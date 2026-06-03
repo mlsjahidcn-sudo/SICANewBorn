@@ -252,7 +252,7 @@ export default function StudentDashboardPage() {
           <CardContent className="space-y-4">
             {recentApplications.length === 0 ? (
               <div className="text-center py-8 text-sm text-gray-500">
-                <p className="mb-3">{t('student.noApplications') || 'No applications yet.'}</p>
+                <p className="mb-3">{t('student.noApplications')}</p>
                 <Link href="/student/applications/new">
                   <Button size="sm" className="bg-[#9B1B30] hover:bg-[#7A1526]">
                     {t('student.startYourFirst')}
@@ -303,7 +303,7 @@ export default function StudentDashboardPage() {
           <CardContent className="space-y-4">
             {recentDocuments.length === 0 ? (
               <div className="text-center py-8 text-sm text-gray-500">
-                <p className="mb-3">{t('student.noDocuments') || 'No documents uploaded yet.'}</p>
+                <p className="mb-3">{t('student.noDocuments')}</p>
                 <Link href="/student/documents">
                   <Button size="sm" variant="outline" className="border-[#1B2A4A] text-[#1B2A4A]">
                     {t('student.uploadNow')}
@@ -346,7 +346,7 @@ export default function StudentDashboardPage() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-gray-500 text-center py-4">
-            {t('student.noNotifications') || 'You have no new notifications.'}
+            {t('student.noNotifications')}
           </p>
         </CardContent>
       </Card>
