@@ -201,7 +201,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     // to get the email; the welcome path doesn't need this because
     // the admin provides the email in the request body.
     if (data.email) {
-      /* eslint-disable-next-line @typescript-eslint/no-floating-promises */
+       
       void sendStudentSuspended({
         firstName: data.first_name || 'Student',
         email: data.email,

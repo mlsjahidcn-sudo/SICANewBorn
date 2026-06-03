@@ -112,7 +112,7 @@ export function AIGenerateModal({ isOpen, onClose, onGenerated }: AIGenerateModa
           jsonStr = jsonStr.slice(firstBrace, lastBrace + 1);
         }
         // Remove trailing commas
-        let fixed = jsonStr.replace(/,\s*([}\]])/g, '$1');
+        const fixed = jsonStr.replace(/,\s*([}\]])/g, '$1');
 
         try {
           generatedData = JSON.parse(fixed);

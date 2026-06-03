@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { SICA_CHATBOT_SYSTEM_PROMPT, SICA_UNIVERSITY_CONTEXT_PROMPT } from '@/lib/ai/prompts';
 import { getUniversityContext, getApplicationGuideContext, searchFAQ, sicaFAQ } from '@/lib/ai/knowledge';
-import { universities } from '@/lib/data';
+import { universities, type University } from '@/lib/data';
 
 function buildRAGContext(userMessage: string) {
   let context = '';
@@ -240,7 +240,7 @@ What brings you to SICA today? Are you curious about a specific university, fiel
   return helpResponses[Math.floor(Math.random() * helpResponses.length)];
 }
 
-function generateUniversityResponse(uni: any, userMessage: string): string {
+function generateUniversityResponse(uni: University, userMessage: string): string {
   const lowerMessage = userMessage.toLowerCase();
   
   const intro = [
@@ -375,7 +375,7 @@ export async function POST(request: NextRequest) {
     }
 
     const lastUserMessage = messages
-      .filter((m: any) => m.role === 'user')
+      .filter((m: { role: string; content: string }) => m.role === 'user')
       .pop()?.content || '';
 
     console.log('[AI Chat] Processing message:', lastUserMessage.substring(0, 100));
@@ -390,7 +390,7 @@ export async function POST(request: NextRequest) {
 
         const llmMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
           { role: 'system', content: fullSystemPrompt },
-          ...messages.map((m: any) => ({
+          ...messages.map((m: { role: string; content: string }) => ({
             role: m.role as 'system' | 'user' | 'assistant',
             content: m.content
           }))
@@ -438,7 +438,7 @@ export async function POST(request: NextRequest) {
 
       const llmMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
         { role: 'system', content: fullSystemPrompt },
-        ...messages.map((m: any) => ({
+        ...messages.map((m: { role: string; content: string }) => ({
           role: m.role as 'system' | 'user' | 'assistant',
           content: m.content
         }))

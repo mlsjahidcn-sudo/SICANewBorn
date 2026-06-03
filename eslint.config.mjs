@@ -27,6 +27,36 @@ const eslintConfig = defineConfig([
       'import/no-cycle': ['error', { ignoreExternal: true }],
       'react-hooks/set-state-in-effect': 'off',
       'no-restricted-syntax': ['error', ...syntaxRules],
+      // Stylistic: React/Next handle unescaped `'` and `"` fine; this rule
+      // is purely a preference and creates noise across the codebase.
+      'react/no-unescaped-entities': 'off',
+      // Tests legitimately use `as any` to mock modules. Disable the rule
+      // inside __tests__/ — production code is still checked.
+      '@typescript-eslint/no-explicit-any': ['error', { ignoreRestArgs: false }],
+    },
+  },
+  {
+    files: ['**/__tests__/**/*.ts', '**/__tests__/**/*.tsx', 'src/**/*.test.ts', 'src/**/*.test.tsx'],
+    rules: {
+      // Tests are free to use `as any` for module mocks and type erasure
+      // — the real production type-safety is enforced by `tsc` on the
+      // test's own imports.
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
+  {
+    // Catch blocks: we don't always use the `err` parameter. The default
+    // rule treats that as an unused-var warning; we treat it as fine.
+    files: ['**/*.ts', '**/*.tsx'],
+    rules: {
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
     },
   },
   {

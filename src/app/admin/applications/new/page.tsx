@@ -15,6 +15,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { universities, programs, degreeLevels, intendedIntakes, documentTypes } from '@/lib/data';
 import { useStudentList } from '@/hooks/use-student-list';
 import { apiFetchJson } from '@/lib/api-client';
+import type { AdminStudent } from '@/lib/student-mapper';
+import type { DocumentStatus, StudentDocument } from '@/lib/student-data';
 
 interface FormData {
   studentId: string | null;
@@ -37,8 +39,8 @@ export default function AdminNewApplicationPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState<any>(null);
-  const [studentDocuments, setStudentDocuments] = useState<any[]>([]);
+  const [selectedStudent, setSelectedStudent] = useState<AdminStudent | null>(null);
+  const [studentDocuments, setStudentDocuments] = useState<StudentDocument[]>([]);
   const [studentDocumentsLoading, setStudentDocumentsLoading] = useState(false);
   const [filteredPrograms, setFilteredPrograms] = useState(programs);
   const [filteredUniversities, setFilteredUniversities] = useState(universities);
@@ -104,7 +106,7 @@ export default function AdminNewApplicationPage() {
     }
 
     const student = students.find(s => s.id === formData.studentId);
-    setSelectedStudent(student);
+    setSelectedStudent(student ?? null);
 
     let cancelled = false;
     setStudentDocumentsLoading(true);
@@ -117,11 +119,11 @@ export default function AdminNewApplicationPage() {
         if (cancelled) return;
 
         // Map snake_case DB rows -> camelCase StudentDocument shape the page already expects.
-        const docs = (res.documents || []).map((d) => ({
+        const docs: StudentDocument[] = (res.documents || []).map((d) => ({
           id: String(d.id),
           studentId: String(d.student_id),
           documentTypeId: String(d.document_type_id),
-          status: (d.status as string) || 'Pending',
+          status: ((d.status as DocumentStatus) || 'Pending'),
           fileUrl: (d.file_url as string) || undefined,
           fileName: (d.file_name as string) || undefined,
           fileSize: (d.file_size as number) || undefined,
@@ -157,7 +159,7 @@ export default function AdminNewApplicationPage() {
     };
   }, [formData.studentId, students]);
 
-  const handleChange = (field: keyof FormData, value: any) => {
+  const handleChange = (field: keyof FormData, value: string | boolean | string[] | null) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 

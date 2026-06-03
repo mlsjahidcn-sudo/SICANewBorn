@@ -250,7 +250,7 @@ export async function POST(request: NextRequest) {
     // Fire-and-forget welcome email. Don't block the response on it —
     // the admin already has the temp password in the response body
     // and can re-share it manually if Resend fails.
-    /* eslint-disable-next-line @typescript-eslint/no-floating-promises */
+     
     void sendStudentWelcome({
       firstName: body.firstName,
       lastName: body.lastName,
