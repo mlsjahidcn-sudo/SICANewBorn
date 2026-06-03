@@ -11,24 +11,48 @@
   "env": {
     "NODE_ENV": "production",
     "NEXT_PUBLIC_SUPABASE_URL": {
-      "description": "Supabase项目URL",
+      "description": "Supabase project URL (client)",
       "required": true
     },
     "NEXT_PUBLIC_SUPABASE_ANON_KEY": {
-      "description": "Supabase匿名访问密钥",
+      "description": "Supabase anon key (client)",
       "required": true
     },
     "COZE_SUPABASE_URL": {
-      "description": "Supabase项目URL（服务器端）",
+      "description": "Supabase project URL (server, service-role)",
       "required": true
     },
     "COZE_SUPABASE_ANON_KEY": {
-      "description": "Supabase匿名访问密钥（服务器端）",
+      "description": "Supabase anon key (server, per-request JWT)",
       "required": true
     },
     "COZE_SUPABASE_SERVICE_ROLE_KEY": {
-      "description": "Supabase服务角色密钥（仅服务器端使用）",
+      "description": "Supabase service-role key (server only — never exposed to client)",
       "required": true
+    },
+    "DOUBAO_API_KEY": {
+      "description": "Volcengine Doubao (Ark) API key for AI chat",
+      "required": false
+    },
+    "DOUBAO_BASE_URL": {
+      "description": "Doubao Ark base URL (default: https://ark.cn-beijing.volces.com/api/v3)",
+      "required": false
+    },
+    "DOUBAO_MODEL": {
+      "description": "Doubao model name (e.g. doubao-1-5-pro-32k-250115)",
+      "required": false
+    },
+    "RESEND_API_KEY": {
+      "description": "Resend API key for transactional email (welcome, suspend, contact). Skip silently if unset.",
+      "required": false
+    },
+    "ADMIN_INVITE_TOKEN": {
+      "description": "Shared secret for /admin/register. If unset, new-admin signup returns 404. Existing admins can still create others via the dashboard.",
+      "required": false
+    },
+    "NEXT_PUBLIC_SITE_URL": {
+      "description": "Canonical site URL (default: https://sica.com.cn). Used in sitemap, metadata, structured data, and email links.",
+      "required": false
     }
   }
 }
