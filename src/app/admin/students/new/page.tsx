@@ -2,10 +2,20 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Save, User, GraduationCap, BookOpen, CheckCircle2, Copy, AlertCircle, Loader2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  Save,
+  User,
+  GraduationCap,
+  BookOpen,
+  CheckCircle2,
+  Copy,
+  AlertCircle,
+} from 'lucide-react';
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -755,7 +765,7 @@ export default function AdminAddStudentPage() {
             <Button onClick={handleSave} disabled={isSaving} className="bg-[#9B1B30] hover:bg-[#7A1526]">
               {isSaving ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <Spinner size="sm" className="mr-2" />
                   Saving...
                 </>
               ) : (

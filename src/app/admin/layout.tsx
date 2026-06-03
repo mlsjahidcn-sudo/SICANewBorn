@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { Spinner } from '@/components/ui/spinner';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
 import { useRouter, usePathname } from 'next/navigation';
 import {
@@ -65,7 +66,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   if (!mounted || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#1B2A4A]">
-        <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-none animate-spin" />
+        <Spinner size="md" className="text-white" />
       </div>
     );
   }

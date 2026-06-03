@@ -142,6 +142,30 @@
   }
 }
 
+/* SICA spinner animations — used by src/components/ui/spinner.tsx.
+ * Three dots scaling up/down in sequence, each offset by 120ms, for an
+ * organic "traffic light" pulse. The cubic-bezier curve softens the
+ * attack/release so it doesn't feel like a generic loading indicator. */
+@keyframes sica-dot-pulse {
+  0%, 60%, 100% {
+    transform: scaleY(0.4);
+    opacity: 0.45;
+  }
+  30% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+/* Indeterminate bar: a 33%-wide block slides left to right, then
+ * resets with a brief gap. The keyframe holds at the end so the gap
+ * is visible — otherwise the bar feels like it's always moving. */
+@keyframes sica-bar-slide {
+  0%   { left: -33%; }
+  60%  { left: 100%; }
+  100% { left: 100%; }
+}
+
 body {
   @apply font-sans;
   background-color: #FAFAF8;

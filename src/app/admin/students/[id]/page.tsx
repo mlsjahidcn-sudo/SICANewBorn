@@ -7,6 +7,7 @@ import {
   Plus, Mail, ChevronRight, RefreshCw, Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -561,7 +562,7 @@ function NotesTab({ studentId }: { studentId: string }) {
               className="bg-[#1B2A4A] hover:bg-[#152138]"
               size="sm"
             >
-              {isPosting ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Plus className="w-4 h-4 mr-1" />}
+              {isPosting ? <Spinner size="sm" className="mr-1" /> : <Plus className="w-4 h-4 mr-1" />}
               Add Note
             </Button>
           </div>

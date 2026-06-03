@@ -1,8 +1,15 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Upload, FileText, X, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import {
+  Upload,
+  FileText,
+  X,
+  CheckCircle2,
+  AlertCircle,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { Card, CardContent } from '@/components/ui/card';
 import { apiFetchJson } from '@/lib/api-client';
 import { STUDENT_DOC_ALLOWED_TYPES, STUDENT_DOC_MAX_BYTES } from '@/lib/storage';
@@ -212,7 +219,7 @@ export function DocumentUploader({
 
         {isWorking && (
           <div className="flex items-center gap-2 text-sm text-[#4B5563] py-2">
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Spinner size="sm" />
             <span>
               {state.status === 'requesting' && 'Requesting upload URL…'}
               {state.status === 'uploading' && 'Uploading to storage…'}

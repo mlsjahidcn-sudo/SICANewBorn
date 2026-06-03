@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Check, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -127,7 +128,7 @@ export default function AdminApplicationEditPage() {
   if (isLoading) {
     return (
       <div className="p-8 text-center text-[#4B5563]">
-        <Loader2 className="w-5 h-5 inline-block animate-spin mr-2" />
+        <Spinner size="sm" className="inline-block mr-2" />
         Loading application...
       </div>
     );
@@ -261,7 +262,7 @@ export default function AdminApplicationEditPage() {
         </Button>
         <Button onClick={handleSave} disabled={isSaving} className="bg-[#9B1B30] hover:bg-[#7A1526]">
           {isSaving ? (
-            <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</>
+            <><Spinner size="sm" className="mr-2" /> Saving...</>
           ) : (
             <><Check className="w-4 h-4 mr-2" /> Save Changes</>
           )}

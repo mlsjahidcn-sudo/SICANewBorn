@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Save, Bell, Lock, Building2, Shield, Key, CheckCircle, AlertCircle, Loader2, Mail, Phone, MapPin, Calendar, Percent } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
@@ -221,7 +222,7 @@ export default function PartnerSettingsPage() {
                     >
                       {isSaving ? (
                         <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          <Spinner size="sm" className="mr-2" />
                           Saving…
                         </>
                       ) : (

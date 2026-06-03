@@ -1,7 +1,11 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { Mail, AlertCircle, Loader2 } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
+import {
+  Mail,
+  AlertCircle,
+} from 'lucide-react';
 
 interface Props {
   formTitle: string;
@@ -172,7 +176,7 @@ export function ContactForm({ formTitle, labels, successMessages }: Props) {
           >
             {status === 'submitting' ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Spinner size="sm" />
                 Sending…
               </>
             ) : (

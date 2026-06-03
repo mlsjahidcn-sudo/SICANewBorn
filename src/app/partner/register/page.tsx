@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { Spinner } from '@/components/ui/spinner';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Users, CheckCircle2, Send, ArrowLeft } from 'lucide-react';
@@ -214,7 +215,7 @@ export default function PartnerRegisterPage() {
               className="w-full bg-[#9B1B30] text-white py-2.5 font-medium hover:bg-[#7a1525] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {loading ? (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-none animate-spin" />
+                <Spinner size="sm" className="text-white" />
               ) : (
                 <>
                   <Send size={18} />

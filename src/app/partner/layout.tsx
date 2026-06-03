@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { Spinner } from '@/components/ui/spinner';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
@@ -113,7 +114,7 @@ function PartnerLayoutInner({ children }: { children: React.ReactNode }) {
   if (!mounted || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#1B2A4A]">
-        <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-none animate-spin" />
+        <Spinner size="md" className="text-white" />
       </div>
     );
   }

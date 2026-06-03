@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
+import { Spinner } from '@/components/ui/spinner';
 import { Sparkles, X, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface AIGenerateModalProps {
@@ -219,7 +220,7 @@ export function AIGenerateModal({ isOpen, onClose, onGenerated }: AIGenerateModa
           {state.status === 'generating' && (
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <Loader2 className="w-4 h-4 text-[#9B1B30] animate-spin" />
+                <Spinner size="sm" className="text-[#9B1B30]" />
                 <span className="text-sm text-[#4B5563]">{state.progress}</span>
               </div>
               <div className="bg-gray-50 border border-gray-200 p-3 max-h-60 overflow-y-auto">

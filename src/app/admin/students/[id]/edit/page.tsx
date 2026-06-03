@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Check, Loader2, ChevronRight, ChevronLeft, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -496,7 +497,7 @@ export default function AdminStudentEditPage() {
           ) : (
             <Button onClick={handleSave} disabled={isSaving} className="bg-[#9B1B30] hover:bg-[#7A1526]">
               {isSaving ? (
-                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving...</>
+                <><><Spinner size="sm" className="mr-2" /> Saving...</></>
               ) : (
                 <><Check className="h-4 w-4 mr-2" /> Update Student</>
               )}

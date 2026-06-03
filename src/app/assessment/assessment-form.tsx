@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type FormEvent, type ChangeEvent } from 'react';
+import { Spinner } from '@/components/ui/spinner';
 import { CheckCircle, Mail, Calendar, GraduationCap, Upload, AlertCircle, Loader2, FileCheck, X } from 'lucide-react';
 
 interface Props {
@@ -383,7 +384,7 @@ export function AssessmentForm({ successMessages }: Props) {
               )}
               {uploadStatus === 'uploading' && (
                 <div>
-                  <Loader2 className="h-8 w-8 text-[#9B1B30] mx-auto mb-2 animate-spin" />
+                  <Spinner size="lg" className="text-[#9B1B30] mx-auto mb-2" />
                   <p className="text-sm text-gray-600">{uploadProgress}</p>
                 </div>
               )}
@@ -446,7 +447,7 @@ export function AssessmentForm({ successMessages }: Props) {
           >
             {status === 'submitting' ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Spinner size="sm" />
                 Submitting…
               </>
             ) : (

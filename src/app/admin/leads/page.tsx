@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -181,7 +182,7 @@ export default function LeadsPage() {
         <div className={`${selected ? 'lg:col-span-2' : 'lg:col-span-3'} space-y-3`}>
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-[#1B2A4A]" />
+              <Spinner size="md" className="text-[#1B2A4A]" />
             </div>
           ) : filtered.length === 0 ? (
             <div className="bg-white border border-gray-200 px-4 py-12 text-center text-gray-500">
@@ -284,7 +285,7 @@ export default function LeadsPage() {
                       }
                     >
                       {updatingId === selected.id ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
+                        <Spinner size="xs" />
                       ) : selected.status === s ? (
                         <CheckCircle className="h-3 w-3 mr-1" />
                       ) : null}
