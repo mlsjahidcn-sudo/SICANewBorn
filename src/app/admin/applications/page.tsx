@@ -16,6 +16,7 @@ import {
 import { ListPageSkeleton } from '@/components/partner/skeletons';
 import { useStudentList } from '@/hooks/use-student-list';
 import { apiFetch, apiFetchJson } from '@/lib/api-client';
+import { APPLICATION_STATUSES, ApplicationStatus } from '@/lib/application-mapper';
 
 interface Application {
   id: string;
@@ -35,8 +36,18 @@ interface Application {
 
 const PAGE_SIZE = 20;
 
-// Status mapping from DB → display label + badge color
-const statusDisplay: Record<string, { label: string; color: string }> = {
+/**
+ * Single source of truth for how each application status is rendered:
+ *   - key   = exact DB value (must match APPLICATION_STATUSES)
+ *   - label = human-readable text (used in the filter dropdown + badge)
+ *   - color = tailwind classes for the badge
+ *
+ * IMPORTANT: the filter dropdown's `value` MUST be the DB value (not the
+ * label) so the API can match. Both the badge and the filter use this
+ * same map; the only difference is the filter shows the label and the
+ * badge shows the label.
+ */
+const STATUS_DISPLAY: Record<ApplicationStatus, { label: string; color: string }> = {
   Draft: { label: 'Draft', color: 'bg-gray-100 text-gray-800' },
   Submitted: { label: 'Submitted', color: 'bg-blue-100 text-blue-800' },
   'Under Review': { label: 'In Review', color: 'bg-yellow-100 text-yellow-800' },
@@ -45,14 +56,6 @@ const statusDisplay: Record<string, { label: string; color: string }> = {
   Accepted: { label: 'Approved', color: 'bg-green-100 text-green-800' },
   Rejected: { label: 'Rejected', color: 'bg-red-100 text-red-800' },
   Withdrawn: { label: 'Withdrawn', color: 'bg-gray-100 text-gray-800' },
-};
-
-const statusColors: Record<string, string> = {
-  'Pending': 'bg-yellow-100 text-yellow-800 border-yellow-200',
-  'In Review': 'bg-blue-100 text-blue-800 border-blue-200',
-  'Documents Needed': 'bg-orange-100 text-orange-800 border-orange-200',
-  'Approved': 'bg-green-100 text-green-800 border-green-200',
-  'Rejected': 'bg-red-100 text-red-800 border-red-200'
 };
 
 const sourceColors: Record<string, string> = {
@@ -267,11 +270,14 @@ export default function AdminApplicationsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="Pending">Pending</SelectItem>
-                  <SelectItem value="In Review">In Review</SelectItem>
-                  <SelectItem value="Documents Needed">Documents Needed</SelectItem>
-                  <SelectItem value="Approved">Approved</SelectItem>
-                  <SelectItem value="Rejected">Rejected</SelectItem>
+                  {/* Use the canonical APPLICATION_STATUSES so the filter value
+                      matches what the API actually returns. `STATUS_DISPLAY[s].label`
+                      is the human-readable text shown to the user. */}
+                  {APPLICATION_STATUSES.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {STATUS_DISPLAY[s].label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <Select value={sourceFilter} onValueChange={setSourceFilter}>
@@ -306,7 +312,13 @@ export default function AdminApplicationsPage() {
                   <tr key={application.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4">
                       <div>
-                        <div className="font-medium text-[#1F2937]">{application.studentName}</div>
+                        <div className="font-medium text-[#1F2937]">
+                          {/* Some students sign up without filling their name;
+                              fall back to the email local-part so the row is
+                              still readable instead of an em-dash placeholder. */}
+                          {application.studentName?.trim() ||
+                            (application.studentEmail ? application.studentEmail.split('@')[0] : '—')}
+                        </div>
                         <div className="text-xs text-[#4B5563]">{application.studentEmail}</div>
                       </div>
                     </td>
@@ -318,8 +330,14 @@ export default function AdminApplicationsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <Badge className={`${statusColors[application.status]} rounded-none border`}>
-                        {application.status}
+                      <Badge
+                        className={`${
+                          STATUS_DISPLAY[application.status as ApplicationStatus]?.color ??
+                          'bg-gray-100 text-gray-800'
+                        } rounded-none border`}
+                      >
+                        {STATUS_DISPLAY[application.status as ApplicationStatus]?.label ??
+                          application.status}
                       </Badge>
                     </td>
                     <td className="px-6 py-4">
