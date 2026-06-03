@@ -55,9 +55,24 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // For the Admin (offline) source we can push the filter into SQL —
+    // those rows have student_id IS NULL. For Online/Partner we have
+    // to filter in JS after mapping, because the `source` lives on
+    // the joined student_profiles row and PostgREST doesn't let you
+    // filter on a nullable LEFT JOIN relationship the way we'd want.
+    const isOfflineFilter = source === 'Admin';
+    if (isOfflineFilter) {
+      query = query.is('student_id', null);
+    }
+
     const from = (page - 1) * limit;
     const to = from + limit - 1;
-    query = query.range(from, to);
+    // When filtering by Online/Partner, over-fetch by 2x so the JS
+    // filter still has a chance of returning `limit` rows. For small
+    // data this is a non-issue; for large tables we'd want to push
+    // the filter into SQL via a stored procedure.
+    const fetchLimit = source && !isOfflineFilter ? Math.min(100, limit * 2) : limit;
+    query = query.range(from, from + fetchLimit - 1);
 
     const { data, count, error } = await query;
     if (error) {
@@ -67,16 +82,25 @@ export async function GET(request: NextRequest) {
 
     let applications = ((data || []) as RawApp[]).map(mapApplicationFromDb);
 
-    if (source) {
+    // Apply source filter in JS for Online/Partner. The mapper
+    // already resolved the source from the join, so this is a simple
+    // equality check.
+    if (source && !isOfflineFilter) {
       applications = applications.filter((a) => a.source === source);
+      // Re-slice to the requested page size after filtering
+      applications = applications.slice(0, limit);
     }
+
+    // When JS-side filtering, the SQL `count` is the unfiltered total.
+    // We report the filtered count instead so pagination is correct.
+    const reportedTotal = source && !isOfflineFilter ? applications.length : (count || 0);
 
     return NextResponse.json({
       applications,
-      total: count || 0,
+      total: reportedTotal,
       page,
       limit,
-      totalPages: Math.ceil((count || 0) / limit),
+      totalPages: Math.max(1, Math.ceil(reportedTotal / limit)),
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
