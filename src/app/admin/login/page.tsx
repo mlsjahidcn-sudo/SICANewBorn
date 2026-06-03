@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, LogIn } from 'lucide-react';
+import { getPostLoginRedirectPath } from '@/lib/auth-redirect';
 
 export default function AdminLoginPage() {
   const { signIn, user, isConfigured } = useAuth();
@@ -20,7 +21,10 @@ export default function AdminLoginPage() {
   useEffect(() => {
     if (user && !redirecting) {
       setRedirecting(true);
-      router.replace('/admin/dashboard');
+      // Use the shared role-based redirect so a partner or student who
+      // happened to land on the admin login form still goes to the right
+      // portal instead of getting an auth wall.
+      router.replace(getPostLoginRedirectPath(user));
     }
   }, [user, router, redirecting]);
 

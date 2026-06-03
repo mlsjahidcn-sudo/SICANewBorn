@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, LogIn, Users, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
+import { getPostLoginRedirectPath } from '@/lib/auth-redirect';
 
 export default function PartnerLoginPage() {
   const router = useRouter();
@@ -18,6 +19,14 @@ export default function PartnerLoginPage() {
   // If already signed in, check whether they're a partner.
   useEffect(() => {
     if (!user) return;
+    // Quick role check first: if they're not a partner, don't even try
+    // the partner API — send them to the right portal via the shared helper.
+    const role = (user.user_metadata?.role as string | undefined) ?? 'student';
+    if (role !== 'partner') {
+      router.replace(getPostLoginRedirectPath(user));
+      return;
+    }
+
     let cancelled = false;
     (async () => {
       const { supabase } = await import('@/lib/supabase-browser');
