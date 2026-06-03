@@ -1,0 +1,150 @@
+import { NextResponse } from 'next/server';
+import { getRequestAuth } from '@/lib/supabase-auth';
+import { mapApplicationForStudent, parseApplicationStatus } from '@/lib/application-mapper';
+import { insertTimelineEvent } from '@/lib/timeline';
+
+/**
+ * GET  /api/student/applications — list the authed student's own applications
+ * POST /api/student/applications — student self-service create
+ *
+ * The student's identity is derived from the JWT (auth.user.id), NEVER
+ * from the body. The student can only see/create their own applications.
+ *
+ * S14: now uses the shared application-mapper so the response shape
+ * matches what the student UI expects (no internal fields leaked).
+ */
+export async function GET(request: Request) {
+  try {
+    const auth = await getRequestAuth(request);
+    if (!auth.ok) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+    const { supabase, user } = auth;
+
+    const { data: rows, error } = await supabase
+      .from('student_applications')
+      .select('*')
+      .eq('student_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    return NextResponse.json({
+      applications: (rows || []).map(mapApplicationForStudent),
+    });
+  } catch (error) {
+    console.error('[Student Applications GET]', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const auth = await getRequestAuth(request);
+    if (!auth.ok) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+    const { supabase, user } = auth;
+
+    const body = await request.json();
+
+    // Required fields for a student application. Trim before checking so
+    // whitespace-only inputs ("   ") don't bypass the validation.
+    const trimmedUniversity = typeof body.universityName === 'string' ? body.universityName.trim() : '';
+    const trimmedProgram = typeof body.programName === 'string' ? body.programName.trim() : '';
+    const trimmedDegree = typeof body.degree === 'string' ? body.degree.trim() : '';
+    const trimmedIntake = typeof body.intake === 'string' ? body.intake.trim() : '';
+
+    if (!trimmedUniversity) {
+      return NextResponse.json({ error: 'universityName is required' }, { status: 400 });
+    }
+    if (!trimmedProgram) {
+      return NextResponse.json({ error: 'programName is required' }, { status: 400 });
+    }
+    if (!trimmedDegree) {
+      return NextResponse.json({ error: 'degree is required' }, { status: 400 });
+    }
+    if (!trimmedIntake) {
+      return NextResponse.json({ error: 'intake is required' }, { status: 400 });
+    }
+
+    // Degree must be one of the 4 known values (mirrors the DB intent;
+    // the schema accepts any string but we want to reject garbage)
+    const ALLOWED_DEGREES = ['Bachelor', 'Master', 'PhD', 'Chinese Language'];
+    if (!ALLOWED_DEGREES.includes(trimmedDegree)) {
+      return NextResponse.json(
+        { error: `degree must be one of: ${ALLOWED_DEGREES.join(', ')}` },
+        { status: 400 },
+      );
+    }
+
+    // Validate status (only certain values are valid for a student to set)
+    const requestedStatus = body.status || 'Submitted';
+    const validStatuses = ['Draft', 'Submitted'];
+    if (!validStatuses.includes(requestedStatus)) {
+      return NextResponse.json(
+        { error: `students can only set status to: ${validStatuses.join(', ')}` },
+        { status: 400 },
+      );
+    }
+    // (The other statuses are admin-set: Under Review, Documents Requested, etc.)
+    void parseApplicationStatus; // imported for future use
+
+    // Generate application_number atomically (S5 fix)
+    const { data: rpcData, error: rpcError } = await supabase.rpc('generate_application_number');
+    if (rpcError || !rpcData) {
+      console.error('[Student Applications POST] generate_application_number failed:', rpcError);
+      return NextResponse.json(
+        { error: 'Failed to generate application number' },
+        { status: 500 },
+      );
+    }
+
+    // Explicit snake_case mapping (don't `...body` — Supabase silently
+    // drops unknown column names, so camelCase keys would be lost).
+    // Uses the TRIMMED versions of the required text fields.
+    const applicationData = {
+      student_id: user.id,
+      university_id: body.universityId || 'manual',
+      university_name: trimmedUniversity,
+      university_name_cn: body.universityNameCn || null,
+      program_id: body.programId || null,
+      program_name: trimmedProgram,
+      program_name_cn: body.programNameCn || null,
+      degree: trimmedDegree,
+      degree_level: body.degreeLevel || trimmedDegree,
+      intake: trimmedIntake,
+      status: requestedStatus,
+      priority: body.priority || 'Medium',
+      application_number: rpcData as string,
+      personal_statement: body.personalStatement || null,
+      additional_notes: body.additionalNotes || null,
+      submitted_at: requestedStatus === 'Submitted' ? new Date().toISOString() : null,
+    };
+
+    const { data: row, error } = await supabase
+      .from('student_applications')
+      .insert(applicationData)
+      .select('*')
+      .single();
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    // Audit trail: timeline event
+    await insertTimelineEvent(supabase, {
+      application_id: row.id,
+      status: requestedStatus,
+      notes: 'Application created by student.',
+      created_by: user.id,
+    });
+
+    return NextResponse.json({ application: mapApplicationForStudent(row) }, { status: 201 });
+  } catch (error) {
+    console.error('[Student Applications POST]', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

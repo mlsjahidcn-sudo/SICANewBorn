@@ -1,0 +1,177 @@
+'use client';
+
+import Link from 'next/link';
+import { useI18n } from '@/lib/i18n';
+import { useState } from 'react';
+import { Menu, X, Search, Globe, FileText, Users, UserPlus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+
+export function Header() {
+  const { t, locale, setLocale } = useI18n();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const navLinks = [
+    { href: '/', label: t('nav.home') },
+    { href: '/universities', label: t('nav.universities') },
+    { href: '/programs', label: t('nav.programs') },
+    { href: '/scholarships', label: t('nav.scholarships') },
+    { href: '/assessment', label: locale === 'en' ? 'Free Assessment' : '免费评估' },
+    { href: '/about', label: t('nav.about') },
+    { href: '/contact', label: t('nav.contact') },
+  ];
+
+  return (
+    <header className="sticky top-0 z-50 w-full border-b border-gray-200 bg-white/95 backdrop-blur-sm">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        {/* Logo */}
+        <Link href="/" className="flex items-center gap-2">
+          <div className="flex h-9 w-9 items-center justify-center rounded-none bg-[#9B1B30] text-white font-bold text-sm">
+            S
+          </div>
+          <div className="flex flex-col">
+            <span className="text-lg font-bold leading-tight tracking-tight text-[#1B2A4A]">
+              SICA
+            </span>
+            <span className="text-[10px] leading-tight text-gray-500 tracking-wide">
+              {locale === 'en' ? 'Study in China Agency' : '留学中国咨询'}
+            </span>
+          </div>
+        </Link>
+
+        {/* Desktop Nav */}
+        <nav className="hidden lg:flex items-center gap-6">
+          {navLinks.map((link) => (
+            <Link
+              key={link.label}
+              href={link.href}
+              className="text-sm font-medium text-gray-700 transition-colors hover:text-[#9B1B30]"
+            >
+              {link.label}
+            </Link>
+          ))}
+        </nav>
+
+        {/* Right Actions */}
+        <div className="hidden lg:flex items-center gap-3">
+          <button
+            onClick={() => setLocale(locale === 'en' ? 'zh' : 'en')}
+            className="flex items-center gap-1.5 rounded-none border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 transition-colors hover:border-[#9B1B30] hover:text-[#9B1B30]"
+          >
+            <Globe className="h-4 w-4" />
+            {locale === 'en' ? '中文' : 'EN'}
+          </button>
+          
+          {/* Portal Login Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="border-[#1B2A4A] text-[#1B2A4A] hover:bg-[#1B2A4A] hover:text-white font-semibold text-sm">
+                <Users className="mr-2 h-4 w-4" />
+                {locale === 'en' ? 'Portal Login' : '门户登录'}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <Link href="/student/login">
+                <DropdownMenuItem className="cursor-pointer">
+                  <Users className="mr-2 h-4 w-4" />
+                  <span>{locale === 'en' ? 'Student Portal' : '学生门户'}</span>
+                </DropdownMenuItem>
+              </Link>
+              <Link href="/partner/login">
+                <DropdownMenuItem className="cursor-pointer">
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  <span>{locale === 'en' ? 'Partner Portal' : '合作伙伴门户'}</span>
+                </DropdownMenuItem>
+              </Link>
+              <Link href="/admin/login">
+                <DropdownMenuItem className="cursor-pointer">
+                  <FileText className="mr-2 h-4 w-4" />
+                  <span>{locale === 'en' ? 'Admin Portal' : '管理员门户'}</span>
+                </DropdownMenuItem>
+              </Link>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
+          <Button className="bg-[#9B1B30] hover:bg-[#7A1526] text-white font-semibold text-sm px-5">
+            {t('nav.apply')}
+          </Button>
+        </div>
+
+        {/* Mobile Menu Toggle */}
+        <button
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="lg:hidden p-2 text-gray-700"
+        >
+          {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </button>
+      </div>
+
+      {/* Mobile Menu */}
+      {mobileMenuOpen && (
+        <div className="lg:hidden border-t border-gray-200 bg-white px-4 pb-4 pt-2">
+          <nav className="flex flex-col gap-2">
+            {navLinks.map((link) => (
+              <Link
+                key={link.label}
+                href={link.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className="rounded-none px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-[#9B1B30]"
+              >
+                {link.label}
+              </Link>
+            ))}
+            {/* Portal Login Links */}
+            <div className="space-y-2 pt-3 border-t border-gray-100">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                {locale === 'en' ? 'Portal Login' : '门户登录'}
+              </p>
+              <Link
+                href="/student/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2 rounded-none px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-[#9B1B30]"
+              >
+                <Users className="h-4 w-4" />
+                {locale === 'en' ? 'Student Portal' : '学生门户'}
+              </Link>
+              <Link
+                href="/partner/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2 rounded-none px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-[#9B1B30]"
+              >
+                <UserPlus className="h-4 w-4" />
+                {locale === 'en' ? 'Partner Portal' : '合作伙伴门户'}
+              </Link>
+              <Link
+                href="/admin/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2 rounded-none px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-[#9B1B30]"
+              >
+                <FileText className="h-4 w-4" />
+                {locale === 'en' ? 'Admin Portal' : '管理员门户'}
+              </Link>
+            </div>
+            
+            {/* Language & Apply */}
+            <div className="flex items-center gap-3 pt-3 border-t border-gray-100">
+              <button
+                onClick={() => setLocale(locale === 'en' ? 'zh' : 'en')}
+                className="flex items-center gap-1.5 rounded-none border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600"
+              >
+                <Globe className="h-4 w-4" />
+                {locale === 'en' ? '中文' : 'EN'}
+              </button>
+              <Button className="bg-[#9B1B30] hover:bg-[#7A1526] text-white font-semibold text-sm flex-1">
+                {t('nav.apply')}
+              </Button>
+            </div>
+          </nav>
+        </div>
+      )}
+    </header>
+  );
+}

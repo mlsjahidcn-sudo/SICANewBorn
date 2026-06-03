@@ -1,0 +1,130 @@
+import { NextResponse } from 'next/server';
+import { supabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-server';
+import { scholarships as staticScholarships } from '@/lib/data';
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const type = searchParams.get('type');
+  const degreeLevel = searchParams.get('degreeLevel');
+  const search = searchParams.get('search');
+  const sort = searchParams.get('sort') || 'name';
+  const page = parseInt(searchParams.get('page') || '1');
+  const limit = parseInt(searchParams.get('limit') || '6');
+
+  if (isSupabaseServerConfigured() && supabaseServer) {
+    let query = supabaseServer
+      .from('scholarships')
+      .select('*', { count: 'exact' });
+
+    if (type) query = query.eq('type', type);
+    if (degreeLevel) query = query.contains('degree_levels', [degreeLevel]);
+    if (search) query = query.or(`name.ilike.%${search}%,name_cn.ilike.%${search}%`);
+
+    if (sort === 'name') query = query.order('name', { ascending: true });
+    else if (sort === 'deadline') query = query.order('deadline', { ascending: true });
+
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+    query = query.range(from, to);
+
+    const { data, count, error } = await query;
+
+    if (!error && data && data.length > 0) {
+      return NextResponse.json({
+        scholarships: data.map(mapScholarshipFromDb),
+        total: count || 0,
+        page,
+        limit,
+        totalPages: Math.ceil((count || 0) / limit),
+      });
+    }
+  }
+
+  // Fallback to static data
+  let filtered = [...staticScholarships];
+  if (type) filtered = filtered.filter((s) => s.type === type);
+  if (degreeLevel) filtered = filtered.filter((s) => s.degreeLevels.includes(degreeLevel));
+  if (search) {
+    const s = search.toLowerCase();
+    filtered = filtered.filter((sc) => sc.name.toLowerCase().includes(s) || sc.nameCn.includes(s));
+  }
+
+  const total = filtered.length;
+  const from = (page - 1) * limit;
+  const paged = filtered.slice(from, from + limit);
+
+  return NextResponse.json({
+    scholarships: paged,
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit),
+  });
+}
+
+export async function POST(request: Request) {
+  if (!isSupabaseServerConfigured() || !supabaseServer) {
+    return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
+  }
+
+  try {
+    const body = await request.json();
+    const dbRecord = mapScholarshipToDb(body);
+    const { data, error } = await supabaseServer
+      .from('scholarships')
+      .insert(dbRecord)
+      .select()
+      .single();
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json({ scholarship: mapScholarshipFromDb(data) }, { status: 201 });
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  }
+}
+
+function mapScholarshipFromDb(row: Record<string, unknown>) {
+  return {
+    slug: row.slug,
+    name: row.name,
+    nameCn: row.name_cn,
+    type: row.type,
+    degreeLevels: row.degree_levels,
+    eligibleRegions: row.eligible_regions,
+    duration: row.duration,
+    description: row.description,
+    descriptionCn: row.description_cn,
+    coverage: row.coverage,
+    coverageCn: row.coverage_cn,
+    requirements: row.requirements,
+    requirementsCn: row.requirements_cn,
+    applicationProcess: row.application_process,
+    applicationProcessCn: row.application_process_cn,
+    deadline: row.deadline,
+    applicationMethod: row.application_method,
+    applicationMethodCn: row.application_method_cn,
+  };
+}
+
+function mapScholarshipToDb(s: Record<string, unknown>) {
+  return {
+    slug: s.slug,
+    name: s.name,
+    name_cn: s.nameCn,
+    type: s.type,
+    degree_levels: s.degreeLevels,
+    eligible_regions: s.eligibleRegions,
+    duration: s.duration,
+    description: s.description,
+    description_cn: s.descriptionCn,
+    coverage: s.coverage,
+    coverage_cn: s.coverageCn,
+    requirements: s.requirements,
+    requirements_cn: s.requirementsCn,
+    application_process: s.applicationProcess,
+    application_process_cn: s.applicationProcessCn,
+    deadline: s.deadline,
+    application_method: s.applicationMethod,
+    application_method_cn: s.applicationMethodCn,
+  };
+}
