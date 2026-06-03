@@ -36,11 +36,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const client = supabase;
 
-    const getSession = async () => {
-      const { data: { session } } = await client.auth.getSession();
-      setSession(session);
-      setUser(session?.user ?? null);
+    // Safety timeout — never let the layout's loading spinner stay up
+    // forever. getSession() reads from localStorage and should resolve
+    // in <50ms, but a slow Supabase backend (or a JS bundle that
+    // failed to hydrate) could leave `loading=true` indefinitely and
+    // hang every protected page in a permanent spinner state. 5s is
+    // generous; real sessions resolve in tens of milliseconds.
+    const safety = setTimeout(() => {
       setLoading(false);
+    }, 5_000);
+
+    const getSession = async () => {
+      try {
+        const { data: { session } } = await client.auth.getSession();
+        setSession(session);
+        setUser(session?.user ?? null);
+      } catch {
+        // Swallow — the user simply isn't signed in
+      } finally {
+        clearTimeout(safety);
+        setLoading(false);
+      }
     };
 
     getSession();
@@ -51,7 +67,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(safety);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {

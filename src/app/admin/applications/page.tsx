@@ -94,6 +94,12 @@ export default function AdminApplicationsPage() {
     if (sourceFilter !== 'all') params.set('source', sourceFilter);
     if (studentFilter !== 'all') params.set('student', studentFilter);
 
+    // Safety timeout — never let the page hang on a stalled network call.
+    // 15s is generous (the API normally returns in <1s after cold compile)
+    // but short enough that the user gets feedback within a perceptible
+    // window.
+    const timeoutId = setTimeout(() => controller.abort(), 15_000);
+
     apiFetchJson<{ applications: Application[]; total: number; page: number; totalPages: number }>(
       `/api/admin/applications?${params.toString()}`,
       { signal: controller.signal },
@@ -103,17 +109,28 @@ export default function AdminApplicationsPage() {
         setTotal(data.total);
       })
       .catch((err) => {
-        if (err.name !== 'AbortError') {
+        if (err.name === 'AbortError') {
+          if (!controller.signal.aborted) {
+            // Timed out (not unmounted)
+            setError('Request took too long — please try again.');
+            setApplications([]);
+            setTotal(0);
+          }
+        } else {
           setError(err.message || 'Failed to load applications');
           setApplications([]);
           setTotal(0);
         }
       })
       .finally(() => {
+        clearTimeout(timeoutId);
         if (!controller.signal.aborted) setIsLoading(false);
       });
 
-    return () => controller.abort();
+    return () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
   }, [page, searchQuery, statusFilter, sourceFilter, studentFilter]);
 
   // Debounce search
@@ -245,8 +262,8 @@ export default function AdminApplicationsPage() {
             <div className="flex-1">
               <Input
                 placeholder="Search by student name, email, or university..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 className="rounded-none"
               />
             </div>
