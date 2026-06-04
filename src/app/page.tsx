@@ -24,18 +24,24 @@ import {
   ArrowRight,
   MapPin,
 } from 'lucide-react';
-import { universities as staticUniversities } from '@/lib/data';
+import { getAllUniversities } from '@/lib/data-fetcher';
+
+// Home page is server-rendered. We re-fetch the live list on every
+// request (with a 60s edge cache via `revalidate`) so newly-added
+// AI-generated or admin-imported universidades automatically appear
+// in the hero, partner logo strip, and any other university-driven
+// section. Cached for 60s — same trade-off as the other RSC pages.
+export const revalidate = 60;
 
 export default async function HomePage() {
   const t = await getServerT();
 
   // Pick 3 featured universidades for the hero. Strategy: top 3 by
-  // China ranking. If the static data set is small, fall back to
-  // whatever's there. The list is server-rendered, so the cards
-  // are baked into the initial HTML (no client fetch on first
-  // paint). For a future "admin-curated featured" feature, add
-  // a `featured: boolean` field and filter on that instead.
-  const featured = [...staticUniversities]
+  // China ranking. If the list is empty, fall back to whatever's
+  // there. The list is server-rendered, so the cards are baked
+  // into the initial HTML (no client fetch on first paint).
+  const liveUnis = await getAllUniversities();
+  const featured = [...liveUnis]
     .sort((a, b) => a.ranking - b.ranking)
     .slice(0, 3);
 
@@ -240,7 +246,7 @@ export default async function HomePage() {
             Trusted by students at China's top universities
           </p>
           <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-8 gap-4 sm:gap-6 items-center">
-            {staticUniversities.slice(0, 8).map((u) => (
+            {liveUnis.slice(0, 8).map((u) => (
               <Link
                 key={u.slug}
                 href={`/universities/${u.slug}`}

@@ -2,19 +2,25 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Award, ChevronRight, ArrowRight, Globe, Users, Calendar, Banknote } from 'lucide-react';
-import { scholarships as staticScholarships } from '@/lib/data';
+import { getAllScholarships } from '@/lib/data-fetcher';
 import { COUNTRIES } from '@/lib/seo-data';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sica.com.cn';
 
-const REAL_SCHOLARSHIPS = staticScholarships.filter(
-  (s) => s.slug.includes('scholarship') || s.slug.startsWith('csc-'),
-);
+// Render on demand with ISR — reads the live DB so newly-added
+// scholarships show up automatically. Cached at the edge for 60s.
+export const revalidate = 60;
 
-export const dynamic = 'force-static';
+async function getRealScholarships() {
+  const all = await getAllScholarships();
+  return all.filter(
+    (s) => s.slug.includes('scholarship') || s.slug.startsWith('csc-'),
+  );
+}
 
-export function generateStaticParams() {
-  return REAL_SCHOLARSHIPS.map((s) => ({ slug: s.slug }));
+export async function generateStaticParams() {
+  const scholarships = await getRealScholarships();
+  return scholarships.map((s) => ({ slug: s.slug }));
 }
 
 export async function generateMetadata({
@@ -23,7 +29,8 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const scholarship = REAL_SCHOLARSHIPS.find((s) => s.slug === slug);
+  const scholarships = await getRealScholarships();
+  const scholarship = scholarships.find((s) => s.slug === slug);
   if (!scholarship) return { title: 'Not Found' };
 
   const title = `${scholarship.name} — Eligible Countries and Application Guide (2026)`;
@@ -43,7 +50,8 @@ export default async function EligibleCountriesPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const scholarship = REAL_SCHOLARSHIPS.find((s) => s.slug === slug);
+  const scholarships = await getRealScholarships();
+  const scholarship = scholarships.find((s) => s.slug === slug);
   if (!scholarship) notFound();
 
   // Heuristic eligibility: most CSC scholarships are open to all

@@ -2,25 +2,28 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowRight, GraduationCap, ChevronRight, MapPin, Clock, Banknote, Globe, Award } from 'lucide-react';
-import { universities as staticUniversities, programs as staticPrograms, type Program } from '@/lib/data';
+import { getAllUniversities, getAllPrograms, type Program, type University } from '@/lib/data-fetcher';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sica.com.cn';
 
 // URL slug ↔ discipline. Slugs are URL-safe variants of the
-// `discipline` field on each program. The mapping is generated at
-// build time (see slugifyDiscipline).
+// `discipline` field on each program. The mapping is computed from
+// the live DB at build time (see slugifyDiscipline).
 const slugifyDiscipline = (s: string) => s.toLowerCase().replace(/\s+/g, '-');
 
-const ALL_DISCIPLINES = Array.from(
-  new Set(staticPrograms.map((p) => p.discipline)),
-).sort();
+// Render on demand with ISR — reads the live DB so newly-added
+// programs / disciplines show up automatically. Cached at the
+// edge for 60s.
+export const revalidate = 60;
 
-const DISCIPLINE_SLUGS = ALL_DISCIPLINES.map(slugifyDiscipline);
+async function getDisciplines() {
+  const programs = await getAllPrograms();
+  return Array.from(new Set(programs.map((p) => p.discipline))).sort();
+}
 
-export const dynamic = 'force-static';
-
-export function generateStaticParams() {
-  return DISCIPLINE_SLUGS.map((d) => ({ discipline: d }));
+export async function generateStaticParams() {
+  const disciplines = await getDisciplines();
+  return disciplines.map((d) => ({ discipline: slugifyDiscipline(d) }));
 }
 
 export async function generateMetadata({
@@ -29,7 +32,8 @@ export async function generateMetadata({
   params: Promise<{ discipline: string }>;
 }): Promise<Metadata> {
   const { discipline: disciplineSlug } = await params;
-  const discipline = ALL_DISCIPLINES.find((d) => slugifyDiscipline(d) === disciplineSlug);
+  const disciplines = await getDisciplines();
+  const discipline = disciplines.find((d) => slugifyDiscipline(d) === disciplineSlug);
   if (!discipline) return { title: 'Not Found' };
 
   const title = `${discipline} Programs in China for International Students (2026)`;
@@ -55,25 +59,30 @@ export default async function MajorPage({
   params: Promise<{ discipline: string }>;
 }) {
   const { discipline: disciplineSlug } = await params;
-  const discipline = ALL_DISCIPLINES.find((d) => slugifyDiscipline(d) === disciplineSlug);
+  const [disciplines, programs, unis] = await Promise.all([
+    getDisciplines(),
+    getAllPrograms(),
+    getAllUniversities(),
+  ]);
+  const discipline = disciplines.find((d) => slugifyDiscipline(d) === disciplineSlug);
   if (!discipline) notFound();
 
   // All programs in this discipline, with the parent university
   // resolved so we can show uni context.
-  const programsInMajor: Array<{ program: Program; uni: (typeof staticUniversities)[number] | undefined }> =
-    staticPrograms
+  const programsInMajor: Array<{ program: Program; uni: University | undefined }> =
+    programs
       .filter((p) => p.discipline === discipline)
       .map((p) => ({
         program: p,
-        uni: staticUniversities.find((u) => u.slug === p.universitySlug),
+        uni: unis.find((u) => u.slug === p.universitySlug),
       }));
 
   // Unique universities offering this major
   const uniqueUnis = Array.from(
     new Set(programsInMajor.map((p) => p.program.universitySlug)),
   )
-    .map((slug) => staticUniversities.find((u) => u.slug === slug))
-    .filter((u): u is (typeof staticUniversities)[number] => Boolean(u))
+    .map((slug) => unis.find((u) => u.slug === slug))
+    .filter((u): u is University => Boolean(u))
     .sort((a, b) => a.ranking - b.ranking);
 
   // Quick aggregate stats

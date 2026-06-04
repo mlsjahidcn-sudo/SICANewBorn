@@ -15,20 +15,29 @@ import {
   Users,
   Calendar,
 } from 'lucide-react';
-import { universities as staticUniversities } from '@/lib/data';
+import { getAllUniversities } from '@/lib/data-fetcher';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sica.com.cn';
 
 // All ranked universities, sorted. The picker and the slug validation
 // both pull from this list, so the compare page never produces a 404
-// for a known pair.
-const RANKED_UNIS = [...staticUniversities]
-  .filter((u) => u.ranking > 0)
-  .sort((a, b) => a.ranking - b.ranking);
+// for a known pair. Reads the live DB at render time (with static
+// fallback) so newly-added AI-generated or admin-imported
+// universidades are picked up automatically.
+async function getRankedUnis() {
+  const unis = await getAllUniversities();
+  return unis
+    .filter((u) => u.ranking > 0)
+    .sort((a, b) => a.ranking - b.ranking);
+}
 
-// Pre-render every valid pair. 8 ranked universities → 28 unique pairs.
-export function generateStaticParams() {
-  const slugs = RANKED_UNIS.map((u) => u.slug);
+// Pre-render every valid pair. 8 ranked universidades → 28 unique
+// pairs; 9 → 36; etc. Reads the live list at build time so newly
+// added universidades (post-build) can be visited directly without
+// waiting for the next deploy.
+export async function generateStaticParams() {
+  const unis = await getRankedUnis();
+  const slugs = unis.map((u) => u.slug);
   const pairs: Array<{ a: string; b: string }> = [];
   for (let i = 0; i < slugs.length; i++) {
     for (let j = i + 1; j < slugs.length; j++) {
@@ -44,8 +53,9 @@ export async function generateMetadata({
   params: Promise<{ a: string; b: string }>;
 }): Promise<Metadata> {
   const { a, b } = await params;
-  const uniA = RANKED_UNIS.find((u) => u.slug === a);
-  const uniB = RANKED_UNIS.find((u) => u.slug === b);
+  const unis = await getRankedUnis();
+  const uniA = unis.find((u) => u.slug === a);
+  const uniB = unis.find((u) => u.slug === b);
   if (!uniA || !uniB) return { title: 'Compare universities' };
 
   const title = `${uniA.name} vs ${uniB.name}: Side-by-Side Comparison (2026)`;
@@ -71,8 +81,9 @@ export default async function ComparePage({
   params: Promise<{ a: string; b: string }>;
 }) {
   const { a, b } = await params;
-  const uniA = RANKED_UNIS.find((u) => u.slug === a);
-  const uniB = RANKED_UNIS.find((u) => u.slug === b);
+  const unis = await getRankedUnis();
+  const uniA = unis.find((u) => u.slug === a);
+  const uniB = unis.find((u) => u.slug === b);
   if (!uniA || !uniB) notFound();
 
   // Build a one-row-per-attribute comparison table. Using arrays of

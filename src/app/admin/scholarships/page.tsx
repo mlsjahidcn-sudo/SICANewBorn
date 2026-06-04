@@ -1,20 +1,59 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Plus, Pencil, Trash2, ExternalLink } from 'lucide-react';
 import { scholarships as staticScholarships, type Scholarship } from '@/lib/data';
+import { apiFetch } from '@/lib/api-client';
 import { ToastProvider, useToast } from '@/components/admin/toast';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
 
 function ScholarshipsPageInner() {
   const router = useRouter();
   const { addToast } = useToast();
+  // Start with static data so the table renders immediately. On
+  // mount we replace this with the merged static+DB list so admin
+  // sees everything that exists in either source — same pattern as
+  // /admin/programs.
   const [scholarships, setScholarships] = useState<Scholarship[]>(staticScholarships);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<Scholarship | null>(null);
+
+  // Fetch live scholarships from the API and merge with the
+  // static fallback by slug. DB wins on conflict (richer data,
+  // fresher edits). Static rows that have no DB counterpart are
+  // kept so pre-seeded entries still appear in dev / pre-migration
+  // state.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiFetch('/api/scholarships?limit=200');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const dbScholarships: Scholarship[] = data.scholarships || [];
+        if (cancelled) return;
+        const merged = mergeBySlug(dbScholarships, staticScholarships);
+        setScholarships(merged);
+      } catch {
+        if (!cancelled) {
+          addToast(
+            'Could not reach /api/scholarships — showing local fallback. ' +
+              'If you recently added scholarships, refresh to retry.',
+            'error',
+          );
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [addToast]);
 
   const filtered = scholarships.filter(s => {
     const matchSearch = s.name.toLowerCase().includes(search.toLowerCase()) || s.nameCn.includes(search);
@@ -24,7 +63,7 @@ function ScholarshipsPageInner() {
 
   const handleDelete = useCallback(async (schol: Scholarship) => {
     try {
-      const res = await fetch(`/api/scholarships/${schol.slug}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/scholarships/${schol.slug}`, { method: 'DELETE' });
       if (res.ok) {
         setScholarships(prev => prev.filter(s => s.slug !== schol.slug));
         addToast('Scholarship deleted successfully', 'success');
@@ -145,8 +184,16 @@ function ScholarshipsPageInner() {
             </tbody>
           </table>
         </div>
-        <div className="px-4 py-3 border-t border-gray-200 bg-[#F3F4F6] text-xs text-[#4B5563]">
-          Showing {filtered.length} of {scholarships.length} scholarships
+        <div className="px-4 py-3 border-t border-gray-200 bg-[#F3F4F6] text-xs text-[#4B5563] flex items-center justify-between">
+          <span>
+            Showing {filtered.length} of {scholarships.length} scholarships
+          </span>
+          {loading && (
+            <span className="inline-flex items-center gap-1.5">
+              <span className="inline-block h-2.5 w-2.5 border-2 border-[#1B2A4A] border-t-transparent rounded-full animate-spin" />
+              Syncing latest…
+            </span>
+          )}
         </div>
       </div>
 
@@ -167,5 +214,24 @@ export default function ScholarshipsPage() {
     <ToastProvider>
       <ScholarshipsPageInner />
     </ToastProvider>
+  );
+}
+
+/**
+ * Merge DB-fetched scholarships with the static fallback by slug.
+ * DB rows win on conflict (richer data, fresher edits). Static
+ * rows that have no DB counterpart are kept so pre-seeded entries
+ * still appear in dev / pre-migration state. Result is sorted by
+ * name for stable display.
+ */
+function mergeBySlug(
+  primary: Scholarship[],
+  secondary: Scholarship[],
+): Scholarship[] {
+  const bySlug = new Map<string, Scholarship>();
+  for (const s of secondary) bySlug.set(s.slug, s);
+  for (const s of primary) bySlug.set(s.slug, s);
+  return Array.from(bySlug.values()).sort((a, b) =>
+    a.name.localeCompare(b.name, 'en'),
   );
 }

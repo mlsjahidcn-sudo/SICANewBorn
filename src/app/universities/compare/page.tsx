@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowRight, GraduationCap, Check } from 'lucide-react';
-import { universities as staticUniversities } from '@/lib/data';
+import { universities as staticUniversities, type University } from '@/lib/data';
 
 /**
  * Picker UI for the /universities/compare feature.
@@ -15,20 +15,56 @@ import { universities as staticUniversities } from '@/lib/data';
  *
  * The dedicated page is the SEO value — this picker is just for
  * users who don't have a specific pair in mind.
+ *
+ * Fetches the live university list on mount (DB first, static
+ * fallback) so newly-added AI-generated or admin-imported
+ * universidades show up here too — not just the 8 in the seed
+ * data.
  */
 export default function ComparePickerPage() {
   const router = useRouter();
   const [selected, setSelected] = useState<string[]>([]);
-
-  // Show all ranked universities. Sorted by ranking ascending so
-  // top-3 pairs are visually adjacent.
-  const unis = useMemo(
-    () =>
-      [...staticUniversities]
-        .filter((u) => u.ranking > 0)
-        .sort((a, b) => a.ranking - b.ranking),
-    [],
+  // Start with static so the grid is never empty (avoids layout
+  // shift on slow networks). On mount we replace this with the
+  // merged live list.
+  const [unis, setUnis] = useState<University[]>(() =>
+    [...staticUniversities]
+      .filter((u) => u.ranking > 0)
+      .sort((a, b) => a.ranking - b.ranking),
   );
+
+  // Fetch live universities. Merge with the static fallback by
+  // slug so pre-seeded entries are always available. Sort by
+  // ranking so top-3 pairs are visually adjacent.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/universities?limit=200');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        const dbUnis: University[] = data.universities || [];
+        if (dbUnis.length === 0) return;
+        const merged = mergeBySlug(dbUnis, staticUniversities);
+        setUnis(
+          merged
+            .filter((u) => (u.ranking ?? 0) > 0)
+            .sort((a, b) => a.ranking - b.ranking),
+        );
+      } catch {
+        // keep static fallback silently
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Total number of unique pairs: C(n, 2). Updates as the live
+  // list grows so we never have a stale "28 pairs" footer once
+  // universities are added.
+  const totalPairs = (unis.length * (unis.length - 1)) / 2;
 
   const toggle = (slug: string) => {
     setSelected((prev) => {
@@ -183,8 +219,10 @@ export default function ComparePickerPage() {
 
 // Top-of-mind pairs for users. These get indexed first and surface
 // prominently on the picker page. Order matters: top of list = most
-// commonly searched. The picker can still produce any of the 28
-// unique pairs from the 8 partner universities.
+// commonly searched. The picker can still produce any pair from the
+// live list. Pairs that don't have both sides in the live list are
+// hidden automatically (popularPairs.map filters with the
+// `if (!uniA || !uniB) return null;` guard above).
 const popularPairs: Array<[string, string]> = [
   ['tsinghua-university', 'peking-university'],
   ['tsinghua-university', 'fudan-university'],
@@ -197,4 +235,13 @@ const popularPairs: Array<[string, string]> = [
   ['wuhan-university', 'sun-yat-sen-university'],
 ];
 
-const totalPairs = (8 * 7) / 2; // 28
+/** Merge DB-fetched universities with the static fallback by slug.
+ *  DB wins on conflict (richer data, fresher edits). Static rows
+ *  that have no DB counterpart are kept so pre-seeded entries
+ *  always render even when the DB is empty / pre-migration. */
+function mergeBySlug(primary: University[], secondary: University[]): University[] {
+  const bySlug = new Map<string, University>();
+  for (const u of secondary) bySlug.set(u.slug, u);
+  for (const u of primary) bySlug.set(u.slug, u);
+  return Array.from(bySlug.values());
+}

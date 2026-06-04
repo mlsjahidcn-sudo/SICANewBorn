@@ -3,17 +3,21 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Award, ChevronRight, ArrowRight, GraduationCap, MapPin, Banknote, Globe } from 'lucide-react';
 import {
-  programs as staticPrograms,
-  universities as staticUniversities,
-  scholarships as staticScholarships,
-} from '@/lib/data';
+  getAllPrograms,
+  getAllUniversities,
+  getAllScholarships,
+} from '@/lib/data-fetcher';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sica.com.cn';
 
-export const dynamic = 'force-static';
+// Render on demand with ISR — reads the live DB so newly-added
+// programs and admin-curated scholarships show up automatically.
+// Cached at the edge for 60s.
+export const revalidate = 60;
 
-export function generateStaticParams() {
-  return staticPrograms.map((p) => ({ slug: p.slug }));
+export async function generateStaticParams() {
+  const programs = await getAllPrograms();
+  return programs.map((p) => ({ slug: p.slug }));
 }
 
 export async function generateMetadata({
@@ -22,10 +26,14 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const program = staticPrograms.find((p) => p.slug === slug);
+  const [programs, unis] = await Promise.all([
+    getAllPrograms(),
+    getAllUniversities(),
+  ]);
+  const program = programs.find((p) => p.slug === slug);
   if (!program) return { title: 'Not Found' };
 
-  const uni = staticUniversities.find((u) => u.slug === program.universitySlug);
+  const uni = unis.find((u) => u.slug === program.universitySlug);
   const uniName = uni?.name || 'this university';
 
   const title = `Scholarships for ${program.name} at ${uniName} (2026)`;
@@ -45,15 +53,20 @@ export default async function ProgramScholarshipsPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const program = staticPrograms.find((p) => p.slug === slug);
+  const [programs, unis, allScholarshipsList] = await Promise.all([
+    getAllPrograms(),
+    getAllUniversities(),
+    getAllScholarships(),
+  ]);
+  const program = programs.find((p) => p.slug === slug);
   if (!program) notFound();
 
-  const uni = staticUniversities.find((u) => u.slug === program.universitySlug);
+  const uni = unis.find((u) => u.slug === program.universitySlug);
 
-  // All 10 scholarships — these are national scholarships open to
+  // All scholarships — these are national scholarships open to
   // any SICA partner university. SICA helps with the application
   // for each.
-  const allScholarships = staticScholarships.filter((s) =>
+  const allScholarships = allScholarshipsList.filter((s) =>
     s.slug.includes('scholarship') || s.slug.startsWith('csc-'),
   );
 

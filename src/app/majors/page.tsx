@@ -1,13 +1,16 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowRight, GraduationCap, ChevronRight } from 'lucide-react';
-import { programs as staticPrograms } from '@/lib/data';
+import { getAllPrograms } from '@/lib/data-fetcher';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sica.com.cn';
 
 const slugifyDiscipline = (s: string) => s.toLowerCase().replace(/\s+/g, '-');
 
-export const dynamic = 'force-static';
+// Render on demand with ISR — reads the live DB so newly-added
+// programs / disciplines show up automatically. Cached at the
+// edge for 60s.
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: 'Study by Major in China: All Fields of Study (2026)',
@@ -16,20 +19,18 @@ export const metadata: Metadata = {
   alternates: { canonical: `${SITE_URL}/majors` },
 };
 
-export default function MajorsIndexPage() {
+export default async function MajorsIndexPage() {
+  const programs = await getAllPrograms();
+
   const counts: Record<string, number> = {};
-  const uniCounts: Record<string, number> = {};
-  for (const p of staticPrograms) {
+  for (const p of programs) {
     counts[p.discipline] = (counts[p.discipline] || 0) + 1;
-    uniCounts[p.discipline] = uniCounts[p.discipline]
-      ? new Set([...Array(uniCounts[p.discipline])].map((_, i) => p.universitySlug)).size
-      : 1;
   }
 
   // Build a unique university count per discipline
   const uniCountPerDisc: Record<string, number> = {};
   const seen: Record<string, Set<string>> = {};
-  for (const p of staticPrograms) {
+  for (const p of programs) {
     if (!seen[p.discipline]) seen[p.discipline] = new Set();
     seen[p.discipline].add(p.universitySlug);
   }

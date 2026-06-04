@@ -2,18 +2,26 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ChevronRight, ArrowRight, MapPin, Trophy, GraduationCap, Clock, Banknote, Globe, Award } from 'lucide-react';
-import { universities as staticUniversities, programs as staticPrograms } from '@/lib/data';
+import { getAllUniversities, getAllPrograms } from '@/lib/data-fetcher';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sica.com.cn';
 
-const RANKED_UNIS = [...staticUniversities]
-  .filter((u) => u.ranking > 0)
-  .sort((a, b) => a.ranking - b.ranking);
+// Render on demand with ISR — reads the live DB so newly-added
+// universidades (post-build) show up automatically, and the
+// per-university program list stays current with admin edits.
+// Cached at the edge for 60s to keep response time fast.
+export const revalidate = 60;
 
-export const dynamic = 'force-static';
+async function getRankedUnis() {
+  const unis = await getAllUniversities();
+  return unis
+    .filter((u) => u.ranking > 0)
+    .sort((a, b) => a.ranking - b.ranking);
+}
 
-export function generateStaticParams() {
-  return RANKED_UNIS.map((u) => ({ slug: u.slug }));
+export async function generateStaticParams() {
+  const unis = await getRankedUnis();
+  return unis.map((u) => ({ slug: u.slug }));
 }
 
 export async function generateMetadata({
@@ -22,7 +30,8 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const uni = RANKED_UNIS.find((u) => u.slug === slug);
+  const unis = await getRankedUnis();
+  const uni = unis.find((u) => u.slug === slug);
   if (!uni) return { title: 'Not Found' };
 
   const title = `Programs at ${uni.name} for International Students (2026)`;
@@ -48,10 +57,14 @@ export default async function UniversityProgramsPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const uni = RANKED_UNIS.find((u) => u.slug === slug);
+  const [unis, allPrograms] = await Promise.all([
+    getRankedUnis(),
+    getAllPrograms(),
+  ]);
+  const uni = unis.find((u) => u.slug === slug);
   if (!uni) notFound();
 
-  const programs = staticPrograms.filter((p) => p.universitySlug === slug);
+  const programs = allPrograms.filter((p) => p.universitySlug === slug);
 
   // Group by degree level
   const byDegree = {

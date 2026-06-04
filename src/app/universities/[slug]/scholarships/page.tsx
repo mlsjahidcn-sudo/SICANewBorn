@@ -3,21 +3,28 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Award, ChevronRight, ArrowRight, MapPin, Trophy, GraduationCap } from 'lucide-react';
 import {
-  universities as staticUniversities,
-  scholarships as staticScholarships,
-  programs as staticPrograms,
-} from '@/lib/data';
+  getAllUniversities,
+  getAllScholarships,
+  getAllPrograms,
+} from '@/lib/data-fetcher';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sica.com.cn';
 
-const RANKED_UNIS = [...staticUniversities]
-  .filter((u) => u.ranking > 0)
-  .sort((a, b) => a.ranking - b.ranking);
+// Render on demand with ISR — reads the live DB so newly-added
+// universidades and admin-curated programs show up automatically.
+// Cached at the edge for 60s.
+export const revalidate = 60;
 
-export const dynamic = 'force-static';
+async function getRankedUnis() {
+  const unis = await getAllUniversities();
+  return unis
+    .filter((u) => u.ranking > 0)
+    .sort((a, b) => a.ranking - b.ranking);
+}
 
-export function generateStaticParams() {
-  return RANKED_UNIS.map((u) => ({ slug: u.slug }));
+export async function generateStaticParams() {
+  const unis = await getRankedUnis();
+  return unis.map((u) => ({ slug: u.slug }));
 }
 
 export async function generateMetadata({
@@ -26,7 +33,8 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const uni = RANKED_UNIS.find((u) => u.slug === slug);
+  const unis = await getRankedUnis();
+  const uni = unis.find((u) => u.slug === slug);
   if (!uni) return { title: 'Not Found' };
 
   const title = `${uni.name} Scholarships for International Students (2026)`;
@@ -46,19 +54,24 @@ export default async function UniversityScholarshipsPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const uni = RANKED_UNIS.find((u) => u.slug === slug);
+  const [unis, allScholarshipsList, allPrograms] = await Promise.all([
+    getRankedUnis(),
+    getAllScholarships(),
+    getAllPrograms(),
+  ]);
+  const uni = unis.find((u) => u.slug === slug);
   if (!uni) notFound();
 
   // Programs at this university with scholarshipAvailable=true
-  const programsWithScholarship = staticPrograms.filter(
+  const programsWithScholarship = allPrograms.filter(
     (p) => p.universitySlug === slug && p.scholarshipAvailable,
   );
 
-  // All 10 scholarships (the per-uni filtering would be too narrow
+  // All scholarships (the per-uni filtering would be too narrow
   // — most scholarships are national and applicable to any uni).
   // Show all of them, with a callout that "applies to all SICA
   // partner universities including [this one]."
-  const allScholarships = staticScholarships.filter((s) =>
+  const allScholarships = allScholarshipsList.filter((s) =>
     s.slug.includes('scholarship') || s.slug.startsWith('csc-') || s.slug === 'mofcom-scholarship',
   );
 
