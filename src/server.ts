@@ -13,18 +13,26 @@ import next from 'next';
  * production tries to acquire `.next/dev/lock`, which is exactly the
  * failure mode we hit on Railway.
  *
- * Detection order (first match wins):
- *   1. `COZE_PROJECT_ENV=DEV`  → dev mode (Coze dev)
- *   2. `NODE_ENV=development`  → dev mode (standard)
- *   3. anything else           → production mode (default)
+ * Detection logic — read in order, first match wins:
+ *   1. `COZE_PROJECT_ENV=DEV`         → dev (Coze dev)
+ *   2. `COZE_PROJECT_ENV=PROD`        → production (Coze prod)
+ *   3. `NODE_ENV=production`          → production (Railway, Docker, npm start)
+ *   4. anything else                  → dev (default; covers `pnpm dev` locally)
  *
- * This way Railway (NODE_ENV=production by default in their
- * Nixpacks builder) gets the production build. Coze still works
- * because they set COZE_PROJECT_ENV=PROD in prod and =DEV in dev.
+ * This way:
+ *   - Local `pnpm dev`              → dev mode (no env vars set)
+ *   - Local `NODE_ENV=production node dist/server.js` → production
+ *   - Railway / Docker             → production (NODE_ENV=production by default)
+ *   - Coze dev                      → dev (COZE_PROJECT_ENV=DEV)
+ *   - Coze prod                     → production (COZE_PROJECT_ENV=PROD)
  */
-const dev =
-  process.env.COZE_PROJECT_ENV === 'DEV' ||
-  process.env.NODE_ENV === 'development';
+function resolveDevMode(): boolean {
+  if (process.env.COZE_PROJECT_ENV === 'DEV') return true;
+  if (process.env.COZE_PROJECT_ENV === 'PROD') return false;
+  if (process.env.NODE_ENV === 'production') return false;
+  return true; // default to dev (matches local `pnpm dev` behavior)
+}
+const dev = resolveDevMode();
 
 const hostname = process.env.HOSTNAME || '0.0.0.0';
 const port = parseInt(process.env.PORT || '3000', 10);
