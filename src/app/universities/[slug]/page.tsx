@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import { useI18n } from '@/lib/i18n';
-import { type University } from '@/lib/data';
+import { type University, type Program } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -39,10 +39,18 @@ export default function UniversityDetailPage() {
   const [selectedImage, setSelectedImage] = useState(0);
   const [uni, setUni] = useState<University | undefined>(undefined);
   const [notFound, setNotFound] = useState(false);
+  // Real programs from the programs table (linked via university_slug).
+  // These are different from uni.popularPrograms (the AI-generated
+  // string list) — these have their own detail pages at
+  // /programs/[slug] and an admin-managed lifecycle.
+  const [programs, setPrograms] = useState<Program[]>([]);
+  const [programsLoading, setProgramsLoading] = useState(true);
 
   useEffect(() => {
     setUni(undefined);
     setNotFound(false);
+    setPrograms([]);
+    setProgramsLoading(true);
     fetch(`/api/universities/${slug}`)
       .then((res) => (res.ok ? res.json() : Promise.reject(res)))
       .then((data) => {
@@ -53,6 +61,17 @@ export default function UniversityDetailPage() {
         }
       })
       .catch(() => setNotFound(true));
+
+    // Fetch programs linked to this university. The API supports
+    // ?university=slug as a filter. We pull up to 50 — more than
+    // enough for any single university (typical: 3-10 programs).
+    fetch(`/api/programs?university=${encodeURIComponent(slug)}&limit=50`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.programs) setPrograms(data.programs);
+      })
+      .catch(() => {})
+      .finally(() => setProgramsLoading(false));
   }, [slug]);
 
   if (notFound) {
@@ -337,6 +356,16 @@ export default function UniversityDetailPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Available Programs — pulled from the programs
+                    table (linked via university_slug). Different
+                    from uni.popularPrograms (the AI-generated
+                    shortlist). Each row links to /programs/[slug]. */}
+                <AvailableProgramsSection
+                  programs={programs}
+                  loading={programsLoading}
+                  locale={locale}
+                />
               </div>
 
               {/* Sidebar - Image Gallery */}
@@ -678,5 +707,140 @@ export default function UniversityDetailPage() {
         </Tabs>
       </section>
     </>
+  );
+}
+
+/**
+ * Programs offered by this university, fetched from the programs
+ * table (admin-managed, with their own detail pages at
+ * /programs/[slug]). Distinct from uni.popularPrograms which is an
+ * AI-generated shortlist of string labels stored on the university
+ * itself — these are the real, citable, linkable programs.
+ */
+function AvailableProgramsSection({
+  programs,
+  loading,
+  locale,
+}: {
+  programs: Program[];
+  loading: boolean;
+  locale: 'en' | 'zh';
+}) {
+  // Don't render the section at all while loading — saves vertical
+  // space and avoids a flicker. If we end up with no programs, we
+  // also skip the section (an empty "Available Programs" header
+  // with no rows is noise).
+  if (loading) {
+    return (
+      <div className="rounded-none border border-gray-200 bg-white p-6">
+        <h2 className="text-lg font-bold text-[#1B2A4A] flex items-center gap-2">
+          <BookOpen className="h-5 w-5 text-[#1B2A4A]" />
+          {locale === 'en' ? 'Available Programs' : '可申请项目'}
+        </h2>
+        <div className="mt-4 flex items-center gap-2 text-sm text-gray-500">
+          <span className="inline-block h-3 w-3 border-2 border-[#1B2A4A] border-t-transparent rounded-full animate-spin" />
+          {locale === 'en' ? 'Loading programs…' : '正在加载项目…'}
+        </div>
+      </div>
+    );
+  }
+
+  if (programs.length === 0) {
+    return (
+      <div className="rounded-none border border-gray-200 bg-white p-6">
+        <h2 className="text-lg font-bold text-[#1B2A4A] flex items-center gap-2">
+          <BookOpen className="h-5 w-5 text-[#1B2A4A]" />
+          {locale === 'en' ? 'Available Programs' : '可申请项目'}
+        </h2>
+        <p className="mt-3 text-sm text-gray-600 leading-relaxed">
+          {locale === 'en'
+            ? 'Program listings for this university are being curated. Check back soon, or contact a SICA counselor for current offerings.'
+            : '本校的项目信息正在整理中。稍后再来查看，或联系 SICA 顾问了解最新项目。'}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-none border border-gray-200 bg-white p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-bold text-[#1B2A4A] flex items-center gap-2">
+          <BookOpen className="h-5 w-5 text-[#1B2A4A]" />
+          {locale === 'en' ? 'Available Programs' : '可申请项目'}
+        </h2>
+        <span className="text-xs font-semibold text-[#1B2A4A] bg-[#1B2A4A]/10 px-2 py-1">
+          {programs.length} {locale === 'en' ? (programs.length === 1 ? 'program' : 'programs') : '个项目'}
+        </span>
+      </div>
+      <div className="space-y-3">
+        {programs.map((p) => (
+          <Link
+            key={p.slug}
+            href={`/programs/${p.slug}`}
+            className="group block rounded-none border border-gray-200 hover:border-[#9B1B30] bg-[#FAFAF8] hover:bg-white p-4 transition-colors"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <h3 className="font-semibold text-[#1B2A4A] group-hover:text-[#9B1B30] transition-colors">
+                  {locale === 'en' ? p.name : p.nameCn}
+                </h3>
+                {(p.discipline || p.disciplineCn) && (
+                  <p className="text-xs text-[#4B5563] mt-0.5">
+                    {locale === 'en' ? p.discipline : p.disciplineCn}
+                  </p>
+                )}
+              </div>
+              <div className="flex flex-col items-end gap-1 shrink-0">
+                {p.degree && (
+                  <span className="inline-flex items-center text-[10px] font-bold uppercase tracking-wider bg-[#9B1B30] text-white px-2 py-1">
+                    {p.degree}
+                  </span>
+                )}
+                {p.scholarshipAvailable && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#D4A853] border border-[#D4A853]/40 bg-[#D4A853]/10 px-1.5 py-0.5">
+                    <Award className="h-2.5 w-2.5" />
+                    {locale === 'en' ? 'Scholarship' : '奖学金'}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[#4B5563]">
+              {p.duration && (
+                <span className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {locale === 'en' ? p.duration : p.durationCn}
+                </span>
+              )}
+              {p.language && (
+                <span className="flex items-center gap-1">
+                  <Globe className="h-3 w-3" />
+                  {p.language}
+                </span>
+              )}
+              {p.tuition && (
+                <span className="flex items-center gap-1">
+                  <DollarSign className="h-3 w-3" />
+                  {p.tuition}
+                </span>
+              )}
+              {p.intake && (
+                <span className="flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  {locale === 'en' ? p.intake : p.intakeCn}
+                </span>
+              )}
+            </div>
+          </Link>
+        ))}
+      </div>
+      <div className="mt-4 text-center">
+        <Link
+          href={`/programs?university=${encodeURIComponent(programs[0]?.universitySlug ?? '')}`}
+          className="inline-flex items-center gap-1 text-xs font-semibold text-[#9B1B30] hover:underline"
+        >
+          {locale === 'en' ? 'View all programs' : '查看全部项目'} <ArrowRight className="h-3 w-3" />
+        </Link>
+      </div>
+    </div>
   );
 }
