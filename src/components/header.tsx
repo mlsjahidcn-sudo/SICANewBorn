@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { MainNav } from '@/components/main-nav';
+import { SicaLogo } from '@/components/sica-logo';
 
 export function Header() {
   const { t, locale, setLocale } = useI18n();
@@ -38,17 +39,10 @@ export function Header() {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 shrink-0">
-          <div className="flex h-9 w-9 items-center justify-center rounded-none bg-[#9B1B30] text-white font-bold text-sm">
-            S
-          </div>
-          <div className="flex flex-col">
-            <span className="text-lg font-bold leading-tight tracking-tight text-[#1B2A4A]">
-              SICA
-            </span>
-            <span className="text-[10px] leading-tight text-gray-500 tracking-wide">
-              {locale === 'en' ? 'Study in China Agency' : '留学中国咨询'}
-            </span>
-          </div>
+          <SicaLogo className="h-9 w-auto" />
+          <span className="hidden xl:inline text-[10px] leading-tight text-gray-500 tracking-wide border-l border-gray-200 pl-2">
+            {locale === 'en' ? 'Study in China Agency' : '留学中国咨询'}
+          </span>
         </Link>
 
         {/* Desktop Nav with submenus */}

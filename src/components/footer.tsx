@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useI18n } from '@/lib/i18n';
 import { Mail, Phone, MapPin } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { SicaLogo } from '@/components/sica-logo';
 
 export function Footer() {
   const { t, locale } = useI18n();
@@ -19,12 +20,7 @@ export function Footer() {
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-5">
           {/* Brand */}
           <div className="sm:col-span-2 lg:col-span-1">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="flex h-9 w-9 items-center justify-center rounded-none bg-[#C41E3A] text-white font-bold text-sm">
-                S
-              </div>
-              <span className="text-lg font-bold text-white">SICA</span>
-            </div>
+            <SicaLogo variant="white" className="h-9 w-auto mb-4" />
             <p className="text-sm leading-relaxed text-gray-400">
               {t('footer.mission')}
             </p>

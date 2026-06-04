@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, UserPlus } from 'lucide-react';
+import { SicaLogo } from '@/components/sica-logo';
 
 export default function StudentRegisterPage() {
   const { signUp, user, isConfigured } = useAuth();
@@ -57,8 +58,8 @@ export default function StudentRegisterPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-[#9B1B30] mb-4">
-            <span className="text-white font-bold text-2xl">S</span>
+          <div className="mb-4">
+            <SicaLogo className="h-10 w-auto mx-auto" />
           </div>
           <h1 className="text-white text-2xl font-bold">Create Student Account</h1>
           <p className="text-white/50 mt-1 text-sm">Register to start your journey to study in China</p>

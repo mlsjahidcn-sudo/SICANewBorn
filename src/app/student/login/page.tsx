@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, LogIn } from 'lucide-react';
 import { getPostLoginRedirectPath } from '@/lib/auth-redirect';
+import { SicaLogo } from '@/components/sica-logo';
 
 export default function StudentLoginPage() {
   const { signIn, user, isConfigured } = useAuth();
@@ -48,8 +49,8 @@ export default function StudentLoginPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-[#9B1B30] mb-4">
-            <span className="text-white font-bold text-2xl">S</span>
+          <div className="mb-4">
+            <SicaLogo className="h-10 w-auto mx-auto" />
           </div>
           <h1 className="text-white text-2xl font-bold">SICA Student</h1>
           <p className="text-white/50 mt-1 text-sm">Sign in to your student account</p>

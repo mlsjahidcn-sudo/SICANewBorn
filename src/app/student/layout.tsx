@@ -18,6 +18,7 @@ import {
   GraduationCap,
 } from 'lucide-react';
 import Link from 'next/link';
+import { SicaLogo } from '@/components/sica-logo';
 import { Chatbot } from '@/components/ai/Chatbot';
 
 const navItems = [
@@ -100,13 +101,8 @@ function StudentLayoutInner({ children }: { children: React.ReactNode }) {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-200">
-            <div className="w-9 h-9 bg-[#9B1B30] flex items-center justify-center">
-              <span className="text-white font-bold text-sm">S</span>
-            </div>
-            <div>
-              <div className="text-[#1B2A4A] font-bold text-sm tracking-wide">SICA</div>
-              <div className="text-gray-500 text-xs">Student Portal</div>
-            </div>
+            <SicaLogo className="h-8 w-auto" />
+            <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Student</span>
             <button
               className="ml-auto lg:hidden text-gray-500 hover:text-[#1B2A4A]"
               onClick={() => setSidebarOpen(false)}

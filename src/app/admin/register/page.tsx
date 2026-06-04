@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth-context';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, UserPlus, ShieldOff } from 'lucide-react';
+import { SicaLogo } from '@/components/sica-logo';
 
 function AdminRegisterForm() {
   const { signUp, user, isConfigured } = useAuth();
@@ -114,8 +115,8 @@ function AdminRegisterForm() {
     <div className="min-h-screen bg-[#1B2A4A] flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-[#9B1B30] mb-4">
-            <span className="text-white font-bold text-2xl">S</span>
+          <div className="mb-4">
+            <SicaLogo className="h-10 w-auto mx-auto" />
           </div>
           <h1 className="text-white text-2xl font-bold">Create Admin Account</h1>
           <p className="text-white/50 mt-1 text-sm">Register a new administrator account</p>
