@@ -10,11 +10,11 @@ function SettingsPageInner() {
   const [profile, setProfile] = useState({ fullName: '', email: '' });
   const [passwords, setPasswords] = useState({ current: '', newPass: '', confirm: '' });
   const [siteSettings, setSiteSettings] = useState({
-    contactEmail: 'info@sica-china.com',
-    phone: '+86-10-6278-5564',
-    wechat: 'SICA_China',
-    whatsapp: '+8613812345678',
-    address: 'Haidian District, Beijing, China',
+    contactEmail: 'mlsjahid@qq.com',
+    phone: '+86-173-2576-4171',
+    wechat: 'mlsjahid',
+    whatsapp: '+8617325764171',
+    address: 'Guangzhou, China',
     officeHours: 'Mon-Fri: 9:00 AM - 6:00 PM (CST)',
   });
 

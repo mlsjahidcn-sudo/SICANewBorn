@@ -92,7 +92,9 @@ export default function AssessmentPage() {
                   <Mail className="h-5 w-5 text-[#1B2A4A] mt-0.5 flex-shrink-0" />
                   <div>
                     <div className="text-sm font-medium text-[#1F2937]">Email</div>
-                    <div className="text-sm text-[#4B5563]">assessment@sica-edu.com</div>
+                    <a href="mailto:mlsjahid@qq.com" className="text-sm text-[#4B5563] hover:text-[#9B1B30] transition-colors">
+                      mlsjahid@qq.com
+                    </a>
                   </div>
                 </div>
               </div>

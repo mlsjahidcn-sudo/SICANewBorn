@@ -297,7 +297,7 @@ export default async function HomePage() {
                 {t('cta.apply')}
               </Button>
             </Link>
-            <Link href="mailto:info@sica-edu.com">
+            <Link href="mailto:mlsjahid@qq.com">
               <Button
                 variant="outline"
                 className="border-white bg-transparent text-white hover:bg-white/10 hover:text-white font-semibold px-8 py-3 text-base"

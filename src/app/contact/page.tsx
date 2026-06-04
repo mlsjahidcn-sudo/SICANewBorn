@@ -61,14 +61,23 @@ export default async function ContactPage() {
                   <Mail className="h-5 w-5 text-[#1B2A4A] mt-0.5 flex-shrink-0" />
                   <div>
                     <div className="text-sm font-medium text-[#1F2937]">{t('contact.emailLabel')}</div>
-                    <div className="text-sm text-[#4B5563]">info@sica-edu.com</div>
+                    <a href="mailto:mlsjahid@qq.com" className="text-sm text-[#4B5563] hover:text-[#9B1B30] transition-colors">
+                      mlsjahid@qq.com
+                    </a>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <Phone className="h-5 w-5 text-[#1B2A4A] mt-0.5 flex-shrink-0" />
                   <div>
                     <div className="text-sm font-medium text-[#1F2937]">{t('contact.phoneLabel')}</div>
-                    <div className="text-sm text-[#4B5563]">+86 10 8888 9999</div>
+                    <a
+                      href="https://wa.me/8617325764171"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-[#4B5563] hover:text-[#9B1B30] transition-colors"
+                    >
+                      +86 173 2576 4171
+                    </a>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">

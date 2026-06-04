@@ -21,16 +21,16 @@ export function getOrganizationSchema() {
     contactPoint: {
       '@type': 'ContactPoint',
       contactType: 'customer service',
-      email: 'info@sica-edu.com',
-      telephone: '+86-10-8888-9999',
+      email: 'mlsjahid@qq.com',
+      telephone: '+86-173-2576-4171',
       areaServed: 'Worldwide',
       availableLanguage: ['English', 'Chinese'],
     },
     address: {
       '@type': 'PostalAddress',
       streetAddress: 'Zhongguancun South Street',
-      addressLocality: 'Beijing',
-      addressRegion: 'Beijing',
+      addressLocality: 'Guangzhou',
+      addressRegion: 'Guangdong',
       addressCountry: 'CN',
     },
     sameAs: [

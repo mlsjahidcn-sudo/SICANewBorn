@@ -71,17 +71,29 @@ export function Footer() {
               {t('footer.contact')}
             </h4>
             <ul className="space-y-3">
-              <li className="flex items-center gap-2 text-sm text-gray-600">
-                <Mail className="h-4 w-4 shrink-0 text-[#1B2A4A]" />
-                info@sica-edu.com
+              <li>
+                <a
+                  href="mailto:mlsjahid@qq.com"
+                  className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#9B1B30] transition-colors"
+                >
+                  <Mail className="h-4 w-4 shrink-0 text-[#1B2A4A]" />
+                  mlsjahid@qq.com
+                </a>
               </li>
-              <li className="flex items-center gap-2 text-sm text-gray-600">
-                <Phone className="h-4 w-4 shrink-0 text-[#1B2A4A]" />
-                +86 10 8888 6666
+              <li>
+                <a
+                  href="https://wa.me/8617325764171"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#9B1B30] transition-colors"
+                >
+                  <Phone className="h-4 w-4 shrink-0 text-[#1B2A4A]" />
+                  +86 173 2576 4171
+                </a>
               </li>
               <li className="flex items-start gap-2 text-sm text-gray-600">
                 <MapPin className="h-4 w-4 shrink-0 mt-0.5 text-[#1B2A4A]" />
-                {locale === 'en' ? 'Haidian District, Beijing, China' : '中国北京市海淀区'}
+                {locale === 'en' ? 'Guangzhou, China' : '中国广州'}
               </li>
             </ul>
           </div>
