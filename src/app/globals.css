@@ -166,6 +166,22 @@
   100% { left: 100%; }
 }
 
+/* Sticky contact widget: popover slides up + fades in when the
+ * user clicks the floating button. Slight 4px translateY so the
+ * motion feels physical. */
+@keyframes sica-popover-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Notification dot on the floating contact button — a soft pulse
+ * that draws the eye without being annoying. The 0.4 opacity floor
+ * keeps the dot visible even at the trough of the pulse. */
+@keyframes sica-pulse {
+  0%, 100% { transform: scale(1);   opacity: 0.4; }
+  50%      { transform: scale(1.4); opacity: 1;   }
+}
+
 body {
   @apply font-sans;
   background-color: #FAFAF8;

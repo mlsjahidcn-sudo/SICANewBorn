@@ -244,8 +244,12 @@ export const translations: Record<Locale, Record<string, string>> = {
     'contact.hoursSaturday': 'Saturday',
     'contact.hoursSaturdayTime': '10:00 AM - 4:00 PM (CST)',
     'contact.hoursSunday': 'Sunday',
-    'contact.hoursSundayTime': 'Closed',
-    // Admin
+     'contact.hoursSundayTime': 'Closed',
+     // Sticky contact widget
+     'stickyContact.title': 'Chat with SICA',
+     'stickyContact.subtitle': 'We respond within 24 hours',
+     'stickyContact.buttonLabel': 'Open contact options',
+     // Admin
     'admin.loginTitle': 'Admin Portal',
     'admin.loginSubtitle': 'Sign in to manage the SICA platform',
     'admin.email': 'Email Address',
@@ -587,6 +591,10 @@ export const translations: Record<Locale, Record<string, string>> = {
     'contact.hoursSaturdayTime': '上午 10:00 - 下午 4:00（北京时间）',
     'contact.hoursSunday': '周日',
     'contact.hoursSundayTime': '休息',
+    // Sticky contact widget
+    'stickyContact.title': '联系 SICA',
+    'stickyContact.subtitle': '我们将在 24 小时内回复',
+    'stickyContact.buttonLabel': '打开联系方式',
     // Admin
     'admin.loginTitle': '管理后台',
     'admin.loginSubtitle': '登录以管理 SICA 平台',
