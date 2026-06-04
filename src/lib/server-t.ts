@@ -1,8 +1,11 @@
 import { cookies } from 'next/headers';
-import { translations, type Locale } from './i18n-translations';
+import { t, DEFAULT_LOCALE, type Locale } from './i18n-translations';
 
 /**
- * Server-side locale + translation helper. Use in React Server Components:
+ * Server-side locale + translation helper. Use in React Server Components.
+ *
+ * Returns a `t(key, params?)` function that interpolates `{{key}}`
+ * placeholders. Example:
  *
  * ```tsx
  * import { getServerT } from '@/lib/server-t';
@@ -16,8 +19,13 @@ import { translations, type Locale } from './i18n-translations';
  * Reads the `sica-locale` cookie set by the client-side `I18nProvider`.
  * Falls back to English ('en') when the cookie is missing or invalid.
  */
-export async function getServerT(): Promise<(key: string) => string> {
+export async function getServerT(): Promise<(
+  key: string,
+  params?: Record<string, string | number>,
+) => string> {
   const cookieStore = await cookies();
   const locale: Locale = cookieStore.get('sica-locale')?.value === 'zh' ? 'zh' : 'en';
-  return (key: string) => translations[locale]?.[key] ?? key;
+  return (key, params) => t(locale, key, params);
 }
+
+export { t, DEFAULT_LOCALE, type Locale };
