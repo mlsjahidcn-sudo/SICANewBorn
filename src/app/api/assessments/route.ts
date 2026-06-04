@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
 import { sendAssessmentNotification } from '@/lib/email';
+import { scheduleDripSequence } from '@/lib/email/drip/scheduler';
 
 export const dynamic = 'force-dynamic';
 
@@ -98,6 +99,20 @@ export async function POST(request: NextRequest) {
       submittedAt: data.created_at,
     }).catch((err) =>
       console.error('[POST /api/assessments] email notification failed:', err),
+    );
+    // Schedule the 4-step drip sequence (welcome now, day 1/3/7
+    // in the future). Fire-and-forget so it doesn't block the
+    // response. Idempotent — re-submitting the form won't
+    // double-schedule.
+    scheduleDripSequence({
+      sourceKind: 'assessment',
+      sourceId: data.id,
+      email,
+      firstName,
+      country,
+      intendedMajor: (body.intendedMajor as string) || undefined,
+    }).catch((err) =>
+      console.error('[POST /api/assessments] drip schedule failed:', err),
     );
     return NextResponse.json({ success: true, id: data.id });
   } catch (err) {

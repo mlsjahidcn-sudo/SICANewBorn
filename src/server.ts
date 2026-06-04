@@ -64,5 +64,15 @@ app.prepare().then(() => {
     );
     // Make this visible in `docker logs` / `railway logs` / `fly logs`
     // so deployment-success is obvious in the platform's log viewer.
+    // Start the background email-drip scheduler (5-minute tick).
+    // Idempotent — only starts once per process. Auto-skips if
+    // Supabase or Resend env vars are not set.
+    if (!dev) {
+      import('./lib/email/drip/scheduler').then((m) => m.startDripScheduler()).catch((err) =>
+        console.error('[server] failed to start drip scheduler', err),
+      );
+    } else {
+      console.log('[server] dev mode — drip scheduler disabled (set NODE_ENV=production to enable)');
+    }
   });
 });
