@@ -40,9 +40,6 @@ export function Header() {
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 shrink-0">
           <SicaLogo className="h-9 w-auto" />
-          <span className="hidden xl:inline text-[10px] leading-tight text-gray-500 tracking-wide border-l border-gray-200 pl-2">
-            {locale === 'en' ? 'Study in China Agency' : '留学中国咨询'}
-          </span>
         </Link>
 
         {/* Desktop Nav with submenus */}

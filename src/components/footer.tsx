@@ -15,84 +15,87 @@ export function Footer() {
   }, []);
 
   return (
-    <footer className="bg-[#1B2A4A] text-gray-300">
+    <footer className="bg-white border-t-2 border-[#1B2A4A] text-gray-700">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-5">
           {/* Brand */}
           <div className="sm:col-span-2 lg:col-span-1">
-            <SicaLogo variant="white" className="h-9 w-auto mb-4" />
-            <p className="text-sm leading-relaxed text-gray-400">
+            {/* Color logo (the white variant was the right call on
+                the old dark navy footer; now that the bg is light,
+                the brand-color logo stands out naturally). */}
+            <SicaLogo className="h-9 w-auto mb-4" />
+            <p className="text-sm leading-relaxed text-gray-600">
               {t('footer.mission')}
             </p>
           </div>
 
           {/* Explore */}
           <div>
-            <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-white">
+            <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[#1B2A4A]">
               {t('footer.explore')}
             </h4>
             <ul className="space-y-2">
-              <li><Link href="/universities" className="text-sm text-gray-400 hover:text-white transition-colors">{t('nav.universities')}</Link></li>
-              <li><Link href="/universities" className="text-sm text-gray-400 hover:text-white transition-colors">{t('nav.programs')}</Link></li>
-              <li><Link href="/universities" className="text-sm text-gray-400 hover:text-white transition-colors">{t('nav.scholarships')}</Link></li>
-              <li><Link href="/universities" className="text-sm text-gray-400 hover:text-white transition-colors">{t('nav.admissions')}</Link></li>
+              <li><Link href="/universities" className="text-sm text-gray-600 hover:text-[#9B1B30] transition-colors">{t('nav.universities')}</Link></li>
+              <li><Link href="/universities" className="text-sm text-gray-600 hover:text-[#9B1B30] transition-colors">{t('nav.programs')}</Link></li>
+              <li><Link href="/universities" className="text-sm text-gray-600 hover:text-[#9B1B30] transition-colors">{t('nav.scholarships')}</Link></li>
+              <li><Link href="/universities" className="text-sm text-gray-600 hover:text-[#9B1B30] transition-colors">{t('nav.admissions')}</Link></li>
             </ul>
           </div>
 
           {/* Support */}
           <div>
-            <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-white">
+            <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[#1B2A4A]">
               {t('footer.support')}
             </h4>
             <ul className="space-y-2">
-              <li><Link href="#" className="text-sm text-gray-400 hover:text-white transition-colors">{t('footer.howToApply')}</Link></li>
-              <li><Link href="#" className="text-sm text-gray-400 hover:text-white transition-colors">{t('footer.visaGuide')}</Link></li>
-              <li><Link href="#" className="text-sm text-gray-400 hover:text-white transition-colors">{t('footer.scholarshipGuide')}</Link></li>
+              <li><Link href="#" className="text-sm text-gray-600 hover:text-[#9B1B30] transition-colors">{t('footer.howToApply')}</Link></li>
+              <li><Link href="#" className="text-sm text-gray-600 hover:text-[#9B1B30] transition-colors">{t('footer.visaGuide')}</Link></li>
+              <li><Link href="#" className="text-sm text-gray-600 hover:text-[#9B1B30] transition-colors">{t('footer.scholarshipGuide')}</Link></li>
             </ul>
           </div>
 
           {/* Resources */}
           <div>
-            <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-white">
+            <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[#1B2A4A]">
               {t('footer.resources')}
             </h4>
             <ul className="space-y-2">
-              <li><Link href="#" className="text-sm text-gray-400 hover:text-white transition-colors">{t('footer.livingGuide')}</Link></li>
-              <li><Link href="#" className="text-sm text-gray-400 hover:text-white transition-colors">{t('footer.careerSupport')}</Link></li>
+              <li><Link href="#" className="text-sm text-gray-600 hover:text-[#9B1B30] transition-colors">{t('footer.livingGuide')}</Link></li>
+              <li><Link href="#" className="text-sm text-gray-600 hover:text-[#9B1B30] transition-colors">{t('footer.careerSupport')}</Link></li>
             </ul>
           </div>
 
           {/* Contact */}
           <div>
-            <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-white">
+            <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[#1B2A4A]">
               {t('footer.contact')}
             </h4>
             <ul className="space-y-3">
-              <li className="flex items-center gap-2 text-sm text-gray-400">
-                <Mail className="h-4 w-4 shrink-0" />
+              <li className="flex items-center gap-2 text-sm text-gray-600">
+                <Mail className="h-4 w-4 shrink-0 text-[#1B2A4A]" />
                 info@sica-edu.com
               </li>
-              <li className="flex items-center gap-2 text-sm text-gray-400">
-                <Phone className="h-4 w-4 shrink-0" />
+              <li className="flex items-center gap-2 text-sm text-gray-600">
+                <Phone className="h-4 w-4 shrink-0 text-[#1B2A4A]" />
                 +86 10 8888 6666
               </li>
-              <li className="flex items-start gap-2 text-sm text-gray-400">
-                <MapPin className="h-4 w-4 shrink-0 mt-0.5" />
+              <li className="flex items-start gap-2 text-sm text-gray-600">
+                <MapPin className="h-4 w-4 shrink-0 mt-0.5 text-[#1B2A4A]" />
                 {locale === 'en' ? 'Haidian District, Beijing, China' : '中国北京市海淀区'}
               </li>
             </ul>
           </div>
         </div>
 
-        <div className="mt-10 border-t border-gray-700 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="mt-10 border-t border-gray-200 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-gray-500">
             © {year} SICA. {t('footer.rights')}
           </p>
           <div className="flex items-center gap-4">
-            <Link href="#" className="text-xs text-gray-500 hover:text-gray-300 transition-colors">
+            <Link href="#" className="text-xs text-gray-500 hover:text-[#9B1B30] transition-colors">
               {t('footer.privacy')}
             </Link>
-            <Link href="#" className="text-xs text-gray-500 hover:text-gray-300 transition-colors">
+            <Link href="#" className="text-xs text-gray-500 hover:text-[#9B1B30] transition-colors">
               {t('footer.terms')}
             </Link>
           </div>
