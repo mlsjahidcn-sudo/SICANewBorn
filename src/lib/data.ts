@@ -37,6 +37,15 @@ export interface University {
     en: string[];
     zh: string[];
   };
+  /**
+   * University-specific scholarship narrative. Optional — most rows
+   * use the program-level `scholarshipAvailable` flag instead, which
+   * is auto-rendered in the Scholarships tab. This free-text field
+   * is for the longer "Tsinghua's named scholarship portfolio
+   * includes..." narrative.
+   */
+  scholarshipInfo?: string;
+  scholarshipInfoCn?: string;
 }
 
 export const universities: University[] = [

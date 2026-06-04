@@ -41,6 +41,8 @@ You MUST respond with ONLY a valid JSON object (no markdown, no code blocks, no 
     "en": ["English highlight 1", "English highlight 2", "English highlight 3", "English highlight 4"],
     "zh": ["亮点1", "亮点2", "亮点3", "亮点4"]
   },
+  "scholarshipInfo": "University-specific scholarship narrative in English. 2-3 sentences about the named scholarship portfolio this university administers (e.g. 'Tsinghua's Schwarzman Scholars and university merit awards cover up to 100% of tuition for top applicants').",
+  "scholarshipInfoCn": "Same in Chinese (2-3 sentences)",
   "gallery": ["https://images.unsplash.com/photo-XXXXXXXX?w=800", "url2", "url3", "url4"],
   "image": "Main campus/building photo URL (string)",
   "logo": "University logo URL (string, can be empty if not available)"

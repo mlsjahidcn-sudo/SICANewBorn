@@ -113,6 +113,8 @@ function mapUniversityFromDb(row: Record<string, unknown>) {
       en: row.highlights_en ?? [],
       zh: row.highlights_zh ?? [],
     },
+    scholarshipInfo: row.scholarship_info ?? row.scholarshipInfo,
+    scholarshipInfoCn: row.scholarship_info_cn ?? row.scholarshipInfoCn,
   };
 }
 
@@ -157,6 +159,8 @@ function mapUniversityToDb(u: Record<string, unknown>) {
     // src/app/api/universities/route.ts for the full implementation.
     highlights_en: extractHighlightArray(u.highlights, 'en'),
     highlights_zh: extractHighlightArray(u.highlights, 'zh'),
+    scholarship_info: u.scholarshipInfo ?? u.scholarship_info,
+    scholarship_info_cn: u.scholarshipInfoCn ?? u.scholarship_info_cn,
   };
 }
 

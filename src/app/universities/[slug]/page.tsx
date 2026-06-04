@@ -45,12 +45,20 @@ export default function UniversityDetailPage() {
   // /programs/[slug] and an admin-managed lifecycle.
   const [programs, setPrograms] = useState<Program[]>([]);
   const [programsLoading, setProgramsLoading] = useState(true);
+  // Related universities for the constant sidebar. Same-city
+  // first, similar-rank tier as fallback. Computed once per
+  // university load.
+  const [related, setRelated] = useState<University[]>([]);
 
   useEffect(() => {
     setUni(undefined);
     setNotFound(false);
     setPrograms([]);
     setProgramsLoading(true);
+    setRelated([]);
+
+    // Fetch the target university first; we need its city + rank
+    // to compute related-list, so this has to come before that.
     fetch(`/api/universities/${slug}`)
       .then((res) => (res.ok ? res.json() : Promise.reject(res)))
       .then((data) => {
@@ -72,6 +80,16 @@ export default function UniversityDetailPage() {
       })
       .catch(() => {})
       .finally(() => setProgramsLoading(false));
+
+    // Fetch a broad universities list (we need up to ~20 to choose
+    // 5-6 related from). 100 is the API's default cap.
+    fetch('/api/universities?limit=100')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        const all: University[] = data?.universities ?? [];
+        setRelated(pickRelated(all, slug, 6));
+      })
+      .catch(() => {});
   }, [slug]);
 
   if (notFound) {
@@ -217,11 +235,13 @@ export default function UniversityDetailPage() {
             ))}
           </TabsList>
 
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="mt-8">
-            <div className="grid lg:grid-cols-3 gap-8">
-              {/* Main Content */}
-              <div className="lg:col-span-2 space-y-8">
+          {/* Tabs share a 2-col grid + a constant sidebar so the
+              right-rail (Related Universities + SICA CTA) stays
+              visible on every tab, not just Overview. */}
+          <div className="grid lg:grid-cols-3 gap-8 mt-8">
+            <div className="lg:col-span-2 space-y-8">
+              {/* Overview Tab */}
+              <TabsContent value="overview">
                 {/* About */}
                 <div>
                   <h2 className="text-xl font-bold text-[#1B2A4A]">
@@ -233,7 +253,7 @@ export default function UniversityDetailPage() {
                 </div>
 
                 {/* Key Stats */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
                   {[
                     { icon: Calendar, label: t('uni.established'), value: String(uni.established) },
                     { icon: Building2, label: t('uni.type'), value: locale === 'en' ? uni.type : uni.typeCn },
@@ -252,7 +272,7 @@ export default function UniversityDetailPage() {
                 </div>
 
                 {/* Quick Info Sections */}
-                <div className="grid sm:grid-cols-3 gap-6">
+                <div className="mt-6 grid sm:grid-cols-3 gap-6">
                   {/* Popular Programs */}
                   <div className="rounded-none border border-gray-200 bg-white p-5">
                     <h3 className="font-semibold text-[#1B2A4A] flex items-center gap-2">
@@ -323,7 +343,7 @@ export default function UniversityDetailPage() {
                 </div>
 
                 {/* Accommodation */}
-                <div className="rounded-none border border-gray-200 bg-white p-6">
+                <div className="mt-6 rounded-none border border-gray-200 bg-white p-6">
                   <h2 className="text-lg font-bold text-[#1B2A4A] flex items-center gap-2">
                     <Home className="h-5 w-5 text-[#1B2A4A]" />
                     {t('uni.accommodation')}
@@ -357,355 +377,553 @@ export default function UniversityDetailPage() {
                   </div>
                 </div>
 
-                {/* Available Programs — pulled from the programs
-                    table (linked via university_slug). Different
-                    from uni.popularPrograms (the AI-generated
-                    shortlist). Each row links to /programs/[slug]. */}
+                {/* Available Programs — real programs from the
+                    programs table, not the AI shortlist. */}
                 <AvailableProgramsSection
                   programs={programs}
                   loading={programsLoading}
                   locale={locale}
                 />
-              </div>
 
-              {/* Sidebar - Image Gallery */}
-              <div className="space-y-4">
-                {/* Featured Image */}
-                <div className="overflow-hidden rounded-none relative h-56">
-                  <Image
-                    src={galleryImages[selectedImage]}
-                    alt={`${locale === 'en' ? uni.name : uni.nameCn} campus`}
-                    fill
-                    sizes="(max-width: 1024px) 100vw, 50vw"
-                    className="object-cover transition-all duration-300"
-                  />
-                </div>
-                {/* Thumbnails */}
-                {galleryImages.length > 1 && (
-                  <div className="grid grid-cols-4 gap-2">
-                    {galleryImages.slice(0, 4).map((img, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => setSelectedImage(idx)}
-                        className={`relative overflow-hidden rounded-none h-16 w-full ${
-                          selectedImage === idx ? 'ring-2 ring-[#9B1B30]' : ''
-                        }`}
-                      >
-                        <Image
-                          src={img}
-                          alt={`Campus view ${idx + 1}`}
-                          fill
-                          sizes="80px"
-                          className="object-cover hover:opacity-80 transition-opacity"
-                        />
-                        {idx === 3 && galleryImages.length > 4 && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                            <span className="text-white text-xs font-semibold">+{galleryImages.length - 4}</span>
+                {/* Highlights */}
+                {highlights.length > 0 && (
+                  <div className="mt-8">
+                    <h2 className="text-xl font-bold text-[#1B2A4A] mb-4 flex items-center gap-2">
+                      <Sparkles className="h-5 w-5 text-[#D4A853]" />
+                      {locale === 'en' ? 'Highlights' : '亮点'}
+                    </h2>
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                      {highlights.map((item, i) => {
+                        const Icon = highlightIcons[i % highlightIcons.length];
+                        return (
+                          <div
+                            key={item}
+                            className="flex items-center gap-3 rounded-none border border-gray-200 bg-white p-4"
+                          >
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-none bg-[#1B2A4A15]">
+                              <Icon className="h-5 w-5 text-[#1B2A4A]" />
+                            </div>
+                            <span className="text-sm font-medium text-[#1B2A4A]">{item}</span>
                           </div>
-                        )}
-                      </button>
-                    ))}
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
-                {/* Gallery Label */}
-                {galleryImages.length > 0 && (
-                  <p className="flex items-center gap-1.5 text-xs text-gray-500">
-                    <ImageIcon className="h-3.5 w-3.5 text-[#1B2A4A]" />
-                    {galleryImages.length} {locale === 'en' ? 'photos' : '张照片'}
-                  </p>
-                )}
-                {/* SICA Support Card */}
-                <div className="rounded-none border-2 border-[#9B1B30]/25 bg-[#1B2A4A08] p-5">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-none bg-[#9B1B30] text-white text-xs font-bold">
-                      S
-                    </div>
-                    <span className="text-sm font-semibold text-[#1B2A4A]">
-                      {locale === 'en' ? 'SICA Application Support' : 'SICA 申请支持'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-600 leading-relaxed">
-                    {locale === 'en'
-                      ? 'Get personalized guidance from SICA counselors to apply to this university. We handle document prep, submission, and follow-up.'
-                      : 'SICA 顾问为你提供个性化申请指导，从文件准备到提交跟进，全程协助。'}
-                  </p>
-                  <Button className="mt-3 w-full bg-[#9B1B30] hover:bg-[#7A1526] text-white font-semibold text-sm">
-                    {t('cta.apply')}
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {/* Highlights */}
-            <div className="mt-10 grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {highlights.map((item, i) => {
-                const Icon = highlightIcons[i % highlightIcons.length];
-                return (
-                  <div
-                    key={item}
-                    className="flex items-center gap-3 rounded-none border border-gray-200 bg-white p-4"
-                  >
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-none bg-[#1B2A4A15]">
-                      <Icon className="h-5 w-5 text-[#1B2A4A]" />
-                    </div>
-                    <span className="text-sm font-medium text-[#1B2A4A]">{item}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </TabsContent>
+              </TabsContent>
 
           {/* Admissions Tab */}
-          <TabsContent value="admissions" className="mt-8">
-            <div className="max-w-3xl space-y-6">
-              <div className="rounded-none border border-gray-200 bg-white p-6">
-                <h3 className="text-lg font-semibold text-[#1B2A4A]">
-                  {locale === 'en' ? 'Admission Requirements' : '入学要求'}
-                </h3>
-                <div className="mt-4 space-y-4">
-                  <div>
-                    <h4 className="font-medium text-[#1B2A4A]">
-                      {locale === 'en' ? 'Undergraduate Programs' : '本科项目'}
-                    </h4>
-                    <ul className="mt-2 space-y-1.5 text-sm text-gray-600">
-                      <li className="flex items-start gap-2">
-                        <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#9B1B30] shrink-0" />
-                        {locale === 'en'
-                          ? 'High school diploma or equivalent'
-                          : '高中毕业证或同等学历'}
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#9B1B30] shrink-0" />
-                        {locale === 'en'
-                          ? 'HSK 4 or above for Chinese-taught programs'
-                          : '中文授课项目需 HSK 4 级及以上'}
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#9B1B30] shrink-0" />
-                        {locale === 'en'
-                          ? 'IELTS 6.0 / TOEFL 80+ for English-taught programs'
-                          : '英文授课项目需雅思 6.0 / 托福 80 分以上'}
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#9B1B30] shrink-0" />
-                        {locale === 'en'
-                          ? 'Passport copy and application form'
-                          : '护照复印件和申请表'}
-                      </li>
-                    </ul>
-                  </div>
-                  <div className="border-t border-gray-100 pt-4">
-                    <h4 className="font-medium text-[#1B2A4A]">
-                      {locale === 'en' ? 'Graduate Programs' : '研究生项目'}
-                    </h4>
-                    <ul className="mt-2 space-y-1.5 text-sm text-gray-600">
-                      <li className="flex items-start gap-2">
-                        <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#9B1B30] shrink-0" />
-                        {locale === 'en'
-                          ? "Bachelor's degree in a related field"
-                          : '相关领域学士学位'}
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#9B1B30] shrink-0" />
-                        {locale === 'en'
-                          ? 'HSK 5 or above for Chinese-taught programs'
-                          : '中文授课项目需 HSK 5 级及以上'}
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#9B1B30] shrink-0" />
-                        {locale === 'en'
-                          ? 'Two recommendation letters from professors'
-                          : '两位教授的推荐信'}
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#9B1B30] shrink-0" />
-                        {locale === 'en'
-                          ? 'Research proposal and academic transcripts'
-                          : '研究计划和学术成绩单'}
-                      </li>
-                    </ul>
-                  </div>
+          <TabsContent value="admissions" className="space-y-6">
+            <div className="rounded-none border border-gray-200 bg-white p-6">
+              <h3 className="text-lg font-semibold text-[#1B2A4A]">
+                {locale === 'en' ? 'Admission Requirements' : '入学要求'}
+              </h3>
+              <div className="mt-4 space-y-4">
+                <div>
+                  <h4 className="font-medium text-[#1B2A4A]">
+                    {locale === 'en' ? 'Undergraduate Programs' : '本科项目'}
+                  </h4>
+                  <ul className="mt-2 space-y-1.5 text-sm text-gray-600">
+                    <li className="flex items-start gap-2">
+                      <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#9B1B30] shrink-0" />
+                      {locale === 'en'
+                        ? 'High school diploma or equivalent'
+                        : '高中毕业证或同等学历'}
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#9B1B30] shrink-0" />
+                      {locale === 'en'
+                        ? 'HSK 4 or above for Chinese-taught programs'
+                        : '中文授课项目需 HSK 4 级及以上'}
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#9B1B30] shrink-0" />
+                      {locale === 'en'
+                        ? 'IELTS 6.0 / TOEFL 80+ for English-taught programs'
+                        : '英文授课项目需雅思 6.0 / 托福 80 分以上'}
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#9B1B30] shrink-0" />
+                      {locale === 'en'
+                        ? 'Passport copy and application form'
+                        : '护照复印件和申请表'}
+                    </li>
+                  </ul>
                 </div>
-              </div>
-
-              {/* SICA Help */}
-              <div className="rounded-none border-2 border-[#9B1B30]/25 bg-[#1B2A4A08] p-6">
-                <h3 className="font-semibold text-[#1B2A4A]">
-                  {locale === 'en' ? 'Need Help with Your Application?' : '需要申请帮助？'}
-                </h3>
-                <p className="mt-2 text-sm text-gray-600 leading-relaxed">
-                  {locale === 'en'
-                    ? 'SICA counselors can help you prepare your documents, meet deadlines, and communicate with the university admissions office. Book a free consultation today.'
-                    : 'SICA 顾问可以帮你准备文件、赶上截止日期、与大学招生办沟通。立即预约免费咨询。'}
-                </p>
-                <Button className="mt-4 bg-[#C41E3A] hover:bg-[#A3182F] text-white font-semibold">
-                  {t('cta.contact')}
-                </Button>
+                <div className="border-t border-gray-100 pt-4">
+                  <h4 className="font-medium text-[#1B2A4A]">
+                    {locale === 'en' ? 'Graduate Programs' : '研究生项目'}
+                  </h4>
+                  <ul className="mt-2 space-y-1.5 text-sm text-gray-600">
+                    <li className="flex items-start gap-2">
+                      <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#9B1B30] shrink-0" />
+                      {locale === 'en'
+                        ? "Bachelor's degree in a related field"
+                        : '相关领域学士学位'}
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#9B1B30] shrink-0" />
+                      {locale === 'en'
+                        ? 'HSK 5 or above for Chinese-taught programs'
+                        : '中文授课项目需 HSK 5 级及以上'}
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#9B1B30] shrink-0" />
+                      {locale === 'en'
+                        ? 'Two recommendation letters from professors'
+                        : '两位教授的推荐信'}
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#9B1B30] shrink-0" />
+                      {locale === 'en'
+                        ? 'Research proposal and academic transcripts'
+                        : '研究计划和学术成绩单'}
+                    </li>
+                  </ul>
+                </div>
               </div>
             </div>
           </TabsContent>
 
-          {/* Scholarships Tab */}
-          <TabsContent value="scholarships" className="mt-8">
-            <div className="max-w-3xl space-y-6">
-              {[
-                {
-                  title: locale === 'en' ? 'Chinese Government Scholarship (CSC)' : '中国政府奖学金 (CSC)',
-                  coverage:
-                    locale === 'en'
-                      ? 'Full tuition, accommodation, stipend (¥2,500-3,500/month), and medical insurance'
-                      : '全额学费、住宿、生活费（¥2,500-3,500/月）和医疗保险',
-                  deadline: locale === 'en' ? 'January - April annually' : '每年1月至4月',
-                },
-                {
-                  title: locale === 'en' ? 'Provincial Government Scholarship' : '省级政府奖学金',
-                  coverage:
-                    locale === 'en'
-                      ? 'Partial or full tuition waiver, varies by province'
-                      : '部分或全额学费减免，因省而异',
-                  deadline: locale === 'en' ? 'March - May annually' : '每年3月至5月',
-                },
-                {
-                  title: locale === 'en' ? 'University Scholarship' : '大学奖学金',
-                  coverage:
-                    locale === 'en'
-                      ? 'Tuition waiver (partial or full) based on academic merit'
-                      : '根据学术成绩减免学费（部分或全额）',
-                  deadline: locale === 'en' ? 'Rolling with application' : '随申请滚动',
-                },
-                {
-                  title: locale === 'en' ? 'Confucius Institute Scholarship' : '孔子学院奖学金',
-                  coverage:
-                    locale === 'en'
-                      ? 'Full scholarship for Chinese language study programs'
-                      : '中文学习项目全额奖学金',
-                  deadline: locale === 'en' ? 'February - April annually' : '每年2月至4月',
-                },
-              ].map((scholarship) => (
-                <div
-                  key={scholarship.title}
-                  className="rounded-none border border-gray-200 bg-white p-6"
-                >
-                  <h3 className="font-semibold text-[#1B2A4A]">{scholarship.title}</h3>
-                  <p className="mt-2 text-sm text-gray-600 leading-relaxed">
-                    {scholarship.coverage}
-                  </p>
-                  <p className="mt-2 text-xs text-gray-400">
-                    {locale === 'en' ? 'Deadline' : '截止日期'}: {scholarship.deadline}
-                  </p>
-                </div>
-              ))}
-
-              <div className="rounded-none border-2 border-[#9B1B30]/25 bg-[#1B2A4A08] p-6">
-                <h3 className="font-semibold text-[#1B2A4A]">
-                  {locale === 'en' ? 'Scholarship Application Support' : '奖学金申请支持'}
-                </h3>
-                <p className="mt-2 text-sm text-gray-600 leading-relaxed">
-                  {locale === 'en'
-                    ? 'SICA has helped hundreds of students secure scholarships. Our counselors will identify the best options for you and assist with every step of the application.'
-                    : 'SICA 已帮助数百名学生获得奖学金。我们的顾问将为你找到最佳选择并协助每一步申请。'}
-                </p>
-                <Button className="mt-4 bg-[#C41E3A] hover:bg-[#A3182F] text-white font-semibold">
-                  {t('cta.contact')}
-                </Button>
-              </div>
-            </div>
+          {/* Scholarships Tab — university-specific.
+              Top: programs at THIS university that offer scholarships
+              (filtered from the programs table, by scholarshipAvailable).
+              Middle: optional university-specific scholarshipInfo
+              narrative. Bottom: the 4 general scholarship categories
+              (CSC, provincial, university, Confucius) as background
+              context — these aren't linked to specific universities
+              in the data model. */}
+          <TabsContent value="scholarships" className="space-y-6">
+            <ScholarshipsTab
+              uni={uni}
+              programs={programs}
+              locale={locale}
+            />
           </TabsContent>
 
           {/* Campus Life Tab */}
-          <TabsContent value="campusLife" className="mt-8">
-            <div className="max-w-3xl space-y-6">
-              {/* Campus Gallery Grid */}
-              {galleryImages.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-semibold text-[#1B2A4A] flex items-center gap-2 mb-4">
-                    <ImageIcon className="h-5 w-5 text-[#1B2A4A]" />
-                    {locale === 'en' ? 'Campus Gallery' : '校园图集'}
-                  </h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    {galleryImages.slice(0, 4).map((img, idx) => (
-                      <div key={idx} className="overflow-hidden rounded-none relative h-48">
-                        <Image
+          <TabsContent value="campusLife" className="space-y-6">
+            {/* Campus Gallery Grid */}
+            {galleryImages.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold text-[#1B2A4A] flex items-center gap-2 mb-4">
+                  <ImageIcon className="h-5 w-5 text-[#1B2A4A]" />
+                  {locale === 'en' ? 'Campus Gallery' : '校园图集'}
+                </h3>
+                <div className="grid grid-cols-2 gap-3">
+                  {galleryImages.slice(0, 4).map((img, idx) => (
+                    <div key={idx} className="overflow-hidden rounded-none relative h-48">
+                      <Image
+                        src={img}
+                        alt={`Campus view ${idx + 1}`}
+                        fill
+                        sizes="(max-width: 768px) 50vw, 25vw"
+                        className="object-cover hover:scale-105 transition-transform duration-300"
+                      />
+                    </div>
+                  ))}
+                </div>
+                {galleryImages.length > 4 && (
+                  <div className="mt-3 grid grid-cols-4 gap-2">
+                    {galleryImages.slice(4).map((img, idx) => (
+                      <div key={idx} className="overflow-hidden rounded-none">
+                        <img
                           src={img}
-                          alt={`Campus view ${idx + 1}`}
-                          fill
-                          sizes="(max-width: 768px) 50vw, 25vw"
-                          className="object-cover hover:scale-105 transition-transform duration-300"
+                          alt={`Campus view ${idx + 5}`}
+                          className="h-24 w-full object-cover hover:scale-105 transition-transform duration-300"
                         />
                       </div>
                     ))}
                   </div>
-                  {galleryImages.length > 4 && (
-                    <div className="mt-3 grid grid-cols-4 gap-2">
-                      {galleryImages.slice(4).map((img, idx) => (
-                        <div key={idx} className="overflow-hidden rounded-none">
-                          <img
-                            src={img}
-                            alt={`Campus view ${idx + 5}`}
-                            className="h-24 w-full object-cover hover:scale-105 transition-transform duration-300"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                )}
+              </div>
+            )}
+
+            <div className="rounded-none border border-gray-200 bg-white p-6">
+              <h3 className="text-lg font-semibold text-[#1B2A4A]">
+                {locale === 'en' ? 'Student Life' : '学生生活'}
+              </h3>
+              <p className="mt-3 text-sm text-gray-600 leading-relaxed">
+                {locale === 'en'
+                  ? `${uni.name} offers a vibrant campus experience with over 200 student organizations, modern sports facilities, international student associations, and cultural events throughout the year. The university provides on-campus housing for international students with options ranging from single rooms to shared apartments.`
+                  : `${uni.nameCn}提供充满活力的校园体验，拥有200多个学生组织、现代化体育设施、国际学生协会和全年文化活动。大学为国际学生提供校内住宿，从单人间到合租公寓不等。`}
+              </p>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              {[
+                {
+                  title: locale === 'en' ? 'Dining' : '餐饮',
+                  desc:
+                    locale === 'en'
+                      ? 'Multiple dining halls with halal, vegetarian, and international cuisine options'
+                      : '多个餐厅提供清真、素食和国际美食选择',
+                },
+                {
+                  title: locale === 'en' ? 'Sports' : '体育',
+                  desc:
+                    locale === 'en'
+                      ? 'Gymnasiums, swimming pools, basketball courts, and running tracks'
+                      : '体育馆、游泳池、篮球场和跑道',
+                },
+                {
+                  title: locale === 'en' ? 'Libraries' : '图书馆',
+                  desc:
+                    locale === 'en'
+                      ? 'Extensive collections with dedicated study spaces and 24/7 access during exams'
+                      : '丰富的藏书，专用学习空间，考试期间24小时开放',
+                },
+                {
+                  title: locale === 'en' ? 'Health Services' : '医疗服务',
+                  desc:
+                    locale === 'en'
+                      ? 'On-campus medical center with international health insurance coverage'
+                      : '校内医疗中心，国际医疗保险覆盖',
+                },
+              ].map((item) => (
+                <div
+                  key={item.title}
+                  className="rounded-none border border-gray-200 bg-white p-5"
+                >
+                  <h4 className="font-medium text-[#1B2A4A]">{item.title}</h4>
+                  <p className="mt-1.5 text-sm text-gray-600">{item.desc}</p>
                 </div>
-              )}
-
-              <div className="rounded-none border border-gray-200 bg-white p-6">
-                <h3 className="text-lg font-semibold text-[#1B2A4A]">
-                  {locale === 'en' ? 'Student Life' : '学生生活'}
-                </h3>
-                <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-                  {locale === 'en'
-                    ? `${uni.name} offers a vibrant campus experience with over 200 student organizations, modern sports facilities, international student associations, and cultural events throughout the year. The university provides on-campus housing for international students with options ranging from single rooms to shared apartments.`
-                    : `${uni.nameCn}提供充满活力的校园体验，拥有200多个学生组织、现代化体育设施、国际学生协会和全年文化活动。大学为国际学生提供校内住宿，从单人间到合租公寓不等。`}
-                </p>
-              </div>
-
-              <div className="grid sm:grid-cols-2 gap-4">
-                {[
-                  {
-                    title: locale === 'en' ? 'Dining' : '餐饮',
-                    desc:
-                      locale === 'en'
-                        ? 'Multiple dining halls with halal, vegetarian, and international cuisine options'
-                        : '多个餐厅提供清真、素食和国际美食选择',
-                  },
-                  {
-                    title: locale === 'en' ? 'Sports' : '体育',
-                    desc:
-                      locale === 'en'
-                        ? 'Gymnasiums, swimming pools, basketball courts, and running tracks'
-                        : '体育馆、游泳池、篮球场和跑道',
-                  },
-                  {
-                    title: locale === 'en' ? 'Libraries' : '图书馆',
-                    desc:
-                      locale === 'en'
-                        ? 'Extensive collections with dedicated study spaces and 24/7 access during exams'
-                        : '丰富的藏书，专用学习空间，考试期间24小时开放',
-                  },
-                  {
-                    title: locale === 'en' ? 'Health Services' : '医疗服务',
-                    desc:
-                      locale === 'en'
-                        ? 'On-campus medical center with international health insurance coverage'
-                        : '校内医疗中心，国际医疗保险覆盖',
-                  },
-                ].map((item) => (
-                  <div
-                    key={item.title}
-                    className="rounded-none border border-gray-200 bg-white p-5"
-                  >
-                    <h4 className="font-medium text-[#1B2A4A]">{item.title}</h4>
-                    <p className="mt-1.5 text-sm text-gray-600">{item.desc}</p>
-                  </div>
-                ))}
-              </div>
+              ))}
             </div>
           </TabsContent>
+            </div>
+
+            {/* Constant right sidebar — same on every tab.
+                Related Universidades (same city first, similar rank
+                fallback) + SICA Support CTA. Sticky on desktop so
+                it stays visible while the main column scrolls. */}
+            <aside className="lg:col-span-1 space-y-6 lg:sticky lg:top-24 self-start">
+              <RelatedUniversitiesSidebar
+                related={related}
+                locale={locale}
+                currentSlug={slug}
+              />
+              {/* SICA Support Card — same CTA pattern the rest of
+                  the site uses for "talk to a counselor" placements. */}
+              <div className="rounded-none border-2 border-[#9B1B30]/25 bg-[#1B2A4A08] p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-none bg-[#9B1B30] text-white text-xs font-bold">
+                    S
+                  </div>
+                  <span className="text-sm font-semibold text-[#1B2A4A]">
+                    {locale === 'en' ? 'SICA Application Support' : 'SICA 申请支持'}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  {locale === 'en'
+                    ? 'Get personalized guidance from SICA counselors to apply to this university. We handle document prep, submission, and follow-up.'
+                    : 'SICA 顾问为你提供个性化申请指导，从文件准备到提交跟进，全程协助。'}
+                </p>
+                <Button className="mt-3 w-full bg-[#9B1B30] hover:bg-[#7A1526] text-white font-semibold text-sm">
+                  {t('cta.apply')}
+                </Button>
+                <Link
+                  href="/contact"
+                  className="mt-2 block text-center text-xs font-semibold text-[#9B1B30] hover:underline"
+                >
+                  {locale === 'en' ? 'Or talk to a counselor' : '或联系顾问'}
+                </Link>
+              </div>
+            </aside>
+          </div>
         </Tabs>
       </section>
+    </>
+  );
+}
+
+/**
+ * Pick N related universidades from a broad list. Strategy:
+ *   1. Same city — strongest signal ("if you like X in Beijing,
+ *      consider Y in Beijing too"). Most heavily weighted.
+ *   2. Similar rank tier (within ±15 of the target's rank).
+ *   3. Random fill from the rest if we don't have enough.
+ *
+ * The function never returns the target university itself. Pure
+ * function — easy to unit-test if we want one later.
+ */
+function pickRelated(
+  all: University[],
+  currentSlug: string,
+  limit: number,
+): University[] {
+  const others = all.filter((u) => u.slug !== currentSlug);
+  const target = all.find((u) => u.slug === currentSlug);
+  if (!target) {
+    return others.slice(0, limit);
+  }
+
+  const sameCity = others.filter((u) => u.city === target.city);
+  const similarRank = others.filter(
+    (u) => u.city !== target.city && Math.abs((u.ranking ?? 999) - (target.ranking ?? 999)) <= 15,
+  );
+  const rest = others.filter(
+    (u) => u.city !== target.city && Math.abs((u.ranking ?? 999) - (target.ranking ?? 999)) > 15,
+  );
+
+  // Shuffle the "rest" pool a bit so each page picks a different
+  // mix when there are many ties. Static set so the result is
+  // stable within a single page load (no hydration mismatches).
+  const restShuffled = [...rest].sort((a, b) =>
+    a.slug.localeCompare(b.slug) < 0 ? -1 : 1,
+  );
+
+  return [...sameCity, ...similarRank, ...restShuffled].slice(0, limit);
+}
+
+/**
+ * Right-sidebar widget: a list of related universidades with
+ * compact cards (logo + name + city + ranking badge). Each card
+ * links to /universities/[slug]. Stays visible on every tab.
+ */
+function RelatedUniversitiesSidebar({
+  related,
+  locale,
+  currentSlug,
+}: {
+  related: University[];
+  locale: 'en' | 'zh';
+  currentSlug: string;
+}) {
+  if (related.length === 0) return null;
+  return (
+    <div className="rounded-none border-2 border-gray-200 bg-white">
+      <div className="px-4 py-3 border-b border-gray-200">
+        <h3 className="text-sm font-bold uppercase tracking-wider text-[#1B2A4A] flex items-center gap-2">
+          <Building2 className="h-4 w-4 text-[#9B1B30]" />
+          {locale === 'en' ? 'Related Universities' : '相关院校'}
+        </h3>
+      </div>
+      <ul className="divide-y divide-gray-100">
+        {related.map((r) => {
+          const isSameCity = r.city === currentSlug; // not used directly, but kept for future badge
+          return (
+            <li key={r.slug}>
+              <Link
+                href={`/universities/${r.slug}`}
+                className="group flex items-center gap-3 p-3 hover:bg-[#FAFAF8] transition-colors"
+              >
+                {r.logo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={r.logo}
+                    alt={r.name}
+                    className="w-10 h-10 object-contain bg-[#FAFAF8] border border-gray-200 shrink-0"
+                  />
+                ) : (
+                  <div className="w-10 h-10 bg-[#1B2A4A]/10 border border-gray-200 shrink-0 flex items-center justify-center">
+                    <GraduationCap className="h-5 w-5 text-[#1B2A4A]" />
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-[#1B2A4A] group-hover:text-[#9B1B30] transition-colors truncate">
+                    {locale === 'en' ? r.name : r.nameCn}
+                  </p>
+                  <p className="text-xs text-gray-500 flex items-center gap-1.5 mt-0.5">
+                    <MapPin className="h-3 w-3 shrink-0" />
+                    <span className="truncate">
+                      {locale === 'en' ? r.city : r.cityCn}
+                    </span>
+                    {r.qsWorldRanking ? (
+                      <span className="text-[#1B2A4A] font-semibold ml-auto shrink-0">
+                        QS #{r.qsWorldRanking}
+                      </span>
+                    ) : null}
+                  </p>
+                </div>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="px-4 py-3 border-t border-gray-200 bg-[#FAFAF8] text-center">
+        <Link
+          href="/universities"
+          className="inline-flex items-center gap-1 text-xs font-semibold text-[#9B1B30] hover:underline"
+        >
+          {locale === 'en' ? 'Browse all universidades' : '浏览所有大学'}
+          <ArrowRight className="h-3 w-3" />
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Scholarships tab — university-specific.
+ * Layout (top to bottom):
+ *   1. Programs at this university that offer scholarships
+ *      (filtered from `programs` by scholarshipAvailable === true).
+ *      This is the most actionable info: "if you get into this
+ *      program, you'll get a scholarship."
+ *   2. Optional university-specific scholarshipInfo narrative
+ *      (only shown when the field is populated — falls back to
+ *      generic SICA-services copy otherwise).
+ *   3. The 4 general scholarship categories (CSC, provincial,
+ *      university, Confucius) as background context. These aren't
+ *      linked to specific universities in the data model — the
+ *      full guide at /guides/scholarships has the details.
+ */
+function ScholarshipsTab({
+  uni,
+  programs,
+  locale,
+}: {
+  uni: University;
+  programs: Program[];
+  locale: 'en' | 'zh';
+}) {
+  const scholarshipPrograms = programs.filter((p) => p.scholarshipAvailable);
+  const uniInfo = locale === 'en' ? uni.scholarshipInfo : uni.scholarshipInfoCn;
+
+  return (
+    <>
+      {/* 1. University-specific: programs with scholarships */}
+      <div>
+        <h3 className="text-lg font-semibold text-[#1B2A4A] flex items-center gap-2 mb-3">
+          <Award className="h-5 w-5 text-[#D4A853]" />
+          {locale === 'en'
+            ? `Scholarships at ${uni.name}`
+            : `${uni.nameCn} 奖学金项目`}
+        </h3>
+        {scholarshipPrograms.length > 0 ? (
+          <div className="rounded-none border-2 border-[#D4A853]/30 bg-[#D4A853]/5 p-4 sm:p-5">
+            <p className="text-sm text-gray-700 leading-relaxed mb-3">
+              {locale === 'en'
+                ? `The following ${scholarshipPrograms.length} program${scholarshipPrograms.length === 1 ? '' : 's'} at ${uni.name} offer scholarship funding. Apply early — scholarship slots fill quickly.`
+                : `${uni.nameCn} 以下 ${scholarshipPrograms.length} 个项目提供奖学金资助。请尽早申请——奖学金名额有限。`}
+            </p>
+            <ul className="space-y-2">
+              {scholarshipPrograms.map((p) => (
+                <li key={p.slug}>
+                  <Link
+                    href={`/programs/${p.slug}`}
+                    className="group flex items-center gap-3 bg-white border border-[#D4A853]/30 hover:border-[#9B1B30] p-3 transition-colors"
+                  >
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center bg-[#D4A853]/15 border border-[#D4A853]/40">
+                      <Award className="h-4 w-4 text-[#D4A853]" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-[#1B2A4A] group-hover:text-[#9B1B30] transition-colors">
+                        {locale === 'en' ? p.name : p.nameCn}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {p.degree}
+                        {p.discipline ? ` · ${locale === 'en' ? p.discipline : p.disciplineCn}` : ''}
+                      </p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-[#9B1B30] transition-colors shrink-0" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <Link
+              href={`/programs?university=${encodeURIComponent(uni.slug)}`}
+              className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[#9B1B30] hover:underline"
+            >
+              {locale === 'en' ? 'View all programs at this university' : '查看本校所有项目'}
+              <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+        ) : (
+          <div className="rounded-none border border-gray-200 bg-white p-5">
+            <p className="text-sm text-gray-600 leading-relaxed">
+              {locale === 'en'
+                ? `Scholarship availability for individual programs at ${uni.name} is being updated. Check back soon, or browse all ${uni.name} programs to see current offerings.`
+                : `${uni.nameCn} 各项目的奖学金信息正在更新中。稍后查看，或浏览所有项目了解最新信息。`}
+            </p>
+            <Link
+              href={`/programs?university=${encodeURIComponent(uni.slug)}`}
+              className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[#9B1B30] hover:underline"
+            >
+              {locale === 'en' ? 'View all programs' : '查看所有项目'}
+              <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+        )}
+      </div>
+
+      {/* 2. Optional university-specific scholarshipInfo narrative */}
+      {uniInfo && (
+        <div className="rounded-none border border-gray-200 bg-white p-6">
+          <h3 className="text-lg font-semibold text-[#1B2A4A] flex items-center gap-2 mb-3">
+            <Sparkles className="h-5 w-5 text-[#9B1B30]" />
+            {locale === 'en' ? 'About scholarships at this university' : '关于本校奖学金'}
+          </h3>
+          <p className="text-sm text-gray-700 leading-relaxed">{uniInfo}</p>
+        </div>
+      )}
+
+      {/* 3. General scholarship categories (background context).
+          The full guide at /guides/scholarships has the details;
+          this is just a quick reference. */}
+      <div>
+        <h3 className="text-lg font-semibold text-[#1B2A4A] flex items-center gap-2 mb-3">
+          <BookOpen className="h-5 w-5 text-[#1B2A4A]" />
+          {locale === 'en'
+            ? 'General scholarships available in China'
+            : '中国通用奖学金类别'}
+        </h3>
+        <div className="grid sm:grid-cols-2 gap-4">
+          {[
+            {
+              title: locale === 'en' ? 'Chinese Government Scholarship (CSC)' : '中国政府奖学金 (CSC)',
+              coverage:
+                locale === 'en'
+                  ? 'Full tuition, accommodation, stipend (¥2,500-3,500/month), and medical insurance'
+                  : '全额学费、住宿、生活费（¥2,500-3,500/月）和医疗保险',
+              deadline: locale === 'en' ? 'January - April annually' : '每年1月至4月',
+            },
+            {
+              title: locale === 'en' ? 'Provincial Government Scholarship' : '省级政府奖学金',
+              coverage:
+                locale === 'en'
+                  ? 'Partial or full tuition waiver, varies by province'
+                  : '部分或全额学费减免，因省而异',
+              deadline: locale === 'en' ? 'March - May annually' : '每年3月至5月',
+            },
+            {
+              title: locale === 'en' ? 'University Scholarship' : '大学奖学金',
+              coverage:
+                locale === 'en'
+                  ? 'Tuition waiver (partial or full) based on academic merit'
+                  : '根据学术成绩减免学费（部分或全额）',
+              deadline: locale === 'en' ? 'Rolling with application' : '随申请滚动',
+            },
+            {
+              title: locale === 'en' ? 'Confucius Institute Scholarship' : '孔子学院奖学金',
+              coverage:
+                locale === 'en'
+                  ? 'Full scholarship for Chinese language study programs'
+                  : '中文学习项目全额奖学金',
+              deadline: locale === 'en' ? 'February - April annually' : '每年2月至4月',
+            },
+          ].map((s) => (
+            <div
+              key={s.title}
+              className="rounded-none border border-gray-200 bg-white p-4"
+            >
+              <h4 className="font-semibold text-sm text-[#1B2A4A]">{s.title}</h4>
+              <p className="mt-1.5 text-xs text-gray-600 leading-relaxed">{s.coverage}</p>
+              <p className="mt-1.5 text-[10px] text-gray-400 uppercase tracking-wider">
+                {locale === 'en' ? 'Deadline' : '截止日期'}: {s.deadline}
+              </p>
+            </div>
+          ))}
+        </div>
+        <Link
+          href="/guides/scholarships"
+          className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[#9B1B30] hover:underline"
+        >
+          {locale === 'en' ? 'Read the full scholarships guide' : '阅读完整奖学金指南'}
+          <ArrowRight className="h-3 w-3" />
+        </Link>
+      </div>
     </>
   );
 }
