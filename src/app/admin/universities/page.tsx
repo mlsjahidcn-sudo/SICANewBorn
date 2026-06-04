@@ -18,6 +18,8 @@ function UniversitiesPageInner() {
   const [search, setSearch] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<University | null>(null);
   const [showAIModal, setShowAIModal] = useState(false);
+  const [aiMode, setAiMode] = useState<'create' | 'regenerate'>('create');
+  const [aiInitialName, setAiInitialName] = useState('');
 
   useEffect(() => {
     fetch('/api/universities?limit=100')
@@ -50,6 +52,18 @@ function UniversitiesPageInner() {
     setDeleteTarget(null);
   }, [addToast]);
 
+  const openAIModalCreate = () => {
+    setAiMode('create');
+    setAiInitialName('');
+    setShowAIModal(true);
+  };
+
+  const openAIModalRegenerate = (uni: University) => {
+    setAiMode('regenerate');
+    setAiInitialName(uni.name);
+    setShowAIModal(true);
+  };
+
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
@@ -59,7 +73,7 @@ function UniversitiesPageInner() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setShowAIModal(true)}
+            onClick={openAIModalCreate}
             className="inline-flex items-center gap-2 border-2 border-[#9B1B30] text-[#9B1B30] px-4 py-2 text-sm font-semibold hover:bg-[#9B1B30] hover:text-white transition-colors"
           >
             <Sparkles className="w-4 h-4" />
@@ -151,6 +165,13 @@ function UniversitiesPageInner() {
                       >
                         <ExternalLink className="w-4 h-4" />
                       </a>
+                      <button
+                        onClick={() => openAIModalRegenerate(uni)}
+                        className="p-1.5 text-[#9B1B30] hover:bg-[#9B1B30]/10 transition-colors"
+                        title="Re-generate with AI (overwrites AI fields, keeps manual edits)"
+                      >
+                        <Sparkles className="w-4 h-4" />
+                      </button>
                       <Link
                         href={`/admin/universities/${uni.slug}/edit`}
                         className="p-1.5 text-[#1B2A4A] hover:bg-gray-100 transition-colors"
@@ -196,24 +217,42 @@ function UniversitiesPageInner() {
       <AIGenerateModal
         isOpen={showAIModal}
         onClose={() => setShowAIModal(false)}
-        onGenerated={async (data) => {
+        mode={aiMode}
+        initialName={aiInitialName}
+        onGenerated={async (data, mode) => {
           try {
-            const res = await fetch('/api/universities', {
-              method: 'POST',
+            // In 'regenerate' mode we PUT to the existing slug. Use
+            // the slug from the AI's output (which should match the
+            // existing one for the same name) — fall back to the
+            // pre-filled initial name's slug if the AI omitted one.
+            const targetSlug = (data.slug as string) || '';
+            const endpoint =
+              mode === 'regenerate' && targetSlug
+                ? `/api/universities/${targetSlug}`
+                : '/api/universities';
+            const method = mode === 'regenerate' ? 'PUT' : 'POST';
+
+            const res = await fetch(endpoint, {
+              method,
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(data),
             });
             if (res.ok) {
-              addToast('University created successfully via AI!', 'success');
+              addToast(
+                mode === 'regenerate'
+                  ? 'University updated via AI re-generation!'
+                  : 'University created successfully via AI!',
+                'success',
+              );
               // Refresh the list
               const freshData = await fetch('/api/universities?limit=100').then(r => r.json());
               if (freshData?.universities) setUniversities(freshData.universities);
             } else {
-              const err = await res.json().catch(() => ({ error: 'Failed to create' }));
-              addToast(err.error || 'Failed to create university', 'error');
+              const err = await res.json().catch(() => ({ error: 'Failed' }));
+              addToast(err.error || `Failed to ${mode} university`, 'error');
             }
           } catch {
-            addToast('Failed to create university', 'error');
+            addToast(`Failed to ${mode} university`, 'error');
           }
         }}
       />

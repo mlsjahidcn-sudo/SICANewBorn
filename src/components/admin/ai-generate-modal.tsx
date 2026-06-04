@@ -1,13 +1,25 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Spinner } from '@/components/ui/spinner';
-import { Sparkles, X, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Sparkles, X, Loader2, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 
 interface AIGenerateModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onGenerated: (data: Record<string, unknown>) => void;
+  /**
+   * Called with the AI's parsed JSON output. The parent decides
+   * whether to POST (create) or PUT (regenerate) based on `mode`.
+   */
+  onGenerated: (data: Record<string, unknown>, mode: 'create' | 'regenerate') => void;
+  /**
+   * - 'create' (default): modal opens empty, button says "Create".
+   * - 'regenerate': modal pre-fills with the existing name, button
+   *   says "Re-generate". Parent should PUT to the existing slug.
+   */
+  mode?: 'create' | 'regenerate';
+  /** Pre-fill the input. Used in 'regenerate' mode. */
+  initialName?: string;
 }
 
 interface GenerationState {
@@ -18,8 +30,14 @@ interface GenerationState {
   rawContent: string;
 }
 
-export function AIGenerateModal({ isOpen, onClose, onGenerated }: AIGenerateModalProps) {
-  const [universityName, setUniversityName] = useState('');
+export function AIGenerateModal({
+  isOpen,
+  onClose,
+  onGenerated,
+  mode = 'create',
+  initialName = '',
+}: AIGenerateModalProps) {
+  const [universityName, setUniversityName] = useState(initialName);
   const [state, setState] = useState<GenerationState>({
     status: 'idle',
     progress: '',
@@ -28,6 +46,16 @@ export function AIGenerateModal({ isOpen, onClose, onGenerated }: AIGenerateModa
     rawContent: '',
   });
   const abortRef = useRef<AbortController | null>(null);
+
+  // Reset the input + state whenever the modal opens, so the
+  // initialName from the parent actually takes effect (and a stale
+  // preview from a previous session doesn't leak in).
+  useEffect(() => {
+    if (isOpen) {
+      setUniversityName(initialName);
+      setState({ status: 'idle', progress: '', error: '', generatedData: null, rawContent: '' });
+    }
+  }, [isOpen, initialName]);
 
   if (!isOpen) return null;
 
@@ -145,17 +173,19 @@ export function AIGenerateModal({ isOpen, onClose, onGenerated }: AIGenerateModa
 
   const handleUseGenerated = () => {
     if (state.generatedData) {
-      onGenerated(state.generatedData);
+      onGenerated(state.generatedData, mode);
       handleClose();
     }
   };
 
   const handleClose = () => {
     abortRef.current?.abort();
-    setUniversityName('');
+    setUniversityName(initialName);
     setState({ status: 'idle', progress: '', error: '', generatedData: null, rawContent: '' });
     onClose();
   };
+
+  const isRegenerate = mode === 'regenerate';
 
   const renderFieldPreview = (key: string, value: unknown) => {
     if (value === null || value === undefined || value === '') return null;
@@ -190,8 +220,14 @@ export function AIGenerateModal({ isOpen, onClose, onGenerated }: AIGenerateModa
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-[#9B1B30]" />
-            <h2 className="text-lg font-semibold text-[#1F2937]">AI University Generator</h2>
+            {isRegenerate ? (
+              <RefreshCw className="w-5 h-5 text-[#9B1B30]" />
+            ) : (
+              <Sparkles className="w-5 h-5 text-[#9B1B30]" />
+            )}
+            <h2 className="text-lg font-semibold text-[#1F2937]">
+              {isRegenerate ? 'Re-generate University' : 'AI University Generator'}
+            </h2>
           </div>
           <button onClick={handleClose} className="text-gray-400 hover:text-gray-600">
             <X className="w-5 h-5" />
@@ -203,7 +239,9 @@ export function AIGenerateModal({ isOpen, onClose, onGenerated }: AIGenerateModa
           {state.status === 'idle' && (
             <div>
               <p className="text-sm text-[#4B5563] mb-4">
-                Enter a Chinese university name and AI will generate all the information automatically — description, programs, rankings, accommodation, and more.
+                {isRegenerate
+                  ? 'Re-running AI generation with the new prompt. The existing row will be updated in place — only the AI fields get overwritten; your manual edits to other fields are preserved.'
+                  : 'Enter a Chinese university name and AI will generate all the information automatically — description, programs, rankings, accommodation, and more.'}
               </p>
               <label className="block text-sm font-medium text-[#1F2937] mb-1">University Name</label>
               <input
@@ -296,7 +334,7 @@ export function AIGenerateModal({ isOpen, onClose, onGenerated }: AIGenerateModa
                 className="inline-flex items-center gap-2 bg-[#9B1B30] text-white px-4 py-2 text-sm font-semibold hover:bg-[#7A1526] transition-colors"
               >
                 <CheckCircle className="w-4 h-4" />
-                Create University
+                {isRegenerate ? 'Update University' : 'Create University'}
               </button>
             </>
           )}
