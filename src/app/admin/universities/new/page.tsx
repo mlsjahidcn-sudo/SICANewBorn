@@ -42,6 +42,8 @@ interface UniversityFormData {
   accommodationTypes: string;
   accommodationTypesCn: string;
   gallery: string;
+  scholarshipInfo: string;
+  scholarshipInfoCn: string;
 }
 
 const defaultFormData: UniversityFormData = {
@@ -79,6 +81,8 @@ const defaultFormData: UniversityFormData = {
   accommodationTypes: '',
   accommodationTypesCn: '',
   gallery: '',
+  scholarshipInfo: '',
+  scholarshipInfoCn: '',
 };
 
 function universityToForm(uni: University): UniversityFormData {
@@ -117,6 +121,8 @@ function universityToForm(uni: University): UniversityFormData {
     accommodationTypes: (uni.accommodationTypes || []).join(', '),
     accommodationTypesCn: (uni.accommodationTypesCn || []).join(', '),
     gallery: (uni.gallery || []).join('\n'),
+    scholarshipInfo: uni.scholarshipInfo || '',
+    scholarshipInfoCn: uni.scholarshipInfoCn || '',
   };
 }
 
@@ -465,6 +471,42 @@ function UniversityFormInner({ slug }: { slug?: string }) {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+
+        {/* Scholarship Information */}
+        <div className="bg-white border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold text-[#1F2937] mb-1">Scholarship Information</h2>
+          <p className="text-sm text-[#4B5563] mb-4">
+            University-specific scholarship narrative. Shown on the Scholarships tab of the
+            public university detail page between the per-program list and the general
+            categories. Each university has its own scholarships — write them out as text
+            here (e.g. which scholarships this university offers, coverage, eligibility,
+            how to apply, deadlines, links).
+          </p>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-[#1F2937] mb-1">Scholarship Info (English)</label>
+              <textarea
+                name="scholarshipInfo"
+                value={form.scholarshipInfo}
+                onChange={handleChange}
+                rows={6}
+                className={inputClass}
+                placeholder="e.g. Tsinghua University offers the following scholarships for international students: ..."
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#1F2937] mb-1">Scholarship Info (Chinese)</label>
+              <textarea
+                name="scholarshipInfoCn"
+                value={form.scholarshipInfoCn}
+                onChange={handleChange}
+                rows={6}
+                className={inputClass}
+                placeholder="例如：清华大学为国际学生提供以下奖学金：..."
+              />
             </div>
           </div>
         </div>
