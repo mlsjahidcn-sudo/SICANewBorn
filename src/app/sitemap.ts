@@ -174,6 +174,36 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.65,
   }));
 
+  // News posts — /news index + per-post URLs. The RLS policy on
+  // news_posts lets the public see only status='published' rows, so
+  // we filter here too (defense in depth). Posts are fresh, so weekly
+  // change frequency + priority 0.8 matches their SEO weight.
+  const newsIndexUrl: MetadataRoute.Sitemap = [
+    { url: `${SITE_URL}/news`, lastModified: now, changeFrequency: 'daily', priority: 0.8 },
+  ];
+  let newsPostUrls: MetadataRoute.Sitemap = [];
+  if (isSupabaseServerConfigured()) {
+    const supabase = getSupabaseServer();
+    if (supabase) {
+      const { data } = await supabase
+        .from('news_posts')
+        .select('slug, updated_at, published_at')
+        .eq('status', 'published')
+        .order('published_at', { ascending: false })
+        .limit(500);
+      if (data && data.length > 0) {
+        newsPostUrls = (data as Array<{ slug: string; updated_at: string; published_at: string }>).map(
+          (p) => ({
+            url: `${SITE_URL}/news/${p.slug}`,
+            lastModified: p.updated_at ? new Date(p.updated_at) : now,
+            changeFrequency: 'monthly' as const,
+            priority: 0.8,
+          }),
+        );
+      }
+    }
+  }
+
   return [
     ...staticPages,
     ...seoHubPages,
@@ -188,5 +218,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...majorUrls,
     ...scholarshipEligibilityUrls,
     ...programScholarshipUrls,
+    ...newsIndexUrl,
+    ...newsPostUrls,
   ];
 }
