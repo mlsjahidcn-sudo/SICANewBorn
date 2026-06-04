@@ -98,6 +98,26 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
+  // University comparison pages — high-intent "X vs Y" search
+  // queries. Pre-rendered at /universities/compare/[a]/vs/[b].
+  // 8 ranked universities → 28 unique pairs. Captures
+  // comparison-intent traffic (ChatGPT, Perplexity, Google).
+  const rankedSlugs = universities
+    .map((u) => u.slug)
+    .filter(Boolean);
+  const comparePairs: Array<{ a: string; b: string }> = [];
+  for (let i = 0; i < rankedSlugs.length; i++) {
+    for (let j = i + 1; j < rankedSlugs.length; j++) {
+      comparePairs.push({ a: rankedSlugs[i], b: rankedSlugs[j] });
+    }
+  }
+  const compareUrls: MetadataRoute.Sitemap = comparePairs.map((p) => ({
+    url: `${SITE_URL}/universities/compare/${p.a}/vs/${p.b}`,
+    lastModified: now,
+    changeFrequency: 'monthly',
+    priority: 0.75,
+  }));
+
   return [
     ...staticPages,
     ...seoHubPages,
@@ -106,5 +126,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...countryUrls,
     ...universityUrls,
     ...scholarshipUrls,
+    ...compareUrls,
   ];
 }
