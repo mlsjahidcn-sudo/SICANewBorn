@@ -63,8 +63,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'nav.menu.openMenu': 'Open main menu',
     'nav.menu.closeMenu': 'Close menu',
     // Hero
-    'hero.title': 'Your Future Starts in China',
-    'hero.subtitle': 'Discover top universidades, diverse programs, and scholarship opportunities — all with SICA by your side.',
+    'hero.title': 'Study in China',
+    'hero.tagline': 'Shape Your Future',
+    'hero.subtitle': 'Discover world-class universidades, find perfect programs, and get expert guidance throughout your application journey.',
     'hero.explore': 'Explore Universities',
     'hero.howToApply': 'How to Apply',
     'hero.featured': 'Featured Top Universities',
@@ -518,8 +519,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'nav.menu.closeMenu': '关闭菜单',
     'nav.apply': '立即申请',
     // Hero
-    'hero.title': '你的未来，从中国开始',
-    'hero.subtitle': '探索顶尖大学、多元项目和奖学金机会——SICA 全程陪伴。',
+    'hero.title': '留学中国',
+    'hero.tagline': '塑造你的未来',
+    'hero.subtitle': '探索世界一流大学，寻找心仪专业，全程获得 SICA 专家团队的申请指导。',
     'hero.explore': '探索大学',
     'hero.howToApply': '申请指南',
     'hero.featured': '精选顶尖大学',

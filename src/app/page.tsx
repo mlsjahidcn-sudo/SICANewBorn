@@ -54,10 +54,12 @@ export default async function HomePage() {
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 lg:py-32">
           <div className="grid lg:grid-cols-5 gap-10 lg:gap-12 items-center">
             <div className="lg:col-span-3 max-w-2xl">
-              <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl">
+              <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl leading-[1.05]">
                 {t('hero.title')}
+                <br />
+                <span className="text-[#D4A853]">{t('hero.tagline')}</span>
               </h1>
-              <p className="mt-5 text-lg text-gray-300 leading-relaxed sm:text-xl">
+              <p className="mt-5 text-base text-gray-300 leading-relaxed sm:text-lg max-w-xl">
                 {t('hero.subtitle')}
               </p>
               <div className="mt-8 flex flex-wrap gap-4">
