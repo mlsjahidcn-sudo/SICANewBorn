@@ -55,14 +55,20 @@ export function StickyContact() {
     <>
       <div
         ref={containerRef}
-        className="fixed bottom-5 right-5 z-40 sm:bottom-6 sm:right-6"
+        // Sits on the bottom-LEFT to avoid overlapping the AI Chatbot
+        // (which lives on the bottom-right at z-50). With the AI chat
+        // as the primary "always-on" interaction, the human contact
+        // options (WeChat / WhatsApp / email) get the secondary
+        // position. Both popovers open upward and never collide.
+        className="fixed bottom-5 left-5 z-40 sm:bottom-6 sm:left-6"
       >
-        {/* Popover */}
+        {/* Popover — opens above the button and aligns to its right
+            edge so it doesn't bleed off the left side of the screen. */}
         {open && (
           <div
             role="dialog"
             aria-label={t('stickyContact.title')}
-            className="absolute bottom-16 right-0 w-80 max-w-[calc(100vw-2.5rem)] bg-white border-2 border-[#1B2A4A] shadow-2xl"
+            className="absolute bottom-16 left-0 w-80 max-w-[calc(100vw-2.5rem)] bg-white border-2 border-[#1B2A4A] shadow-2xl"
             style={{ animation: 'sica-popover-in 160ms ease-out' }}
           >
             {/* Header */}
@@ -186,7 +192,11 @@ export function StickyContact() {
           aria-label={t('stickyContact.buttonLabel')}
           aria-expanded={open}
           onClick={() => setOpen((o) => !o)}
-          className={`relative h-14 w-14 sm:h-16 sm:w-16 bg-[#9B1B30] hover:bg-[#7A1526] text-white shadow-lg hover:shadow-xl transition-all duration-150 flex items-center justify-center group ${
+          // Deep navy (#1B2A4A) instead of crimson so it's visually
+          // distinct from the AI Chatbot (crimson, bottom-right).
+          // Two floating crimson squares on opposite corners would
+          // confuse users; navy vs crimson signals "different tools".
+          className={`relative h-14 w-14 sm:h-16 sm:w-16 bg-[#1B2A4A] hover:bg-[#0F1B33] text-white shadow-lg hover:shadow-xl transition-all duration-150 flex items-center justify-center group ${
             open ? 'scale-95' : 'hover:scale-105'
           }`}
         >
@@ -195,7 +205,8 @@ export function StickyContact() {
           ) : (
             <MessageCircle className="w-6 h-6" />
           )}
-          {/* Notification dot (subtle pulse) — hides once user has opened the widget */}
+          {/* Notification dot (subtle pulse) — gold for the navy
+              background, hides once user has opened the widget. */}
           <span
             className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-[#D4A853] rounded-none ring-2 ring-white"
             style={{
