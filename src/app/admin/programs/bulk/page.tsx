@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Upload, FileText, AlertCircle, CheckCircle2, X, Plus, Trash2 } from 'lucide-react';
 import { universities as staticUniversities } from '@/lib/data';
@@ -50,6 +50,39 @@ function BulkImportContent() {
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ success: number; errors: string[] } | null>(null);
+
+  // Live university list — fetched from the API so newly
+  // AI-generated universities appear here, not just the 8 hard-
+  // coded in src/lib/data.ts. We merge with the static list as
+  // a fallback so the page still works in dev / offline.
+  const [universities, setUniversities] = useState<
+    Array<{ slug: string; name: string; nameCn: string }>
+  >(staticUniversities.map((u) => ({ slug: u.slug, name: u.name, nameCn: u.nameCn })));
+
+  useEffect(() => {
+    // Fetch all universities from the API. If the API returns
+    // rows, replace the static list. If the API fails (e.g. dev
+    // without Supabase), keep the static list.
+    fetch('/api/universities?limit=200')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        const rows: Array<{ slug: string; name: string; nameCn: string }> | undefined =
+          data?.universities;
+        if (rows && rows.length > 0) {
+          // De-dupe by slug — DB rows can overlap with the static
+          // list. Sort alphabetically by name for the dropdown.
+          const merged = new Map<string, { slug: string; name: string; nameCn: string }>();
+          for (const u of staticUniversities) merged.set(u.slug, u);
+          for (const u of rows) merged.set(u.slug, u);
+          setUniversities(
+            Array.from(merged.values()).sort((a, b) => a.name.localeCompare(b.name)),
+          );
+        }
+      })
+      .catch(() => {
+        // Keep static list on error
+      });
+  }, []);
 
   const parseText = useCallback(() => {
     if (!rawText.trim()) {
@@ -301,7 +334,7 @@ function BulkImportContent() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-none text-[#1B2A4A] bg-white focus:outline-none focus:border-[#9B1B30]"
               >
                 <option value="">Select a university...</option>
-                {staticUniversities.map(u => (
+                {universities.map(u => (
                   <option key={u.slug} value={u.slug}>{u.name} ({u.nameCn})</option>
                 ))}
               </select>
@@ -355,7 +388,7 @@ function BulkImportContent() {
                   </div>
                 )}
                 <div className="text-sm text-[#4B5563]">
-                  University: <span className="font-medium text-[#1B2A4A]">{staticUniversities.find(u => u.slug === universitySlug)?.name || universitySlug}</span>
+                  University: <span className="font-medium text-[#1B2A4A]">{universities.find(u => u.slug === universitySlug)?.name || universitySlug}</span>
                 </div>
               </div>
               <button
