@@ -171,7 +171,7 @@ export default function UniversidadesPage() {
               <Link
                 key={uni.slug}
                 href={`/universities/${uni.slug}`}
-                className="group rounded-none border border-gray-200 bg-white shadow-sm transition-all duration-150 hover:shadow-md hover:-translate-y-0.5 hover:border-[#9B1B30]/30"
+                className="group isolate rounded-none border border-gray-200 bg-white shadow-sm transition-all duration-150 hover:shadow-md hover:-translate-y-0.5 hover:border-[#9B1B30]/30"
               >
                 {/* Image + Logo */}
                 <div className="relative">
