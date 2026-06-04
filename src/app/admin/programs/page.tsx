@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Plus, Pencil, Trash2, ExternalLink, Upload } from 'lucide-react';
@@ -8,13 +8,69 @@ import { programs as staticPrograms, universities as staticUniversities, type Pr
 import { ToastProvider, useToast } from '@/components/admin/toast';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
 
+/**
+ * Merge DB-fetched programs with the static fallback by slug.
+ * DB rows win on conflict (richer data, fresher edits). Static
+ * rows that have no DB counterpart are kept so pre-seeded entries
+ * still appear in dev / pre-migration state. Result is sorted by
+ * name for stable display.
+ */
+function mergeBySlug(primary: Program[], secondary: Program[]): Program[] {
+  const bySlug = new Map<string, Program>();
+  for (const p of secondary) bySlug.set(p.slug, p);
+  for (const p of primary) bySlug.set(p.slug, p);
+  return Array.from(bySlug.values()).sort((a, b) =>
+    a.name.localeCompare(b.name, 'en'),
+  );
+}
+
 function ProgramsPageInner() {
   const router = useRouter();
   const { addToast } = useToast();
+  // Start with static data so the table renders immediately. On mount
+  // we replace this with the merged static+DB list so admin sees
+  // everything that exists in either source.
   const [programs, setPrograms] = useState<Program[]>(staticPrograms);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterDegree, setFilterDegree] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<Program | null>(null);
+
+  // Fetch live programs from the API and merge with the static
+  // fallback by slug. DB wins on conflict (richer data, fresher
+  // edits). Static rows that have no DB counterpart are kept so
+  // pre-seeded entries still appear in dev / pre-migration state.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/programs?limit=200');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const dbPrograms: Program[] = data.programs || [];
+        if (cancelled) return;
+        const merged = mergeBySlug(dbPrograms, staticPrograms);
+        setPrograms(merged);
+      } catch (err) {
+        // Keep the static list on error. Admin still sees the
+        // pre-seeded set; the only loss is admin-imported programs
+        // added since the page last loaded. Surface a hint toast
+        // so the user knows to retry.
+        if (!cancelled) {
+          addToast(
+            'Could not reach /api/programs — showing local fallback. ' +
+              'If you recently imported programs, refresh to retry.',
+            'error',
+          );
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [addToast]);
 
   const filtered = programs.filter(p => {
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -168,8 +224,16 @@ function ProgramsPageInner() {
             </tbody>
           </table>
         </div>
-        <div className="px-4 py-3 border-t border-gray-200 bg-[#F3F4F6] text-xs text-[#4B5563]">
-          Showing {filtered.length} of {programs.length} programs
+        <div className="px-4 py-3 border-t border-gray-200 bg-[#F3F4F6] text-xs text-[#4B5563] flex items-center justify-between">
+          <span>
+            Showing {filtered.length} of {programs.length} programs
+          </span>
+          {loading && (
+            <span className="inline-flex items-center gap-1.5">
+              <span className="inline-block h-2.5 w-2.5 border-2 border-[#1B2A4A] border-t-transparent rounded-full animate-spin" />
+              Syncing latest…
+            </span>
+          )}
         </div>
       </div>
 

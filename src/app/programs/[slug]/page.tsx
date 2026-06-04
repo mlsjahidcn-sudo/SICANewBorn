@@ -1,29 +1,158 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useI18n } from '@/lib/i18n';
-import { programs, universities, degreeTypes, degreeTypesCn, languages, languagesCn } from '@/lib/data';
+import { programs as staticPrograms, universities as staticUniversities, degreeTypes, degreeTypesCn, languages, languagesCn, type Program, type University } from '@/lib/data';
 import { ChevronRight, Clock, Banknote, GraduationCap, Globe, Award, BookOpen, CheckCircle, ArrowRight, MapPin } from 'lucide-react';
 
 type TabKey = 'overview' | 'requirements' | 'curriculum' | 'tuition';
+type LoadState = 'loading' | 'ok' | 'not-found' | 'error';
 
 export default function ProgramDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const { t, locale } = useI18n();
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
+  const [program, setProgram] = useState<Program | null>(null);
+  const [university, setUniversity] = useState<University | null>(null);
+  const [state, setState] = useState<LoadState>('loading');
 
-  const program = programs.find((p) => p.slug === slug);
-  if (!program) {
+  // Fetch the program from the live API on mount / slug change. Falls
+  // back to the static data row if the API is unreachable (e.g. dev
+  // mode without Supabase configured) or returns 404. Admin-imported
+  // programs that don't exist in data.ts will resolve correctly here
+  // because the API hits the programs table directly.
+  useEffect(() => {
+    if (!slug) return;
+    let cancelled = false;
+    setState('loading');
+    setProgram(null);
+    setUniversity(null);
+
+    (async () => {
+      try {
+        const res = await fetch(`/api/programs/${encodeURIComponent(slug)}`);
+        if (cancelled) return;
+        if (res.ok) {
+          const data = await res.json();
+          const fetchedProgram: Program | null = data.program ?? null;
+          if (!fetchedProgram) {
+            setState('not-found');
+            return;
+          }
+          setProgram(fetchedProgram);
+
+          // Resolve the university. Use the API for the same
+          // reason (newly-added AI-generated universities may
+          // not be in static data.ts).
+          if (fetchedProgram.universitySlug) {
+            try {
+              const uniRes = await fetch(
+                `/api/universities/${encodeURIComponent(fetchedProgram.universitySlug)}`,
+              );
+              if (uniRes.ok) {
+                const uniData = await uniRes.json();
+                if (uniData.university) setUniversity(uniData.university);
+              } else {
+                // 404 from API → try static fallback
+                const fallback = staticUniversities.find(
+                  (u) => u.slug === fetchedProgram.universitySlug,
+                );
+                if (fallback) setUniversity(fallback);
+              }
+            } catch {
+              // ignore uni fetch error — sidebar will simply omit the card
+            }
+          }
+          setState('ok');
+        } else if (res.status === 404) {
+          // Program not in DB. Try static fallback for pre-seeded
+          // programs, else 404.
+          const fallback = staticPrograms.find((p) => p.slug === slug);
+          if (fallback) {
+            setProgram(fallback);
+            const u = staticUniversities.find(
+              (uni) => uni.slug === fallback.universitySlug,
+            );
+            if (u) setUniversity(u);
+            setState('ok');
+          } else {
+            setState('not-found');
+          }
+        } else {
+          setState('error');
+        }
+      } catch {
+        // Network error / API unreachable — try static fallback
+        if (cancelled) return;
+        const fallback = staticPrograms.find((p) => p.slug === slug);
+        if (fallback) {
+          setProgram(fallback);
+          const u = staticUniversities.find(
+            (uni) => uni.slug === fallback.universitySlug,
+          );
+          if (u) setUniversity(u);
+          setState('ok');
+        } else {
+          setState('not-found');
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
+
+  if (state === 'loading') {
     return (
       <main className="min-h-screen bg-[#FAFAF8] flex items-center justify-center">
-        <p className="text-gray-500">{locale === 'en' ? 'Program not found' : '未找到该项目'}</p>
+        <div className="flex items-center gap-2 text-gray-500">
+          <span className="inline-block h-4 w-4 border-2 border-[#1B2A4A] border-t-transparent rounded-full animate-spin" />
+          {locale === 'en' ? 'Loading program…' : '正在加载项目…'}
+        </div>
       </main>
     );
   }
 
-  const university = universities.find((u) => u.slug === program.universitySlug);
+  if (state === 'not-found' || !program) {
+    return (
+      <main className="min-h-screen bg-[#FAFAF8] flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-500 mb-4">
+            {locale === 'en' ? 'Program not found' : '未找到该项目'}
+          </p>
+          <Link
+            href="/programs"
+            className="text-sm text-[#9B1B30] hover:underline"
+          >
+            {locale === 'en' ? '← Back to all programs' : '← 返回项目列表'}
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
+  if (state === 'error') {
+    return (
+      <main className="min-h-screen bg-[#FAFAF8] flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-500 mb-4">
+            {locale === 'en'
+              ? 'Failed to load this program. Please try again later.'
+              : '加载该项目失败，请稍后重试。'}
+          </p>
+          <Link
+            href="/programs"
+            className="text-sm text-[#9B1B30] hover:underline"
+          >
+            {locale === 'en' ? '← Back to all programs' : '← 返回项目列表'}
+          </Link>
+        </div>
+      </main>
+    );
+  }
 
   const tabs: { key: TabKey; label: string }[] = [
     { key: 'overview', label: t('prog.overview') },
