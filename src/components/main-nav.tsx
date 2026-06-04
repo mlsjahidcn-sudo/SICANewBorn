@@ -236,48 +236,78 @@ export function MainNav() {
               </NavigationMenuTrigger>
               <NavigationMenuContent>
                 <div
-                  className={`grid gap-3 p-4 ${
+                  className={`grid ${
                     (item.sections?.length ?? 0) > 1
-                      ? 'w-[640px] md:grid-cols-2'
-                      : 'w-[420px]'
-                  } bg-white border-2 border-[#1B2A4A] shadow-2xl`}
+                      ? 'w-[480px] md:grid-cols-[1fr_140px]'
+                      : 'w-[280px]'
+                  } bg-white border border-[#1B2A4A] shadow-lg`}
                   style={{ borderRadius: 0 }}
                 >
-                  {item.sections?.map((section) => (
-                    <div key={section.title}>
-                      {/* Section title — only show when there are 2+ sections
-                          and this isn't the first one (so the left column
-                          shows the primary items without a redundant heading). */}
-                      {(item.sections?.length ?? 0) > 1 && section !== item.sections![0] && (
-                        <h3 className="mb-2 mt-1 px-2 text-[10px] font-bold uppercase tracking-[0.15em] text-[#9B1B30]">
+                  {item.sections?.map((section, idx) => (
+                    <div
+                      key={section.title}
+                      className={
+                        (item.sections?.length ?? 0) > 1
+                          ? // Two-column layout: left = primary items (with
+                            // subtle icons), right = compact city/country
+                            // list (no icons, denser rows).
+                            idx === 0
+                            ? 'p-2 border-r border-gray-100'
+                            : 'p-2 bg-[#FAFAF8]'
+                          : 'p-2'
+                      }
+                    >
+                      {/* Section title — only show when there are 2+
+                          sections and this isn't the first one. */}
+                      {(item.sections?.length ?? 0) > 1 && idx > 0 && (
+                        <h3 className="mb-1 px-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#9B1B30]">
                           {section.title}
                         </h3>
                       )}
-                      <ul className="space-y-1">
-                        {section.items.map((sub) => (
-                          <li key={sub.href}>
-                            <NavigationMenuLink asChild>
-                              <Link
-                                href={sub.href}
-                                className="group flex select-none items-start gap-3 p-2 outline-none transition-colors hover:bg-[#FAFAF8]"
-                              >
-                                <div className="flex h-9 w-9 shrink-0 items-center justify-center bg-[#1B2A4A] text-white">
-                                  <sub.icon className="h-4 w-4" />
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <div className="text-sm font-semibold leading-tight text-[#1B2A4A] group-hover:text-[#9B1B30]">
-                                    {sub.label}
-                                  </div>
-                                  {sub.desc && (
-                                    <div className="mt-0.5 text-xs leading-snug text-[#4B5563] line-clamp-1">
-                                      {sub.desc}
+                      <ul className={idx === 0 ? 'space-y-0.5' : 'space-y-px'}>
+                        {section.items.map((sub) => {
+                          // Compact mode for the right column: no icon,
+                          // smaller text, single line.
+                          const isCompact = idx > 0;
+                          return (
+                            <li key={sub.href}>
+                              <NavigationMenuLink asChild>
+                                <Link
+                                  href={sub.href}
+                                  className={[
+                                    'group flex select-none outline-none transition-colors hover:bg-[#1B2A4A]/5',
+                                    isCompact
+                                      ? 'items-center px-1.5 py-1 text-[12px] text-[#1B2A4A] group-hover:text-[#9B1B30]'
+                                      : 'items-start gap-2 p-1.5',
+                                  ].join(' ')}
+                                >
+                                  {!isCompact && (
+                                    <div className="flex h-6 w-6 shrink-0 items-center justify-center bg-[#1B2A4A]/8 text-[#1B2A4A] group-hover:bg-[#9B1B30] group-hover:text-white transition-colors">
+                                      <sub.icon className="h-3.5 w-3.5" />
                                     </div>
                                   )}
-                                </div>
-                              </Link>
-                            </NavigationMenuLink>
-                          </li>
-                        ))}
+                                  <div className="min-w-0 flex-1">
+                                    <div
+                                      className={[
+                                        'leading-tight group-hover:text-[#9B1B30] transition-colors',
+                                        isCompact
+                                          ? 'text-[12px] font-medium text-[#1B2A4A] truncate'
+                                          : 'text-[13px] font-semibold text-[#1B2A4A]',
+                                      ].join(' ')}
+                                    >
+                                      {sub.label}
+                                    </div>
+                                    {!isCompact && sub.desc && (
+                                      <div className="mt-0.5 text-[11px] leading-snug text-[#4B5563] line-clamp-1">
+                                        {sub.desc}
+                                      </div>
+                                    )}
+                                  </div>
+                                </Link>
+                              </NavigationMenuLink>
+                            </li>
+                          );
+                        })}
                       </ul>
                     </div>
                   ))}
