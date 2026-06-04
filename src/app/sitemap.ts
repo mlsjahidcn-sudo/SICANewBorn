@@ -64,6 +64,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let programs: SitemapEntry[] = staticPrograms.map((p) => ({
     slug: p.slug,
   }));
+  // We use the unfiltered programs list for sitemap entries that
+  // need additional fields (e.g. discipline for the /majors/* URLs).
+  const allPrograms = staticPrograms;
   let scholarships: SitemapEntry[] = staticScholarships.map((s) => ({
     slug: s.slug,
   }));
@@ -118,6 +121,59 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.75,
   }));
 
+  // Per-university subpages — scholarships and programs subroutes.
+  // 8 ranked universities × 2 subroutes = 16 pages. High-intent
+  // "[University] scholarships" / "[University] programs" queries.
+  const rankedUniSubUrls: MetadataRoute.Sitemap = rankedSlugs.flatMap((s) => [
+    {
+      url: `${SITE_URL}/universities/${s}/scholarships`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
+    {
+      url: `${SITE_URL}/universities/${s}/programs`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
+  ]);
+
+  // /majors index + per-discipline pages — 8 unique disciplines.
+  const majorsIndexUrl: MetadataRoute.Sitemap = [
+    { url: `${SITE_URL}/majors`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
+  ];
+  // Derive the same discipline slugs the /majors/[discipline] route uses
+  // (lowercased, hyphens). Build from the programs list to stay in
+  // sync with the page's own slugifyDiscipline.
+  const DISCIPLINE_SLUGS = Array.from(
+    new Set(allPrograms.map((p) => p.discipline.toLowerCase().replace(/\s+/g, '-'))),
+  );
+  const majorUrls: MetadataRoute.Sitemap = DISCIPLINE_SLUGS.map((d) => ({
+    url: `${SITE_URL}/majors/${d}`,
+    lastModified: now,
+    changeFrequency: 'monthly',
+    priority: 0.7,
+  }));
+
+  // Per-scholarship /eligible-countries subpage — 10 real scholarships.
+  const scholarshipEligibilityUrls: MetadataRoute.Sitemap = scholarships
+    .filter((s: { slug: string }) => s.slug.includes('scholarship') || s.slug.startsWith('csc-'))
+    .map((s: { slug: string }) => ({
+      url: `${SITE_URL}/scholarships/${s.slug}/eligible-countries`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.65,
+    }));
+
+  // Per-program /scholarships subpage — 17 programs.
+  const programScholarshipUrls: MetadataRoute.Sitemap = allPrograms.map((p: { slug: string }) => ({
+    url: `${SITE_URL}/programs/${p.slug}/scholarships`,
+    lastModified: now,
+    changeFrequency: 'monthly',
+    priority: 0.65,
+  }));
+
   return [
     ...staticPages,
     ...seoHubPages,
@@ -127,5 +183,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...universityUrls,
     ...scholarshipUrls,
     ...compareUrls,
+    ...rankedUniSubUrls,
+    ...majorsIndexUrl,
+    ...majorUrls,
+    ...scholarshipEligibilityUrls,
+    ...programScholarshipUrls,
   ];
 }
