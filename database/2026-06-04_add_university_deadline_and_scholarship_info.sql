@@ -35,16 +35,7 @@ ALTER TABLE universities
 
 -- Cleanup: if a previous version of this migration accidentally created
 -- an empty `universidades` table (wrong table name typo), this drops it.
--- Safe even if the table doesn't exist or contains real data (the IF
--- EXISTS check + count guard prevents data loss).
-DO $$
-BEGIN
-  IF EXISTS (
-    SELECT 1 FROM information_schema.tables
-    WHERE table_schema = 'public' AND table_name = 'universidades'
-  ) AND NOT EXISTS (
-    SELECT 1 FROM universidades LIMIT 1
-  ) THEN
-    DROP TABLE universidades;
-  END IF;
-END $$;
+-- The IF EXISTS guard makes it safe whether or not the table exists.
+-- We don't check row count because querying a non-existent table
+-- inside a DO block throws an error.
+DROP TABLE IF EXISTS universidades CASCADE;
