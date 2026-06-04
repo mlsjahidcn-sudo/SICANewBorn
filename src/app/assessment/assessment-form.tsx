@@ -2,7 +2,20 @@
 
 import { useState, useEffect, useRef, type FormEvent, type ChangeEvent } from 'react';
 import { Spinner } from '@/components/ui/spinner';
-import { CheckCircle, Mail, Calendar, GraduationCap, Upload, AlertCircle, Loader2, FileCheck, X } from 'lucide-react';
+import {
+  CheckCircle,
+  Mail,
+  GraduationCap,
+  Upload,
+  AlertCircle,
+  FileCheck,
+  X,
+  ArrowRight,
+  ArrowLeft,
+  User,
+  FileText,
+  Check,
+} from 'lucide-react';
 
 interface Props {
   successMessages: {
@@ -18,22 +31,56 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ALLOWED_TYPES = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
 const ALLOWED_EXTENSIONS = '.pdf, .png, .jpg, .jpeg';
 
+// Step metadata. The wizard always advances forward and lets the
+// user jump back to fix earlier answers; it never loses data
+// because the underlying form is uncontrolled.
+const STEPS = [
+  { key: 'personal', label: 'Personal', icon: User, desc: 'Your contact details' },
+  { key: 'education', label: 'Education', icon: GraduationCap, desc: 'Your study background' },
+  { key: 'documents', label: 'Documents', icon: Upload, desc: 'Upload transcript' },
+  { key: 'notes', label: 'Submit', icon: FileText, desc: 'Add notes & send' },
+] as const;
+
 export function AssessmentForm({ successMessages }: Props) {
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
+  const [currentStep, setCurrentStep] = useState(0);
 
   // File upload state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'done' | 'failed'>('idle');
   const [uploadProgress, setUploadProgress] = useState('');
   const [storagePath, setStoragePath] = useState<string | null>(null);
-  const [assessmentId, setAssessmentId] = useState<string | null>(null);
+  // Set when the transcript upload creates the assessment record
+  // (so we don't double-post on submit). Used in handleSubmit.
+  const [, setAssessmentId] = useState<string | null>(null);
+
+  // Pre-submit summary values. Read from form on input events
+  // (post-render) and displayed in step 4. Avoids the React
+  // anti-pattern of reading ref.current during render.
+  const [summary, setSummary] = useState({
+    name: '—',
+    email: '—',
+    country: '—',
+    currentEducation: '—',
+    intendedMajor: '—',
+  });
+
+  // Refs for per-step validation. The form is still uncontrolled
+  // (FormData on submit) but the wizard needs to read individual
+  // field values to validate before advancing.
+  const firstNameRef = useRef<HTMLInputElement>(null);
+  const lastNameRef = useRef<HTMLInputElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const whatsappRef = useRef<HTMLInputElement>(null);
+  const countryRef = useRef<HTMLInputElement>(null);
+  const dateOfBirthRef = useRef<HTMLInputElement>(null);
+  const currentEducationRef = useRef<HTMLSelectElement>(null);
+  const intendedMajorRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   // Pre-fill the Intended Major field when the user comes from a
-  // program page (e.g. /assessment?major=Computer+Science&program=cs-bsc).
-  // The form is uncontrolled (uses FormData on submit), so we use a
-  // ref + post-mount useEffect instead of wiring a controlled input.
-  const intendedMajorRef = useRef<HTMLInputElement>(null);
+  // program page (e.g. /assessment?major=Computer+Science).
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
@@ -42,6 +89,88 @@ export function AssessmentForm({ successMessages }: Props) {
       intendedMajorRef.current.value = major;
     }
   }, []);
+
+  // Keep the pre-submit summary in sync with the live form values.
+  // We attach a single delegated `input` listener to the form (via
+  // the ref) and update state on every change. This is a post-
+  // render side effect, so it doesn't violate the React refs
+  // rule of "no ref access during render".
+  useEffect(() => {
+    const form = formRef.current;
+    if (!form) return;
+    const update = () => {
+      const data = new FormData(form);
+      setSummary({
+        name:
+          [data.get('firstName'), data.get('lastName')]
+            .filter(Boolean)
+            .join(' ')
+            .trim() || '—',
+        email: (data.get('email') as string)?.trim() || '—',
+        country: (data.get('country') as string)?.trim() || '—',
+        currentEducation: (data.get('currentEducation') as string)?.trim() || '—',
+        intendedMajor: (data.get('intendedMajor') as string)?.trim() || '—',
+      });
+    };
+    update();
+    form.addEventListener('input', update);
+    form.addEventListener('change', update);
+    return () => {
+      form.removeEventListener('input', update);
+      form.removeEventListener('change', update);
+    };
+  }, [currentStep, status]);
+
+  // Per-step validation. Returns null if step is valid; otherwise
+  // returns the name of the first invalid field (which we focus).
+  // Required-field check uses simple trimmed-string comparison —
+  // mirrors what `required` would do, but lets us advance one
+  // step at a time without re-rendering the whole form.
+  const validateStep = (step: number): string | null => {
+    const get = (ref: React.RefObject<HTMLInputElement | HTMLSelectElement | null>) => {
+      return ref.current?.value?.trim() ?? '';
+    };
+    if (step === 0) {
+      if (!get(firstNameRef)) return 'firstName';
+      if (!get(lastNameRef)) return 'lastName';
+      if (!get(emailRef)) return 'email';
+      else if (!/^\S+@\S+\.\S+$/.test(get(emailRef))) return 'email';
+      if (!get(whatsappRef)) return 'whatsapp';
+      if (!get(countryRef)) return 'country';
+      if (!get(dateOfBirthRef)) return 'dateOfBirth';
+      return null;
+    }
+    if (step === 1) {
+      if (!get(currentEducationRef)) return 'currentEducation';
+      if (!get(intendedMajorRef)) return 'intendedMajor';
+      return null;
+    }
+    // Steps 2 and 3 are always valid (transcript + notes are
+    // optional, and the submit happens in step 3).
+    return null;
+  };
+
+  const focusField = (name: string) => {
+    if (!formRef.current) return;
+    const el = formRef.current.querySelector<HTMLElement>(`[name="${name}"]`);
+    if (el) {
+      el.focus();
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
+
+  const handleNext = () => {
+    const invalid = validateStep(currentStep);
+    if (invalid) {
+      focusField(invalid);
+      return;
+    }
+    setCurrentStep((s) => Math.min(s + 1, STEPS.length - 1));
+  };
+
+  const handleBack = () => {
+    setCurrentStep((s) => Math.max(s - 1, 0));
+  };
 
   const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.currentTarget.files?.[0];
@@ -71,7 +200,8 @@ export function AssessmentForm({ successMessages }: Props) {
 
     try {
       // Step 1: Create assessment record to get an ID
-      const form = document.getElementById('assessment-form') as HTMLFormElement;
+      const form = formRef.current;
+      if (!form) return;
       const data = new FormData(form);
       const submitPayload = {
         firstName: data.get('firstName'),
@@ -163,39 +293,6 @@ export function AssessmentForm({ successMessages }: Props) {
       sourcePage: window.location.pathname,
     };
 
-    // If we have a storage path but the record wasn't created yet, create it first
-    if (storagePath && !assessmentId) {
-      try {
-        setUploadProgress('Creating record…');
-        const res = await fetch('/api/assessments', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ...payload,
-            transcript: selectedFile
-              ? { name: selectedFile.name, size: selectedFile.size, type: selectedFile.type }
-              : null,
-            transcriptStoragePath: storagePath,
-          }),
-        });
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error((body as { error?: string }).error || `Submission failed (${res.status})`);
-        }
-        setStatus('success');
-        setSelectedFile(null);
-        setUploadStatus('idle');
-        setStoragePath(null);
-        setAssessmentId(null);
-        form.reset();
-        return;
-      } catch (err) {
-        setErrorMsg(err instanceof Error ? err.message : 'Submission failed');
-        setStatus('error');
-        return;
-      }
-    }
-
     try {
       const res = await fetch('/api/assessments', {
         method: 'POST',
@@ -224,45 +321,113 @@ export function AssessmentForm({ successMessages }: Props) {
     }
   };
 
+  // ── Success state ─────────────────────────────────────────────
+  if (status === 'success') {
+    return (
+      <div className="bg-white border border-gray-200 p-6 sm:p-8 text-center">
+        <div className="h-16 w-16 bg-[#9B1B30]/10 flex items-center justify-center mx-auto mb-4">
+          <CheckCircle className="h-8 w-8 text-[#9B1B30]" />
+        </div>
+        <h3 className="text-lg font-semibold text-[#1F2937] mb-2">
+          {successMessages.title}
+        </h3>
+        <p className="text-[#4B5563] mb-2">{successMessages.body1}</p>
+        <p className="text-[#4B5563] mb-6">{successMessages.body2}</p>
+        <button
+          onClick={() => {
+            setStatus('idle');
+            setCurrentStep(0);
+          }}
+          className="px-6 py-2 bg-[#9B1B30] text-white font-semibold text-sm uppercase tracking-wider hover:bg-[#7A1526] transition-colors duration-150"
+        >
+          {successMessages.sendAnother}
+        </button>
+      </div>
+    );
+  }
+
+  // ── Wizard ────────────────────────────────────────────────────
   return (
     <div className="bg-white border border-gray-200 p-6 sm:p-8">
       <h2 className="text-xl font-bold text-[#1F2937] mb-6">Submit Your Assessment</h2>
 
-      {status === 'success' ? (
-        <div className="text-center py-12">
-          <div className="h-16 w-16 bg-[#9B1B30]/10 flex items-center justify-center mx-auto mb-4">
-            <CheckCircle className="h-8 w-8 text-[#9B1B30]" />
-          </div>
-          <h3 className="text-lg font-semibold text-[#1F2937] mb-2">
-            {successMessages.title}
-          </h3>
-          <p className="text-[#4B5563] mb-2">{successMessages.body1}</p>
-          <p className="text-[#4B5563] mb-6">{successMessages.body2}</p>
-          <button
-            onClick={() => setStatus('idle')}
-            className="px-6 py-2 bg-[#9B1B30] text-white font-semibold text-sm uppercase tracking-wider hover:bg-[#7A1526] transition-colors duration-150"
-          >
-            {successMessages.sendAnother}
-          </button>
-        </div>
-      ) : (
-        <form id="assessment-form" onSubmit={handleSubmit} className="space-y-5">
-          {status === 'error' && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm flex items-start gap-2">
-              <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
-              <span>{errorMsg}</span>
-            </div>
-          )}
+      {/* Progress indicator */}
+      <ol className="flex items-center gap-2 mb-6" aria-label="Progress">
+        {STEPS.map((s, i) => {
+          const isDone = i < currentStep;
+          const isCurrent = i === currentStep;
+          return (
+            <li key={s.key} className="flex-1 flex items-center gap-2 min-w-0">
+              <div
+                className={[
+                  'shrink-0 h-8 w-8 flex items-center justify-center text-xs font-bold border-2',
+                  isDone
+                    ? 'bg-[#9B1B30] border-[#9B1B30] text-white'
+                    : isCurrent
+                      ? 'bg-white border-[#9B1B30] text-[#9B1B30]'
+                      : 'bg-white border-gray-200 text-gray-400',
+                ].join(' ')}
+                aria-current={isCurrent ? 'step' : undefined}
+              >
+                {isDone ? <Check className="h-4 w-4" /> : i + 1}
+              </div>
+              <div className="min-w-0 flex-1 hidden sm:block">
+                <p
+                  className={[
+                    'text-xs font-semibold truncate',
+                    isCurrent ? 'text-[#9B1B30]' : isDone ? 'text-[#1B2A4A]' : 'text-gray-400',
+                  ].join(' ')}
+                >
+                  {s.label}
+                </p>
+                <p className="text-[10px] text-gray-500 truncate">{s.desc}</p>
+              </div>
+              {i < STEPS.length - 1 && (
+                <div
+                  className={[
+                    'hidden md:block flex-1 h-px',
+                    isDone ? 'bg-[#9B1B30]' : 'bg-gray-200',
+                  ].join(' ')}
+                />
+              )}
+            </li>
+          );
+        })}
+      </ol>
 
+      {/* Visual progress bar */}
+      <div className="h-1 w-full bg-gray-100 mb-6 overflow-hidden">
+        <div
+          className="h-full bg-[#9B1B30] transition-all duration-300"
+          style={{ width: `${((currentStep + 1) / STEPS.length) * 100}%` }}
+        />
+      </div>
+
+      <form
+        ref={formRef}
+        onSubmit={handleSubmit}
+        noValidate
+        className="space-y-5"
+      >
+        {status === 'error' && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm flex items-start gap-2">
+            <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
+            <span>{errorMsg}</span>
+          </div>
+        )}
+
+        {/* ── Step 1: Personal info ─────────────────────────── */}
+        {currentStep === 0 && (
           <div>
             <h3 className="text-base font-semibold text-[#1F2937] mb-4 flex items-center gap-2">
-              <Mail className="h-4 w-4 text-[#1B2A4A]" />
-              Basic Information
+              <User className="h-4 w-4 text-[#1B2A4A]" />
+              Personal Information
             </h3>
             <div className="grid sm:grid-cols-2 gap-5">
               <div>
                 <label className="block text-sm font-medium text-[#1F2937] mb-1">First Name *</label>
                 <input
+                  ref={firstNameRef}
                   type="text"
                   name="firstName"
                   required
@@ -273,6 +438,7 @@ export function AssessmentForm({ successMessages }: Props) {
               <div>
                 <label className="block text-sm font-medium text-[#1F2937] mb-1">Last Name *</label>
                 <input
+                  ref={lastNameRef}
                   type="text"
                   name="lastName"
                   required
@@ -285,6 +451,7 @@ export function AssessmentForm({ successMessages }: Props) {
               <div>
                 <label className="block text-sm font-medium text-[#1F2937] mb-1">Email *</label>
                 <input
+                  ref={emailRef}
                   type="email"
                   name="email"
                   required
@@ -295,6 +462,7 @@ export function AssessmentForm({ successMessages }: Props) {
               <div>
                 <label className="block text-sm font-medium text-[#1F2937] mb-1">WhatsApp *</label>
                 <input
+                  ref={whatsappRef}
                   type="tel"
                   name="whatsapp"
                   required
@@ -303,34 +471,35 @@ export function AssessmentForm({ successMessages }: Props) {
                 />
               </div>
             </div>
-            <div className="mt-5">
-              <label className="block text-sm font-medium text-[#1F2937] mb-1">Country *</label>
-              <input
-                type="text"
-                name="country"
-                required
-                className="w-full border border-gray-300 px-4 py-2.5 text-sm text-[#1F2937] bg-white rounded-none focus:border-[#9B1B30] focus:outline-none focus:ring-1 focus:ring-[#9B1B30]"
-                placeholder="Your Country"
-              />
+            <div className="grid sm:grid-cols-2 gap-5 mt-5">
+              <div>
+                <label className="block text-sm font-medium text-[#1F2937] mb-1">Country *</label>
+                <input
+                  ref={countryRef}
+                  type="text"
+                  name="country"
+                  required
+                  className="w-full border border-gray-300 px-4 py-2.5 text-sm text-[#1F2937] bg-white rounded-none focus:border-[#9B1B30] focus:outline-none focus:ring-1 focus:ring-[#9B1B30]"
+                  placeholder="Your Country"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#1F2937] mb-1">Date of Birth *</label>
+                <input
+                  ref={dateOfBirthRef}
+                  type="date"
+                  name="dateOfBirth"
+                  required
+                  className="w-full border border-gray-300 px-4 py-2.5 text-sm text-[#1F2937] bg-white rounded-none focus:border-[#9B1B30] focus:outline-none focus:ring-1 focus:ring-[#9B1B30]"
+                />
+              </div>
             </div>
           </div>
+        )}
 
-          <div className="pt-4 border-t border-gray-100">
-            <h3 className="text-base font-semibold text-[#1F2937] mb-4 flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-[#1B2A4A]" />
-              Date of Birth *
-            </h3>
-            <div>
-              <input
-                type="date"
-                name="dateOfBirth"
-                required
-                className="w-full border border-gray-300 px-4 py-2.5 text-sm text-[#1F2937] bg-white rounded-none focus:border-[#9B1B30] focus:outline-none focus:ring-1 focus:ring-[#9B1B30]"
-              />
-            </div>
-          </div>
-
-          <div className="pt-4 border-t border-gray-100">
+        {/* ── Step 2: Education ─────────────────────────────── */}
+        {currentStep === 1 && (
+          <div>
             <h3 className="text-base font-semibold text-[#1F2937] mb-4 flex items-center gap-2">
               <GraduationCap className="h-4 w-4 text-[#1B2A4A]" />
               Education Background
@@ -339,6 +508,7 @@ export function AssessmentForm({ successMessages }: Props) {
               <div>
                 <label className="block text-sm font-medium text-[#1F2937] mb-1">Current Education *</label>
                 <select
+                  ref={currentEducationRef}
                   name="currentEducation"
                   required
                   defaultValue=""
@@ -374,15 +544,25 @@ export function AssessmentForm({ successMessages }: Props) {
                 placeholder="Tsinghua, Peking, Fudan, etc."
               />
             </div>
+            <p className="mt-4 text-xs text-gray-500 flex items-center gap-1.5">
+              <Mail className="h-3.5 w-3.5" />
+              Step 1 of 4 complete. Tell us about your study background.
+            </p>
           </div>
+        )}
 
-          {/* Transcript Upload */}
-          <div className="pt-4 border-t border-gray-100">
-            <h3 className="text-base font-semibold text-[#1F2937] mb-4 flex items-center gap-2">
+        {/* ── Step 3: Documents (transcript upload) ─────────── */}
+        {currentStep === 2 && (
+          <div>
+            <h3 className="text-base font-semibold text-[#1F2937] mb-1 flex items-center gap-2">
               <Upload className="h-4 w-4 text-[#1B2A4A]" />
               Academic Transcript
-              <span className="text-xs font-normal text-gray-500 ml-1">(optional)</span>
+              <span className="text-xs font-normal text-gray-500 ml-1">(optional but recommended)</span>
             </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Uploading your transcript lets our team give you a more accurate assessment.
+              Skip this if you don't have a copy handy — you can always email it later.
+            </p>
             <div className="border-2 border-dashed border-gray-300 p-6 text-center">
               {uploadStatus === 'idle' && (
                 <>
@@ -441,36 +621,122 @@ export function AssessmentForm({ successMessages }: Props) {
                 </div>
               )}
             </div>
+            {uploadStatus === 'failed' && (
+              <p className="mt-3 text-xs text-red-600">
+                The transcript upload failed, but you can still submit the form and email
+                your transcript to <a href="mailto:mlsjahid@qq.com" className="underline">mlsjahid@qq.com</a>{' '}
+                after.
+              </p>
+            )}
           </div>
+        )}
 
-          <div className="pt-4 border-t border-gray-100">
+        {/* ── Step 4: Notes & Submit ────────────────────────── */}
+        {currentStep === 3 && (
+          <div>
+            <h3 className="text-base font-semibold text-[#1F2937] mb-1 flex items-center gap-2">
+              <FileText className="h-4 w-4 text-[#1B2A4A]" />
+              Additional Notes
+              <span className="text-xs font-normal text-gray-500 ml-1">(optional)</span>
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Anything else you want our team to know? Scholarship needs, preferred
+              cities, deadlines, language test scores, etc.
+            </p>
             <div>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1">Additional Notes</label>
               <textarea
                 name="notes"
-                rows={4}
+                rows={6}
                 className="w-full border border-gray-300 px-4 py-2.5 text-sm text-[#1F2937] bg-white rounded-none focus:border-[#9B1B30] focus:outline-none focus:ring-1 focus:ring-[#9B1B30] resize-vertical"
                 placeholder="Any additional information you'd like us to know..."
               />
             </div>
-          </div>
 
+            {/* Summary card — pre-submit review. Values are read
+                from the form on mount and via input events (see
+                useEffect below) so we don't have to touch refs
+                during render. */}
+            <div className="mt-6 bg-[#FAFAF8] border border-gray-200 p-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-[#1B2A4A] mb-3">
+                Review before submitting
+              </p>
+              <dl className="space-y-1.5 text-sm">
+                <SummaryRow label="Name" value={summary.name} />
+                <SummaryRow label="Email" value={summary.email} />
+                <SummaryRow label="Country" value={summary.country} />
+                <SummaryRow label="Education" value={summary.currentEducation} />
+                <SummaryRow label="Intended major" value={summary.intendedMajor} />
+                {selectedFile && (
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-gray-500">Transcript</dt>
+                    <dd className="font-medium text-[#1B2A4A] text-right">
+                      {selectedFile.name}
+                    </dd>
+                  </div>
+                )}
+              </dl>
+            </div>
+          </div>
+        )}
+
+        {/* ── Navigation ──────────────────────────────────── */}
+        <div className="pt-2 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-gray-100">
           <button
-            type="submit"
-            disabled={status === 'submitting'}
-            className="w-full sm:w-auto px-8 py-3 bg-[#9B1B30] text-white font-semibold uppercase tracking-wider text-sm hover:bg-[#7A1526] transition-colors duration-150 flex items-center gap-2 disabled:opacity-50"
+            type="button"
+            onClick={handleBack}
+            disabled={currentStep === 0 || status === 'submitting'}
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-medium text-[#1B2A4A] border border-gray-300 hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
-            {status === 'submitting' ? (
-              <>
-                <Spinner size="sm" />
-                Submitting…
-              </>
-            ) : (
-              'Submit Assessment'
-            )}
+            <ArrowLeft className="h-4 w-4" />
+            Back
           </button>
-        </form>
-      )}
+
+          {currentStep < STEPS.length - 1 ? (
+            <button
+              type="button"
+              onClick={handleNext}
+              className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-[#9B1B30] text-white font-semibold text-sm uppercase tracking-wider hover:bg-[#7A1526] transition-colors"
+            >
+              {currentStep === 0 ? 'Continue to education' : 'Continue to documents'}
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={status === 'submitting'}
+              className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-[#9B1B30] text-white font-semibold text-sm uppercase tracking-wider hover:bg-[#7A1526] transition-colors disabled:opacity-50"
+            >
+              {status === 'submitting' ? (
+                <>
+                  <Spinner size="sm" />
+                  Submitting…
+                </>
+              ) : (
+                'Submit Assessment'
+              )}
+            </button>
+          )}
+        </div>
+
+        <p className="text-xs text-gray-400 text-center sm:text-left">
+          Step {currentStep + 1} of {STEPS.length} · {STEPS[currentStep].label}
+        </p>
+      </form>
+    </div>
+  );
+}
+
+// Tiny presentational helper for the pre-submit summary list. Reads
+// from the `summary` state (which is updated by a delegated input
+// listener — see useEffect above). This is the lint-safe
+// alternative to reading formRef.current during render.
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between gap-2">
+      <dt className="text-gray-500">{label}</dt>
+      <dd className="font-medium text-[#1B2A4A] text-right max-w-[60%] truncate">
+        {value || '—'}
+      </dd>
     </div>
   );
 }

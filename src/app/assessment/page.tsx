@@ -51,9 +51,9 @@ export default function AssessmentPage() {
                     <span className="text-[#9B1B30] font-bold text-sm">1</span>
                   </div>
                   <div>
-                    <h4 className="font-medium text-[#1F2937] text-sm">Submit Your Documents</h4>
+                    <h4 className="font-medium text-[#1F2937] text-sm">Fill the 4-step form</h4>
                     <p className="text-xs text-[#4B5563]">
-                      Fill out the form and upload your academic transcript
+                      Personal info → Education → Transcript (optional) → Notes
                     </p>
                   </div>
                 </div>
@@ -64,7 +64,7 @@ export default function AssessmentPage() {
                   <div>
                     <h4 className="font-medium text-[#1F2937] text-sm">Our Team Reviews</h4>
                     <p className="text-xs text-[#4B5563]">
-                      Our education experts evaluate your academic profile
+                      Our education experts evaluate your academic profile within 48 hours
                     </p>
                   </div>
                 </div>
