@@ -206,14 +206,16 @@ export default function UniversityDetailPage() {
                 ))}
               </div>
             </div>
-            <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-              {/* Live countdown to the next application deadline.
-                  Sits above the CTAs so users see "X days left" before
-                  deciding to apply. The component renders nothing if
-                  uni.applicationDeadline isn't set, so old DB rows
-                  without the field still look clean. */}
+            <div className="flex flex-col gap-3 w-full lg:w-auto">
+              {/* Live countdown to the next application deadline. Now
+                  the primary CTA in the hero (replaces the removed
+                  Apply Now + Visit Website buttons). The user sees
+                  the ticking urgency before they scroll for the
+                  Apply button further down the page. The component
+                  renders nothing if uni.applicationDeadline isn't
+                  set — the admin should backfill the column. */}
               {uni.applicationDeadline && (
-                <div className="w-full sm:w-80 lg:w-72 mb-1">
+                <div className="w-full sm:w-80 lg:w-72">
                   <DeadlineCountdown
                     deadline={uni.applicationDeadline}
                     locale={locale}
@@ -225,17 +227,6 @@ export default function UniversityDetailPage() {
                   />
                 </div>
               )}
-              <div className="flex gap-3 w-full sm:w-auto">
-                <Button className="bg-[#9B1B30] hover:bg-[#7A1526] text-white font-semibold px-6 flex-1 sm:flex-none">
-                  {t('cta.apply')}
-                </Button>
-                <Button
-                  variant="outline"
-                  className="border-white/30 bg-transparent text-white hover:bg-white/10 font-semibold px-6 flex-1 sm:flex-none"
-                >
-                  {t('uni.visitWebsite')}
-                </Button>
-              </div>
             </div>
           </div>
         </div>
