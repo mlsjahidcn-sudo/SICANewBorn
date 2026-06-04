@@ -3,9 +3,15 @@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
-// Enhanced Skeleton with shimmer effect
+// Enhanced Skeleton with shimmer effect. Note: this is just a passthrough
+// to the base Skeleton — the `variant` prop is accepted but not used by
+// the underlying component (CSS keyframes are global). Previous versions
+// of this file referenced `ShimmerSkeleton` inside its own body, which
+// caused an infinite render loop and "Maximum call stack size exceeded"
+// on every page that used these skeletons. Keep this pointing at the
+// base `Skeleton` component.
 const ShimmerSkeleton = ({ className, ...props }: React.ComponentProps<typeof Skeleton>) => (
-  <ShimmerSkeleton variant="shimmer" className={className} {...props} />
+  <Skeleton className={className} {...props} />
 );
 
 // Dashboard Skeleton

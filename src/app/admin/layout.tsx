@@ -48,28 +48,21 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
 
+  // Redirect to login if auth check completed and there's no user.
+  // We intentionally do NOT block render on `loading` — the sidebar and
+  // header render immediately, only the user-specific bits (avatar, sign-out)
+  // gate on `user`. The old behavior (full-screen spinner) made the page
+  // appear "not accessible" if the auth context was slow or the tab was
+  // backgrounded.
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (mounted && !loading && !user) {
+    if (!loading && !user) {
       const isAuthPage = pathname === '/admin/login' || pathname === '/admin/register';
       if (!isAuthPage) {
         router.push('/admin/login');
       }
     }
-  }, [user, loading, mounted, pathname, router]);
-
-  if (!mounted || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#1B2A4A]">
-        <Spinner size="md" className="text-white" />
-      </div>
-    );
-  }
+  }, [user, loading, pathname, router]);
 
   const isAuthPage = pathname === '/admin/login' || pathname === '/admin/register';
 
@@ -77,8 +70,61 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
+  // If still resolving auth, render the shell with a small inline
+  // indicator. User bits (avatar, sign-out) render as skeletons.
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#F3F4F6] flex">
+        <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
+          <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-200">
+            <div className="w-9 h-9 bg-[#9B1B30] flex items-center justify-center">
+              <span className="text-white font-bold text-sm">S</span>
+            </div>
+            <div>
+              <div className="text-[#1B2A4A] font-bold text-sm tracking-wide">SICA</div>
+              <div className="text-gray-500 text-xs">Admin Portal</div>
+            </div>
+          </div>
+          <div className="flex-1 px-3 py-4 space-y-1">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <div
+                  key={item.label}
+                  className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-400"
+                >
+                  <Icon size={18} />
+                  <span>{item.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </aside>
+        <div className="flex-1 flex flex-col">
+          <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-4">
+            <div className="flex-1" />
+            <div className="text-sm text-[#4B5563] flex items-center gap-2">
+              <Spinner size="xs" />
+              <span>Loading session…</span>
+            </div>
+          </header>
+          <main className="flex-1 p-6 overflow-auto">
+            {children}
+          </main>
+        </div>
+      </div>
+    );
+  }
+
   if (!user) {
-    return null;
+    // Auth resolved with no user — the redirect effect above is about to
+    // push us to /admin/login. Render a minimal placeholder to avoid a
+    // flash of empty content during the navigation.
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F3F4F6]">
+        <p className="text-sm text-[#4B5563]">Redirecting to sign in…</p>
+      </div>
+    );
   }
 
   const handleSignOut = async () => {
