@@ -31,7 +31,7 @@
       "required": true
     },
     "DOUBAO_API_KEY": {
-      "description": "Volcengine Doubao (Ark) API key for AI chat",
+      "description": "Volcengine Doubao (Ark) API key for AI chat (default provider)",
       "required": false
     },
     "DOUBAO_BASE_URL": {
@@ -40,6 +40,22 @@
     },
     "DOUBAO_MODEL": {
       "description": "Doubao model name (e.g. doubao-1-5-pro-32k-250115)",
+      "required": false
+    },
+    "DEEPSEEK_API_KEY": {
+      "description": "DeepSeek API key (alternative AI provider; set AI_PROVIDER=deepseek to use)",
+      "required": false
+    },
+    "DEEPSEEK_BASE_URL": {
+      "description": "DeepSeek API base URL (default: https://api.deepseek.com/v1)",
+      "required": false
+    },
+    "DEEPSEEK_MODEL": {
+      "description": "DeepSeek model (deepseek-chat = V3, deepseek-reasoner = R1)",
+      "required": false
+    },
+    "AI_PROVIDER": {
+      "description": "AI provider to use: 'doubao' (default) or 'deepseek'. Only the matching env vars need to be set.",
       "required": false
     },
     "RESEND_API_KEY": {

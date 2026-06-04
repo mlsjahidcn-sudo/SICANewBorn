@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { SICA_CHATBOT_SYSTEM_PROMPT, SICA_UNIVERSITY_CONTEXT_PROMPT } from '@/lib/ai/prompts';
 import { getUniversityContext, getApplicationGuideContext, searchFAQ, sicaFAQ } from '@/lib/ai/knowledge';
 import { universities, type University } from '@/lib/data';
+import { getAIProvider } from '@/lib/ai/provider';
 
 function buildRAGContext(userMessage: string) {
   let context = '';
@@ -281,84 +282,45 @@ function generateUniversityResponse(uni: University, userMessage: string): strin
   return intro + details + followUp;
 }
 
-async function callDoubaoAPI(
-  messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
+/**
+ * Stream a chatbot reply from the configured AI provider (Doubao or
+ * DeepSeek). Falls back to the rule-based response on any failure —
+ * never throws to the client. The SSE envelope is `data: {"content":...}\n\n`
+ * with a final `data: [DONE]\n\n`.
+ */
+async function streamProviderResponse(
+  providerName: string,
+  llmMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
   controller: ReadableStreamDefaultController,
-  encoder: TextEncoder
-) {
-  const apiKey = process.env.DOUBAO_API_KEY;
-  const baseUrl = process.env.DOUBAO_BASE_URL || 'https://ark.cn-beijing.volces.com/api/v3';
-  const model = process.env.DOUBAO_MODEL;
-
-  if (!apiKey || !model) {
-    console.log('[AI Chat] Doubao API not configured, falling back');
-    return false;
-  }
-
+  encoder: TextEncoder,
+): Promise<boolean> {
   try {
-    console.log('[AI Chat] Calling Doubao API with model:', model);
-    
-    const response = await fetch(`${baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: model,
-        messages: messages,
-        stream: true,
-        temperature: 0.7,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[AI Chat] Doubao API error:', response.status, errorText);
+    const provider = getAIProvider();
+    if (!provider.isConfigured) {
+      console.log(`[AI Chat] ${providerName} not configured (AI_PROVIDER=${provider.name})`);
       return false;
     }
 
-    const reader = response.body?.getReader();
-    if (!reader) {
-      console.error('[AI Chat] No response body from Doubao API');
-      return false;
-    }
-
-    const decoder = new TextDecoder();
-    let buffer = '';
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed || trimmed === 'data: [DONE]') continue;
-        if (!trimmed.startsWith('data: ')) continue;
-
+    console.log(`[AI Chat] Streaming via ${provider.name}...`);
+    for await (const chunk of provider.stream(llmMessages, { temperature: 0.7 })) {
+      if (chunk.content) {
         try {
-          const jsonStr = trimmed.slice(6);
-          const data = JSON.parse(jsonStr);
-          const content = data.choices?.[0]?.delta?.content;
-          
-          if (content) {
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
-          }
-        } catch (parseError) {
-          // Skip invalid JSON lines
-          continue;
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify({ content: chunk.content })}\n\n`),
+          );
+        } catch (enqueueError) {
+          // Client disconnected or controller was torn down mid-stream.
+          // Stop consuming the provider to free its socket.
+          console.warn(`[AI Chat] Controller closed mid-stream, aborting ${provider.name}`);
+          return false;
         }
       }
+      if (chunk.done) break;
     }
-
-    console.log('[AI Chat] Doubao API stream completed');
+    console.log(`[AI Chat] ${provider.name} stream completed`);
     return true;
   } catch (error) {
-    console.error('[AI Chat] Doubao API call failed:', error);
+    console.error(`[AI Chat] ${providerName} stream failed:`, error);
     return false;
   }
 }
@@ -380,116 +342,48 @@ export async function POST(request: NextRequest) {
 
     console.log('[AI Chat] Processing message:', lastUserMessage.substring(0, 100));
 
-    // Try Doubao API first if configured
-    if (process.env.DOUBAO_API_KEY && process.env.DOUBAO_MODEL) {
-      try {
-        console.log('[AI Chat] Using Doubao API...');
-        
-        const ragContext = buildRAGContext(lastUserMessage);
-        const fullSystemPrompt = `${SICA_CHATBOT_SYSTEM_PROMPT}\n\n${SICA_UNIVERSITY_CONTEXT_PROMPT}${ragContext}`;
+    // Build RAG context + full system prompt once (used by both LLM
+    // and the rule-based fallback so the prompt surface is identical).
+    const ragContext = buildRAGContext(lastUserMessage);
+    const fullSystemPrompt = `${SICA_CHATBOT_SYSTEM_PROMPT}\n\n${SICA_UNIVERSITY_CONTEXT_PROMPT}${ragContext}`;
 
-        const llmMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
-          { role: 'system', content: fullSystemPrompt },
-          ...messages.map((m: { role: string; content: string }) => ({
-            role: m.role as 'system' | 'user' | 'assistant',
-            content: m.content
-          }))
-        ];
+    const llmMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+      { role: 'system', content: fullSystemPrompt },
+      ...messages.map((m: { role: string; content: string }) => ({
+        role: m.role as 'system' | 'user' | 'assistant',
+        content: m.content,
+      })),
+    ];
 
-        const encoder = new TextEncoder();
-        const readableStream = new ReadableStream({
-          async start(controller) {
-            try {
-              const success = await callDoubaoAPI(llmMessages, controller, encoder);
-              if (!success) {
-                console.log('[AI Chat] Doubao API failed, falling back to intelligent response');
-                await sendIntelligentResponse(lastUserMessage, messages, controller, encoder);
-              } else {
-                controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-                controller.close();
-              }
-            } catch (error) {
-              console.error('[AI Chat] Stream error, falling back:', error);
-              await sendIntelligentResponse(lastUserMessage, messages, controller, encoder);
-            }
-          },
-        });
+    // Surface which provider we'll use. The actual stream happens
+    // inside the ReadableStream so we can swap mid-flight to the
+    // rule-based fallback without throwing to the client.
+    const provider = getAIProvider();
+    const providerLabel = provider.isConfigured ? provider.name : 'fallback (no AI provider configured)';
+    console.log(`[AI Chat] Routing to ${providerLabel}`);
 
-        return new Response(readableStream, {
-          headers: {
-            'Content-Type': 'text/event-stream',
-            'Cache-Control': 'no-cache',
-            'Connection': 'keep-alive',
-          },
-        });
-      } catch (doubaoError) {
-        console.log('[AI Chat] Doubao API not available, trying other options');
-      }
-    }
-
-    // Try Coze SDK if available
-    try {
-      const { LLMClient, Config, HeaderUtils } = await import('coze-coding-dev-sdk');
-      
-      console.log('[AI Chat] Using Coze SDK...');
-      
-      const ragContext = buildRAGContext(lastUserMessage);
-      const fullSystemPrompt = `${SICA_CHATBOT_SYSTEM_PROMPT}\n\n${SICA_UNIVERSITY_CONTEXT_PROMPT}${ragContext}`;
-
-      const llmMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
-        { role: 'system', content: fullSystemPrompt },
-        ...messages.map((m: { role: string; content: string }) => ({
-          role: m.role as 'system' | 'user' | 'assistant',
-          content: m.content
-        }))
-      ];
-
-      const customHeaders = HeaderUtils.extractForwardHeaders(request.headers);
-      const config = new Config();
-      const client = new LLMClient(config, customHeaders);
-
-      const encoder = new TextEncoder();
-      const readableStream = new ReadableStream({
-        async start(controller) {
-          try {
-            const llmStream = client.stream(llmMessages, {
-              model: 'doubao-seed-2-0-lite-260215',
-              temperature: 0.7,
-            });
-
-            for await (const chunk of llmStream) {
-              if (chunk.content) {
-                const text = chunk.content.toString();
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: text })}\n\n`));
-              }
-            }
-
-            console.log('[AI Chat] Coze SDK stream completed');
-            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-            controller.close();
-          } catch (streamError) {
-            console.error('[AI Chat] Coze SDK stream error, falling back:', streamError);
-            await sendIntelligentResponse(lastUserMessage, messages, controller, encoder);
-          }
-        },
-      });
-
-      return new Response(readableStream, {
-        headers: {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive',
-        },
-      });
-    } catch (sdkError) {
-      console.log('[AI Chat] Coze SDK not available, using intelligent fallback');
-    }
-
-    // Fallback: Use intelligent rule-based responses
     const encoder = new TextEncoder();
     const readableStream = new ReadableStream({
       async start(controller) {
-        await sendIntelligentResponse(lastUserMessage, messages, controller, encoder);
+        const success = await streamProviderResponse(
+          provider.name,
+          llmMessages,
+          controller,
+          encoder,
+        );
+        if (!success) {
+          console.log('[AI Chat] LLM stream failed or unconfigured, using rule-based fallback');
+          await sendIntelligentResponse(lastUserMessage, messages, controller, encoder);
+          return;
+        }
+        try {
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+          controller.close();
+        } catch (closeError) {
+          // Controller already closed (e.g. dev-mode HMR teardown).
+          // Safe to ignore — the client already received the stream.
+          console.warn('[AI Chat] Controller already closed after LLM stream:', closeError);
+        }
       },
     });
 
@@ -512,34 +406,55 @@ export async function POST(request: NextRequest) {
 }
 
 async function sendIntelligentResponse(
-  userMessage: string, 
+  userMessage: string,
   messages: Array<{ role: string; content: string }>,
   controller: ReadableStreamDefaultController,
   encoder: TextEncoder
 ) {
+  /**
+   * Stream chunks word-by-word with a tiny per-word delay so the
+   * chatbot feels responsive even when we're not hitting an LLM.
+   * If the controller has already been closed (e.g. the LLM stream
+   * partially succeeded then failed and closed the stream), every
+   * enqueue would throw ERR_INVALID_STATE. Guard with a try/catch
+   * and bail silently — the response is already done from the
+   * caller's perspective.
+   */
+  const safeEnqueue = (data: string) => {
+    try {
+      controller.enqueue(encoder.encode(data));
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   try {
     const response = generateIntelligentResponse(userMessage, messages);
     console.log('[AI Chat] Generated intelligent response, length:', response.length);
-    
+
     // Stream word by word for a natural feel
     const words = response.split(/(\s+)/); // Keep whitespace
     for (let i = 0; i < words.length; i++) {
       const word = words[i];
       if (word) {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: word })}\n\n`));
+        if (!safeEnqueue(`data: ${JSON.stringify({ content: word })}\n\n`)) {
+          console.warn('[AI Chat] Controller already closed, aborting fallback stream');
+          return;
+        }
         // Variable delay for natural feel
         const delay = word.length > 10 ? 80 : word.length > 5 ? 50 : 30;
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
-    
-    controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-    controller.close();
+
+    safeEnqueue('data: [DONE]\n\n');
+    try { controller.close(); } catch {}
   } catch (error) {
     console.error('[AI Chat] Error in intelligent response:', error);
     const fallbackResponse = "I'm here to help you with studying in China! Please try asking your question again, or feel free to ask about universities, programs, scholarships, or the application process. 😊";
-    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: fallbackResponse })}\n\n`));
-    controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-    controller.close();
+    safeEnqueue(`data: ${JSON.stringify({ content: fallbackResponse })}\n\n`);
+    safeEnqueue('data: [DONE]\n\n');
+    try { controller.close(); } catch {}
   }
 }

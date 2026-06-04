@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { LLMClient, Config, HeaderUtils } from 'coze-coding-dev-sdk';
+import { getAIProvider } from '@/lib/ai/provider';
 
 const SYSTEM_PROMPT = `You are a university data generator for a Study in China platform. Given a Chinese university name, generate comprehensive information about it.
 
@@ -66,9 +66,16 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const customHeaders = HeaderUtils.extractForwardHeaders(request.headers);
-    const config = new Config();
-    const client = new LLMClient(config, customHeaders);
+    const provider = getAIProvider();
+    if (!provider.isConfigured) {
+      return new Response(
+        JSON.stringify({
+          error:
+            'AI provider not configured. Set DEEPSEEK_API_KEY or DOUBAO_API_KEY on the server.',
+        }),
+        { status: 503, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
 
     const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
       { role: 'system', content: SYSTEM_PROMPT },
@@ -80,17 +87,20 @@ export async function POST(request: NextRequest) {
       async start(controller) {
         let fullContent = '';
         try {
-          const llmStream = client.stream(messages, {
-            model: 'doubao-seed-2-0-lite-260215',
+          // Lower temperature for structured JSON output; max_tokens
+          // cap protects against runaway generations on long university
+          // descriptions in either language.
+          for await (const chunk of provider.stream(messages, {
             temperature: 0.3,
-          });
-
-          for await (const chunk of llmStream) {
+            maxTokens: 4000,
+          })) {
             if (chunk.content) {
-              const text = chunk.content.toString();
-              fullContent += text;
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content: text })}\n\n`));
+              fullContent += chunk.content;
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ content: chunk.content })}\n\n`),
+              );
             }
+            if (chunk.done) break;
           }
 
           // Server-side JSON validation and repair
@@ -118,8 +128,11 @@ export async function POST(request: NextRequest) {
           controller.enqueue(encoder.encode('data: [DONE]\n\n'));
           controller.close();
         } catch (streamError) {
-          const errorMessage = streamError instanceof Error ? streamError.message : 'Stream error';
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: errorMessage })}\n\n`));
+          const errorMessage =
+            streamError instanceof Error ? streamError.message : 'Stream error';
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify({ error: errorMessage })}\n\n`),
+          );
           controller.close();
         }
       },
