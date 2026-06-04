@@ -110,7 +110,7 @@ export default function ProgramDetailPage() {
 
             <div className="flex gap-3 lg:flex-col lg:items-end">
               <Link
-                href="/programs"
+                href={`/assessment?major=${encodeURIComponent(locale === 'zh' ? program.nameCn : program.name)}&program=${encodeURIComponent(program.slug)}`}
                 className="rounded-none border border-white/30 bg-transparent px-5 py-2.5 text-sm font-semibold text-white hover:bg-white/10 hover:text-white transition-colors"
               >
                 {t('prog.applyViaSica')}

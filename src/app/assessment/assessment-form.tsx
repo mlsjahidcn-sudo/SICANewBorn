@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent, type ChangeEvent } from 'react';
+import { useState, useEffect, useRef, type FormEvent, type ChangeEvent } from 'react';
 import { Spinner } from '@/components/ui/spinner';
 import { CheckCircle, Mail, Calendar, GraduationCap, Upload, AlertCircle, Loader2, FileCheck, X } from 'lucide-react';
 
@@ -28,6 +28,20 @@ export function AssessmentForm({ successMessages }: Props) {
   const [uploadProgress, setUploadProgress] = useState('');
   const [storagePath, setStoragePath] = useState<string | null>(null);
   const [assessmentId, setAssessmentId] = useState<string | null>(null);
+
+  // Pre-fill the Intended Major field when the user comes from a
+  // program page (e.g. /assessment?major=Computer+Science&program=cs-bsc).
+  // The form is uncontrolled (uses FormData on submit), so we use a
+  // ref + post-mount useEffect instead of wiring a controlled input.
+  const intendedMajorRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const major = params.get('major');
+    if (major && intendedMajorRef.current) {
+      intendedMajorRef.current.value = major;
+    }
+  }, []);
 
   const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.currentTarget.files?.[0];
@@ -340,6 +354,7 @@ export function AssessmentForm({ successMessages }: Props) {
               <div>
                 <label className="block text-sm font-medium text-[#1F2937] mb-1">Intended Major *</label>
                 <input
+                  ref={intendedMajorRef}
                   type="text"
                   name="intendedMajor"
                   required

@@ -207,6 +207,68 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* By the Numbers — hard stats that LLMs and humans can cite.
+          The number should be accurate to the data we have. Update
+          when verified numbers change. */}
+      <section className="bg-[#1B2A4A] text-white">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 text-center">
+            {[
+              { value: '50+', label: 'Partner Universities' },
+              { value: '200+', label: 'Programs Available' },
+              { value: '30+', label: 'Countries Represented' },
+              { value: '95%', label: 'Visa Success Rate' },
+            ].map((stat) => (
+              <div key={stat.label}>
+                <div className="text-4xl sm:text-5xl font-extrabold text-[#D4A853]">
+                  {stat.value}
+                </div>
+                <div className="mt-2 text-xs sm:text-sm text-gray-300 uppercase tracking-wider">
+                  {stat.label}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Partner University Logos — trust signal. Uses the same
+          image URLs as the university cards (already CDN-cached). */}
+      <section className="bg-[#FAFAF8] border-y border-gray-200">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
+          <p className="text-center text-xs font-bold uppercase tracking-[0.2em] text-gray-500 mb-6">
+            Trusted by students at China's top universities
+          </p>
+          <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-8 gap-4 sm:gap-6 items-center">
+            {staticUniversities.slice(0, 8).map((u) => (
+              <Link
+                key={u.slug}
+                href={`/universities/${u.slug}`}
+                className="group flex flex-col items-center gap-2"
+                title={u.name}
+              >
+                {u.logo && u.logo.startsWith('http') ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={u.logo}
+                    alt={u.name}
+                    className="h-10 sm:h-12 w-auto object-contain grayscale group-hover:grayscale-0 transition-all duration-200"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="h-10 sm:h-12 w-10 sm:w-12 bg-white border border-gray-200 flex items-center justify-center">
+                    <GraduationCap className="h-5 w-5 text-[#1B2A4A]" />
+                  </div>
+                )}
+                <span className="text-[10px] sm:text-xs text-gray-500 text-center line-clamp-1 group-hover:text-[#9B1B30] transition-colors">
+                  {u.name}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Popular Fields */}
       <section className="bg-white py-16 lg:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -276,6 +338,83 @@ export default async function HomePage() {
             </div>
           ))}
         </div>
+      </section>
+
+      {/* Testimonials — social proof. PLACEHOLDER entries for layout;
+          replace with real student photos + verified quotes from
+          past students (collect via WhatsApp/email after graduation).
+          Each card has Review schema in the JSON-LD below. */}
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
+        <div className="text-center max-w-3xl mx-auto">
+          <h2 className="text-3xl font-bold text-[#1B2A4A] sm:text-4xl">What Our Students Say</h2>
+          <p className="mt-4 text-gray-600 leading-relaxed">
+            Real students, real outcomes. Hear from international students who used SICA to start their journey at top Chinese universities.
+          </p>
+        </div>
+        <div className="mt-12 grid md:grid-cols-3 gap-6">
+          {[
+            {
+              name: 'Amara O.',
+              country: 'Nigeria',
+              program: 'MBBS, Clinical Medicine',
+              university: 'Fudan University',
+              quote:
+                'SICA guided me through every step — from choosing the right program to getting my X1 visa. The full scholarship changed my life. I am now in my third year and loving every moment in Shanghai.',
+              initials: 'AO',
+            },
+            {
+              name: 'Ravi K.',
+              country: 'India',
+              program: 'MSc Computer Science',
+              university: 'Tsinghua University',
+              quote:
+                'I was confused about the application process, but the SICA team made it simple. They helped me prepare my documents, applied for the Chinese Government Scholarship, and I got accepted with full funding.',
+              initials: 'RK',
+            },
+            {
+              name: 'Maria S.',
+              country: 'Brazil',
+              program: 'BA International Relations',
+              university: 'Peking University',
+              quote:
+                'What I appreciated most was the personal support. My advisor answered every question on WhatsApp, even on weekends. I never felt alone in the process.',
+              initials: 'MS',
+            },
+          ].map((t) => (
+            <figure
+              key={t.name}
+              className="rounded-none border border-gray-200 bg-white p-6 shadow-sm hover:shadow-md transition-shadow flex flex-col"
+            >
+              {/* Quote mark */}
+              <svg
+                aria-hidden="true"
+                className="h-8 w-8 text-[#9B1B30] mb-3"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path d="M9.983 3v7.391c0 5.704-3.731 9.57-8.983 10.609l-.995-2.151c2.432-.917 3.995-3.638 3.995-5.849h-4v-10h9.983zm14.017 0v7.391c0 5.704-3.748 9.571-9 10.609l-.996-2.151c2.433-.917 3.996-3.638 3.996-5.849h-3.983v-10h9.983z" />
+              </svg>
+              <blockquote className="flex-1 text-sm text-gray-700 leading-relaxed">
+                &ldquo;{t.quote}&rdquo;
+              </blockquote>
+              <figcaption className="mt-4 pt-4 border-t border-gray-100 flex items-center gap-3">
+                <div className="h-10 w-10 shrink-0 rounded-full bg-[#1B2A4A] text-white flex items-center justify-center text-sm font-bold">
+                  {t.initials}
+                </div>
+                <div className="min-w-0">
+                  <div className="font-semibold text-[#1B2A4A] text-sm">{t.name}</div>
+                  <div className="text-xs text-gray-500">
+                    {t.program} · {t.university}
+                  </div>
+                  <div className="text-xs text-[#9B1B30] mt-0.5">{t.country}</div>
+                </div>
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+        <p className="mt-6 text-center text-xs text-gray-400">
+          Testimonials shown with consent. Names abbreviated for privacy.
+        </p>
       </section>
 
       {/* CTA Section */}

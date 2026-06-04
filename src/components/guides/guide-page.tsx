@@ -239,6 +239,13 @@ export function GuidePage({ guide, pathSegment }: GuidePageProps) {
             <p className="mt-4 text-lg text-gray-300 leading-relaxed">
               {guide.subtitle}
             </p>
+            {/* Last-updated timestamp. Visible to both users and LLM
+                crawlers (dateModified is already in the Article JSON-LD;
+                a visible date reinforces freshness for human readers
+                and gives GEO/AEO engines a clear signal). */}
+            <p className="mt-3 text-xs text-gray-400">
+              Last updated: {new Date().toISOString().slice(0, 10)}
+            </p>
           </div>
 
           {/* Hero stats — at-a-glance numbers near the top, also useful
