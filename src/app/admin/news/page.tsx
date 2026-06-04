@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Plus, Pencil, Trash2, ExternalLink, Newspaper, Eye, EyeOff, Search } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
+import { apiFetch } from '@/lib/api-client';
 import { ToastProvider, useToast } from '@/components/admin/toast';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
 
@@ -46,7 +47,7 @@ function NewsListInner() {
   }, [user, loading, router]);
 
   const fetchPosts = useCallback(async () => {
-    const res = await fetch('/api/admin/news');
+    const res = await apiFetch('/api/admin/news');
     if (res.ok) {
       const data = await res.json();
       setPosts(data.posts || []);
@@ -59,7 +60,7 @@ function NewsListInner() {
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
-    const res = await fetch(`/api/admin/news/${deleteTarget.id}`, { method: 'DELETE' });
+    const res = await apiFetch(`/api/admin/news/${deleteTarget.id}`, { method: 'DELETE' });
     if (res.ok) {
       addToast('Post deleted', 'success');
       setDeleteTarget(null);
@@ -71,7 +72,7 @@ function NewsListInner() {
 
   const handlePublishToggle = async (post: NewsPost) => {
     const newStatus = post.status === 'published' ? 'draft' : 'published';
-    const res = await fetch(`/api/admin/news/${post.id}`, {
+    const res = await apiFetch(`/api/admin/news/${post.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: newStatus }),

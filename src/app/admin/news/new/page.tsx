@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ArrowLeft, Save, Eye, Sparkles, Loader2, X, AlertCircle, CheckCircle } from 'lucide-react';
 import { ToastProvider, useToast } from '@/components/admin/toast';
 import { useAuth } from '@/lib/auth-context';
+import { apiFetch } from '@/lib/api-client';
 
 const CATEGORIES = [
   { value: 'announcement', label: 'Announcement' },
@@ -89,7 +90,7 @@ function NewPostInner() {
         status: publish ? 'published' : 'draft',
         tags: form.tags.split(',').map((s) => s.trim()).filter(Boolean),
       };
-      const res = await fetch('/api/admin/news', {
+      const res = await apiFetch('/api/admin/news', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

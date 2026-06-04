@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Save, Eye, Trash2, ExternalLink } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
+import { apiFetch } from '@/lib/api-client';
 import { ToastProvider, useToast } from '@/components/admin/toast';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
 
@@ -55,7 +56,7 @@ function EditPostInner() {
 
   const fetchPost = useCallback(async () => {
     if (!params?.id) return;
-    const res = await fetch(`/api/admin/news/${params.id}`);
+    const res = await apiFetch(`/api/admin/news/${params.id}`);
     if (res.ok) {
       const data = await res.json();
       setPost(data.post);
@@ -89,7 +90,7 @@ function EditPostInner() {
       // Recompute read time
       const content = (payload.content_en as string) || '';
       payload.read_time_minutes = Math.max(1, Math.round(content.split(/\s+/).length / 220));
-      const res = await fetch(`/api/admin/news/${post.id}`, {
+      const res = await apiFetch(`/api/admin/news/${post.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -109,7 +110,7 @@ function EditPostInner() {
 
   const handleDelete = async () => {
     if (!post) return;
-    const res = await fetch(`/api/admin/news/${post.id}`, { method: 'DELETE' });
+    const res = await apiFetch(`/api/admin/news/${post.id}`, { method: 'DELETE' });
     if (res.ok) {
       addToast('Post deleted', 'success');
       router.push('/admin/news');

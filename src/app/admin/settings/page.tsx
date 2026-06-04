@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { User, Lock, Building2 } from 'lucide-react';
 import { ToastProvider, useToast } from '@/components/admin/toast';
+import { apiFetch } from '@/lib/api-client';
 
 function SettingsPageInner() {
   const { addToast } = useToast();
@@ -21,7 +22,7 @@ function SettingsPageInner() {
   useEffect(() => {
     async function loadProfile() {
       try {
-        const res = await fetch('/api/admin/profile');
+        const res = await apiFetch('/api/admin/profile');
         if (res.ok) {
           const data = await res.json();
           if (data.profile) {
