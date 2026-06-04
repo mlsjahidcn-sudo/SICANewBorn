@@ -5,7 +5,7 @@ import Image from 'next/image';
 
 interface UniversityLogoProps {
   src: string;
-  variant?: 'card' | 'detail';
+  variant?: 'card' | 'detail' | 'directory';
   className?: string;
 }
 
@@ -23,8 +23,10 @@ export default function UniversityLogo({ src, variant = 'card', className = '' }
   }
 
   const isCard = variant === 'card';
+  const isDirectory = variant === 'directory';
   // Card logos render as a 64x64 image inside the card overlay; detail page logos
-  // are 88x88 round avatars. next.config.ts allows all remote hostnames.
+  // are 88x88 round avatars; directory logos are 64x64 round overlays. next.config.ts
+  // allows all remote hostnames.
   const size = isCard ? 48 : 88;
 
   return (
@@ -32,7 +34,9 @@ export default function UniversityLogo({ src, variant = 'card', className = '' }
       className={[
         isCard
           ? 'absolute bg-white border-2 border-white shadow-2xl flex items-center justify-center z-50 left-4 -bottom-8 h-16 w-16'
-          : 'bg-white border-2 border-gray-200 shadow-lg flex items-center justify-center shrink-0 h-[88px] w-[88px] rounded-full',
+          : isDirectory
+            ? 'absolute bg-white flex items-center justify-center z-50 left-4 -bottom-8 h-16 w-16 rounded-full overflow-hidden'
+            : 'bg-white border-2 border-gray-200 shadow-lg flex items-center justify-center shrink-0 h-[88px] w-[88px] rounded-full',
         className,
       ].join(' ')}
     >
@@ -41,7 +45,13 @@ export default function UniversityLogo({ src, variant = 'card', className = '' }
         alt="University logo"
         width={size}
         height={size}
-        className={isCard ? 'h-12 w-12 object-contain' : 'h-[64px] w-[64px] object-contain rounded-full'}
+        className={
+          isCard
+            ? 'h-12 w-12 object-contain'
+            : isDirectory
+              ? 'h-full w-full object-contain'
+              : 'h-[64px] w-[64px] object-contain rounded-full'
+        }
         onError={() => setHasError(true)}
         unoptimized
       />

@@ -185,7 +185,7 @@ export default function UniversidadesPage() {
                     />
                   </div>
                   {/* University Logo */}
-                  <UniversityLogo src={uni.logo || ''} variant="card" />
+                  <UniversityLogo src={uni.logo || ''} variant="directory" />
                 </div>
 
                 {/* Ranking & QS Row */}
