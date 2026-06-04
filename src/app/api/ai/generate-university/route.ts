@@ -3,26 +3,32 @@ import { getAIProvider } from '@/lib/ai/provider';
 
 const SYSTEM_PROMPT = `You are a university data generator for a Study in China platform. Given a Chinese university name, generate comprehensive information about it.
 
-You MUST respond with ONLY a valid JSON object (no markdown, no code blocks, no extra text) with the following fields:
+You MUST respond with ONLY a valid JSON object (no markdown, no code blocks, no extra text) with EXACTLY these field names and shapes:
 
 {
-  "name": "English name of the university",
-  "nameCn": "Chinese name of the university",
-  "slug": "url-friendly-slug-using-english-name-lowercase-hyphenated",
-  "city": "City in English",
-  "cityCn": "City in Chinese",
-  "ranking": "China ranking number (integer, based on general reputation)",
-  "rating": "Rating out of 5 (e.g. 4.7, between 4.0-5.0)",
+  "name": "English name of the university (string)",
+  "nameCn": "Chinese name of the university (string)",
+  "slug": "url-friendly-slug-using-english-name-lowercase-hyphenated (string, ASCII only)",
+  "city": "City in English (string)",
+  "cityCn": "City in Chinese (string)",
+  "ranking": "China ranking number (integer, e.g. 1, 5, 20)",
+  "rating": "Rating out of 5 as a NUMBER, e.g. 4.7 (not a string)",
   "type": "University type in English (e.g. Public University)",
   "typeCn": "University type in Chinese (e.g. 公立大学)",
-  "established": "Year established (integer)",
-  "students": "Total student count (e.g. 40,000+)",
-  "intlStudents": "International student count (e.g. 2,500+)",
+  "established": "Year established as INTEGER, e.g. 1911",
+  "students": "Total student count as a string with comma and plus, e.g. 40,000+",
+  "intlStudents": "International student count as a string with comma and plus, e.g. 2,500+",
   "description": "Detailed English description (3-5 sentences about the university's reputation, strengths, and campus)",
   "descriptionCn": "Detailed Chinese description (3-5 sentences)",
-  "popularPrograms": ["Program1", "Program2", "Program3", "Program4", "Program5"],
+  "popularPrograms": ["Program 1", "Program 2", "Program 3", "Program 4", "Program 5"],
   "popularProgramsCn": ["项目1", "项目2", "项目3", "项目4", "项目5"],
-  "qsWorldRanking": "QS World University Ranking number (integer, approximate latest)",
+  "tuitionUndergrad": "Undergraduate annual tuition as a string, e.g. ¥25,000-40,000/year or $3,500-5,000/year",
+  "tuitionGraduate": "Graduate annual tuition as a string, e.g. ¥30,000-50,000/year or $4,000-6,000/year",
+  "intake": "Intake months in English (e.g. 'September (main); February/March (limited)')",
+  "intakeCn": "Intake months in Chinese (e.g. '九月（主入学）；二/三月（部分项目）')",
+  "disciplines": ["Engineering", "Business", "Computer Science", "Medicine"],
+  "qsRanking": "QS Asia University Ranking as a string (e.g. '5' or '15')",
+  "qsWorldRanking": "QS World University Ranking as INTEGER, e.g. 14, 25, 100",
   "tags": ["985", "211", "Double First Class"],
   "tagsCn": ["985工程", "211工程", "双一流"],
   "accommodation": "English description of on-campus accommodation for international students (2-3 sentences)",
@@ -31,22 +37,32 @@ You MUST respond with ONLY a valid JSON object (no markdown, no code blocks, no 
   "accommodationCostCn": "Chinese cost range (e.g. ¥800-1,500/月)",
   "accommodationTypes": ["Single Room", "Double Room", "International Student Dorm"],
   "accommodationTypesCn": ["单人间", "双人间", "留学生宿舍"],
-  "highlights": ["Highlight 1", "Highlight 2", "Highlight 3", "Highlight 4"],
-  "highlightsCn": ["亮点1", "亮点2", "亮点3", "亮点4"],
-  "requirements": ["Requirement 1", "Requirement 2", "Requirement 3"],
-  "requirementsCn": ["要求1", "要求2", "要求3"],
-  "scholarshipInfo": "English info about available scholarships (2-3 sentences)",
-  "scholarshipInfoCn": "Chinese scholarship info",
-  "campusLife": "English description of campus life (2-3 sentences)",
-  "campusLifeCn": "Chinese campus life description",
-  "gallery": ["unsplash url1", "unsplash url2", "unsplash url3", "unsplash url4"],
-  "logo": ""
+  "highlights": {
+    "en": ["English highlight 1", "English highlight 2", "English highlight 3", "English highlight 4"],
+    "zh": ["亮点1", "亮点2", "亮点3", "亮点4"]
+  },
+  "gallery": ["https://images.unsplash.com/photo-XXXXXXXX?w=800", "url2", "url3", "url4"],
+  "image": "Main campus/building photo URL (string)",
+  "logo": "University logo URL (string, can be empty if not available)"
 }
+
+CRITICAL field shape rules:
+- "ranking" must be an INTEGER (1, 5, 20) — NOT a string
+- "rating" must be a NUMBER (4.7) — NOT a string
+- "established" must be an INTEGER (year) — NOT a string
+- "qsWorldRanking" must be an INTEGER — NOT a string
+- "students" and "intlStudents" must be STRINGS with comma and plus (e.g. "40,000+")
+- "highlights" MUST be an OBJECT with "en" and "zh" arrays — NOT a flat array
+- "popularPrograms" and "popularProgramsCn" must be ARRAYS of strings
+- "accommodationTypes" and "accommodationTypesCn" must be ARRAYS of strings
+- "tags" and "tagsCn" must be ARRAYS of strings
 
 Rules:
 - For gallery, provide 4 Unsplash photo URLs related to the university or its city (use format: https://images.unsplash.com/photo-XXXXX?w=800)
+- For image, use one of the gallery URLs (the first one is usually best)
 - For tags, include "985" if it's a 985 university, "211" if it's a 211 university, "Double First Class" if applicable
 - For tagsCn, use Chinese equivalents: "985工程", "211工程", "双一流"
+- For disciplines, use one of: Engineering, Computer Science, Business, Medicine, Sciences, Humanities, Arts, Law, Education, Agriculture
 - All fields must be present and non-empty (except logo which can be empty string)
 - Be accurate with real facts about the university
 - Respond with ONLY the JSON object, no other text, no markdown formatting, no code blocks

@@ -81,7 +81,7 @@ function mapUniversityFromDb(row: Record<string, unknown>) {
     city: row.city,
     cityCn: row.city_cn,
     ranking: row.ranking,
-    rating: Number(row.rating),
+    rating: row.rating !== null && row.rating !== undefined ? Number(row.rating) : undefined,
     type: row.type,
     typeCn: row.type_cn,
     established: row.established,
@@ -89,29 +89,29 @@ function mapUniversityFromDb(row: Record<string, unknown>) {
     intlStudents: row.intl_students,
     description: row.description,
     descriptionCn: row.description_cn,
-    popularPrograms: row.popular_programs,
-    popularProgramsCn: row.popular_programs_cn,
+    popularPrograms: row.popular_programs ?? [],
+    popularProgramsCn: row.popular_programs_cn ?? [],
     tuitionUndergrad: row.tuition_undergrad,
     tuitionGraduate: row.tuition_graduate,
     intake: row.intake,
     intakeCn: row.intake_cn,
-    disciplines: row.disciplines,
+    disciplines: row.disciplines ?? [],
     image: row.image,
     logo: row.logo,
     qsRanking: row.qs_ranking,
     qsWorldRanking: row.qs_world_ranking,
-    tags: row.tags,
-    tagsCn: row.tags_cn,
+    tags: row.tags ?? [],
+    tagsCn: row.tags_cn ?? [],
     accommodation: row.accommodation,
     accommodationCn: row.accommodation_cn,
     accommodationCost: row.accommodation_cost,
     accommodationCostCn: row.accommodation_cost_cn,
-    accommodationTypes: row.accommodation_types,
-    accommodationTypesCn: row.accommodation_types_cn,
-    gallery: row.gallery,
+    accommodationTypes: row.accommodation_types ?? [],
+    accommodationTypesCn: row.accommodation_types_cn ?? [],
+    gallery: row.gallery ?? [],
     highlights: {
-      en: row.highlights_en,
-      zh: row.highlights_zh,
+      en: row.highlights_en ?? [],
+      zh: row.highlights_zh ?? [],
     },
   };
 }
@@ -152,7 +152,35 @@ function mapUniversityToDb(u: Record<string, unknown>) {
     accommodation_types: u.accommodationTypes,
     accommodation_types_cn: u.accommodationTypesCn,
     gallery: u.gallery,
-    highlights_en: (u.highlights as { en: string[]; zh: string[] })?.en,
-    highlights_zh: (u.highlights as { en: string[]; zh: string[] })?.zh,
+    // Highlights: accept the new {en, zh} shape, legacy flat array,
+    // or bullet-separated string. See extractHighlightArray in
+    // src/app/api/universities/route.ts for the full implementation.
+    highlights_en: extractHighlightArray(u.highlights, 'en'),
+    highlights_zh: extractHighlightArray(u.highlights, 'zh'),
   };
+}
+
+/**
+ * Same shape tolerance as the [route.ts] sibling — duplicated here so
+ * the [slug] route is self-contained and the [route.ts] file can
+ * stay focused on list/create logic.
+ */
+function extractHighlightArray(
+  value: unknown,
+  lang: 'en' | 'zh',
+): string[] {
+  if (Array.isArray(value)) {
+    return value.map((v) => String(v));
+  }
+  if (value && typeof value === 'object' && lang in (value as Record<string, unknown>)) {
+    const arr = (value as Record<string, unknown>)[lang];
+    if (Array.isArray(arr)) return arr.map((v) => String(v));
+  }
+  if (typeof value === 'string') {
+    return value
+      .split(/[\n•·]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+  return [];
 }

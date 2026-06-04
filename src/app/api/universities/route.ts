@@ -99,7 +99,7 @@ function mapUniversityFromDb(row: Record<string, unknown>) {
     city: row.city,
     cityCn: row.city_cn,
     ranking: row.ranking,
-    rating: Number(row.rating),
+    rating: row.rating !== null && row.rating !== undefined ? Number(row.rating) : undefined,
     type: row.type,
     typeCn: row.type_cn,
     established: row.established,
@@ -107,29 +107,29 @@ function mapUniversityFromDb(row: Record<string, unknown>) {
     intlStudents: row.intl_students,
     description: row.description,
     descriptionCn: row.description_cn,
-    popularPrograms: row.popular_programs,
-    popularProgramsCn: row.popular_programs_cn,
+    popularPrograms: row.popular_programs ?? [],
+    popularProgramsCn: row.popular_programs_cn ?? [],
     tuitionUndergrad: row.tuition_undergrad,
     tuitionGraduate: row.tuition_graduate,
     intake: row.intake,
     intakeCn: row.intake_cn,
-    disciplines: row.disciplines,
+    disciplines: row.disciplines ?? [],
     image: row.image,
     logo: row.logo,
     qsRanking: row.qs_ranking,
     qsWorldRanking: row.qs_world_ranking,
-    tags: row.tags,
-    tagsCn: row.tags_cn,
+    tags: row.tags ?? [],
+    tagsCn: row.tags_cn ?? [],
     accommodation: row.accommodation,
     accommodationCn: row.accommodation_cn,
     accommodationCost: row.accommodation_cost,
     accommodationCostCn: row.accommodation_cost_cn,
-    accommodationTypes: row.accommodation_types,
-    accommodationTypesCn: row.accommodation_types_cn,
-    gallery: row.gallery,
+    accommodationTypes: row.accommodation_types ?? [],
+    accommodationTypesCn: row.accommodation_types_cn ?? [],
+    gallery: row.gallery ?? [],
     highlights: {
-      en: row.highlights_en,
-      zh: row.highlights_zh,
+      en: row.highlights_en ?? [],
+      zh: row.highlights_zh ?? [],
     },
   };
 }
@@ -170,7 +170,40 @@ function mapUniversityToDb(u: Record<string, unknown>) {
     accommodation_types: u.accommodationTypes,
     accommodation_types_cn: u.accommodationTypesCn,
     gallery: u.gallery,
-    highlights_en: (u.highlights as { en: string[]; zh: string[] })?.en,
-    highlights_zh: (u.highlights as { en: string[]; zh: string[] })?.zh,
+    // Highlights: AI used to return a flat array. The new prompt asks
+    // for {en, zh} but we accept both shapes so existing generations
+    // and any future ones with the old shape still work.
+    highlights_en: extractHighlightArray(u.highlights, 'en'),
+    highlights_zh: extractHighlightArray(u.highlights, 'zh'),
   };
+}
+
+/**
+ * Pull the `en` (or `zh`) sub-array out of a highlights value that
+ * may be either:
+ *  - the canonical {en: string[], zh: string[]} object (new AI prompt)
+ *  - a flat string[] (legacy AI prompt)
+ *  - a single string with bullet separators (defensive)
+ * Returns an empty array for null/undefined.
+ */
+function extractHighlightArray(
+  value: unknown,
+  lang: 'en' | 'zh',
+): string[] {
+  if (Array.isArray(value)) {
+    // Flat array — same content for both languages (legacy shape).
+    return value.map((v) => String(v));
+  }
+  if (value && typeof value === 'object' && lang in (value as Record<string, unknown>)) {
+    const arr = (value as Record<string, unknown>)[lang];
+    if (Array.isArray(arr)) return arr.map((v) => String(v));
+  }
+  if (typeof value === 'string') {
+    // Bullet-separated string — split and trim.
+    return value
+      .split(/[\n•·]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+  return [];
 }

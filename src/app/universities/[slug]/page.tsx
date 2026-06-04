@@ -38,18 +38,43 @@ export default function UniversityDetailPage() {
   const { t, locale } = useI18n();
   const [selectedImage, setSelectedImage] = useState(0);
   const [uni, setUni] = useState<University | undefined>(undefined);
+  const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
     setUni(undefined);
+    setNotFound(false);
     fetch(`/api/universities/${slug}`)
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
+      .then((res) => (res.ok ? res.json() : Promise.reject(res)))
+      .then((data) => {
         if (data?.university) {
           setUni(data.university);
+        } else {
+          setNotFound(true);
         }
       })
-      .catch(() => {});
+      .catch(() => setNotFound(true));
   }, [slug]);
+
+  if (notFound) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 text-center px-4">
+        <h1 className="text-2xl font-bold text-[#1B2A4A]">
+          {locale === 'en' ? 'University not found' : '未找到该大学'}
+        </h1>
+        <p className="mt-2 text-gray-600 max-w-md">
+          {locale === 'en'
+            ? `We could not find a university with the slug "${slug}". It may have been removed, or the link is incorrect.`
+            : `找不到 slug 为 "${slug}" 的大学。可能已被删除，或链接不正确。`}
+        </p>
+        <Link
+          href="/universities"
+          className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 bg-[#9B1B30] hover:bg-[#7A1526] text-white text-sm font-semibold uppercase tracking-wider transition-colors"
+        >
+          {locale === 'en' ? 'Browse all universities' : '浏览所有大学'}
+        </Link>
+      </div>
+    );
+  }
 
   if (!uni) {
     return (
@@ -61,9 +86,25 @@ export default function UniversityDetailPage() {
     );
   }
 
-  const highlights = locale === 'en' ? uni.highlights.en : uni.highlights.zh;
+  // AI-generated universities can have null/undefined arrays for
+  // highlights/tags/programs/etc. Normalize to safe arrays so .map()
+  // never crashes — the page should always render, even on a
+  // partially-filled row.
+  const safeArray = <T,>(v: T[] | null | undefined): T[] =>
+    Array.isArray(v) ? v : [];
+  const highlights = safeArray(
+    locale === 'en' ? uni.highlights?.en : uni.highlights?.zh,
+  );
+  const tags = safeArray(locale === 'en' ? uni.tags : uni.tagsCn);
+  const popularPrograms = safeArray(
+    locale === 'en' ? uni.popularPrograms : uni.popularProgramsCn,
+  );
+  const accommodationTypes = safeArray(
+    locale === 'en' ? uni.accommodationTypes : uni.accommodationTypesCn,
+  );
   const highlightIcons = [Sparkles, Building2, Handshake, PartyPopper];
-  const galleryImages = uni.gallery && uni.gallery.length > 0 ? uni.gallery : [uni.image];
+  const galleryImages =
+    safeArray(uni.gallery).length > 0 ? safeArray(uni.gallery) : uni.image ? [uni.image] : [];
 
   return (
     <>
@@ -116,7 +157,7 @@ export default function UniversityDetailPage() {
               </div>
               {/* Classification Tags */}
               <div className="mt-4 flex flex-wrap gap-2">
-                {(locale === 'en' ? uni.tags : uni.tagsCn).map((tag) => (
+                {tags.map((tag) => (
                   <span
                     key={tag}
                     className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-none border border-white/30 bg-white/10 text-white"
@@ -200,7 +241,7 @@ export default function UniversityDetailPage() {
                       {t('uni.popularPrograms')}
                     </h3>
                     <ul className="mt-3 space-y-1.5">
-                      {(locale === 'en' ? uni.popularPrograms : uni.popularProgramsCn).map(
+                      {popularPrograms.map(
                         (prog) => (
                           <li key={prog} className="text-sm text-gray-600 flex items-center gap-2">
                             <span className="h-1 w-1 rounded-full bg-[#9B1B30] shrink-0" />
@@ -285,7 +326,7 @@ export default function UniversityDetailPage() {
                   <div className="mt-4">
                     <p className="text-xs font-semibold text-[#1B2A4A] mb-2">{t('uni.roomTypes')}</p>
                     <div className="flex flex-wrap gap-2">
-                      {(locale === 'en' ? uni.accommodationTypes : uni.accommodationTypesCn).map((type) => (
+                      {accommodationTypes.map((type) => (
                         <span
                           key={type}
                           className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-none border border-[#1B2A4A]/15 bg-[#1B2A4A]/5 text-[#1B2A4A]"
