@@ -5,7 +5,7 @@ import { Inspector } from 'react-dev-inspector';
 import './globals.css';
 import { ClientLayout } from '@/components/client-layout';
 import { inter } from '@/app/fonts';
-import { getOrganizationSchema, getWebsiteSchema } from '@/lib/structured-data';
+import { getOrganizationSchema, getWebsiteSchema, getEditorialTeamSchema } from '@/lib/structured-data';
 import type { Locale } from '@/lib/i18n-translations';
 
 export const metadata: Metadata = {
@@ -68,10 +68,14 @@ export default async function RootLayout({
   const isDev = process.env.COZE_PROJECT_ENV === 'DEV';
   const initialLocale = await readLocaleCookie();
 
-  // JSON-LD for SEO (Organization + WebSite). Service schema is added on
-  // relevant pages (e.g. home) so it can be locale-aware.
+  // JSON-LD for SEO (Organization + WebSite + Editorial Team). Service
+  // schema is added on relevant pages (e.g. home) so it can be
+  // locale-aware. The Editorial Team entity is the author for all
+  // Article JSON-LD on guide pages, giving Google and LLMs a
+  // consistent author to attribute to.
   const organizationJsonLd = JSON.stringify(getOrganizationSchema());
   const websiteJsonLd = JSON.stringify(getWebsiteSchema());
+  const editorialTeamJsonLd = JSON.stringify(getEditorialTeamSchema());
 
   return (
     <html lang={initialLocale} className={inter.variable}>
@@ -89,6 +93,12 @@ export default async function RootLayout({
           type="application/ld+json"
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: websiteJsonLd }}
+        />
+        <Script
+          id="ld-editorial-team"
+          type="application/ld+json"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: editorialTeamJsonLd }}
         />
         <ClientLayout initialLocale={initialLocale}>{children}</ClientLayout>
       </body>

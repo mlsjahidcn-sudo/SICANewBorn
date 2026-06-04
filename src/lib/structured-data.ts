@@ -28,7 +28,6 @@ export function getOrganizationSchema() {
     },
     address: {
       '@type': 'PostalAddress',
-      streetAddress: 'Zhongguancun South Street',
       addressLocality: 'Guangzhou',
       addressRegion: 'Guangdong',
       addressCountry: 'CN',
@@ -52,6 +51,35 @@ export function getOrganizationSchema() {
       'Study in China',
       'International student admissions',
     ],
+    // Author/editor entity. Tying editorial content to an
+    // organization with a named "editorial team" boosts E-E-A-T
+    // signals for LLMs and Google's Helpful Content system.
+    member: { '@id': `${SITE_URL}/#editorial-team` },
+  };
+}
+
+/**
+ * Person schema for the SICA Editorial Team. Used as the author
+ * on Article JSON-LD across all guides. Gives LLMs and Google
+ * a consistent author entity to attribute quotes and citations.
+ */
+export function getEditorialTeamSchema() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    '@id': `${SITE_URL}/#editorial-team`,
+    name: 'SICA Editorial Team',
+    url: SITE_URL,
+    description:
+      'The SICA Editorial Team researches and writes all SICA guides, university profiles, and scholarship content. Team members include former international students and education consultants based in Guangzhou, China.',
+    parentOrganization: { '@id': `${SITE_URL}/#organization` },
+    knowsAbout: [
+      'Chinese higher education',
+      'International student admissions',
+      'Chinese Government Scholarship (CSC)',
+      'University rankings (QS, Times Higher Education, ARWU)',
+      'Student visa policy (X1, X2)',
+    ],
   };
 }
 
@@ -66,6 +94,18 @@ export function getWebsiteSchema() {
       'Explore top Chinese universities, programs, and scholarships with SICA.',
     publisher: { '@id': `${SITE_URL}/#organization` },
     inLanguage: ['en', 'zh'],
+    // SearchAction enables the sitelinks search box in Google SERPs
+    // when the site becomes a recognizable brand. Helps Google
+    // understand the site has searchable content.
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: `${SITE_URL}/universities?q={search_term_string}`,
+      },
+      // 'required query input' for SearchAction
+      'query-input': 'required name=search_term_string',
+    },
   };
 }
 
@@ -128,5 +168,10 @@ export async function getServiceSchema() {
  * the layout or relevant pages.
  */
 export async function getAllSchemas() {
-  return [getOrganizationSchema(), getWebsiteSchema(), await getServiceSchema()];
+  return [
+    getOrganizationSchema(),
+    getWebsiteSchema(),
+    getEditorialTeamSchema(),
+    await getServiceSchema(),
+  ];
 }
