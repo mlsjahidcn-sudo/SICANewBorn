@@ -57,7 +57,7 @@ export default async function HomePage() {
               <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl leading-[1.05]">
                 {t('hero.title')}
                 <br />
-                <span className="text-[#9B1B30]">{t('hero.tagline')}</span>
+                <span className="text-white">{t('hero.tagline')}</span>
               </h1>
               <p className="mt-5 text-base text-gray-300 leading-relaxed sm:text-lg max-w-xl">
                 {t('hero.subtitle')}
