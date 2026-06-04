@@ -5,7 +5,7 @@ import Image from 'next/image';
 
 interface UniversityLogoProps {
   src: string;
-  variant?: 'card' | 'detail' | 'directory';
+  variant?: 'card' | 'detail' | 'directory' | 'sidebar';
   className?: string;
 }
 
@@ -24,10 +24,12 @@ export default function UniversityLogo({ src, variant = 'card', className = '' }
 
   const isCard = variant === 'card';
   const isDirectory = variant === 'directory';
+  const isSidebar = variant === 'sidebar';
   // Card logos render as a 64x64 image inside the card overlay; detail page logos
-  // are 88x88 round avatars; directory logos are 64x64 round overlays. next.config.ts
-  // allows all remote hostnames.
-  const size = isCard ? 48 : 88;
+  // are 88x88 round avatars; directory logos are 64x64 round overlays; sidebar
+  // logos are 48x48 round avatars used in the program detail page sidebar.
+  // next.config.ts allows all remote hostnames.
+  const size = isCard ? 48 : isSidebar ? 48 : 88;
 
   return (
     <div
@@ -36,7 +38,9 @@ export default function UniversityLogo({ src, variant = 'card', className = '' }
           ? 'absolute bg-white border-2 border-white shadow-2xl flex items-center justify-center z-50 left-4 -bottom-8 h-16 w-16'
           : isDirectory
             ? 'absolute bg-white flex items-center justify-center z-50 left-4 -bottom-8 h-16 w-16 rounded-full overflow-hidden'
-            : 'bg-white border-2 border-gray-200 shadow-lg flex items-center justify-center shrink-0 h-[88px] w-[88px] rounded-full',
+            : isSidebar
+              ? 'bg-white border border-gray-200 flex items-center justify-center shrink-0 h-12 w-12 rounded-full overflow-hidden'
+              : 'bg-white border-2 border-gray-200 shadow-lg flex items-center justify-center shrink-0 h-[88px] w-[88px] rounded-full',
         className,
       ].join(' ')}
     >
@@ -50,7 +54,9 @@ export default function UniversityLogo({ src, variant = 'card', className = '' }
             ? 'h-12 w-12 object-contain'
             : isDirectory
               ? 'h-full w-full object-contain'
-              : 'h-[64px] w-[64px] object-contain rounded-full'
+              : isSidebar
+                ? 'h-9 w-9 object-contain'
+                : 'h-[64px] w-[64px] object-contain rounded-full'
         }
         onError={() => setHasError(true)}
         unoptimized

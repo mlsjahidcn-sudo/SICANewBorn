@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useI18n } from '@/lib/i18n';
 import { programs as staticPrograms, universities as staticUniversities, degreeTypes, degreeTypesCn, languages, languagesCn, type Program, type University } from '@/lib/data';
 import { ChevronRight, Clock, Banknote, GraduationCap, Globe, Award, BookOpen, CheckCircle, ArrowRight, MapPin } from 'lucide-react';
+import UniversityLogo from '@/components/university-logo';
 
 type TabKey = 'overview' | 'requirements' | 'curriculum' | 'tuition';
 type LoadState = 'loading' | 'ok' | 'not-found' | 'error';
@@ -454,9 +455,13 @@ export default function ProgramDetailPage() {
                   href={`/universities/${university.slug}`}
                   className="flex items-center gap-3 group"
                 >
-                  <div className="flex h-12 w-12 items-center justify-center bg-[#1B2A4A] text-white font-bold text-lg shrink-0">
-                    {university.logo}
-                  </div>
+                  {university.logo && university.logo.startsWith('http') ? (
+                    <UniversityLogo src={university.logo} variant="sidebar" />
+                  ) : (
+                    <div className="flex h-12 w-12 items-center justify-center bg-[#1B2A4A] text-white font-bold text-lg shrink-0">
+                      {(university.name || '').charAt(0)}
+                    </div>
+                  )}
                   <div>
                     <p className="font-semibold text-[#1B2A4A] group-hover:text-[#9B1B30] transition-colors">
                       {locale === 'zh' ? university.nameCn : university.name}
