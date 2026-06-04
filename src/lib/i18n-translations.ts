@@ -18,6 +18,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'nav.programs': 'Programs',
     'nav.scholarships': 'Scholarships',
     'nav.admissions': 'Admissions',
+    'nav.guides': 'Guides',
     'nav.about': 'About SICA',
     'nav.contact': 'Contact',
     'nav.apply': 'Apply Now',
@@ -472,6 +473,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'nav.programs': '项目',
     'nav.scholarships': '奖学金',
     'nav.admissions': '招生',
+    'nav.guides': '指南',
     'nav.about': '关于 SICA',
     'nav.contact': '联系我们',
     // Submenu items (zh)

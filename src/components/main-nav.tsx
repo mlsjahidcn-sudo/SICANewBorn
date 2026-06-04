@@ -179,6 +179,11 @@ export function MainNav() {
       ],
     },
     {
+      type: 'link',
+      href: '/guides',
+      label: t('nav.guides'),
+    },
+    {
       type: 'menu',
       label: t('nav.about'),
       sections: [

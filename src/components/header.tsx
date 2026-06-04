@@ -27,6 +27,7 @@ export function Header() {
     { href: '/programs', label: t('nav.programs') },
     { href: '/scholarships', label: t('nav.scholarships') },
     { href: '/scholarships-for', label: t('nav.scholarships.byCountry') },
+    { href: '/guides', label: t('nav.guides') },
     { href: '/assessment', label: t('nav.admissions.assessment') },
     { href: '/about', label: t('nav.about') },
     { href: '/contact', label: t('nav.about.contact') },
