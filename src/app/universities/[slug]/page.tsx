@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 
 import UniversityLogo from '@/components/university-logo';
+import { DeadlineCountdown } from '@/components/deadline-countdown';
 
 export default function UniversityDetailPage() {
   const params = useParams();
@@ -206,15 +207,35 @@ export default function UniversityDetailPage() {
               </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-              <Button className="bg-[#9B1B30] hover:bg-[#7A1526] text-white font-semibold px-6">
-                {t('cta.apply')}
-              </Button>
-              <Button
-                variant="outline"
-                className="border-white/30 bg-transparent text-white hover:bg-white/10 font-semibold px-6"
-              >
-                {t('uni.visitWebsite')}
-              </Button>
+              {/* Live countdown to the next application deadline.
+                  Sits above the CTAs so users see "X days left" before
+                  deciding to apply. The component renders nothing if
+                  uni.applicationDeadline isn't set, so old DB rows
+                  without the field still look clean. */}
+              {uni.applicationDeadline && (
+                <div className="w-full sm:w-80 lg:w-72 mb-1">
+                  <DeadlineCountdown
+                    deadline={uni.applicationDeadline}
+                    locale={locale}
+                    label={
+                      locale === 'en'
+                        ? `${uni.name} · Application Deadline`
+                        : `${uni.nameCn} · 申请截止`
+                    }
+                  />
+                </div>
+              )}
+              <div className="flex gap-3 w-full sm:w-auto">
+                <Button className="bg-[#9B1B30] hover:bg-[#7A1526] text-white font-semibold px-6 flex-1 sm:flex-none">
+                  {t('cta.apply')}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="border-white/30 bg-transparent text-white hover:bg-white/10 font-semibold px-6 flex-1 sm:flex-none"
+                >
+                  {t('uni.visitWebsite')}
+                </Button>
+              </div>
             </div>
           </div>
         </div>

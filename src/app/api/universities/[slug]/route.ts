@@ -2,6 +2,19 @@ import { NextResponse } from 'next/server';
 import { supabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-server';
 import { universities as staticUniversities } from '@/lib/data';
 
+/**
+ * For fields the DB doesn't have yet (because the migration hasn't
+ * been applied), fall back to the static-data row with the same slug
+ * if it exists. Lets the page render useful values for legacy DB
+ * rows while the migration is in flight. Once the migration is
+ * applied and rows are backfilled, this fallback becomes a no-op.
+ */
+function withStaticFallback<T>(slug: string, key: keyof (typeof staticUniversities)[number], value: T): T {
+  if (value !== undefined && value !== null) return value;
+  const staticRow = staticUniversities.find((u) => u.slug === slug);
+  return (staticRow?.[key] as T) ?? value;
+}
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ slug: string }> }
@@ -115,6 +128,11 @@ function mapUniversityFromDb(row: Record<string, unknown>) {
     },
     scholarshipInfo: row.scholarship_info ?? row.scholarshipInfo,
     scholarshipInfoCn: row.scholarship_info_cn ?? row.scholarshipInfoCn,
+    applicationDeadline: withStaticFallback(
+      row.slug as string,
+      'applicationDeadline',
+      (row.application_deadline ?? row.applicationDeadline) as string | undefined,
+    ),
   };
 }
 
@@ -161,6 +179,7 @@ function mapUniversityToDb(u: Record<string, unknown>) {
     highlights_zh: extractHighlightArray(u.highlights, 'zh'),
     scholarship_info: u.scholarshipInfo ?? u.scholarship_info,
     scholarship_info_cn: u.scholarshipInfoCn ?? u.scholarship_info_cn,
+    application_deadline: u.applicationDeadline ?? u.application_deadline,
   };
 }
 

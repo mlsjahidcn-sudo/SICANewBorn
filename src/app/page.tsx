@@ -22,10 +22,22 @@ import {
   Plane,
   Home,
   ArrowRight,
+  MapPin,
 } from 'lucide-react';
+import { universities as staticUniversities } from '@/lib/data';
 
 export default async function HomePage() {
   const t = await getServerT();
+
+  // Pick 3 featured universidades for the hero. Strategy: top 3 by
+  // China ranking. If the static data set is small, fall back to
+  // whatever's there. The list is server-rendered, so the cards
+  // are baked into the initial HTML (no client fetch on first
+  // paint). For a future "admin-curated featured" feature, add
+  // a `featured: boolean` field and filter on that instead.
+  const featured = [...staticUniversities]
+    .sort((a, b) => a.ranking - b.ranking)
+    .slice(0, 3);
 
   return (
     <>
@@ -38,29 +50,86 @@ export default async function HomePage() {
               'url(/hero-bg.avif)',
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#1B2A4A] via-[#1B2A4A]/80 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#1B2A4A] via-[#1B2A4A]/95 to-[#1B2A4A]/40" />
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 lg:py-32">
-          <div className="max-w-2xl">
-            <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl">
-              {t('hero.title')}
-            </h1>
-            <p className="mt-5 text-lg text-gray-300 leading-relaxed sm:text-xl">
-              {t('hero.subtitle')}
-            </p>
-            <div className="mt-8 flex flex-wrap gap-4">
-              <Link href="/universities">
-                <Button className="bg-[#9B1B30] hover:bg-[#7A1526] text-white font-semibold px-7 py-3 text-base">
-                  {t('hero.explore')}
-                </Button>
-              </Link>
-              <Link href="/universities">
-                <Button
-                  variant="outline"
-                  className="border-white bg-transparent text-white hover:bg-white/10 hover:text-white font-semibold px-7 py-3 text-base"
+          <div className="grid lg:grid-cols-5 gap-10 lg:gap-12 items-center">
+            <div className="lg:col-span-3 max-w-2xl">
+              <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl">
+                {t('hero.title')}
+              </h1>
+              <p className="mt-5 text-lg text-gray-300 leading-relaxed sm:text-xl">
+                {t('hero.subtitle')}
+              </p>
+              <div className="mt-8 flex flex-wrap gap-4">
+                <Link href="/universities">
+                  <Button className="bg-[#9B1B30] hover:bg-[#7A1526] text-white font-semibold px-7 py-3 text-base">
+                    {t('hero.explore')}
+                  </Button>
+                </Link>
+                <Link href="/universities">
+                  <Button
+                    variant="outline"
+                    className="border-white bg-transparent text-white hover:bg-white/10 hover:text-white font-semibold px-7 py-3 text-base"
+                  >
+                    {t('hero.howToApply')}
+                  </Button>
+                </Link>
+              </div>
+            </div>
+
+            {/* Right side: 3 featured universidad cards. Hidden on
+                mobile (the hero text is enough); visible on lg+
+                where there's horizontal space. Stacks vertically
+                with a small gap so each card is distinct. */}
+            <div className="hidden lg:block lg:col-span-2 space-y-3">
+              <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/60 mb-2 flex items-center gap-2">
+                <span className="h-px w-6 bg-white/40" />
+                {t('hero.featured', { default: 'Featured Top Universities' })}
+              </div>
+              {featured.map((u) => (
+                <Link
+                  key={u.slug}
+                  href={`/universities/${u.slug}`}
+                  className="group flex items-center gap-3 bg-white/95 hover:bg-white p-3 border-2 border-transparent hover:border-[#D4A853] transition-all duration-200"
                 >
-                  {t('hero.howToApply')}
-                </Button>
-              </Link>
+                  {/* Plain <img> instead of UniversityLogo because
+                      the existing component only supports 'card' (big
+                      64x64) and 'detail' (88x88 round) variants. The
+                      hero card needs an inline 40x40 square logo. */}
+                  {u.logo && u.logo.startsWith('http') ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={u.logo}
+                      alt={u.name}
+                      className="w-10 h-10 object-contain bg-white border border-gray-200 shrink-0"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 bg-[#1B2A4A]/10 border border-gray-200 shrink-0 flex items-center justify-center">
+                      <GraduationCap className="h-5 w-5 text-[#1B2A4A]" />
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-bold text-[#1B2A4A] group-hover:text-[#9B1B30] transition-colors truncate">
+                        {u.name}
+                      </h3>
+                      <span className="shrink-0 inline-flex items-center justify-center bg-[#9B1B30] text-white text-[10px] font-bold w-5 h-5">
+                        {u.ranking}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs text-[#4B5563] mt-0.5">
+                      <MapPin className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{u.city}, China</span>
+                      {u.qsWorldRanking ? (
+                        <span className="ml-auto text-[10px] font-semibold text-[#1B2A4A] shrink-0">
+                          QS #{u.qsWorldRanking}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-[#9B1B30] group-hover:translate-x-0.5 transition-all shrink-0" />
+                </Link>
+              ))}
             </div>
           </div>
         </div>

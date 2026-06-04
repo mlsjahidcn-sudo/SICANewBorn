@@ -133,6 +133,7 @@ function mapUniversityFromDb(row: Record<string, unknown>) {
     },
     scholarshipInfo: row.scholarship_info ?? row.scholarshipInfo,
     scholarshipInfoCn: row.scholarship_info_cn ?? row.scholarshipInfoCn,
+    applicationDeadline: row.application_deadline ?? row.applicationDeadline,
   };
 }
 
@@ -182,6 +183,7 @@ function mapUniversityToDb(u: Record<string, unknown>) {
     // (DB column name) so it works on both sides of the boundary.
     scholarship_info: u.scholarshipInfo ?? u.scholarship_info,
     scholarship_info_cn: u.scholarshipInfoCn ?? u.scholarship_info_cn,
+    application_deadline: u.applicationDeadline ?? u.application_deadline,
   };
 }
 

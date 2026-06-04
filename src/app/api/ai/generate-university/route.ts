@@ -43,6 +43,7 @@ You MUST respond with ONLY a valid JSON object (no markdown, no code blocks, no 
   },
   "scholarshipInfo": "University-specific scholarship narrative in English. 2-3 sentences about the named scholarship portfolio this university administers (e.g. 'Tsinghua's Schwarzman Scholars and university merit awards cover up to 100% of tuition for top applicants').",
   "scholarshipInfoCn": "Same in Chinese (2-3 sentences)",
+  "applicationDeadline": "Next application deadline as ISO 8601 date string. Use a date ~2-3 months in the future from today (e.g. '2026-09-30'). Powers the live countdown timer on the detail page.",
   "gallery": ["https://images.unsplash.com/photo-XXXXXXXX?w=800", "url2", "url3", "url4"],
   "image": "Main campus/building photo URL (string)",
   "logo": "University logo URL (string, can be empty if not available)"

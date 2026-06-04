@@ -46,6 +46,13 @@ export interface University {
    */
   scholarshipInfo?: string;
   scholarshipInfoCn?: string;
+  /**
+   * Next application deadline (ISO 8601 date string, e.g. "2026-05-31").
+   * Powers the live countdown timer on the detail page hero. If
+   * unset, the page falls back to a static "Applications open until
+   * [intake]" message.
+   */
+  applicationDeadline?: string;
 }
 
 export const universities: University[] = [
@@ -83,6 +90,7 @@ export const universities: University[] = [
     accommodationCostCn: '¥800 - 2,500/月',
     accommodationTypes: ['Single Room', 'Double Room', 'International Student Dorm'],
     accommodationTypesCn: ['单人间', '双人间', '留学生公寓'],
+    applicationDeadline: '2026-07-15',
     gallery: [
       'https://images.unsplash.com/photo-1595437193398-f24279553f4f?w=800&q=80',
       'https://images.unsplash.com/photo-1564981797816-1043664bf78d?w=800&q=80',
@@ -128,6 +136,7 @@ export const universities: University[] = [
     accommodationCostCn: '¥700 - 2,200/月',
     accommodationTypes: ['Single Room', 'Double Room', 'Suite'],
     accommodationTypesCn: ['单人间', '双人间', '套间'],
+    applicationDeadline: '2026-07-15',
     gallery: [
       'https://images.unsplash.com/photo-1596437795667-1af9e4287c96?w=800&q=80',
       'https://images.unsplash.com/photo-1564981797816-1043664bf78d?w=800&q=80',
@@ -173,6 +182,7 @@ export const universities: University[] = [
     accommodationCostCn: '¥1,000 - 3,000/月',
     accommodationTypes: ['Single Room', 'Double Room', 'Off-campus Apartment'],
     accommodationTypesCn: ['单人间', '双人间', '校外公寓'],
+    applicationDeadline: '2026-07-15',
     gallery: [
       'https://images.unsplash.com/photo-1537531027583-9a0e3e52451f?w=800&q=80',
       'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=800&q=80',
@@ -218,6 +228,7 @@ export const universities: University[] = [
     accommodationCostCn: '¥900 - 2,800/月',
     accommodationTypes: ['Single Room', 'Double Room', 'International Student Dorm'],
     accommodationTypesCn: ['单人间', '双人间', '留学生公寓'],
+    applicationDeadline: '2026-07-15',
     gallery: [
       'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=800&q=80',
       'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=800&q=80',
@@ -263,6 +274,7 @@ export const universities: University[] = [
     accommodationCostCn: '¥600 - 2,000/月',
     accommodationTypes: ['Single Room', 'Double Room', 'Shared Apartment'],
     accommodationTypesCn: ['单人间', '双人间', '合租公寓'],
+    applicationDeadline: '2026-07-15',
     gallery: [
       'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=800&q=80',
       'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=800&q=80',
@@ -308,6 +320,7 @@ export const universities: University[] = [
     accommodationCostCn: '¥500 - 1,800/月',
     accommodationTypes: ['Single Room', 'Double Room', 'Shared Apartment'],
     accommodationTypesCn: ['单人间', '双人间', '合租公寓'],
+    applicationDeadline: '2026-07-15',
     gallery: [
       'https://images.unsplash.com/photo-1564981797816-1043664bf78d?w=800&q=80',
       'https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=800&q=80',
@@ -353,6 +366,7 @@ export const universities: University[] = [
     accommodationCostCn: '¥400 - 1,500/月',
     accommodationTypes: ['Single Room', 'Double Room', 'International Student Dorm'],
     accommodationTypesCn: ['单人间', '双人间', '留学生公寓'],
+    applicationDeadline: '2026-07-15',
     gallery: [
       'https://images.unsplash.com/photo-1519451241324-20b4ea2c4220?w=800&q=80',
       'https://images.unsplash.com/photo-1540541338287-41700207dee6?w=800&q=80',
@@ -398,6 +412,7 @@ export const universities: University[] = [
     accommodationCostCn: '¥600 - 2,200/月',
     accommodationTypes: ['Single Room', 'Double Room', 'Off-campus Apartment'],
     accommodationTypesCn: ['单人间', '双人间', '校外公寓'],
+    applicationDeadline: '2026-07-15',
     gallery: [
       'https://images.unsplash.com/photo-1577985043696-8bd54d9c4f19?w=800&q=80',
       'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=800&q=80',
