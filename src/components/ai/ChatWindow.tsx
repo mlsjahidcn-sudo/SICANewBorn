@@ -148,7 +148,10 @@ export function ChatWindow({ isOpen, onClose, onMinimize }: ChatWindowProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 w-[380px] max-w-[90vw] h-[600px] max-h-[80vh] bg-white rounded-lg shadow-2xl border border-gray-200 flex flex-col">
+    // On mobile: full-screen bottom sheet (no rounded corners,
+    // spans the viewport). On sm+: floating 380px panel anchored
+    // to the bottom-right.
+    <div className="fixed inset-0 sm:inset-auto sm:bottom-4 sm:right-4 z-50 w-full sm:w-[380px] sm:max-w-[90vw] h-full sm:h-[600px] sm:max-h-[80vh] bg-white sm:rounded-lg shadow-2xl border-0 sm:border border-gray-200 flex flex-col">
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-[#9B1B30]">
         <div className="flex items-center gap-2 text-white">
           <MessageSquare size={20} />

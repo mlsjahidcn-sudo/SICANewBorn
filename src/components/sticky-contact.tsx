@@ -62,13 +62,14 @@ export function StickyContact() {
         // position. Both popovers open upward and never collide.
         className="fixed bottom-5 left-5 z-40 sm:bottom-6 sm:left-6"
       >
-        {/* Popover — opens above the button and aligns to its right
-            edge so it doesn't bleed off the left side of the screen. */}
+        {/* Popover — on desktop: anchored to the button, opens above.
+            On mobile: becomes a full-width bottom sheet for thumb
+            reach. */}
         {open && (
           <div
             role="dialog"
             aria-label={t('stickyContact.title')}
-            className="absolute bottom-16 left-0 w-80 max-w-[calc(100vw-2.5rem)] bg-white border-2 border-[#1B2A4A] shadow-2xl"
+            className="fixed inset-x-0 bottom-0 sm:absolute sm:inset-auto sm:bottom-16 sm:left-0 w-full sm:w-80 sm:max-w-[calc(100vw-2.5rem)] bg-white border-t-2 sm:border-t-0 sm:border-2 border-[#1B2A4A] shadow-2xl"
             style={{ animation: 'sica-popover-in 160ms ease-out' }}
           >
             {/* Header */}

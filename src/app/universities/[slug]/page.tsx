@@ -223,12 +223,12 @@ export default function UniversityDetailPage() {
       {/* Tabs Section */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="w-full justify-start border-b border-gray-200 bg-transparent h-auto p-0 gap-0 rounded-none">
+          <TabsList className="w-full justify-start border-b border-gray-200 bg-transparent h-auto p-0 gap-0 rounded-none overflow-x-auto overflow-y-hidden">
             {['overview', 'admissions', 'scholarships', 'campusLife'].map((tab) => (
               <TabsTrigger
                 key={tab}
                 value={tab}
-                className="relative rounded-none border-b-2 border-transparent px-4 py-3 text-sm font-medium text-gray-500 data-[state=active]:border-[#9B1B30] data-[state=active]:text-[#9B1B30] data-[state=active]:shadow-none"
+                className="relative rounded-none border-b-2 border-transparent px-3 py-2.5 sm:px-4 sm:py-3 text-sm font-medium text-gray-500 whitespace-nowrap data-[state=active]:border-[#9B1B30] data-[state=active]:text-[#9B1B30] data-[state=active]:shadow-none"
               >
                 {t(`uni.${tab === 'campusLife' ? 'campusLife' : tab}`)}
               </TabsTrigger>

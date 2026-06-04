@@ -96,25 +96,36 @@ export default async function CityPage({
                 {city.tagline}
               </p>
             </div>
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div className="bg-white/10 border border-white/20 px-4 py-3 min-w-[100px]">
-                <div className="text-2xl font-bold text-white">{city.universityCount}</div>
-                <div className="text-xs uppercase tracking-wider text-gray-300 mt-0.5">
-                  {city.universityCount === 1 ? t('seo.cities.university') : t('seo.cities.universities')}
+            <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
+              {[
+                {
+                  value: String(city.universityCount),
+                  label:
+                    city.universityCount === 1
+                      ? t('seo.cities.university')
+                      : t('seo.cities.universities'),
+                },
+                {
+                  value: `${city.programCount}+`,
+                  label: t('seo.cities.programs'),
+                },
+                {
+                  value: String(cityUniversities[0]?.established ?? '—'),
+                  label: t('seo.cities.established'),
+                },
+              ].map((stat) => (
+                <div
+                  key={stat.label}
+                  className="bg-white/10 border border-white/20 px-2 sm:px-4 py-3 min-w-0"
+                >
+                  <div className="text-xl sm:text-2xl font-bold text-white truncate">
+                    {stat.value}
+                  </div>
+                  <div className="text-[10px] sm:text-xs uppercase tracking-wider text-gray-300 mt-0.5 truncate">
+                    {stat.label}
+                  </div>
                 </div>
-              </div>
-              <div className="bg-white/10 border border-white/20 px-4 py-3 min-w-[100px]">
-                <div className="text-2xl font-bold text-white">{city.programCount}+</div>
-                <div className="text-xs uppercase tracking-wider text-gray-300 mt-0.5">
-                  {t('seo.cities.programs')}
-                </div>
-              </div>
-              <div className="bg-white/10 border border-white/20 px-4 py-3 min-w-[100px]">
-                <div className="text-2xl font-bold text-white">{cityUniversities[0]?.established ?? '—'}</div>
-                <div className="text-xs uppercase tracking-wider text-gray-300 mt-0.5">
-                  {t('seo.cities.established')}
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         </div>
