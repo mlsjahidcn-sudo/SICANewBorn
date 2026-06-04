@@ -8,6 +8,9 @@ import {
   Compass,
   ClipboardList,
   Stamp,
+  Award,
+  Wallet,
+  BedDouble,
   type LucideIcon,
 } from 'lucide-react';
 import type { Guide, GuideBlock } from '@/lib/guides/types';
@@ -457,4 +460,7 @@ export const GuideIcons: Record<string, LucideIcon> = {
   compass: Compass,
   'clipboard-list': ClipboardList,
   passport: Stamp,
+  award: Award,
+  wallet: Wallet,
+  bed: BedDouble,
 };

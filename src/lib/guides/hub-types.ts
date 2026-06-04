@@ -8,7 +8,7 @@ import type { Locale } from '../i18n-translations';
 export interface GuideCard {
   slug: string;
   href: string;
-  icon: 'compass' | 'clipboard-list' | 'passport';
+  icon: 'compass' | 'clipboard-list' | 'passport' | 'award' | 'wallet' | 'bed';
   title: string;
   subtitle: string;
   readTime: string;

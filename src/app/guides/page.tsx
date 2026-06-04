@@ -47,6 +47,7 @@ export default async function GuidesHubPage() {
       '@type': 'ListItem',
       position: i + 1,
       name: c.title,
+      description: c.subtitle,
       url: `${SITE_URL}${c.href}`,
     })),
   };
@@ -84,12 +85,12 @@ export default async function GuidesHubPage() {
       {/* Cards grid */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
         <h2 className="text-2xl font-bold text-[#1B2A4A] mb-2">
-          {isZh ? '3篇核心指南' : '3 essential guides'}
+          {isZh ? '6篇核心指南' : '6 essential guides'}
         </h2>
         <p className="text-[#4B5563] mb-8">
           {isZh
-            ? '每篇都含 2,000+ 字深度内容、10+ 个常见问答、8 步实操流程，以及问答片段（FAQ schema）、步骤片段（HowTo schema）和文章元数据，便于 AI 引擎和搜索引擎抓取。'
-            : 'Each guide ships with 2,000+ words of in-depth content, 10+ FAQs, 8-step process, plus FAQPage and HowTo structured data so search engines and AI assistants can extract the answers directly.'}
+            ? '每篇都含 2,000+ 字深度内容、8+ 个常见问答、8 步实操流程，以及问答片段（FAQ schema）、步骤片段（HowTo schema）和文章元数据，便于 AI 引擎和搜索引擎抓取。'
+            : 'Each guide ships with 2,000+ words of in-depth content, 8+ FAQs, 8-step process, plus FAQPage and HowTo structured data so search engines and AI assistants can extract the answers directly.'}
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
