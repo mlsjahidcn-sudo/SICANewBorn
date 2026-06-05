@@ -86,8 +86,11 @@ export function Header() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Button className="bg-[#9B1B30] hover:bg-[#7A1526] text-white font-semibold text-sm px-5">
-            {t('nav.apply')}
+          <Button
+            asChild
+            className="bg-[#9B1B30] hover:bg-[#7A1526] text-white font-semibold text-sm px-5"
+          >
+            <Link href="/assessment">{t('nav.apply')}</Link>
           </Button>
         </div>
 
@@ -156,8 +159,12 @@ export function Header() {
                 <Globe className="h-4 w-4" />
                 {locale === 'en' ? '中文' : 'EN'}
               </button>
-              <Button className="bg-[#9B1B30] hover:bg-[#7A1526] text-white font-semibold text-sm flex-1">
-                {t('nav.apply')}
+              <Button
+                asChild
+                className="bg-[#9B1B30] hover:bg-[#7A1526] text-white font-semibold text-sm flex-1"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Link href="/assessment">{t('nav.apply')}</Link>
               </Button>
             </div>
           </nav>
