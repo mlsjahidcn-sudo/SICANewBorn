@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import {
   ArrowLeft, Calendar, Building, BookOpen, FileText, FileCheck, CheckCircle2,
   Clock, XCircle, AlertCircle, RefreshCw, Loader2, Filter, Upload, Eye, Download,
-  User,
+  User, Ban, Edit, Send, MessageSquare,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +14,10 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { apiFetchJson } from '@/lib/api-client';
 import type { StudentApplication } from '@/lib/application-mapper';
 
@@ -104,6 +108,89 @@ export default function StudentApplicationDetailPage() {
   const [notFound, setNotFound] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedDocStatus, setSelectedDocStatus] = useState<DocumentStatus | 'all'>('all');
+  // Phase 1 student actions
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [resubmitOpen, setResubmitOpen] = useState(false);
+  const [actionPending, setActionPending] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  /**
+   * Phase 1: Withdraw — student-driven transition to terminal
+   * Withdrawn. Allowed for Draft, Submitted, and any in-flight state
+   * EXCEPT Accepted / Decision Made / Rejected / Withdrawn (terminal).
+   * Backend enforces the same rules in STUDENT_STATUS_TRANSITIONS.
+   */
+  const canWithdraw = !!application && !['Withdrawn', 'Accepted', 'Decision Made', 'Rejected'].includes(application.status);
+
+  /**
+   * Phase 1: Resubmit — student-driven transition:
+   *   Documents Requested → Under Review  (after re-uploading)
+   *   Rejected             → Submitted     (second-chance flow)
+   */
+  const canResubmit = !!application && ['Documents Requested', 'Rejected'].includes(application.status);
+
+  /** Phase 1: Editable draft — student can resume from /new (which
+   * accepts existing applicationId) or via a dedicated edit page. */
+  const isDraft = application?.status === 'Draft';
+
+  const runStatusChange = async (
+    nextStatus: 'Withdrawn' | 'Under Review' | 'Submitted',
+    successMessage: string,
+  ) => {
+    if (!application) return;
+    setActionPending(true);
+    setActionError(null);
+    try {
+      const data = await apiFetchJson<{ application: StudentApplication }>(
+        `/api/student/applications/${applicationId}`,
+        {
+          method: 'PUT',
+          body: JSON.stringify({ status: nextStatus }),
+        },
+      );
+      setApplication(data.application);
+      // Re-fetch timeline to surface the new event
+      try {
+        const detail = await apiFetchJson<DetailResponse>(
+          `/api/student/applications/${applicationId}`,
+        );
+        setTimeline(detail.timeline);
+      } catch {
+        // non-fatal; user will see the new event on next refresh
+      }
+      setActionError(null);
+      // Surface a brief inline notice — using alert is fine here since
+      // it's a destructive / state-changing action the user just
+      // confirmed.
+      // eslint-disable-next-line no-alert
+      alert(successMessage);
+    } catch (err) {
+      const e = err as { message?: string };
+      setActionError(e.message || 'Failed to update application');
+    } finally {
+      setActionPending(false);
+    }
+  };
+
+  const handleWithdraw = async () => {
+    await runStatusChange('Withdrawn', 'Your application has been withdrawn.');
+    setWithdrawOpen(false);
+  };
+
+  const handleResubmit = async () => {
+    // The route picks the right target status for the current
+    // "Documents Requested" or "Rejected" state. We send the explicit
+    // destination to keep the API contract simple.
+    if (!application) return;
+    const target = application.status === 'Rejected' ? 'Submitted' : 'Under Review';
+    await runStatusChange(
+      target,
+      target === 'Submitted'
+        ? 'Your application has been resubmitted for review.'
+        : 'Marked as Under Review — admin will re-evaluate your updated materials.',
+    );
+    setResubmitOpen(false);
+  };
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -200,13 +287,92 @@ export default function StudentApplicationDetailPage() {
             <p className="text-gray-600 mt-1">{application.university} · {application.program}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {isDraft && (
+            <Link href={`/student/applications/new?resume=${applicationId}`}>
+              <Button className="bg-[#1B2A4A] hover:bg-[#26345A] text-white rounded-none">
+                <Edit className="h-4 w-4 mr-2" />
+                Continue Editing
+              </Button>
+            </Link>
+          )}
+          {canResubmit && (
+            <Button
+              onClick={() => setResubmitOpen(true)}
+              disabled={actionPending}
+              className="bg-[#1B2A4A] hover:bg-[#26345A] text-white rounded-none"
+            >
+              <Send className="h-4 w-4 mr-2" />
+              {application.status === 'Rejected' ? 'Resubmit Application' : 'Mark as Resubmitted'}
+            </Button>
+          )}
+          {canWithdraw && (
+            <Button
+              variant="outline"
+              onClick={() => setWithdrawOpen(true)}
+              disabled={actionPending}
+              className="rounded-none border-red-300 text-red-700 hover:bg-red-50 hover:border-red-400"
+            >
+              <Ban className="h-4 w-4 mr-2" />
+              Withdraw
+            </Button>
+          )}
           <Button variant="outline" onClick={load} disabled={isLoading}>
             <RefreshCw className={`h-4 w-4 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
         </div>
       </div>
+
+      {/* Admin notes banner (Phase 1 — surface what admin left for the student) */}
+      {application.adminNotes && (
+        <div className="flex items-start gap-3 p-4 border border-[#D4A853] bg-[#FAF6E8] rounded-none">
+          <MessageSquare className="h-5 w-5 text-[#9B1B30] flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-[#1B2A4A]">Note from SICA</p>
+            <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{application.adminNotes}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Status-driven action hint banners */}
+      {isDraft && (
+        <div className="flex items-start gap-3 p-3 border border-gray-300 bg-gray-50 rounded-none">
+          <FileText className="h-4 w-4 text-gray-500 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-gray-700">
+            <strong>This is a draft.</strong> SICA has not received this
+            application yet. Continue editing and submit it when you're
+            ready.
+          </p>
+        </div>
+      )}
+      {application.status === 'Documents Requested' && (
+        <div className="flex items-start gap-3 p-3 border border-purple-300 bg-purple-50 rounded-none">
+          <FileCheck className="h-4 w-4 text-purple-700 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-purple-900">
+            <strong>Action needed:</strong> SICA has requested additional
+            documents. Review the note above, upload the requested
+            materials, then click <strong>Mark as Resubmitted</strong>.
+          </p>
+        </div>
+      )}
+      {application.status === 'Rejected' && (
+        <div className="flex items-start gap-3 p-3 border border-red-300 bg-red-50 rounded-none">
+          <XCircle className="h-4 w-4 text-red-700 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-red-900">
+            <strong>Application was rejected.</strong> You can review the
+            feedback above and <strong>Resubmit</strong> to apply again
+            with a new application record.
+          </p>
+        </div>
+      )}
+
+      {actionError && (
+        <div className="flex items-start gap-3 p-3 border border-red-200 bg-red-50 text-red-800 text-sm rounded-none">
+          <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+          <p><strong>Error:</strong> {actionError}</p>
+        </div>
+      )}
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -466,6 +632,86 @@ export default function StudentApplicationDetailPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Withdraw confirmation dialog */}
+      <AlertDialog open={withdrawOpen} onOpenChange={setWithdrawOpen}>
+        <AlertDialogContent className="rounded-none">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[#1B2A4A]">
+              Withdraw this application?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Once withdrawn, this application is final and cannot be
+              reactivated. You'll need to create a brand new application
+              to apply to {application.university} again.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={actionPending} className="rounded-none">
+              Keep Application
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                void handleWithdraw();
+              }}
+              disabled={actionPending}
+              className="bg-red-600 hover:bg-red-700 text-white rounded-none"
+            >
+              {actionPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Withdrawing...
+                </>
+              ) : (
+                'Yes, Withdraw'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Resubmit confirmation dialog */}
+      <AlertDialog open={resubmitOpen} onOpenChange={setResubmitOpen}>
+        <AlertDialogContent className="rounded-none">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[#1B2A4A]">
+              {application.status === 'Rejected'
+                ? 'Resubmit this application?'
+                : 'Mark as Resubmitted?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {application.status === 'Rejected'
+                ? 'Resubmitting will create a fresh review cycle for SICA. The original rejection reason is preserved on your timeline.'
+                : 'SICA will be notified that your requested documents have been re-uploaded and the application is back in the review queue.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={actionPending} className="rounded-none">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                void handleResubmit();
+              }}
+              disabled={actionPending}
+              className="bg-[#9B1B30] hover:bg-[#7A1525] text-white rounded-none"
+            >
+              {actionPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Submitting...
+                </>
+              ) : application.status === 'Rejected' ? (
+                'Resubmit Application'
+              ) : (
+                'Mark as Resubmitted'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

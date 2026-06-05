@@ -57,39 +57,53 @@ export async function POST(request: Request) {
     const trimmedDegree = typeof body.degree === 'string' ? body.degree.trim() : '';
     const trimmedIntake = typeof body.intake === 'string' ? body.intake.trim() : '';
 
+    // Phase 1: parse requested status early so we know whether the
+    // student is actually submitting (degree + intake required) or
+    // saving a partial draft (looser requirements).
+    const validStatuses = ['Draft', 'Submitted'];
+    const requestedStatus = body.status || 'Submitted';
+    if (!validStatuses.includes(requestedStatus)) {
+      return NextResponse.json(
+        { error: `status must be one of: ${validStatuses.join(', ')}` },
+        { status: 400 },
+      );
+    }
+    const isDraft = requestedStatus === 'Draft';
+
     if (!trimmedUniversity) {
       return NextResponse.json({ error: 'universityName is required' }, { status: 400 });
     }
     if (!trimmedProgram) {
       return NextResponse.json({ error: 'programName is required' }, { status: 400 });
     }
-    if (!trimmedDegree) {
+    if (!trimmedDegree && !isDraft) {
       return NextResponse.json({ error: 'degree is required' }, { status: 400 });
     }
-    if (!trimmedIntake) {
+    if (!trimmedIntake && !isDraft) {
+      return NextResponse.json({ error: 'intake is required' }, { status: 400 });
+    }
+    if (!trimmedDegree && !isDraft) {
+      return NextResponse.json({ error: 'degree is required' }, { status: 400 });
+    }
+    if (!trimmedIntake && !isDraft) {
       return NextResponse.json({ error: 'intake is required' }, { status: 400 });
     }
 
     // Degree must be one of the 4 known values (mirrors the DB intent;
-    // the schema accepts any string but we want to reject garbage)
+    // the schema accepts any string but we want to reject garbage).
+    // Phase 1: skipped for Drafts — student can save partial and fill
+    // degree in later.
     const ALLOWED_DEGREES = ['Bachelor', 'Master', 'PhD', 'Chinese Language'];
-    if (!ALLOWED_DEGREES.includes(trimmedDegree)) {
+    if (trimmedDegree && !ALLOWED_DEGREES.includes(trimmedDegree)) {
       return NextResponse.json(
         { error: `degree must be one of: ${ALLOWED_DEGREES.join(', ')}` },
         { status: 400 },
       );
     }
 
-    // Validate status (only certain values are valid for a student to set)
-    const requestedStatus = body.status || 'Submitted';
-    const validStatuses = ['Draft', 'Submitted'];
-    if (!validStatuses.includes(requestedStatus)) {
-      return NextResponse.json(
-        { error: `students can only set status to: ${validStatuses.join(', ')}` },
-        { status: 400 },
-      );
-    }
-    // (The other statuses are admin-set: Under Review, Documents Requested, etc.)
+    // (Status validation done above. The other statuses — Under Review,
+    // Documents Requested, Decision Made, Accepted, Rejected, Withdrawn
+    // — are admin-set, not student-driven.)
     void parseApplicationStatus; // imported for future use
 
     // Generate application_number atomically (S5 fix)

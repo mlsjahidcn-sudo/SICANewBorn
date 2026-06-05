@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Check, CheckCircle2, ChevronRight, Building, Upload, FileText, FileCheck, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Check, CheckCircle2, ChevronRight, Building, Upload, FileText, FileCheck, RefreshCw, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -67,6 +67,16 @@ interface SyncableDocument {
 
 export default function StudentNewApplicationPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // Phase 1: when the student clicks "Continue Editing" on a draft
+  // detail page, the link is /new?resume=<applicationId>. The wizard
+  // loads the existing application and pre-fills the form, then uses
+  // PUT (not POST) for both Save-as-Draft and Submit so the same
+  // record is updated.
+  const resumeId = searchParams.get('resume');
+  const isResuming = !!resumeId;
+  const [resuming, setResuming] = useState(isResuming);
+  const resumeLoadStartedRef = useRef(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [applicationData, setApplicationData] = useState<ApplicationFormData>({
@@ -78,6 +88,62 @@ export default function StudentNewApplicationPage() {
     additionalNotes: '',
     selectedDocuments: []
   });
+
+  /**
+   * Phase 1: when `?resume=<id>` is set, load the existing draft and
+   * pre-fill the form. The form state needs to be narrowed to
+   * DegreeLevel for type-safety on the Select.
+   */
+  useEffect(() => {
+    if (!isResuming || !resumeId || resumeLoadStartedRef.current) return;
+    resumeLoadStartedRef.current = true;
+    (async () => {
+      try {
+        const data = await apiFetchJson<{
+          application: {
+            id: string;
+            degree: string | null;
+            intake: string | null;
+            personalStatement: string | null;
+            additionalNotes: string | null;
+            university: string;
+            program: string;
+          };
+        }>(`/api/student/applications/${resumeId}`);
+        const a = data.application;
+        // Match the program by its display name to recover the slug,
+        // since the API returns the name not the id. Fall back to the
+        // existing form value if no match.
+        const matchedProgram = programs.find(
+          (p) => p.name === a.program || p.slug === a.program,
+        );
+        const matchedUniversity = matchedProgram
+          ? universities.find((u) => u.slug === matchedProgram.universitySlug)
+          : universities.find((u) => u.name === a.university);
+        setApplicationData((prev) => ({
+          ...prev,
+          targetDegreeLevel:
+            a.degree && isDegreeLevel(a.degree) ? a.degree : prev.targetDegreeLevel,
+          targetProgramSlug: matchedProgram?.slug || prev.targetProgramSlug,
+          targetUniversity: matchedUniversity?.slug || prev.targetUniversity,
+          intendedIntake: a.intake || prev.intendedIntake,
+          personalStatement: a.personalStatement || prev.personalStatement,
+          additionalNotes: a.additionalNotes || prev.additionalNotes,
+        }));
+      } catch (err) {
+        // Non-fatal: just start with an empty form. The student can
+        // still create a new application.
+        const e = err as { message?: string };
+        setSubmitError(`Couldn't load draft: ${e.message || 'Unknown error'}`);
+      } finally {
+        setResuming(false);
+      }
+    })();
+    // We intentionally run this only on mount. resumeId is a string
+    // parsed from searchParams; if the user navigates here twice we
+    // don't want to re-fetch. The ref guard makes that explicit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const filteredPrograms = applicationData.targetDegreeLevel
     ? programs.filter(p => p.degree === applicationData.targetDegreeLevel)
@@ -153,9 +219,70 @@ export default function StudentNewApplicationPage() {
 
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [createdAppId, setCreatedAppId] = useState<string | null>(null);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [draftSaved, setDraftSaved] = useState(false);
 
   const getSelectedProgramBySlug = () =>
     programs.find((p) => p.slug === applicationData.targetProgramSlug);
+
+  /**
+   * Phase 1: save the current form state as a Draft. Available on
+   * every step. POSTs with status='Draft' for a new application, or
+   * PUTs status='Draft' when resuming an existing draft. The API
+   * allows a Draft with just universityName + programName; other
+   * fields can be filled in later.
+   */
+  const handleSaveAsDraft = async () => {
+    if (!applicationData.targetUniversity) {
+      setSubmitError('Pick a university first to save a draft.');
+      setCurrentStep(1);
+      return;
+    }
+    if (!applicationData.targetProgramSlug) {
+      setSubmitError('Pick a program first to save a draft.');
+      setCurrentStep(1);
+      return;
+    }
+    setSavingDraft(true);
+    setSubmitError(null);
+    try {
+      const university = universities.find(
+        (u: { slug: string }) => u.slug === applicationData.targetUniversity,
+      );
+      const program = getSelectedProgramBySlug();
+      const payload = {
+        universityId: applicationData.targetUniversity,
+        universityName: university?.name || applicationData.targetUniversity,
+        universityNameCn: university?.nameCn,
+        programId: applicationData.targetProgramSlug,
+        programName: program?.name || applicationData.targetProgramSlug,
+        programNameCn: program?.nameCn,
+        degree: applicationData.targetDegreeLevel || undefined,
+        intake: applicationData.intendedIntake || undefined,
+        status: 'Draft' as const,
+        personalStatement: applicationData.personalStatement,
+        additionalNotes: applicationData.additionalNotes,
+      };
+      const data = isResuming && resumeId
+        ? await apiFetchJson<{ application: { id: string; applicationNumber: string | null } }>(
+            `/api/student/applications/${resumeId}`,
+            { method: 'PUT', body: JSON.stringify(payload) },
+          )
+        : await apiFetchJson<{ application: { id: string; applicationNumber: string | null } }>(
+            '/api/student/applications',
+            { method: 'POST', body: JSON.stringify(payload) },
+          );
+      setCreatedAppId(data.application.id);
+      setDraftSaved(true);
+      // Brief delay so the success message is visible
+      setTimeout(() => {
+        router.push(`/student/applications/${data.application.id}`);
+      }, 1000);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Failed to save draft');
+      setSavingDraft(false);
+    }
+  };
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -163,25 +290,28 @@ export default function StudentNewApplicationPage() {
     try {
       const university = universities.find((u: { slug: string }) => u.slug === applicationData.targetUniversity);
       const program = getSelectedProgramBySlug();
-      const data = await apiFetchJson<{ application: { id: string; applicationNumber: string | null } }>(
-        '/api/student/applications',
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            universityId: applicationData.targetUniversity,
-            universityName: university?.name || applicationData.targetUniversity,
-            universityNameCn: university?.nameCn,
-            programId: applicationData.targetProgramSlug,
-            programName: program?.name || applicationData.targetProgramSlug,
-            programNameCn: program?.nameCn,
-            degree: applicationData.targetDegreeLevel,
-            intake: applicationData.intendedIntake,
-            status: 'Submitted',
-            personalStatement: applicationData.personalStatement,
-            additionalNotes: applicationData.additionalNotes,
-          }),
-        },
-      );
+      const payload = {
+        universityId: applicationData.targetUniversity,
+        universityName: university?.name || applicationData.targetUniversity,
+        universityNameCn: university?.nameCn,
+        programId: applicationData.targetProgramSlug,
+        programName: program?.name || applicationData.targetProgramSlug,
+        programNameCn: program?.nameCn,
+        degree: applicationData.targetDegreeLevel,
+        intake: applicationData.intendedIntake,
+        status: 'Submitted' as const,
+        personalStatement: applicationData.personalStatement,
+        additionalNotes: applicationData.additionalNotes,
+      };
+      const data = isResuming && resumeId
+        ? await apiFetchJson<{ application: { id: string; applicationNumber: string | null } }>(
+            `/api/student/applications/${resumeId}`,
+            { method: 'PUT', body: JSON.stringify(payload) },
+          )
+        : await apiFetchJson<{ application: { id: string; applicationNumber: string | null } }>(
+            '/api/student/applications',
+            { method: 'POST', body: JSON.stringify(payload) },
+          );
       setCreatedAppId(data.application.id);
       // Brief delay so the success message is visible before navigating
       setTimeout(() => router.push('/student/applications'), 1500);
@@ -237,6 +367,15 @@ export default function StudentNewApplicationPage() {
           <h1 className="text-2xl font-bold text-[#1B2A4A]">New Application</h1>
           <p className="text-[#4B5563] mt-1">Create a new application for yourself</p>
         </div>
+      </div>
+
+      <div className="flex items-start gap-2 p-3 border border-[#D4A853] bg-[#FAF6E8] text-sm text-[#1B2A4A]">
+        <Save className="h-4 w-4 mt-0.5 flex-shrink-0 text-[#9B1B30]" />
+        <p>
+          <strong>Save as Draft</strong> is available on every step — your
+          progress is saved and you can come back to finish later. Nothing
+          is sent to SICA until you click <strong>Submit Application</strong>.
+        </p>
       </div>
 
       {/* Step Indicator */}
@@ -548,27 +687,53 @@ export default function StudentNewApplicationPage() {
           )}
 
           {/* Navigation Buttons */}
-          <div className="flex justify-between mt-8 pt-6 border-t border-gray-200">
-            <Button 
-              variant="ghost" 
+          <div className="flex flex-wrap items-center justify-between gap-3 mt-8 pt-6 border-t border-gray-200">
+            <Button
+              variant="ghost"
               onClick={handlePrevious}
-              disabled={currentStep === 1 || loading}
+              disabled={currentStep === 1 || loading || savingDraft}
               className="rounded-none"
             >
               Previous
             </Button>
-            {currentStep < steps.length ? (
-              <Button 
-                onClick={handleNext}
-                className="bg-[#9B1B30] hover:bg-[#7A1525] text-white rounded-none"
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                variant="outline"
+                onClick={handleSaveAsDraft}
+                disabled={savingDraft || draftSaved || loading}
+                className="rounded-none border-[#1B2A4A] text-[#1B2A4A] hover:bg-[#1B2A4A] hover:text-white"
+                title="Save as Draft — keep your progress and finish later"
               >
-                Next
-                <ChevronRight className="h-4 w-4 ml-2" />
+                {savingDraft ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Saving Draft...
+                  </>
+                ) : draftSaved ? (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    Draft Saved
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save as Draft
+                  </>
+                )}
               </Button>
-            ) : (
+              {currentStep < steps.length ? (
+                <Button
+                  onClick={handleNext}
+                  disabled={savingDraft}
+                  className="bg-[#9B1B30] hover:bg-[#7A1525] text-white rounded-none"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4 ml-2" />
+                </Button>
+              ) : (
               <Button
                 onClick={handleSubmit}
-                disabled={loading || !!createdAppId}
+                disabled={loading || !!createdAppId || savingDraft}
                 className="bg-[#9B1B30] hover:bg-[#7A1525] text-white rounded-none"
               >
                 {loading ? (
@@ -585,7 +750,8 @@ export default function StudentNewApplicationPage() {
                   'Submit Application'
                 )}
               </Button>
-            )}
+              )}
+            </div>
           </div>
 
           {submitError && (

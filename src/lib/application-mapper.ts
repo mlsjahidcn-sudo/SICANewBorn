@@ -130,6 +130,14 @@ export interface StudentApplication {
   status: string;
   personalStatement: string | null;
   additionalNotes: string | null;
+  /**
+   * Phase 1: admin leaves notes here via the admin PATCH and they
+   * appear to the student as a "Note from SICA" banner on the detail
+   * page. Intended to be a public-facing message from SICA — e.g.
+   * "we need a clearer photo of your passport", "your application is
+   * on hold until March", etc.
+   */
+  adminNotes: string | null;
   submittedAt: string | null;
   reviewedAt: string | null;
   createdAt: string;
@@ -149,6 +157,7 @@ export function mapApplicationForStudent(row: RawApp): StudentApplication {
     status: row.status,
     personalStatement: row.personal_statement,
     additionalNotes: row.additional_notes,
+    adminNotes: row.admin_notes,
     submittedAt: row.submitted_at,
     reviewedAt: row.reviewed_at,
     createdAt: row.created_at,

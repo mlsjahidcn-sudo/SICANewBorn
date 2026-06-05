@@ -64,14 +64,46 @@ export async function GET(
 }
 
 /**
- * PUT — student can update their application, but ONLY:
+ * PUT — student can update their application, but ONLY in a controlled way.
+ *
+ * Editable fields (always allowed for any status):
  *   - personal_statement
  *   - additional_notes
- *   - status (can be Draft or Submitted; admin handles the rest)
- * Blocked fields (id, student_id, university_*, program_*, degree, intake,
- * application_number, submitted_at, reviewed_at, decision_*, admin_notes, etc.)
- * are silently stripped before the UPDATE.
+ *
+ * Editable fields (Drafts only — Phase 1: student is shaping a draft
+ * that hasn't been submitted yet, so they can still pick a different
+ * university/program/degree/intake. Once submitted, the only path
+ * to change these is admin contact):
+ *   - university_id, university_name, university_name_cn
+ *   - program_id,   program_name,   program_name_cn
+ *   - degree, intake
+ *
+ * Status transitions the student can drive (Phase 1 enhancements):
+ *   - Draft           → Withdrawn            (give up on a draft)
+ *   - Submitted       → Withdrawn            (withdraw after submit)
+ *   - Rejected        → Submitted            (resubmit after rejection)
+ *   - Documents Requested → Under Review     (after student uploads missing docs)
+ *
+ * Terminal (no transitions out):
+ *   - Accepted, Decision Made, Withdrawn (admin-only or final)
+ *
+ * Submitted → Submitted is treated as a no-op (no-op check below).
+ * Blocked fields (id, student_id, application_number, submitted_at,
+ * reviewed_at, decision_*, admin_notes, etc.) are silently stripped
+ * before the UPDATE.
  */
+const STUDENT_STATUS_TRANSITIONS: Record<string, string[]> = {
+  Draft: ['Draft', 'Withdrawn'], // Draft → Draft is a no-op but allowed
+  Submitted: ['Submitted', 'Withdrawn'],
+  'Documents Requested': ['Documents Requested', 'Under Review'],
+  Rejected: ['Rejected', 'Submitted'],
+  // Terminal — student cannot transition out:
+  'Under Review': ['Under Review'],
+  'Decision Made': ['Decision Made'],
+  Accepted: ['Accepted'],
+  Withdrawn: ['Withdrawn'],
+};
+
 export async function PUT(
   request: Request,
   context: { params: Promise<{ id: string }> },
@@ -86,7 +118,19 @@ export async function PUT(
 
     const body = await request.json();
 
-    // Only allow specific fields to be updated by the student
+    // 1. Fetch the existing row first so we can validate the transition
+    const { data: existingRow } = await supabase
+      .from('student_applications')
+      .select('status, application_number, personal_statement, additional_notes')
+      .eq('id', params.id)
+      .eq('student_id', user.id)
+      .maybeSingle();
+    if (!existingRow) {
+      return NextResponse.json({ error: 'Application not found' }, { status: 404 });
+    }
+    const currentStatus = existingRow.status as string;
+
+    // 2. Only allow specific fields to be updated by the student
     const allowed: Record<string, unknown> = {};
     if (typeof body.personalStatement === 'string') {
       allowed.personal_statement = body.personalStatement;
@@ -94,26 +138,72 @@ export async function PUT(
     if (typeof body.additionalNotes === 'string') {
       allowed.additional_notes = body.additionalNotes;
     }
-    if (typeof body.status === 'string' && ['Draft', 'Submitted'].includes(body.status)) {
+    // Phase 1: shape the draft. University / program / degree / intake
+    // are still mutable while the row is a Draft — the student can
+    // pick a different school or fix typos before submitting. Once
+    // the row leaves Draft, these fields are admin-controlled.
+    if (currentStatus === 'Draft') {
+      if (typeof body.universityId === 'string') {
+        allowed.university_id = body.universityId;
+      }
+      if (typeof body.universityName === 'string' && body.universityName.trim()) {
+        allowed.university_name = body.universityName.trim();
+      }
+      if (typeof body.universityNameCn === 'string') {
+        allowed.university_name_cn = body.universityNameCn || null;
+      }
+      if (typeof body.programId === 'string') {
+        allowed.program_id = body.programId || null;
+      }
+      if (typeof body.programName === 'string' && body.programName.trim()) {
+        allowed.program_name = body.programName.trim();
+      }
+      if (typeof body.programNameCn === 'string') {
+        allowed.program_name_cn = body.programNameCn || null;
+      }
+      if (typeof body.degree === 'string' && body.degree.trim()) {
+        const ALLOWED_DEGREES = ['Bachelor', 'Master', 'PhD', 'Chinese Language'];
+        if (!ALLOWED_DEGREES.includes(body.degree)) {
+          return NextResponse.json(
+            { error: `degree must be one of: ${ALLOWED_DEGREES.join(', ')}` },
+            { status: 400 },
+          );
+        }
+        allowed.degree = body.degree;
+      }
+      if (typeof body.intake === 'string' && body.intake.trim()) {
+        allowed.intake = body.intake.trim();
+      }
+    }
+    if (typeof body.status === 'string') {
+      const allowedNext = STUDENT_STATUS_TRANSITIONS[currentStatus] || [];
+      if (!allowedNext.includes(body.status)) {
+        return NextResponse.json(
+          {
+            error: `Cannot move from ${currentStatus} to ${body.status} as a student. Allowed next states: ${allowedNext.join(', ')}.`,
+          },
+          { status: 400 },
+        );
+      }
+      // No-op transition (e.g. Submitted → Submitted) — don't update
+      // the row, don't write a timeline event, just return current.
+      if (body.status === currentStatus) {
+        return NextResponse.json({ application: mapApplicationForStudent({
+          ...(existingRow as Record<string, unknown>),
+          personal_statement: allowed.personal_statement ?? existingRow.personal_statement,
+          additional_notes: allowed.additional_notes ?? existingRow.additional_notes,
+        } as Parameters<typeof mapApplicationForStudent>[0]) });
+      }
       allowed.status = body.status;
       if (body.status === 'Submitted') {
-        // First time submitting — stamp submitted_at
+        // First submit OR resubmit after rejection — stamp fresh submitted_at
         allowed.submitted_at = new Date().toISOString();
       }
     }
 
-    // Detect status changes BEFORE the update (we need the old value)
-    // for the timeline note. Read the existing row first.
-    const { data: existingRow } = await supabase
-      .from('student_applications')
-      .select('status, application_number')
-      .eq('id', params.id)
-      .eq('student_id', user.id)
-      .maybeSingle();
-    const statusChanged = !!existingRow && existingRow.status !== allowed.status && allowed.status;
     if (Object.keys(allowed).length === 0) {
       return NextResponse.json(
-        { error: 'No editable fields provided. Students can update: personal_statement, additional_notes, status (Draft|Submitted)' },
+        { error: 'No editable fields provided. Students can update: personal_statement, additional_notes, status (within the allowed transition set for the current status).' },
         { status: 400 },
       );
     }
@@ -133,17 +223,19 @@ export async function PUT(
       return NextResponse.json({ error: 'Application not found' }, { status: 404 });
     }
 
-    // If status flipped to Submitted, write a timeline event
-    if (statusChanged && typeof allowed.status === 'string') {
-      const fromStatus = existingRow?.status || 'unknown';
-      const toStatus = allowed.status;
+    // 3. Write a timeline event for the status flip
+    if (typeof allowed.status === 'string' && allowed.status !== currentStatus) {
+      const fromStatus = currentStatus;
+      const toStatus = allowed.status as string;
+      const note = timelineNoteForTransition(
+        fromStatus,
+        toStatus,
+        existingRow.application_number as string | null,
+      );
       await insertTimelineEvent(supabase, {
         application_id: params.id,
         status: toStatus,
-        notes:
-          toStatus === 'Submitted'
-            ? `Application ${existingRow?.application_number || ''} submitted by student.`
-            : `Status changed by student: ${fromStatus} → ${toStatus}.`,
+        notes: note,
         created_by: user.id,
       });
     }
@@ -153,4 +245,23 @@ export async function PUT(
     console.error('[Student Application PUT]', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
+}
+
+/**
+ * Phase 1: human-readable timeline note for each student-driven transition.
+ * Kept here so the wording is consistent across the detail page UI and
+ * the audit log.
+ */
+function timelineNoteForTransition(
+  from: string,
+  to: string,
+  applicationNumber: string | null,
+): string {
+  const ref = applicationNumber || '';
+  if (to === 'Withdrawn') return `Application ${ref} withdrawn by student.`;
+  if (from === 'Rejected' && to === 'Submitted')
+    return `Application ${ref} resubmitted by student after rejection.`;
+  if (from === 'Documents Requested' && to === 'Under Review')
+    return `Requested documents uploaded by student; ready for review.`;
+  return `Status changed by student: ${from} → ${to}.`;
 }
