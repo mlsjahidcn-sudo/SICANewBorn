@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth-context';
 import {
   GraduationCap, BookOpen, Award, FileText, Users, TrendingUp,
   ArrowUpRight, Clock, Loader2, AlertCircle, UserPlus, Activity,
+  Inbox, AlertTriangle, MessageCircle, MessageSquare, ClipboardList,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { apiFetchJson } from '@/lib/api-client';
@@ -59,7 +60,7 @@ interface AdminApplication {
 
 interface ActivityEvent {
   id: string;
-  type: 'application' | 'student';
+  type: 'application' | 'student' | 'lead';
   message: string;
   timestamp: string;
   meta?: Record<string, unknown>;
@@ -76,6 +77,15 @@ interface DashboardData {
     applicationsLast7d: number;
     leads: number;          // unlinked applications
     activeApplications: number;
+    // Lead workflow (Phase 2.1)
+    leadsContact: number;
+    leadsContactLast7d: number;
+    leadsChat: number;
+    leadsChatLast7d: number;
+    leadsAssessment: number;
+    leadsAssessmentLast7d: number;
+    leadsUnassigned: number;
+    leadsNeedsFollowup: number;
   };
   recentApplications: AdminApplication[];
   recentActivity: ActivityEvent[];
@@ -207,73 +217,166 @@ export default function AdminDashboardPage() {
       {/* Two Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Applications */}
-        <div className="lg:col-span-2 bg-white border border-gray-200">
-          <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
-            <h2 className="font-semibold text-[#1F2937]">Recent Applications</h2>
-            <Link
-              href="/admin/applications"
-              className="text-sm text-[#9B1B30] font-medium hover:underline flex items-center gap-1"
-            >
-              View All <ArrowUpRight size={14} />
-            </Link>
+        <div className="lg:col-span-2 space-y-6">
+          <div className="bg-white border border-gray-200">
+            <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="font-semibold text-[#1F2937]">Recent Applications</h2>
+              <Link
+                href="/admin/applications"
+                className="text-sm text-[#9B1B30] font-medium hover:underline flex items-center gap-1"
+              >
+                View All <ArrowUpRight size={14} />
+              </Link>
+            </div>
+            <div className="overflow-x-auto">
+              {data.recentApplications.length === 0 ? (
+                <div className="p-12 text-center text-gray-500">
+                  <FileText className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+                  <p>No applications yet.</p>
+                  <Link
+                    href="/admin/applications/new"
+                    className="text-sm text-[#9B1B30] hover:underline mt-2 inline-block"
+                  >
+                    Add the first one →
+                  </Link>
+                </div>
+              ) : (
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-[#F3F4F6]">
+                      <th className="text-left text-xs font-medium text-[#4B5563] px-5 py-3">Applicant</th>
+                      <th className="text-left text-xs font-medium text-[#4B5563] px-5 py-3">Program</th>
+                      <th className="text-left text-xs font-medium text-[#4B5563] px-5 py-3">University</th>
+                      <th className="text-left text-xs font-medium text-[#4B5563] px-5 py-3">Date</th>
+                      <th className="text-left text-xs font-medium text-[#4B5563] px-5 py-3">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {data.recentApplications.map((app) => {
+                      const s = statusDisplay[app.status] || { label: app.status, color: 'bg-gray-100 text-gray-800' };
+                      return (
+                        <tr key={app.id} className="hover:bg-[#FAFAF8] transition-colors">
+                          <td className="px-5 py-3 text-sm font-medium text-[#1F2937]">
+                            <Link href={`/admin/applications/${app.id}`} className="hover:underline">
+                              {app.studentName}
+                            </Link>
+                            {!app.isLinked && (
+                              <span className="ml-2 text-xs text-[#9B1B30] font-normal">(no account)</span>
+                            )}
+                          </td>
+                          <td className="px-5 py-3 text-sm text-[#4B5563]">
+                            {app.program}
+                            {app.applicationNumber && (
+                              <span className="ml-1 text-xs text-gray-400">{app.applicationNumber}</span>
+                            )}
+                          </td>
+                          <td className="px-5 py-3 text-sm text-[#4B5563]">{app.university}</td>
+                          <td className="px-5 py-3 text-sm text-[#4B5563]">
+                            {new Date(app.createdAt).toLocaleDateString()}
+                          </td>
+                          <td className="px-5 py-3">
+                            <span className={`text-xs px-2 py-1 rounded ${s.color}`}>
+                              {s.label}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </div>
-          <div className="overflow-x-auto">
-            {data.recentApplications.length === 0 ? (
-              <div className="p-12 text-center text-gray-500">
-                <FileText className="w-10 h-10 mx-auto mb-2 text-gray-300" />
-                <p>No applications yet.</p>
+
+          {/* Lead pipeline (Phase 2.1) */}
+          <div className="bg-white border border-gray-200">
+            <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="font-semibold text-[#1F2937] flex items-center gap-2">
+                <Inbox size={16} className="text-[#1B2A4A]" />
+                Lead pipeline
+              </h2>
+              <Link
+                href="/admin/leads"
+                className="text-sm text-[#9B1B30] font-medium hover:underline flex items-center gap-1"
+              >
+                View all <ArrowUpRight size={14} />
+              </Link>
+            </div>
+            <div className="p-5">
+              <div className="grid grid-cols-3 gap-4 mb-4">
                 <Link
-                  href="/admin/applications/new"
-                  className="text-sm text-[#9B1B30] hover:underline mt-2 inline-block"
+                  href="/admin/leads?type=contact"
+                  className="border border-gray-200 p-4 hover:border-[#1B2A4A] transition-colors"
                 >
-                  Add the first one →
+                  <div className="flex items-center gap-2 mb-1">
+                    <MessageSquare size={14} className="text-[#1B2A4A]" />
+                    <span className="text-xs text-gray-500">Contact form</span>
+                  </div>
+                  <p className="text-2xl font-bold text-[#1F2937]">
+                    {s.leadsContact.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    +{s.leadsContactLast7d} in 7d
+                  </p>
+                </Link>
+                <Link
+                  href="/admin/leads?type=chat"
+                  className="border border-gray-200 p-4 hover:border-[#9B1B30] transition-colors"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <MessageCircle size={14} className="text-[#9B1B30]" />
+                    <span className="text-xs text-gray-500">Chat</span>
+                  </div>
+                  <p className="text-2xl font-bold text-[#1F2937]">
+                    {s.leadsChat.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    +{s.leadsChatLast7d} in 7d
+                  </p>
+                </Link>
+                <Link
+                  href="/admin/leads?type=assessment"
+                  className="border border-gray-200 p-4 hover:border-[#D4A853] transition-colors"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <ClipboardList size={14} className="text-[#D4A853]" />
+                    <span className="text-xs text-gray-500">Assessment</span>
+                  </div>
+                  <p className="text-2xl font-bold text-[#1F2937]">
+                    {s.leadsAssessment.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    +{s.leadsAssessmentLast7d} in 7d
+                  </p>
                 </Link>
               </div>
-            ) : (
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-[#F3F4F6]">
-                    <th className="text-left text-xs font-medium text-[#4B5563] px-5 py-3">Applicant</th>
-                    <th className="text-left text-xs font-medium text-[#4B5563] px-5 py-3">Program</th>
-                    <th className="text-left text-xs font-medium text-[#4B5563] px-5 py-3">University</th>
-                    <th className="text-left text-xs font-medium text-[#4B5563] px-5 py-3">Date</th>
-                    <th className="text-left text-xs font-medium text-[#4B5563] px-5 py-3">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {data.recentApplications.map((app) => {
-                    const s = statusDisplay[app.status] || { label: app.status, color: 'bg-gray-100 text-gray-800' };
-                    return (
-                      <tr key={app.id} className="hover:bg-[#FAFAF8] transition-colors">
-                        <td className="px-5 py-3 text-sm font-medium text-[#1F2937]">
-                          <Link href={`/admin/applications/${app.id}`} className="hover:underline">
-                            {app.studentName}
-                          </Link>
-                          {!app.isLinked && (
-                            <span className="ml-2 text-xs text-[#9B1B30] font-normal">(no account)</span>
-                          )}
-                        </td>
-                        <td className="px-5 py-3 text-sm text-[#4B5563]">
-                          {app.program}
-                          {app.applicationNumber && (
-                            <span className="ml-1 text-xs text-gray-400">{app.applicationNumber}</span>
-                          )}
-                        </td>
-                        <td className="px-5 py-3 text-sm text-[#4B5563]">{app.university}</td>
-                        <td className="px-5 py-3 text-sm text-[#4B5563]">
-                          {new Date(app.createdAt).toLocaleDateString()}
-                        </td>
-                        <td className="px-5 py-3">
-                          <span className={`text-xs px-2 py-1 rounded ${s.color}`}>
-                            {s.label}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
+              <div className="grid grid-cols-2 gap-3">
+                <Link
+                  href="/admin/leads?assignee=unassigned"
+                  className="flex items-center justify-between p-3 bg-[#9B1B30]/5 border border-[#9B1B30]/20 hover:bg-[#9B1B30]/10 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <UserPlus size={14} className="text-[#9B1B30]" />
+                    <span className="text-sm text-[#1F2937]">Unassigned leads</span>
+                  </div>
+                  <span className="text-lg font-bold text-[#9B1B30]">
+                    {s.leadsUnassigned.toLocaleString()}
+                  </span>
+                </Link>
+                <Link
+                  href="/admin/leads?type=all"
+                  className="flex items-center justify-between p-3 bg-[#D4A853]/5 border border-[#D4A853]/20 hover:bg-[#D4A853]/10 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle size={14} className="text-[#D4A853]" />
+                    <span className="text-sm text-[#1F2937]">Needs follow-up</span>
+                  </div>
+                  <span className="text-lg font-bold text-[#1B2A4A]">
+                    {s.leadsNeedsFollowup.toLocaleString()}
+                  </span>
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -322,6 +425,8 @@ export default function AdminDashboardPage() {
                   <div key={`${event.type}-${event.id}`} className="flex items-start gap-3">
                     {event.type === 'student' ? (
                       <UserPlus size={14} className="text-green-600 mt-0.5 flex-shrink-0" />
+                    ) : event.type === 'lead' ? (
+                      <Inbox size={14} className="text-[#9B1B30] mt-0.5 flex-shrink-0" />
                     ) : (
                       <FileText size={14} className="text-blue-600 mt-0.5 flex-shrink-0" />
                     )}

@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
 
     // 7-day cutoff for "this week" deltas
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
     // All queries in parallel. Each one uses count: 'exact' to get the
     // real count from the row headers (cheap; no row data transferred).
@@ -41,6 +42,13 @@ export async function GET(request: NextRequest) {
       recentAppsRes,
       recentTimelineRes,
       recentStudentsRes,
+      // Lead workflow metrics
+      leadContactTotalRes, leadContactRecentRes,
+      leadChatTotalRes, leadChatRecentRes,
+      leadAssessTotalRes, leadAssessRecentRes,
+      leadUnassignedRes,
+      leadNeedsFollowupRes,
+      recentLeadHistoryRes,
     ] = await Promise.all([
       service.from('universities').select('id', { count: 'exact', head: true }),
       service.from('programs').select('id', { count: 'exact', head: true }),
@@ -91,6 +99,77 @@ export async function GET(request: NextRequest) {
         .select('id, first_name, last_name, email, source, created_at')
         .order('created_at', { ascending: false })
         .limit(6),
+
+      // ---- Lead workflow ----
+      // Contact form: total + 7d
+      service.from('contact_submissions').select('id', { count: 'exact', head: true }),
+      service
+        .from('contact_submissions')
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', sevenDaysAgo),
+      // Chat: total + 7d
+      service.from('chat_leads').select('id', { count: 'exact', head: true }),
+      service
+        .from('chat_leads')
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', sevenDaysAgo),
+      // Assessment: total + 7d
+      service.from('student_assessments').select('id', { count: 'exact', head: true }),
+      service
+        .from('student_assessments')
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', sevenDaysAgo),
+
+      // Unassigned leads across all 3 sources
+      Promise.all([
+        service
+          .from('contact_submissions')
+          .select('id', { count: 'exact', head: true })
+          .is('assigned_to', null)
+          .neq('status', 'Resolved')
+          .neq('status', 'Spam'),
+        service
+          .from('chat_leads')
+          .select('id', { count: 'exact', head: true })
+          .is('assigned_to', null)
+          .neq('status', 'Unqualified'),
+        service
+          .from('student_assessments')
+          .select('id', { count: 'exact', head: true })
+          .is('assigned_to', null)
+          .neq('status', 'Rejected'),
+      ]).then((rs) => rs.reduce((a, r) => a + (r.count ?? 0), 0)),
+
+      // Needs follow-up: lead exists, status not 'Resolved'/'Spam'/'Accepted'/'Rejected'/'Qualified',
+      // AND (last_contacted_at is null OR last_contacted_at < 1 day ago)
+      // AND created_at is older than 1 day
+      Promise.all([
+        service
+          .from('contact_submissions')
+          .select('id', { count: 'exact', head: true })
+          .in('status', ['New', 'In Progress'])
+          .or(`last_contacted_at.is.null,last_contacted_at.lt.${oneDayAgo}`)
+          .lt('created_at', oneDayAgo),
+        service
+          .from('chat_leads')
+          .select('id', { count: 'exact', head: true })
+          .in('status', ['New', 'Contacted'])
+          .or(`last_contacted_at.is.null,last_contacted_at.lt.${oneDayAgo}`)
+          .lt('created_at', oneDayAgo),
+        service
+          .from('student_assessments')
+          .select('id', { count: 'exact', head: true })
+          .in('status', ['Pending', 'Reviewed', 'Contacted'])
+          .or(`last_contacted_at.is.null,last_contacted_at.lt.${oneDayAgo}`)
+          .lt('created_at', oneDayAgo),
+      ]).then((rs) => rs.reduce((a, r) => a + (r.count ?? 0), 0)),
+
+      // Last 6 lead_history events (any action, any lead)
+      service
+        .from('lead_history')
+        .select('id, lead_type, lead_id, action, admin_id, note, created_at')
+        .order('created_at', { ascending: false })
+        .limit(6),
     ]);
 
     // Normalize the recent applications to the AdminApplication shape
@@ -114,10 +193,10 @@ export async function GET(request: NextRequest) {
       created_at: string;
     };
 
-    // Merge timeline + new students into a unified activity feed
+    // Merge timeline + new students + lead history into a unified activity feed
     type ActivityEvent = {
       id: string;
-      type: 'application' | 'student';
+      type: 'application' | 'student' | 'lead';
       message: string;
       timestamp: string;
       meta?: Record<string, unknown>;
@@ -142,8 +221,40 @@ export async function GET(request: NextRequest) {
         meta: { student_id: s.id, source: s.source },
       });
     }
+    type LeadHistoryRow = {
+      id: string;
+      lead_type: string;
+      lead_id: string;
+      action: string;
+      admin_id: string | null;
+      note: string | null;
+      created_at: string;
+    };
+    const LEAD_ACTION_LABEL: Record<string, string> = {
+      created: 'Lead created',
+      status_changed: 'Lead status changed',
+      notes_updated: 'Lead notes updated',
+      assigned: 'Lead assigned',
+      unassigned: 'Lead unassigned',
+      contacted: 'Lead contacted',
+    };
+    for (const h of (recentLeadHistoryRes.data || []) as LeadHistoryRow[]) {
+      const verb = LEAD_ACTION_LABEL[h.action] || h.action;
+      const channel = h.note ? ` (${h.note})` : '';
+      events.push({
+        id: h.id,
+        type: 'lead',
+        message: `${verb} — ${h.lead_type}${channel}`,
+        timestamp: h.created_at,
+        meta: { lead_type: h.lead_type, lead_id: h.lead_id, action: h.action },
+      });
+    }
     events.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
     const recentActivity = events.slice(0, 6);
+
+    // leadUnassignedRes and leadNeedsFollowupRes are already numbers (Promise.all resolved values)
+    const unassignedTotal = Number(leadUnassignedRes) || 0;
+    const needsFollowupTotal = Number(leadNeedsFollowupRes) || 0;
 
     return NextResponse.json({
       stats: {
@@ -156,6 +267,15 @@ export async function GET(request: NextRequest) {
         applicationsLast7d: appsRecentRes.count ?? 0,
         leads: appsLeadsRes.count ?? 0, // unlinked apps (no student account)
         activeApplications: appsActiveRes.count ?? 0,
+        // Lead workflow (Phase 2.1)
+        leadsContact: leadContactTotalRes.count ?? 0,
+        leadsContactLast7d: leadContactRecentRes.count ?? 0,
+        leadsChat: leadChatTotalRes.count ?? 0,
+        leadsChatLast7d: leadChatRecentRes.count ?? 0,
+        leadsAssessment: leadAssessTotalRes.count ?? 0,
+        leadsAssessmentLast7d: leadAssessRecentRes.count ?? 0,
+        leadsUnassigned: unassignedTotal,
+        leadsNeedsFollowup: needsFollowupTotal,
       },
       recentApplications,
       recentActivity,
