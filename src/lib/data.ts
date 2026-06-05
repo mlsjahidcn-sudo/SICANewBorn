@@ -1547,7 +1547,59 @@ export const applicationStatuses = ['Pending', 'Reviewing', 'Documents Requested
 
 export const genders = ['Male', 'Female', 'Other'];
 export const maritalStatuses = ['Single', 'Married', 'Divorced', 'Widowed'];
-export const intendedIntakes = ['2024 Fall', '2025 Spring', '2025 Fall', '2026 Spring'];
+// Phase S25: static list is replaced by a function. The previous
+// hard-coded ['2024 Fall', '2025 Spring', '2025 Fall', '2026 Spring']
+// is now stale (the latest "Spring 2026" already passed). We
+// generate 4 semesters starting from the current year — Fall +
+// Spring × 2 years — so the dropdown always shows what's actually
+// available to apply for. The wizard imports the function and
+// calls it once on mount; we cache the result in a module-level
+// array so the same list is used for the whole session (avoids
+// the year flipping mid-fill if a long session crosses midnight
+// on Dec 31).
+const _intakeCache: { value: string[] } = { value: [] };
+function buildIntendedIntakes(): string[] {
+  const now = new Date();
+  // The current year is the anchor: we always show Fall of the
+  // current year as the first option. Spring of the current year
+  // is only meaningful if the date is before Aug (intakes for
+  // Sep usually close in May/Jun). After Aug, the "current
+  // Spring" is in the past — we skip it.
+  const year = now.getFullYear();
+  const month = now.getMonth(); // 0-11
+  const out: string[] = [];
+  if (month < 7) {
+    // Jan-Jul: show Spring (already passed but students sometimes
+    // apply late) AND Fall of the current year, then 2 more years.
+    out.push(`${year} Spring`);
+    out.push(`${year} Fall`);
+  } else {
+    // Aug-Dec: current Spring is gone, current Fall is the
+    // upcoming intake.
+    out.push(`${year} Fall`);
+  }
+  out.push(`${year + 1} Spring`);
+  out.push(`${year + 1} Fall`);
+  out.push(`${year + 2} Spring`);
+  return out;
+}
+/**
+ * Phase S25: function form of `intendedIntakes`. Returns a list
+ * of 4 upcoming semester labels (e.g. ['2026 Fall', '2027 Spring',
+ * '2027 Fall', '2028 Spring']) computed from the current date.
+ * Module-level memo so the result is stable for the lifetime of
+ * the page load.
+ */
+export function getIntendedIntakes(): string[] {
+  if (_intakeCache.value.length === 0) {
+    _intakeCache.value = buildIntendedIntakes();
+  }
+  return _intakeCache.value;
+}
+/** Back-compat constant — same shape, freshly computed. Prefer
+ *  getIntendedIntakes() in new code so the list reflects the
+ *  current year. */
+export const intendedIntakes: string[] = getIntendedIntakes();
 
 // ==================== Partner Portal Types ====================
 

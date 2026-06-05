@@ -15,14 +15,16 @@ import { apiFetchJson } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { DocumentUploader, DocumentCategory } from '@/components/student/DocumentUploader';
 import { SearchableSelect } from '@/components/ui/searchable-select';
-// We keep the *static* enumerations (degreeLevels, intendedIntakes,
-// documentTypes) from data.ts — those are not "data" per se, they're
-// closed taxonomies the wizard drives. The university + program
-// lists are now fetched from the API so admin-added entries show up
-// immediately.
+// We keep the *static* enumerations (degreeLevels, documentTypes)
+// from data.ts — those are closed taxonomies the wizard drives.
+// The university + program lists are now fetched from the API so
+// admin-added entries show up immediately. The intake list is
+// generated at runtime from the current date (see
+// getIntendedIntakes in data.ts) so the dropdown always shows
+// what's actually available to apply for.
 import {
   degreeLevels,
-  intendedIntakes,
+  getIntendedIntakes,
   documentTypes,
   DegreeLevel,
   DocumentType,
@@ -146,7 +148,7 @@ export default function StudentNewApplicationPage() {
   const [loading, setLoading] = useState(false);
   // Phase S20: live university + program lists fetched from the
   // admin-managed API. The static data.ts fallback is gone for
-  // these two — admin-added universidades / programs now show up
+  // these two — admin-added universities / programs now show up
   // in the wizard immediately. The page still works offline-ish: if
   // the API is unreachable we fall back to the static arrays below.
   const [universities, setUniversities] = useState<University[]>([]);
@@ -298,7 +300,7 @@ export default function StudentNewApplicationPage() {
     const controller = new AbortController();
     setDataLoading(true);
     Promise.all([
-      apiFetchJson<{ universidades: University[] }>('/api/universities?limit=200', {
+      apiFetchJson<{ universities: University[] }>('/api/universities?limit=200', {
         signal: controller.signal,
       }),
       apiFetchJson<{ programs: Program[] }>('/api/programs?limit=500', {
@@ -329,7 +331,7 @@ export default function StudentNewApplicationPage() {
     ])
       .then(([u, p, profRes]) => {
         if (controller.signal.aborted) return;
-        setUniversities((u as { universidades: University[] }).universidades || []);
+        setUniversities((u as { universities: University[] }).universities || []);
         setPrograms((p as { programs: Program[] }).programs || []);
         const prof = profRes?.data ?? null;
         setProfile(prof);
@@ -369,7 +371,7 @@ export default function StudentNewApplicationPage() {
       })
       .catch((err) => {
         if (!controller.signal.aborted) {
-          console.error('[student/new] failed to load universidades/programs:', err);
+          console.error('[student/new] failed to load universities/programs:', err);
           setUniversities([]);
           setPrograms([]);
         }
@@ -443,34 +445,70 @@ export default function StudentNewApplicationPage() {
     programs.find((p) => p.slug === applicationData.targetProgramSlug);
 
   /**
-   * Phase S20: after the application is created (POST or PUT
-   * on an existing draft), walk through the doc IDs the student
-   * uploaded in this session and PATCH each one with the new
-   * application_id. Without this the docs stay orphans — the
-   * wizard uploaded them before the application row existed, so
-   * they were saved with application_id = NULL.
+   * Phase S25: after the application is created, link ALL of the
+   * student's orphan documents (any document with
+   * application_id = NULL) to the new application. This catches
+   * the case the user kept hitting: upload a doc on
+   * /student/documents, then create an application, and the doc
+   * doesn't get linked. Previously we only tracked
+   * pendingDocIds (docs uploaded in the wizard session) — the
+   * re-fetch approach below is simpler and covers everything.
    *
    * Failures are non-fatal: if a single PATCH errors out (e.g. the
    * server returns 401 because the JWT is mid-rotation) we just
    * log it and move on. The user can always re-attach manually
    * from /student/documents.
    */
-  const linkPendingDocsToApplication = useCallback(async (applicationId: string) => {
-    if (pendingDocIds.length === 0) return;
-    await Promise.all(
-      pendingDocIds.map(async (docId) => {
-        try {
-          await apiFetchJson(`/api/student/documents/${docId}`, {
+  const linkOrphanDocsToApplication = useCallback(async (applicationId: string) => {
+    try {
+      // Re-fetch the full doc list — the wizard's local
+      // studentDocuments state is filtered by what's needed for
+      // step 2, but we need every orphan. The API response shape
+      // is { data: [...] } (Phase S20 fix).
+      const res = await apiFetchJson<{
+        data: Array<{ id: string; application_id: string | null }>;
+      }>('/api/student/documents');
+      const orphans = (res.data || []).filter(
+        (d) => d.application_id === null || d.application_id === undefined,
+      );
+      if (orphans.length === 0) {
+        setPendingDocIds([]); // nothing to do, clear for next time
+        return;
+      }
+      // Patch each orphan with the new application_id. We do
+      // these in parallel — the PATCH is idempotent and a
+      // failure on one doc doesn't block the others.
+      const results = await Promise.allSettled(
+        orphans.map((doc) =>
+          apiFetchJson(`/api/student/documents/${doc.id}`, {
             method: 'PUT',
             body: JSON.stringify({ applicationId }),
-          });
-        } catch (err) {
-          console.error('[student/new] failed to link doc', docId, '→', applicationId, err);
-        }
-      }),
-    );
-    setPendingDocIds([]); // we've done what we can
-  }, [pendingDocIds]);
+          }),
+        ),
+      );
+      // Refresh the local studentDocuments state so step 2 +
+      // the post-submit detail page show the new link.
+      setStudentDocuments((prev) =>
+        prev.map((d) => {
+          if (orphans.some((o) => o.id === d.id)) {
+            return { ...d, documentTypeId: d.documentTypeId, name: d.name, status: d.status, fileName: d.fileName, applicationId: applicationId } as typeof d;
+          }
+          return d;
+        }),
+      );
+      setPendingDocIds([]);
+      // Log any failures so the next refactor can address them
+      const failed = results.filter((r) => r.status === 'rejected').length;
+      if (failed > 0) {
+        console.error(`[student/new] ${failed} of ${orphans.length} doc links failed`);
+      }
+    } catch (err) {
+      console.error('[student/new] linkOrphanDocsToApplication failed:', err);
+      // Don't throw — the application was created successfully,
+      // the doc linking is best-effort. The user can re-attach
+      // from /student/documents.
+    }
+  }, []);
 
   /**
    * Phase 1: save the current form state as a Draft. Available on
@@ -524,7 +562,7 @@ export default function StudentNewApplicationPage() {
       // (now-existing) application. Skipped on resume — those docs
       // are already linked to the resumed application.
       if (!isResuming) {
-        await linkPendingDocsToApplication(data.application.id);
+        await linkOrphanDocsToApplication(data.application.id);
       }
       setDraftSaved(true);
       // Brief delay so the success message is visible
@@ -571,7 +609,7 @@ export default function StudentNewApplicationPage() {
       // orphans (application_id = NULL) because the application row
       // didn't exist at upload time.
       if (!isResuming) {
-        await linkPendingDocsToApplication(data.application.id);
+        await linkOrphanDocsToApplication(data.application.id);
       }
       // Brief delay so the success message is visible before navigating
       setTimeout(() => router.push('/student/applications'), 1500);
@@ -778,12 +816,16 @@ export default function StudentNewApplicationPage() {
                         return {
                           value: program.slug,
                           label: program.name,
-                          // University name is the FIRST thing in
-                          // the sublabel so it's prominent in the
-                          // dropdown. Degree + language are the
-                          // secondary info.
+                          // Phase S25: the sublabel is now visually
+                          // structured so the university name
+                          // always reads first and is the
+                          // dominant signal — "at Tsinghua
+                          // University · Master · English" reads
+                          // naturally and the search filter
+                          // catches the university name (cmdk
+                          // does fuzzy match on `value` below).
                           sublabel: university
-                            ? `${university.name} · ${program.degree} · ${program.language}`
+                            ? `at ${university.name} · ${program.degree} · ${program.language}`
                             : `${program.degree} · ${program.language}`,
                           // University logo is rendered in the
                           // picker (the SearchableSelect component
@@ -827,7 +869,7 @@ export default function StudentNewApplicationPage() {
                         <SelectValue placeholder="Select intake" />
                       </SelectTrigger>
                       <SelectContent>
-                        {intendedIntakes.map((intake) => (
+                        {getIntendedIntakes().map((intake) => (
                           <SelectItem key={intake} value={intake}>{intake}</SelectItem>
                         ))}
                       </SelectContent>
