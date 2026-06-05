@@ -25,6 +25,7 @@ import type {
 import {
   PARTNER_APPLICATION_STATUSES,
   PARTNER_APPLICATION_DECISIONS,
+  PARTNER_STATUS_TRANSITIONS,
 } from '@/lib/partner-application-mapper';
 
 const STATUS_VARIANTS: Record<PartnerApplicationStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -34,21 +35,6 @@ const STATUS_VARIANTS: Record<PartnerApplicationStatus, 'default' | 'secondary' 
   'Accepted': 'default',
   'Rejected': 'destructive',
   'Withdrawn': 'outline',
-};
-
-// Phase 4: partner-driven status transitions. The partner can move an
-// application forward in the pipeline (Draft → Submitted → In Review →
-// Accepted / Rejected) and back (Submitted → Draft, In Review → Draft).
-// Withdrawn and the terminal decisions are also reachable. We keep
-// this in a small allow-list so a UI bug or stale button can't write
-// a status that's nonsensical in the partner workflow.
-const PARTNER_STATUS_TRANSITIONS: Record<PartnerApplicationStatus, PartnerApplicationStatus[]> = {
-  Draft: ['Draft', 'Submitted', 'Withdrawn'],
-  Submitted: ['Submitted', 'In Review', 'Draft', 'Withdrawn'],
-  'In Review': ['In Review', 'Accepted', 'Rejected', 'Withdrawn'],
-  Accepted: ['Accepted'],
-  Rejected: ['Rejected', 'Draft'], // partner can re-open a rejection
-  Withdrawn: ['Withdrawn', 'Draft'], // partner can re-open a withdrawal
 };
 
 const PRIORITY_VARIANTS: Record<PartnerApplicationPriority, string> = {

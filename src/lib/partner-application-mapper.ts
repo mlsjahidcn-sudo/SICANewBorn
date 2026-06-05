@@ -68,6 +68,43 @@ export const PARTNER_APPLICATION_DEGREES = [
 ] as const;
 export type PartnerApplicationDegree = (typeof PARTNER_APPLICATION_DEGREES)[number];
 
+/**
+ * Phase 4 (security hardening): server-enforced allow-list for
+ * partner-driven status transitions. Mirrors the student portal's
+ * STUDENT_STATUS_TRANSITIONS table — every PATCH that touches `status`
+ * is checked against this map, and a status that isn't reachable
+ * from the current state returns HTTP 400.
+ *
+ * Rules:
+ *   - Same → same is a no-op (UI sends them, server short-circuits)
+ *   - Accepted is terminal for the partner — admin writes the final
+ *     decision via the admin portal, not the partner portal
+ *   - The partner can re-open Rejected / Withdrawn back to Draft
+ *     (the original event is preserved on the row, just not the
+ *     status)
+ *   - The Submitted → Submitted / In Review / Draft / Withdrawn
+ *     fan-out covers the most common "I'm still working on it" and
+ *     "changed my mind" cases
+ */
+export const PARTNER_STATUS_TRANSITIONS: Record<PartnerApplicationStatus, readonly PartnerApplicationStatus[]> = {
+  Draft: ['Draft', 'Submitted', 'Withdrawn'],
+  Submitted: ['Submitted', 'In Review', 'Draft', 'Withdrawn'],
+  'In Review': ['In Review', 'Accepted', 'Rejected', 'Withdrawn'],
+  // Terminal from the partner's perspective — only re-open back to
+  // Draft is allowed (admin re-decisioning happens elsewhere).
+  Accepted: ['Accepted', 'Draft'],
+  Rejected: ['Rejected', 'Draft'],
+  Withdrawn: ['Withdrawn', 'Draft'],
+};
+
+export function isPartnerStatusTransitionAllowed(
+  from: PartnerApplicationStatus,
+  to: PartnerApplicationStatus,
+): boolean {
+  const allowed = PARTNER_STATUS_TRANSITIONS[from] || [];
+  return allowed.includes(to);
+}
+
 export interface PartnerApplication {
   id: string;
   partnerId: string;
