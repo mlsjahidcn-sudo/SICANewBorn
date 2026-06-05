@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Check, CheckCircle2, ChevronRight, Building, Upload, FileText, FileCheck, RefreshCw, Save } from 'lucide-react';
@@ -14,14 +14,20 @@ import { Badge } from '@/components/ui/badge';
 import { apiFetchJson } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { DocumentUploader, DocumentCategory } from '@/components/student/DocumentUploader';
+import { SearchableSelect } from '@/components/ui/searchable-select';
+// We keep the *static* enumerations (degreeLevels, intendedIntakes,
+// documentTypes) from data.ts — those are not "data" per se, they're
+// closed taxonomies the wizard drives. The university + program
+// lists are now fetched from the API so admin-added entries show up
+// immediately.
 import {
-  universities,
-  programs,
   degreeLevels,
   intendedIntakes,
   documentTypes,
   DegreeLevel,
-  DocumentType
+  DocumentType,
+  type University,
+  type Program,
 } from '@/lib/data';
 
 // Form state shape — targetDegreeLevel starts as '' (unset) and narrows to
@@ -79,6 +85,19 @@ export default function StudentNewApplicationPage() {
   const resumeLoadStartedRef = useRef(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  // Phase S20: live university + program lists fetched from the
+  // admin-managed API. The static data.ts fallback is gone for
+  // these two — admin-added universities / programs now show up in
+  // the wizard immediately. The page still works offline-ish: if
+  // the API is unreachable we fall back to the static arrays below.
+  const [universities, setUniversities] = useState<University[]>([]);
+  const [programs, setPrograms] = useState<Program[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
+  // Track docs that were uploaded during this wizard session so we
+  // can PATCH them with the new application_id after the POST
+  // succeeds. Without this they're orphans (the doc was uploaded
+  // before the application row existed).
+  const [pendingDocIds, setPendingDocIds] = useState<string[]>([]);
   const [applicationData, setApplicationData] = useState<ApplicationFormData>({
     targetDegreeLevel: '',
     targetProgramSlug: '',
@@ -145,9 +164,22 @@ export default function StudentNewApplicationPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const filteredPrograms = applicationData.targetDegreeLevel
-    ? programs.filter(p => p.degree === applicationData.targetDegreeLevel)
-    : programs;
+  // Phase S20: programs filtered by degree + (optionally) university.
+  // The university filter is optional — picking a school narrows the
+  // program list, but a student can also leave it empty and see
+  // every program at their degree level.
+  const filteredPrograms = useMemo(() => {
+    let list = programs;
+    if (applicationData.targetDegreeLevel) {
+      list = list.filter((p) => p.degree === applicationData.targetDegreeLevel);
+    }
+    if (applicationData.targetUniversity) {
+      list = list.filter(
+        (p) => p.universitySlug === applicationData.targetUniversity,
+      );
+    }
+    return list;
+  }, [programs, applicationData.targetDegreeLevel, applicationData.targetUniversity]);
 
   const selectedProgram = filteredPrograms.find(p => p.slug === applicationData.targetProgramSlug);
   const selectedUniversity = selectedProgram 
@@ -167,13 +199,53 @@ export default function StudentNewApplicationPage() {
   }>>([]);
   const [documentsLoading, setDocumentsLoading] = useState(false);
 
+  // Phase S20: fetch universities + programs from the API. Both
+  // endpoints are public, no auth required, paginated — we pass
+  // a high limit so the whole list comes back in one round-trip.
+  // If the API fails we keep the empty arrays; the wizard still
+  // renders but the university + program pickers will be empty
+  // and the user sees an error.
+  useEffect(() => {
+    const controller = new AbortController();
+    setDataLoading(true);
+    Promise.all([
+      apiFetchJson<{ universities: University[] }>('/api/universities?limit=200', {
+        signal: controller.signal,
+      }),
+      apiFetchJson<{ programs: Program[] }>('/api/programs?limit=500', {
+        signal: controller.signal,
+      }),
+    ])
+      .then(([u, p]) => {
+        if (!controller.signal.aborted) {
+          setUniversities(u.universities || []);
+          setPrograms(p.programs || []);
+        }
+      })
+      .catch((err) => {
+        if (!controller.signal.aborted) {
+          console.error('[student/new] failed to load universities/programs:', err);
+          setUniversities([]);
+          setPrograms([]);
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setDataLoading(false);
+      });
+    return () => controller.abort();
+  }, []);
+
   useEffect(() => {
     const controller = new AbortController();
     setDocumentsLoading(true);
-    apiFetchJson<{ documents: typeof studentDocuments }>('/api/student/documents', {
+    // Phase S20: the API returns { data: [...] } not { documents: [...] }.
+    // The previous code looked for d.documents and got undefined, so the
+    // wizard started with no docs visible even when the student had
+    // uploaded some. Fixed.
+    apiFetchJson<{ data: typeof studentDocuments }>('/api/student/documents', {
       signal: controller.signal,
     })
-      .then((d) => setStudentDocuments(d.documents || []))
+      .then((d) => setStudentDocuments(d.data || []))
       .catch(() => setStudentDocuments([]))
       .finally(() => {
         if (!controller.signal.aborted) setDocumentsLoading(false);
@@ -226,6 +298,36 @@ export default function StudentNewApplicationPage() {
     programs.find((p) => p.slug === applicationData.targetProgramSlug);
 
   /**
+   * Phase S20: after the application is created (POST or PUT
+   * on an existing draft), walk through the doc IDs the student
+   * uploaded in this session and PATCH each one with the new
+   * application_id. Without this the docs stay orphans — the
+   * wizard uploaded them before the application row existed, so
+   * they were saved with application_id = NULL.
+   *
+   * Failures are non-fatal: if a single PATCH errors out (e.g. the
+   * server returns 401 because the JWT is mid-rotation) we just
+   * log it and move on. The user can always re-attach manually
+   * from /student/documents.
+   */
+  const linkPendingDocsToApplication = useCallback(async (applicationId: string) => {
+    if (pendingDocIds.length === 0) return;
+    await Promise.all(
+      pendingDocIds.map(async (docId) => {
+        try {
+          await apiFetchJson(`/api/student/documents/${docId}`, {
+            method: 'PUT',
+            body: JSON.stringify({ applicationId }),
+          });
+        } catch (err) {
+          console.error('[student/new] failed to link doc', docId, '→', applicationId, err);
+        }
+      }),
+    );
+    setPendingDocIds([]); // we've done what we can
+  }, [pendingDocIds]);
+
+  /**
    * Phase 1: save the current form state as a Draft. Available on
    * every step. POSTs with status='Draft' for a new application, or
    * PUTs status='Draft' when resuming an existing draft. The API
@@ -273,6 +375,12 @@ export default function StudentNewApplicationPage() {
             { method: 'POST', body: JSON.stringify(payload) },
           );
       setCreatedAppId(data.application.id);
+      // Phase S20: link any docs uploaded during this session to the
+      // (now-existing) application. Skipped on resume — those docs
+      // are already linked to the resumed application.
+      if (!isResuming) {
+        await linkPendingDocsToApplication(data.application.id);
+      }
       setDraftSaved(true);
       // Brief delay so the success message is visible
       setTimeout(() => {
@@ -313,6 +421,13 @@ export default function StudentNewApplicationPage() {
             { method: 'POST', body: JSON.stringify(payload) },
           );
       setCreatedAppId(data.application.id);
+      // Phase S20: link any docs uploaded during this session to the
+      // new application. Without this, docs uploaded in step 2 stay
+      // orphans (application_id = NULL) because the application row
+      // didn't exist at upload time.
+      if (!isResuming) {
+        await linkPendingDocsToApplication(data.application.id);
+      }
       // Brief delay so the success message is visible before navigating
       setTimeout(() => router.push('/student/applications'), 1500);
     } catch (err) {
@@ -424,7 +539,15 @@ export default function StudentNewApplicationPage() {
                       value={applicationData.targetDegreeLevel}
                       onValueChange={(value) => {
                         if (isDegreeLevel(value)) {
-                          setApplicationData({ ...applicationData, targetDegreeLevel: value });
+                          // Reset program + university when the degree
+                          // level changes — old picks are now invalid
+                          // for the new degree scope.
+                          setApplicationData({
+                            ...applicationData,
+                            targetDegreeLevel: value,
+                            targetProgramSlug: '',
+                            targetUniversity: '',
+                          });
                         }
                       }}
                     >
@@ -441,42 +564,83 @@ export default function StudentNewApplicationPage() {
 
                   <div>
                     <Label className="text-[#1B2A4A]">Program</Label>
-                    <Select 
+                    <SearchableSelect
                       value={applicationData.targetProgramSlug}
-                      onValueChange={(value) => {
-                        const program = filteredPrograms.find(p => p.slug === value);
-                        const university = program 
+                      onChange={(value) => {
+                        const program = filteredPrograms.find((p) => p.slug === value);
+                        const university = program
                           ? universities.find((u: { slug: string }) => u.slug === program.universitySlug)
                           : null;
                         setApplicationData({
-                          ...applicationData, 
+                          ...applicationData,
                           targetProgramSlug: value,
-                          targetUniversity: university?.slug || ''
+                          // Auto-fill the university from the program —
+                          // saves the user a click and avoids the
+                          // "wrong school for this program" mistake.
+                          targetUniversity: university?.slug || applicationData.targetUniversity,
                         });
                       }}
-                      disabled={!applicationData.targetDegreeLevel}
-                    >
-                      <SelectTrigger className="rounded-none">
-                        <SelectValue placeholder="Select program" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {filteredPrograms.map((program) => {
-                          const university = universities.find((u: { slug: string }) => u.slug === program.universitySlug);
-                          return (
-                            <SelectItem key={program.slug} value={program.slug}>
-                              {university?.name} - {program.name}
-                            </SelectItem>
-                          );
-                        })}
-                      </SelectContent>
-                    </Select>
+                      options={filteredPrograms.map((program) => {
+                        const university = universities.find(
+                          (u: { slug: string }) => u.slug === program.universitySlug,
+                        );
+                        return {
+                          value: program.slug,
+                          label: program.name,
+                          sublabel: university
+                            ? `${university.name} · ${program.degree} · ${program.language}`
+                            : `${program.degree} · ${program.language}`,
+                        };
+                      })}
+                      placeholder={
+                        !applicationData.targetDegreeLevel
+                          ? 'Pick a degree first'
+                          : dataLoading
+                          ? 'Loading programs…'
+                          : filteredPrograms.length === 0
+                          ? 'No programs for this degree'
+                          : 'Type to search…'
+                      }
+                      emptyText="No programs match"
+                      searchPlaceholder="Search by name, university, or language…"
+                      disabled={!applicationData.targetDegreeLevel || dataLoading}
+                      loading={dataLoading}
+                    />
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <div>
+                    <Label className="text-[#1B2A4A]">University</Label>
+                    <SearchableSelect
+                      value={applicationData.targetUniversity}
+                      onChange={(value) => {
+                        // When the user picks a university, clear the
+                        // program (the old one is from a different
+                        // school) but keep the degree level.
+                        setApplicationData({
+                          ...applicationData,
+                          targetUniversity: value,
+                          targetProgramSlug: '',
+                        });
+                      }}
+                      options={universities.map((u) => ({
+                        value: u.slug,
+                        label: u.name,
+                        sublabel: u.cityCn ? `${u.cityCn} · ${u.ranking}th in China` : `Ranked #${u.ranking} in China`,
+                      }))}
+                      placeholder={dataLoading ? 'Loading universities…' : 'Type to search…'}
+                      emptyText="No universities match"
+                      searchPlaceholder="Search by name or city…"
+                      clearValue=""
+                      clearLabel="(any university)"
+                      disabled={dataLoading}
+                      loading={dataLoading}
+                    />
+                  </div>
+                  <div>
                     <Label className="text-[#1B2A4A]">Intended Intake</Label>
-                    <Select 
+                    <Select
                       value={applicationData.intendedIntake}
                       onValueChange={(value) => setApplicationData({...applicationData, intendedIntake: value})}
                     >
@@ -614,6 +778,13 @@ export default function StudentNewApplicationPage() {
                                   .then((d) => setStudentDocuments(d.data || []))
                                   .catch(() => {})
                                   .finally(() => setDocumentsLoading(false));
+                                // Track this upload so we can attach it to
+                                // the new application once it's POSTed. The
+                                // doc was uploaded with application_id = NULL
+                                // because the application doesn't exist yet.
+                                setPendingDocIds((prev) =>
+                                  prev.includes(uploaded.id) ? prev : [...prev, uploaded.id],
+                                );
                                 console.log('[student/new] document uploaded:', uploaded.id);
                               }}
                               compact

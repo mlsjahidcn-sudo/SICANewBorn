@@ -44,7 +44,24 @@ export async function PUT(
     const { supabase, user } = auth;
 
     const body = await request.json();
-    const { id, created_at, uploaded_at, verified_at, ...updates } = body;
+    const {
+      id,
+      created_at,
+      uploaded_at,
+      verified_at,
+      // Phase S20: pull out the camelCase wrapper fields and map to
+      // their snake_case column names. Without this the PATCH sends
+      // `applicationId` to the DB, which has the column `application_id`
+      // — Supabase would silently ignore the unknown key and the
+      // link would never persist.
+      applicationId,
+      ...rest
+    } = body;
+    const updates: Record<string, unknown> = { ...rest };
+    if (applicationId !== undefined) {
+      // Allow explicit null to unlink a doc from an application
+      updates.application_id = applicationId === null ? null : applicationId;
+    }
 
     const { data: document, error } = await supabase
       .from('student_documents')

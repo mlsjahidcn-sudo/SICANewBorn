@@ -1,14 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FileText, FileUp, Upload, CheckCircle2, Clock, XCircle, Trash2 } from 'lucide-react';
+import Link from 'next/link';
+import { FileText, FileUp, Upload, CheckCircle2, Clock, XCircle, Trash2, Link2, ExternalLink, FileCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { apiFetchJson } from '@/lib/api-client';
 import { documentTypes, DocumentCategory } from '@/lib/student-data';
 import { DocumentUploader, DocumentCategory as DocCat, UploadedDocument } from '@/components/student/DocumentUploader';
 import { createStudentDocDownloadUrl } from '@/lib/storage-client';
+import type { StudentApplication } from '@/lib/application-mapper';
 
 // Shape of a single row from `student_documents` as returned by
 // /api/student/documents. The API returns raw DB rows (snake_case).
@@ -23,6 +27,10 @@ interface DbStudentDocument {
   file_type?: string;
   file_size?: number;
   uploaded_at?: string;
+  // Phase S20: documents can be linked to an application via this FK.
+  // When null, the doc is "floating" — it doesn't belong to any
+  // application yet. The user can re-link from this page.
+  application_id?: string | null;
 }
 
 const CATEGORIES: Array<'All' | DocumentCategory> = [
@@ -39,7 +47,13 @@ export default function StudentDocumentsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState<'All' | DocumentCategory>('All');
   const [documents, setDocuments] = useState<DbStudentDocument[]>([]);
+  // Phase S20: fetch the student's applications so each doc row
+  // can show its "Linked to" app + offer a re-link dropdown.
+  const [applications, setApplications] = useState<StudentApplication[]>([]);
   const [error, setError] = useState<string | null>(null);
+  // Per-doc re-link state. We track which doc is currently being
+  // re-linked so the dropdown can show a "saving…" affordance.
+  const [linkingId, setLinkingId] = useState<string | null>(null);
 
   // Upload panel state
   const [showUploadPanel, setShowUploadPanel] = useState(false);
@@ -49,10 +63,17 @@ export default function StudentDocumentsPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await apiFetchJson<{ data: DbStudentDocument[] }>(
-        '/api/student/documents',
-      );
-      setDocuments(res.data || []);
+      // Phase S20: load docs AND applications in parallel. The
+      // applications list drives the per-doc "Link to application"
+      // dropdown on each row.
+      const [docsRes, appsRes] = await Promise.all([
+        apiFetchJson<{ data: DbStudentDocument[] }>('/api/student/documents'),
+        apiFetchJson<{ applications: StudentApplication[] }>(
+          '/api/student/applications?limit=50',
+        ),
+      ]);
+      setDocuments(docsRes.data || []);
+      setApplications(appsRes.applications || []);
     } catch (err) {
       console.error('[student/documents] fetch failed:', err);
       setError(err instanceof Error ? err.message : 'Failed to load documents.');
@@ -65,8 +86,38 @@ export default function StudentDocumentsPage() {
     void loadDocuments();
   }, []);
 
+  /**
+   * Phase S20: link (or unlink) a doc to an application. We do a
+   * optimistic local update so the dropdown reflects the change
+   * immediately, then PATCH the server. On failure we roll back.
+   */
+  const handleLinkDoc = async (docId: string, applicationId: string | null) => {
+    const previous = documents.find((d) => d.id === docId)?.application_id ?? null;
+    setLinkingId(docId);
+    setDocuments((prev) =>
+      prev.map((d) => (d.id === docId ? { ...d, application_id: applicationId } : d)),
+    );
+    try {
+      await apiFetchJson(`/api/student/documents/${docId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ applicationId }),
+      });
+    } catch (err) {
+      // Roll back on failure
+      setDocuments((prev) =>
+        prev.map((d) => (d.id === docId ? { ...d, application_id: previous } : d)),
+      );
+      setError(err instanceof Error ? err.message : 'Failed to link document.');
+    } finally {
+      setLinkingId(null);
+    }
+  };
+
   const handleUploaded = (doc: UploadedDocument) => {
-    // Optimistic prepend so the doc appears immediately
+    // Optimistic prepend so the doc appears immediately. The
+    // application_id is whatever the uploader had at the time of
+    // upload (usually null for docs uploaded on this page, set
+    // to the new app id for docs uploaded in the wizard).
     setDocuments((prev) => [
       {
         id: doc.id,
@@ -79,6 +130,7 @@ export default function StudentDocumentsPage() {
         file_type: doc.fileType,
         file_size: doc.fileSize,
         uploaded_at: new Date().toISOString(),
+        application_id: null, // re-linkable from the row
       } as DbStudentDocument,
       ...prev,
     ]);
@@ -232,56 +284,135 @@ export default function StudentDocumentsPage() {
       </div>
 
       <div className="space-y-4">
-        {filteredDocuments.map((doc) => (
-          <Card key={doc.id} className="rounded-none">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-4">
-                <div className="bg-[#1B2A4A]/10 p-3 rounded-none">
-                  <FileText className="h-6 w-6 text-[#1B2A4A]" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <h3 className="font-medium text-[#1B2A4A]">{doc.name}</h3>
-                    {getStatusBadge(doc.status)}
+        {filteredDocuments.map((doc) => {
+          // Phase S20: find the linked application (if any) so we
+          // can show a quick link and let the user re-link from
+          // here. Documents uploaded before the wizard existed —
+          // or before an application existed — land here as
+          // orphans with application_id = null.
+          const linkedApp = doc.application_id
+            ? applications.find((a) => a.id === doc.application_id)
+            : null;
+          const isLinking = linkingId === doc.id;
+          return (
+            <Card key={doc.id} className="rounded-none">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-4">
+                  <div className="bg-[#1B2A4A]/10 p-3 rounded-none">
+                    <FileText className="h-6 w-6 text-[#1B2A4A]" />
                   </div>
-                  <p className="text-sm text-[#4B5563]">
-                    {doc.category}
-                    {doc.file_size ? ` • ${(doc.file_size / 1024 / 1024).toFixed(1)} MB` : ''}
-                    {doc.file_name ? ` • ${doc.file_name}` : ''}
-                  </p>
-                  {doc.uploaded_at && (
-                    <p className="text-xs text-[#4B5563] mt-1">
-                      Uploaded: {new Date(doc.uploaded_at).toLocaleDateString()}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <h3 className="font-medium text-[#1B2A4A]">{doc.name}</h3>
+                      {getStatusBadge(doc.status)}
+                      {/* Phase S20: "Linked to" badge — green if linked
+                          to an app, gold/orange if orphan. Helps the
+                          student spot floating docs that need
+                          attention before submission. */}
+                      {linkedApp ? (
+                        <Link
+                          href={`/student/applications/${linkedApp.id}`}
+                          className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded-none hover:bg-green-100"
+                          title="Open this application"
+                        >
+                          <FileCheck className="h-3 w-3" />
+                          Linked to {linkedApp.university}
+                          <ExternalLink className="h-3 w-3" />
+                        </Link>
+                      ) : (
+                        <span
+                          className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 bg-orange-50 text-orange-700 border border-orange-200 rounded-none"
+                          title="This document isn't linked to any application yet"
+                        >
+                          <Link2 className="h-3 w-3" />
+                          Unlinked
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-[#4B5563] mt-1">
+                      {doc.category}
+                      {doc.file_size ? ` • ${(doc.file_size / 1024 / 1024).toFixed(1)} MB` : ''}
+                      {doc.file_name ? ` • ${doc.file_name}` : ''}
                     </p>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  {getStatusIcon(doc.status)}
-                  {doc.file_url && (
+                    {doc.uploaded_at && (
+                      <p className="text-xs text-[#4B5563] mt-1">
+                        Uploaded: {new Date(doc.uploaded_at).toLocaleDateString()}
+                      </p>
+                    )}
+
+                    {/* Phase S20: re-link dropdown. Lets the user
+                        retroactively attach an orphan doc to an
+                        app, or move a doc from one app to another. */}
+                    {applications.length > 0 && (
+                      <div className="mt-3 flex items-center gap-2 flex-wrap">
+                        <Label
+                          htmlFor={`link-${doc.id}`}
+                          className="text-xs text-[#4B5563] font-normal"
+                        >
+                          {linkedApp ? 'Move to:' : 'Link to:'}
+                        </Label>
+                        <Select
+                          value={doc.application_id ?? 'none'}
+                          onValueChange={(value) =>
+                            handleLinkDoc(
+                              doc.id,
+                              value === 'none' ? null : value,
+                            )
+                          }
+                          disabled={isLinking}
+                        >
+                          <SelectTrigger
+                            id={`link-${doc.id}`}
+                            className="h-8 text-xs rounded-none min-w-[200px]"
+                          >
+                            <SelectValue placeholder="(unlinked)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">
+                              (unlinked — not attached to any app)
+                            </SelectItem>
+                            {applications.map((a) => (
+                              <SelectItem key={a.id} value={a.id}>
+                                {a.university} · {a.program}
+                                {a.applicationNumber ? ` · ${a.applicationNumber}` : ''}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {isLinking && (
+                          <span className="text-xs text-gray-500">Saving…</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {getStatusIcon(doc.status)}
+                    {doc.file_url && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDownload(doc)}
+                        className="rounded-none"
+                        title="Download"
+                      >
+                        Download
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleDownload(doc)}
-                      className="rounded-none"
-                      title="Download"
+                      onClick={() => handleDelete(doc.id)}
+                      className="rounded-none text-red-600 hover:text-red-800"
+                      title="Delete"
                     >
-                      Download
+                      <Trash2 className="h-4 w-4" />
                     </Button>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDelete(doc.id)}
-                    className="rounded-none text-red-600 hover:text-red-800"
-                    title="Delete"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {filteredDocuments.length === 0 && !error && (

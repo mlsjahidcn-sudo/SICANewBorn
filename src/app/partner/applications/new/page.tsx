@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { apiFetchJson } from '@/lib/api-client';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import {
   PARTNER_APPLICATION_STATUSES,
   PARTNER_APPLICATION_DECISIONS,
@@ -23,6 +24,7 @@ import {
   PartnerApplicationDegree,
 } from '@/lib/partner-application-mapper';
 import type { PartnerStudent } from '@/lib/partner-student-mapper';
+import type { University, Program } from '@/lib/data';
 
 interface FormData {
   studentName: string;
@@ -58,27 +60,48 @@ export default function PartnerNewApplicationPage() {
   const router = useRouter();
   const [formData, setFormData] = useState<FormData>(INITIAL);
   const [students, setStudents] = useState<PartnerStudent[]>([]);
+  const [universities, setUniversities] = useState<University[]>([]);
+  const [programs, setPrograms] = useState<Program[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load this partner's students so they can pick one to seed studentName.
+  // Phase S20: load this partner's students, plus the live university
+  // and program lists. The university / program fields used to be
+  // plain text inputs — the partner could mistype a school name and
+  // ship the application to "Tsingha University". Now they pick
+  // from the same list the public site uses.
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await apiFetchJson<{ students: PartnerStudent[] }>(
-          '/api/partner/students?limit=100',
-        );
-        if (cancelled) return;
-        setStudents(res.students || []);
-      } catch {
-        // Non-fatal — user can still type a name manually
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    const controller = new AbortController();
+    setDataLoading(true);
+    Promise.all([
+      apiFetchJson<{ students: PartnerStudent[] }>('/api/partner/students?limit=100', {
+        signal: controller.signal,
+      }).catch(() => ({ students: [] })),
+      apiFetchJson<{ universities: University[] }>('/api/universities?limit=200', {
+        signal: controller.signal,
+      }).catch(() => ({ universities: [] })),
+      apiFetchJson<{ programs: Program[] }>('/api/programs?limit=500', {
+        signal: controller.signal,
+      }).catch(() => ({ programs: [] })),
+    ])
+      .then(([s, u, p]) => {
+        if (controller.signal.aborted) return;
+        setStudents(s.students || []);
+        setUniversities(u.universities || []);
+        setPrograms(p.programs || []);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setDataLoading(false);
+      });
+    return () => controller.abort();
   }, []);
+
+  // Programs filtered by the picked university (if any) so the
+  // partner can drill into one school without scrolling a 500-row list.
+  const filteredPrograms = programs.filter(
+    (p) => !formData.university || p.universitySlug === formData.university,
+  );
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
@@ -253,28 +276,72 @@ export default function PartnerNewApplicationPage() {
                   <Label htmlFor="university" className="text-[#1B2A4A] mb-2 block">
                     University <span className="text-red-600">*</span>
                   </Label>
-                  <Input
-                    id="university"
-                    name="university"
+                  <SearchableSelect
                     value={formData.university}
-                    onChange={handleInputChange}
-                    required
-                    className="rounded-none"
-                    placeholder="e.g., Tsinghua University"
+                    onChange={(value) => {
+                      // The API stores university as a free-text
+                      // name (partner_applications.university), not a
+                      // slug, so we resolve the picked slug → name
+                      // before stashing it. Keeps the API contract
+                      // simple and lets the partner eventually add
+                      // a school we don't yet have in the catalogue.
+                      const picked = universities.find((u) => u.slug === value);
+                      setFormData((prev) => ({
+                        ...prev,
+                        university: picked?.name ?? value,
+                        // Clear the program — it was tied to the
+                        // old university, and any program the
+                        // partner re-picks should match the new one.
+                        program: '',
+                      }));
+                    }}
+                    options={universities.map((u) => ({
+                      value: u.slug,
+                      label: u.name,
+                      sublabel: u.cityCn
+                        ? `${u.cityCn} · #${u.ranking} in China`
+                        : `#${u.ranking} in China`,
+                    }))}
+                    placeholder={dataLoading ? 'Loading universities…' : 'Type to search…'}
+                    emptyText="No universities match"
+                    searchPlaceholder="Search by name or city…"
+                    disabled={dataLoading}
+                    loading={dataLoading}
                   />
                 </div>
                 <div>
                   <Label htmlFor="program" className="text-[#1B2A4A] mb-2 block">
                     Program <span className="text-red-600">*</span>
                   </Label>
-                  <Input
-                    id="program"
-                    name="program"
+                  <SearchableSelect
                     value={formData.program}
-                    onChange={handleInputChange}
-                    required
-                    className="rounded-none"
-                    placeholder="e.g., Computer Science (Master)"
+                    onChange={(value) => {
+                      // The API stores program as a free-text name
+                      // (partner_applications.program), so resolve
+                      // the picked slug → name before stashing.
+                      const picked = programs.find((p) => p.slug === value);
+                      setFormData((prev) => ({
+                        ...prev,
+                        program: picked?.name ?? value,
+                      }));
+                    }}
+                    options={filteredPrograms.map((p) => {
+                      const uni = universities.find((u) => u.slug === p.universitySlug);
+                      return {
+                        value: p.slug,
+                        label: p.name,
+                        sublabel: uni
+                          ? `${uni.name} · ${p.degree} · ${p.language}`
+                          : `${p.degree} · ${p.language}`,
+                      };
+                    })}
+                    placeholder={dataLoading ? 'Loading programs…' : 'Type to search…'}
+                    emptyText={formData.university ? 'No programs at this school' : 'No programs match'}
+                    searchPlaceholder="Search by name, school, or language…"
+                    clearValue=""
+                    clearLabel="(any program)"
+                    disabled={dataLoading}
+                    loading={dataLoading}
                   />
                 </div>
                 <div>

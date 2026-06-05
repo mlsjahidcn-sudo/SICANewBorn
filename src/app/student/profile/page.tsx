@@ -1,22 +1,140 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { User, Edit, Save } from 'lucide-react';
+import { useAuth } from '@/lib/auth-context';
+import { User, Edit, Save, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { apiFetchJson } from '@/lib/api-client';
+
+interface StudentProfile {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  phone: string | null;
+  nationality: string | null;
+  date_of_birth: string | null;
+  passport_number: string | null;
+  passport_expiry: string | null;
+  current_address: string | null;
+  permanent_address: string | null;
+  highest_education: string | null;
+  school_name: string | null;
+  graduation_year: string | null;
+  gpa: string | null;
+  english_proficiency: string | null;
+  english_score: string | null;
+  target_degree: string | null;
+  target_field: string | null;
+  target_intake: string | null;
+  preferred_universities: string[] | null;
+}
+
+const EMPTY_PROFILE: StudentProfile = {
+  id: '',
+  first_name: '',
+  last_name: '',
+  phone: '',
+  nationality: '',
+  date_of_birth: '',
+  passport_number: '',
+  passport_expiry: '',
+  current_address: '',
+  permanent_address: '',
+  highest_education: '',
+  school_name: '',
+  graduation_year: '',
+  gpa: '',
+  english_proficiency: '',
+  english_score: '',
+  target_degree: '',
+  target_field: '',
+  target_intake: '',
+  preferred_universities: [],
+};
+
+// Allowed target degree values — mirrors the enum the wizard uses.
+const TARGET_DEGREES = ['Bachelor', 'Master', 'PhD', 'Chinese Language'] as const;
+const ENGLISH_PROFICIENCY = ['IELTS', 'TOEFL', 'Duolingo', 'PTE', 'Other'] as const;
+const HIGHEST_EDUCATION = ['High School', 'Diploma', 'Bachelor', 'Master', 'PhD', 'Other'] as const;
 
 export default function StudentProfilePage() {
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<StudentProfile>(EMPTY_PROFILE);
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
+
+  const load = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await apiFetchJson<{ data: StudentProfile }>('/api/student/profile');
+      setProfile({ ...EMPTY_PROFILE, ...res.data });
+    } catch (err) {
+      const e = err as { message?: string; status?: number };
+      // 404 is fine — the trigger that creates the profile row on
+      // sign-up may not have run for older accounts. Show empty form
+      // and let the user fill it in.
+      if (e.status !== 404) {
+        setError(e.message || 'Failed to load profile.');
+      }
+      setProfile(EMPTY_PROFILE);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 300);
-    return () => clearTimeout(timer);
+    void load();
   }, []);
+
+  const handleChange = (key: keyof StudentProfile, value: string) => {
+    setProfile((prev) => ({ ...prev, [key]: value }));
+    if (savedAt) setSavedAt(null);
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    setError(null);
+    try {
+      // Only send editable fields — strip id/created_at/updated_at
+      // and convert empty strings to null so the DB doesn't end up
+      // with a forest of empty string rows.
+      const payload: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(profile)) {
+        if (k === 'id') continue;
+        if (typeof v === 'string') {
+          payload[k] = v.trim() === '' ? null : v.trim();
+        } else if (Array.isArray(v)) {
+          payload[k] = v.length === 0 ? null : v;
+        } else {
+          payload[k] = v;
+        }
+      }
+      const res = await apiFetchJson<{ data: StudentProfile }>('/api/student/profile', {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      });
+      setProfile({ ...EMPTY_PROFILE, ...res.data });
+      setSavedAt(new Date());
+      setIsEditing(false);
+    } catch (err) {
+      const e = err as { message?: string };
+      setError(e.message || 'Failed to save profile.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    void load(); // re-fetch the canonical state
+  };
 
   if (isLoading) {
     return (
@@ -32,65 +150,162 @@ export default function StudentProfilePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-[#1B2A4A]">My Profile</h1>
-          <p className="text-[#4B5563] mt-1">Manage your personal information</p>
+          <p className="text-[#4B5563] mt-1">
+            Manage your personal information ·{' '}
+            <span className="font-mono text-xs">{user?.email}</span>
+          </p>
         </div>
-        <Button 
-          variant={isEditing ? "default" : "outline"} 
-          className="rounded-none"
-          onClick={() => setIsEditing(!isEditing)}
-        >
-          {isEditing ? (
-            <>
-              <Save className="mr-2 h-4 w-4" />
-              Save Changes
-            </>
-          ) : (
-            <>
+        <div className="flex items-center gap-2">
+          {savedAt && !isEditing && (
+            <span className="inline-flex items-center gap-1 text-xs text-green-700">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Saved {savedAt.toLocaleTimeString()}
+            </span>
+          )}
+          {!isEditing ? (
+            <Button
+              className="rounded-none"
+              onClick={() => { setSavedAt(null); setIsEditing(true); }}
+            >
               <Edit className="mr-2 h-4 w-4" />
               Edit Profile
+            </Button>
+          ) : (
+            <>
+              <Button
+                variant="outline"
+                className="rounded-none"
+                onClick={handleCancel}
+                disabled={isSaving}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="rounded-none bg-[#9B1B30] hover:bg-[#7A1526]"
+                onClick={handleSave}
+                disabled={isSaving}
+              >
+                <Save className="mr-2 h-4 w-4" />
+                {isSaving ? 'Saving…' : 'Save Changes'}
+              </Button>
             </>
           )}
-        </Button>
+        </div>
       </div>
+
+      {error && (
+        <Card className="rounded-none border-red-200 bg-red-50">
+          <CardContent className="p-4 text-sm text-red-800 flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+            {error}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Personal Information */}
         <Card className="rounded-none">
           <CardHeader>
-            <CardTitle>Personal Information</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              Personal Information
+            </CardTitle>
             <CardDescription>Your basic details</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>First Name</Label>
-                <Input defaultValue="John" disabled={!isEditing} className="rounded-none" />
+                <Label htmlFor="first_name">First Name</Label>
+                <Input
+                  id="first_name"
+                  value={profile.first_name ?? ''}
+                  onChange={(e) => handleChange('first_name', e.target.value)}
+                  disabled={!isEditing}
+                  className="rounded-none"
+                />
               </div>
               <div className="space-y-2">
-                <Label>Last Name</Label>
-                <Input defaultValue="Smith" disabled={!isEditing} className="rounded-none" />
+                <Label htmlFor="last_name">Last Name</Label>
+                <Input
+                  id="last_name"
+                  value={profile.last_name ?? ''}
+                  onChange={(e) => handleChange('last_name', e.target.value)}
+                  disabled={!isEditing}
+                  className="rounded-none"
+                />
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Email Address</Label>
-              <Input defaultValue="john.smith@example.com" disabled className="rounded-none" />
-            </div>
-            <div className="space-y-2">
-              <Label>Phone Number</Label>
-              <Input defaultValue="+1 202 555 0123" disabled={!isEditing} className="rounded-none" />
+              <Label htmlFor="phone">Phone Number</Label>
+              <Input
+                id="phone"
+                type="tel"
+                value={profile.phone ?? ''}
+                onChange={(e) => handleChange('phone', e.target.value)}
+                disabled={!isEditing}
+                className="rounded-none"
+                placeholder="+86 138 0000 0000"
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Nationality</Label>
-                <Input defaultValue="United States" disabled={!isEditing} className="rounded-none" />
+                <Label htmlFor="nationality">Nationality</Label>
+                <Input
+                  id="nationality"
+                  value={profile.nationality ?? ''}
+                  onChange={(e) => handleChange('nationality', e.target.value)}
+                  disabled={!isEditing}
+                  className="rounded-none"
+                  placeholder="e.g., Nigeria, Brazil, Vietnam"
+                />
               </div>
               <div className="space-y-2">
-                <Label>Date of Birth</Label>
-                <Input defaultValue="2000-05-15" type="date" disabled={!isEditing} className="rounded-none" />
+                <Label htmlFor="date_of_birth">Date of Birth</Label>
+                <Input
+                  id="date_of_birth"
+                  type="date"
+                  value={profile.date_of_birth ?? ''}
+                  onChange={(e) => handleChange('date_of_birth', e.target.value)}
+                  disabled={!isEditing}
+                  className="rounded-none"
+                />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="passport_number">Passport Number</Label>
+              <Input
+                id="passport_number"
+                value={profile.passport_number ?? ''}
+                onChange={(e) => handleChange('passport_number', e.target.value)}
+                disabled={!isEditing}
+                className="rounded-none"
+                placeholder="e.g., E1234567"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="passport_expiry">Passport Expiry</Label>
+              <Input
+                id="passport_expiry"
+                type="date"
+                value={profile.passport_expiry ?? ''}
+                onChange={(e) => handleChange('passport_expiry', e.target.value)}
+                disabled={!isEditing}
+                className="rounded-none"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="current_address">Current Address</Label>
+              <Input
+                id="current_address"
+                value={profile.current_address ?? ''}
+                onChange={(e) => handleChange('current_address', e.target.value)}
+                disabled={!isEditing}
+                className="rounded-none"
+                placeholder="Where you live now"
+              />
             </div>
           </CardContent>
         </Card>
@@ -99,44 +314,118 @@ export default function StudentProfilePage() {
         <Card className="rounded-none">
           <CardHeader>
             <CardTitle>Education & Preferences</CardTitle>
-            <CardDescription>Your academic background</CardDescription>
+            <CardDescription>Your academic background + what you want to study</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>Highest Education</Label>
-              <Input defaultValue="High School" disabled={!isEditing} className="rounded-none" />
+              <Label htmlFor="highest_education">Highest Education</Label>
+              <select
+                id="highest_education"
+                value={profile.highest_education ?? ''}
+                onChange={(e) => handleChange('highest_education', e.target.value)}
+                disabled={!isEditing}
+                className="w-full h-10 rounded-none border border-gray-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2A4A]/20 disabled:bg-gray-50 disabled:text-gray-500"
+              >
+                <option value="">(not set)</option>
+                {HIGHEST_EDUCATION.map((d) => <option key={d} value={d}>{d}</option>)}
+              </select>
             </div>
             <div className="space-y-2">
-              <Label>School Name</Label>
-              <Input defaultValue="Lincoln High School" disabled={!isEditing} className="rounded-none" />
+              <Label htmlFor="school_name">School Name</Label>
+              <Input
+                id="school_name"
+                value={profile.school_name ?? ''}
+                onChange={(e) => handleChange('school_name', e.target.value)}
+                disabled={!isEditing}
+                className="rounded-none"
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Graduation Year</Label>
-                <Input defaultValue="2018" disabled={!isEditing} className="rounded-none" />
+                <Label htmlFor="graduation_year">Graduation Year</Label>
+                <Input
+                  id="graduation_year"
+                  value={profile.graduation_year ?? ''}
+                  onChange={(e) => handleChange('graduation_year', e.target.value)}
+                  disabled={!isEditing}
+                  className="rounded-none"
+                  placeholder="e.g., 2023"
+                />
               </div>
               <div className="space-y-2">
-                <Label>GPA</Label>
-                <Input defaultValue="3.8" disabled={!isEditing} className="rounded-none" />
+                <Label htmlFor="gpa">GPA / Grade</Label>
+                <Input
+                  id="gpa"
+                  value={profile.gpa ?? ''}
+                  onChange={(e) => handleChange('gpa', e.target.value)}
+                  disabled={!isEditing}
+                  className="rounded-none"
+                  placeholder="e.g., 3.8 / 4.0"
+                />
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label>English Proficiency</Label>
-              <Input defaultValue="IELTS - 7.0" disabled={!isEditing} className="rounded-none" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Target Degree</Label>
-                <Input defaultValue="Bachelor" disabled={!isEditing} className="rounded-none" />
+                <Label htmlFor="english_proficiency">English Test</Label>
+                <select
+                  id="english_proficiency"
+                  value={profile.english_proficiency ?? ''}
+                  onChange={(e) => handleChange('english_proficiency', e.target.value)}
+                  disabled={!isEditing}
+                  className="w-full h-10 rounded-none border border-gray-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2A4A]/20 disabled:bg-gray-50 disabled:text-gray-500"
+                >
+                  <option value="">(not set)</option>
+                  {ENGLISH_PROFICIENCY.map((d) => <option key={d} value={d}>{d}</option>)}
+                </select>
               </div>
               <div className="space-y-2">
-                <Label>Target Intake</Label>
-                <Input defaultValue="September 2024" disabled={!isEditing} className="rounded-none" />
+                <Label htmlFor="english_score">Test Score</Label>
+                <Input
+                  id="english_score"
+                  value={profile.english_score ?? ''}
+                  onChange={(e) => handleChange('english_score', e.target.value)}
+                  disabled={!isEditing}
+                  className="rounded-none"
+                  placeholder="e.g., 7.0"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="target_degree">Target Degree</Label>
+                <select
+                  id="target_degree"
+                  value={profile.target_degree ?? ''}
+                  onChange={(e) => handleChange('target_degree', e.target.value)}
+                  disabled={!isEditing}
+                  className="w-full h-10 rounded-none border border-gray-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2A4A]/20 disabled:bg-gray-50 disabled:text-gray-500"
+                >
+                  <option value="">(not set)</option>
+                  {TARGET_DEGREES.map((d) => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="target_intake">Target Intake</Label>
+                <Input
+                  id="target_intake"
+                  value={profile.target_intake ?? ''}
+                  onChange={(e) => handleChange('target_intake', e.target.value)}
+                  disabled={!isEditing}
+                  className="rounded-none"
+                  placeholder="e.g., Fall 2026"
+                />
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Field of Study</Label>
-              <Input defaultValue="Computer Science" disabled={!isEditing} className="rounded-none" />
+              <Label htmlFor="target_field">Field of Study</Label>
+              <Input
+                id="target_field"
+                value={profile.target_field ?? ''}
+                onChange={(e) => handleChange('target_field', e.target.value)}
+                disabled={!isEditing}
+                className="rounded-none"
+                placeholder="e.g., Computer Science"
+              />
             </div>
           </CardContent>
         </Card>
