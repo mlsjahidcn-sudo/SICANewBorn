@@ -9,7 +9,7 @@ export interface FAQ {
 export const sicaFAQ: FAQ[] = [
   {
     question: 'What is SICA?',
-    answer: 'SICA (Study in China Agency) is a professional education consulting agency that provides end-to-end support for international students wishing to study in China. We help with university selection, application preparation, visa processing, and post-arrival support.',
+    answer: 'SICA (Study in China Academy) is a professional education institution that provides end-to-end support for international students wishing to study in China. We help with university selection, application preparation, visa processing, and post-arrival support.',
     category: 'general'
   },
   {

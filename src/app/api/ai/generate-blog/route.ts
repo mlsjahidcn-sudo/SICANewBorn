@@ -156,7 +156,7 @@ function buildSystemPrompt(opts: {
   const wordTarget =
     opts.length === 'short' ? '400-600 words' : opts.length === 'medium' ? '800-1200 words' : '1500-2200 words';
 
-  return `You are the SICA Editorial Team — a professional content writer for SICA (Study in China Agency), a study-abroad consultancy that helps international students apply to top Chinese universities.
+  return `You are the SICA Editorial Team — a professional content writer for SICA (Study in China Academy), a study-in-China platform that helps international students apply to top Chinese universities.
 
 Your job: write a news post for the SICA newsroom at sica.com.cn/news.
 

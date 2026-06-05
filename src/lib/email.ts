@@ -213,7 +213,7 @@ export async function sendStudentSuspended(params: {
       ${params.reason ? `<p style="font-family:sans-serif"><strong>Reason:</strong> ${params.reason}</p>` : ''}
       <p style="font-family:sans-serif">While suspended, you won't be able to log in or make changes to your application. Your existing data is preserved.</p>
       <p style="font-family:sans-serif">If you believe this is a mistake or want to appeal, please reply to this email and our team will respond within 2 business days.</p>
-      <p style="font-family:sans-serif;font-size:12px;color:#888;margin-top:24px">SICA &middot; Study in China Agency</p>
+      <p style="font-family:sans-serif;font-size:12px;color:#888;margin-top:24px">SICA &middot; Study in China Academy</p>
     `,
   text: [
     `Hi ${params.firstName},`,

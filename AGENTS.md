@@ -1,7 +1,7 @@
 # AGENTS.md
 
 ## 项目概览
-SICA (Study in China Agency) - 面向国际学生的中国高校及项目信息查询平台。作为教育咨询机构SICA的官方平台，提供大学目录、大学详情、奖学金信息、招生要求等功能，并突出SICA的申请支持服务。
+SICA (Study in China Academy) - 面向国际学生的中国高校及项目信息查询平台。作为教育机构SICA的官方平台，提供大学目录、大学详情、奖学金信息、招生要求等功能，并突出SICA的申请支持服务。
 
 **目标用户**：计划赴中国留学的国际学生（中国大陆以外）。当前为单租户生产站点（Supabase 项目 ref: `wbzdwwvtbaftjxecgdxk`，ap-northeast-1 区域，2026-06-02 从 Volcengine 迁移到官方 supabase.com）。
 

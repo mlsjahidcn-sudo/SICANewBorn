@@ -10,7 +10,7 @@ export function getOrganizationSchema() {
     '@type': ['Organization', 'EducationalOrganization'],
     '@id': `${SITE_URL}/#organization`,
     name: 'SICA',
-    alternateName: 'Study in China Agency',
+    alternateName: 'Study in China Academy',
     description:
       'SICA is a professional study-in-China consultancy helping international students gain admission to top Chinese universities, secure scholarships, and navigate the application and visa process end-to-end.',
     url: SITE_URL,

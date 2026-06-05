@@ -6,7 +6,7 @@
 
 ## TL;DR
 
-SICA (Study in China Agency) is a Next.js 16 + Supabase consultancy platform for international students. **7 sprints of work are already done and live.** The platform is shippable. The dev server runs on `http://localhost:5050` against official Supabase cloud (project `wbzdwwvtbaftjxecgdxk`, region `ap-northeast-1`).
+SICA (Study in China Academy) is a Next.js 16 + Supabase platform for international students coming to study in China. **7 sprints of work are already done and live.** The platform is shippable. The dev server runs on `http://localhost:5050` against official Supabase cloud (project `wbzdwwvtbaftjxecgdxk`, region `ap-northeast-1`).
 
 **All 7 sprints shipped without regressions. Type check is 0 errors. S1 auth + S2 cleanup + S3 RSC + S4 perf + S5 real forms + S6 admin views + S7 AVIF all green.**
 
