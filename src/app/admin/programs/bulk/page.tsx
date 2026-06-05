@@ -49,7 +49,12 @@ function BulkImportContent() {
   const [parsedPrograms, setParsedPrograms] = useState<ParsedProgram[]>([]);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-  const [importResult, setImportResult] = useState<{ success: number; errors: string[] } | null>(null);
+  const [importResult, setImportResult] = useState<{
+    imported: number;
+    skipped: number;
+    submitted: number;
+    errors: string[];
+  } | null>(null);
 
   // Live university list — fetched from the API so newly
   // AI-generated universities appear here, not just the 8 hard-
@@ -201,15 +206,33 @@ function BulkImportContent() {
       }
 
       setImportResult({
-        success: data.imported || 0,
-        errors: [],
+        imported: data.imported || 0,
+        skipped: data.skipped || 0,
+        submitted: data.submitted || data.imported || 0,
+        errors: data.errors || [],
       });
 
-      addToast(`Successfully imported ${data.imported} programs`, 'success');
+      const imported = data.imported || 0;
+      const skipped = data.skipped || 0;
+      if (imported > 0 && skipped === 0) {
+        addToast(`Imported ${imported} program${imported === 1 ? '' : 's'}`, 'success');
+      } else if (imported > 0 && skipped > 0) {
+        addToast(
+          `Imported ${imported}; ${skipped} already existed (skipped)`,
+          'success',
+        );
+      } else if (imported === 0 && skipped > 0) {
+        addToast(
+          `All ${skipped} program${skipped === 1 ? '' : 's'} already existed (no changes)`,
+          'success',
+        );
+      } else {
+        addToast('No programs imported', 'error');
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Import failed';
       addToast(msg, 'error');
-      setImportResult({ success: 0, errors: [msg] });
+      setImportResult({ imported: 0, skipped: 0, submitted: 0, errors: [msg] });
     } finally {
       setIsImporting(false);
     }
@@ -246,14 +269,33 @@ function BulkImportContent() {
         {importResult ? (
           /* Success State */
           <div className="bg-white border border-gray-200 rounded-none p-8 text-center">
-            <CheckCircle2 className="w-16 h-16 text-green-600 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-[#1B2A4A] mb-2">Import Complete</h2>
-            <p className="text-[#4B5563] mb-6">
-              Successfully imported <span className="font-bold text-green-600">{importResult.success}</span> programs
+            <CheckCircle2 className={`w-16 h-16 mx-auto mb-4 ${importResult.imported > 0 ? 'text-green-600' : 'text-yellow-600'}`} />
+            <h2 className="text-2xl font-bold text-[#1B2A4A] mb-2">
+              {importResult.imported > 0 ? 'Import Complete' : 'No New Programs'}
+            </h2>
+            <p className="text-[#4B5563] mb-2">
+              Imported{' '}
+              <span className="font-bold text-green-600">
+                {importResult.imported}
+              </span>{' '}
+              new program{importResult.imported === 1 ? '' : 's'}.
+            </p>
+            {importResult.skipped > 0 && (
+              <p className="text-[#4B5563] mb-2">
+                <span className="font-bold text-yellow-600">
+                  {importResult.skipped}
+                </span>{' '}
+                already existed (skipped).
+              </p>
+            )}
+            <p className="text-xs text-[#4B5563] mb-6">
+              Total rows submitted: {importResult.submitted}
             </p>
             {importResult.errors.length > 0 && (
-              <div className="mb-6 text-left">
-                <p className="text-sm font-medium text-red-600 mb-2">Errors:</p>
+              <div className="mb-6 text-left max-w-xl mx-auto">
+                <p className="text-sm font-medium text-red-600 mb-2">
+                  Skipped due to validation errors:
+                </p>
                 {importResult.errors.map((err, i) => (
                   <p key={i} className="text-sm text-red-500">{err}</p>
                 ))}

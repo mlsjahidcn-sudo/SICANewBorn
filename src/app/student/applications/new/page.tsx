@@ -252,21 +252,25 @@ export default function StudentNewApplicationPage() {
   // Phase S20: programs filtered by degree + (optionally) university.
   // The university filter is optional — picking a school narrows the
   // program list, but a student can also leave it empty and see
-  // every program at their degree level.
-  const filteredPrograms = useMemo(() => {
+  // Phase S23: the student wanted to see ALL programs in the
+  // dropdown, not a pre-filtered subset. The wizard no longer
+  // hides programs by degree level — the student picks from the
+  // full list and the program picker auto-fills the rest. We
+  // keep the (now unused) targetUniversity filter for backwards-
+  // compat with the auto-fill path but the typical flow doesn't
+  // touch it. Renamed from `filteredPrograms` to `availablePrograms`
+  // so the intent is clear at call sites.
+  const availablePrograms = useMemo(() => {
     let list = programs;
-    if (applicationData.targetDegreeLevel) {
-      list = list.filter((p) => p.degree === applicationData.targetDegreeLevel);
-    }
     if (applicationData.targetUniversity) {
       list = list.filter(
         (p) => p.universitySlug === applicationData.targetUniversity,
       );
     }
     return list;
-  }, [programs, applicationData.targetDegreeLevel, applicationData.targetUniversity]);
+  }, [programs, applicationData.targetUniversity]);
 
-  const selectedProgram = filteredPrograms.find(p => p.slug === applicationData.targetProgramSlug);
+  const selectedProgram = availablePrograms.find(p => p.slug === applicationData.targetProgramSlug);
   const selectedUniversity = selectedProgram 
     ? universities.find((u: { slug: string }) => u.slug === selectedProgram.universitySlug)
     : null;
@@ -754,7 +758,7 @@ export default function StudentNewApplicationPage() {
                     <SearchableSelect
                       value={applicationData.targetProgramSlug}
                       onChange={(value) => {
-                        const program = filteredPrograms.find((p) => p.slug === value);
+                        const program = availablePrograms.find((p) => p.slug === value);
                         const university = program
                           ? universities.find((u: { slug: string }) => u.slug === program.universitySlug)
                           : null;
@@ -767,7 +771,7 @@ export default function StudentNewApplicationPage() {
                           targetUniversity: university?.slug || applicationData.targetUniversity,
                         });
                       }}
-                      options={filteredPrograms.map((program) => {
+                      options={availablePrograms.map((program) => {
                         const university = universities.find(
                           (u: { slug: string }) => u.slug === program.universitySlug,
                         );
@@ -789,12 +793,10 @@ export default function StudentNewApplicationPage() {
                         };
                       })}
                       placeholder={
-                        !applicationData.targetDegreeLevel
-                          ? 'Pick a degree first'
-                          : dataLoading
+                        dataLoading
                           ? 'Loading programs…'
-                          : filteredPrograms.length === 0
-                          ? 'No programs for this degree'
+                          : availablePrograms.length === 0
+                          ? 'No programs available yet'
                           : 'Type to search by program OR university…'
                       }
                       emptyText="No programs match"
