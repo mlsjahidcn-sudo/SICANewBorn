@@ -68,18 +68,18 @@ export default function PartnerRegisterPage() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-[#1B2A4A] flex items-center justify-center px-4">
+      <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center px-4">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-14 h-14 bg-green-600 mb-4">
               <CheckCircle2 className="text-white" size={28} />
             </div>
-            <h1 className="text-white text-2xl font-bold">Application Received</h1>
-            <p className="text-white/70 mt-2 text-sm">
+            <h1 className="text-[#1B2A4A] text-2xl font-bold">Application Received</h1>
+            <p className="text-[#4B5563] mt-2 text-sm">
               Thank you for your interest in becoming a SICA partner. Our team will review your application and contact you within 2 business days.
             </p>
           </div>
-          <div className="bg-white p-8 text-center space-y-3">
+          <div className="bg-white border border-gray-200 p-8 text-center space-y-3">
             <Link
               href="/partner/login"
               className="block text-[#9B1B30] hover:text-[#7a1525] font-medium"
@@ -99,19 +99,19 @@ export default function PartnerRegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1B2A4A] flex items-center justify-center px-4 py-8">
+    <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-lg">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 bg-[#9B1B30] mb-4">
             <Users className="text-white" size={28} />
           </div>
-          <h1 className="text-white text-2xl font-bold">Become a SICA Partner</h1>
-          <p className="text-white/50 mt-1 text-sm">
+          <h1 className="text-[#1B2A4A] text-2xl font-bold">Become a SICA Partner</h1>
+          <p className="text-[#4B5563] mt-1 text-sm">
             Submit your interest and our partnerships team will get back to you.
           </p>
         </div>
 
-        <div className="bg-white p-8">
+        <div className="bg-white border border-gray-200 p-8">
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm">

@@ -45,19 +45,19 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#1B2A4A] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="mb-4">
             <SicaLogo className="h-10 w-auto mx-auto" />
           </div>
-          <h1 className="text-white text-2xl font-bold">SICA Admin</h1>
-          <p className="text-white/50 mt-1 text-sm">Sign in to your admin account</p>
+          <h1 className="text-[#1B2A4A] text-2xl font-bold">SICA Admin</h1>
+          <p className="text-[#4B5563] mt-1 text-sm">Sign in to your admin account</p>
         </div>
 
         {/* Login Card */}
-        <div className="bg-white p-8">
+        <div className="bg-white border border-gray-200 p-8">
           {!isConfigured && (
             <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 text-sm mb-5">
               Supabase is not configured. Please set COZE_SUPABASE_URL and COZE_SUPABASE_ANON_KEY environment variables to enable authentication.
@@ -133,7 +133,7 @@ export default function AdminLoginPage() {
 
         {/* Back link */}
         <div className="mt-6 text-center">
-          <Link href="/" className="text-white/40 text-sm hover:text-white/70 transition-colors">
+          <Link href="/" className="text-[#4B5563] text-sm hover:text-[#1B2A4A] transition-colors">
             &larr; Back to SICA Website
           </Link>
         </div>

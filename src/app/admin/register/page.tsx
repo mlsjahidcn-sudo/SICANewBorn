@@ -55,26 +55,26 @@ function AdminRegisterForm() {
 
   if (inviteValid === null) {
     return (
-      <div className="min-h-screen bg-[#1B2A4A] flex items-center justify-center px-4">
-        <div className="text-white/60 text-sm">Checking invite...</div>
+      <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center px-4">
+        <div className="text-[#4B5563] text-sm">Checking invite...</div>
       </div>
     );
   }
 
   if (inviteValid === false) {
     return (
-      <div className="min-h-screen bg-[#1B2A4A] flex items-center justify-center px-4 py-8">
+      <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-14 h-14 bg-[#9B1B30] mb-4">
               <ShieldOff className="text-white" size={28} />
             </div>
-            <h1 className="text-white text-2xl font-bold">Invite Required</h1>
-            <p className="text-white/60 mt-2 text-sm">
+            <h1 className="text-[#1B2A4A] text-2xl font-bold">Invite Required</h1>
+            <p className="text-[#4B5563] mt-2 text-sm">
               Admin registration is by invitation only. Ask an existing administrator to send you an invite link.
             </p>
           </div>
-          <div className="bg-white p-8 text-center">
+          <div className="bg-white border border-gray-200 p-8 text-center">
             <Link
               href="/admin/login"
               className="inline-block text-[#9B1B30] hover:text-[#7A1526] font-medium"
@@ -112,17 +112,17 @@ function AdminRegisterForm() {
   };
 
   return (
-    <div className="min-h-screen bg-[#1B2A4A] flex items-center justify-center px-4 py-8">
+    <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="mb-4">
             <SicaLogo className="h-10 w-auto mx-auto" />
           </div>
-          <h1 className="text-white text-2xl font-bold">Create Admin Account</h1>
-          <p className="text-white/50 mt-1 text-sm">Register a new administrator account</p>
+          <h1 className="text-[#1B2A4A] text-2xl font-bold">Create Admin Account</h1>
+          <p className="text-[#4B5563] mt-1 text-sm">Register a new administrator account</p>
         </div>
 
-        <div className="bg-white p-8">
+        <div className="bg-white border border-gray-200 p-8">
           {!isConfigured && (
             <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 text-sm mb-5">
               Supabase is not configured. Please set COZE_SUPABASE_URL and COZE_SUPABASE_ANON_KEY environment variables to enable authentication.
@@ -236,7 +236,7 @@ function AdminRegisterForm() {
 
 export default function AdminRegisterPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#1B2A4A]" />}>
+    <Suspense fallback={<div className="min-h-screen bg-[#FAFAF8]" />}>
       <AdminRegisterForm />
     </Suspense>
   );
