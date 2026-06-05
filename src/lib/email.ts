@@ -207,14 +207,81 @@ export async function sendStudentSuspended(params: {
       <p style="font-family:sans-serif">If you believe this is a mistake or want to appeal, please reply to this email and our team will respond within 2 business days.</p>
       <p style="font-family:sans-serif;font-size:12px;color:#888;margin-top:24px">SICA &middot; Study in China Agency</p>
     `,
+  text: [
+    `Hi ${params.firstName},`,
+    ``,
+    `Your SICA account was suspended by ${params.suspendedByAdmin} on ${params.suspendedAt}.`,
+    params.reason ? `Reason: ${params.reason}` : '',
+    ``,
+    `While suspended, you won't be able to log in or make changes to your application.`,
+    `If you believe this is a mistake, please reply to this email.`,
+  ].filter(Boolean).join('\n'),
+  });
+}
+
+/**
+ * Send an admin email when a new chat lead is captured from the
+ * SICA AI assistant. Same shape as the contact / assessment
+ * notifications, with the lead fields formatted as a table and a
+ * link to the admin leads dashboard.
+ */
+export async function sendChatLeadNotification(params: {
+  name: string | null;
+  email: string;
+  whatsapp: string | null;
+  country: string | null;
+  interested_degree: string | null;
+  interested_program: string | null;
+  interested_university: string | null;
+  sourcePage: string | null;
+  submittedAt: string;
+}) {
+  if (!isEmailConfigured()) return;
+
+  const resend = getResend()!;
+  const adminEmail = process.env.ADMIN_EMAIL!;
+
+  const subject = params.interested_program
+    ? `[SICA Chat] New lead interested in ${params.interested_program}`
+    : `[SICA Chat] New lead from AI assistant`;
+
+  await resend.emails.send({
+    from: FROM,
+    to: adminEmail,
+    subject,
+    html: `
+      <h2>New Chat Lead</h2>
+      <p style="font-family:sans-serif;color:#444;margin-bottom:16px">
+        Captured from the SICA AI assistant chat. The visitor filled in
+        the "Save my progress" form to get personalized follow-up.
+      </p>
+      <table style="font-family:sans-serif;border-collapse:collapse;width:100%">
+        <tr><td style="padding:6px 12px;font-weight:bold;background:#f5f5f5">Name</td><td style="padding:6px 12px">${params.name ?? '—'}</td></tr>
+        <tr><td style="padding:6px 12px;font-weight:bold;background:#f5f5f5">Email</td><td style="padding:6px 12px"><a href="mailto:${params.email}">${params.email}</a></td></tr>
+        <tr><td style="padding:6px 12px;font-weight:bold;background:#f5f5f5">WhatsApp</td><td style="padding:6px 12px"><a href="https://wa.me/${(params.whatsapp ?? '').replace(/[^0-9+]/g, '')}">${params.whatsapp ?? '—'}</a></td></tr>
+        <tr><td style="padding:6px 12px;font-weight:bold;background:#f5f5f5">Country</td><td style="padding:6px 12px">${params.country ?? '—'}</td></tr>
+        <tr><td style="padding:6px 12px;font-weight:bold;background:#f5f5f5">Interested Degree</td><td style="padding:6px 12px">${params.interested_degree ?? '—'}</td></tr>
+        <tr><td style="padding:6px 12px;font-weight:bold;background:#f5f5f5">Interested Program</td><td style="padding:6px 12px">${params.interested_program ?? '—'}</td></tr>
+        <tr><td style="padding:6px 12px;font-weight:bold;background:#f5f5f5">Interested University</td><td style="padding:6px 12px">${params.interested_university ?? '—'}</td></tr>
+        <tr><td style="padding:6px 12px;font-weight:bold;background:#f5f5f5">Source Page</td><td style="padding:6px 12px">${params.sourcePage ?? '—'}</td></tr>
+        <tr><td style="padding:6px 12px;font-weight:bold;background:#f5f5f5">Submitted At</td><td style="padding:6px 12px">${params.submittedAt}</td></tr>
+      </table>
+      <p style="margin-top:16px;font-size:12px;color:#888">Log in to the <a href="https://sica.com.cn/admin/leads">admin panel</a> to view the conversation context and follow up.</p>
+    `,
     text: [
-      `Hi ${params.firstName},`,
+      `New Chat Lead captured from the SICA AI assistant.`,
       ``,
-      `Your SICA account was suspended by ${params.suspendedByAdmin} on ${params.suspendedAt}.`,
-      params.reason ? `Reason: ${params.reason}` : '',
+      `Name: ${params.name ?? '—'}`,
+      `Email: ${params.email}`,
+      `WhatsApp: ${params.whatsapp ?? '—'}`,
+      `Country: ${params.country ?? '—'}`,
+      `Interested Degree: ${params.interested_degree ?? '—'}`,
+      `Interested Program: ${params.interested_program ?? '—'}`,
+      `Interested University: ${params.interested_university ?? '—'}`,
+      `Source Page: ${params.sourcePage ?? '—'}`,
+      `Submitted At: ${params.submittedAt}`,
       ``,
-      `While suspended, you won't be able to log in or make changes to your application.`,
-      `If you believe this is a mistake, please reply to this email.`,
-    ].filter(Boolean).join('\n'),
+      `Log in to the admin panel to view the conversation context.`,
+    ].join('\n'),
   });
 }
