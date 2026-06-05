@@ -110,6 +110,13 @@ export default function StudentApplicationsPage() {
     return <Clock className="h-5 w-5 text-gray-400" />;
   };
 
+  // Phase 2: action-needed counts so we can render the in-page banner
+  // AND keep the filter chips aware of what's outstanding.
+  const attentionBreakdown = {
+    requested: applications.filter((a) => a.status === 'Documents Requested').length,
+    drafts: applications.filter((a) => a.status === 'Draft').length,
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -145,18 +152,76 @@ export default function StudentApplicationsPage() {
 
       {/* Status Filter */}
       <div className="flex flex-wrap gap-2">
-        {FILTERS.map((f) => (
-          <Button
-            key={f.value}
-            variant={activeStatus === f.value ? 'default' : 'outline'}
-            className="rounded-none"
-            onClick={() => setActiveStatus(f.value)}
-            size="sm"
-          >
-            {f.label}
-          </Button>
-        ))}
+        {FILTERS.map((f) => {
+          // Phase 2: show the relevant count next to actionable filters
+          // so the student can see "you have 2 drafts" at a glance.
+          const countForFilter =
+            f.value === 'Documents Requested'
+              ? attentionBreakdown.requested
+              : f.value === 'Draft'
+              ? attentionBreakdown.drafts
+              : null;
+          return (
+            <Button
+              key={f.value}
+              variant={activeStatus === f.value ? 'default' : 'outline'}
+              className="rounded-none"
+              onClick={() => setActiveStatus(f.value)}
+              size="sm"
+            >
+              {f.label}
+              {countForFilter != null && countForFilter > 0 && (
+                <span
+                  className={`ml-2 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-semibold rounded-full ${
+                    f.value === 'Documents Requested'
+                      ? 'bg-[#9B1B30] text-white'
+                      : 'bg-[#D4A853] text-[#1B2A4A]'
+                  }`}
+                >
+                  {countForFilter}
+                </span>
+              )}
+            </Button>
+          );
+        })}
       </div>
+
+      {/* Phase 2: in-page action banner — same data the sidebar badge
+          shows, surfaced here so the student sees it without having
+          to glance at the sidebar. */}
+      {attentionBreakdown.requested > 0 && (
+        <div className="flex items-start gap-3 p-3 border border-[#9B1B30] bg-red-50 text-sm text-[#1B2A4A]">
+          <AlertCircle className="h-4 w-4 text-[#9B1B30] flex-shrink-0 mt-0.5" />
+          <p>
+            <strong>{attentionBreakdown.requested}</strong>{' '}
+            application{attentionBreakdown.requested === 1 ? '' : 's'} need
+            documents from you.{' '}
+            <button
+              type="button"
+              onClick={() => setActiveStatus('Documents Requested')}
+              className="font-semibold underline text-[#9B1B30] hover:text-[#7A1525]"
+            >
+              Show me which ones
+            </button>
+          </p>
+        </div>
+      )}
+      {attentionBreakdown.drafts > 0 && attentionBreakdown.requested === 0 && (
+        <div className="flex items-start gap-3 p-3 border border-[#D4A853] bg-[#FAF6E8] text-sm text-[#1B2A4A]">
+          <Clock className="h-4 w-4 text-[#9B1B30] flex-shrink-0 mt-0.5" />
+          <p>
+            You have <strong>{attentionBreakdown.drafts}</strong> unsent draft
+            {attentionBreakdown.drafts === 1 ? '' : 's'}.{' '}
+            <button
+              type="button"
+              onClick={() => setActiveStatus('Draft')}
+              className="font-semibold underline text-[#9B1B30] hover:text-[#7A1525]"
+            >
+              Resume a draft
+            </button>
+          </p>
+        </div>
+      )}
 
       {/* Loading skeleton */}
       {isLoading && applications.length === 0 ? (

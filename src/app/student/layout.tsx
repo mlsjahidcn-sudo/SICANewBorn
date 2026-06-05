@@ -20,6 +20,8 @@ import {
 import Link from 'next/link';
 import { SicaLogo } from '@/components/sica-logo';
 import { Chatbot } from '@/components/ai/Chatbot';
+import { apiFetchJson } from '@/lib/api-client';
+import type { StudentApplication } from '@/lib/application-mapper';
 
 const navItems = [
   { href: '/student', label: 'Dashboard', labelCn: '仪表盘', icon: LayoutDashboard },
@@ -28,6 +30,51 @@ const navItems = [
   { href: '/student/applications', label: 'Applications', labelCn: '申请', icon: GraduationCap },
   { href: '/student/settings', label: 'Settings', labelCn: '设置', icon: Settings },
 ];
+
+/**
+ * Phase 2: notification badge on the Applications sidebar item.
+ * Counts anything that needs student attention:
+ *   - Documents Requested  → red badge (urgent: admin is waiting on you)
+ *   - Draft                → gold badge (resumable: you started but didn't submit)
+ * The badge color follows the highest-severity bucket present; if
+ * no attention items exist, no badge is shown.
+ */
+function useAttentionCount(): { count: number; severity: 'urgent' | 'resumable' | null } {
+  const [apps, setApps] = useState<StudentApplication[]>([]);
+  const fetchAttention = React.useCallback(async () => {
+    try {
+      const data = await apiFetchJson<{ applications: StudentApplication[] }>(
+        '/api/student/applications',
+      );
+      setApps(data.applications || []);
+    } catch {
+      // Silent — sidebar badge is a nice-to-have, not a blocker.
+      // The /applications page itself will surface real errors.
+    }
+  }, []);
+  useEffect(() => {
+    fetchAttention();
+  }, [fetchAttention]);
+  // Re-fetch when the route changes (covers /applications → / → /applications)
+  // and when the tab regains focus (covers coming back from the
+  // documents page where the student uploaded a file).
+  const pathname = usePathname();
+  useEffect(() => {
+    fetchAttention();
+  }, [pathname, fetchAttention]);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onFocus = () => fetchAttention();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [fetchAttention]);
+  const requested = apps.filter((a) => a.status === 'Documents Requested').length;
+  const drafts = apps.filter((a) => a.status === 'Draft').length;
+  const count = requested + drafts;
+  const severity: 'urgent' | 'resumable' | null =
+    requested > 0 ? 'urgent' : drafts > 0 ? 'resumable' : null;
+  return { count, severity };
+}
 
 export default function StudentLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -45,6 +92,7 @@ function StudentLayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const { count: attentionCount, severity: attentionSeverity } = useAttentionCount();
 
   useEffect(() => {
     setMounted(true);
@@ -116,6 +164,8 @@ function StudentLayoutInner({ children }: { children: React.ReactNode }) {
             {navItems.map((item) => {
               const isActive = pathname === item.href;
               const Icon = item.icon;
+              // Phase 2: only the Applications link carries the badge
+              const showBadge = item.href === '/student/applications' && attentionCount > 0;
               return (
                 <Link
                   key={item.label}
@@ -127,8 +177,24 @@ function StudentLayoutInner({ children }: { children: React.ReactNode }) {
                   }`}
                 >
                   <Icon size={18} />
-                  <span>{item.label}</span>
-                  {isActive && <ChevronRight size={14} className="ml-auto" />}
+                  <span className="flex-1">{item.label}</span>
+                  {showBadge && (
+                    <span
+                      title={
+                        attentionSeverity === 'urgent'
+                          ? `${attentionCount} application(s) need documents from you`
+                          : `${attentionCount} draft application(s) ready to submit`
+                      }
+                      className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-semibold rounded-full ${
+                        attentionSeverity === 'urgent'
+                          ? 'bg-[#9B1B30] text-white'
+                          : 'bg-[#D4A853] text-[#1B2A4A]'
+                      }`}
+                    >
+                      {attentionCount}
+                    </span>
+                  )}
+                  {isActive && <ChevronRight size={14} />}
                 </Link>
               );
             })}

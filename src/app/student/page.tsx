@@ -19,6 +19,7 @@ import {
   CheckCircle,
   Clock,
   Loader2,
+  AlertCircle,
 } from 'lucide-react';
 import { StudentDashboardSkeleton } from '@/components/student/skeletons';
 
@@ -99,6 +100,9 @@ export default function StudentDashboardPage() {
   const pendingApplications = applications.filter((a) => PENDING_STATUSES.has(a.status)).length;
   const acceptedOffers = applications.filter((a) => a.status === 'Accepted').length;
   const totalDocuments = documents.length;
+  // Phase 2: action-needed breakdown for the dashboard banner
+  const docsNeeded = applications.filter((a) => a.status === 'Documents Requested');
+  const resumableDrafts = applications.filter((a) => a.status === 'Draft');
   const recentApplications = applications.slice(0, 2);
   const recentDocuments = documents.slice(0, 3);
 
@@ -157,6 +161,55 @@ export default function StudentDashboardPage() {
         </h1>
         <p className="text-[#4B5563] mt-2">{t('student.manageApplications')}</p>
       </div>
+
+      {/* Phase 2: action-needed callout — surfaces the highest-priority
+          items from the sidebar badge in the body so the student
+          doesn't miss them. Urgent (Documents Requested) outranks
+          resumable (Draft). */}
+      {docsNeeded.length > 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 border-l-4 border-[#9B1B30] bg-red-50 rounded-none">
+          <AlertCircle className="h-5 w-5 text-[#9B1B30] flex-shrink-0" />
+          <div className="flex-1">
+            <p className="font-semibold text-[#1B2A4A]">
+              {docsNeeded.length} application{docsNeeded.length === 1 ? '' : 's'}{' '}
+              need{docsNeeded.length === 1 ? 's' : ''} documents from you
+            </p>
+            <p className="text-sm text-gray-700 mt-0.5">
+              SICA is waiting on uploaded files before they can continue reviewing your application.
+            </p>
+          </div>
+          <Link href="/student/applications" className="sm:ml-auto">
+            <Button size="sm" className="bg-[#9B1B30] hover:bg-[#7A1525] text-white rounded-none">
+              Review now
+              <ArrowRight className="h-4 w-4 ml-1" />
+            </Button>
+          </Link>
+        </div>
+      )}
+      {resumableDrafts.length > 0 && docsNeeded.length === 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 border-l-4 border-[#D4A853] bg-[#FAF6E8] rounded-none">
+          <FileText className="h-5 w-5 text-[#9B1B30] flex-shrink-0" />
+          <div className="flex-1">
+            <p className="font-semibold text-[#1B2A4A]">
+              You have {resumableDrafts.length} unsent draft
+              {resumableDrafts.length === 1 ? '' : 's'}
+            </p>
+            <p className="text-sm text-gray-700 mt-0.5">
+              Pick up where you left off — your progress is saved.
+            </p>
+          </div>
+          <Link href="/student/applications" className="sm:ml-auto">
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-[#1B2A4A] text-[#1B2A4A] hover:bg-[#1B2A4A] hover:text-white rounded-none"
+            >
+              Resume
+              <ArrowRight className="h-4 w-4 ml-1" />
+            </Button>
+          </Link>
+        </div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

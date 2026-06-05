@@ -162,6 +162,7 @@ const auth = await requirePartner(request);
 - **L11**: partner/admin 门户 UI 字符串硬编码英文 (useI18n 覆盖率不完整)
 - **L15**: `/api/proxy-image` 仍存在 (H6 未完全清理, 目前用 `unoptimized` next/image 替代)
 - **S16** (2026-06-05): Student Portal Phase 1 — Save-as-Draft (POST accepts status='Draft' with looser validation; wizard has button on every step; resumes via `/student/applications/new?resume=<id>` using PUT), Withdraw (PUT allows `Draft/Submitted → Withdrawn` + confirmation dialog), Resubmit (PUT allows `Documents Requested → Under Review` and `Rejected → Submitted` + auto-stamps `submitted_at` + timeline note), adminNotes surfaced in detail-page banner, `StudentApplication.adminNotes` field added. PUT allows editing university/program/degree/intake while row is in `Draft` state.
+- **S17** (2026-06-05): Student Portal Phase 2 — sidebar notification badge on Applications item (red for `Documents Requested`, gold for `Draft`, hidden if zero), refetches on route change and window focus. In-page action banner on dashboard + applications list, with per-filter counts on the Docs Needed / Draft filter chips.
 - **公开 admin 注册**: `/admin/register` 仍开放 (需 `ADMIN_INVITE_TOKEN` env)
 
 ## S1-S3 重要决策记录
