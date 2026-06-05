@@ -135,7 +135,14 @@ export async function GET(request: NextRequest) {
  *   - studentName (required)
  *   - university (required)
  *   - program (required)
- *   - status, submittedAt, decision, notes (optional)
+ *   - studentEmail, studentPhone, intake, degree, nationality, priority,
+ *     notes, applicationNumber (all optional)
+ *   - any of the 26 S26 extended application fields (passport,
+ *     academic, language, personal statement, funding) — all optional
+ *
+ * Status / decision / submitted_at / created_by_user_id are server-
+ * derived — never trust the client. The partner can't create a row
+ * in any state other than Draft / Pending.
  *
  * Response: { application }
  */
@@ -157,14 +164,25 @@ export async function POST(request: NextRequest) {
     if (!body.program || !String(body.program).trim()) {
       return NextResponse.json({ error: 'program is required' }, { status: 400 });
     }
-    if (body.status !== undefined && !parsePartnerApplicationStatus(body.status)) {
-      return NextResponse.json(
-        {
-          error:
-            "status must be 'Draft' | 'Submitted' | 'In Review' | 'Accepted' | 'Rejected' | 'Withdrawn'",
-        },
-        { status: 400 },
-      );
+
+    // S27: status / decision / submitted_at are admin-only. The
+    // partner's job is intake; SICA's admin team drives the
+    // workflow. Reject any attempt to set them on create.
+    const partnerForbiddenFields = [
+      'status',
+      'decision',
+      'submittedAt',
+      'submitted_at',
+    ];
+    for (const key of partnerForbiddenFields) {
+      if (body[key] !== undefined) {
+        return NextResponse.json(
+          {
+            error: `Field '${key}' is admin-only. SICA's admin team sets the application status and decision.`,
+          },
+          { status: 403 },
+        );
+      }
     }
 
     let dbRow: Record<string, unknown>;
@@ -176,11 +194,19 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
+    // Belt-and-suspenders: drop any of the admin-only fields that
+    // might have leaked through the mapper. The earlier 403 check
+    // is the user-facing error path; this is the safety net.
+    for (const key of ['status', 'decision', 'submitted_at']) {
+      delete (dbRow as Record<string, unknown>)[key];
+    }
     dbRow.partner_id = auth.partnerId;
     // Phase 3: server-derived created_by_user_id — never trust client
     dbRow.created_by_user_id = auth.user.id;
-    if (!dbRow.status) dbRow.status = 'Draft';
-    if (!dbRow.decision) dbRow.decision = 'Pending';
+    // S27: always start as Draft / Pending. The admin team will
+    // move it from there.
+    dbRow.status = 'Draft';
+    dbRow.decision = 'Pending';
 
     // Auto-mint application_number (PA-YYYY-NNNN, per-partner counter)
     // if the partner didn't supply one. Done via RPC because the

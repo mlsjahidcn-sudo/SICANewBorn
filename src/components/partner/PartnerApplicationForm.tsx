@@ -29,8 +29,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import {
   PARTNER_APPLICATION_DEGREES,
-  PARTNER_APPLICATION_STATUSES,
-  PARTNER_APPLICATION_DECISIONS,
   PARTNER_APPLICATION_PRIORITIES,
   GENDERS,
   MARITAL_STATUSES,
@@ -39,8 +37,6 @@ import {
   HSK_LEVELS,
   FUNDING_SOURCES,
   EMERGENCY_RELATIONSHIPS,
-  PartnerApplicationStatus,
-  PartnerApplicationDecision,
   PartnerApplicationPriority,
   PartnerApplicationDegree,
   Gender,
@@ -118,9 +114,11 @@ export interface PartnerApplicationFormData {
   careerPlan: string;
 
   // Section 9 — Workflow
+  // S27: status and decision are admin-only — the partner can never
+  // change them. They live in the partner_applications row (set by
+  // SICA's admin team) and shown on the detail page, but the
+  // partner's edit form doesn't surface them as controls.
   priority: PartnerApplicationPriority;
-  status: PartnerApplicationStatus;
-  decision: PartnerApplicationDecision;
   notes: string;
 
   // Edit-page-only bookkeeping
@@ -176,8 +174,6 @@ export const INITIAL_FORM_DATA: PartnerApplicationFormData = {
   careerPlan: '',
 
   priority: 'Normal',
-  status: 'Draft',
-  decision: 'Pending',
   notes: '',
 
   applicationNumber: '',
@@ -968,14 +964,14 @@ export function PartnerApplicationForm({
         </div>
       </FormSection>
 
-      {/* Section 9 — Workflow */}
+      {/* Section 9 — Workflow (S27: status + decision are admin-only) */}
       <FormSection
         title="Workflow"
-        description="Internal pipeline status. The student never sees these."
+        description="Internal pipeline. SICA's admin team sets the application status and decision — you can only flag urgency here."
         icon={ListChecks}
         defaultOpen={true}
       >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label className="text-[#1B2A4A] mb-2 block">Priority</Label>
             <Select
@@ -995,46 +991,10 @@ export function PartnerApplicationForm({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div>
-            <Label className="text-[#1B2A4A] mb-2 block">Status</Label>
-            <Select
-              value={formData.status}
-              onValueChange={(v) =>
-                set('status', v as PartnerApplicationStatus)
-              }
-            >
-              <SelectTrigger className="rounded-none">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PARTNER_APPLICATION_STATUSES.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label className="text-[#1B2A4A] mb-2 block">Decision</Label>
-            <Select
-              value={formData.decision}
-              onValueChange={(v) =>
-                set('decision', v as PartnerApplicationDecision)
-              }
-            >
-              <SelectTrigger className="rounded-none">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PARTNER_APPLICATION_DECISIONS.map((d) => (
-                  <SelectItem key={d} value={d}>
-                    {d}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <p className="text-xs text-gray-500 mt-1">
+              Admin sees this in their queue so they can triage Urgent / High
+              first.
+            </p>
           </div>
         </div>
         <div className="mt-4">

@@ -147,14 +147,13 @@ export default function PartnerNewApplicationPage() {
         whyProgram: formData.whyProgram.trim() || undefined,
         careerPlan: formData.careerPlan.trim() || undefined,
         // Section 9 — workflow
+        // S27: status + decision are admin-only. The form doesn't
+        // expose them, so we don't include them in the payload. The
+        // API defaults status to 'Draft' and decision to 'Pending'
+        // on insert.
         priority: formData.priority,
-        status: formData.status,
-        decision: formData.decision,
         notes: formData.notes.trim() || undefined,
       };
-      if (formData.status === 'Submitted' || formData.status === 'In Review') {
-        payload.submittedAt = new Date().toISOString();
-      }
       const res = await apiFetchJson<{ application: { id: string } }>(
         '/api/partner/applications',
         {

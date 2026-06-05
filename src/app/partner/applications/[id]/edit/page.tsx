@@ -13,8 +13,6 @@ import {
   type PartnerApplicationFormData,
 } from '@/components/partner/PartnerApplicationForm';
 import {
-  PartnerApplicationStatus,
-  PartnerApplicationDecision,
   PartnerApplicationPriority,
   PartnerApplicationDegree,
   Gender,
@@ -111,9 +109,10 @@ export default function PartnerEditApplicationPage() {
         whyProgram: a.whyProgram ?? '',
         careerPlan: a.careerPlan ?? '',
 
+        // S27: status + decision are admin-only. The edit page
+        // doesn't expose them; the load() just reads the current
+        // values for display elsewhere (the detail page).
         priority: a.priority,
-        status: a.status,
-        decision: a.decision,
         notes: a.notes ?? '',
 
         applicationNumber: a.applicationNumber ?? '',
@@ -194,21 +193,14 @@ export default function PartnerEditApplicationPage() {
         whyProgram: formData.whyProgram.trim() || null,
         careerPlan: formData.careerPlan.trim() || null,
         // Section 9 — workflow
+        // S27: status + decision are admin-only — the partner can
+        // never change them via the edit form. We omit them from the
+        // PATCH payload; the API would 403 if a partner tried
+        // anyway.
         priority: formData.priority,
-        status: formData.status,
-        decision: formData.decision,
         notes: formData.notes.trim() || null,
         applicationNumber: formData.applicationNumber.trim() || null,
       };
-      // Stamp submittedAt the first time status moves to Submitted/In Review
-      // and the row doesn't have one yet. The server keeps an existing
-      // timestamp — we just nudge it on the transition.
-      if (
-        (formData.status === 'Submitted' || formData.status === 'In Review') &&
-        !formData.submittedAt
-      ) {
-        payload.submittedAt = new Date().toISOString();
-      }
       await apiFetchJson(`/api/partner/applications/${applicationId}`, {
         method: 'PATCH',
         body: JSON.stringify(payload),

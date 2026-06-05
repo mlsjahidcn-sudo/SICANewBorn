@@ -1,0 +1,553 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import {
+  ArrowLeft, Calendar, Building, Mail, Phone, Globe, Hash, Flag,
+  CheckCircle2, XCircle, Loader2,
+} from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { apiFetchJson } from '@/lib/api-client';
+import {
+  PARTNER_APPLICATION_STATUSES,
+  PARTNER_APPLICATION_DECISIONS,
+  PARTNER_APPLICATION_PRIORITIES,
+  PartnerApplication,
+  PartnerApplicationStatus,
+  PartnerApplicationDecision,
+  PartnerApplicationPriority,
+} from '@/lib/partner-application-mapper';
+
+// S27: this is the only page in the system where the admin can
+// change the application status / decision. The partner's
+// /partner/applications/[id] page is read-only for status. The
+// partner's PATCH endpoint rejects status/decision with 403.
+//
+// When the admin changes status here:
+//   - We re-fetch the row to get the canonical server-side state
+//     (auto-stamped submittedAt, etc.)
+//   - We don't try to be clever with the form — the API
+//     `mapPartnerApplicationToDb` accepts every field, so the
+//     patch is just a flat JSON object of what's changed.
+
+const STATUS_VARIANTS: Record<PartnerApplicationStatus, string> = {
+  Draft: 'bg-gray-100 text-gray-800',
+  Submitted: 'bg-blue-100 text-blue-800',
+  'In Review': 'bg-yellow-100 text-yellow-800',
+  Accepted: 'bg-green-100 text-green-800',
+  Rejected: 'bg-red-100 text-red-800',
+  Withdrawn: 'bg-gray-100 text-gray-700',
+};
+
+const PRIORITY_VARIANTS: Record<PartnerApplicationPriority, string> = {
+  Low: 'bg-gray-100 text-gray-700',
+  Normal: 'bg-blue-50 text-blue-700',
+  High: 'bg-orange-100 text-orange-800',
+  Urgent: 'bg-[#9B1B30] text-white',
+};
+
+export default function AdminPartnerApplicationDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const applicationId = params.id as string;
+
+  const [app, setApp] = useState<PartnerApplication | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isSavingStatus, setIsSavingStatus] = useState(false);
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
+  const [adminNotes, setAdminNotes] = useState('');
+
+  const load = useCallback(async () => {
+    if (!applicationId) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await apiFetchJson<{ application: PartnerApplication }>(
+        `/api/admin/partner-applications/${applicationId}`,
+      );
+      setApp(res.application);
+      setAdminNotes(res.application.notes ?? '');
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Failed to load application.',
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, [applicationId]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const patchField = useCallback(
+    async (field: 'status' | 'decision' | 'priority', value: string) => {
+      if (!app) return;
+      const setter =
+        field === 'status' ? setIsSavingStatus : setIsSavingStatus;
+      setter(true);
+      setError(null);
+      try {
+        const payload: Record<string, unknown> = { [field]: value };
+        // Auto-stamp submittedAt when the admin flips Draft → Submitted
+        // (or any Submitted-ish state) and the row doesn't have one
+        // yet. Mirrors the partner wizard's logic for the partner's
+        // own submissions.
+        if (
+          field === 'status' &&
+          (value === 'Submitted' || value === 'In Review') &&
+          !app.submittedAt
+        ) {
+          payload.submittedAt = new Date().toISOString();
+        }
+        const res = await apiFetchJson<{ application: PartnerApplication }>(
+          `/api/admin/partner-applications/${applicationId}`,
+          {
+            method: 'PATCH',
+            body: JSON.stringify(payload),
+          },
+        );
+        setApp(res.application);
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : `Failed to update ${field} to ${value}.`,
+        );
+      } finally {
+        setter(false);
+      }
+    },
+    [app, applicationId],
+  );
+
+  const saveNotes = useCallback(async () => {
+    if (!app) return;
+    setIsSavingNotes(true);
+    setError(null);
+    try {
+      const res = await apiFetchJson<{ application: PartnerApplication }>(
+        `/api/admin/partner-applications/${applicationId}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ notes: adminNotes }),
+        },
+      );
+      setApp(res.application);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save notes.');
+    } finally {
+      setIsSavingNotes(false);
+    }
+  }, [app, applicationId, adminNotes]);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="h-8 bg-gray-200 animate-pulse w-48" />
+        <div className="h-64 bg-gray-200 animate-pulse" />
+      </div>
+    );
+  }
+
+  if (error && !app) {
+    return (
+      <div className="space-y-4">
+        <Link
+          href="/admin/partner-applications"
+          className="inline-flex items-center gap-2 text-[#1B2A4A]"
+        >
+          <ArrowLeft className="w-4 h-4" /> Back to Partner Pipeline
+        </Link>
+        <Card className="rounded-none border-red-200 bg-red-50">
+          <CardContent className="p-6 text-red-700">
+            <p className="font-medium">Couldn't load application</p>
+            <p className="text-sm">{error}</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!app) return null;
+
+  return (
+    <div className="space-y-6 max-w-5xl">
+      <div className="flex items-center gap-4 flex-wrap">
+        <Link
+          href="/admin/partner-applications"
+          className="p-2 hover:bg-gray-100 inline-flex"
+        >
+          <ArrowLeft className="w-5 h-5 text-[#1B2A4A]" />
+        </Link>
+        <div>
+          <h1 className="text-2xl font-bold text-[#1B2A4A]">
+            {app.studentName}
+          </h1>
+          <p className="text-[#4B5563] mt-1 text-sm">
+            {app.university} · {app.program}
+            {app.applicationNumber && (
+              <span className="ml-2 font-mono text-xs text-gray-400">
+                {app.applicationNumber}
+              </span>
+            )}
+          </p>
+        </div>
+      </div>
+
+      {error && (
+        <Card className="rounded-none border-red-200 bg-red-50">
+          <CardContent className="p-4 text-sm text-red-700">{error}</CardContent>
+        </Card>
+      )}
+
+      {/* Workflow control — the only place in the system that can
+          move an application through the pipeline. */}
+      <Card className="rounded-none border-[#1B2A4A] border-2">
+        <CardHeader className="bg-gray-50">
+          <CardTitle className="text-[#1B2A4A] flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5" /> Workflow
+          </CardTitle>
+          <p className="text-xs text-gray-500 mt-1">
+            The partner can't change these — only the admin team.
+          </p>
+        </CardHeader>
+        <CardContent className="p-4 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Label>Status</Label>
+              <div className="flex items-center gap-2 mt-1">
+                <Select
+                  value={app.status}
+                  disabled={isSavingStatus}
+                  onValueChange={(v) => patchField('status', v)}
+                >
+                  <SelectTrigger className="rounded-none">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PARTNER_APPLICATION_STATUSES.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {isSavingStatus && (
+                  <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                )}
+              </div>
+              <Badge
+                variant="outline"
+                className={`rounded-none border-0 mt-2 ${STATUS_VARIANTS[app.status]}`}
+              >
+                {app.status}
+              </Badge>
+            </div>
+            <div>
+              <Label>Decision</Label>
+              <div className="flex items-center gap-2 mt-1">
+                <Select
+                  value={app.decision}
+                  disabled={isSavingStatus}
+                  onValueChange={(v) => patchField('decision', v)}
+                >
+                  <SelectTrigger className="rounded-none">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PARTNER_APPLICATION_DECISIONS.map((d) => (
+                      <SelectItem key={d} value={d}>
+                        {d}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Badge variant="outline" className="rounded-none mt-2">
+                {app.decision}
+              </Badge>
+            </div>
+            <div>
+              <Label>Priority (partner-set)</Label>
+              <div className="mt-1">
+                <Select
+                  value={app.priority}
+                  disabled={isSavingStatus}
+                  onValueChange={(v) => patchField('priority', v)}
+                >
+                  <SelectTrigger className="rounded-none">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PARTNER_APPLICATION_PRIORITIES.map((p) => (
+                      <SelectItem key={p} value={p}>
+                        {p}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span
+                  className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-none mt-2 ${PRIORITY_VARIANTS[app.priority]}`}
+                >
+                  <Flag className="w-3 h-3" /> {app.priority}
+                </span>
+              </div>
+            </div>
+          </div>
+          {app.submittedAt && (
+            <p className="text-xs text-gray-500">
+              Submitted at: {new Date(app.submittedAt).toLocaleString()}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="rounded-none">
+          <CardHeader>
+            <CardTitle className="text-[#1B2A4A] flex items-center gap-2">
+              <Building className="w-4 h-4" /> University & Program
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <Field label="University" value={app.university} />
+            <Field label="Program" value={app.program} />
+            <Field label="Intake" value={app.intake} />
+            <Field label="Degree" value={app.degree} />
+            <Field label="Application #" value={app.applicationNumber} mono />
+            <Field
+              label="Created"
+              value={app.createdAt ? new Date(app.createdAt).toLocaleString() : null}
+            />
+            <Field
+              label="Updated"
+              value={app.updatedAt ? new Date(app.updatedAt).toLocaleString() : null}
+            />
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-none">
+          <CardHeader>
+            <CardTitle className="text-[#1B2A4A] flex items-center gap-2">
+              <Mail className="w-4 h-4" /> Student Contact
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            {app.studentEmail ? (
+              <div className="flex items-center gap-2">
+                <Mail className="w-4 h-4 text-[#4B5563]" />
+                <a
+                  href={`mailto:${app.studentEmail}`}
+                  className="text-[#1B2A4A] hover:underline"
+                >
+                  {app.studentEmail}
+                </a>
+              </div>
+            ) : (
+              <p className="text-sm text-[#4B5563] italic">No email on file.</p>
+            )}
+            {app.studentPhone && (
+              <div className="flex items-center gap-2">
+                <Phone className="w-4 h-4 text-[#4B5563]" />
+                <a
+                  href={`tel:${app.studentPhone}`}
+                  className="text-[#1B2A4A] hover:underline"
+                >
+                  {app.studentPhone}
+                </a>
+              </div>
+            )}
+            {app.nationality && (
+              <div className="flex items-center gap-2">
+                <Globe className="w-4 h-4 text-[#4B5563]" />
+                <span className="text-[#1F2937]">{app.nationality}</span>
+              </div>
+            )}
+            {app.applicationNumber && (
+              <div className="flex items-center gap-2">
+                <Hash className="w-4 h-4 text-[#4B5563]" />
+                <span className="font-mono text-[#1B2A4A]">
+                  {app.applicationNumber}
+                </span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Extended S26 fields (academic, language, funding, personal statement)
+          shown read-only — admin can read but partner is the one who
+          keeps them up to date. */}
+      {(app.highestEducation || app.schoolName || app.gpa || app.englishTest || app.fundingSource) && (
+        <Card className="rounded-none">
+          <CardHeader>
+            <CardTitle className="text-[#1B2A4A]">Application Data (S26)</CardTitle>
+            <p className="text-xs text-gray-500 mt-1">
+              Captured by the partner. Read-only here — partner edits via
+              their portal.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            {app.highestEducation && (
+              <Field label="Highest Education" value={app.highestEducation} />
+            )}
+            {app.schoolName && <Field label="School" value={app.schoolName} />}
+            {app.major && <Field label="Major" value={app.major} />}
+            {app.gpa && <Field label="GPA" value={app.gpa} />}
+            {app.graduationYear && (
+              <Field label="Graduation Year" value={String(app.graduationYear)} />
+            )}
+            {app.englishTest && (
+              <Field
+                label="English"
+                value={
+                  app.englishScore
+                    ? `${app.englishTest} · ${app.englishScore}`
+                    : app.englishTest
+                }
+              />
+            )}
+            {app.hskLevel && (
+              <Field
+                label="HSK"
+                value={
+                  app.hskScore
+                    ? `${app.hskLevel} · ${app.hskScore}`
+                    : app.hskLevel
+                }
+              />
+            )}
+            {app.fundingSource && (
+              <Field label="Funding Source" value={app.fundingSource} />
+            )}
+            {app.scholarshipName && (
+              <Field label="Scholarship" value={app.scholarshipName} />
+            )}
+            {app.hasStudiedInChina !== null && (
+              <Field
+                label="Studied in China before"
+                value={app.hasStudiedInChina ? 'Yes' : 'No'}
+              />
+            )}
+            {app.hasAppliedChinaUni !== null && (
+              <Field
+                label="Applied to CN uni before"
+                value={app.hasAppliedChinaUni ? 'Yes' : 'No'}
+              />
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {(app.whyProgram || app.careerPlan) && (
+        <Card className="rounded-none">
+          <CardHeader>
+            <CardTitle className="text-[#1B2A4A]">Personal Statement</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 text-sm">
+            {app.whyProgram && (
+              <div>
+                <div className="text-[#4B5563] font-medium mb-1">
+                  Why this program?
+                </div>
+                <p className="text-[#1F2937] whitespace-pre-wrap">
+                  {app.whyProgram}
+                </p>
+              </div>
+            )}
+            {app.careerPlan && (
+              <div>
+                <div className="text-[#4B5563] font-medium mb-1">
+                  Post-graduation plan
+                </div>
+                <p className="text-[#1F2937] whitespace-pre-wrap">
+                  {app.careerPlan}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Admin notes — internal only. The partner has their own
+          "Internal Notes" field which is separate. */}
+      <Card className="rounded-none">
+        <CardHeader>
+          <CardTitle className="text-[#1B2A4A]">Admin Notes</CardTitle>
+          <p className="text-xs text-gray-500 mt-1">
+            Visible to admins only. Use for internal context, decision
+            rationale, or follow-up actions.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <Textarea
+            value={adminNotes}
+            onChange={(e) => setAdminNotes(e.target.value)}
+            rows={4}
+            className="rounded-none"
+            placeholder="Internal notes — visible to admins only."
+          />
+          <div className="flex justify-end mt-2">
+            <Button
+              onClick={saveNotes}
+              disabled={isSavingNotes || adminNotes === (app.notes ?? '')}
+              size="sm"
+              className="rounded-none bg-[#1B2A4A] hover:bg-[#26345A] text-white"
+            >
+              {isSavingNotes ? (
+                <>
+                  <Loader2 className="mr-2 h-3 w-3 animate-spin" /> Saving…
+                </>
+              ) : (
+                'Save Notes'
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function Label({ children }: { children: React.ReactNode }) {
+  return (
+    <label className="text-xs uppercase tracking-wider text-[#4B5563] font-medium">
+      {children}
+    </label>
+  );
+}
+
+function Field({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value: string | null | undefined;
+  mono?: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-[#4B5563] min-w-24">{label}:</span>
+      <span
+        className={`font-medium text-[#1F2937] ${mono ? 'font-mono' : ''}`}
+      >
+        {value || '—'}
+      </span>
+    </div>
+  );
+}

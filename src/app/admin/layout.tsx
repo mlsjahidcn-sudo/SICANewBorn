@@ -36,6 +36,11 @@ const navItems = [
   { href: '/admin/leads', label: 'Leads', labelCn: '线索', icon: Users },
   { href: '/admin/students', label: 'Students', labelCn: '学生', icon: UserCheck },
   { href: '/admin/partners', label: 'Partners', labelCn: '合作方', icon: Building2 },
+  // S27: Partner Pipeline — the only place in the system where the
+  // admin can change a partner application's status / decision.
+  // Distinct from /admin/applications (student applications) because
+  // they live in separate tables.
+  { href: '/admin/partner-applications', label: 'Partner Pipeline', labelCn: '合作方申请', icon: Building2 },
   { href: '/admin/fees', label: 'Fees', labelCn: '费用', icon: DollarSign },
   { href: '/admin/assessments', label: 'Assessments', labelCn: '评估', icon: ClipboardList },
   { href: '/admin/applications', label: 'Applications', labelCn: '申请', icon: FileText },
