@@ -7,6 +7,10 @@
  *   ADMIN_EMAIL     - Admin email address to receive notifications
  *
  * If RESEND_API_KEY is not set, emails are skipped (no error thrown).
+ *
+ * sendApplicationStatusUpdate() is the only function in this module
+ * that emails the APPLICANT (not the admin). It fires when an admin
+ * moves an application to a status the applicant should know about.
  */
 
 import { Resend } from 'resend';
@@ -284,4 +288,173 @@ export async function sendChatLeadNotification(params: {
       `Log in to the admin panel to view the conversation context.`,
     ].join('\n'),
   });
+}
+
+// ============================================================================
+// Applicant-facing emails
+// ============================================================================
+//
+// notifyApplicantOnStatusChange() is a passive helper that picks the right
+// status template based on the application's new status. It's called from
+// the admin PATCH /api/admin/applications/[id] route after the row update
+// commits.
+//
+// We deliberately do NOT email on every status change — only on the ones
+// the applicant should know about: 'Submitted' (we got it), 'Under Review'
+// (we're looking), 'Documents Requested' (you owe us), 'Decision Made',
+// 'Accepted', 'Rejected'. Drafts and Withdrawn are admin-internal.
+// ============================================================================
+
+const APPLICANT_STATUS_EMAILS: Record<string, { subject: string; headline: string; tone: string }> = {
+  Submitted: {
+    subject: 'We received your SICA application',
+    headline: 'Your application is in',
+    tone: 'received',
+  },
+  'Under Review': {
+    subject: 'Your SICA application is being reviewed',
+    headline: 'We are reviewing your application',
+    tone: 'in_progress',
+  },
+  'Documents Requested': {
+    subject: 'SICA needs more documents from you',
+    headline: 'Additional documents needed',
+    tone: 'action_required',
+  },
+  'Decision Made': {
+    subject: 'A decision has been made on your SICA application',
+    headline: 'A decision has been made',
+    tone: 'decision_made',
+  },
+  Accepted: {
+    subject: '🎉 Congratulations — your SICA application was accepted!',
+    headline: 'Welcome to China!',
+    tone: 'accepted',
+  },
+  Rejected: {
+    subject: 'Update on your SICA application',
+    headline: 'Update on your application',
+    tone: 'rejected',
+  },
+};
+
+export interface ApplicantEmailParams {
+  toEmail: string;
+  applicantName: string | null;
+  universityName: string | null;
+  programName: string | null;
+  degree: string | null;
+  intake: string | null;
+  applicationNumber: string | null;
+  newStatus: string;
+  extraNote?: string | null;
+}
+
+/**
+ * Send a status-update email to the applicant. Skips silently when:
+ *  - Resend is not configured
+ *  - newStatus is not in APPLICANT_STATUS_EMAILS
+ *  - toEmail is empty/null
+ *
+ * Returns true on send, false on skip. Never throws — callers shouldn't
+ * let email failure block a status update.
+ */
+export async function notifyApplicantOnStatusChange(
+  params: ApplicantEmailParams,
+): Promise<boolean> {
+  const tpl = APPLICANT_STATUS_EMAILS[params.newStatus];
+  if (!tpl) return false;
+  if (!isEmailConfigured()) return false;
+  if (!params.toEmail) return false;
+
+  const resend = getResend()!;
+  const firstName = (params.applicantName || '').split(' ')[0] || 'there';
+
+  const programLine = [params.programName, params.degree, params.intake]
+    .filter(Boolean)
+    .join(' · ');
+  const universityLine = params.universityName || 'your chosen university';
+
+  const cta = params.newStatus === 'Documents Requested'
+    ? `<p style="margin:16px 0">Please reply to this email with the requested documents, or upload them at <a href="https://sica.com.cn/student/documents">your student portal</a>.</p>`
+    : params.newStatus === 'Accepted'
+      ? `<p style="margin:16px 0">Next steps will be sent in a follow-up email. If you have questions, reply to this email or message us on WhatsApp (+86 173 2576 4171).</p>`
+      : `<p style="margin:16px 0">If you have questions, reply to this email or message us on WhatsApp (+86 173 2576 4171).</p>`;
+
+  const extraHtml = params.extraNote
+    ? `<p style="background:#FAFAF8;padding:12px;border-left:3px solid #D4A853;margin:16px 0;font-size:14px;color:#444">${params.extraNote.replace(/</g, '&lt;')}</p>`
+    : '';
+
+  await resend.emails.send({
+    from: FROM,
+    to: params.toEmail,
+    replyTo: process.env.ADMIN_EMAIL,
+    subject: tpl.subject,
+    html: `
+      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#1F2937">
+        <div style="background:#1B2A4A;color:#fff;padding:16px 20px;margin-bottom:20px">
+          <h1 style="margin:0;font-size:20px">${tpl.headline}</h1>
+        </div>
+        <p>Hi ${firstName},</p>
+        <p>${introFor(tpl.tone, { firstName, university: universityLine, program: programLine })}</p>
+        <table style="font-family:sans-serif;border-collapse:collapse;width:100%;margin:16px 0">
+          <tr><td style="padding:6px 12px;font-weight:bold;background:#f5f5f5;width:140px">Application</td><td style="padding:6px 12px">${params.applicationNumber ?? '—'}</td></tr>
+          <tr><td style="padding:6px 12px;font-weight:bold;background:#f5f5f5">University</td><td style="padding:6px 12px">${universityLine}</td></tr>
+          ${programLine ? `<tr><td style="padding:6px 12px;font-weight:bold;background:#f5f5f5">Program</td><td style="padding:6px 12px">${programLine}</td></tr>` : ''}
+          <tr><td style="padding:6px 12px;font-weight:bold;background:#f5f5f5">New status</td><td style="padding:6px 12px"><strong>${params.newStatus}</strong></td></tr>
+        </table>
+        ${extraHtml}
+        ${cta}
+        <p style="margin-top:24px">— The SICA Team<br><span style="color:#888;font-size:12px">Study in China Academy · Guangzhou, China</span></p>
+        <hr style="border:none;border-top:1px solid #eee;margin-top:24px">
+        <p style="font-size:11px;color:#999">You are receiving this email because you submitted an application through SICA. <a href="https://sica.com.cn/student/settings" style="color:#999">Manage email preferences</a></p>
+      </div>
+    `,
+    text: [
+      tpl.headline,
+      '',
+      `Hi ${firstName},`,
+      '',
+      introFor(tpl.tone, { firstName, university: universityLine, program: programLine }),
+      '',
+      `Application: ${params.applicationNumber ?? '—'}`,
+      `University: ${universityLine}`,
+      programLine ? `Program: ${programLine}` : '',
+      `New status: ${params.newStatus}`,
+      '',
+      params.extraNote || '',
+      '',
+      params.newStatus === 'Documents Requested'
+        ? 'Please reply to this email with the requested documents, or upload them at https://sica.com.cn/student/documents'
+        : 'If you have questions, reply to this email or message us on WhatsApp (+86 173 2576 4171).',
+      '',
+      '— The SICA Team',
+      'Study in China Academy · Guangzhou, China',
+    ]
+      .filter(Boolean)
+      .join('\n'),
+  });
+  return true;
+}
+
+function introFor(
+  tone: string,
+  ctx: { firstName: string; university: string; program: string },
+): string {
+  switch (tone) {
+    case 'received':
+      return `Thanks for submitting your application to ${ctx.university}. Our admissions team has received it and will start the review shortly.`;
+    case 'in_progress':
+      return `Our admissions team is now reviewing your application to ${ctx.university}. We will be in touch as soon as a decision is made (usually within 5–10 business days).`;
+    case 'action_required':
+      return `Our admissions team has reviewed your application to ${ctx.university} and needs a few more documents from you before we can proceed.`;
+    case 'decision_made':
+      return `Our admissions team has reached a decision on your application to ${ctx.university}. Please log in to your student portal for the full decision letter.`;
+    case 'accepted':
+      return `Congratulations! You have been accepted to ${ctx.university}. ${ctx.program ? `We look forward to welcoming you into the ${ctx.program} program.` : ''} This is a huge milestone — well done.`;
+    case 'rejected':
+      return `Thank you for your patience while we reviewed your application to ${ctx.university}. Unfortunately we are unable to offer you a place this cycle. This is by no means the end of your study-in-China journey — we would be happy to discuss alternative universities or programs.`;
+    default:
+      return `Your application status with ${ctx.university} has been updated.`;
+  }
 }

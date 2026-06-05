@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, buildServiceClient, getServerEnv } from '@/lib/supabase-auth';
 import { insertTimelineEvent } from '@/lib/timeline';
 import { mapApplicationFromDb } from '@/lib/application-mapper';
+import { notifyApplicantOnStatusChange } from '@/lib/email';
 
 const ALLOWED_STATUSES = [
   'Draft', 'Submitted', 'Under Review', 'Documents Requested',
@@ -107,6 +108,58 @@ export async function PATCH(
         notes: body.notes || `Status changed to ${newStatus} by admin.`,
         created_by: auth.user.id,
       });
+
+      // Email the applicant (fire-and-forget — never block the response
+      // on email). Admin can opt out per-update with notify_applicant=false.
+      const shouldNotify = body.notify_applicant !== false;
+      if (shouldNotify) {
+        // Determine recipient: linked student profile email first, fall
+        // back to applicant_email (unlinked application).
+        let toEmail: string | null = null;
+        let applicantName: string | null = null;
+        if (data.student_id) {
+          const { data: profile } = await service
+            .from('student_profiles')
+            .select('email, first_name, last_name')
+            .eq('id', data.student_id)
+            .maybeSingle();
+          if (profile) {
+            toEmail = profile.email || null;
+            applicantName = [profile.first_name, profile.last_name]
+              .filter(Boolean)
+              .join(' ') || null;
+          }
+        }
+        if (!toEmail) {
+          toEmail = (data as { applicant_email?: string | null }).applicant_email || null;
+          applicantName =
+            (data as { applicant_name?: string | null }).applicant_name || applicantName;
+        }
+
+        // Send the email in the background. We deliberately do NOT await
+        // this — a Resend outage shouldn't break the admin's status
+        // update. Errors are logged but swallowed.
+        if (toEmail) {
+          notifyApplicantOnStatusChange({
+            toEmail,
+            applicantName,
+            universityName:
+              (data as { university_name?: string | null }).university_name || null,
+            programName: (data as { program_name?: string | null }).program_name || null,
+            degree:
+              (data as { degree_level?: string | null }).degree_level ||
+              (data as { degree?: string | null }).degree ||
+              null,
+            intake: (data as { intake?: string | null }).intake || null,
+            applicationNumber:
+              (data as { application_number?: string | null }).application_number || null,
+            newStatus,
+            extraNote: body.applicant_note || null,
+          }).catch((emailErr) => {
+            console.error('[admin/applications PATCH] applicant email failed:', emailErr);
+          });
+        }
+      }
     }
 
     return NextResponse.json({ application: data });

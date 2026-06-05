@@ -51,6 +51,8 @@ export default function AdminApplicationDetailPage() {
   const [notFound, setNotFound] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [confirmAction, setConfirmAction] = useState<'Approved' | 'Rejected' | 'Withdrawn' | null>(null);
+  const [notifyApplicant, setNotifyApplicant] = useState(true);
+  const [applicantNote, setApplicantNote] = useState('');
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -81,17 +83,22 @@ export default function AdminApplicationDetailPage() {
       try {
         await apiFetch(`/api/admin/applications/${app.id}`, {
           method: 'PATCH',
-          body: JSON.stringify({ status: newStatus }),
+          body: JSON.stringify({
+            status: newStatus,
+            notify_applicant: notifyApplicant,
+            applicant_note: applicantNote || undefined,
+          }),
         });
         setApp((prev) => (prev ? { ...prev, status: newStatus } : prev));
         setConfirmAction(null);
+        setApplicantNote('');
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to update status');
       } finally {
         setIsUpdating(false);
       }
     },
-    [app],
+    [app, notifyApplicant, applicantNote],
   );
 
   if (isLoading) {
@@ -296,6 +303,34 @@ export default function AdminApplicationDetailPage() {
                 Change status of <strong>{app.studentName}</strong>'s application to <strong>{confirmAction}</strong>?
                 This will be recorded in the audit timeline.
               </p>
+              <label className="flex items-start gap-2 mb-3 text-sm">
+                <input
+                  type="checkbox"
+                  checked={notifyApplicant}
+                  onChange={(e) => setNotifyApplicant(e.target.checked)}
+                  className="mt-1"
+                />
+                <span>
+                  <span className="font-medium text-[#1F2937]">Email applicant</span>
+                  <span className="block text-xs text-gray-500">
+                    Sends a status-update email via Resend.
+                  </span>
+                </span>
+              </label>
+              {notifyApplicant && (
+                <div className="mb-4">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Optional note (shown in the email)
+                  </label>
+                  <textarea
+                    value={applicantNote}
+                    onChange={(e) => setApplicantNote(e.target.value)}
+                    rows={3}
+                    className="w-full border border-gray-300 px-3 py-2 text-sm"
+                    placeholder="e.g. We need your passport scan by next Friday"
+                  />
+                </div>
+              )}
               <div className="flex justify-end gap-2">
                 <Button variant="ghost" onClick={() => setConfirmAction(null)} disabled={isUpdating}>
                   Cancel
