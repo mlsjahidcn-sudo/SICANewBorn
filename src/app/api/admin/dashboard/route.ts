@@ -276,6 +276,12 @@ export async function GET(request: NextRequest) {
         leadsAssessmentLast7d: leadAssessRecentRes.count ?? 0,
         leadsUnassigned: unassignedTotal,
         leadsNeedsFollowup: needsFollowupTotal,
+        // Note: tier counts (hot/warm/cold) are derived client-side
+        // in the leads page (the scoreLead heuristic is in
+        // src/app/api/admin/leads/route.ts). We don't pre-aggregate
+        // here because the same lead changes tier as its fields
+        // change; recomputing on every dashboard load would be
+        // wasteful for 1000+ leads.
       },
       recentApplications,
       recentActivity,

@@ -67,6 +67,9 @@ interface UnifiedLead {
   resolved_at: string | null;
   created_at: string;
   updated_at: string | null;
+  score: number;
+  score_tier: 'cold' | 'warm' | 'hot';
+  score_reasons: string[];
 }
 
 interface LeadsResponse {
@@ -87,6 +90,17 @@ const STATUS_COLOR: Record<string, string> = {
   Unqualified: 'bg-gray-100 text-gray-700',
   Rejected: 'bg-red-100 text-red-800',
   Contacted: 'bg-purple-100 text-purple-800',
+};
+
+const TIER_COLOR: Record<string, string> = {
+  hot: 'bg-[#9B1B30] text-white',
+  warm: 'bg-[#D4A853] text-[#1B2A4A]',
+  cold: 'bg-gray-200 text-gray-700',
+};
+const TIER_LABEL: Record<string, string> = {
+  hot: '🔥 Hot',
+  warm: '🌡 Warm',
+  cold: '❄ Cold',
 };
 
 const TYPE_COLOR: Record<LeadType, string> = {
@@ -119,6 +133,7 @@ export default function LeadsPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [countryFilter, setCountryFilter] = useState('');
   const [assigneeFilter, setAssigneeFilter] = useState('all');
+  const [tierFilter, setTierFilter] = useState<'all' | 'cold' | 'warm' | 'hot'>('all');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [q, setQ] = useState('');
@@ -165,7 +180,14 @@ export default function LeadsPage() {
   // leads that don't match the current view.
   useEffect(() => {
     setSelected(new Set());
-  }, [statusFilter, countryFilter, assigneeFilter, fromDate, toDate, q]);
+  }, [statusFilter, countryFilter, assigneeFilter, tierFilter, fromDate, toDate, q]);
+
+  // Client-side tier filter (the API doesn't filter by tier; we apply
+  // it here so the list page stays in sync with the badge UI).
+  const visibleLeads = useMemo(
+    () => (tierFilter === 'all' ? leads : leads.filter((l) => l.score_tier === tierFilter)),
+    [leads, tierFilter],
+  );
 
   const statusOptions: string[] = useMemo(
     () => (typeFilter === 'all' ? [] : STATUS_OPTIONS[typeFilter]),
@@ -366,6 +388,20 @@ export default function LeadsPage() {
               <SelectItem value="unassigned">Unassigned</SelectItem>
             </SelectContent>
           </Select>
+          <Select
+            value={tierFilter}
+            onValueChange={(v) => setTierFilter(v as 'all' | 'cold' | 'warm' | 'hot')}
+          >
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Priority" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Priority</SelectItem>
+              <SelectItem value="hot">🔥 Hot</SelectItem>
+              <SelectItem value="warm">🌡 Warm</SelectItem>
+              <SelectItem value="cold">❄ Cold</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
           <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -471,36 +507,36 @@ export default function LeadsPage() {
       <div>
         <div className="flex items-center justify-between mb-2 text-sm text-gray-600">
           <div className="flex items-center gap-3">
-            {leads.length > 0 && (
+            {visibleLeads.length > 0 && (
               <button
                 onClick={() => {
-                  if (selected.size === leads.length) {
+                  if (selected.size === visibleLeads.length) {
                     setSelected(new Set());
                   } else {
                     setSelected(
-                      new Set(leads.map((l) => `${l.lead_type}:${l.lead_id}`)),
+                      new Set(visibleLeads.map((l) => `${l.lead_type}:${l.lead_id}`)),
                     );
                   }
                 }}
                 className="flex items-center gap-1.5 hover:text-[#1B2A4A]"
               >
-                {selected.size === leads.length && leads.length > 0 ? (
+                {selected.size === visibleLeads.length && visibleLeads.length > 0 ? (
                   <CheckSquare className="h-4 w-4" />
                 ) : (
                   <Square className="h-4 w-4" />
                 )}
-                {selected.size === leads.length && leads.length > 0
+                {selected.size === visibleLeads.length && visibleLeads.length > 0
                   ? 'Deselect all'
                   : 'Select all'}
               </button>
             )}
-            <span>{leads.length} leads</span>
+            <span>{visibleLeads.length} leads</span>
           </div>
           <Button
             size="sm"
             variant="outline"
             onClick={exportCsv}
-            disabled={bulkBusy || leads.length === 0}
+            disabled={bulkBusy || visibleLeads.length === 0}
           >
             <Download className="h-3.5 w-3.5 mr-1.5" />
             Export CSV
@@ -510,13 +546,13 @@ export default function LeadsPage() {
           <div className="flex items-center justify-center py-12">
             <Spinner size="md" className="text-[#1B2A4A]" />
           </div>
-        ) : leads.length === 0 ? (
+        ) : visibleLeads.length === 0 ? (
           <div className="bg-white border border-gray-200 px-4 py-12 text-center text-gray-500">
             No leads match your filters.
           </div>
         ) : (
           <div className="space-y-2">
-            {leads.map((lead) => {
+            {visibleLeads.map((lead) => {
               const key = `${lead.lead_type}:${lead.lead_id}`;
               const isSelected = selected.has(key);
               return (
@@ -558,6 +594,12 @@ export default function LeadsPage() {
                           <h3 className="font-semibold text-[#1B2A4A] truncate">
                             {lead.name || '(no name)'}
                           </h3>
+                          <span
+                            className={`text-xs px-2 py-0.5 font-semibold ${TIER_COLOR[lead.score_tier]}`}
+                            title={lead.score_reasons.join(' · ') || 'No signal yet'}
+                          >
+                            {TIER_LABEL[lead.score_tier]} {lead.score}
+                          </span>
                           {lead.status && (
                             <Badge className={STATUS_COLOR[lead.status] || 'bg-gray-100 text-gray-800'}>
                               {lead.status}

@@ -72,6 +72,13 @@ interface UnifiedLead {
   resolved_at: string | null;
   created_at: string;
   updated_at: string | null;
+  // Phase 2.4 — derived lead score (0-100). See scoreLead() for the
+  // heuristic. Same row can have a different score in different
+  // snapshots; we recompute every request so the latest fields
+  // (e.g. contact_attempts going up) reflect.
+  score: number;
+  score_tier: 'cold' | 'warm' | 'hot';
+  score_reasons: string[];
 }
 
 const MAX_LIMIT = 200;
@@ -236,6 +243,8 @@ function toUnified(type: LeadType, row: Record<string, unknown>): UnifiedLead {
     program = pickString(row, ['intended_major']);
   }
 
+  const { score, reasons } = scoreLead(type, row, { program });
+
   return {
     lead_type: type,
     lead_id: String(row.id),
@@ -257,5 +266,156 @@ function toUnified(type: LeadType, row: Record<string, unknown>): UnifiedLead {
     resolved_at: pickString(row, ['resolved_at']),
     created_at: pickString(row, ['created_at']) || new Date().toISOString(),
     updated_at: pickString(row, ['updated_at']),
+    score,
+    score_tier: scoreToTier(score),
+    score_reasons: reasons,
   };
+}
+
+// ============================================================================
+// Lead scoring (Phase 2.4)
+//
+// Pure derived score 0-100. We surface three reasons per lead so the
+// admin can see WHY a lead is hot (not just that it is). The
+// heuristic rewards signal-rich leads — phone/WhatsApp, program
+// clarity, transcript upload, multiple target universities,
+// engaged chat. It penalizes inactivity (lead sits uncontacted >48h)
+// and the closed statuses.
+//
+// Buckets (returned as score_tier):
+//   0-30  cold
+//   31-65 warm
+//   66-100 hot
+// ============================================================================
+
+function scoreToTier(s: number): 'cold' | 'warm' | 'hot' {
+  if (s >= 66) return 'hot';
+  if (s >= 31) return 'warm';
+  return 'cold';
+}
+
+function scoreLead(
+  type: LeadType,
+  row: Record<string, unknown>,
+  derived: { program: string | null },
+): { score: number; reasons: string[] } {
+  let score = 0;
+  const reasons: string[] = [];
+
+  // -- Contact info (reaches multiple channels = serious) --
+  const hasPhone = !!pickString(row, ['phone']);
+  const hasWhatsapp = !!pickString(row, ['whatsapp']);
+  if (hasPhone && hasWhatsapp) {
+    score += 20;
+    reasons.push('Phone + WhatsApp provided');
+  } else if (hasPhone || hasWhatsapp) {
+    score += 12;
+    reasons.push(hasPhone ? 'Phone provided' : 'WhatsApp provided');
+  }
+
+  // -- Country (geographic signal — they care enough to specify) --
+  if (pickString(row, ['country'])) {
+    score += 8;
+    reasons.push('Country specified');
+  }
+
+  // -- Program / major (knows what they want) --
+  if (derived.program) {
+    score += 12;
+    reasons.push('Program / major specified');
+  }
+
+  // -- Type-specific signals --
+  if (type === 'contact') {
+    const msg = pickString(row, ['message']) || '';
+    if (msg.length > 200) {
+      score += 10;
+      reasons.push('Detailed message (>200 chars)');
+    } else if (msg.length > 60) {
+      score += 5;
+    }
+  } else if (type === 'chat') {
+    // conversation_context is a JSON array of {role, content} msgs
+    const ctx = pickString(row, ['conversation_context']);
+    if (ctx) {
+      try {
+        const parsed = JSON.parse(ctx);
+        if (Array.isArray(parsed) && parsed.length >= 5) {
+          score += 15;
+          reasons.push('Engaged in 5+ chat messages');
+        } else if (Array.isArray(parsed) && parsed.length >= 2) {
+          score += 6;
+        }
+      } catch {
+        // ignore
+      }
+    }
+    if (pickString(row, ['interested_university'])) {
+      score += 8;
+      reasons.push('Named a target university');
+    }
+  } else if (type === 'assessment') {
+    if (pickString(row, ['has_transcript']) === 'true' || pickString(row, ['transcript_file_name'])) {
+      score += 20;
+      reasons.push('Transcript uploaded');
+    }
+    if (pickString(row, ['date_of_birth'])) {
+      score += 3; // completed full form
+    }
+    if (pickString(row, ['current_education'])) {
+      score += 5;
+      reasons.push('Current education specified');
+    }
+    const targets = pickString(row, ['target_universities']);
+    if (targets) {
+      // Could be JSON array or comma-separated
+      let count = 0;
+      try {
+        const parsed = JSON.parse(targets);
+        if (Array.isArray(parsed)) count = parsed.length;
+      } catch {
+        count = targets.split(',').filter((s) => s.trim()).length;
+      }
+      if (count >= 3) {
+        score += 15;
+        reasons.push(`${count} target universities`);
+      } else if (count >= 1) {
+        score += 7;
+      }
+    }
+  }
+
+  // -- Inactivity penalty (open lead, no contact in 48h) --
+  const status = pickString(row, ['status']);
+  const isClosed =
+    status === 'Resolved' ||
+    status === 'Spam' ||
+    status === 'Qualified' ||
+    status === 'Unqualified' ||
+    status === 'Accepted' ||
+    status === 'Rejected';
+  if (!isClosed) {
+    const lastContact = pickString(row, ['last_contacted_at']);
+    const createdAt = pickString(row, ['created_at']);
+    if (createdAt) {
+      const ageHours = (Date.now() - new Date(createdAt).getTime()) / 36e5;
+      if (ageHours > 168 && !lastContact) {
+        score -= 15;
+        reasons.push('Stale: >7d old, never contacted');
+      } else if (ageHours > 48 && !lastContact) {
+        score -= 8;
+        reasons.push('Aging: >48h, no contact yet');
+      }
+    }
+    // Open lead with several contact attempts but still 'New' = friction
+    const attempts = pickNumber(row, ['contact_attempts']);
+    if (attempts >= 3 && status === 'New') {
+      score -= 10;
+      reasons.push(`${attempts} contact attempts, still New`);
+    }
+  }
+
+  // Clamp to 0-100
+  score = Math.max(0, Math.min(100, score));
+  return { score, reasons };
 }
