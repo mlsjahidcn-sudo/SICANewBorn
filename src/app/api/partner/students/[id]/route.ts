@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requirePartner } from '@/lib/supabase-auth';
+import { requireTeamMember } from '@/lib/supabase-auth';
 import {
   mapPartnerStudentFromDb,
   mapPartnerStudentToDb,
@@ -20,7 +20,7 @@ export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requirePartner(request);
+  const auth = await requireTeamMember(request);
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
@@ -31,11 +31,15 @@ export async function GET(
   }
 
   try {
-    const { data, error } = await auth.supabase
+    let q = auth.supabase
       .from('partner_students')
       .select('*')
-      .eq('id', id)
-      .maybeSingle();
+      .eq('id', id);
+    // Phase 3: member can only see/edit their own rows
+    if (auth.role === 'member') {
+      q = q.eq('created_by_user_id', auth.user.id);
+    }
+    const { data, error } = await q.maybeSingle();
 
     if (error) {
       console.error('[partner/students/:id GET] supabase error:', error);
@@ -57,7 +61,7 @@ export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requirePartner(request);
+  const auth = await requireTeamMember(request);
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
@@ -87,12 +91,14 @@ export async function PATCH(
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
     }
 
-    const { data, error } = await auth.supabase
+    let q = auth.supabase
       .from('partner_students')
       .update(updates)
-      .eq('id', id)
-      .select('*')
-      .maybeSingle();
+      .eq('id', id);
+    if (auth.role === 'member') {
+      q = q.eq('created_by_user_id', auth.user.id);
+    }
+    const { data, error } = await q.select('*').maybeSingle();
 
     if (error) {
       console.error('[partner/students/:id PATCH] supabase error:', error);
@@ -117,7 +123,7 @@ export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requirePartner(request);
+  const auth = await requireTeamMember(request);
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
@@ -133,10 +139,14 @@ export async function DELETE(
     // matching the SICA design). Use hard delete for now — partners
     // shouldn't accidentally delete their students, but if they do,
     // the action is reversible only by re-creating. Document this.
-    const { error, count } = await auth.supabase
+    let delQ = auth.supabase
       .from('partner_students')
       .delete({ count: 'exact' })
       .eq('id', id);
+    if (auth.role === 'member') {
+      delQ = delQ.eq('created_by_user_id', auth.user.id);
+    }
+    const { error, count } = await delQ;
 
     if (error) {
       console.error('[partner/students/:id DELETE] supabase error:', error);

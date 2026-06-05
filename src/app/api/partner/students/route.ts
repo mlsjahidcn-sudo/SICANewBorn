@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requirePartner, getServerEnv } from '@/lib/supabase-auth';
+import { requireTeamMember, getServerEnv } from '@/lib/supabase-auth';
 import { mapPartnerStudentFromDb, mapPartnerStudentToDb, parsePartnerStudentStatus } from '@/lib/partner-student-mapper';
 
 /**
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const auth = await requirePartner(request);
+  const auth = await requireTeamMember(request);
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
@@ -53,6 +53,12 @@ export async function GET(request: NextRequest) {
       .select('*', { count: 'exact' })
       .order(sort, { ascending });
 
+    // Phase 3: role='member' sees ONLY rows they created.
+    // role='owner' sees everything for the partner org (back-compat).
+    if (auth.role === 'member') {
+      query = query.eq('created_by_user_id', auth.user.id);
+    }
+
     if (status) query = query.eq('status', status);
 
     if (search) {
@@ -73,7 +79,35 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    const students = (data || []).map(mapPartnerStudentFromDb);
+    // Phase 3: hydrate created_by_email via auth.admin.listUsers
+    const userIds = Array.from(
+      new Set(
+        (data || [])
+          .map((r) => (r as { created_by_user_id?: string | null }).created_by_user_id)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    );
+    let emailMap = new Map<string, string>();
+    if (userIds.length) {
+      const { buildServiceClient, getServerEnv: gse } = await import('@/lib/supabase-auth');
+      if (gse().serviceKey) {
+        const { data: usersPage } = await buildServiceClient().auth.admin.listUsers({
+          perPage: 200,
+        });
+        for (const u of usersPage?.users || []) {
+          if (userIds.includes(u.id)) {
+            emailMap.set(u.id, u.email || '');
+          }
+        }
+      }
+    }
+    const students = (data || []).map((r) => {
+      const id = (r as { created_by_user_id?: string | null }).created_by_user_id;
+      return mapPartnerStudentFromDb({
+        ...(r as Record<string, unknown>),
+        created_by_email: id ? emailMap.get(id) || null : null,
+      } as Parameters<typeof mapPartnerStudentFromDb>[0]);
+    });
     const total = count || 0;
 
     return NextResponse.json({
@@ -109,7 +143,7 @@ export async function GET(request: NextRequest) {
  * is used so RLS scopes the insert to this partner.
  */
 export async function POST(request: NextRequest) {
-  const auth = await requirePartner(request);
+  const auth = await requireTeamMember(request);
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
@@ -132,6 +166,8 @@ export async function POST(request: NextRequest) {
 
     const dbRow = mapPartnerStudentToDb(body);
     dbRow.partner_id = auth.partnerId;
+    // Phase 3: server-derived created_by_user_id — never trust client
+    dbRow.created_by_user_id = auth.user.id;
     // Default status to 'New' for new entries
     if (!dbRow.status) dbRow.status = 'New';
 

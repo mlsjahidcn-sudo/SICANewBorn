@@ -7,9 +7,9 @@ import {
   LayoutDashboard,
   Users,
   FileText,
-  DollarSign,
   Share2,
   Settings,
+  UserCog,
   LogOut,
   Menu,
   X,
@@ -19,12 +19,14 @@ import Link from 'next/link';
 import { SicaLogo } from '@/components/sica-logo';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
 
+// Fees nav item REMOVED (Phase 3): partner orgs never see fees /
+// service charge. Admin manages those in /admin/fees.
 const navItems = [
   { name: 'Dashboard', href: '/partner', icon: LayoutDashboard },
   { name: 'Students', href: '/partner/students', icon: Users },
   { name: 'Applications', href: '/partner/applications', icon: FileText },
-  { name: 'Fees', href: '/partner/fees', icon: DollarSign },
   { name: 'Lead Sharing', href: '/partner/lead-sharing', icon: Share2 },
+  { name: 'Team', href: '/partner/team', icon: UserCog, ownerOnly: true },
   { name: 'Settings', href: '/partner/settings', icon: Settings },
 ];
 
@@ -50,6 +52,7 @@ function PartnerLayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user, loading: authLoading, signOut } = useAuth();
   const [partner, setPartner] = useState<PartnerMe | null>(null);
+  const [role, setRole] = useState<'owner' | 'member' | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -62,7 +65,12 @@ function PartnerLayoutInner({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!mounted || authLoading) return;
 
-    const isAuthPage = pathname === '/partner/login' || pathname === '/partner/register';
+    const isAuthPage =
+      pathname === '/partner/login' ||
+      pathname === '/partner/register' ||
+      pathname === '/partner/pending' ||
+      pathname === '/partner/rejected' ||
+      pathname === '/partner/accept-invite';
 
     if (!user && !isAuthPage) {
       router.push('/partner/login');
@@ -73,7 +81,8 @@ function PartnerLayoutInner({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Verify the user has a partner record before showing the portal.
+    // Phase 3: status gate. If the partner isn't 'active' yet, route
+    // them to the right waiting page.
     let cancelled = false;
     (async () => {
       const { supabase } = await import('@/lib/supabase-browser');
@@ -88,13 +97,38 @@ function PartnerLayoutInner({ children }: { children: React.ReactNode }) {
         if (!cancelled) router.push('/partner/login');
         return;
       }
-      const res = await fetch('/api/partner/me', {
+      const res = await fetch('/api/partner/login-status', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (cancelled) return;
       if (res.ok) {
         const body = await res.json();
-        setPartner(body.partner);
+        const status = body.partner?.status as string | undefined;
+        if (status === 'pending') {
+          router.push('/partner/pending');
+          return;
+        }
+        if (status === 'rejected') {
+          router.push('/partner/rejected');
+          return;
+        }
+        if (status === 'suspended') {
+          setAuthError(
+            'Your partner account is suspended. Please contact SICA support.',
+          );
+          setIsLoading(false);
+          return;
+        }
+        // active
+        setPartner({
+          id: body.partner.id,
+          email: body.partner.email,
+          company_name: body.partner.company_name,
+          contact_person: body.partner.contact_person,
+          status: body.partner.status,
+          commission_rate: null,
+        });
+        setRole(body.teamMember?.role ?? null);
         setIsLoading(false);
       } else {
         setAuthError('Your account is not linked to a partner profile.');
@@ -178,25 +212,27 @@ function PartnerLayoutInner({ children }: { children: React.ReactNode }) {
 
           {/* Navigation */}
           <nav className="flex-1 px-3 py-4 space-y-1">
-            {navItems.map((item) => {
-              const isActive = pathname === item.href;
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors ${
-                    isActive
-                      ? 'bg-[#9B1B30]/10 text-[#9B1B30]'
-                      : 'text-gray-600 hover:text-[#1B2A4A] hover:bg-gray-100'
-                  }`}
-                >
-                  <Icon size={18} />
-                  <span>{item.name}</span>
-                  {isActive && <ChevronRight size={14} className="ml-auto" />}
-                </Link>
-              );
-            })}
+            {navItems
+              .filter((item) => !('ownerOnly' in item && item.ownerOnly) || role === 'owner')
+              .map((item) => {
+                const isActive = pathname === item.href;
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={`flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors ${
+                      isActive
+                        ? 'bg-[#9B1B30]/10 text-[#9B1B30]'
+                        : 'text-gray-600 hover:text-[#1B2A4A] hover:bg-gray-100'
+                    }`}
+                  >
+                    <Icon size={18} />
+                    <span>{item.name}</span>
+                    {isActive && <ChevronRight size={14} className="ml-auto" />}
+                  </Link>
+                );
+              })}
           </nav>
 
           {/* Partner & Logout */}

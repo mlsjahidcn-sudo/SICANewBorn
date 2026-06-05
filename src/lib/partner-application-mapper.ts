@@ -55,6 +55,9 @@ export interface PartnerApplication {
   notes?: string | null;
   createdAt: string;
   updatedAt: string;
+  // Phase 3: who created this row
+  createdByUserId?: string | null;
+  createdByEmail?: string | null;
 }
 
 export function parsePartnerApplicationStatus(input: unknown): PartnerApplicationStatus | null {
@@ -85,6 +88,8 @@ interface RawPartnerApplication {
   notes?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
+  created_by_user_id?: string | null;
+  created_by_email?: string | null;
 }
 
 export function mapPartnerApplicationFromDb(row: RawPartnerApplication): PartnerApplication {
@@ -100,6 +105,8 @@ export function mapPartnerApplicationFromDb(row: RawPartnerApplication): Partner
     notes: row.notes ?? null,
     createdAt: row.created_at ?? '',
     updatedAt: row.updated_at ?? '',
+    createdByUserId: row.created_by_user_id ?? null,
+    createdByEmail: row.created_by_email ?? null,
   };
 }
 

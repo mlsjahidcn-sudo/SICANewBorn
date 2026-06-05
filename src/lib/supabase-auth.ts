@@ -96,10 +96,25 @@ export type PartnerAuthSuccess = {
 };
 export type PartnerAuthResult = PartnerAuthSuccess | AuthFailure;
 
+export type TeamAuthSuccess = {
+  ok: true;
+  supabase: SupabaseClient;
+  user: User;
+  partnerId: string;
+  role: 'owner' | 'member';
+  teamMemberId: string;
+  partner: Record<string, unknown>;
+};
+export type TeamAuthResult = TeamAuthSuccess | AuthFailure;
+
 /**
  * Verify the caller is a partner and return their partner record.
  * The partnerId is server-derived (looked up from auth.users.id → partners.user_id)
  * so callers cannot spoof it via ?partnerId=... in the query string.
+ *
+ * Kept for back-compat. New code should use `requireTeamMember` which also
+ * returns the team-member row (with role + status) and refuses if the
+ * team-member row isn't `active`.
  */
 export async function requirePartner(request: Request): Promise<PartnerAuthResult> {
   const auth = await getRequestAuth(request);
@@ -126,6 +141,72 @@ export async function requirePartner(request: Request): Promise<PartnerAuthResul
     user: auth.user,
     partnerId: data.id as string,
     partner: data,
+  };
+}
+
+/**
+ * Verify the caller is an ACTIVE member of a partner team.
+ *
+ * Refuses with 403 if:
+ *  - No partner_team_members row exists for (caller, partners.*)
+ *  - That row is not 'active' (i.e. 'pending_approval', 'pending_invite',
+ *    'suspended')
+ *
+ * Returns the role + teamMemberId so the caller can scope queries:
+ *  - role='owner' sees ALL rows for the partner (back-compat)
+ *  - role='member' sees ONLY rows where created_by_user_id = caller
+ */
+export async function requireTeamMember(request: Request): Promise<TeamAuthResult> {
+  const auth = await getRequestAuth(request);
+  if (!auth.ok) return auth;
+  const { serviceKey } = getServerEnv();
+  if (!serviceKey) {
+    return { ok: false, status: 503, error: 'Database not configured' };
+  }
+  const service = buildServiceClient();
+
+  // Look up the partner record first. Old data has 1:1 with user_id
+  // (the owner); new data has the team_members table.
+  const { data: partner, error: pErr } = await service
+    .from('partners')
+    .select('*')
+    .eq('user_id', auth.user.id)
+    .maybeSingle();
+  if (pErr) {
+    return { ok: false, status: 500, error: pErr.message };
+  }
+  if (!partner) {
+    return { ok: false, status: 403, error: 'Partner access required' };
+  }
+
+  const { data: member, error: mErr } = await service
+    .from('partner_team_members')
+    .select('id, role, status')
+    .eq('partner_id', partner.id)
+    .eq('user_id', auth.user.id)
+    .maybeSingle();
+  if (mErr) {
+    return { ok: false, status: 500, error: mErr.message };
+  }
+  if (!member) {
+    return { ok: false, status: 403, error: 'No active team membership' };
+  }
+  if (member.status !== 'active') {
+    return {
+      ok: false,
+      status: 403,
+      error: `Your team membership is ${member.status}. Please contact your partner owner.`,
+    };
+  }
+
+  return {
+    ok: true,
+    supabase: auth.supabase,
+    user: auth.user,
+    partnerId: partner.id as string,
+    role: member.role as 'owner' | 'member',
+    teamMemberId: member.id as string,
+    partner,
   };
 }
 

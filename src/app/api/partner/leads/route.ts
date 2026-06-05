@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requirePartner, getServerEnv } from '@/lib/supabase-auth';
+import { requireTeamMember, getServerEnv } from '@/lib/supabase-auth';
 import {
   mapPartnerLeadFromDb,
   mapPartnerLeadToDb,
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const auth = await requirePartner(request);
+  const auth = await requireTeamMember(request);
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
@@ -44,6 +44,11 @@ export async function GET(request: NextRequest) {
       .from('partner_leads')
       .select('*', { count: 'exact' })
       .order(sort, { ascending });
+
+    // Phase 3: role='member' sees ONLY rows they created.
+    if (auth.role === 'member') {
+      query = query.eq('created_by_user_id', auth.user.id);
+    }
 
     if (status) query = query.eq('status', status);
     if (search) {
@@ -89,7 +94,7 @@ export async function GET(request: NextRequest) {
  *   - leadEmail, leadPhone, interestedProgram, status, notes (optional)
  */
 export async function POST(request: NextRequest) {
-  const auth = await requirePartner(request);
+  const auth = await requireTeamMember(request);
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
@@ -109,6 +114,8 @@ export async function POST(request: NextRequest) {
 
     const dbRow = mapPartnerLeadToDb(body);
     dbRow.partner_id = auth.partnerId;
+    // Phase 3: server-derived created_by_user_id — never trust client
+    dbRow.created_by_user_id = auth.user.id;
     if (!dbRow.status) dbRow.status = 'New';
 
     const { data, error } = await auth.supabase

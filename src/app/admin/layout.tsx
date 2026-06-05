@@ -21,6 +21,7 @@ import {
   DollarSign,
   Newspaper,
   Mail,
+  Building2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { SicaLogo } from '@/components/sica-logo';
@@ -34,6 +35,7 @@ const navItems = [
   { href: '/admin/emails', label: 'Emails', labelCn: '邮件', icon: Mail },
   { href: '/admin/leads', label: 'Leads', labelCn: '线索', icon: Users },
   { href: '/admin/students', label: 'Students', labelCn: '学生', icon: UserCheck },
+  { href: '/admin/partners', label: 'Partners', labelCn: '合作方', icon: Building2 },
   { href: '/admin/fees', label: 'Fees', labelCn: '费用', icon: DollarSign },
   { href: '/admin/assessments', label: 'Assessments', labelCn: '评估', icon: ClipboardList },
   { href: '/admin/applications', label: 'Applications', labelCn: '申请', icon: FileText },

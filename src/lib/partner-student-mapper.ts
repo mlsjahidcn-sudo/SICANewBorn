@@ -47,6 +47,9 @@ export interface PartnerStudent {
   notes?: string | null;
   createdAt: string;
   updatedAt: string;
+  // Phase 3: who created this row
+  createdByUserId?: string | null;
+  createdByEmail?: string | null;
 }
 
 export function parsePartnerStudentStatus(input: unknown): PartnerStudentStatus | null {
@@ -73,6 +76,9 @@ interface RawPartnerStudent {
   notes?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
+  created_by_user_id?: string | null;
+  // Optional: join column from auth.users (set by the API layer)
+  created_by_email?: string | null;
 }
 
 export function mapPartnerStudentFromDb(row: RawPartnerStudent): PartnerStudent {
@@ -89,6 +95,8 @@ export function mapPartnerStudentFromDb(row: RawPartnerStudent): PartnerStudent 
     notes: row.notes ?? null,
     createdAt: row.created_at ?? '',
     updatedAt: row.updated_at ?? '',
+    createdByUserId: row.created_by_user_id ?? null,
+    createdByEmail: row.created_by_email ?? null,
   };
 }
 

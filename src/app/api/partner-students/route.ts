@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requirePartner } from '@/lib/supabase-auth';
+import { requireTeamMember } from '@/lib/supabase-auth';
 
 export async function GET(request: NextRequest) {
   try {
-    const auth = await requirePartner(request);
+    const auth = await requireTeamMember(request);
     if (!auth.ok) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requirePartner(request);
+    const auth = await requireTeamMember(request);
     if (!auth.ok) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }

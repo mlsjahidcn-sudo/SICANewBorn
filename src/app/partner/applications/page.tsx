@@ -267,6 +267,7 @@ export default function PartnerApplicationsPage() {
                   <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">Program</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">Status</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">Decision</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">Submitted by</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">Submitted</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">Actions</th>
                 </tr>
@@ -286,6 +287,9 @@ export default function PartnerApplicationsPage() {
                     <td className="px-6 py-4 text-[#4B5563]">{app.program}</td>
                     <td className="px-6 py-4">{getStatusBadge(app.status)}</td>
                     <td className="px-6 py-4 text-[#4B5563]">{app.decision}</td>
+                    <td className="px-6 py-4 text-[#4B5563] text-sm">
+                      {app.createdByEmail || '—'}
+                    </td>
                     <td className="px-6 py-4 text-[#4B5563]">
                       {app.submittedAt ? new Date(app.submittedAt).toLocaleDateString() : '—'}
                     </td>

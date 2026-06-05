@@ -289,6 +289,7 @@ export default function PartnerStudentsPage() {
                       <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">Nationality</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">Target</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">Status</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">Added by</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">Added</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">Actions</th>
                     </tr>
@@ -319,6 +320,9 @@ export default function PartnerStudentsPage() {
                             : '—'}
                         </td>
                         <td className="px-6 py-4">{getStatusBadge(student.status)}</td>
+                        <td className="px-6 py-4 text-[#4B5563] text-sm">
+                          {student.createdByEmail || '—'}
+                        </td>
                         <td className="px-6 py-4 text-[#4B5563]">
                           {student.createdAt
                             ? new Date(student.createdAt).toLocaleDateString()
