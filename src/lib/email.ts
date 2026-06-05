@@ -8,12 +8,16 @@
  *
  * If RESEND_API_KEY is not set, emails are skipped (no error thrown).
  *
- * sendApplicationStatusUpdate() is the only function in this module
- * that emails the APPLICANT (not the admin). It fires when an admin
- * moves an application to a status the applicant should know about.
+ * notifyApplicantOnStatusChange() is the only function in this module
+ * that emails the APPLICANT (not the admin). It looks up the
+ * email_templates row by status (e.g. status='Accepted' →
+ * slug='status.accepted'), renders with the renderer, and sends.
+ * Templates are editable from the admin UI.
  */
 
 import { Resend } from 'resend';
+import { getSupabaseServer } from '@/lib/supabase-server';
+import { renderTemplate } from '@/lib/email/renderer';
 
 function isEmailConfigured(): boolean {
   return Boolean(process.env.RESEND_API_KEY && process.env.ADMIN_EMAIL);
@@ -294,48 +298,25 @@ export async function sendChatLeadNotification(params: {
 // Applicant-facing emails
 // ============================================================================
 //
-// notifyApplicantOnStatusChange() is a passive helper that picks the right
-// status template based on the application's new status. It's called from
-// the admin PATCH /api/admin/applications/[id] route after the row update
-// commits.
+// notifyApplicantOnStatusChange() reads the email_templates row by
+// slug='status.<lowercase_status>' (e.g. 'status.accepted') and
+// renders it with the context. Templates are editable from the
+// admin UI. Slugs we look up:
 //
-// We deliberately do NOT email on every status change — only on the ones
-// the applicant should know about: 'Submitted' (we got it), 'Under Review'
-// (we're looking), 'Documents Requested' (you owe us), 'Decision Made',
-// 'Accepted', 'Rejected'. Drafts and Withdrawn are admin-internal.
+//   status.submitted, status.under_review, status.documents_requested,
+//   status.decision_made, status.accepted, status.rejected
+//
+// We deliberately do NOT email on every status change — Drafts and
+// Withdrawn are admin-internal and have no email template.
 // ============================================================================
 
-const APPLICANT_STATUS_EMAILS: Record<string, { subject: string; headline: string; tone: string }> = {
-  Submitted: {
-    subject: 'We received your SICA application',
-    headline: 'Your application is in',
-    tone: 'received',
-  },
-  'Under Review': {
-    subject: 'Your SICA application is being reviewed',
-    headline: 'We are reviewing your application',
-    tone: 'in_progress',
-  },
-  'Documents Requested': {
-    subject: 'SICA needs more documents from you',
-    headline: 'Additional documents needed',
-    tone: 'action_required',
-  },
-  'Decision Made': {
-    subject: 'A decision has been made on your SICA application',
-    headline: 'A decision has been made',
-    tone: 'decision_made',
-  },
-  Accepted: {
-    subject: '🎉 Congratulations — your SICA application was accepted!',
-    headline: 'Welcome to China!',
-    tone: 'accepted',
-  },
-  Rejected: {
-    subject: 'Update on your SICA application',
-    headline: 'Update on your application',
-    tone: 'rejected',
-  },
+const STATUS_TO_TEMPLATE_SLUG: Record<string, string> = {
+  Submitted: 'status.submitted',
+  'Under Review': 'status.under_review',
+  'Documents Requested': 'status.documents_requested',
+  'Decision Made': 'status.decision_made',
+  Accepted: 'status.accepted',
+  Rejected: 'status.rejected',
 };
 
 export interface ApplicantEmailParams {
@@ -351,110 +332,110 @@ export interface ApplicantEmailParams {
 }
 
 /**
- * Send a status-update email to the applicant. Skips silently when:
- *  - Resend is not configured
- *  - newStatus is not in APPLICANT_STATUS_EMAILS
- *  - toEmail is empty/null
+ * Send a status-update email to the applicant. Looks up the
+ * template by slug, renders it, sends via Resend.
  *
- * Returns true on send, false on skip. Never throws — callers shouldn't
- * let email failure block a status update.
+ * Skips silently when:
+ *  - Resend is not configured
+ *  - newStatus doesn't map to a template slug
+ *  - toEmail is empty/null
+ *  - template is_active = false
+ *  - template row is missing (admin deleted it)
+ *
+ * Returns true on send, false on skip. Never throws — callers
+ * shouldn't let email failure block a status update.
  */
 export async function notifyApplicantOnStatusChange(
   params: ApplicantEmailParams,
 ): Promise<boolean> {
-  const tpl = APPLICANT_STATUS_EMAILS[params.newStatus];
-  if (!tpl) return false;
+  const slug = STATUS_TO_TEMPLATE_SLUG[params.newStatus];
+  if (!slug) return false;
   if (!isEmailConfigured()) return false;
   if (!params.toEmail) return false;
 
-  const resend = getResend()!;
-  const firstName = (params.applicantName || '').split(' ')[0] || 'there';
+  const supabase = getSupabaseServer();
+  if (!supabase) return false;
 
+  // Look up the template. RLS would normally hide it from non-admins,
+  // but service-role bypasses RLS — so the cron-like path here works.
+  const { data: tpl, error: tplErr } = await supabase
+    .from('email_templates')
+    .select('id, subject, body_html, body_text, variables, is_active')
+    .eq('slug', slug)
+    .maybeSingle();
+  if (tplErr) {
+    console.error('[email] template lookup failed', slug, tplErr);
+    return false;
+  }
+  if (!tpl) {
+    console.warn('[email] no template for slug', slug, '— admin may have deleted it');
+    return false;
+  }
+  if (!tpl.is_active) return false;
+
+  const firstName = (params.applicantName || '').split(' ')[0] || 'there';
   const programLine = [params.programName, params.degree, params.intake]
     .filter(Boolean)
     .join(' · ');
-  const universityLine = params.universityName || 'your chosen university';
+  const universityName = params.universityName || 'your chosen university';
 
-  const cta = params.newStatus === 'Documents Requested'
-    ? `<p style="margin:16px 0">Please reply to this email with the requested documents, or upload them at <a href="https://sica.com.cn/student/documents">your student portal</a>.</p>`
-    : params.newStatus === 'Accepted'
-      ? `<p style="margin:16px 0">Next steps will be sent in a follow-up email. If you have questions, reply to this email or message us on WhatsApp (+86 173 2576 4171).</p>`
-      : `<p style="margin:16px 0">If you have questions, reply to this email or message us on WhatsApp (+86 173 2576 4171).</p>`;
+  // Build the facts table for $FACTS$ macro
+  const facts: Array<{ key: string; value: string }> = [
+    { key: 'Application', value: params.applicationNumber || '' },
+    { key: 'University', value: universityName },
+  ];
+  if (programLine) facts.push({ key: 'Program', value: programLine });
+  facts.push({ key: 'New status', value: params.newStatus });
 
-  const extraHtml = params.extraNote
-    ? `<p style="background:#FAFAF8;padding:12px;border-left:3px solid #D4A853;margin:16px 0;font-size:14px;color:#444">${params.extraNote.replace(/</g, '&lt;')}</p>`
-    : '';
+  // Render
+  const rendered = renderTemplate({
+    subject: tpl.subject,
+    bodyHtml: tpl.body_html,
+    bodyText: tpl.body_text,
+    context: {
+      firstName,
+      universityName,
+      programName: params.programName,
+      programLine,
+      degree: params.degree,
+      intake: params.intake,
+      applicationNumber: params.applicationNumber,
+      newStatus: params.newStatus,
+      extraNote: params.extraNote,
+      facts,
+    },
+    allowedVariables: Array.isArray(tpl.variables) ? (tpl.variables as string[]) : undefined,
+  });
 
+  const resend = getResend()!;
   await resend.emails.send({
     from: FROM,
     to: params.toEmail,
     replyTo: process.env.ADMIN_EMAIL,
-    subject: tpl.subject,
-    html: `
-      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#1F2937">
-        <div style="background:#1B2A4A;color:#fff;padding:16px 20px;margin-bottom:20px">
-          <h1 style="margin:0;font-size:20px">${tpl.headline}</h1>
-        </div>
-        <p>Hi ${firstName},</p>
-        <p>${introFor(tpl.tone, { firstName, university: universityLine, program: programLine })}</p>
-        <table style="font-family:sans-serif;border-collapse:collapse;width:100%;margin:16px 0">
-          <tr><td style="padding:6px 12px;font-weight:bold;background:#f5f5f5;width:140px">Application</td><td style="padding:6px 12px">${params.applicationNumber ?? '—'}</td></tr>
-          <tr><td style="padding:6px 12px;font-weight:bold;background:#f5f5f5">University</td><td style="padding:6px 12px">${universityLine}</td></tr>
-          ${programLine ? `<tr><td style="padding:6px 12px;font-weight:bold;background:#f5f5f5">Program</td><td style="padding:6px 12px">${programLine}</td></tr>` : ''}
-          <tr><td style="padding:6px 12px;font-weight:bold;background:#f5f5f5">New status</td><td style="padding:6px 12px"><strong>${params.newStatus}</strong></td></tr>
-        </table>
-        ${extraHtml}
-        ${cta}
-        <p style="margin-top:24px">— The SICA Team<br><span style="color:#888;font-size:12px">Study in China Academy · Guangzhou, China</span></p>
-        <hr style="border:none;border-top:1px solid #eee;margin-top:24px">
-        <p style="font-size:11px;color:#999">You are receiving this email because you submitted an application through SICA. <a href="https://sica.com.cn/student/settings" style="color:#999">Manage email preferences</a></p>
-      </div>
-    `,
-    text: [
-      tpl.headline,
-      '',
-      `Hi ${firstName},`,
-      '',
-      introFor(tpl.tone, { firstName, university: universityLine, program: programLine }),
-      '',
-      `Application: ${params.applicationNumber ?? '—'}`,
-      `University: ${universityLine}`,
-      programLine ? `Program: ${programLine}` : '',
-      `New status: ${params.newStatus}`,
-      '',
-      params.extraNote || '',
-      '',
-      params.newStatus === 'Documents Requested'
-        ? 'Please reply to this email with the requested documents, or upload them at https://sica.com.cn/student/documents'
-        : 'If you have questions, reply to this email or message us on WhatsApp (+86 173 2576 4171).',
-      '',
-      '— The SICA Team',
-      'Study in China Academy · Guangzhou, China',
-    ]
-      .filter(Boolean)
-      .join('\n'),
+    subject: rendered.subject,
+    html: wrapForApplicant(rendered.html),
+    text: rendered.text,
   });
   return true;
 }
 
-function introFor(
-  tone: string,
-  ctx: { firstName: string; university: string; program: string },
-): string {
-  switch (tone) {
-    case 'received':
-      return `Thanks for submitting your application to ${ctx.university}. Our admissions team has received it and will start the review shortly.`;
-    case 'in_progress':
-      return `Our admissions team is now reviewing your application to ${ctx.university}. We will be in touch as soon as a decision is made (usually within 5–10 business days).`;
-    case 'action_required':
-      return `Our admissions team has reviewed your application to ${ctx.university} and needs a few more documents from you before we can proceed.`;
-    case 'decision_made':
-      return `Our admissions team has reached a decision on your application to ${ctx.university}. Please log in to your student portal for the full decision letter.`;
-    case 'accepted':
-      return `Congratulations! You have been accepted to ${ctx.university}. ${ctx.program ? `We look forward to welcoming you into the ${ctx.program} program.` : ''} This is a huge milestone — well done.`;
-    case 'rejected':
-      return `Thank you for your patience while we reviewed your application to ${ctx.university}. Unfortunately we are unable to offer you a place this cycle. This is by no means the end of your study-in-China journey — we would be happy to discuss alternative universities or programs.`;
-    default:
-      return `Your application status with ${ctx.university} has been updated.`;
-  }
+/**
+ * Wraps the rendered inner body with the SICA applicant shell —
+ * navy header band + footer. The template body supplies the
+ * headline copy; this just gives the email consistent visual
+ * structure across all 6 status templates.
+ */
+function wrapForApplicant(innerHtml: string): string {
+  return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#FAFAF8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1F2937">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FAFAF8;padding:24px 0"><tr><td align="center">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border:1px solid #E5E7EB">
+<tr><td style="background:#1B2A4A;padding:16px 20px;color:#fff;font-weight:800;font-size:18px;letter-spacing:0.05em">SICA</td></tr>
+<tr><td style="padding:32px;font-size:15px;line-height:1.6;color:#374151">${innerHtml}</td></tr>
+<tr><td style="padding:16px 32px;background:#FAFAF8;border-top:1px solid #E5E7EB;font-size:12px;color:#6B7280">
+<p style="margin:0 0 4px 0">SICA · Guangzhou, China · <a href="mailto:mlsjahid@qq.com" style="color:#9B1B30;text-decoration:none">mlsjahid@qq.com</a></p>
+<p style="margin:0">You're receiving this because you submitted an application through SICA. <a href="https://sica.com.cn/student/settings" style="color:#6B7280">Manage email preferences</a></p>
+</td></tr></table></td></tr></table>
+</body></html>`;
 }

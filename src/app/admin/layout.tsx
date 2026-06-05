@@ -20,6 +20,7 @@ import {
   ClipboardList,
   DollarSign,
   Newspaper,
+  Mail,
 } from 'lucide-react';
 import Link from 'next/link';
 import { SicaLogo } from '@/components/sica-logo';
@@ -30,6 +31,7 @@ const navItems = [
   { href: '/admin/programs', label: 'Programs', labelCn: '项目', icon: BookOpen },
   { href: '/admin/scholarships', label: 'Scholarships', labelCn: '奖学金', icon: Award },
   { href: '/admin/news', label: 'News', labelCn: '新闻', icon: Newspaper },
+  { href: '/admin/emails', label: 'Emails', labelCn: '邮件', icon: Mail },
   { href: '/admin/leads', label: 'Leads', labelCn: '线索', icon: Users },
   { href: '/admin/students', label: 'Students', labelCn: '学生', icon: UserCheck },
   { href: '/admin/fees', label: 'Fees', labelCn: '费用', icon: DollarSign },

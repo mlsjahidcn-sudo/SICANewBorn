@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { unsubscribe } from '@/lib/email/drip/scheduler';
-import { decodeUnsubToken } from '@/lib/email/drip/templates';
+import { decodeUnsubToken } from '@/lib/email/drip/tokens';
 
 export const dynamic = 'force-dynamic';
 

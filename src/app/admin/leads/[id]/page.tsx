@@ -37,6 +37,8 @@ import {
   User as UserIcon,
   History,
   PhoneCall,
+  Send,
+  X,
 } from 'lucide-react';
 import { apiFetchJson, ApiError } from '@/lib/api-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -62,6 +64,15 @@ interface HistoryRow {
   to_value: string | null;
   note: string | null;
   created_at: string;
+}
+
+interface EmailTemplate {
+  id: string;
+  slug: string;
+  name: string;
+  category: 'drip' | 'status' | 'oneoff';
+  subject: string;
+  description: string | null;
 }
 
 interface LeadDetail {
@@ -118,6 +129,7 @@ export default function LeadDetailPage() {
   const [lead, setLead] = useState<Record<string, unknown> | null>(null);
   const [history, setHistory] = useState<HistoryRow[]>([]);
   const [team, setTeam] = useState<TeamMember[]>([]);
+  const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -129,14 +141,25 @@ export default function LeadDetailPage() {
   const [assigneeVal, setAssigneeVal] = useState<string>(''); // 'unassigned' | user_id
   const [contactChannel, setContactChannel] = useState<string>('whatsapp');
 
+  // Email modal (Phase 2.6)
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [emailTemplateId, setEmailTemplateId] = useState<string>('');
+  const [emailOverrideSubject, setEmailOverrideSubject] = useState<string>('');
+  const [emailOverrideHtml, setEmailOverrideHtml] = useState<string>('');
+  const [emailOverrideText, setEmailOverrideText] = useState<string>('');
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [emailSendTest, setEmailSendTest] = useState(false);
+
   // Load lead + history + team in parallel
   const load = useCallback(async () => {
     setIsLoading(true);
     setLoadError(null);
     try {
-      const [leadRes, teamRes] = await Promise.all([
+      const [leadRes, teamRes, tplRes] = await Promise.all([
         apiFetchJson<LeadDetail>(`/api/admin/leads/${id}?type=${type}`),
         apiFetchJson<{ team: TeamMember[] }>(`/api/admin/team`),
+        apiFetchJson<{ templates: EmailTemplate[] }>(`/api/admin/emails/templates?category=oneoff`),
       ]);
       setLead(leadRes.lead);
       setHistory(leadRes.history || []);
@@ -146,6 +169,8 @@ export default function LeadDetailPage() {
         leadRes.lead.assigned_to ? String(leadRes.lead.assigned_to) : 'unassigned',
       );
       setTeam(teamRes.team || []);
+      // Only show active oneoff templates in the picker
+      setTemplates((tplRes.templates || []).filter((t) => t.category === 'oneoff'));
     } catch (err) {
       setLoadError(err instanceof ApiError ? err.message : 'Failed to load lead');
     } finally {
@@ -211,6 +236,70 @@ export default function LeadDetailPage() {
       setLoadError(err instanceof ApiError ? err.message : 'Failed to record contact');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const openEmailModal = () => {
+    setEmailError(null);
+    setEmailTemplateId(templates[0]?.id || '');
+    setEmailOverrideSubject('');
+    setEmailOverrideHtml('');
+    setEmailOverrideText('');
+    setEmailSendTest(false);
+    setEmailModalOpen(true);
+  };
+
+  const sendEmail = async () => {
+    if (!emailTemplateId && !emailOverrideSubject) {
+      setEmailError('Pick a template or write a custom subject + body');
+      return;
+    }
+    if (!lead) return;
+    setEmailSending(true);
+    setEmailError(null);
+    try {
+      const body: Record<string, unknown> = {
+        send_test: emailSendTest,
+        variables: {
+          firstName:
+            pickString(lead, ['name'])?.split(' ')[0] ||
+            pickString(lead, ['first_name']) ||
+            'there',
+          country: pickString(lead, ['country']) || '',
+          intendedMajor:
+            pickString(lead, ['intended_major']) ||
+            pickString(lead, ['interested_program']) ||
+            '',
+        },
+      };
+      if (emailTemplateId) {
+        body.template_id = emailTemplateId;
+      } else {
+        body.subject = emailOverrideSubject;
+        body.body_html = emailOverrideHtml;
+        body.body_text = emailOverrideText;
+      }
+      const res = await apiFetchJson<{ rendered: { subject: string } }>(
+        `/api/admin/leads/${id}/send-email?type=${type}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        },
+      );
+      setSaveSuccess(
+        emailSendTest
+          ? `Test sent: "${res.rendered.subject}"`
+          : `Email sent: "${res.rendered.subject}"`,
+      );
+      setTimeout(() => setSaveSuccess(null), 3000);
+      setEmailModalOpen(false);
+      // Refresh history to show the new lead_history row
+      load();
+    } catch (err) {
+      setEmailError(err instanceof ApiError ? err.message : 'Send failed');
+    } finally {
+      setEmailSending(false);
     }
   };
 
@@ -513,6 +602,27 @@ export default function LeadDetailPage() {
 
           <Card>
             <CardHeader>
+              <CardTitle className="text-base">Send email</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs text-gray-500 mb-3">
+                Pick a one-off template or write a custom message. The lead's first name,
+                country, and intended program are auto-injected as variables.
+              </p>
+              <Button
+                onClick={openEmailModal}
+                variant="outline"
+                className="w-full"
+                disabled={!pickString(lead, ['email'])}
+              >
+                <Send className="h-4 w-4 mr-2" />
+                {pickString(lead, ['email']) ? 'Compose email' : 'No email on file'}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 <History className="h-4 w-4" /> Timeline
               </CardTitle>
@@ -590,6 +700,139 @@ export default function LeadDetailPage() {
           </Card>
         </div>
       </div>
+
+      {/* Email modal (Phase 2.6) */}
+      {emailModalOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <Card className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <CardHeader className="flex flex-row items-start justify-between space-y-0">
+              <div>
+                <CardTitle>Send email to {displayName}</CardTitle>
+                <p className="text-sm text-gray-500 mt-1">
+                  To: {pickString(lead, ['email']) || '—'}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setEmailModalOpen(false)}
+                disabled={emailSending}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {emailError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 text-sm flex items-start gap-2">
+                  <AlertCircle size={14} className="mt-0.5 flex-shrink-0" />
+                  <span>{emailError}</span>
+                </div>
+              )}
+
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-1">
+                  Template
+                </label>
+                <Select
+                  value={emailTemplateId}
+                  onValueChange={setEmailTemplateId}
+                  disabled={emailSending}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pick a one-off template…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {templates.length === 0 && (
+                      <SelectItem value="__none__" disabled>
+                        No one-off templates yet — create one in /admin/emails
+                      </SelectItem>
+                    )}
+                    {templates.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.name} <span className="text-gray-400 ml-1">— {t.slug}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Variables: <code className="bg-gray-100 px-1">firstName</code>,{' '}
+                  <code className="bg-gray-100 px-1">country</code>,{' '}
+                  <code className="bg-gray-100 px-1">intendedMajor</code>{' '}
+                  (auto-filled from the lead row)
+                </p>
+              </div>
+
+              <details className="border border-gray-200 p-3">
+                <summary className="text-sm text-gray-700 cursor-pointer">
+                  Custom override (subject + body)
+                </summary>
+                <div className="mt-3 space-y-3">
+                  <div>
+                    <label className="text-xs text-gray-600 block mb-1">Subject</label>
+                    <Input
+                      value={emailOverrideSubject}
+                      onChange={(e) => setEmailOverrideSubject(e.target.value)}
+                      placeholder="Leave blank to use the template subject"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-600 block mb-1">Body (HTML)</label>
+                    <textarea
+                      value={emailOverrideHtml}
+                      onChange={(e) => setEmailOverrideHtml(e.target.value)}
+                      rows={6}
+                      className="w-full border border-gray-300 px-2 py-1 text-xs font-mono"
+                      placeholder="<p>Hi {{firstName}}, ...</p>"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-600 block mb-1">Body (text)</label>
+                    <textarea
+                      value={emailOverrideText}
+                      onChange={(e) => setEmailOverrideText(e.target.value)}
+                      rows={3}
+                      className="w-full border border-gray-300 px-2 py-1 text-xs font-mono"
+                      placeholder="Hi {{firstName}}, ..."
+                    />
+                  </div>
+                </div>
+              </details>
+
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={emailSendTest}
+                  onChange={(e) => setEmailSendTest(e.target.checked)}
+                />
+                <span>
+                  <span className="font-medium">Send to me (test)</span>
+                  <span className="block text-xs text-gray-500">
+                    Redirects to your admin email instead of the lead.
+                  </span>
+                </span>
+              </label>
+
+              <div className="flex justify-end gap-2 pt-2 border-t">
+                <Button
+                  variant="ghost"
+                  onClick={() => setEmailModalOpen(false)}
+                  disabled={emailSending}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={sendEmail}
+                  disabled={emailSending || (!emailTemplateId && !emailOverrideSubject)}
+                  className="bg-[#1B2A4A] hover:bg-[#152033]"
+                >
+                  {emailSending ? <Spinner size="xs" /> : <Send className="h-4 w-4 mr-2" />}
+                  {emailSendTest ? 'Send test' : 'Send email'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
