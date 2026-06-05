@@ -6,6 +6,7 @@ import { Footer } from '@/components/footer';
 import { Chatbot } from '@/components/ai/Chatbot';
 import { StickyContact } from '@/components/sticky-contact';
 import { WhatsAppFloat } from '@/components/whatsapp-float';
+import { ExitIntentPopup } from '@/components/exit-intent-popup';
 import { usePathname } from 'next/navigation';
 import type { Locale } from '@/lib/i18n-translations';
 
@@ -34,6 +35,7 @@ export function ClientLayout({
         <Chatbot />
         <WhatsAppFloat />
         <StickyContact />
+        <ExitIntentPopup />
       </div>
     </I18nProvider>
   );
