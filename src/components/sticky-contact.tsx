@@ -55,12 +55,13 @@ export function StickyContact() {
     <>
       <div
         ref={containerRef}
-        // Sits on the bottom-LEFT to avoid overlapping the AI Chatbot
-        // (which lives on the bottom-right at z-50). With the AI chat
-        // as the primary "always-on" interaction, the human contact
-        // options (WeChat / WhatsApp / email) get the secondary
-        // position. Both popovers open upward and never collide.
-        className="fixed bottom-5 left-5 z-40 sm:bottom-6 sm:left-6"
+        // Sits on the bottom-LEFT, ABOVE the WhatsApp direct-link
+        // button (which lives at bottom-4). The WhatsApp button is
+        // the primary "tap to chat" action; this widget is the
+        // secondary "more contact options" entry point (WeChat QR
+        // for Chinese users, email, hours). Popover opens upward
+        // and never collides with the WhatsApp button below.
+        className="fixed bottom-24 left-4 z-40 sm:bottom-24 sm:left-6"
       >
         {/* Popover — on desktop: anchored to the button, opens above.
             On mobile: becomes a full-width bottom sheet for thumb
