@@ -15,15 +15,25 @@ import { apiFetchJson } from '@/lib/api-client';
 import {
   PARTNER_APPLICATION_STATUSES,
   PARTNER_APPLICATION_DECISIONS,
+  PARTNER_APPLICATION_PRIORITIES,
+  PARTNER_APPLICATION_DEGREES,
   PartnerApplicationStatus,
   PartnerApplicationDecision,
+  PartnerApplicationPriority,
+  PartnerApplicationDegree,
 } from '@/lib/partner-application-mapper';
 import type { PartnerStudent } from '@/lib/partner-student-mapper';
 
 interface FormData {
   studentName: string;
+  studentEmail: string;
+  studentPhone: string;
   university: string;
   program: string;
+  intake: string;
+  degree: '' | PartnerApplicationDegree;
+  nationality: string;
+  priority: PartnerApplicationPriority;
   status: PartnerApplicationStatus;
   decision: PartnerApplicationDecision;
   notes: string;
@@ -31,8 +41,14 @@ interface FormData {
 
 const INITIAL: FormData = {
   studentName: '',
+  studentEmail: '',
+  studentPhone: '',
   university: '',
   program: '',
+  intake: '',
+  degree: '',
+  nationality: '',
+  priority: 'Normal',
   status: 'Draft',
   decision: 'Pending',
   notes: '',
@@ -73,7 +89,16 @@ export default function PartnerNewApplicationPage() {
 
   const handleStudentPick = (studentId: string) => {
     const s = students.find((x) => x.id === studentId);
-    if (s) setFormData((prev) => ({ ...prev, studentName: s.studentName }));
+    if (!s) return;
+    setFormData((prev) => ({
+      ...prev,
+      studentName: s.studentName,
+      // Auto-fill contact + context fields if blank, but don't clobber
+      // anything the partner has already typed.
+      studentEmail: prev.studentEmail || s.studentEmail || '',
+      studentPhone: prev.studentPhone || s.studentPhone || '',
+      nationality: prev.nationality || s.nationality || '',
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -97,8 +122,14 @@ export default function PartnerNewApplicationPage() {
     try {
       const payload: Record<string, unknown> = {
         studentName: formData.studentName.trim(),
+        studentEmail: formData.studentEmail.trim() || undefined,
+        studentPhone: formData.studentPhone.trim() || undefined,
         university: formData.university.trim(),
         program: formData.program.trim(),
+        intake: formData.intake.trim() || undefined,
+        degree: formData.degree || undefined,
+        nationality: formData.nationality.trim() || undefined,
+        priority: formData.priority,
         status: formData.status,
         decision: formData.decision,
         notes: formData.notes.trim() || undefined,
@@ -178,6 +209,47 @@ export default function PartnerNewApplicationPage() {
                   />
                 </div>
                 <div>
+                  <Label htmlFor="studentEmail" className="text-[#1B2A4A] mb-2 block">
+                    Student Email
+                  </Label>
+                  <Input
+                    id="studentEmail"
+                    name="studentEmail"
+                    type="email"
+                    value={formData.studentEmail}
+                    onChange={handleInputChange}
+                    className="rounded-none"
+                    placeholder="student@example.com"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="studentPhone" className="text-[#1B2A4A] mb-2 block">
+                    Student Phone
+                  </Label>
+                  <Input
+                    id="studentPhone"
+                    name="studentPhone"
+                    type="tel"
+                    value={formData.studentPhone}
+                    onChange={handleInputChange}
+                    className="rounded-none"
+                    placeholder="+86 138 0000 0000"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="nationality" className="text-[#1B2A4A] mb-2 block">
+                    Nationality
+                  </Label>
+                  <Input
+                    id="nationality"
+                    name="nationality"
+                    value={formData.nationality}
+                    onChange={handleInputChange}
+                    className="rounded-none"
+                    placeholder="e.g., Nigeria, Brazil, Vietnam"
+                  />
+                </div>
+                <div>
                   <Label htmlFor="university" className="text-[#1B2A4A] mb-2 block">
                     University <span className="text-red-600">*</span>
                   </Label>
@@ -204,6 +276,57 @@ export default function PartnerNewApplicationPage() {
                     className="rounded-none"
                     placeholder="e.g., Computer Science (Master)"
                   />
+                </div>
+                <div>
+                  <Label htmlFor="intake" className="text-[#1B2A4A] mb-2 block">Intake</Label>
+                  <Input
+                    id="intake"
+                    name="intake"
+                    value={formData.intake}
+                    onChange={handleInputChange}
+                    className="rounded-none"
+                    placeholder="e.g., Fall 2026"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="degree" className="text-[#1B2A4A] mb-2 block">Degree</Label>
+                  <Select
+                    value={formData.degree || 'none'}
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        degree: value === 'none' ? '' : (value as PartnerApplicationDegree),
+                      }))
+                    }
+                  >
+                    <SelectTrigger id="degree" className="rounded-none">
+                      <SelectValue placeholder="(unspecified)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">(unspecified)</SelectItem>
+                      {PARTNER_APPLICATION_DEGREES.map((d) => (
+                        <SelectItem key={d} value={d}>{d}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="priority" className="text-[#1B2A4A] mb-2 block">Priority</Label>
+                  <Select
+                    value={formData.priority}
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({ ...prev, priority: value as PartnerApplicationPriority }))
+                    }
+                  >
+                    <SelectTrigger id="priority" className="rounded-none">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PARTNER_APPLICATION_PRIORITIES.map((p) => (
+                        <SelectItem key={p} value={p}>{p}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label htmlFor="status" className="text-[#1B2A4A] mb-2 block">Status</Label>

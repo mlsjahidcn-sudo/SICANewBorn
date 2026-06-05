@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, Eye, Edit, MoreHorizontal, Trash2, X, Download } from 'lucide-react';
+import { Plus, Search, Eye, Edit, MoreHorizontal, Trash2, X, Download, Flag, Mail } from 'lucide-react';
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,11 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { apiFetchJson } from '@/lib/api-client';
-import type { PartnerApplication, PartnerApplicationStatus } from '@/lib/partner-application-mapper';
+import type {
+  PartnerApplication,
+  PartnerApplicationStatus,
+  PartnerApplicationPriority,
+} from '@/lib/partner-application-mapper';
 
 const STATUS_VARIANTS: Record<PartnerApplicationStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   'Draft': 'secondary',
@@ -20,6 +24,13 @@ const STATUS_VARIANTS: Record<PartnerApplicationStatus, 'default' | 'secondary' 
   'Accepted': 'default',
   'Rejected': 'destructive',
   'Withdrawn': 'outline',
+};
+
+const PRIORITY_VARIANTS: Record<PartnerApplicationPriority, string> = {
+  Low: 'bg-gray-100 text-gray-600',
+  Normal: 'bg-blue-50 text-blue-700',
+  High: 'bg-orange-100 text-orange-800',
+  Urgent: 'bg-[#9B1B30] text-white',
 };
 
 export default function PartnerApplicationsPage() {
@@ -34,7 +45,9 @@ export default function PartnerApplicationsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [stats, setStats] = useState({ inReview: 0, accepted: 0, submitted: 0 });
+  const [isExporting, setIsExporting] = useState(false);
+  const [stats, setStats] = useState({ inReview: 0, accepted: 0, submitted: 0, urgent: 0 });
+  const [priorityFilter, setPriorityFilter] = useState<string>('all');
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 250);
@@ -48,6 +61,7 @@ export default function PartnerApplicationsPage() {
       const params = new URLSearchParams();
       if (debouncedSearch) params.set('search', debouncedSearch);
       if (statusFilter !== 'all') params.set('status', statusFilter);
+      if (priorityFilter !== 'all') params.set('priority', priorityFilter);
       params.set('limit', '50');
       const res = await apiFetchJson<{ applications: PartnerApplication[]; total: number }>(
         `/api/partner/applications${params.toString() ? `?${params}` : ''}`,
@@ -61,7 +75,7 @@ export default function PartnerApplicationsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [debouncedSearch, statusFilter]);
+  }, [debouncedSearch, statusFilter, priorityFilter]);
 
   useEffect(() => {
     void fetchApps();
@@ -81,6 +95,7 @@ export default function PartnerApplicationsPage() {
           inReview: apps.filter((a) => a.status === 'In Review' || a.status === 'Submitted').length,
           accepted: apps.filter((a) => a.status === 'Accepted').length,
           submitted: apps.filter((a) => a.status === 'Submitted').length,
+          urgent: apps.filter((a) => a.priority === 'High' || a.priority === 'Urgent').length,
         });
       } catch {
         // ignore — non-fatal
@@ -94,6 +109,44 @@ export default function PartnerApplicationsPage() {
   const handleDeleteApp = (id: string) => {
     setAppToDelete(id);
     setShowDeleteModal(true);
+  };
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    setError(null);
+    try {
+      // Fetch a wide filter (no pagination cap) so the partner gets
+      // everything. The export endpoint enforces its own auth + scope.
+      const params = new URLSearchParams();
+      if (debouncedSearch) params.set('search', debouncedSearch);
+      if (statusFilter !== 'all') params.set('status', statusFilter);
+      if (priorityFilter !== 'all') params.set('priority', priorityFilter);
+      const res = await fetch(
+        `/api/partner/applications/export${params.toString() ? `?${params}` : ''}`,
+        { headers: { Accept: 'text/csv' } },
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Export failed (HTTP ${res.status})`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      // Pull a sensible filename from the Content-Disposition header
+      // if the server set one, otherwise fall back to a default.
+      const cd = res.headers.get('Content-Disposition') || '';
+      const match = /filename="?([^"]+)"?/i.exec(cd);
+      a.download = match?.[1] || `sica-partner-applications-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Export failed.');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const confirmDelete = async () => {
@@ -166,9 +219,19 @@ export default function PartnerApplicationsPage() {
             <p className="text-[#4B5563] mt-1">Manage student university applications</p>
           </div>
           <div className="flex gap-3">
-            <Button variant="outline" className="rounded-none" disabled>
-              <Download className="mr-2 h-4 w-4" />
-              Export
+            <Button
+              variant="outline"
+              className="rounded-none"
+              onClick={handleExport}
+              disabled={isExporting || applications.length === 0}
+              title={
+                applications.length === 0
+                  ? 'No applications to export'
+                  : `Download ${applications.length} row(s) as CSV`
+              }
+            >
+              <Download className={`mr-2 h-4 w-4 ${isExporting ? 'animate-spin' : ''}`} />
+              {isExporting ? 'Exporting…' : 'Export'}
             </Button>
             <Button asChild className="rounded-none bg-[#9B1B30] hover:bg-[#7a1626]">
               <Link href="/partner/applications/new" className="flex items-center">
@@ -201,11 +264,13 @@ export default function PartnerApplicationsPage() {
         </Card>
         <Card className="rounded-none">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-[#4B5563]">Submitted</CardTitle>
+            <CardTitle className="text-sm font-medium text-[#4B5563] flex items-center gap-1">
+              <Flag className="w-3 h-3" /> Urgent / High
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-[#1B2A4A]">{stats.submitted}</div>
-            <p className="text-sm text-[#4B5563] mt-1">Awaiting review</p>
+            <div className="text-2xl font-bold text-[#9B1B30]">{stats.urgent}</div>
+            <p className="text-sm text-[#4B5563] mt-1">Flagged for priority handling</p>
           </CardContent>
         </Card>
         <Card className="rounded-none">
@@ -253,6 +318,18 @@ export default function PartnerApplicationsPage() {
               <SelectItem value="Withdrawn">Withdrawn</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+            <SelectTrigger className="w-40 rounded-none">
+              <SelectValue placeholder="All Priority" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Priority</SelectItem>
+              <SelectItem value="Urgent">Urgent</SelectItem>
+              <SelectItem value="High">High</SelectItem>
+              <SelectItem value="Normal">Normal</SelectItem>
+              <SelectItem value="Low">Low</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -266,6 +343,7 @@ export default function PartnerApplicationsPage() {
                   <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">University</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">Program</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">Status</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">Priority</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">Decision</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">Submitted by</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">Submitted</th>
@@ -276,16 +354,48 @@ export default function PartnerApplicationsPage() {
                 {applications.map((app) => (
                   <tr key={app.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
-                      <Link
-                        href={`/partner/applications/${app.id}`}
-                        className="font-medium text-[#1B2A4A] hover:underline"
-                      >
-                        {app.studentName}
-                      </Link>
+                      <div className="flex flex-col">
+                        <Link
+                          href={`/partner/applications/${app.id}`}
+                          className="font-medium text-[#1B2A4A] hover:underline"
+                        >
+                          {app.studentName}
+                        </Link>
+                        <div className="flex flex-col gap-0.5 mt-1 text-xs text-[#4B5563]">
+                          {app.studentEmail && (
+                            <a
+                              href={`mailto:${app.studentEmail}`}
+                              className="flex items-center gap-1 hover:text-[#9B1B30]"
+                            >
+                              <Mail className="w-3 h-3" />
+                              <span className="truncate max-w-[180px]">{app.studentEmail}</span>
+                            </a>
+                          )}
+                          {(app.intake || app.degree) && (
+                            <span className="text-gray-500">
+                              {app.intake || '—'}{app.degree ? ` · ${app.degree}` : ''}
+                            </span>
+                          )}
+                          {app.applicationNumber && (
+                            <span className="font-mono text-gray-400">{app.applicationNumber}</span>
+                          )}
+                        </div>
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-[#1B2A4A]">{app.university}</td>
                     <td className="px-6 py-4 text-[#4B5563]">{app.program}</td>
                     <td className="px-6 py-4">{getStatusBadge(app.status)}</td>
+                    <td className="px-6 py-4">
+                      {app.priority && app.priority !== 'Normal' ? (
+                        <span
+                          className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-none ${PRIORITY_VARIANTS[app.priority]}`}
+                        >
+                          <Flag className="w-3 h-3" /> {app.priority}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-400">Normal</span>
+                      )}
+                    </td>
                     <td className="px-6 py-4 text-[#4B5563]">{app.decision}</td>
                     <td className="px-6 py-4 text-[#4B5563] text-sm">
                       {app.createdByEmail || '—'}

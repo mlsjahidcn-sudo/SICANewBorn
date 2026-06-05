@@ -73,7 +73,15 @@ export async function PATCH(
       );
     }
 
-    const updates = mapPartnerApplicationToDb(body);
+    let updates: Record<string, unknown>;
+    try {
+      updates = mapPartnerApplicationToDb(body);
+    } catch (e) {
+      return NextResponse.json(
+        { error: e instanceof Error ? e.message : 'Invalid field value' },
+        { status: 400 },
+      );
+    }
     delete (updates as Record<string, unknown>).partner_id;
     delete (updates as Record<string, unknown>).id;
 

@@ -15,19 +15,31 @@ import { apiFetchJson } from '@/lib/api-client';
 import type {
   PartnerApplicationStatus,
   PartnerApplicationDecision,
+  PartnerApplicationPriority,
+  PartnerApplicationDegree,
 } from '@/lib/partner-application-mapper';
 import {
   PARTNER_APPLICATION_STATUSES,
   PARTNER_APPLICATION_DECISIONS,
+  PARTNER_APPLICATION_PRIORITIES,
+  PARTNER_APPLICATION_DEGREES,
 } from '@/lib/partner-application-mapper';
 
 interface FormData {
   studentName: string;
+  studentEmail: string;
+  studentPhone: string;
   university: string;
   program: string;
+  intake: string;
+  degree: '' | PartnerApplicationDegree;
+  nationality: string;
+  priority: PartnerApplicationPriority;
   status: PartnerApplicationStatus;
   decision: PartnerApplicationDecision;
   notes: string;
+  applicationNumber: string;
+  submittedAt: string | null;
 }
 
 export default function PartnerEditApplicationPage() {
@@ -52,11 +64,19 @@ export default function PartnerEditApplicationPage() {
       const a = res.application;
       setFormData({
         studentName: a.studentName,
+        studentEmail: a.studentEmail ?? '',
+        studentPhone: a.studentPhone ?? '',
         university: a.university,
         program: a.program,
+        intake: a.intake ?? '',
+        degree: (a.degree as PartnerApplicationDegree | null) || '',
+        nationality: a.nationality ?? '',
+        priority: a.priority,
         status: a.status,
         decision: a.decision,
         notes: a.notes ?? '',
+        applicationNumber: a.applicationNumber ?? '',
+        submittedAt: a.submittedAt ?? null,
       });
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : 'Failed to load application.');
@@ -94,21 +114,27 @@ export default function PartnerEditApplicationPage() {
     try {
       const payload: Record<string, unknown> = {
         studentName: formData.studentName.trim(),
+        studentEmail: formData.studentEmail.trim() || null,
+        studentPhone: formData.studentPhone.trim() || null,
         university: formData.university.trim(),
         program: formData.program.trim(),
+        intake: formData.intake.trim() || null,
+        degree: formData.degree || null,
+        nationality: formData.nationality.trim() || null,
+        priority: formData.priority,
         status: formData.status,
         decision: formData.decision,
         notes: formData.notes.trim() || null,
+        applicationNumber: formData.applicationNumber.trim() || null,
       };
       // Stamp submittedAt the first time status moves to Submitted/In Review
+      // and the row doesn't have one yet. The server keeps an existing
+      // timestamp — we just nudge it on the transition.
       if (
         (formData.status === 'Submitted' || formData.status === 'In Review') &&
-        !formData.notes.includes('__auto_submitted')
+        !formData.submittedAt
       ) {
-        // Only set if not already set; client doesn't have that info, so
-        // the server keeps submitted_at if it was already set, and sets
-        // it on the first status flip. The form-level "I just submitted"
-        // intent is best-effort here.
+        payload.submittedAt = new Date().toISOString();
       }
       await apiFetchJson(`/api/partner/applications/${applicationId}`, {
         method: 'PATCH',
@@ -185,6 +211,44 @@ export default function PartnerEditApplicationPage() {
                   />
                 </div>
                 <div>
+                  <Label htmlFor="studentEmail" className="text-[#1B2A4A] mb-2 block">
+                    Student Email
+                  </Label>
+                  <Input
+                    id="studentEmail"
+                    name="studentEmail"
+                    type="email"
+                    value={formData.studentEmail}
+                    onChange={handleInputChange}
+                    className="rounded-none"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="studentPhone" className="text-[#1B2A4A] mb-2 block">
+                    Student Phone
+                  </Label>
+                  <Input
+                    id="studentPhone"
+                    name="studentPhone"
+                    type="tel"
+                    value={formData.studentPhone}
+                    onChange={handleInputChange}
+                    className="rounded-none"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="nationality" className="text-[#1B2A4A] mb-2 block">
+                    Nationality
+                  </Label>
+                  <Input
+                    id="nationality"
+                    name="nationality"
+                    value={formData.nationality}
+                    onChange={handleInputChange}
+                    className="rounded-none"
+                  />
+                </div>
+                <div>
                   <Label htmlFor="university" className="text-[#1B2A4A] mb-2 block">
                     University <span className="text-red-600">*</span>
                   </Label>
@@ -209,6 +273,70 @@ export default function PartnerEditApplicationPage() {
                     required
                     className="rounded-none"
                   />
+                </div>
+                <div>
+                  <Label htmlFor="intake" className="text-[#1B2A4A] mb-2 block">Intake</Label>
+                  <Input
+                    id="intake"
+                    name="intake"
+                    value={formData.intake}
+                    onChange={handleInputChange}
+                    className="rounded-none"
+                    placeholder="e.g., Fall 2026"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="degree" className="text-[#1B2A4A] mb-2 block">Degree</Label>
+                  <Select
+                    value={formData.degree || 'none'}
+                    onValueChange={(value) =>
+                      setFormData((prev) => (prev ? {
+                        ...prev,
+                        degree: value === 'none' ? '' : (value as PartnerApplicationDegree),
+                      } : prev))
+                    }
+                  >
+                    <SelectTrigger id="degree" className="rounded-none">
+                      <SelectValue placeholder="(unspecified)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">(unspecified)</SelectItem>
+                      {PARTNER_APPLICATION_DEGREES.map((d) => (
+                        <SelectItem key={d} value={d}>{d}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="applicationNumber" className="text-[#1B2A4A] mb-2 block">
+                    Application #
+                  </Label>
+                  <Input
+                    id="applicationNumber"
+                    name="applicationNumber"
+                    value={formData.applicationNumber}
+                    onChange={handleInputChange}
+                    className="rounded-none font-mono"
+                    placeholder="auto-assigned on submit"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="priority" className="text-[#1B2A4A] mb-2 block">Priority</Label>
+                  <Select
+                    value={formData.priority}
+                    onValueChange={(value) =>
+                      setFormData((prev) => (prev ? { ...prev, priority: value as PartnerApplicationPriority } : prev))
+                    }
+                  >
+                    <SelectTrigger id="priority" className="rounded-none">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PARTNER_APPLICATION_PRIORITIES.map((p) => (
+                        <SelectItem key={p} value={p}>{p}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label htmlFor="status" className="text-[#1B2A4A] mb-2 block">Status</Label>

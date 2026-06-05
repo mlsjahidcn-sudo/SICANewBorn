@@ -39,6 +39,8 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search')?.trim() || '';
     const status = parsePartnerApplicationStatus(searchParams.get('status'));
     const decision = searchParams.get('decision')?.trim() || '';
+    const priority = searchParams.get('priority')?.trim() || '';
+    const validPriorities = ['Low', 'Normal', 'High', 'Urgent'];
     const sortRaw = searchParams.get('sort') || 'created_at';
     const orderRaw = searchParams.get('order') || 'desc';
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
@@ -60,6 +62,9 @@ export async function GET(request: NextRequest) {
 
     if (status) query = query.eq('status', status);
     if (decision) query = query.eq('decision', decision);
+    if (priority && validPriorities.includes(priority)) {
+      query = query.eq('priority', priority);
+    }
     if (search) {
       const safe = search.replace(/[%_]/g, '\\$&');
       query = query.or(
@@ -162,12 +167,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const dbRow = mapPartnerApplicationToDb(body);
+    let dbRow: Record<string, unknown>;
+    try {
+      dbRow = mapPartnerApplicationToDb(body);
+    } catch (e) {
+      return NextResponse.json(
+        { error: e instanceof Error ? e.message : 'Invalid field value' },
+        { status: 400 },
+      );
+    }
     dbRow.partner_id = auth.partnerId;
     // Phase 3: server-derived created_by_user_id — never trust client
     dbRow.created_by_user_id = auth.user.id;
     if (!dbRow.status) dbRow.status = 'Draft';
     if (!dbRow.decision) dbRow.decision = 'Pending';
+
+    // Auto-mint application_number (PA-YYYY-NNNN, per-partner counter)
+    // if the partner didn't supply one. Done via RPC because the
+    // counter is held in a side table and we want it atomic under
+    // concurrent inserts.
+    if (!dbRow.application_number) {
+      const { data: minted, error: mintError } = await auth.supabase.rpc(
+        'next_partner_app_number',
+        { p_partner_id: auth.partnerId },
+      );
+      if (mintError) {
+        // Non-fatal: insert will still succeed; partner can edit
+        // the row later to set a number manually.
+        console.warn('[partner/applications POST] next_partner_app_number failed:', mintError);
+      } else if (typeof minted === 'string' && minted) {
+        dbRow.application_number = minted;
+      }
+    }
 
     const { data, error } = await auth.supabase
       .from('partner_applications')

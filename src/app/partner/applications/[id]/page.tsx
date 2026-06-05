@@ -3,16 +3,24 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Edit, Trash2, Calendar, Building, BookOpen, AlertTriangle } from 'lucide-react';
+import {
+  ArrowLeft, Edit, Trash2, Calendar, Building, BookOpen, AlertTriangle,
+  Mail, Phone, Globe, Hash, Flag, Send, CheckCircle2, XCircle, X, Loader2,
+} from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { apiFetchJson } from '@/lib/api-client';
 import type {
   PartnerApplication,
   PartnerApplicationStatus,
   PartnerApplicationDecision,
+  PartnerApplicationPriority,
 } from '@/lib/partner-application-mapper';
 import {
   PARTNER_APPLICATION_STATUSES,
@@ -28,6 +36,28 @@ const STATUS_VARIANTS: Record<PartnerApplicationStatus, 'default' | 'secondary' 
   'Withdrawn': 'outline',
 };
 
+// Phase 4: partner-driven status transitions. The partner can move an
+// application forward in the pipeline (Draft → Submitted → In Review →
+// Accepted / Rejected) and back (Submitted → Draft, In Review → Draft).
+// Withdrawn and the terminal decisions are also reachable. We keep
+// this in a small allow-list so a UI bug or stale button can't write
+// a status that's nonsensical in the partner workflow.
+const PARTNER_STATUS_TRANSITIONS: Record<PartnerApplicationStatus, PartnerApplicationStatus[]> = {
+  Draft: ['Draft', 'Submitted', 'Withdrawn'],
+  Submitted: ['Submitted', 'In Review', 'Draft', 'Withdrawn'],
+  'In Review': ['In Review', 'Accepted', 'Rejected', 'Withdrawn'],
+  Accepted: ['Accepted'],
+  Rejected: ['Rejected', 'Draft'], // partner can re-open a rejection
+  Withdrawn: ['Withdrawn', 'Draft'], // partner can re-open a withdrawal
+};
+
+const PRIORITY_VARIANTS: Record<PartnerApplicationPriority, string> = {
+  Low: 'bg-gray-100 text-gray-700',
+  Normal: 'bg-blue-50 text-blue-700',
+  High: 'bg-orange-100 text-orange-800',
+  Urgent: 'bg-[#9B1B30] text-white',
+};
+
 export default function PartnerApplicationDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -38,6 +68,8 @@ export default function PartnerApplicationDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [showDelete, setShowDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  // Phase 4: status workflow
+  const [statusPending, setStatusPending] = useState<PartnerApplicationStatus | null>(null);
 
   const load = useCallback(async () => {
     if (!applicationId) return;
@@ -58,6 +90,32 @@ export default function PartnerApplicationDetailPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const handleStatusChange = async (nextStatus: PartnerApplicationStatus) => {
+    if (!app) return;
+    setStatusPending(nextStatus);
+    try {
+      const res = await apiFetchJson<{ application: PartnerApplication }>(
+        `/api/partner/applications/${applicationId}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({
+            status: nextStatus,
+            // Auto-stamp submittedAt on the Draft → Submitted transition.
+            // The PATCH endpoint keeps an existing value if already set.
+            ...(app.status === 'Draft' && nextStatus === 'Submitted' && !app.submittedAt
+              ? { submittedAt: new Date().toISOString() }
+              : {}),
+          }),
+        },
+      );
+      setApp(res.application);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `Failed to set status to ${nextStatus}.`);
+    } finally {
+      setStatusPending(null);
+    }
+  };
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -139,8 +197,8 @@ export default function PartnerApplicationDetailPage() {
         <Link href="/partner/applications" className="p-2 hover:bg-gray-100 inline-flex">
           <ArrowLeft className="w-5 h-5 text-[#1B2A4A]" />
         </Link>
-        <div className="flex-1">
-          <div className="flex items-center gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-bold text-[#1B2A4A]">{app.studentName}</h1>
             <Badge variant={STATUS_VARIANTS[app.status]} className="rounded-none">
               {app.status}
@@ -148,12 +206,25 @@ export default function PartnerApplicationDetailPage() {
             <Badge variant="outline" className="rounded-none">
               {app.decision}
             </Badge>
+            {app.priority && app.priority !== 'Normal' && (
+              <span
+                className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-none ${PRIORITY_VARIANTS[app.priority]}`}
+                title="Partner-set priority"
+              >
+                <Flag className="w-3 h-3" /> {app.priority}
+              </span>
+            )}
           </div>
           <p className="text-[#4B5563] mt-1 text-sm">
             {app.university} · {app.program}
+            {app.applicationNumber && (
+              <span className="ml-2 font-mono text-xs text-gray-400">
+                {app.applicationNumber}
+              </span>
+            )}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button asChild variant="outline" className="rounded-none">
             <Link href={`/partner/applications/${app.id}/edit`}>
               <Edit className="mr-2 h-4 w-4" />
@@ -171,6 +242,73 @@ export default function PartnerApplicationDetailPage() {
         </div>
       </div>
 
+      {/* Phase 4: Quick status update panel — only shows transitions
+          the partner can drive from the current state. Lets the partner
+          mark Submitted / In Review / Accepted / Rejected without
+          opening the full edit form. */}
+      {(() => {
+        const next = PARTNER_STATUS_TRANSITIONS[app.status] || [];
+        const actionable = next.filter((s) => s !== app.status);
+        if (actionable.length === 0) return null;
+        return (
+          <Card className="rounded-none">
+            <CardHeader className="border-b border-gray-200 pb-3">
+              <CardTitle className="text-base text-[#1B2A4A] flex items-center gap-2">
+                <Send className="w-4 h-4" />
+                Quick status update
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <p className="text-sm text-[#4B5563] mb-3">
+                Move this application to the next state. The student and SICA
+                admin will see the new status immediately.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {actionable.map((target) => {
+                  const label =
+                    target === 'Submitted' ? 'Mark as Submitted'
+                    : target === 'In Review' ? 'Move to In Review'
+                    : target === 'Accepted' ? 'Mark Accepted'
+                    : target === 'Rejected' ? 'Mark Rejected'
+                    : target === 'Withdrawn' ? 'Withdraw'
+                    : target === 'Draft' ? 'Reopen as Draft'
+                    : `Set ${target}`;
+                  const isPending = statusPending === target;
+                  const isDestructive = target === 'Rejected' || target === 'Withdrawn';
+                  return (
+                    <Button
+                      key={target}
+                      size="sm"
+                      variant={isDestructive ? 'outline' : 'default'}
+                      disabled={statusPending !== null}
+                      onClick={() => handleStatusChange(target)}
+                      className={
+                        isDestructive
+                          ? 'rounded-none border-red-300 text-red-600 hover:bg-red-50'
+                          : 'rounded-none bg-[#1B2A4A] hover:bg-[#26345A] text-white'
+                      }
+                    >
+                      {isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-3 w-3 animate-spin" /> Updating…
+                        </>
+                      ) : target === 'Accepted' ? (
+                        <CheckCircle2 className="mr-2 h-3 w-3" />
+                      ) : target === 'Rejected' || target === 'Withdrawn' ? (
+                        <XCircle className="mr-2 h-3 w-3" />
+                      ) : (
+                        <Send className="mr-2 h-3 w-3" />
+                      )}
+                      {label}
+                    </Button>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
       {error && (
         <Card className="rounded-none border-red-200 bg-red-50">
           <CardContent className="p-4 text-sm text-red-700">{error}</CardContent>
@@ -187,13 +325,16 @@ export default function PartnerApplicationDetailPage() {
           <CardContent className="space-y-3 text-sm">
             <Field label="University" value={app.university} />
             <Field label="Program" value={app.program} />
+            <Field label="Intake" value={app.intake} />
+            <Field label="Degree" value={app.degree} />
+            <Field label="Application #" value={app.applicationNumber} mono />
           </CardContent>
         </Card>
 
         <Card className="rounded-none">
           <CardHeader>
             <CardTitle className="text-[#1B2A4A] flex items-center gap-2">
-              <BookOpen className="w-4 h-4" /> Status
+              <UserIcon name="book" className="w-4 h-4" /> Status
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
@@ -208,6 +349,14 @@ export default function PartnerApplicationDetailPage() {
               <Badge variant="outline" className="rounded-none">{app.decision}</Badge>
             </div>
             <div className="flex items-center gap-2">
+              <span className="text-[#4B5563] min-w-24">Priority:</span>
+              <span
+                className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-none ${PRIORITY_VARIANTS[app.priority]}`}
+              >
+                <Flag className="w-3 h-3" /> {app.priority}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
               <span className="text-[#4B5563] min-w-24">Submitted:</span>
               <span className="text-[#1F2937]">
                 {app.submittedAt ? new Date(app.submittedAt).toLocaleDateString() : '—'}
@@ -216,6 +365,51 @@ export default function PartnerApplicationDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="rounded-none">
+        <CardHeader>
+          <CardTitle className="text-[#1B2A4A] flex items-center gap-2">
+            <Mail className="w-4 h-4" /> Student Contact
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          {app.studentEmail ? (
+            <div className="flex items-center gap-2">
+              <Mail className="w-4 h-4 text-[#4B5563]" />
+              <a
+                href={`mailto:${app.studentEmail}`}
+                className="text-[#1B2A4A] hover:underline"
+              >
+                {app.studentEmail}
+              </a>
+            </div>
+          ) : (
+            <p className="text-sm text-[#4B5563] italic">No email on file.</p>
+          )}
+          {app.studentPhone && (
+            <div className="flex items-center gap-2">
+              <Phone className="w-4 h-4 text-[#4B5563]" />
+              <a href={`tel:${app.studentPhone}`} className="text-[#1B2A4A] hover:underline">
+                {app.studentPhone}
+              </a>
+            </div>
+          )}
+          {app.nationality && (
+            <div className="flex items-center gap-2">
+              <Globe className="w-4 h-4 text-[#4B5563]" />
+              <span className="text-[#1F2937]">{app.nationality}</span>
+            </div>
+          )}
+          {app.createdByEmail && (
+            <div className="text-xs text-[#4B5563] pt-2 border-t border-gray-100 mt-2">
+              Added by <span className="font-medium text-[#1B2A4A]">{app.createdByEmail}</span>
+              {app.createdAt && (
+                <> on {new Date(app.createdAt).toLocaleDateString()}</>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card className="rounded-none">
         <CardHeader>
@@ -240,11 +434,31 @@ export default function PartnerApplicationDetailPage() {
   );
 }
 
-function Field({ label, value }: { label: string; value: string | null | undefined }) {
+function Field({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value: string | null | undefined;
+  mono?: boolean;
+}) {
   return (
     <div className="flex items-center gap-2">
       <span className="text-[#4B5563] min-w-24">{label}:</span>
-      <span className="font-medium text-[#1F2937]">{value || '—'}</span>
+      <span className={`font-medium text-[#1F2937] ${mono ? 'font-mono' : ''}`}>
+        {value || '—'}
+      </span>
     </div>
   );
+}
+
+// Local icon shim — keeps the import block short and matches the
+// pattern used elsewhere in the partner portal.
+function UserIcon({ name, className }: { name: string; className?: string }) {
+  // We import BookOpen statically at the top of the file and re-use
+  // it here. The "name" param is a future-proofing hook for the day
+  // we want to add a User icon next to student info.
+  if (name === 'book') return <BookOpen className={className} />;
+  return <BookOpen className={className} />;
 }
