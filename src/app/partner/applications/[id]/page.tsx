@@ -68,8 +68,11 @@ export default function PartnerApplicationDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [showDelete, setShowDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  // Phase 4: status workflow
+  // Phase 4: status workflow. We always show a confirmation dialog
+  // before flipping status — destructive transitions get a stronger
+  // copy, routine transitions get a "are you sure" footer.
   const [statusPending, setStatusPending] = useState<PartnerApplicationStatus | null>(null);
+  const [statusConfirming, setStatusConfirming] = useState<PartnerApplicationStatus | null>(null);
 
   const load = useCallback(async () => {
     if (!applicationId) return;
@@ -281,7 +284,7 @@ export default function PartnerApplicationDetailPage() {
                       size="sm"
                       variant={isDestructive ? 'outline' : 'default'}
                       disabled={statusPending !== null}
-                      onClick={() => handleStatusChange(target)}
+                      onClick={() => setStatusConfirming(target)}
                       className={
                         isDestructive
                           ? 'rounded-none border-red-300 text-red-600 hover:bg-red-50'
@@ -430,6 +433,29 @@ export default function PartnerApplicationDetailPage() {
           </p>
         </CardContent>
       </Card>
+
+      {/* Phase 4: confirmation dialog for the Quick Status Update panel.
+          Wording is tailored per (from, to) pair so the partner knows
+          exactly what they're committing to. Destructive transitions
+          (Rejected, Withdrawn) get a red confirm button + explicit
+          "this signals X" copy; routine transitions stay calm. */}
+      <StatusChangeDialog
+        fromStatus={app.status}
+        toStatus={statusConfirming}
+        studentName={app.studentName}
+        university={app.university}
+        program={app.program}
+        isPending={statusPending !== null}
+        onConfirm={async () => {
+          if (!statusConfirming) return;
+          const target = statusConfirming;
+          setStatusConfirming(null);
+          await handleStatusChange(target);
+        }}
+        onCancel={() => {
+          if (statusPending === null) setStatusConfirming(null);
+        }}
+      />
     </div>
   );
 }
@@ -461,4 +487,167 @@ function UserIcon({ name, className }: { name: string; className?: string }) {
   // we want to add a User icon next to student info.
   if (name === 'book') return <BookOpen className={className} />;
   return <BookOpen className={className} />;
+}
+
+/**
+ * Phase 4: confirmation dialog for the Quick Status Update panel.
+ * Wording is per (from, to) pair so the partner always knows what
+ * they're committing to. Destructive transitions (Rejected, Withdrawn)
+ * get a red confirm button + stronger copy; routine transitions stay
+ * calm. Built on shadcn AlertDialog so the focus trap + ESC dismissal
+ * work out of the box.
+ *
+ * When `toStatus` is null the dialog is closed (shadcn handles
+ * unmounting when open flips to false).
+ */
+function StatusChangeDialog({
+  fromStatus,
+  toStatus,
+  studentName,
+  university,
+  program,
+  isPending,
+  onConfirm,
+  onCancel,
+}: {
+  fromStatus: PartnerApplicationStatus;
+  toStatus: PartnerApplicationStatus | null;
+  studentName: string;
+  university: string;
+  program: string;
+  isPending: boolean;
+  onConfirm: () => void | Promise<void>;
+  onCancel: () => void;
+}) {
+  // Per-transition copy. Anything not in the table falls back to a
+  // generic "are you sure" footer, so a future transition added to
+  // PARTNER_STATUS_TRANSITIONS doesn't render a broken dialog.
+  const COPY: Record<string, { title: string; body: string; confirmLabel: string; destructive: boolean }> = {
+    'Draft->Submitted': {
+      title: 'Mark this application as Submitted?',
+      body: `SICA will see ${studentName}'s application in the review queue and a Submitted timestamp will be recorded on the row. You can still move it back to Draft if you need to make a change.`,
+      confirmLabel: 'Yes, mark as Submitted',
+      destructive: false,
+    },
+    'Draft->Withdrawn': {
+      title: 'Withdraw this draft?',
+      body: `The application for ${studentName} at ${university} will be marked Withdrawn. You can re-open it as a Draft later if you change your mind — the row stays on file.`,
+      confirmLabel: 'Yes, withdraw',
+      destructive: true,
+    },
+    'Submitted->In Review': {
+      title: 'Move this application to In Review?',
+      body: `This signals to SICA admin that ${studentName}'s application is actively being evaluated. Use this when you've actually started the review conversation.`,
+      confirmLabel: 'Yes, move to In Review',
+      destructive: false,
+    },
+    'Submitted->Draft': {
+      title: 'Move this application back to Draft?',
+      body: `The Submitted timestamp is kept on the row, but the application leaves SICA's review queue. Use this if you need to fix something before review starts.`,
+      confirmLabel: 'Yes, move back to Draft',
+      destructive: false,
+    },
+    'Submitted->Withdrawn': {
+      title: 'Withdraw this submitted application?',
+      body: `${studentName}'s application at ${university} will be marked Withdrawn. SICA admin will see it leave the queue. You can re-open it later if circumstances change.`,
+      confirmLabel: 'Yes, withdraw',
+      destructive: true,
+    },
+    'In Review->Accepted': {
+      title: `Mark ${studentName}'s application as Accepted?`,
+      body: `This is a big deal — it tells SICA admin and the student that the university has accepted them. Make sure the acceptance is real and documented before confirming.`,
+      confirmLabel: 'Yes, mark Accepted',
+      destructive: false,
+    },
+    'In Review->Rejected': {
+      title: `Mark ${studentName}'s application as Rejected?`,
+      body: `This will signal the bad news to the student and SICA. The application is still on file and can be re-opened as a Draft later if there's new information.`,
+      confirmLabel: 'Yes, mark Rejected',
+      destructive: true,
+    },
+    'In Review->Withdrawn': {
+      title: `Withdraw ${studentName}'s application?`,
+      body: `This is an unusual move — the application is already in the review queue. Withdrawing now will pull it out. The student and SICA admin will both be affected.`,
+      confirmLabel: 'Yes, withdraw',
+      destructive: true,
+    },
+    'Rejected->Draft': {
+      title: 'Re-open this rejection as a Draft?',
+      body: `The original Rejected status and any admin notes are preserved on the timeline. The application goes back to Draft so you can edit fields and resubmit.`,
+      confirmLabel: 'Yes, re-open as Draft',
+      destructive: false,
+    },
+    'Withdrawn->Draft': {
+      title: 'Re-open this withdrawal as a Draft?',
+      body: `The application goes back to Draft so you can edit and submit again. The previous Withdrawn event is preserved on the timeline.`,
+      confirmLabel: 'Yes, re-open as Draft',
+      destructive: false,
+    },
+  };
+
+  const key = `${fromStatus}->${toStatus}`;
+  const copy = toStatus
+    ? COPY[key] || {
+        title: `Change status to ${toStatus}?`,
+        body: `Move ${studentName}'s application at ${university} (${program}) from ${fromStatus} to ${toStatus}.`,
+        confirmLabel: `Yes, set to ${toStatus}`,
+        destructive: false,
+      }
+    : null;
+
+  return (
+    <AlertDialog
+      // Force-closed if no target — shadcn renders nothing.
+      open={toStatus !== null}
+      onOpenChange={(open) => {
+        if (!open) onCancel();
+      }}
+    >
+      <AlertDialogContent className="rounded-none">
+        {copy && (
+          <>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-[#1B2A4A]">
+                {copy.title}
+              </AlertDialogTitle>
+              <AlertDialogDescription>{copy.body}</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel
+                disabled={isPending}
+                onClick={(e) => {
+                  e.preventDefault();
+                  onCancel();
+                }}
+                className="rounded-none"
+              >
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                disabled={isPending}
+                onClick={(e) => {
+                  e.preventDefault();
+                  void onConfirm();
+                }}
+                className={
+                  copy.destructive
+                    ? 'rounded-none bg-red-600 hover:bg-red-700 text-white'
+                    : 'rounded-none bg-[#1B2A4A] hover:bg-[#26345A] text-white'
+                }
+              >
+                {isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Updating…
+                  </>
+                ) : (
+                  copy.confirmLabel
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </>
+        )}
+      </AlertDialogContent>
+    </AlertDialog>
+  );
 }
