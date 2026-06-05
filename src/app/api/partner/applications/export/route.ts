@@ -108,17 +108,36 @@ export async function GET(request: NextRequest) {
     });
 
     // Build the CSV. Column order is deliberate: identity first, then
-    // the program context, then workflow state, then admin/meta.
+    // the program context, then academic / language / funding, then
+    // workflow state, then admin/meta.
+    //
+    // S26: extended with the S26 application data fields
+    // (DOB, gender, academic background, language, etc.) so the
+    // partner can hand the CSV straight to SICA / the university
+    // without re-keying.
     const headers = [
       'Application #',
       'Student Name',
       'Student Email',
       'Student Phone',
       'Nationality',
+      'Date of Birth',
+      'Gender',
       'University',
       'Program',
       'Intake',
       'Degree',
+      'Highest Education',
+      'School',
+      'Major',
+      'GPA',
+      'Native Language',
+      'English Test',
+      'English Score',
+      'HSK Level',
+      'HSK Score',
+      'Funding Source',
+      'Scholarship',
       'Status',
       'Priority',
       'Decision',
@@ -138,10 +157,23 @@ export async function GET(request: NextRequest) {
           a.studentEmail || '',
           a.studentPhone || '',
           a.nationality || '',
+          a.dateOfBirth || '',
+          a.gender || '',
           a.university,
           a.program,
           a.intake || '',
           a.degree || '',
+          a.highestEducation || '',
+          a.schoolName || '',
+          a.major || '',
+          a.gpa || '',
+          a.nativeLanguage || '',
+          a.englishTest || '',
+          a.englishScore || '',
+          a.hskLevel || '',
+          a.hskScore || '',
+          a.fundingSource || '',
+          a.scholarshipName || '',
           a.status,
           a.priority,
           a.decision,

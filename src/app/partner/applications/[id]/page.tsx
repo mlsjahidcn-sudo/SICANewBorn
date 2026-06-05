@@ -400,6 +400,186 @@ export default function PartnerApplicationDetailPage() {
         </CardContent>
       </Card>
 
+      {/* S26 — extended application data. We render these as
+          additional cards below the contact card so the partner can
+          see everything admissions needs. Each card only renders
+          if at least one field is filled in, so the page stays
+          clean for sparse rows (the old partner_applications had
+          none of these fields). */}
+
+      {/* Identity & address */}
+      {(app.dateOfBirth ||
+        app.gender ||
+        app.maritalStatus ||
+        app.placeOfBirth ||
+        app.currentAddress) && (
+        <Card className="rounded-none">
+          <CardHeader>
+            <CardTitle className="text-[#1B2A4A]">Identity & Address</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <Field label="Date of Birth" value={app.dateOfBirth} />
+            <Field label="Gender" value={app.gender} />
+            <Field label="Marital Status" value={app.maritalStatus} />
+            <Field label="Place of Birth" value={app.placeOfBirth} />
+            {app.currentAddress && (
+              <div>
+                <div className="text-[#4B5563] mb-1">Current Address:</div>
+                <p className="text-[#1F2937] whitespace-pre-wrap">{app.currentAddress}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Passport */}
+      {(app.passportNumber || app.passportIssueDate || app.passportExpiryDate) && (
+        <Card className="rounded-none">
+          <CardHeader>
+            <CardTitle className="text-[#1B2A4A]">Passport</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <Field label="Passport #" value={app.passportNumber} mono />
+            <Field label="Issue Date" value={app.passportIssueDate} />
+            <Field label="Expiry Date" value={app.passportExpiryDate} />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Emergency contact */}
+      {(app.emergencyContactName ||
+        app.emergencyContactPhone ||
+        app.emergencyContactEmail ||
+        app.emergencyContactRelationship) && (
+        <Card className="rounded-none">
+          <CardHeader>
+            <CardTitle className="text-[#1B2A4A]">Emergency Contact</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <Field label="Name" value={app.emergencyContactName} />
+            <Field label="Relationship" value={app.emergencyContactRelationship} />
+            <Field label="Phone" value={app.emergencyContactPhone} />
+            <Field label="Email" value={app.emergencyContactEmail} />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Academic background */}
+      {(app.highestEducation ||
+        app.schoolName ||
+        app.major ||
+        app.gpa ||
+        app.graduationYear) && (
+        <Card className="rounded-none">
+          <CardHeader>
+            <CardTitle className="text-[#1B2A4A]">Academic Background</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <Field label="Highest Education" value={app.highestEducation} />
+            <Field label="School" value={app.schoolName} />
+            <Field label="Country" value={app.schoolCountry} />
+            <Field label="Major" value={app.major} />
+            <Field
+              label="Graduation Year"
+              value={app.graduationYear ? String(app.graduationYear) : null}
+            />
+            <Field label="GPA" value={app.gpa} />
+            <Field label="Class Rank" value={app.classRank} />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Language proficiency */}
+      {(app.nativeLanguage ||
+        app.englishTest ||
+        app.englishScore ||
+        app.hskLevel ||
+        app.hskScore) && (
+        <Card className="rounded-none">
+          <CardHeader>
+            <CardTitle className="text-[#1B2A4A]">Language Proficiency</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <Field label="Native Language" value={app.nativeLanguage} />
+            <Field
+              label="English"
+              value={
+                app.englishTest
+                  ? `${app.englishTest}${app.englishScore ? ` · ${app.englishScore}` : ''}`
+                  : null
+              }
+            />
+            <Field
+              label="HSK"
+              value={
+                app.hskLevel
+                  ? `${app.hskLevel}${app.hskScore ? ` · ${app.hskScore}` : ''}`
+                  : null
+              }
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Application context (prior China study, funding) */}
+      {(app.hasStudiedInChina !== null ||
+        app.hasAppliedChinaUni !== null ||
+        app.fundingSource ||
+        app.scholarshipName) && (
+        <Card className="rounded-none">
+          <CardHeader>
+            <CardTitle className="text-[#1B2A4A]">Application Context</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <Field
+              label="Studied in China before"
+              value={
+                app.hasStudiedInChina === null
+                  ? null
+                  : app.hasStudiedInChina
+                  ? 'Yes'
+                  : 'No'
+              }
+            />
+            <Field
+              label="Applied to CN uni before"
+              value={
+                app.hasAppliedChinaUni === null
+                  ? null
+                  : app.hasAppliedChinaUni
+                  ? 'Yes'
+                  : 'No'
+              }
+            />
+            <Field label="Funding Source" value={app.fundingSource} />
+            <Field label="Scholarship / Sponsor" value={app.scholarshipName} />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Personal statement */}
+      {(app.whyProgram || app.careerPlan) && (
+        <Card className="rounded-none">
+          <CardHeader>
+            <CardTitle className="text-[#1B2A4A]">Personal Statement</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 text-sm">
+            {app.whyProgram && (
+              <div>
+                <div className="text-[#4B5563] font-medium mb-1">Why this program?</div>
+                <p className="text-[#1F2937] whitespace-pre-wrap">{app.whyProgram}</p>
+              </div>
+            )}
+            {app.careerPlan && (
+              <div>
+                <div className="text-[#4B5563] font-medium mb-1">Post-graduation plan</div>
+                <p className="text-[#1F2937] whitespace-pre-wrap">{app.careerPlan}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <Card className="rounded-none">
         <CardHeader>
           <CardTitle className="text-[#1B2A4A]">Notes</CardTitle>
