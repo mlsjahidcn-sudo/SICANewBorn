@@ -222,9 +222,15 @@ export function GuidePage({ guide, pathSegment }: GuidePageProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }}
       />
 
-      {/* Hero */}
-      <section className="relative overflow-hidden bg-[#1B2A4A] text-white">
-        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_30%_20%,#D4A853_0%,transparent_50%),radial-gradient(circle_at_70%_80%,#9B1B30_0%,transparent_50%)]" />
+      {/* Hero — same bg-image + left-to-right navy gradient overlay
+          as /about and /guides, so the visual treatment is
+          consistent across the public surface. */}
+      <section className="relative overflow-hidden text-white">
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: 'url(/hero-bg.avif)' }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#1B2A4A] via-[#1B2A4A]/80 to-transparent" />
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 lg:py-20">
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 border border-white/20 mb-6">
