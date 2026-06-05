@@ -215,7 +215,14 @@ export function MainNav() {
   ];
 
   return (
-    <NavigationMenu className="hidden lg:flex">
+    // viewport={false} → each NavigationMenuContent renders in its
+    // own trigger item (absolutely positioned under that trigger),
+    // not in a single shared floating viewport. We were getting
+    // "submenu shows under the wrong menu item" when the viewport
+    // tried to re-position for content of mixed widths (some menus
+    // are 280px wide, others 480px). Per-trigger positioning is the
+    // simpler, more predictable layout.
+    <NavigationMenu className="hidden lg:flex" viewport={false}>
       <NavigationMenuList>
         {menuItems.map((item) =>
           item.type === 'link' ? (
