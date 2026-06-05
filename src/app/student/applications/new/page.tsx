@@ -694,7 +694,7 @@ export default function StudentNewApplicationPage() {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-6">
                 <div className="space-y-4">
                   <div>
                     <Label className="text-[#1B2A4A]">
@@ -736,8 +736,21 @@ export default function StudentNewApplicationPage() {
                     </Select>
                   </div>
 
+                  {/* Phase S22: single combined program picker. The
+                      old split between "university" and "program"
+                      was two pickers, two clicks, two chances to
+                      mismatch. This one picker shows program name +
+                      university name + university logo; the user
+                      can type either a program name OR a university
+                      name and the dropdown filters. Picking a
+                      program auto-fills the university from
+                      program.universitySlug so the rest of the
+                      flow stays consistent. */}
                   <div>
-                    <Label className="text-[#1B2A4A]">Program</Label>
+                    <Label className="text-[#1B2A4A]">
+                      Program
+                      {prefilledFields.has('targetProgramSlug') && <PrefillBadge />}
+                    </Label>
                     <SearchableSelect
                       value={applicationData.targetProgramSlug}
                       onChange={(value) => {
@@ -748,8 +761,8 @@ export default function StudentNewApplicationPage() {
                         setApplicationData({
                           ...applicationData,
                           targetProgramSlug: value,
-                          // Auto-fill the university from the program —
-                          // saves the user a click and avoids the
+                          // Auto-fill the university from the
+                          // program — saves a click and avoids the
                           // "wrong school for this program" mistake.
                           targetUniversity: university?.slug || applicationData.targetUniversity,
                         });
@@ -761,9 +774,18 @@ export default function StudentNewApplicationPage() {
                         return {
                           value: program.slug,
                           label: program.name,
+                          // University name is the FIRST thing in
+                          // the sublabel so it's prominent in the
+                          // dropdown. Degree + language are the
+                          // secondary info.
                           sublabel: university
                             ? `${university.name} · ${program.degree} · ${program.language}`
                             : `${program.degree} · ${program.language}`,
+                          // University logo is rendered in the
+                          // picker (the SearchableSelect component
+                          // shows a small circular thumbnail next
+                          // to the label).
+                          logo: university?.logo || undefined,
                         };
                       })}
                       placeholder={
@@ -773,45 +795,15 @@ export default function StudentNewApplicationPage() {
                           ? 'Loading programs…'
                           : filteredPrograms.length === 0
                           ? 'No programs for this degree'
-                          : 'Type to search…'
+                          : 'Type to search by program OR university…'
                       }
                       emptyText="No programs match"
-                      searchPlaceholder="Search by name, university, or language…"
+                      searchPlaceholder="Program or university name…"
                       disabled={!applicationData.targetDegreeLevel || dataLoading}
                       loading={dataLoading}
                     />
                   </div>
-                </div>
 
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-[#1B2A4A]">University</Label>
-                    <SearchableSelect
-                      value={applicationData.targetUniversity}
-                      onChange={(value) => {
-                        // When the user picks a university, clear the
-                        // program (the old one is from a different
-                        // school) but keep the degree level.
-                        setApplicationData({
-                          ...applicationData,
-                          targetUniversity: value,
-                          targetProgramSlug: '',
-                        });
-                      }}
-                      options={universities.map((u) => ({
-                        value: u.slug,
-                        label: u.name,
-                        sublabel: u.cityCn ? `${u.cityCn} · ${u.ranking}th in China` : `Ranked #${u.ranking} in China`,
-                      }))}
-                      placeholder={dataLoading ? 'Loading universities…' : 'Type to search…'}
-                      emptyText="No universities match"
-                      searchPlaceholder="Search by name or city…"
-                      clearValue=""
-                      clearLabel="(any university)"
-                      disabled={dataLoading}
-                      loading={dataLoading}
-                    />
-                  </div>
                   <div>
                     <Label className="text-[#1B2A4A]">
                       Intended Intake

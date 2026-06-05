@@ -37,6 +37,14 @@ export interface SearchableSelectOption {
   label: string;
   sublabel?: string;
   disabled?: boolean;
+  /**
+   * Optional URL or src for a small logo / avatar rendered next
+   * to the label. Used by the program picker in the student
+   * application wizard so each row shows the university's logo
+   * alongside the program name. Falls back gracefully if the
+   * URL 404s.
+   */
+  logo?: string;
 }
 
 export interface SearchableSelectProps {
@@ -91,11 +99,28 @@ export function SearchableSelect({
           {loading ? (
             <span className="text-gray-400">Loading…</span>
           ) : selected ? (
-            <span className="flex flex-col items-start text-left truncate">
-              <span className="truncate">{selected.label}</span>
-              {selected.sublabel && (
-                <span className="text-xs text-gray-500 truncate">{selected.sublabel}</span>
+            <span className="flex items-center gap-2 min-w-0 flex-1">
+              {selected.logo && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={selected.logo}
+                  alt=""
+                  className="h-6 w-6 rounded-full object-contain bg-white border border-gray-200 flex-shrink-0"
+                  onError={(e) => {
+                    // If the logo URL 404s (which happens for
+                    // admin-added universidades that don't have a
+                    // logo uploaded yet), hide the broken image
+                    // gracefully instead of showing a placeholder.
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
               )}
+              <span className="flex flex-col items-start text-left truncate min-w-0">
+                <span className="truncate">{selected.label}</span>
+                {selected.sublabel && (
+                  <span className="text-xs text-gray-500 truncate">{selected.sublabel}</span>
+                )}
+              </span>
             </span>
           ) : (
             <span>{placeholder}</span>
@@ -138,6 +163,11 @@ export function SearchableSelect({
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
+                  // Concatenate label + sublabel + value so the
+                  // cmdk filter matches against any of them. The
+                  // partner / student pickers put the university
+                  // name in the sublabel, so typing "Tsinghua"
+                  // finds every program at Tsinghua.
                   value={`${option.label} ${option.sublabel ?? ''} ${option.value}`}
                   disabled={option.disabled}
                   onSelect={() => {
@@ -152,10 +182,21 @@ export function SearchableSelect({
                       value === option.value ? 'opacity-100' : 'opacity-0',
                     )}
                   />
-                  <span className="flex flex-col">
-                    <span>{option.label}</span>
+                  {option.logo && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={option.logo}
+                      alt=""
+                      className="h-5 w-5 rounded-full object-contain bg-white border border-gray-200 mr-1 flex-shrink-0"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  )}
+                  <span className="flex flex-col min-w-0">
+                    <span className="truncate">{option.label}</span>
                     {option.sublabel && (
-                      <span className="text-xs text-gray-500">{option.sublabel}</span>
+                      <span className="text-xs text-gray-500 truncate">{option.sublabel}</span>
                     )}
                   </span>
                 </CommandItem>
