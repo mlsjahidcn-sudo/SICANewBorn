@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Check, CheckCircle2, ChevronRight, Building, Upload, FileText, FileCheck, RefreshCw, Save } from 'lucide-react';
+import { ArrowLeft, Check, CheckCircle2, ChevronRight, Building, Upload, FileText, FileCheck, RefreshCw, Save, UserCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -48,6 +48,65 @@ interface ApplicationFormData {
 const isDegreeLevel = (v: string): v is DegreeLevel =>
   (degreeLevels as readonly string[]).includes(v);
 
+/**
+ * Phase S21: build a starter personal-statement paragraph from the
+ * student's profile. The student is expected to rewrite this
+ * before submitting — the seed just gives them a starting point
+ * so they're not staring at a blank text area. Marked as
+ * "from your profile" in the UI so they know it's a draft, not
+ * a real statement.
+ */
+function buildPersonalStatementSeed(prof: {
+  target_degree?: string | null;
+  target_field?: string | null;
+  highest_education?: string | null;
+  gpa?: string | null;
+  english_proficiency?: string | null;
+  english_score?: string | null;
+}): string {
+  const parts: string[] = [];
+  if (prof.highest_education || prof.gpa) {
+    const edu = prof.highest_education
+      ? `I have completed my ${prof.highest_education}`
+      : 'I have completed my most recent academic program';
+    parts.push(`${edu}${prof.gpa ? ` with a GPA of ${prof.gpa}` : ''}.`);
+  }
+  if (prof.english_proficiency && prof.english_score) {
+    parts.push(
+      `My English proficiency is ${prof.english_proficiency} ${prof.english_score}.`,
+    );
+  }
+  if (prof.target_degree || prof.target_field) {
+    const goal = [prof.target_degree, prof.target_field]
+      .filter(Boolean)
+      .join(' in ');
+    parts.push(`I am applying to study ${goal} to deepen my expertise and contribute to my field.`);
+  }
+  if (parts.length === 0) {
+    return '';
+  }
+  return `${parts.join(' ')}\n\n[Edit this draft — the admissions team reads this carefully. Tell them why you chose this university, this program, and this career path.]`;
+}
+
+/**
+ * Phase S21: small "from your profile" badge rendered next to
+ * fields that were auto-prefilled from /api/student/profile. Helps
+ * the student understand the value's source +1 (vs a hardcoded
+ * default). The badge disappears the moment the student types
+ * over the value (we remove the field from the prefilled set).
+ */
+function PrefillBadge({ children }: { children?: React.ReactNode }) {
+  return (
+    <span
+      className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 ml-2 align-middle bg-[#1B2A4A]/10 text-[#1B2A4A] border border-[#1B2A4A]/20 rounded-none whitespace-nowrap"
+      title="Auto-filled from your profile. Type to override."
+    >
+      <UserCircle2 className="h-3 w-3" />
+      from your profile{children}
+    </span>
+  );
+}
+
 // data.ts DocumentType.category is the same union as student-data.ts
 // DocumentCategory, but TypeScript doesn't unify across files. We trust
 // the runtime values match (they do — both are 'Identity' | 'Academic' |
@@ -87,12 +146,38 @@ export default function StudentNewApplicationPage() {
   const [loading, setLoading] = useState(false);
   // Phase S20: live university + program lists fetched from the
   // admin-managed API. The static data.ts fallback is gone for
-  // these two — admin-added universities / programs now show up in
-  // the wizard immediately. The page still works offline-ish: if
+  // these two — admin-added universidades / programs now show up
+  // in the wizard immediately. The page still works offline-ish: if
   // the API is unreachable we fall back to the static arrays below.
   const [universities, setUniversities] = useState<University[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
+  // Phase S21: profile prefill. The student already filled out
+  // their academic info on /student/profile (target degree, intake,
+  // GPA, English score, etc.) — we read it once on mount and
+  // pre-fill the wizard fields that match. The student can still
+  // override any value; the source-of-truth is the profile, but
+  // each application can diverge.
+  const [profile, setProfile] = useState<{
+    target_degree: string | null;
+    target_intake: string | null;
+    target_field: string | null;
+    english_proficiency: string | null;
+    english_score: string | null;
+    gpa: string | null;
+    highest_education: string | null;
+    school_name: string | null;
+  } | null>(null);
+  /**
+   * Which wizard fields were auto-filled from the profile. We
+   * render a small "from your profile" badge next to each, and
+   * remove the field from this set the moment the student types
+   * over it (so the badge disappears and they know the value is
+   * now theirs, not the profile's).
+   */
+  const [prefilledFields, setPrefilledFields] = useState<Set<keyof ApplicationFormData>>(
+    new Set(),
+  );
   // Track docs that were uploaded during this wizard session so we
   // can PATCH them with the new application_id after the POST
   // succeeds. Without this they're orphans (the doc was uploaded
@@ -209,22 +294,78 @@ export default function StudentNewApplicationPage() {
     const controller = new AbortController();
     setDataLoading(true);
     Promise.all([
-      apiFetchJson<{ universities: University[] }>('/api/universities?limit=200', {
+      apiFetchJson<{ universidades: University[] }>('/api/universities?limit=200', {
         signal: controller.signal,
       }),
       apiFetchJson<{ programs: Program[] }>('/api/programs?limit=500', {
         signal: controller.signal,
       }),
+      // Phase S21: also fetch the student's profile so we can
+      // pre-fill target_degree / target_intake / target_field in
+      // the wizard. 404 is fine (the profile trigger may not have
+      // run for older accounts) — we just don't pre-fill.
+      apiFetchJson<{
+        data: {
+          target_degree: string | null;
+          target_intake: string | null;
+          target_field: string | null;
+          english_proficiency: string | null;
+          english_score: string | null;
+          gpa: string | null;
+          highest_education: string | null;
+          school_name: string | null;
+        } | null;
+      }>('/api/student/profile', { signal: controller.signal }).catch((err) => {
+        // 404 is expected for old accounts; just return null
+        if (err && typeof err === 'object' && 'status' in err && (err as { status?: number }).status === 404) {
+          return { data: null };
+        }
+        throw err;
+      }),
     ])
-      .then(([u, p]) => {
-        if (!controller.signal.aborted) {
-          setUniversities(u.universities || []);
-          setPrograms(p.programs || []);
+      .then(([u, p, profRes]) => {
+        if (controller.signal.aborted) return;
+        setUniversities((u as { universidades: University[] }).universidades || []);
+        setPrograms((p as { programs: Program[] }).programs || []);
+        const prof = profRes?.data ?? null;
+        setProfile(prof);
+        // Phase S21: prefill the wizard with profile values, but
+        // ONLY if the form field is still empty. This means a
+        // student who resumes a draft keeps their picks (their
+        // picks win); a fresh wizard pre-fills from the profile.
+        if (prof) {
+          setApplicationData((prev) => {
+            const next = { ...prev };
+            const marked: Set<keyof ApplicationFormData> = new Set();
+            if (!prev.targetDegreeLevel && prof.target_degree && isDegreeLevel(prof.target_degree)) {
+              next.targetDegreeLevel = prof.target_degree;
+              marked.add('targetDegreeLevel');
+            }
+            if (!prev.intendedIntake && prof.target_intake) {
+              next.intendedIntake = prof.target_intake;
+              marked.add('intendedIntake');
+            }
+            // Personal statement gets a starter paragraph seeded
+            // from the student's profile context. They can edit
+            // before submitting — the seed is just a draft.
+            if (!prev.personalStatement && (prof.target_field || prof.highest_education)) {
+              next.personalStatement = buildPersonalStatementSeed(prof);
+              marked.add('personalStatement');
+            }
+            if (marked.size > 0) {
+              setPrefilledFields((cur) => {
+                const merged = new Set(cur);
+                marked.forEach((k) => merged.add(k));
+                return merged;
+              });
+            }
+            return next;
+          });
         }
       })
       .catch((err) => {
         if (!controller.signal.aborted) {
-          console.error('[student/new] failed to load universities/programs:', err);
+          console.error('[student/new] failed to load universidades/programs:', err);
           setUniversities([]);
           setPrograms([]);
         }
@@ -530,11 +671,36 @@ export default function StudentNewApplicationPage() {
               <CardHeader className="px-0 pt-0">
                 <CardTitle className="text-lg text-[#1B2A4A]">Choose University & Program</CardTitle>
               </CardHeader>
-              
+
+              {/* Phase S21: profile prefill banner. Shown when at
+                  least one field was auto-filled from the profile.
+                  The student can update the source via the profile
+                  page if they want different defaults next time. */}
+              {prefilledFields.size > 0 && (
+                <div className="flex flex-wrap items-center gap-3 p-3 border border-[#1B2A4A]/30 bg-[#1B2A4A]/5 rounded-none">
+                  <UserCircle2 className="h-4 w-4 text-[#1B2A4A] flex-shrink-0" />
+                  <p className="text-sm text-[#1B2A4A] flex-1">
+                    We pre-filled <strong>{prefilledFields.size}</strong> field{prefilledFields.size === 1 ? '' : 's'} from your profile.
+                    {prefilledFields.has('personalStatement') && (
+                      <> The personal statement is a <strong>draft</strong> — please edit it before submitting.</>
+                    )}
+                  </p>
+                  <Link
+                    href="/student/profile"
+                    className="text-xs font-semibold text-[#1B2A4A] hover:text-[#9B1B30] underline underline-offset-2 whitespace-nowrap"
+                  >
+                    Edit your profile →
+                  </Link>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div>
-                    <Label className="text-[#1B2A4A]">Degree Level</Label>
+                    <Label className="text-[#1B2A4A]">
+                      Degree Level
+                      {prefilledFields.has('targetDegreeLevel') && <PrefillBadge />}
+                    </Label>
                     <Select
                       value={applicationData.targetDegreeLevel}
                       onValueChange={(value) => {
@@ -547,6 +713,14 @@ export default function StudentNewApplicationPage() {
                             targetDegreeLevel: value,
                             targetProgramSlug: '',
                             targetUniversity: '',
+                          });
+                          // Phase S21: the student overrode the
+                          // prefill — drop the badge for this field.
+                          setPrefilledFields((cur) => {
+                            if (!cur.has('targetDegreeLevel')) return cur;
+                            const next = new Set(cur);
+                            next.delete('targetDegreeLevel');
+                            return next;
                           });
                         }
                       }}
@@ -639,10 +813,21 @@ export default function StudentNewApplicationPage() {
                     />
                   </div>
                   <div>
-                    <Label className="text-[#1B2A4A]">Intended Intake</Label>
+                    <Label className="text-[#1B2A4A]">
+                      Intended Intake
+                      {prefilledFields.has('intendedIntake') && <PrefillBadge />}
+                    </Label>
                     <Select
                       value={applicationData.intendedIntake}
-                      onValueChange={(value) => setApplicationData({...applicationData, intendedIntake: value})}
+                      onValueChange={(value) => {
+                        setApplicationData({ ...applicationData, intendedIntake: value });
+                        setPrefilledFields((cur) => {
+                          if (!cur.has('intendedIntake')) return cur;
+                          const next = new Set(cur);
+                          next.delete('intendedIntake');
+                          return next;
+                        });
+                      }}
                     >
                       <SelectTrigger className="rounded-none">
                         <SelectValue placeholder="Select intake" />
@@ -670,13 +855,32 @@ export default function StudentNewApplicationPage() {
 
               <div className="space-y-4">
                 <div>
-                  <Label className="text-[#1B2A4A]">Personal Statement</Label>
-                  <Textarea 
+                  <Label className="text-[#1B2A4A]">
+                    Personal Statement
+                    {prefilledFields.has('personalStatement') && (
+                      <PrefillBadge>
+                        <span className="ml-1">— edit before submitting</span>
+                      </PrefillBadge>
+                    )}
+                  </Label>
+                  <Textarea
                     placeholder="Tell us why you want to study this program..."
                     className="rounded-none mt-2"
-                    rows={4}
+                    rows={6}
                     value={applicationData.personalStatement}
-                    onChange={(e) => setApplicationData({...applicationData, personalStatement: e.target.value})}
+                    onChange={(e) => {
+                      setApplicationData({ ...applicationData, personalStatement: e.target.value });
+                      // First keystroke after the prefilled seed —
+                      // drop the badge so the student knows the
+                      // draft is now theirs.
+                      if (prefilledFields.has('personalStatement')) {
+                        setPrefilledFields((cur) => {
+                          const next = new Set(cur);
+                          next.delete('personalStatement');
+                          return next;
+                        });
+                      }
+                    }}
                   />
                 </div>
                 <div>
