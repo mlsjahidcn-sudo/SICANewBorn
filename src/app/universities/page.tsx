@@ -5,22 +5,64 @@ import { useI18n } from '@/lib/i18n';
 import { cities, citiesCn, disciplines, disciplinesCn, type University } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Star, MapPin, ChevronLeft, ChevronRight, ArrowRight, Globe, Award } from 'lucide-react';
+import { Search, Star, MapPin, ChevronLeft, ChevronRight, ArrowRight, Globe, Award, X, Filter as FilterIcon } from 'lucide-react';
 import Image from 'next/image';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import UniversityLogo from '@/components/university-logo';
+import { useUrlState } from '@/hooks/use-url-state';
+
+// Phase: filter enhancements
+//   - URL sync (refresh-survives, shareable links)
+//   - Active filter pills with X-to-remove
+//   - Type filter (Public / Private + the 985/211/DFC tags)
+//   - Min rating filter (4+ / 4.5+ / 4.7+)
+//   - Reset all button + empty-state suggestions
+//   - Dead "Search" button removed (filters already fire on every keystroke)
+const RATING_OPTIONS = [
+  { value: 0, label: 'Any' },
+  { value: 4.5, label: '4.5★+' },
+  { value: 4.6, label: '4.6★+' },
+  { value: 4.7, label: '4.7★+' },
+  { value: 4.8, label: '4.8★+' },
+  { value: 4.9, label: '4.9★' },
+] as const;
+
+const TAG_OPTIONS = ['985', '211', 'Double First Class'] as const;
+const TYPE_OPTIONS = [
+  { value: 'Public', en: 'Public', zh: '公立' },
+  { value: 'Private', en: 'Private', zh: '私立' },
+] as const;
 
 export default function UniversidadesPage() {
   const { t, locale } = useI18n();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCity, setSelectedCity] = useState('');
-  const [selectedDiscipline, setSelectedDiscipline] = useState('');
-  const [sortBy, setSortBy] = useState<'ranking' | 'name' | 'qsWorld'>('ranking');
-  const [currentPage, setCurrentPage] = useState(1);
+  const searchParams = useSearchParams();
   const perPage = 6;
   // Start empty — data is fetched on mount from the API (server-side, no client
   // bundle bloat from the 2300-line static fallback).
   const [universities, setUniversities] = useState<University[]>([]);
+
+  // URL-bound filter state. 250ms debounce on the search box so we
+  // don't write to history on every keystroke. Each `as` cast widens
+  // the inferred type so the setter accepts both the empty string
+  // AND the valid filter values.
+  const [searchQuery, setSearchQuery] = useUrlState('q', '' as string, {
+    searchParams, debounceMs: 250,
+  });
+  const [selectedCity, setSelectedCity] = useUrlState('city', '' as string, { searchParams });
+  const [selectedDiscipline, setSelectedDiscipline] = useUrlState('discipline', '' as string, { searchParams });
+  const [selectedTag, setSelectedTag] = useUrlState('tag', '' as string, { searchParams });
+  const [selectedType, setSelectedType] = useUrlState('type', '' as string, { searchParams });
+  const [minRating, setMinRating] = useUrlState('rating', '0' as string, {
+    searchParams,
+    coerce: (raw) => (RATING_OPTIONS.find((o) => String(o.value) === raw)?.value ?? 0).toString(),
+  });
+  const [sortBy, setSortBy] = useUrlState<'ranking' | 'name' | 'qsWorld' | 'rating'>(
+    'sort',
+    'ranking' as 'ranking' | 'name' | 'qsWorld' | 'rating',
+    { searchParams },
+  );
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     fetch('/api/universities?limit=100')
@@ -55,22 +97,112 @@ export default function UniversidadesPage() {
       result = result.filter((u) => u.disciplines.includes(selectedDiscipline));
     }
 
+    if (selectedTag) {
+      result = result.filter((u) => u.tags.includes(selectedTag));
+    }
+
+    if (selectedType) {
+      result = result.filter((u) =>
+        selectedType === 'Public' ? u.type === 'Public University' : u.type !== 'Public University',
+      );
+    }
+
+    const minRatingNum = parseFloat(minRating || '0');
+    if (minRatingNum > 0) {
+      result = result.filter((u) => u.rating >= minRatingNum);
+    }
+
     if (sortBy === 'ranking') {
       result.sort((a, b) => a.ranking - b.ranking);
     } else if (sortBy === 'qsWorld') {
       result.sort((a, b) => a.qsWorldRanking - b.qsWorldRanking);
+    } else if (sortBy === 'rating') {
+      result.sort((a, b) => b.rating - a.rating);
     } else {
       result.sort((a, b) => a.name.localeCompare(b.name));
     }
 
     return result;
-  }, [searchQuery, selectedCity, selectedDiscipline, sortBy, universities]);
+  }, [searchQuery, selectedCity, selectedDiscipline, selectedTag, selectedType, minRating, sortBy, universities]);
+
+  // Reset to page 1 when any filter changes. Without this the user can
+  // land on an empty page because the previous page no longer exists.
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedCity, selectedDiscipline, selectedTag, selectedType, minRating, sortBy]);
 
   const totalPages = Math.ceil(filtered.length / perPage);
   const paginated = filtered.slice((currentPage - 1) * perPage, currentPage * perPage);
 
   const cityList = locale === 'zh' ? citiesCn : cities;
   const disciplineList = locale === 'zh' ? disciplinesCn : disciplines;
+
+  /**
+   * Phase: list of currently-active filters rendered as removable
+   * pills. Each pill has a label and a click-to-remove handler. We
+   * also expose a "Clear all" link that resets every filter.
+   */
+  const activeFilters: { key: string; label: string; clear: () => void }[] = [];
+  if (searchQuery) {
+    activeFilters.push({
+      key: 'q',
+      label: `${locale === 'zh' ? '搜索' : 'Search'}: "${searchQuery}"`,
+      clear: () => setSearchQuery(''),
+    });
+  }
+  if (selectedCity) {
+    const cityLabel = cities.includes(selectedCity)
+      ? (locale === 'zh' ? citiesCn[cities.indexOf(selectedCity)] : selectedCity)
+      : selectedCity;
+    activeFilters.push({
+      key: 'city',
+      label: `${t('uni.allCities').replace('All ', '').replace('所有', '')}: ${cityLabel}`,
+      clear: () => setSelectedCity(''),
+    });
+  }
+  if (selectedDiscipline) {
+    const discLabel = disciplines.includes(selectedDiscipline)
+      ? (locale === 'zh' ? disciplinesCn[disciplines.indexOf(selectedDiscipline)] : selectedDiscipline)
+      : selectedDiscipline;
+    activeFilters.push({
+      key: 'discipline',
+      label: `${t('uni.allDisciplines').replace('All ', '').replace('所有', '')}: ${discLabel}`,
+      clear: () => setSelectedDiscipline(''),
+    });
+  }
+  if (selectedTag) {
+    activeFilters.push({
+      key: 'tag',
+      label: `Tag: ${selectedTag}`,
+      clear: () => setSelectedTag(''),
+    });
+  }
+  if (selectedType) {
+    const typeLabel = TYPE_OPTIONS.find((o) => o.value === selectedType);
+    activeFilters.push({
+      key: 'type',
+      label: `${t('uni.type')}: ${typeLabel ? (locale === 'zh' ? typeLabel.zh : typeLabel.en) : selectedType}`,
+      clear: () => setSelectedType(''),
+    });
+  }
+  if (parseFloat(minRating || '0') > 0) {
+    activeFilters.push({
+      key: 'rating',
+      label: `${t('filter.minRating')}: ${minRating}★+`,
+      clear: () => setMinRating('0'),
+    });
+  }
+
+  const clearAll = useCallback(() => {
+    setSearchQuery('');
+    setSelectedCity('');
+    setSelectedDiscipline('');
+    setSelectedTag('');
+    setSelectedType('');
+    setMinRating('0');
+  }, [setSearchQuery, setSelectedCity, setSelectedDiscipline, setSelectedTag, setSelectedType, setMinRating]);
+
+  const hasAnyFilter = activeFilters.length > 0;
 
   return (
     <>
@@ -102,25 +234,19 @@ export default function UniversidadesPage() {
       {/* Search & Filters */}
       <section className="border-b border-gray-200 bg-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:flex-wrap">
+            <div className="relative flex-1 min-w-[220px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 placeholder={t('uni.search')}
                 value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCurrentPage(1);
-                }}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 h-10"
               />
             </div>
             <select
               value={selectedCity}
-              onChange={(e) => {
-                setSelectedCity(e.target.value);
-                setCurrentPage(1);
-              }}
+              onChange={(e) => setSelectedCity(e.target.value)}
               className="h-10 rounded-none border border-gray-200 bg-white px-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#1B2A4A]/20"
             >
               <option value="">{t('uni.allCities')}</option>
@@ -132,10 +258,7 @@ export default function UniversidadesPage() {
             </select>
             <select
               value={selectedDiscipline}
-              onChange={(e) => {
-                setSelectedDiscipline(e.target.value);
-                setCurrentPage(1);
-              }}
+              onChange={(e) => setSelectedDiscipline(e.target.value)}
               className="h-10 rounded-none border border-gray-200 bg-white px-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#1B2A4A]/20"
             >
               <option value="">{t('uni.allDisciplines')}</option>
@@ -145,17 +268,48 @@ export default function UniversidadesPage() {
                 </option>
               ))}
             </select>
-            <Button className="bg-[#9B1B30] hover:bg-[#7A1526] text-white font-semibold h-10 px-6">
-              {t('uni.searchBtn')}
-            </Button>
+            <select
+              value={selectedTag}
+              onChange={(e) => setSelectedTag(e.target.value)}
+              className="h-10 rounded-none border border-gray-200 bg-white px-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#1B2A4A]/20"
+              title={locale === 'zh' ? '院校标签' : 'Classification tag'}
+            >
+              <option value="">Tags: {locale === 'zh' ? '全部' : 'All'}</option>
+              {TAG_OPTIONS.map((tag) => (
+                <option key={tag} value={tag}>{tag}</option>
+              ))}
+            </select>
+            <select
+              value={selectedType}
+              onChange={(e) => setSelectedType(e.target.value)}
+              className="h-10 rounded-none border border-gray-200 bg-white px-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#1B2A4A]/20"
+            >
+              <option value="">{t('filter.allTypes')}</option>
+              {TYPE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {locale === 'zh' ? o.zh : o.en}
+                </option>
+              ))}
+            </select>
+            <select
+              value={minRating}
+              onChange={(e) => setMinRating(e.target.value)}
+              className="h-10 rounded-none border border-gray-200 bg-white px-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#1B2A4A]/20"
+            >
+              {RATING_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value.toString()}>
+                  {o.value === 0 ? t('filter.allRatings') : o.label}
+                </option>
+              ))}
+            </select>
           </div>
-          <div className="mt-3 flex items-center justify-between">
+          <div className="mt-3 flex items-center justify-between flex-wrap gap-2">
             <p className="text-sm text-gray-500">
               {filtered.length} {locale === 'en' ? 'universities found' : '所大学'}
             </p>
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'ranking' | 'name' | 'qsWorld')}
+              onChange={(e) => setSortBy(e.target.value as 'ranking' | 'name' | 'qsWorld' | 'rating')}
               className="text-sm text-gray-600 bg-transparent border-none focus:outline-none cursor-pointer"
             >
               <option value="ranking">
@@ -164,11 +318,42 @@ export default function UniversidadesPage() {
               <option value="qsWorld">
                 {t('uni.sortBy')}: {t('uni.qsWorldRanking')}
               </option>
+              <option value="rating">
+                {t('uni.sortBy')}: {locale === 'zh' ? '评分' : 'Rating'}
+              </option>
               <option value="name">
                 {t('uni.sortBy')}: {t('uni.name')}
               </option>
             </select>
           </div>
+
+          {/* Active filter pills (click X to remove a single filter) */}
+          {hasAnyFilter && (
+            <div className="mt-3 flex items-center gap-2 flex-wrap" role="region" aria-label={t('filter.activeFilters')}>
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                {t('filter.activeFilters')}:
+              </span>
+              {activeFilters.map((f) => (
+                <button
+                  key={f.key}
+                  type="button"
+                  onClick={f.clear}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-[#9B1B30]/10 text-[#9B1B30] border border-[#9B1B30]/30 rounded-none hover:bg-[#9B1B30]/20 transition-colors"
+                  title={t('filter.clear')}
+                >
+                  {f.label}
+                  <X className="h-3 w-3" />
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={clearAll}
+                className="text-xs font-semibold text-[#1B2A4A] hover:text-[#9B1B30] underline underline-offset-2"
+              >
+                {t('filter.clearAll')}
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
@@ -253,12 +438,31 @@ export default function UniversidadesPage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-16">
-            <p className="text-gray-500">
-              {locale === 'en'
-                ? 'No universities found matching your criteria.'
-                : '没有找到符合条件的大学。'}
+          <div className="text-center py-16 border border-dashed border-gray-200 bg-white">
+            <FilterIcon className="mx-auto h-10 w-10 text-gray-300" />
+            <h3 className="mt-4 text-lg font-semibold text-[#1B2A4A]">
+              {locale === 'en' ? 'No universities match your filters' : '没有符合筛选条件的大学'}
+            </h3>
+            <p className="mt-2 text-sm text-gray-500 max-w-md mx-auto">
+              {t('filter.suggestion')}
             </p>
+            {hasAnyFilter && (
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                <Button
+                  onClick={clearAll}
+                  className="rounded-none bg-[#1B2A4A] hover:bg-[#26345A] text-white"
+                >
+                  {t('filter.resetFilters')}
+                </Button>
+                <Link
+                  href="/universities"
+                  onClick={(e) => { e.preventDefault(); clearAll(); }}
+                  className="text-sm text-gray-600 hover:text-[#9B1B30] underline underline-offset-2"
+                >
+                  {locale === 'en' ? 'or click here' : '或点击此处'}
+                </Link>
+              </div>
+            )}
           </div>
         )}
 

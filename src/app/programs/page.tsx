@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useI18n } from '@/lib/i18n';
 import {
@@ -13,21 +13,39 @@ import {
   type Program,
   type University,
 } from '@/lib/data';
-import { Search, Filter, GraduationCap, Globe, Clock, Banknote, ArrowRight, Award, BookOpen } from 'lucide-react';
+import { Search, Filter, GraduationCap, Globe, Clock, Banknote, ArrowRight, Award, BookOpen, X } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { useUrlState } from '@/hooks/use-url-state';
 
 const ITEMS_PER_PAGE = 8;
 
 export default function ProgramsPage() {
   const { t, locale } = useI18n();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [degreeFilter, setDegreeFilter] = useState('');
-  const [languageFilter, setLanguageFilter] = useState('');
-  const [disciplineFilter, setDisciplineFilter] = useState('');
-  const [sortBy, setSortBy] = useState('popularity');
+  const searchParams = useSearchParams();
   const [currentPage, setCurrentPage] = useState(1);
   // Fetched on mount — keeps the ~2,300-line data.ts out of the client bundle.
   const [programs, setPrograms] = useState<Program[]>([]);
   const [universities, setUniversities] = useState<University[]>([]);
+
+  // URL-bound filter state. 250ms debounce on the search box.
+  const [searchQuery, setSearchQuery] = useUrlState('q', '' as string, {
+    searchParams, debounceMs: 250,
+  });
+  const [degreeFilter, setDegreeFilter] = useUrlState('degree', '' as string, { searchParams });
+  const [languageFilter, setLanguageFilter] = useUrlState('lang', '' as string, { searchParams });
+  const [disciplineFilter, setDisciplineFilter] = useUrlState('disc', '' as string, { searchParams });
+  const [universityFilter, setUniversityFilter] = useUrlState('uni', '' as string, { searchParams });
+  const [scholarshipOnly, setScholarshipOnly] = useUrlState('scholarship', '' as string, {
+    searchParams,
+    coerce: (raw) => (raw === '1' ? '1' : ''),
+  });
+  // "popularity" was a no-op before; rename the option to "default"
+  // (preserves insertion order, which roughly matches how the
+  // programs were ranked when seeded). Real popularity will come
+  // when we have view-count data.
+  const [sortBy, setSortBy] = useUrlState<'default' | 'tuition' | 'name'>(
+    'sort', 'default' as 'default' | 'tuition' | 'name', { searchParams },
+  );
 
   useEffect(() => {
     Promise.all([
@@ -58,14 +76,28 @@ export default function ProgramsPage() {
     if (degreeFilter) result = result.filter((p) => p.degree === degreeFilter);
     if (languageFilter) result = result.filter((p) => p.language === languageFilter);
     if (disciplineFilter) result = result.filter((p) => p.discipline === disciplineFilter);
+    if (universityFilter) {
+      result = result.filter((p) => p.universitySlug === universityFilter);
+    }
+    if (scholarshipOnly === '1') {
+      result = result.filter((p) => p.scholarshipAvailable);
+    }
 
     // Sort
     if (sortBy === 'tuition') {
       result.sort((a, b) => parseInt(a.tuition.replace(/[^\d]/g, '')) - parseInt(b.tuition.replace(/[^\d]/g, '')));
+    } else if (sortBy === 'name') {
+      result.sort((a, b) => a.name.localeCompare(b.name));
     }
+    // 'default' = preserve API order (which mirrors the curated program list)
 
     return result;
-  }, [searchQuery, degreeFilter, languageFilter, disciplineFilter, sortBy, programs]);
+  }, [searchQuery, degreeFilter, languageFilter, disciplineFilter, universityFilter, scholarshipOnly, sortBy, programs]);
+
+  // Reset to page 1 when any filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, degreeFilter, languageFilter, disciplineFilter, universityFilter, scholarshipOnly, sortBy]);
 
   const totalPages = Math.ceil(filteredPrograms.length / ITEMS_PER_PAGE);
   const paginatedPrograms = filteredPrograms.slice(
@@ -87,6 +119,73 @@ export default function ProgramsPage() {
   const localDegrees = locale === 'zh' ? degreeTypesCn : degreeTypes;
   const localLanguages = locale === 'zh' ? languagesCn : languages;
   const localDisciplines = locale === 'zh' ? programDisciplinesCn : programDisciplines;
+
+  /**
+   * Active filter pills. Each pill has a click-to-remove handler.
+   * "Clear all" link resets every filter and the page to 1.
+   */
+  const activeFilters: { key: string; label: string; clear: () => void }[] = [];
+  if (searchQuery) {
+    activeFilters.push({
+      key: 'q',
+      label: `${locale === 'zh' ? '搜索' : 'Search'}: "${searchQuery}"`,
+      clear: () => setSearchQuery(''),
+    });
+  }
+  if (degreeFilter) {
+    const idx = degreeTypes.indexOf(degreeFilter as (typeof degreeTypes)[number]);
+    const label = idx >= 0 ? (locale === 'zh' ? degreeTypesCn[idx] : degreeFilter) : degreeFilter;
+    activeFilters.push({
+      key: 'degree',
+      label: `${t('prog.degree')}: ${label}`,
+      clear: () => setDegreeFilter(''),
+    });
+  }
+  if (languageFilter) {
+    const idx = languages.indexOf(languageFilter as (typeof languages)[number]);
+    const label = idx >= 0 ? (locale === 'zh' ? languagesCn[idx] : languageFilter) : languageFilter;
+    activeFilters.push({
+      key: 'lang',
+      label: `${t('prog.language')}: ${label}`,
+      clear: () => setLanguageFilter(''),
+    });
+  }
+  if (disciplineFilter) {
+    const idx = programDisciplines.indexOf(disciplineFilter as (typeof programDisciplines)[number]);
+    const label = idx >= 0 ? (locale === 'zh' ? programDisciplinesCn[idx] : disciplineFilter) : disciplineFilter;
+    activeFilters.push({
+      key: 'disc',
+      label: `${t('prog.allDisciplines').replace('All ', '').replace('所有', '')}: ${label}`,
+      clear: () => setDisciplineFilter(''),
+    });
+  }
+  if (universityFilter) {
+    const uni = universities.find((u) => u.slug === universityFilter);
+    const label = uni ? (locale === 'zh' ? uni.nameCn : uni.name) : universityFilter;
+    activeFilters.push({
+      key: 'uni',
+      label: `${t('prog.university')}: ${label}`,
+      clear: () => setUniversityFilter(''),
+    });
+  }
+  if (scholarshipOnly === '1') {
+    activeFilters.push({
+      key: 'scholarship',
+      label: t('filter.scholarship'),
+      clear: () => setScholarshipOnly(''),
+    });
+  }
+
+  const clearAll = useCallback(() => {
+    setSearchQuery('');
+    setDegreeFilter('');
+    setLanguageFilter('');
+    setDisciplineFilter('');
+    setUniversityFilter('');
+    setScholarshipOnly('');
+  }, [setSearchQuery, setDegreeFilter, setLanguageFilter, setDisciplineFilter, setUniversityFilter, setScholarshipOnly]);
+
+  const hasAnyFilter = activeFilters.length > 0;
 
   return (
     <main className="min-h-screen bg-[#FAFAF8]">
@@ -115,7 +214,7 @@ export default function ProgramsPage() {
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t('prog.search')}
                 className="w-full rounded-none border border-gray-200 bg-[#FAFAF8] py-2.5 pl-10 pr-4 text-sm focus:border-[#9B1B30] focus:outline-none focus:ring-1 focus:ring-[#9B1B30]"
               />
@@ -123,7 +222,7 @@ export default function ProgramsPage() {
             <div className="flex flex-wrap items-center gap-2">
               <select
                 value={degreeFilter}
-                onChange={(e) => { setDegreeFilter(e.target.value); setCurrentPage(1); }}
+                onChange={(e) => setDegreeFilter(e.target.value)}
                 className="rounded-none border border-gray-200 bg-white px-3 py-2.5 text-sm focus:border-[#9B1B30] focus:outline-none"
               >
                 <option value="">{t('prog.allDegrees')}</option>
@@ -133,7 +232,7 @@ export default function ProgramsPage() {
               </select>
               <select
                 value={languageFilter}
-                onChange={(e) => { setLanguageFilter(e.target.value); setCurrentPage(1); }}
+                onChange={(e) => setLanguageFilter(e.target.value)}
                 className="rounded-none border border-gray-200 bg-white px-3 py-2.5 text-sm focus:border-[#9B1B30] focus:outline-none"
               >
                 <option value="">{t('prog.allLanguages')}</option>
@@ -143,7 +242,7 @@ export default function ProgramsPage() {
               </select>
               <select
                 value={disciplineFilter}
-                onChange={(e) => { setDisciplineFilter(e.target.value); setCurrentPage(1); }}
+                onChange={(e) => setDisciplineFilter(e.target.value)}
                 className="rounded-none border border-gray-200 bg-white px-3 py-2.5 text-sm focus:border-[#9B1B30] focus:outline-none"
               >
                 <option value="">{t('prog.allDisciplines')}</option>
@@ -152,29 +251,107 @@ export default function ProgramsPage() {
                 ))}
               </select>
               <select
+                value={universityFilter}
+                onChange={(e) => setUniversityFilter(e.target.value)}
+                className="rounded-none border border-gray-200 bg-white px-3 py-2.5 text-sm focus:border-[#9B1B30] focus:outline-none max-w-[180px]"
+                title={t('filter.allUniversities')}
+              >
+                <option value="">{t('filter.allUniversities')}</option>
+                {universities.map((u) => (
+                  <option key={u.slug} value={u.slug}>
+                    {locale === 'zh' ? u.nameCn : u.name}
+                  </option>
+                ))}
+              </select>
+              <label
+                className="inline-flex items-center gap-2 px-3 py-2.5 border border-gray-200 bg-white text-sm cursor-pointer hover:border-[#9B1B30] transition-colors rounded-none"
+                title={t('filter.scholarshipOnly')}
+              >
+                <input
+                  type="checkbox"
+                  checked={scholarshipOnly === '1'}
+                  onChange={(e) => setScholarshipOnly(e.target.checked ? '1' : '')}
+                  className="h-4 w-4 accent-[#9B1B30]"
+                />
+                <Award className="h-4 w-4 text-[#9B1B30]" />
+                <span className="text-[#1B2A4A] font-medium">
+                  {locale === 'zh' ? '仅奖学金' : 'Scholarship'}
+                </span>
+              </label>
+              <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
+                onChange={(e) => setSortBy(e.target.value as 'default' | 'tuition' | 'name')}
                 className="rounded-none border border-gray-200 bg-white px-3 py-2.5 text-sm focus:border-[#9B1B30] focus:outline-none"
               >
-                <option value="popularity">{t('prog.popularity')}</option>
-                <option value="tuition">{t('prog.tuition')}</option>
+                <option value="default">{t('prog.sortBy')}: {locale === 'zh' ? '默认' : 'Default'}</option>
+                <option value="tuition">{t('prog.sortBy')}: {t('prog.tuition')}</option>
+                <option value="name">{t('prog.sortBy')}: {locale === 'zh' ? '名称' : 'Name'}</option>
               </select>
             </div>
           </div>
           <p className="mt-3 text-sm text-gray-500">
             {filteredPrograms.length} {t('prog.results')}
           </p>
+
+          {/* Active filter pills — same pattern as /universities */}
+          {hasAnyFilter && (
+            <div className="mt-3 flex items-center gap-2 flex-wrap" role="region" aria-label={t('filter.activeFilters')}>
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                {t('filter.activeFilters')}:
+              </span>
+              {activeFilters.map((f) => (
+                <button
+                  key={f.key}
+                  type="button"
+                  onClick={f.clear}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-[#9B1B30]/10 text-[#9B1B30] border border-[#9B1B30]/30 rounded-none hover:bg-[#9B1B30]/20 transition-colors"
+                  title={t('filter.clear')}
+                >
+                  {f.label}
+                  <X className="h-3 w-3" />
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={clearAll}
+                className="text-xs font-semibold text-[#1B2A4A] hover:text-[#9B1B30] underline underline-offset-2"
+              >
+                {t('filter.clearAll')}
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
       {/* Program Cards Grid */}
       <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {paginatedPrograms.length === 0 ? (
-          <div className="py-20 text-center">
-            <Filter className="mx-auto h-12 w-12 text-gray-300" />
-            <p className="mt-4 text-gray-500">
-              {locale === 'en' ? 'No programs found. Try adjusting your filters.' : '未找到项目，请调整筛选条件。'}
+          <div className="py-20 text-center border border-dashed border-gray-200 bg-white">
+            <Filter className="mx-auto h-10 w-10 text-gray-300" />
+            <h3 className="mt-4 text-lg font-semibold text-[#1B2A4A]">
+              {locale === 'en' ? 'No programs match your filters' : '没有符合筛选条件的项目'}
+            </h3>
+            <p className="mt-2 text-sm text-gray-500 max-w-md mx-auto">
+              {t('filter.suggestion')}
             </p>
+            {hasAnyFilter && (
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={clearAll}
+                  className="rounded-none bg-[#1B2A4A] hover:bg-[#26345A] text-white font-semibold h-10 px-6 text-sm"
+                >
+                  {t('filter.resetFilters')}
+                </button>
+                <Link
+                  href="/programs"
+                  onClick={(e) => { e.preventDefault(); clearAll(); }}
+                  className="text-sm text-gray-600 hover:text-[#9B1B30] underline underline-offset-2"
+                >
+                  {locale === 'en' ? 'or click here' : '或点击此处'}
+                </Link>
+              </div>
+            )}
           </div>
         ) : (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
