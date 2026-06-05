@@ -69,6 +69,7 @@ interface UnifiedLead {
   contact_attempts: number;
   source_page: string | null;
   referrer: string | null;
+  resolved_at: string | null;
   created_at: string;
   updated_at: string | null;
 }
@@ -253,6 +254,7 @@ function toUnified(type: LeadType, row: Record<string, unknown>): UnifiedLead {
     contact_attempts: pickNumber(row, ['contact_attempts']),
     source_page: pickString(row, ['source_page']),
     referrer: pickString(row, ['referrer']),
+    resolved_at: pickString(row, ['resolved_at']),
     created_at: pickString(row, ['created_at']) || new Date().toISOString(),
     updated_at: pickString(row, ['updated_at']),
   };

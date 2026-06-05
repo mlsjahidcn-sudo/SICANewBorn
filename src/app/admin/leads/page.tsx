@@ -6,6 +6,9 @@
  * One list, one filter bar, three source tables (contact / chat /
  * assessment). Each row links to the detail page where you can
  * change status, write notes, assign, and view the timeline.
+ *
+ * Phase 2.2 adds bulk actions + CSV export so the admin can
+ * process a full inbox in minutes instead of one click per lead.
  */
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
@@ -31,6 +34,12 @@ import {
   Globe,
   GraduationCap,
   FileText,
+  CheckSquare,
+  Square,
+  Download,
+  X,
+  Users,
+  PhoneCall,
 } from 'lucide-react';
 import { apiFetchJson, ApiError } from '@/lib/api-client';
 import { Badge } from '@/components/ui/badge';
@@ -55,6 +64,7 @@ interface UnifiedLead {
   contact_attempts: number;
   source_page: string | null;
   referrer: string | null;
+  resolved_at: string | null;
   created_at: string;
   updated_at: string | null;
 }
@@ -113,9 +123,15 @@ export default function LeadsPage() {
   const [toDate, setToDate] = useState('');
   const [q, setQ] = useState('');
 
+  // Selection (Phase 2.2)
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkError, setBulkError] = useState<string | null>(null);
+
   // Reset status when type changes (status enums differ)
   useEffect(() => {
     setStatusFilter('all');
+    setSelected(new Set()); // selection is invalidated
   }, [typeFilter]);
 
   const load = useCallback(async () => {
@@ -145,10 +161,114 @@ export default function LeadsPage() {
     load();
   }, [load]);
 
+  // Clear selection when filters change so we never operate on
+  // leads that don't match the current view.
+  useEffect(() => {
+    setSelected(new Set());
+  }, [statusFilter, countryFilter, assigneeFilter, fromDate, toDate, q]);
+
   const statusOptions: string[] = useMemo(
     () => (typeFilter === 'all' ? [] : STATUS_OPTIONS[typeFilter]),
     [typeFilter],
   );
+
+  // Bulk action — group selected by lead_type (bulk endpoint takes
+  // one type at a time), then POST N requests in parallel.
+  const bulkAction = async (action: 'assign' | 'unassign' | 'set_status' | 'mark_contacted', value?: string) => {
+    if (selected.size === 0) return;
+    setBulkBusy(true);
+    setBulkError(null);
+    try {
+      // Group selected leads by lead_type
+      const byType: Record<LeadType, string[]> = { contact: [], chat: [], assessment: [] };
+      for (const key of selected) {
+        const lead = leads.find((l) => `${l.lead_type}:${l.lead_id}` === key);
+        if (lead) byType[lead.lead_type].push(lead.lead_id);
+      }
+      const tasks = (Object.keys(byType) as LeadType[])
+        .filter((t) => byType[t].length > 0)
+        .map((t) =>
+          apiFetchJson<{ ok: boolean; updated: number }>('/api/admin/leads/bulk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: t,
+              ids: byType[t],
+              action,
+              value,
+              note: 'whatsapp',
+            }),
+          }),
+        );
+      await Promise.all(tasks);
+      setSelected(new Set());
+      load(); // refresh
+    } catch (err) {
+      setBulkError(err instanceof ApiError ? err.message : 'Bulk action failed');
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const exportCsv = () => {
+    const params = new URLSearchParams();
+    if (typeFilter !== 'all') params.set('type', typeFilter);
+    if (statusFilter !== 'all') params.set('status', statusFilter);
+    if (countryFilter.trim()) params.set('country', countryFilter.trim());
+    if (assigneeFilter !== 'all') params.set('assignee', assigneeFilter);
+    if (fromDate) params.set('from', fromDate);
+    if (toDate) params.set('to', toDate);
+    // Use the same auth mechanism as apiFetchJson by going through
+    // the API. For CSV we open a temporary link that includes the
+    // bearer token via Authorization header — browsers can't set
+    // headers on <a download>, so we route through a fetch + Blob.
+    void exportCsvViaFetch(params.toString());
+  };
+
+  const exportCsvViaFetch = async (qs: string) => {
+    setBulkBusy(true);
+    setBulkError(null);
+    try {
+      // Build Authorization header from the same auth client the
+      // apiFetchJson helper uses. The session token lives in
+      // localStorage under the supabase auth key.
+      const sessionRaw =
+        typeof window !== 'undefined' ? localStorage.getItem('sica-auth-v1') : null;
+      if (!sessionRaw) {
+        setBulkError('No session — please re-login');
+        return;
+      }
+      const session = JSON.parse(sessionRaw);
+      const token =
+        session?.session?.access_token ||
+        session?.access_token ||
+        session?.accessToken;
+      if (!token) {
+        setBulkError('No access token in session');
+        return;
+      }
+      const res = await fetch(`/api/admin/leads/export${qs ? `?${qs}` : ''}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || `HTTP ${res.status}`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `sica-leads-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setBulkError(err instanceof Error ? err.message : 'Export failed');
+    } finally {
+      setBulkBusy(false);
+    }
+  };
 
   const formatDate = (iso: string) => {
     try {
@@ -293,8 +413,99 @@ export default function LeadsPage() {
         </div>
       </div>
 
+      {/* Bulk action toolbar (Phase 2.2) */}
+      {selected.size > 0 && (
+        <div className="bg-[#1B2A4A] text-white p-3 flex flex-wrap items-center gap-3 sticky top-0 z-10 shadow-md">
+          <span className="text-sm font-medium">
+            {selected.size} selected
+          </span>
+          <div className="flex-1" />
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={bulkBusy}
+            onClick={() => bulkAction('mark_contacted')}
+            className="bg-white text-[#1B2A4A] border-white hover:bg-gray-100"
+          >
+            {bulkBusy ? <Spinner size="xs" /> : <PhoneCall className="h-3.5 w-3.5 mr-1" />}
+            Mark contacted
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={bulkBusy}
+            onClick={() => bulkAction('assign', 'me')}
+            className="bg-white text-[#1B2A4A] border-white hover:bg-gray-100"
+          >
+            <Users className="h-3.5 w-3.5 mr-1" />
+            Assign to me
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={bulkBusy}
+            onClick={() => bulkAction('unassign')}
+            className="bg-white text-[#1B2A4A] border-white hover:bg-gray-100"
+          >
+            Unassign
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setSelected(new Set())}
+            className="text-white hover:bg-white/10"
+          >
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      )}
+
+      {bulkError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm flex items-start gap-2">
+          <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
+          <span>{bulkError}</span>
+        </div>
+      )}
+
       {/* Lead list */}
       <div>
+        <div className="flex items-center justify-between mb-2 text-sm text-gray-600">
+          <div className="flex items-center gap-3">
+            {leads.length > 0 && (
+              <button
+                onClick={() => {
+                  if (selected.size === leads.length) {
+                    setSelected(new Set());
+                  } else {
+                    setSelected(
+                      new Set(leads.map((l) => `${l.lead_type}:${l.lead_id}`)),
+                    );
+                  }
+                }}
+                className="flex items-center gap-1.5 hover:text-[#1B2A4A]"
+              >
+                {selected.size === leads.length && leads.length > 0 ? (
+                  <CheckSquare className="h-4 w-4" />
+                ) : (
+                  <Square className="h-4 w-4" />
+                )}
+                {selected.size === leads.length && leads.length > 0
+                  ? 'Deselect all'
+                  : 'Select all'}
+              </button>
+            )}
+            <span>{leads.length} leads</span>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={exportCsv}
+            disabled={bulkBusy || leads.length === 0}
+          >
+            <Download className="h-3.5 w-3.5 mr-1.5" />
+            Export CSV
+          </Button>
+        </div>
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Spinner size="md" className="text-[#1B2A4A]" />
@@ -305,82 +516,109 @@ export default function LeadsPage() {
           </div>
         ) : (
           <div className="space-y-2">
-            {leads.map((lead) => (
-              <button
-                key={`${lead.lead_type}:${lead.lead_id}`}
-                onClick={() => openDetail(lead)}
-                className="w-full text-left bg-white border border-gray-200 p-4 hover:border-[#9B1B30]/50 transition-colors"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="flex flex-col items-start gap-1 flex-shrink-0">
-                    <span className={`text-xs px-2 py-0.5 font-semibold ${TYPE_COLOR[lead.lead_type]}`}>
-                      {TYPE_LABEL[lead.lead_type]}
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-semibold text-[#1B2A4A] truncate">
-                        {lead.name || '(no name)'}
-                      </h3>
-                      {lead.status && (
-                        <Badge className={STATUS_COLOR[lead.status] || 'bg-gray-100 text-gray-800'}>
-                          {lead.status}
-                        </Badge>
-                      )}
-                      {lead.assigned_to ? (
-                        <span className="text-xs text-gray-500">Assigned</span>
-                      ) : (
-                        <span className="text-xs text-[#9B1B30]">Unassigned</span>
-                      )}
-                      {lead.contact_attempts > 0 && (
-                        <span className="text-xs text-gray-500">
-                          · {lead.contact_attempts} contact{lead.contact_attempts === 1 ? '' : 's'}
+            {leads.map((lead) => {
+              const key = `${lead.lead_type}:${lead.lead_id}`;
+              const isSelected = selected.has(key);
+              return (
+                <div
+                  key={key}
+                  className={`w-full text-left bg-white border ${
+                    isSelected ? 'border-[#1B2A4A] ring-1 ring-[#1B2A4A]' : 'border-gray-200'
+                  } p-4 hover:border-[#9B1B30]/50 transition-colors flex items-start gap-3`}
+                >
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const next = new Set(selected);
+                      if (isSelected) next.delete(key);
+                      else next.add(key);
+                      setSelected(next);
+                    }}
+                    className="flex-shrink-0 mt-1"
+                    aria-label={isSelected ? 'Deselect' : 'Select'}
+                  >
+                    {isSelected ? (
+                      <CheckSquare className="h-4 w-4 text-[#1B2A4A]" />
+                    ) : (
+                      <Square className="h-4 w-4 text-gray-400" />
+                    )}
+                  </button>
+                  <button
+                    onClick={() => openDetail(lead)}
+                    className="flex-1 min-w-0 text-left"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex flex-col items-start gap-1 flex-shrink-0">
+                        <span className={`text-xs px-2 py-0.5 font-semibold ${TYPE_COLOR[lead.lead_type]}`}>
+                          {TYPE_LABEL[lead.lead_type]}
                         </span>
-                      )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-semibold text-[#1B2A4A] truncate">
+                            {lead.name || '(no name)'}
+                          </h3>
+                          {lead.status && (
+                            <Badge className={STATUS_COLOR[lead.status] || 'bg-gray-100 text-gray-800'}>
+                              {lead.status}
+                            </Badge>
+                          )}
+                          {lead.assigned_to ? (
+                            <span className="text-xs text-gray-500">Assigned</span>
+                          ) : (
+                            <span className="text-xs text-[#9B1B30]">Unassigned</span>
+                          )}
+                          {lead.contact_attempts > 0 && (
+                            <span className="text-xs text-gray-500">
+                              · {lead.contact_attempts} contact{lead.contact_attempts === 1 ? '' : 's'}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-sm text-gray-600">
+                          {lead.email && (
+                            <span className="flex items-center gap-1">
+                              <Mail className="h-3 w-3" /> {lead.email}
+                            </span>
+                          )}
+                          {lead.phone && (
+                            <span className="flex items-center gap-1">
+                              <Phone className="h-3 w-3" /> {lead.phone}
+                            </span>
+                          )}
+                          {lead.whatsapp && (
+                            <span className="flex items-center gap-1">
+                              <MessageCircle className="h-3 w-3" /> {lead.whatsapp}
+                            </span>
+                          )}
+                          {lead.country && (
+                            <span className="flex items-center gap-1">
+                              <Globe className="h-3 w-3" /> {lead.country}
+                            </span>
+                          )}
+                        </div>
+                        {lead.program && (
+                          <p className="text-sm text-gray-700 mt-1 flex items-center gap-1">
+                            <GraduationCap className="h-3 w-3" />
+                            <span className="font-medium">{lead.program}</span>
+                          </p>
+                        )}
+                        {lead.subject && (
+                          <p className="text-sm text-gray-700 mt-1 flex items-center gap-1">
+                            <FileText className="h-3 w-3" />
+                            <span className="font-medium">{lead.subject}</span>
+                          </p>
+                        )}
+                        {lead.message && (
+                          <p className="text-sm text-gray-500 mt-1 line-clamp-2">{lead.message}</p>
+                        )}
+                        <p className="text-xs text-gray-400 mt-2">{formatDate(lead.created_at)}</p>
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-gray-400 flex-shrink-0 mt-1" />
                     </div>
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-sm text-gray-600">
-                      {lead.email && (
-                        <span className="flex items-center gap-1">
-                          <Mail className="h-3 w-3" /> {lead.email}
-                        </span>
-                      )}
-                      {lead.phone && (
-                        <span className="flex items-center gap-1">
-                          <Phone className="h-3 w-3" /> {lead.phone}
-                        </span>
-                      )}
-                      {lead.whatsapp && (
-                        <span className="flex items-center gap-1">
-                          <MessageCircle className="h-3 w-3" /> {lead.whatsapp}
-                        </span>
-                      )}
-                      {lead.country && (
-                        <span className="flex items-center gap-1">
-                          <Globe className="h-3 w-3" /> {lead.country}
-                        </span>
-                      )}
-                    </div>
-                    {lead.program && (
-                      <p className="text-sm text-gray-700 mt-1 flex items-center gap-1">
-                        <GraduationCap className="h-3 w-3" />
-                        <span className="font-medium">{lead.program}</span>
-                      </p>
-                    )}
-                    {lead.subject && (
-                      <p className="text-sm text-gray-700 mt-1 flex items-center gap-1">
-                        <FileText className="h-3 w-3" />
-                        <span className="font-medium">{lead.subject}</span>
-                      </p>
-                    )}
-                    {lead.message && (
-                      <p className="text-sm text-gray-500 mt-1 line-clamp-2">{lead.message}</p>
-                    )}
-                    <p className="text-xs text-gray-400 mt-2">{formatDate(lead.created_at)}</p>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-gray-400 flex-shrink-0 mt-1" />
+                  </button>
                 </div>
-              </button>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
