@@ -23,8 +23,12 @@ import {
   Home,
   ArrowRight,
   MapPin,
+  Newspaper,
+  Calendar,
+  Clock,
 } from 'lucide-react';
 import { getAllUniversities } from '@/lib/data-fetcher';
+import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
 
 // Home page is server-rendered. We re-fetch the live list on every
 // request (with a 60s edge cache via `revalidate`) so newly-added
@@ -44,6 +48,50 @@ export default async function HomePage() {
   const featured = [...liveUnis]
     .sort((a, b) => a.ranking - b.ranking)
     .slice(0, 3);
+
+  // S38: latest news for the home page widget. Server-rendered so
+  // the cards are in the initial HTML (good for SEO + LLMs that
+  // don't run JS). Only the 3 most recent published posts. Same
+  // RLS-aware fetch pattern as the sitemap — admin/service-role
+  // path is fine, the published-only filter is enforced at the DB
+  // level too.
+  interface NewsTeaser {
+    slug: string;
+    title_en: string;
+    title_zh: string | null;
+    excerpt_en: string | null;
+    cover_image: string | null;
+    category: string;
+    tags: string[];
+    published_at: string | null;
+    read_time_minutes: number | null;
+  }
+  // Map the raw DB category → human label. Mirrors the same
+  // dictionary the /news index uses so the badges look identical
+  // across pages.
+  const CATEGORY_LABEL_HOME: Record<string, string> = {
+    announcement: 'Announcement',
+    partnership: 'Partnership',
+    scholarship: 'Scholarship',
+    university: 'University news',
+    event: 'Event',
+    guide: 'Study guide',
+  };
+  let latestNews: NewsTeaser[] = [];
+  if (isSupabaseServerConfigured()) {
+    const supabase = getSupabaseServer();
+    if (supabase) {
+      const { data } = await supabase
+        .from('news_posts')
+        .select(
+          'slug, title_en, title_zh, excerpt_en, cover_image, category, tags, published_at, read_time_minutes',
+        )
+        .eq('status', 'published')
+        .order('published_at', { ascending: false })
+        .limit(3);
+      if (data) latestNews = data as NewsTeaser[];
+    }
+  }
 
   return (
     <>
@@ -422,6 +470,111 @@ export default async function HomePage() {
           Testimonials shown with consent. Names abbreviated for privacy.
         </p>
       </section>
+
+      {/* S38: Latest from SICA News — server-rendered teaser row.
+          Closes the home-page → news interlinking loop so the
+          most visible page on the site (/) actively surfaces
+          fresh news. Pulls only published posts, latest 3, so the
+          section collapses cleanly when the news table is empty
+          (the site won't look broken during the first week
+          before any AI posts exist). Renders as a 3-up card grid
+          matching the visual language of the rest of the home
+          page, with a "View all news →" link to the /news index. */}
+      {latestNews.length > 0 && (
+        <section className="bg-[#FAFAF8] border-t border-gray-200 py-16 lg:py-20">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="flex items-end justify-between gap-4 mb-8">
+              <div>
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-[#9B1B30] mb-2">
+                  <Newspaper className="h-4 w-4" />
+                  Newsroom
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-bold text-[#1B2A4A]">
+                  Latest from SICA
+                </h2>
+                <p className="mt-2 text-sm text-[#4B5563] max-w-2xl">
+                  Updates on Chinese universidades, scholarships, and
+                  partnerships — curated by the SICA Editorial Team.
+                </p>
+              </div>
+              <Link
+                href="/news"
+                className="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold text-[#9B1B30] hover:underline whitespace-nowrap"
+              >
+                View all news
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {latestNews.map((post) => (
+                <Link
+                  key={post.slug}
+                  href={`/news/${post.slug}`}
+                  className="group block bg-white border-2 border-gray-200 hover:border-[#9B1B30] transition-colors overflow-hidden"
+                >
+                  {post.cover_image && (
+                    <div className="relative h-40 bg-gray-100">
+                      <Image
+                        src={post.cover_image}
+                        alt={post.title_en}
+                        fill
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    </div>
+                  )}
+                  <div className="p-5">
+                    <div className="flex items-center gap-2 text-[10px] text-gray-500 mb-2">
+                      <span className="font-semibold uppercase tracking-wider text-[#9B1B30]">
+                        {CATEGORY_LABEL_HOME[post.category] || post.category}
+                      </span>
+                      {post.published_at && (
+                        <>
+                          <span>·</span>
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {new Date(post.published_at).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                            })}
+                          </span>
+                        </>
+                      )}
+                      {post.read_time_minutes ? (
+                        <>
+                          <span>·</span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {post.read_time_minutes} min
+                          </span>
+                        </>
+                      ) : null}
+                    </div>
+                    <h3 className="font-bold text-[#1B2A4A] group-hover:text-[#9B1B30] transition-colors leading-snug line-clamp-2">
+                      {post.title_en}
+                    </h3>
+                    {post.excerpt_en && (
+                      <p className="mt-2 text-sm text-gray-600 line-clamp-2">
+                        {post.excerpt_en}
+                      </p>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+            <div className="sm:hidden mt-6 text-center">
+              <Link
+                href="/news"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#9B1B30] hover:underline"
+              >
+                View all news
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* CTA Section */}
       <section className="relative overflow-hidden">

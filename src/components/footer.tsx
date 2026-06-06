@@ -5,6 +5,7 @@ import { useI18n } from '@/lib/i18n';
 import { Mail, Phone, MapPin } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { SicaLogo } from '@/components/sica-logo';
+import { FooterNews } from '@/components/FooterNews';
 
 export function Footer() {
   const { t, locale } = useI18n();
@@ -17,7 +18,7 @@ export function Footer() {
   return (
     <footer className="bg-white border-t-2 border-[#1B2A4A] text-gray-700">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-6">
           {/* Brand */}
           <div className="sm:col-span-2 lg:col-span-1">
             {/* Color logo (the white variant was the right call on
@@ -97,6 +98,13 @@ export function Footer() {
               </li>
             </ul>
           </div>
+
+          {/* S38: Latest News — global reciprocal link. Visible
+              on every public page because the footer is mounted
+              in the root layout. Closes the last interlinking
+              gap so the home page, catalog pages, and the global
+              footer all surface news posts. */}
+          <FooterNews />
         </div>
 
         <div className="mt-10 border-t border-gray-200 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
