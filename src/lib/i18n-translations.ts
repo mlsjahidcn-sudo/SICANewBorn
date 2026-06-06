@@ -1134,6 +1134,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerAppNew.errorStudentNameRequired': 'Student name is required.',
     'partnerAppNew.errorUniversityRequired': 'University is required.',
     'partnerAppNew.errorProgramRequired': 'Program is required.',
+    'partnerAppNew.errorPassportDateOrder': 'Passport expiry must be after the issue date.',
     'partnerAppNew.errorCreate': 'Failed to create application.',
     // Partner Portal — edit application (page wrapper)
     'partnerAppEdit.title': 'Edit Application',
@@ -2653,6 +2654,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerAppNew.errorStudentNameRequired': '学生姓名是必填项。',
     'partnerAppNew.errorUniversityRequired': '大学是必填项。',
     'partnerAppNew.errorProgramRequired': '专业是必填项。',
+    'partnerAppNew.errorPassportDateOrder': '护照有效期必须晚于签发日期。',
     'partnerAppNew.errorCreate': '创建申请失败。',
     // Partner Portal — edit application (page wrapper)
     'partnerAppEdit.title': '编辑申请',

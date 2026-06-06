@@ -278,7 +278,7 @@ export default function PartnerEditApplicationPage() {
         // form is only ever rendered when `formData` is non-null
         // (the `loadError || !formData` branch above returns early).
         setFormData={setFormData as React.Dispatch<React.SetStateAction<import('@/components/partner/PartnerApplicationForm').PartnerApplicationFormData>>}
-        universities={universities}
+        universidades={universities}
         programs={programs}
         dataLoading={false}
         isSaving={isSaving}

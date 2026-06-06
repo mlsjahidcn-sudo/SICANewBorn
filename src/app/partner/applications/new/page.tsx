@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
@@ -35,6 +35,12 @@ export default function PartnerNewApplicationPage() {
   const [dataLoading, setDataLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Phase 1.6: per-field validation. Map of field name → error
+  // message. The form renders each error inline under the
+  // corresponding field. The submit handler populates this on
+  // failed validation; clearing on every new attempt.
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const formRef = useRef<HTMLFormElement>(null);
 
   // Phase S20: load this partner's students, plus the live university
   // and program lists. S26: this list feeds the combined program
@@ -84,17 +90,36 @@ export default function PartnerNewApplicationPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setFieldErrors({});
 
+    // Phase 1.6: per-field validation. We collect all field
+    // errors up front so the user sees the full set at once
+    // (not "fix one, submit, see the next"). We then scroll
+    // to the first error and focus that field.
+    const errs: Record<string, string> = {};
     if (!formData.studentName.trim()) {
-      setError(t('partnerAppNew.errorStudentNameRequired'));
-      return;
+      errs.studentName = t('partnerAppNew.errorStudentNameRequired');
     }
     if (!formData.university.trim()) {
-      setError(t('partnerAppNew.errorUniversityRequired'));
-      return;
+      errs.university = t('partnerAppNew.errorUniversityRequired');
     }
     if (!formData.program.trim()) {
-      setError(t('partnerAppNew.errorProgramRequired'));
+      errs.program = t('partnerAppNew.errorProgramRequired');
+    }
+    if (formData.passportExpiryDate &&
+        formData.passportIssueDate &&
+        formData.passportExpiryDate < formData.passportIssueDate) {
+      errs.passportExpiryDate = t('partnerAppNew.errorPassportDateOrder');
+    }
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs);
+      // Scroll to first error and focus it
+      const firstKey = Object.keys(errs)[0];
+      const el = document.querySelector(`[name="${firstKey}"]`) as HTMLElement | null;
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if ('focus' in el) (el as HTMLInputElement).focus();
+      }
       return;
     }
 
@@ -227,10 +252,11 @@ export default function PartnerNewApplicationPage() {
       <PartnerApplicationForm
         formData={formData}
         setFormData={setFormData}
-        universities={universities}
+        universidades={universities}
         programs={programs}
         dataLoading={dataLoading}
         isSaving={isSaving}
+        fieldErrors={fieldErrors}
         onSubmit={handleSubmit}
         submitLabel={t('partnerApps.newApplication')}
         cancelHref="/partner/applications"

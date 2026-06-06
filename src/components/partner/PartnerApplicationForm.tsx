@@ -227,19 +227,26 @@ const NONE = '__none__';
 export interface PartnerApplicationFormProps {
   formData: PartnerApplicationFormData;
   setFormData: React.Dispatch<React.SetStateAction<PartnerApplicationFormData>>;
-  universities: University[];
+  universidades: University[];
   programs: Program[];
   dataLoading: boolean;
   isSaving: boolean;
-  onSubmit: (e: React.FormEvent) => void;
-  /** "Create" or "Save Changes" — the submit button label. */
+  // Phase 1.6: per-field error map. Each key is a form field
+  // name; the value is the human error message. The form
+  // renders the error inline below the field (red text) and
+  // adds a red border to the input. Empty object = no errors.
+  fieldErrors?: Record<string, string>;
+  // Label for the primary submit button (e.g. "Submit
+  // Application" for the new page, "Save Changes" for the
+  // edit page). The form suffixes "…" while saving.
   submitLabel: string;
-  /** "Cancel" link target. */
+  // Href for the cancel/back link in the bottom bar.
   cancelHref: string;
   /** Whether the submit button is at the top of the page (default)
    *  or sticky at the bottom. Edit page uses default; new page uses
    *  sticky. */
   stickySubmit?: boolean;
+  onSubmit: (e: React.FormEvent) => void;
 }
 
 /**
@@ -252,14 +259,15 @@ export interface PartnerApplicationFormProps {
 export function PartnerApplicationForm({
   formData,
   setFormData,
-  universities,
+  universidades,
   programs,
   dataLoading,
   isSaving,
-  onSubmit,
+  fieldErrors = {},
   submitLabel,
   cancelHref,
   stickySubmit = false,
+  onSubmit,
 }: PartnerApplicationFormProps) {
   const { t } = useI18n();
   const noneDisplay = t('partnerAppForm.noneDisplay');
@@ -291,12 +299,16 @@ export function PartnerApplicationForm({
             </Label>
             <Input
               id="studentName"
+              name="studentName"
               value={formData.studentName}
               onChange={(e) => set('studentName', e.target.value)}
               required
-              className="rounded-none"
+              className={`rounded-none ${fieldErrors.studentName ? 'border-red-500' : ''}`}
               placeholder={t('partnerAppForm.fieldFullNamePlaceholder')}
             />
+            {fieldErrors.studentName && (
+              <p className="text-xs text-red-700 mt-1">{fieldErrors.studentName}</p>
+            )}
           </div>
           <div>
             <Label htmlFor="studentEmail" className="text-[#1B2A4A] mb-2 block">
@@ -455,11 +467,15 @@ export function PartnerApplicationForm({
             </Label>
             <Input
               id="passportExpiryDate"
+              name="passportExpiryDate"
               type="date"
               value={formData.passportExpiryDate}
+              className={`rounded-none ${fieldErrors.passportExpiryDate ? 'border-red-500' : ''}`}
               onChange={(e) => set('passportExpiryDate', e.target.value)}
-              className="rounded-none"
             />
+            {fieldErrors.passportExpiryDate && (
+              <p className="text-xs text-red-700 mt-1">{fieldErrors.passportExpiryDate}</p>
+            )}
           </div>
         </div>
       </FormSection>
@@ -753,7 +769,7 @@ export function PartnerApplicationForm({
               onChange={(value) => {
                 const picked = programs.find((p) => p.slug === value);
                 if (!picked) return;
-                const uni = universities.find(
+                const uni = universidades.find(
                   (u) => u.slug === picked.universitySlug,
                 );
                 setFormData((prev) => ({
@@ -763,7 +779,7 @@ export function PartnerApplicationForm({
                 }));
               }}
               options={programs.map((program) => {
-                const uni = universities.find(
+                const uni = universidades.find(
                   (u) => u.slug === program.universitySlug,
                 );
                 return {
@@ -785,6 +801,9 @@ export function PartnerApplicationForm({
               disabled={dataLoading}
               loading={dataLoading}
             />
+            {fieldErrors.program && (
+              <p className="text-xs text-red-700 mt-1">{fieldErrors.program}</p>
+            )}
           </div>
           <div>
             <Label htmlFor="university" className="text-[#1B2A4A] mb-2 block">
@@ -792,12 +811,16 @@ export function PartnerApplicationForm({
             </Label>
             <Input
               id="university"
+              name="university"
               value={formData.university}
               onChange={(e) => set('university', e.target.value)}
-              className="rounded-none bg-gray-50"
+              className={`rounded-none bg-gray-50 ${fieldErrors.university ? 'border-red-500' : ''}`}
               placeholder={t('partnerAppForm.fieldUniversityPlaceholder')}
               required
             />
+            {fieldErrors.university && (
+              <p className="text-xs text-red-700 mt-1">{fieldErrors.university}</p>
+            )}
             <p className="text-xs text-gray-500 mt-1">
               {t('partnerAppForm.fieldUniversityHint')}
             </p>
