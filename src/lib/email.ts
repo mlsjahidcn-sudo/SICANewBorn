@@ -295,7 +295,7 @@ export async function sendChatLeadNotification(params: {
 }
 
 // ============================================================================
-// Applicant-facing emails
+// Applicant + Partner status emails
 // ============================================================================
 //
 // notifyApplicantOnStatusChange() reads the email_templates row by
@@ -306,8 +306,16 @@ export async function sendChatLeadNotification(params: {
 //   status.submitted, status.under_review, status.documents_requested,
 //   status.decision_made, status.accepted, status.rejected
 //
+// S29: notifyPartnerOnStatusChange() is the partner-side sibling.
+// The partner's status taxonomy is slightly different (uses 'In Review'
+// instead of 'Under Review' — see PARTNER_STATUS_TO_TEMPLATE_SLUG
+// below), but the partner email templates share the same body shape.
+// Each partner slug is `status.<state>.partner`, e.g.
+// 'status.under_review.partner', 'status.accepted.partner'.
+//
 // We deliberately do NOT email on every status change — Drafts and
-// Withdrawn are admin-internal and have no email template.
+// Withdrawn are admin-internal and have no email template (well,
+// Withdrawn DOES — see status.withdrawn / status.withdrawn.partner).
 // ============================================================================
 
 const STATUS_TO_TEMPLATE_SLUG: Record<string, string> = {
@@ -317,9 +325,27 @@ const STATUS_TO_TEMPLATE_SLUG: Record<string, string> = {
   'Decision Made': 'status.decision_made',
   Accepted: 'status.accepted',
   Rejected: 'status.rejected',
+  Withdrawn: 'status.withdrawn',
 };
 
-export interface ApplicantEmailParams {
+/**
+ * S29: the partner_applications table uses a different status naming:
+ * 'In Review' (not 'Under Review') and there's no 'Documents Requested'
+ * or 'Decision Made' state. We normalize partner → student status
+ * semantics by mapping the partner's names to the partner-targeted
+ * email slugs (status.*.partner). When the partner app's status
+ * is 'In Review', we fire the same notification the student would
+ * have received for 'Under Review' (i.e. status.under_review.partner).
+ */
+const PARTNER_STATUS_TO_TEMPLATE_SLUG: Record<string, string> = {
+  Submitted: 'status.submitted.partner',
+  'In Review': 'status.under_review.partner',
+  Accepted: 'status.accepted.partner',
+  Rejected: 'status.rejected.partner',
+  Withdrawn: 'status.withdrawn.partner',
+};
+
+export interface StatusEmailParams {
   toEmail: string;
   applicantName: string | null;
   universityName: string | null;
@@ -331,27 +357,25 @@ export interface ApplicantEmailParams {
   extraNote?: string | null;
 }
 
+/** @deprecated Use StatusEmailParams. Kept for caller compat. */
+export type ApplicantEmailParams = StatusEmailParams;
+
 /**
- * Send a status-update email to the applicant. Looks up the
- * template by slug, renders it, sends via Resend.
- *
- * Skips silently when:
- *  - Resend is not configured
- *  - newStatus doesn't map to a template slug
- *  - toEmail is empty/null
- *  - template is_active = false
- *  - template row is missing (admin deleted it)
- *
- * Returns true on send, false on skip. Never throws — callers
- * shouldn't let email failure block a status update.
+ * S29: shared rendering + send for status emails. Both the
+ * applicant path (notifyApplicantOnStatusChange) and the partner
+ * path (notifyPartnerOnStatusChange) call this with the right
+ * slug. The slug determines which email_templates row to load
+ * and (for the partner audience) the wrapping HTML tone.
  */
-export async function notifyApplicantOnStatusChange(
-  params: ApplicantEmailParams,
+async function sendStatusEmail(
+  toEmail: string,
+  toName: string | null,
+  slug: string,
+  params: StatusEmailParams,
+  opts: { audience: 'applicant' | 'partner' },
 ): Promise<boolean> {
-  const slug = STATUS_TO_TEMPLATE_SLUG[params.newStatus];
-  if (!slug) return false;
   if (!isEmailConfigured()) return false;
-  if (!params.toEmail) return false;
+  if (!toEmail) return false;
 
   const supabase = getSupabaseServer();
   if (!supabase) return false;
@@ -373,7 +397,7 @@ export async function notifyApplicantOnStatusChange(
   }
   if (!tpl.is_active) return false;
 
-  const firstName = (params.applicantName || '').split(' ')[0] || 'there';
+  const firstName = (toName || '').split(' ')[0] || 'there';
   const programLine = [params.programName, params.degree, params.intake]
     .filter(Boolean)
     .join(' · ');
@@ -410,13 +434,67 @@ export async function notifyApplicantOnStatusChange(
   const resend = getResend()!;
   await resend.emails.send({
     from: FROM,
-    to: params.toEmail,
+    to: toEmail,
     replyTo: process.env.ADMIN_EMAIL,
     subject: rendered.subject,
-    html: wrapForApplicant(rendered.html),
+    html: opts.audience === 'partner' ? wrapForPartner(rendered.html) : wrapForApplicant(rendered.html),
     text: rendered.text,
   });
   return true;
+}
+
+/**
+ * Send a status-update email to the applicant. Looks up the
+ * template by slug, renders it, sends via Resend.
+ *
+ * Skips silently when:
+ *  - Resend is not configured
+ *  - newStatus doesn't map to a template slug
+ *  - toEmail is empty/null
+ *  - template is_active = false
+ *  - template row is missing (admin deleted it)
+ *
+ * Returns true on send, false on skip. Never throws — callers
+ * shouldn't let email failure block a status update.
+ */
+export async function notifyApplicantOnStatusChange(
+  params: StatusEmailParams,
+): Promise<boolean> {
+  const slug = STATUS_TO_TEMPLATE_SLUG[params.newStatus];
+  if (!slug) return false;
+  return sendStatusEmail(
+    params.toEmail,
+    params.applicantName,
+    slug,
+    params,
+    { audience: 'applicant' },
+  );
+}
+
+/**
+ * S29: send a status-update email to the partner when admin changes
+ * a partner_application's status. Same render + send as the applicant
+ * path, but the partner-targeted email slugs have different copy
+ * ("Your student's application...") and the wrapper footer says
+ * "You're receiving this as a SICA partner agency" instead of "...as
+ * a SICA applicant".
+ *
+ * The partner's status names are normalized via
+ * PARTNER_STATUS_TO_TEMPLATE_SLUG so 'In Review' fires the same
+ * notification family as the student's 'Under Review'.
+ */
+export async function notifyPartnerOnStatusChange(
+  params: StatusEmailParams,
+): Promise<boolean> {
+  const slug = PARTNER_STATUS_TO_TEMPLATE_SLUG[params.newStatus];
+  if (!slug) return false;
+  return sendStatusEmail(
+    params.toEmail,
+    params.applicantName,
+    slug,
+    params,
+    { audience: 'partner' },
+  );
 }
 
 /**
@@ -436,6 +514,28 @@ function wrapForApplicant(innerHtml: string): string {
 <tr><td style="padding:16px 32px;background:#FAFAF8;border-top:1px solid #E5E7EB;font-size:12px;color:#6B7280">
 <p style="margin:0 0 4px 0">SICA · Guangzhou, China · <a href="mailto:mlsjahid@qq.com" style="color:#9B1B30;text-decoration:none">mlsjahid@qq.com</a></p>
 <p style="margin:0">You're receiving this because you submitted an application through SICA. <a href="https://sica.com.cn/student/settings" style="color:#6B7280">Manage email preferences</a></p>
+</td></tr></table></td></tr></table>
+</body></html>`;
+}
+
+/**
+ * S29: same shell as wrapForApplicant, but the footer copy is
+ * tailored for the partner audience — the user is a SICA partner
+ * agency, not a SICA applicant. The link points to the partner
+ * settings page (when the partner notifications inbox ships in
+ * S30 the link can flip to /partner/notifications).
+ */
+function wrapForPartner(innerHtml: string): string {
+  return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#FAFAF8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1F2937">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FAFAF8;padding:24px 0"><tr><td align="center">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border:1px solid #E5E7EB">
+<tr><td style="background:#1B2A4A;padding:16px 20px;color:#fff;font-weight:800;font-size:18px;letter-spacing:0.05em">SICA · Partner</td></tr>
+<tr><td style="padding:32px;font-size:15px;line-height:1.6;color:#374151">${innerHtml}</td></tr>
+<tr><td style="padding:16px 32px;background:#FAFAF8;border-top:1px solid #E5E7EB;font-size:12px;color:#6B7280">
+<p style="margin:0 0 4px 0">SICA · Guangzhou, China · <a href="mailto:mlsjahid@qq.com" style="color:#9B1B30;text-decoration:none">mlsjahid@qq.com</a></p>
+<p style="margin:0">You're receiving this as a SICA partner agency, regarding a student application you submitted. <a href="https://sica.com.cn/partner/settings" style="color:#6B7280">Manage email preferences</a></p>
 </td></tr></table></td></tr></table>
 </body></html>`;
 }
