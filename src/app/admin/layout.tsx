@@ -23,9 +23,11 @@ import {
   Mail,
   Building2,
   LayoutGrid,
+  FileCheck,
 } from 'lucide-react';
 import Link from 'next/link';
 import { SicaLogo } from '@/components/sica-logo';
+import { I18nProvider } from '@/lib/i18n';
 
 const navItems = [
   { href: '/admin/dashboard', label: 'Dashboard', labelCn: '仪表盘', icon: LayoutDashboard },
@@ -36,6 +38,7 @@ const navItems = [
   { href: '/admin/emails', label: 'Emails', labelCn: '邮件', icon: Mail },
   { href: '/admin/leads', label: 'Leads', labelCn: '线索', icon: Users },
   { href: '/admin/students', label: 'Students', labelCn: '学生', icon: UserCheck },
+  { href: '/admin/documents', label: 'Documents', labelCn: '文档审核', icon: FileCheck },
   { href: '/admin/partners', label: 'Partners', labelCn: '合作方', icon: Building2 },
   // S27: Partner Pipeline — the only place in the system where the
   // admin can change a partner application's status / decision.
@@ -54,9 +57,11 @@ const navItems = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <AuthProvider>
-      <AdminLayoutInner>{children}</AdminLayoutInner>
-    </AuthProvider>
+    <I18nProvider>
+      <AuthProvider>
+        <AdminLayoutInner>{children}</AdminLayoutInner>
+      </AuthProvider>
+    </I18nProvider>
   );
 }
 
