@@ -511,12 +511,17 @@ export default function StudentApplicationDetailPage() {
                 </Select>
               </div>
               <Button
+                asChild
                 className="bg-[#9B1B30] hover:bg-[#7A1525] text-white rounded-none"
-                disabled
-                title="Document upload flow is not yet wired (admin needs a UI for it)"
               >
-                <Upload className="h-4 w-4 mr-2" />
-                Upload Document
+                {/* Deep-link to the Documents page with this application
+                    pre-filtered. The Documents page reads ?applicationId
+                    and shows a "filtered to application" banner so the
+                    student knows why they're seeing fewer rows. */}
+                <Link href={`/student/documents?applicationId=${application.id}`}>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload Document
+                </Link>
               </Button>
             </div>
 

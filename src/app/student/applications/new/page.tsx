@@ -424,8 +424,35 @@ export default function StudentNewApplicationPage() {
     });
   }, [applicationData.targetDegreeLevel, studentDocuments, applicationData.selectedDocuments]);
 
+  // Per-step validation. Returns the human label of the first
+  // missing required field, or null if the step is complete.
+  // The Next button uses this to disable itself + the user sees
+  // the error inline so they know exactly what to fix.
+  const getStepError = (step: number): string | null => {
+    if (step === 1) {
+      if (!applicationData.targetDegreeLevel) return 'Pick a degree level';
+      if (!applicationData.targetProgramSlug) return 'Pick a program';
+      if (!applicationData.intendedIntake) return 'Pick an intended intake';
+    }
+    if (step === 2) {
+      // Step 2 is the document upload itself. We only require at
+      // least one doc to be linked — submitted applications need
+      // docs, but the student can attach them after Submit too in
+      // the partner flow. Keeping step 2 soft means the wizard
+      // can move on to Review even with no docs.
+      return null;
+    }
+    return null;
+  };
+  const step1Error = getStepError(1);
+  const nextBlocked = currentStep < steps.length && getStepError(currentStep) !== null;
+
   const handleNext = () => {
     if (currentStep < steps.length) {
+      // Don't advance if the current step is invalid. The button
+      // is disabled in this state but we keep a guard here too in
+      // case keyboard users tab through.
+      if (getStepError(currentStep) !== null) return;
       setCurrentStep(currentStep + 1);
     }
   };
@@ -1133,14 +1160,22 @@ export default function StudentNewApplicationPage() {
                 )}
               </Button>
               {currentStep < steps.length ? (
-                <Button
-                  onClick={handleNext}
-                  disabled={savingDraft}
-                  className="bg-[#9B1B30] hover:bg-[#7A1525] text-white rounded-none"
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4 ml-2" />
-                </Button>
+                <div className="flex flex-col items-end gap-1">
+                  {nextBlocked && (
+                    <span className="text-xs text-red-700 font-semibold">
+                      {step1Error ?? 'Fill in the required fields above to continue'}
+                    </span>
+                  )}
+                  <Button
+                    onClick={handleNext}
+                    disabled={savingDraft || nextBlocked}
+                    title={nextBlocked ? (step1Error ?? 'Complete required fields to continue') : undefined}
+                    className="bg-[#9B1B30] hover:bg-[#7A1525] text-white rounded-none"
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </div>
               ) : (
               <Button
                 onClick={handleSubmit}

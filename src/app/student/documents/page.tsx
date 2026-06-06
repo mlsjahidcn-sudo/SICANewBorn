@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { FileText, FileUp, Upload, CheckCircle2, Clock, XCircle, Trash2, Link2, ExternalLink, FileCheck } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { FileText, FileUp, Upload, CheckCircle2, Clock, XCircle, Trash2, Link2, ExternalLink, FileCheck, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -31,6 +32,10 @@ interface DbStudentDocument {
   // When null, the doc is "floating" — it doesn't belong to any
   // application yet. The user can re-link from this page.
   application_id?: string | null;
+  // Admin-set free text explaining why a doc was rejected. Only
+  // populated when status='Rejected'. We render this prominently
+  // under the doc so the student knows what to fix.
+  rejection_reason?: string | null;
 }
 
 const CATEGORIES: Array<'All' | DocumentCategory> = [
@@ -44,6 +49,15 @@ const CATEGORIES: Array<'All' | DocumentCategory> = [
 ];
 
 export default function StudentDocumentsPage() {
+  const searchParams = useSearchParams();
+  // ?applicationId=<id> comes in from the application detail
+  // "Upload Document" button. We pre-filter the docs list to that
+  // application and show a clear "filter active" banner with an X
+  // to clear it. The actual list filter happens after both
+  // documents AND applications have loaded (we need the app's
+  // friendly name for the banner).
+  const filterApplicationId = searchParams.get('applicationId');
+
   const [isLoading, setIsLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState<'All' | DocumentCategory>('All');
   const [documents, setDocuments] = useState<DbStudentDocument[]>([]);
@@ -58,6 +72,13 @@ export default function StudentDocumentsPage() {
   // Upload panel state
   const [showUploadPanel, setShowUploadPanel] = useState(false);
   const [pickerCategory, setPickerCategory] = useState<DocumentCategory>('Identity');
+
+  // Resolved name of the filtered application, if any. Falls back
+  // to the bare id when the app isn't loaded yet (rare race).
+  const filteredApplication = useMemo(
+    () => applications.find((a) => a.id === filterApplicationId) ?? null,
+    [applications, filterApplicationId],
+  );
 
   const loadDocuments = async () => {
     setIsLoading(true);
@@ -196,9 +217,14 @@ export default function StudentDocumentsPage() {
     );
   }
 
-  const filteredDocuments = activeCategory === 'All'
-    ? documents
-    : documents.filter(d => d.category === activeCategory);
+  // Apply both filters: the URL ?applicationId= filter (when set)
+  // AND the category chip filter. The category chip still works
+  // within the filtered scope.
+  const filteredDocuments = documents.filter((d) => {
+    if (filterApplicationId && d.application_id !== filterApplicationId) return false;
+    if (activeCategory !== 'All' && d.category !== activeCategory) return false;
+    return true;
+  });
 
   // Available document types in the picker — by current category
   const availableDocTypes = documentTypes.filter((dt) => dt.category === pickerCategory);
@@ -270,7 +296,7 @@ export default function StudentDocumentsPage() {
         </Card>
       )}
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 items-center">
         {CATEGORIES.map((category) => (
           <Button
             key={category}
@@ -281,6 +307,16 @@ export default function StudentDocumentsPage() {
             {category}
           </Button>
         ))}
+        {filterApplicationId && (
+          <Link
+            href="/student/documents"
+            className="ml-2 inline-flex items-center gap-1 bg-amber-50 border border-amber-300 text-amber-800 px-2.5 py-1 text-xs font-semibold rounded-none hover:bg-amber-100"
+          >
+            <X className="h-3 w-3" />
+            Filtered to application
+            {filteredApplication ? `: ${filteredApplication.university ?? filteredApplication.id.slice(0, 8)}` : ''}
+          </Link>
+        )}
       </div>
 
       <div className="space-y-4">
@@ -337,6 +373,12 @@ export default function StudentDocumentsPage() {
                     {doc.uploaded_at && (
                       <p className="text-xs text-[#4B5563] mt-1">
                         Uploaded: {new Date(doc.uploaded_at).toLocaleDateString()}
+                      </p>
+                    )}
+                    {doc.status === 'Rejected' && doc.rejection_reason && (
+                      <p className="text-sm text-red-700 mt-2 bg-red-50 border border-red-200 px-2 py-1 rounded-none">
+                        <span className="font-semibold">Rejected: </span>
+                        {doc.rejection_reason}
                       </p>
                     )}
 
