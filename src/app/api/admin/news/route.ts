@@ -13,7 +13,15 @@ export const dynamic = 'force-dynamic';
  * Bodies (POST): { title_en, title_zh?, slug, excerpt_en?, excerpt_zh?,
  *                  content_en, content_zh?, cover_image?, category?,
  *                  tags?, status?: 'draft' | 'published',
- *                  author?, ai_prompt?, seo_title?, seo_description? }
+ *                  author?, ai_prompt?, seo_title?, seo_description?,
+ *                  key_takeaways?, at_a_glance?, faq?, sources? }
+ *
+ * S36: the four optional JSONB fields — `key_takeaways`, `at_a_glance`,
+ * `faq`, `sources` — power the AEO + GEO blocks on the public post
+ * (TL;DR box, at-a-glance table, FAQ accordion + FAQPage JSON-LD,
+ * sources footer + isBasedOn). They accept whatever JSON shape the
+ * AI generator / admin form sends; the public renderer is
+ * defensive about malformed entries.
  */
 export async function GET(_request: NextRequest) {
   const auth = await requireAdmin(_request);
@@ -96,6 +104,13 @@ export async function POST(request: NextRequest) {
     ai_prompt: (body.ai_prompt as string) || null,
     seo_title: (body.seo_title as string) || null,
     seo_description: (body.seo_description as string) || null,
+    // S36: pass the four optional JSONB fields through unchanged.
+    // We only assign if the body actually carries them so the DB
+    // default (NULL) wins on create-without-AI.
+    ...(body.key_takeaways !== undefined ? { key_takeaways: body.key_takeaways } : {}),
+    ...(body.at_a_glance   !== undefined ? { at_a_glance:   body.at_a_glance   } : {}),
+    ...(body.faq           !== undefined ? { faq:           body.faq           } : {}),
+    ...(body.sources       !== undefined ? { sources:       body.sources       } : {}),
   };
 
   const { data, error } = await supabaseServer

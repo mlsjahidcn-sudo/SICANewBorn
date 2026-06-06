@@ -7,6 +7,7 @@ import { ArrowLeft, Save, Eye, Sparkles, Loader2, X, AlertCircle, CheckCircle } 
 import { ToastProvider, useToast } from '@/components/admin/toast';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch } from '@/lib/api-client';
+import { StructuredFieldsEditor } from '@/components/admin/StructuredFieldsEditor';
 
 const CATEGORIES = [
   { value: 'announcement', label: 'Announcement' },
@@ -30,6 +31,11 @@ interface AIGenerated {
   seo_title: string;
   seo_description: string;
   read_time_minutes: number;
+  // S36: SEO + AEO + GEO fields the AI now produces.
+  key_takeaways?: string[];
+  at_a_glance?: { label: string; value: string }[];
+  faq?: { question: string; answer: string }[];
+  sources?: { label: string; url: string }[];
 }
 
 function NewPostInner() {
@@ -53,6 +59,13 @@ function NewPostInner() {
     ai_prompt: '',
     seo_title: '',
     seo_description: '',
+    // S36: structured SEO + AEO + GEO fields. Stored as the
+    // exact JSONB shape the API expects; the editor above
+    // handles add/remove/reorder UX.
+    key_takeaways: [] as string[],
+    at_a_glance: [] as { label: string; value: string }[],
+    faq: [] as { question: string; answer: string }[],
+    sources: [] as { label: string; url: string }[],
   });
   const [saving, setSaving] = useState(false);
 
@@ -186,6 +199,13 @@ function NewPostInner() {
         tags: (finalData.tags || []).join(', '),
         seo_title: finalData.seo_title || prev.seo_title,
         seo_description: finalData.seo_description || prev.seo_description,
+        // S36: the AI's structured fields land here verbatim. The
+        // editor in the form below lets the admin tweak any of
+        // these before publishing.
+        key_takeaways: finalData.key_takeaways ?? prev.key_takeaways,
+        at_a_glance: finalData.at_a_glance ?? prev.at_a_glance,
+        faq: finalData.faq ?? prev.faq,
+        sources: finalData.sources ?? prev.sources,
         ai_prompt: JSON.stringify({ topic: aiTopic, category: aiCategory, length: aiLength, tone: aiTone, language: aiLanguage, targetKeyword: aiKeyword }),
       }));
       setAiStatus('success');
@@ -406,6 +426,31 @@ function NewPostInner() {
             </div>
           </div>
         </details>
+
+        {/* S36: SEO + AEO + GEO structured fields. The AI
+            pre-fills these; the admin can tweak any of them
+            before publishing. Each section is independently
+            saveable through the form's `update` setter. */}
+        <StructuredFieldsEditor
+          field="key_takeaways"
+          value={form.key_takeaways}
+          onChange={(v) => update('key_takeaways', v)}
+        />
+        <StructuredFieldsEditor
+          field="at_a_glance"
+          value={form.at_a_glance}
+          onChange={(v) => update('at_a_glance', v)}
+        />
+        <StructuredFieldsEditor
+          field="faq"
+          value={form.faq}
+          onChange={(v) => update('faq', v)}
+        />
+        <StructuredFieldsEditor
+          field="sources"
+          value={form.sources}
+          onChange={(v) => update('sources', v)}
+        />
 
         {/* Save buttons */}
         <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-2 border-t border-gray-100">

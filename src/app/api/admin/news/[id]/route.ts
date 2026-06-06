@@ -52,6 +52,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     'title_en', 'title_zh', 'slug', 'excerpt_en', 'excerpt_zh',
     'content_en', 'content_zh', 'cover_image', 'category', 'tags',
     'status', 'author', 'ai_prompt', 'seo_title', 'seo_description',
+    // S36: SEO + AEO + GEO structured fields. Accept whatever
+    // JSON shape the form sends; the public renderer is
+    // defensive about malformed entries.
+    'key_takeaways', 'at_a_glance', 'faq', 'sources',
   ] as const;
   for (const key of allowed) {
     if (key in body) updatePayload[key] = body[key];

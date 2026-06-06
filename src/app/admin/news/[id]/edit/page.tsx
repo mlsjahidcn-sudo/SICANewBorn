@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/auth-context';
 import { apiFetch } from '@/lib/api-client';
 import { ToastProvider, useToast } from '@/components/admin/toast';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
+import { StructuredFieldsEditor } from '@/components/admin/StructuredFieldsEditor';
 
 const CATEGORIES = [
   { value: 'announcement', label: 'Announcement' },
@@ -37,6 +38,13 @@ interface NewsPost {
   seo_description: string | null;
   published_at: string | null;
   updated_at: string;
+  // S36: structured SEO + AEO + GEO fields. JSONB from the DB
+  // — null on posts created before this migration. The editor
+  // below handles missing values gracefully.
+  key_takeaways: string[] | null;
+  at_a_glance: { label: string; value: string }[] | null;
+  faq: { question: string; answer: string }[] | null;
+  sources: { label: string; url: string }[] | null;
 }
 
 function EditPostInner() {
@@ -299,6 +307,31 @@ function EditPostInner() {
             </div>
           </div>
         </details>
+
+        {/* S36: SEO + AEO + GEO structured fields editor. The
+            same component used in the new-post form, here
+            bound to the loaded post's values (or empty arrays
+            for posts created before this migration). */}
+        <StructuredFieldsEditor
+          field="key_takeaways"
+          value={Array.isArray(form.key_takeaways) ? form.key_takeaways : []}
+          onChange={(v) => update('key_takeaways', v)}
+        />
+        <StructuredFieldsEditor
+          field="at_a_glance"
+          value={Array.isArray(form.at_a_glance) ? form.at_a_glance : []}
+          onChange={(v) => update('at_a_glance', v)}
+        />
+        <StructuredFieldsEditor
+          field="faq"
+          value={Array.isArray(form.faq) ? form.faq : []}
+          onChange={(v) => update('faq', v)}
+        />
+        <StructuredFieldsEditor
+          field="sources"
+          value={Array.isArray(form.sources) ? form.sources : []}
+          onChange={(v) => update('sources', v)}
+        />
 
         <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-2 border-t border-gray-100">
           <button

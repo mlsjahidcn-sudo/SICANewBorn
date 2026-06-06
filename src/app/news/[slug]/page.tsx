@@ -2,13 +2,31 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
-import { Calendar, Clock, ChevronRight, Tag, User, ArrowLeft, ArrowRight, Share2 } from 'lucide-react';
+import { Calendar, Clock, ChevronRight, Tag, User, ArrowLeft, ArrowRight, Share2, ListChecks, HelpCircle, BookOpen, ExternalLink } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
 import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sica.com.cn';
+
+/** S36: structured FAQ pair used for FAQPage JSON-LD + visible accordion. */
+interface FaqItem {
+  question: string;
+  answer: string;
+}
+
+/** S36: a single {label, value} fact row rendered as a 2-col table cell. */
+interface GlanceItem {
+  label: string;
+  value: string;
+}
+
+/** S36: a citation in the post footer + Article JSON-LD isBasedOn. */
+interface SourceItem {
+  label: string;
+  url: string;
+}
 
 interface NewsRow {
   id: string;
@@ -29,6 +47,12 @@ interface NewsRow {
   published_at: string | null;
   updated_at: string;
   read_time_minutes: number | null;
+  // S36: SEO + AEO + GEO structured fields. All nullable — the
+  // public page degrades gracefully when they're absent.
+  faq: FaqItem[] | null;
+  key_takeaways: string[] | null;
+  at_a_glance: GlanceItem[] | null;
+  sources: SourceItem[] | null;
 }
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -80,7 +104,15 @@ export async function generateMetadata({
   if (!post) return { title: 'Not Found' };
 
   const title = post.seo_title || post.title_en;
-  const description = post.seo_description || post.excerpt_en || post.content_en.slice(0, 155);
+  // S36: when no SEO description is set, prefer the key_takeaways
+  // (1-2 of them joined) over the raw first-paragraph excerpt —
+  // the takeaways are distilled for snippet capture so they
+  // typically read better as a meta description.
+  const description = post.seo_description
+    || (Array.isArray(post.key_takeaways) && post.key_takeaways.length > 0
+      ? post.key_takeaways.slice(0, 2).join(' ')
+      : post.excerpt_en)
+    || post.content_en.slice(0, 155);
   const canonical = `${SITE_URL}/news/${post.slug}`;
   const ogImage = post.cover_image || undefined;
   return {
@@ -98,6 +130,16 @@ export async function generateMetadata({
       tags: post.tags,
       images: ogImage ? [{ url: ogImage }] : undefined,
     },
+    twitter: {
+      // S36: explicit Twitter card. Without this Next falls back
+      // to OG, but the spec wants twitter-specific fields for
+      // LLMs that read meta tags and for X / Twitter crawler
+      // rendering.
+      card: 'summary_large_image',
+      title,
+      description,
+      images: ogImage ? [ogImage] : undefined,
+    },
   };
 }
 
@@ -112,7 +154,12 @@ export default async function NewsPostPage({
   const related = await fetchRelatedPosts(post.id, post.category);
 
   const description = post.seo_description || post.excerpt_en || post.content_en.slice(0, 155);
-  const articleSchema = {
+
+  // S36: schema.org JSON-LD. We layer three things:
+  //   1. Article with `about` + `citation` + `isBasedOn` (GEO signal)
+  //   2. BreadcrumbList (same as before)
+  //   3. FAQPage when the post has FAQ pairs (AEO — Google rich result)
+  const articleSchema: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'Article',
     headline: post.title_en,
@@ -126,6 +173,26 @@ export default async function NewsPostPage({
     articleSection: CATEGORY_LABEL[post.category] || post.category,
     mainEntityOfPage: { '@type': 'WebPage', '@id': `${SITE_URL}/news/${post.slug}` },
   };
+  // S36: when the post has sources, attach them as isBasedOn. This
+  // is the schema.org way to say "this article is grounded in
+  // these references" — Google uses it for fact-check signals and
+  // LLMs weight it heavily when deciding to cite a page.
+  if (Array.isArray(post.sources) && post.sources.length > 0) {
+    articleSchema.isBasedOn = post.sources.map((s) => ({
+      '@type': 'CreativeWork',
+      name: s.label,
+      url: s.url,
+    }));
+  }
+  // S36: when the post has at_a_glance facts, surface them as
+  // `about` entities. Each fact becomes a Thing with a name; LLMs
+  // pull from these directly when composing answers.
+  if (Array.isArray(post.at_a_glance) && post.at_a_glance.length > 0) {
+    articleSchema.about = post.at_a_glance.map((g) => ({
+      '@type': 'Thing',
+      name: `${g.label}: ${g.value}`,
+    }));
+  }
   const breadcrumbSchema = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
@@ -135,6 +202,26 @@ export default async function NewsPostPage({
       { '@type': 'ListItem', position: 3, name: post.title_en },
     ],
   };
+  // S36: FAQPage schema. Only emit when there are FAQ pairs —
+  // Google ignores empty FAQPage schemas, and emitting a half-empty
+  // one can hurt trust. The schema's mainEntity references the
+  // exact same questions/answers that render visibly below, which
+  // is the rich-result policy.
+  const faqSchema =
+    Array.isArray(post.faq) && post.faq.length > 0
+      ? {
+          '@context': 'https://schema.org',
+          '@type': 'FAQPage',
+          mainEntity: post.faq.map((f) => ({
+            '@type': 'Question',
+            name: f.question,
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: f.answer,
+            },
+          })),
+        }
+      : null;
 
   return (
     <>
@@ -146,6 +233,12 @@ export default async function NewsPostPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
+      {faqSchema && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+        />
+      )}
 
       <main className="min-h-screen bg-[#FAFAF8]">
         {/* Breadcrumb */}
@@ -263,6 +356,137 @@ export default async function NewsPostPage({
                   </ReactMarkdown>
                 </div>
               </div>
+            )}
+
+            {/* S36 AEO: Key takeaways (TL;DR box). Sits at the
+                bottom of the body so a reader who finished the
+                article sees the distilled facts, AND search
+                engines / LLMs that scrape the post pick them up
+                before any other content. We also use these as
+                the fallback meta description when the admin
+                didn't set a custom SEO description. */}
+            {Array.isArray(post.key_takeaways) && post.key_takeaways.length > 0 && (
+              <section
+                aria-label="Key takeaways"
+                className="mt-10 bg-[#1B2A4A]/5 border-l-4 border-[#1B2A4A] p-5 lg:p-6"
+              >
+                <div className="flex items-center gap-2 text-[#1B2A4A] font-semibold text-sm uppercase tracking-wider mb-3">
+                  <ListChecks className="h-4 w-4" />
+                  Key takeaways
+                </div>
+                <ul className="space-y-2 text-[#1F2937]">
+                  {post.key_takeaways.map((t, i) => (
+                    <li key={i} className="flex gap-2 text-sm lg:text-base leading-relaxed">
+                      <span className="text-[#9B1B30] font-bold mt-0.5">›</span>
+                      <span>{t}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {/* S36 GEO: At-a-glance fact table. Two-column
+                key/value table; the format LLMs (ChatGPT /
+                Perplexity / Claude / Gemini) love to extract
+                from when composing an answer. Each row is a
+                short, atomic fact — not a sentence. */}
+            {Array.isArray(post.at_a_glance) && post.at_a_glance.length > 0 && (
+              <section aria-label="At a glance" className="mt-10">
+                <div className="flex items-center gap-2 text-[#1B2A4A] font-semibold text-sm uppercase tracking-wider mb-3">
+                  <BookOpen className="h-4 w-4" />
+                  At a glance
+                </div>
+                <div className="border border-gray-200">
+                  <table className="w-full text-sm">
+                    <tbody>
+                      {post.at_a_glance.map((g, i) => (
+                        <tr
+                          key={i}
+                          className={i % 2 === 0 ? 'bg-white' : 'bg-[#FAFAF8]'}
+                        >
+                          <th
+                            scope="row"
+                            className="text-left align-top px-4 py-3 font-medium text-[#1B2A4A] w-1/3 border-r border-gray-200"
+                          >
+                            {g.label}
+                          </th>
+                          <td className="align-top px-4 py-3 text-[#374151]">
+                            {g.value}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            )}
+
+            {/* S36 AEO: FAQ block. Same Q&As that power the
+                FAQPage JSON-LD above are rendered here as a
+                visible accordion. Using <details>/<summary>
+                for accordion behavior — no JS required, and the
+                content is indexable by crawlers even when
+                collapsed. */}
+            {Array.isArray(post.faq) && post.faq.length > 0 && (
+              <section id="faq" aria-label="Frequently asked questions" className="mt-10">
+                <div className="flex items-center gap-2 text-[#1B2A4A] font-semibold text-sm uppercase tracking-wider mb-3">
+                  <HelpCircle className="h-4 w-4" />
+                  Frequently asked questions
+                </div>
+                <div className="border border-gray-200 divide-y divide-gray-200">
+                  {post.faq.map((f, i) => (
+                    <details
+                      key={i}
+                      className="group bg-white [&_summary::-webkit-details-marker]:hidden"
+                    >
+                      <summary className="flex items-start gap-3 cursor-pointer px-4 py-4 hover:bg-gray-50 transition-colors list-none">
+                        <span className="text-[#9B1B30] font-semibold text-sm mt-0.5 shrink-0">
+                          Q{i + 1}
+                        </span>
+                        <span className="font-medium text-[#1B2A4A] flex-1">
+                          {f.question}
+                        </span>
+                        <ChevronRight className="h-4 w-4 text-gray-400 mt-1 shrink-0 transition-transform group-open:rotate-90" />
+                      </summary>
+                      <div className="px-4 pb-4 pl-11 text-[#374151] text-sm leading-relaxed">
+                        {f.answer}
+                      </div>
+                    </details>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* S36 GEO: Sources footer. Every claim in the body
+                should be traceable to a public source. The list
+                doubles as the Article JSON-LD `isBasedOn` block,
+                which Google uses for fact-check signals. */}
+            {Array.isArray(post.sources) && post.sources.length > 0 && (
+              <section aria-label="Sources" className="mt-10 pt-6 border-t border-gray-200">
+                <h2 className="text-sm font-semibold text-[#1B2A4A] uppercase tracking-wider mb-3">
+                  Sources
+                </h2>
+                <ol className="space-y-1.5 text-sm">
+                  {post.sources.map((s, i) => (
+                    <li key={i} className="text-[#4B5563]">
+                      <span className="text-[#9B1B30] font-medium mr-1.5">
+                        [{i + 1}]
+                      </span>
+                      <span className="text-[#1F2937]">{s.label}</span>
+                      <span className="mx-1.5 text-gray-400">—</span>
+                      <a
+                        href={s.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#9B1B30] hover:underline inline-flex items-center gap-0.5"
+                      >
+                        {s.url.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </li>
+                  ))}
+                </ol>
+              </section>
             )}
 
             {/* Tags + share */}
