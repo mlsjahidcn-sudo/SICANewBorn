@@ -7,6 +7,7 @@ import { useI18n } from '@/lib/i18n';
 import { scholarships } from '@/lib/data';
 import { ChevronRight, Clock, Globe, GraduationCap, Gift, CheckCircle, ExternalLink, ArrowRight, ShieldCheck, FileText, HeartHandshake } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { RelatedNews } from '@/components/RelatedNews';
 
 export default function ScholarshipDetailPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -359,6 +360,24 @@ export default function ScholarshipDetailPage() {
           </div>
         </div>
       </section>
+
+      {/* S37: reciprocal news widget — links this scholarship page
+          to recent SICA news posts that mention the scholarship
+          by name (CSC, Confucius, Beijing Government, etc.). */}
+      <div className="bg-[#FAFAF8] py-10">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <RelatedNews
+            label={scholarship.name}
+            terms={[
+              scholarship.name,
+              scholarship.slug,
+              scholarship.slug.replace(/-/g, ' '),
+            ].join(', ')}
+            category="scholarship"
+            locale={locale as 'en' | 'zh'}
+          />
+        </div>
+      </div>
     </main>
   );
 }

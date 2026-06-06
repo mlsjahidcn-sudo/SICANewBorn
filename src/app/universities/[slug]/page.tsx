@@ -8,6 +8,7 @@ import { useI18n } from '@/lib/i18n';
 import { type University, type Program } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { RelatedNews } from '@/components/RelatedNews';
 import {
   MapPin,
   Star,
@@ -634,7 +635,7 @@ export default function UniversityDetailPage() {
                 <Button className="mt-3 w-full bg-[#9B1B30] hover:bg-[#7A1526] text-white font-semibold text-sm">
                   {t('cta.apply')}
                 </Button>
-                <Link
+                 <Link
                   href="/contact"
                   className="mt-2 block text-center text-xs font-semibold text-[#9B1B30] hover:underline"
                 >
@@ -645,6 +646,30 @@ export default function UniversityDetailPage() {
           </div>
         </Tabs>
       </section>
+
+      {/* S37: reciprocal news widget — links this university page
+          to recent SICA news posts that mention the university.
+          Closes the catalog↔news interlinking loop that S36
+          opened (post body already points to /universities/<slug>;
+          this widget is the reverse). The widget does an
+          on-mount fetch against /api/public/news-by-tag with
+          multiple search terms (university name, slug tokens,
+          slug without dashes) so a post tagged with "Tsinghua"
+          matches even if the post body says "Tsinghua University". */}
+      <div className="bg-[#FAFAF8] py-10">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <RelatedNews
+            label={uni.name}
+            terms={[
+              uni.name,
+              uni.slug,
+              uni.slug.replace(/-/g, ' '),
+            ].join(', ')}
+            category="university"
+            locale={locale as 'en' | 'zh'}
+          />
+        </div>
+      </div>
     </>
   );
 }

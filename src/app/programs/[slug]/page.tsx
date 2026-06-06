@@ -7,6 +7,7 @@ import { useI18n } from '@/lib/i18n';
 import { programs as staticPrograms, universities as staticUniversities, degreeTypes, degreeTypesCn, languages, languagesCn, type Program, type University } from '@/lib/data';
 import { ChevronRight, Clock, Banknote, GraduationCap, Globe, Award, BookOpen, CheckCircle, ArrowRight, MapPin } from 'lucide-react';
 import UniversityLogo from '@/components/university-logo';
+import { RelatedNews } from '@/components/RelatedNews';
 
 type TabKey = 'overview' | 'requirements' | 'curriculum' | 'tuition';
 type LoadState = 'loading' | 'ok' | 'not-found' | 'error';
@@ -507,6 +508,29 @@ export default function ProgramDetailPage() {
           </div>
         </div>
       </section>
+
+      {/* S37: reciprocal news widget — links this program page
+          to recent SICA news posts that mention the program or
+          its host university. */}
+      {program && (
+        <div className="bg-[#FAFAF8] py-10">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <RelatedNews
+              label={program.name}
+              terms={[
+                program.name,
+                program.nameCn || '',
+                university?.name || '',
+                program.universitySlug,
+                program.slug,
+                program.slug.replace(/-/g, ' '),
+              ].filter(Boolean).join(', ')}
+              category="university"
+              locale={locale as 'en' | 'zh'}
+            />
+          </div>
+        </div>
+      )}
     </main>
   );
 }
