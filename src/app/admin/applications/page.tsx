@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Plus, Eye, Trash2, MoreHorizontal, ArrowUpRight, ArrowDownRight, Minus, RefreshCw, AlertCircle, Search, Users, Building2, UserPlus, CheckSquare, Square, X, StickyNote, Flag } from 'lucide-react';
+import { Plus, Eye, Trash2, MoreHorizontal, ArrowUpRight, ArrowDownRight, Minus, RefreshCw, AlertCircle, Search, Users, Building2, UserPlus, CheckSquare, Square, X, StickyNote, Flag, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -394,13 +394,38 @@ export default function AdminApplicationsPage() {
           <h1 className="text-2xl font-bold text-[#1B2A4A]">Applications</h1>
           <p className="text-[#4B5563] mt-1">Manage all student applications by source</p>
         </div>
-        <Button
-          className="bg-[#9B1B30] hover:bg-[#7A1526] text-white"
-          onClick={() => router.push('/admin/applications/new')}
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Application
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* S33: Export to CSV. Respects the current filter set
+              (status, source, search, tab) so the export matches
+              what the admin sees on screen. Capped at 1000 rows
+              server-side; the response headers include the
+              actual count. */}
+          <Button
+            variant="outline"
+            className="rounded-none"
+            onClick={() => {
+              // Build a query string that mirrors the list
+              // endpoint's filter semantics so the export is
+              // scoped to what the admin sees.
+              const params = new URLSearchParams();
+              if (activeTab !== 'all') params.set('source', activeTab);
+              if (statusFilter !== 'all') params.set('status', statusFilter);
+              if (searchQuery.trim()) params.set('search', searchQuery.trim());
+              window.open(`/api/admin/applications/export?${params.toString()}`, '_blank');
+            }}
+            title="Download the currently visible (filtered) rows as a CSV"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Export CSV
+          </Button>
+          <Button
+            className="bg-[#9B1B30] hover:bg-[#7A1526] text-white"
+            onClick={() => router.push('/admin/applications/new')}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Application
+          </Button>
+        </div>
       </div>
 
       {/* Source tabs */}
@@ -810,6 +835,32 @@ export default function AdminApplicationsPage() {
                 disabled={bulkRunning}
               >
                 <Trash2 size={14} className="mr-1.5" /> Delete
+              </Button>
+              {/* S33: Export selected. Opens the export endpoint
+                  with the current selection as ?ids=... The
+                  response is a CSV file download — we use
+                  window.open in a new tab so the admin's current
+                  filter / list state stays intact. */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-none"
+                onClick={() => {
+                  const idsParam = Array.from(selectedIds).join(',');
+                  window.open(
+                    `/api/admin/applications/export?ids=${encodeURIComponent(idsParam)}`,
+                    '_blank',
+                  );
+                  // Clear the selection — the export is fire-and-
+                  // forget; the next page load is the source of
+                  // truth and a stale id could re-target a row
+                  // the admin thought was already exported.
+                  setSelectedIds(new Set());
+                }}
+                disabled={bulkRunning}
+                title={`Download ${selectedIds.size} selected row(s) as a CSV`}
+              >
+                <Download size={14} className="mr-1.5" /> Export selected
               </Button>
             </div>
           </div>
