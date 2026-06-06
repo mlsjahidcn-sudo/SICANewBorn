@@ -182,6 +182,10 @@ export function isPartnerStatusTransitionAllowed(
 export interface PartnerApplication {
   id: string;
   partnerId: string;
+  // Phase 1.12: the FK to partner_students replaces the soft
+  // studentName join. The name is still kept on the row for
+  // display, but the canonical link is via studentId.
+  studentId?: string | null;
   studentName: string;
   studentEmail?: string | null;
   studentPhone?: string | null;
@@ -311,6 +315,7 @@ export function parsePartnerApplicationDegree(input: unknown): PartnerApplicatio
 interface RawPartnerApplication {
   id: string;
   partner_id: string;
+  student_id?: string | null;
   student_name: string;
   student_email?: string | null;
   student_phone?: string | null;
@@ -366,6 +371,7 @@ export function mapPartnerApplicationFromDb(row: RawPartnerApplication): Partner
   return {
     id: row.id,
     partnerId: row.partner_id,
+    studentId: row.student_id ?? null,
     studentName: row.student_name,
     studentEmail: row.student_email ?? null,
     studentPhone: row.student_phone ?? null,
@@ -461,6 +467,7 @@ export function mapPartnerApplicationToDb(
 ): Record<string, unknown> {
   const row: Record<string, unknown> = {};
   // Existing fields (S18)
+  if (payload.studentId !== undefined) row.student_id = payload.studentId ? String(payload.studentId).trim() : null;
   if (payload.studentName !== undefined) row.student_name = String(payload.studentName).trim();
   if (payload.studentEmail !== undefined) row.student_email = payload.studentEmail || null;
   if (payload.studentPhone !== undefined) row.student_phone = payload.studentPhone || null;

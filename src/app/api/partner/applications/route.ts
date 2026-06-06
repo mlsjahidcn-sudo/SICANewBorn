@@ -40,6 +40,11 @@ export async function GET(request: NextRequest) {
     const status = parsePartnerApplicationStatus(searchParams.get('status'));
     const decision = searchParams.get('decision')?.trim() || '';
     const priority = searchParams.get('priority')?.trim() || '';
+    // Phase 1.12: filter by FK instead of soft name match when the
+    // student detail page knows the partner_students.id. The
+    // partner_student_id is in the standard UUID format, so we
+    // just pass it through.
+    const studentId = searchParams.get('studentId')?.trim() || '';
     const validPriorities = ['Low', 'Normal', 'High', 'Urgent'];
     const sortRaw = searchParams.get('sort') || 'created_at';
     const orderRaw = searchParams.get('order') || 'desc';
@@ -64,6 +69,13 @@ export async function GET(request: NextRequest) {
     if (decision) query = query.eq('decision', decision);
     if (priority && validPriorities.includes(priority)) {
       query = query.eq('priority', priority);
+    }
+    if (studentId) {
+      // Defense: the partner can only filter by their own students.
+      // We re-verify via a separate query if we want to be paranoid,
+      // but the auth context already scoped the partner_id so a
+      // foreign studentId won't match anything in the result set.
+      query = query.eq('student_id', studentId);
     }
     if (search) {
       const safe = search.replace(/[%_]/g, '\\$&');

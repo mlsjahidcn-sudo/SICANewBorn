@@ -47,12 +47,11 @@ export default function PartnerStudentDetailPage() {
       setStudent(res.student);
 
       // Also fetch this partner's applications and filter by name match
-      // (the partner_students row doesn't have a hard FK to
-      // partner_applications — we link them by studentName as a soft
-      // join. The CRM-style workflow assumes one student → N apps by
-      // name.)
+      // Phase 1.12: use the new student_id FK instead of a soft
+      // name join. Two students named "Mohammed Ali" used to
+      // cross-link each other's applications.
       const apps = await apiFetchJson<{ applications: PartnerApplication[] }>(
-        `/api/partner/applications?search=${encodeURIComponent(res.student.studentName)}&limit=50`,
+        `/api/partner/applications?studentId=${encodeURIComponent(res.student.id)}&limit=50`,
       );
       setApplications(apps.applications || []);
     } catch (err) {
