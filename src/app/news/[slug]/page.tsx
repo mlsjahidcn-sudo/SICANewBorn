@@ -8,8 +8,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
 import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sica.com.cn';
-
+import { SITE_URL } from '@/lib/site-url';
 /** S36: structured FAQ pair used for FAQPage JSON-LD + visible accordion. */
 interface FaqItem {
   question: string;

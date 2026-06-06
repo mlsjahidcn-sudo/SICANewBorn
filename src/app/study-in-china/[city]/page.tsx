@@ -5,6 +5,7 @@ import { MapPin, GraduationCap, Star, Building, ArrowRight, Award, Globe } from 
 import UniversityLogo from '@/components/university-logo';
 import { cities, getCityBySlug, getUniversitiesByCity } from '@/lib/seo-data';
 import { getServerT } from '@/lib/server-t';
+import { SITE_URL } from "@/lib/site-url";
 
 /**
  * /study-in-china/[city] — pre-rendered detail page for one Chinese
@@ -41,11 +42,11 @@ export async function generateMetadata({
   return {
     title,
     description,
-    alternates: { canonical: `https://sica.com.cn/study-in-china/${city.slug}` },
+    alternates: { canonical: `${SITE_URL}/study-in-china/${city.slug}` },
     openGraph: {
       title,
       description,
-      url: `https://sica.com.cn/study-in-china/${city.slug}`,
+      url: `${SITE_URL}/study-in-china/${city.slug}`,
       type: 'website',
     },
   };

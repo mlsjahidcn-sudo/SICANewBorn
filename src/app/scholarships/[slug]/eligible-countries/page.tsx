@@ -5,8 +5,7 @@ import { Award, ChevronRight, ArrowRight, Globe, Users, Calendar, Banknote } fro
 import { getAllScholarships } from '@/lib/data-fetcher';
 import { COUNTRIES } from '@/lib/seo-data';
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sica.com.cn';
-
+import { SITE_URL } from '@/lib/site-url';
 // Render on demand with ISR — reads the live DB so newly-added
 // scholarships show up automatically. Cached at the edge for 60s.
 export const revalidate = 60;

@@ -3,8 +3,7 @@ import { getSupabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-se
 import { universities as staticUniversities, programs as staticPrograms, scholarships as staticScholarships } from '@/lib/data';
 import { cities, COUNTRIES } from '@/lib/seo-data';
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sica.com.cn';
-
+import { SITE_URL } from '@/lib/site-url';
 interface SitemapEntry {
   slug: string;
   updated_at?: string;

@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { getAIProvider } from '@/lib/ai/provider';
+import { SITE_URL } from '@/lib/site-url';
 
 /**
  * POST /api/ai/generate-blog
@@ -214,7 +215,7 @@ function buildSystemPrompt(opts: {
 
   return `You are the SICA Editorial Team — a professional content writer for SICA (Study in China Academy), a study-in-China platform that helps international students apply to top Chinese universities.
 
-Your job: write a news post for the SICA newsroom at sica.com.cn/news.
+Your job: write a news post for the SICA newsroom at ${SITE_URL}/news.
 
 ## ⚠️ CRITICAL: language-specific body rules
 - If language='en': write content_en ONLY. Set content_zh to the empty string "". Do NOT write a Chinese body. (The admin will add a translation later if needed.)

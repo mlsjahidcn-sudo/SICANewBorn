@@ -1,3 +1,4 @@
+import { SITE_URL } from '@/lib/site-url';
 /**
  * Admin: preview a template with sample (or real) variables.
  *
@@ -40,7 +41,7 @@ const SAMPLE: Record<string, string> = {
   sourceKind: 'assessment',
   sourceId: '00000000-0000-0000-0000-000000000000',
   unsubToken: 'c2FyYWhAZXhhbXBsZS5jb20',
-  siteUrl: 'https://sica.com.cn',
+  siteUrl: SITE_URL,
   universityName: 'Tsinghua University',
   programName: 'MSc Data Science',
   programLine: 'MSc Data Science · Master · Fall 2026',

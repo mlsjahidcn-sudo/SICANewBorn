@@ -4,8 +4,7 @@ import { notFound } from 'next/navigation';
 import { ArrowRight, GraduationCap, ChevronRight, MapPin, Clock, Banknote, Globe, Award } from 'lucide-react';
 import { getAllUniversities, getAllPrograms, type Program, type University } from '@/lib/data-fetcher';
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sica.com.cn';
-
+import { SITE_URL } from '@/lib/site-url';
 // URL slug ↔ discipline. Slugs are URL-safe variants of the
 // `discipline` field on each program. The mapping is computed from
 // the live DB at build time (see slugifyDiscipline).

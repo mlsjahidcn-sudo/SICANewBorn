@@ -14,8 +14,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { Guide, GuideBlock } from '@/lib/guides/types';
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sica.com.cn';
+import { SITE_URL } from '@/lib/site-url';
 
 /**
  * Render a single guide block. Pure presentation — the page passes

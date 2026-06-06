@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, buildServiceClient, getServerEnv } from '@/lib/supabase-auth';
 
+import { SITE_URL } from '@/lib/site-url';
 export const dynamic = 'force-dynamic';
 
 /**
@@ -90,7 +91,6 @@ interface Report {
   schemaTypes: string[];
 }
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sica.com.cn';
 const RECOMMENDED_KEY_TAKEAWAYS = 3;
 const MAX_KEY_TAKEAWAYS = 5;
 const RECOMMENDED_FAQ_PAIRS = 3;

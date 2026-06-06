@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next';
 
+import { SITE_URL } from '@/lib/site-url';
 // Robots.txt — controls what crawlers can access. We explicitly allow
 // the major AI / LLM crawlers (GPTBot, ClaudeBot, PerplexityBot, etc.)
 // so SICA content is indexable for ChatGPT, Claude, Perplexity, Google
@@ -24,7 +25,7 @@ export default function robots(): MetadataRoute.Robots {
       { userAgent: 'Googlebot', allow: '/', disallow: ['/api/', '/_next/'] },
       { userAgent: 'Applebot-Extended', allow: '/', disallow: ['/api/', '/_next/'] },
     ],
-    sitemap: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://sica.com.cn'}/sitemap.xml`,
+    sitemap: `${process.env.NEXT_PUBLIC_SITE_URL || SITE_URL}/sitemap.xml`,
   };
   return basePolicy;
 }

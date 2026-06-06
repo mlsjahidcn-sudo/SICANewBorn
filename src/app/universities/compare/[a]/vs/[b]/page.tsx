@@ -16,8 +16,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import { getAllUniversities } from '@/lib/data-fetcher';
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sica.com.cn';
+import { SITE_URL } from '@/lib/site-url';
 
 // All ranked universities, sorted. The picker and the slug validation
 // both pull from this list, so the compare page never produces a 404

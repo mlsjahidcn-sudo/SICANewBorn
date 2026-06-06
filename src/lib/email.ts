@@ -18,6 +18,7 @@
 import { Resend } from 'resend';
 import { getSupabaseServer } from '@/lib/supabase-server';
 import { renderTemplate } from '@/lib/email/renderer';
+import { SITE_URL } from '@/lib/site-url';
 
 function isEmailConfigured(): boolean {
   return Boolean(process.env.RESEND_API_KEY && process.env.ADMIN_EMAIL);
@@ -274,7 +275,7 @@ export async function sendChatLeadNotification(params: {
         <tr><td style="padding:6px 12px;font-weight:bold;background:#f5f5f5">Source Page</td><td style="padding:6px 12px">${params.sourcePage ?? '—'}</td></tr>
         <tr><td style="padding:6px 12px;font-weight:bold;background:#f5f5f5">Submitted At</td><td style="padding:6px 12px">${params.submittedAt}</td></tr>
       </table>
-      <p style="margin-top:16px;font-size:12px;color:#888">Log in to the <a href="https://sica.com.cn/admin/leads">admin panel</a> to view the conversation context and follow up.</p>
+      <p style="margin-top:16px;font-size:12px;color:#888">Log in to the <a href="${SITE_URL}/admin/leads">admin panel</a> to view the conversation context and follow up.</p>
     `,
     text: [
       `New Chat Lead captured from the SICA AI assistant.`,
@@ -513,7 +514,7 @@ function wrapForApplicant(innerHtml: string): string {
 <tr><td style="padding:32px;font-size:15px;line-height:1.6;color:#374151">${innerHtml}</td></tr>
 <tr><td style="padding:16px 32px;background:#FAFAF8;border-top:1px solid #E5E7EB;font-size:12px;color:#6B7280">
 <p style="margin:0 0 4px 0">SICA · Guangzhou, China · <a href="mailto:mlsjahid@qq.com" style="color:#9B1B30;text-decoration:none">mlsjahid@qq.com</a></p>
-<p style="margin:0">You're receiving this because you submitted an application through SICA. <a href="https://sica.com.cn/student/settings" style="color:#6B7280">Manage email preferences</a></p>
+<p style="margin:0">You're receiving this because you submitted an application through SICA. <a href="${SITE_URL}/student/settings" style="color:#6B7280">Manage email preferences</a></p>
 </td></tr></table></td></tr></table>
 </body></html>`;
 }
@@ -535,7 +536,7 @@ function wrapForPartner(innerHtml: string): string {
 <tr><td style="padding:32px;font-size:15px;line-height:1.6;color:#374151">${innerHtml}</td></tr>
 <tr><td style="padding:16px 32px;background:#FAFAF8;border-top:1px solid #E5E7EB;font-size:12px;color:#6B7280">
 <p style="margin:0 0 4px 0">SICA · Guangzhou, China · <a href="mailto:mlsjahid@qq.com" style="color:#9B1B30;text-decoration:none">mlsjahid@qq.com</a></p>
-<p style="margin:0">You're receiving this as a SICA partner agency, regarding a student application you submitted. <a href="https://sica.com.cn/partner/settings" style="color:#6B7280">Manage email preferences</a></p>
+<p style="margin:0">You're receiving this as a SICA partner agency, regarding a student application you submitted. <a href="${SITE_URL}/partner/settings" style="color:#6B7280">Manage email preferences</a></p>
 </td></tr></table></td></tr></table>
 </body></html>`;
 }

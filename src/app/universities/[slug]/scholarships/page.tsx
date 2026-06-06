@@ -7,8 +7,7 @@ import {
   getAllScholarships,
   getAllPrograms,
 } from '@/lib/data-fetcher';
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sica.com.cn';
+import { SITE_URL } from '@/lib/site-url';
 
 // Render on demand with ISR — reads the live DB so newly-added
 // universidades and admin-curated programs show up automatically.

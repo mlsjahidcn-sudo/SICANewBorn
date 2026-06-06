@@ -3,8 +3,7 @@ import Link from 'next/link';
 import { ArrowRight, GraduationCap, ChevronRight } from 'lucide-react';
 import { getAllPrograms } from '@/lib/data-fetcher';
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sica.com.cn';
-
+import { SITE_URL } from '@/lib/site-url';
 const slugifyDiscipline = (s: string) => s.toLowerCase().replace(/\s+/g, '-');
 
 // Render on demand with ISR — reads the live DB so newly-added

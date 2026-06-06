@@ -1,3 +1,4 @@
+import { SITE_URL } from '@/lib/site-url';
 /**
  * Admin: send a one-off email to a lead.
  *
@@ -187,7 +188,7 @@ export async function POST(
       pickString(leadRow, ['interested_program']) ||
       '',
     sourceKind: type,
-    siteUrl: process.env.NEXT_PUBLIC_SITE_URL || 'https://sica.com.cn',
+    siteUrl: process.env.NEXT_PUBLIC_SITE_URL || SITE_URL,
     ...(body.variables || {}),
   };
 

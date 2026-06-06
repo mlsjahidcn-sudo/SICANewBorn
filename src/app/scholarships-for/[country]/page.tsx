@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { Gift, Globe, Calendar, CheckCircle, ArrowRight, Clock, BookOpen } from 'lucide-react';
 import { COUNTRIES, getCountryBySlug, getScholarshipsForCountry } from '@/lib/seo-data';
 import { getServerT } from '@/lib/server-t';
+import { SITE_URL } from "@/lib/site-url";
 
 /**
  * /scholarships-for/[country] — pre-rendered detail page that lists
@@ -40,12 +41,12 @@ export async function generateMetadata({
     title,
     description,
     alternates: {
-      canonical: `https://sica.com.cn/scholarships-for/${country.slug}`,
+      canonical: `${SITE_URL}/scholarships-for/${country.slug}`,
     },
     openGraph: {
       title,
       description,
-      url: `https://sica.com.cn/scholarships-for/${country.slug}`,
+      url: `${SITE_URL}/scholarships-for/${country.slug}`,
       type: 'website',
     },
   };

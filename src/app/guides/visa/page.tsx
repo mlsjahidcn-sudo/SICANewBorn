@@ -4,8 +4,7 @@ import type { Locale } from '@/lib/i18n-translations';
 import { visaGuide } from '@/lib/guides/visa';
 import { GuidePage } from '@/components/guides/guide-page';
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sica.com.cn';
-
+import { SITE_URL } from '@/lib/site-url';
 export const dynamic = 'force-static';
 
 export async function generateMetadata(): Promise<Metadata> {

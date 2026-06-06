@@ -29,6 +29,24 @@ const nextConfig: NextConfig = {
   httpAgentOptions: {
     keepAlive: true,
   },
+  // S39: consolidate www. → apex. Both https://studyinchina.academy
+  // and https://www.studyinchina.academy reach the same content,
+  // but the sitemap / JSON-LD / canonical all emit the apex so SEO
+  // sees a single canonical. 301 (permanent) redirect any host
+  // matching the www variant to the apex, preserving the path and
+  // query string. The `has` filter only matches the exact host,
+  // so this is a no-op in dev (localhost) and a no-op for the
+  // apex itself.
+  async redirects() {
+    return [
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'www.studyinchina.academy' }],
+        destination: 'https://studyinchina.academy/:path*',
+        permanent: true,
+      },
+    ];
+  },
   experimental: {
     optimizeCss: true,
     optimizePackageImports: ['lucide-react', 'react-icons'],

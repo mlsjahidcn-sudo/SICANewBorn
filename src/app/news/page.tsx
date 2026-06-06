@@ -4,8 +4,7 @@ import Image from 'next/image';
 import { ArrowRight, Calendar, Clock, ChevronRight, Newspaper, X, Tag } from 'lucide-react';
 import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sica.com.cn';
-
+import { SITE_URL } from '@/lib/site-url';
 interface NewsRow {
   id: string;
   slug: string;

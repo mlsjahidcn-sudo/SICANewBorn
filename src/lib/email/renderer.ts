@@ -1,3 +1,4 @@
+import { SITE_URL } from '@/lib/site-url';
 /**
  * Email template renderer.
  *
@@ -29,7 +30,7 @@
  * template bodies before they ship.
  */
 
-const SITE_URL_DEFAULT = process.env.NEXT_PUBLIC_SITE_URL || 'https://sica.com.cn';
+const SITE_URL_DEFAULT = process.env.NEXT_PUBLIC_SITE_URL || SITE_URL;
 
 export interface RenderContext {
   // Free-form variable values

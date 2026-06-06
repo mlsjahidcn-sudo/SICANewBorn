@@ -4,6 +4,7 @@ import { Building2, GraduationCap, ArrowRight, MapPin } from 'lucide-react';
 import { cities } from '@/lib/seo-data';
 import { universities } from '@/lib/data';
 import { getServerT } from '@/lib/server-t';
+import { SITE_URL } from "@/lib/site-url";
 
 /**
  * /study-in-china — SEO hub page listing all Chinese cities with
@@ -21,12 +22,12 @@ export async function generateMetadata(): Promise<Metadata> {
     title: t('seo.cities.hubTitle'),
     description: t('seo.cities.hubDescription'),
     alternates: {
-      canonical: 'https://sica.com.cn/study-in-china',
+      canonical: '${SITE_URL}/study-in-china',
     },
     openGraph: {
       title: t('seo.cities.hubTitle'),
       description: t('seo.cities.hubDescription'),
-      url: 'https://sica.com.cn/study-in-china',
+      url: '${SITE_URL}/study-in-china',
       type: 'website',
     },
   };

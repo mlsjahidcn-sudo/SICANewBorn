@@ -8,6 +8,7 @@ import { inter } from '@/app/fonts';
 import { getOrganizationSchema, getWebsiteSchema, getEditorialTeamSchema } from '@/lib/structured-data';
 import type { Locale } from '@/lib/i18n-translations';
 
+import { SITE_URL } from '@/lib/site-url';
 export const metadata: Metadata = {
   title: {
     default: 'SICA | Study in China - Your Gateway to Top Chinese Universities',
@@ -30,7 +31,7 @@ export const metadata: Metadata = {
   authors: [{ name: 'SICA' }],
   creator: 'SICA',
   publisher: 'SICA',
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://sica.com.cn'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || SITE_URL),
   alternates: {
     canonical: '/',
   },

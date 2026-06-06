@@ -2,8 +2,7 @@ import type { MetadataRoute } from 'next';
 import { cookies } from 'next/headers';
 import { translations, type Locale } from './i18n-translations';
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sica.com.cn';
-
+import { SITE_URL } from '@/lib/site-url';
 export function getOrganizationSchema() {
   return {
     '@context': 'https://schema.org',

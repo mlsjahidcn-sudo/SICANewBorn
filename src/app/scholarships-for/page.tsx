@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Gift, ArrowRight, Globe } from 'lucide-react';
 import { COUNTRIES, getScholarshipsForCountry } from '@/lib/seo-data';
 import { getServerT } from '@/lib/server-t';
+import { SITE_URL } from '@/lib/site-url';
 
 /**
  * /scholarships-for — SEO hub page. Lists the curated set of source
@@ -19,11 +20,11 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t('seo.scholarships.hubTitle'),
     description: t('seo.scholarships.hubDescription'),
-    alternates: { canonical: 'https://sica.com.cn/scholarships-for' },
+    alternates: { canonical: `${SITE_URL}/scholarships-for` },
     openGraph: {
       title: t('seo.scholarships.hubTitle'),
       description: t('seo.scholarships.hubDescription'),
-      url: 'https://sica.com.cn/scholarships-for',
+      url: `${SITE_URL}/scholarships-for`,
       type: 'website',
     },
   };

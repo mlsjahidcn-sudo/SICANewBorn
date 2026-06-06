@@ -1,3 +1,4 @@
+import { SITE_URL } from '@/lib/site-url';
 /**
  * Partner: team management (owner only).
  *
@@ -15,7 +16,6 @@ import { Resend } from 'resend';
 
 export const dynamic = 'force-dynamic';
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sica.com.cn';
 const FROM = 'SICA <noreply@sica.com.cn>';
 const INVITE_TTL_DAYS = 7;
 

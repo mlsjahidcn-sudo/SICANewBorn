@@ -4,8 +4,7 @@ import { notFound } from 'next/navigation';
 import { ChevronRight, ArrowRight, MapPin, Trophy, GraduationCap, Clock, Banknote, Globe, Award } from 'lucide-react';
 import { getAllUniversities, getAllPrograms } from '@/lib/data-fetcher';
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sica.com.cn';
-
+import { SITE_URL } from '@/lib/site-url';
 // Render on demand with ISR — reads the live DB so newly-added
 // universidades (post-build) show up automatically, and the
 // per-university program list stays current with admin edits.
