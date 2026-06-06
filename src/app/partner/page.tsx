@@ -5,14 +5,11 @@ import Link from 'next/link';
 import {
   Users,
   FileText,
-  DollarSign,
   TrendingUp,
   Plus,
   ChevronRight,
   Calendar,
   MessageSquare,
-  Bell,
-  Loader2,
   AlertCircle,
 } from 'lucide-react';
 
@@ -25,34 +22,40 @@ import { apiFetchJson, ApiError } from '@/lib/api-client';
 
 interface PartnerStudent {
   id: string;
-  student_name: string | null;
-  student_email: string | null;
-  student_phone?: string | null;
+  studentName: string | null;
+  studentEmail: string | null;
+  studentPhone?: string | null;
   nationality?: string | null;
-  target_university?: string | null;
-  target_program?: string | null;
+  targetUniversity?: string | null;
+  targetProgram?: string | null;
   status?: string | null;
-  created_at: string;
+  createdAt: string;
 }
 
 interface PartnerApplication {
   id: string;
-  student_name: string | null;
+  studentName: string | null;
   university: string | null;
   program: string | null;
   status: string | null;
-  submitted_at?: string | null;
-  created_at: string;
+  submittedAt?: string | null;
+  createdAt: string;
 }
 
-interface PartnerFee {
-  id: string;
-  student_name: string | null;
-  amount: number | null;
-  currency: string | null;
-  status: string | null;
-  due_date?: string | null;
-  created_at: string;
+interface PaginatedStudents {
+  students: PartnerStudent[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+interface PaginatedApplications {
+  applications: PartnerApplication[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
 const ACTIVE_APPLICATION_STATUSES = new Set([
@@ -68,23 +71,27 @@ export default function PartnerDashboard() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [students, setStudents] = useState<PartnerStudent[]>([]);
   const [applications, setApplications] = useState<PartnerApplication[]>([]);
-  const [fees, setFees] = useState<PartnerFee[]>([]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        // partner-students and partner-applications both return arrays directly
-        // (not wrapped in { data }), per their route handlers.
-        const [studentsRes, appsRes, feesRes] = await Promise.all([
-          apiFetchJson<PartnerStudent[]>('/api/partner-students'),
-          apiFetchJson<PartnerApplication[]>('/api/partner-applications'),
-          apiFetchJson<PartnerFee[]>('/api/partner-fees'),
+        // /api/partner/students and /api/partner/applications both
+        // return { students: [...] } / { applications: [...] } with
+        // pagination metadata. Fees were removed in Phase 3 —
+        // partner orgs don't see fees or service charge (admin
+        // manages them in /admin/fees). limit=100 is enough for the
+        // dashboard stats; full paginated list lives on /partner/
+        // students and /partner/applications.
+        const [studentsRes, appsRes] = await Promise.all([
+          apiFetchJson<PaginatedStudents>('/api/partner/students?limit=100'),
+          apiFetchJson<PaginatedApplications>('/api/partner/applications?limit=100'),
         ]);
         if (cancelled) return;
-        setStudents(Array.isArray(studentsRes) ? studentsRes : []);
-        setApplications(Array.isArray(appsRes) ? appsRes : []);
-        setFees(Array.isArray(feesRes) ? feesRes : []);
+        setStudents(Array.isArray(studentsRes?.students) ? studentsRes.students : []);
+        setApplications(
+          Array.isArray(appsRes?.applications) ? appsRes.applications : [],
+        );
       } catch (err) {
         if (cancelled) return;
         setLoadError(err instanceof ApiError ? err.message : 'Failed to load dashboard');
@@ -103,9 +110,6 @@ export default function PartnerDashboard() {
     ACTIVE_APPLICATION_STATUSES.has(a.status || ''),
   ).length;
   const acceptedApplications = applications.filter((a) => a.status === 'Accepted').length;
-  const pendingFees = fees
-    .filter((f) => f.status === 'Pending')
-    .reduce((sum, f) => sum + (Number(f.amount) || 0), 0);
 
   const recentStudents = students.slice(0, 3);
   const recentApplications = applications.slice(0, 3);
@@ -127,18 +131,6 @@ export default function PartnerDashboard() {
         {config.label}
       </Badge>
     );
-  };
-
-  const formatCurrency = (amount: number, currency = 'CNY') => {
-    try {
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency,
-        maximumFractionDigits: 0,
-      }).format(amount);
-    } catch {
-      return `${currency} ${amount.toLocaleString()}`;
-    }
   };
 
   const formatDate = (iso?: string | null) => {
@@ -243,29 +235,6 @@ export default function PartnerDashboard() {
         <Card className="rounded-none">
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
             <div>
-              <CardTitle className="text-sm font-medium text-[#4B5563]">Pending Fees</CardTitle>
-              <CardDescription>Awaiting payment</CardDescription>
-            </div>
-            <div className="bg-[#D4A853]/10 p-2 rounded-none">
-              <DollarSign className="h-5 w-5 text-[#D4A853]" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-[#1B2A4A]">
-              {formatCurrency(pendingFees)}
-            </div>
-            <p className="text-sm text-[#4B5563] mt-1">From your students</p>
-            <Button asChild variant="outline" size="sm" className="mt-4 w-full rounded-none">
-              <Link href="/partner/fees" className="flex items-center justify-center">
-                View Fees <ChevronRight className="ml-1 h-4 w-4" />
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-none">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-            <div>
               <CardTitle className="text-sm font-medium text-[#4B5563]">Accepted</CardTitle>
               <CardDescription>Successful applications</CardDescription>
             </div>
@@ -314,17 +283,17 @@ export default function PartnerDashboard() {
                       <div className="flex items-center gap-3">
                         <Avatar className="h-10 w-10 rounded-none bg-[#9B1B30]">
                           <span className="text-white font-medium">
-                            {(student.student_name || '?').charAt(0).toUpperCase()}
+                            {(student.studentName || '?').charAt(0).toUpperCase()}
                           </span>
                         </Avatar>
                         <div>
                           <p className="font-medium text-[#1B2A4A] group-hover:text-[#9B1B30]">
-                            {student.student_name || 'Unnamed'}
+                            {student.studentName || 'Unnamed'}
                           </p>
-                          <p className="text-sm text-[#4B5563]">{student.student_email}</p>
+                          <p className="text-sm text-[#4B5563]">{student.studentEmail}</p>
                           <p className="text-xs text-[#4B5563] flex items-center">
                             <Calendar className="h-3 w-3 mr-1" />
-                            {formatDate(student.created_at)} • {student.nationality || '—'}
+                            {formatDate(student.createdAt)} • {student.nationality || '—'}
                           </p>
                         </div>
                       </div>
@@ -370,14 +339,14 @@ export default function PartnerDashboard() {
                     >
                       <div>
                         <p className="font-medium text-[#1B2A4A] group-hover:text-[#9B1B30]">
-                          {app.student_name || 'Unnamed'}
+                          {app.studentName || 'Unnamed'}
                         </p>
                         <p className="text-sm text-[#4B5563]">
                           {app.program} • {app.university}
                         </p>
                         <p className="text-xs text-[#4B5563] flex items-center">
                           <Calendar className="h-3 w-3 mr-1" />
-                          {formatDate(app.submitted_at || app.created_at)}
+                          {formatDate(app.submittedAt || app.createdAt)}
                         </p>
                       </div>
                       <div className="flex items-center gap-3">
