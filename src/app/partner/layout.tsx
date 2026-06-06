@@ -14,15 +14,20 @@ import {
   Menu,
   X,
   ChevronRight,
+  Bell,
 } from 'lucide-react';
 import Link from 'next/link';
 import { SicaLogo } from '@/components/sica-logo';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
+import { apiFetchJson } from '@/lib/api-client';
 
 // Fees nav item REMOVED (Phase 3): partner orgs never see fees /
 // service charge. Admin manages those in /admin/fees.
 const navItems = [
   { name: 'Dashboard', href: '/partner', icon: LayoutDashboard },
+  // S30: Notifications nav item surfaces the partner's unread count
+  // (badge). The badge is polled every 30s by the layout.
+  { name: 'Notifications', href: '/partner/notifications', icon: Bell, withUnreadBadge: true },
   { name: 'Students', href: '/partner/students', icon: Users },
   { name: 'Applications', href: '/partner/applications', icon: FileText },
   { name: 'Lead Sharing', href: '/partner/lead-sharing', icon: Share2 },
@@ -57,6 +62,10 @@ function PartnerLayoutInner({ children }: { children: React.ReactNode }) {
   const [authError, setAuthError] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  // S30: unread partner-notifications count for the sidebar bell
+  // badge. Polled every 30s + on focus + after route change. Cheap
+  // query (head: true + RLS-scoped), so the cadence is fine.
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
 
   useEffect(() => {
     setMounted(true);
@@ -140,6 +149,38 @@ function PartnerLayoutInner({ children }: { children: React.ReactNode }) {
     };
   }, [mounted, authLoading, user, pathname, router]);
 
+  // S30: poll unread notifications count for the sidebar bell
+  // badge. Mirrors the S17 student-portal pattern. The fetch
+  // goes through apiFetchJson so it gets the Bearer token from
+  // localStorage and any auth errors are surfaced.
+  useEffect(() => {
+    let cancelled = false;
+    const fetchUnread = async () => {
+      try {
+        const { count } = await apiFetchJson<{ count: number }>(
+          '/api/partner/notifications/unread-count',
+        );
+        if (!cancelled) setUnreadNotifCount(count || 0);
+      } catch (err) {
+        // Non-fatal — the badge just keeps its last value. We
+        // don't want a transient 401 to spam the partner with
+        // a toast.
+        console.warn('[partner layout] unread-count fetch failed:', err);
+      }
+    };
+    fetchUnread();
+    const onFocus = () => fetchUnread();
+    window.addEventListener('focus', onFocus);
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') fetchUnread();
+    }, 30_000);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('focus', onFocus);
+      clearInterval(interval);
+    };
+  }, [pathname, user]);
+
   const handleLogout = async () => {
     await signOut();
     setPartner(null);
@@ -217,6 +258,10 @@ function PartnerLayoutInner({ children }: { children: React.ReactNode }) {
               .map((item) => {
                 const isActive = pathname === item.href;
                 const Icon = item.icon;
+                // S30: notifications nav item shows a red badge
+                // with the unread count. Hidden when count is 0.
+                const showBadge =
+                  'withUnreadBadge' in item && item.withUnreadBadge && unreadNotifCount > 0;
                 return (
                   <Link
                     key={item.name}
@@ -228,8 +273,16 @@ function PartnerLayoutInner({ children }: { children: React.ReactNode }) {
                     }`}
                   >
                     <Icon size={18} />
-                    <span>{item.name}</span>
-                    {isActive && <ChevronRight size={14} className="ml-auto" />}
+                    <span className="flex-1">{item.name}</span>
+                    {showBadge && (
+                      <span
+                        className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[11px] font-semibold bg-[#9B1B30] text-white"
+                        title={`${unreadNotifCount} unread notification${unreadNotifCount === 1 ? '' : 's'}`}
+                      >
+                        {unreadNotifCount > 99 ? '99+' : unreadNotifCount}
+                      </span>
+                    )}
+                    {isActive && <ChevronRight size={14} />}
                   </Link>
                 );
               })}
