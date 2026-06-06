@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Spinner } from '@/components/ui/spinner';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
-import { I18nProvider } from '@/lib/i18n';
+import { I18nProvider, useI18n } from '@/lib/i18n';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
@@ -28,13 +28,15 @@ import type { StudentApplication } from '@/lib/application-mapper';
 // layout polls the unread-count endpoint every 30s + on
 // focus + on route change. `withUnreadBadge: true` is the
 // marker the nav loop checks to render the red badge.
+// Labels are translation keys — resolved via t() at render
+// time so the sidebar flips with the locale.
 const navItems = [
-  { href: '/student', label: 'Dashboard', labelCn: '仪表盘', icon: LayoutDashboard },
-  { href: '/student/notifications', label: 'Notifications', labelCn: '通知', icon: Bell, withUnreadBadge: true },
-  { href: '/student/profile', label: 'My Profile', labelCn: '个人资料', icon: User },
-  { href: '/student/documents', label: 'Documents', labelCn: '文档', icon: FileUp },
-  { href: '/student/applications', label: 'Applications', labelCn: '申请', icon: GraduationCap },
-  { href: '/student/settings', label: 'Settings', labelCn: '设置', icon: Settings },
+  { href: '/student', labelKey: 'studentNav.dashboard', icon: LayoutDashboard },
+  { href: '/student/notifications', labelKey: 'studentNav.notifications', icon: Bell, withUnreadBadge: true },
+  { href: '/student/profile', labelKey: 'studentNav.profile', icon: User },
+  { href: '/student/documents', labelKey: 'studentNav.documents', icon: FileUp },
+  { href: '/student/applications', labelKey: 'studentNav.applications', icon: GraduationCap },
+  { href: '/student/settings', labelKey: 'studentNav.settings', icon: Settings },
 ];
 
 /**
@@ -94,6 +96,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
 
 function StudentLayoutInner({ children }: { children: React.ReactNode }) {
   const { user, loading, signOut } = useAuth();
+  const { t } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -189,7 +192,7 @@ function StudentLayoutInner({ children }: { children: React.ReactNode }) {
           {/* Logo */}
           <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-200">
             <SicaLogo className="h-8 w-auto" />
-            <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Student</span>
+            <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">{t('studentNav.studentBadge')}</span>
             <button
               className="ml-auto lg:hidden text-gray-500 hover:text-[#1B2A4A]"
               onClick={() => setSidebarOpen(false)}
@@ -215,7 +218,7 @@ function StudentLayoutInner({ children }: { children: React.ReactNode }) {
                 'withUnreadBadge' in item && item.withUnreadBadge && unreadNotifCount > 0;
               return (
                 <Link
-                  key={item.label}
+                  key={item.href}
                   href={item.href}
                   className={`flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors ${
                     isActive
@@ -224,13 +227,13 @@ function StudentLayoutInner({ children }: { children: React.ReactNode }) {
                   }`}
                 >
                   <Icon size={18} />
-                  <span className="flex-1">{item.label}</span>
+                  <span className="flex-1">{t(item.labelKey)}</span>
                   {isAppsAttention && (
                     <span
                       title={
                         attentionSeverity === 'urgent'
-                          ? `${attentionCount} application(s) need documents from you`
-                          : `${attentionCount} draft application(s) ready to submit`
+                          ? t('studentNav.attentionTitleUrgent', { count: attentionCount })
+                          : t('studentNav.attentionTitleResumable', { count: attentionCount })
                       }
                       className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-semibold rounded-full ${
                         attentionSeverity === 'urgent'
@@ -243,7 +246,7 @@ function StudentLayoutInner({ children }: { children: React.ReactNode }) {
                   )}
                   {isUnreadNotif && (
                     <span
-                      title={`${unreadNotifCount} unread notification${unreadNotifCount === 1 ? '' : 's'}`}
+                      title={t(unreadNotifCount === 1 ? 'studentNav.unreadNotifTitle' : 'studentNav.unreadNotifTitlePlural', { count: unreadNotifCount })}
                       className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-semibold bg-[#9B1B30] text-white"
                     >
                       {unreadNotifCount > 99 ? '99+' : unreadNotifCount}
@@ -267,7 +270,7 @@ function StudentLayoutInner({ children }: { children: React.ReactNode }) {
                 <div className="text-sm font-medium text-[#1B2A4A] truncate">
                   {user.email}
                 </div>
-                <div className="text-xs text-gray-500">Student</div>
+                <div className="text-xs text-gray-500">{t('studentNav.studentRole')}</div>
               </div>
             </div>
             <button
@@ -275,7 +278,7 @@ function StudentLayoutInner({ children }: { children: React.ReactNode }) {
               className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-600 hover:text-red-600 hover:bg-red-50 transition-colors"
             >
               <LogOut size={18} />
-              <span>Sign Out</span>
+              <span>{t('studentNav.signOut')}</span>
             </button>
           </div>
         </div>
@@ -289,7 +292,7 @@ function StudentLayoutInner({ children }: { children: React.ReactNode }) {
             <div className="w-8 h-8 bg-[#9B1B30] flex items-center justify-center">
               <span className="text-white font-bold text-xs">S</span>
             </div>
-            <span className="font-bold text-[#1B2A4A]">SICA</span>
+            <span className="font-bold text-[#1B2A4A]">{t('studentNav.sicaLogo')}</span>
           </div>
           <button
             onClick={() => setSidebarOpen(true)}

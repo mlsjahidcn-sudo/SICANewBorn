@@ -8,7 +8,13 @@ export type { Locale };
 interface I18nContextType {
   locale: Locale;
   setLocale: (locale: Locale) => void;
-  t: (key: string) => string;
+  /**
+   * Look up a translation key in the current locale, with optional
+   * {{placeholder}} interpolation. Falls back to the key itself
+   * if no translation is registered (visible in the UI, which is
+   * better than silently swallowing it).
+   */
+  t: (key: string, params?: Record<string, string | number>) => string;
 }
 
 function readLocaleCookie(): Locale | null {
@@ -65,8 +71,18 @@ export function I18nProvider({ children, initialLocale }: { children: React.Reac
   }, []);
 
   const t = useCallback(
-    (key: string): string => {
-      return translations[locale]?.[key] ?? key;
+    (key: string, params?: Record<string, string | number>): string => {
+      const raw = translations[locale]?.[key] ?? translations[DEFAULT_LOCALE]?.[key] ?? key;
+      if (!params) return raw;
+      // {{name}} placeholder substitution. Unknown placeholders
+      // are left in place so missing params are visible at render
+      // time (better than silently swallowing them).
+      return raw.replace(/\{\{\s*(\w+)\s*\}\}/g, (match, name: string) => {
+        if (Object.prototype.hasOwnProperty.call(params, name)) {
+          return String(params[name]);
+        }
+        return match;
+      });
     },
     [locale]
   );

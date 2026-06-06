@@ -13,6 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { apiFetchJson } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
+import { useI18n } from '@/lib/i18n';
 import { DocumentUploader, DocumentCategory } from '@/components/student/DocumentUploader';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 // We keep the *static* enumerations (degreeLevels, documentTypes)
@@ -58,36 +59,42 @@ const isDegreeLevel = (v: string): v is DegreeLevel =>
  * "from your profile" in the UI so they know it's a draft, not
  * a real statement.
  */
-function buildPersonalStatementSeed(prof: {
-  target_degree?: string | null;
-  target_field?: string | null;
-  highest_education?: string | null;
-  gpa?: string | null;
-  english_proficiency?: string | null;
-  english_score?: string | null;
-}): string {
+function buildPersonalStatementSeed(
+  t: (key: string, params?: Record<string, string | number>) => string,
+  prof: {
+    target_degree?: string | null;
+    target_field?: string | null;
+    highest_education?: string | null;
+    gpa?: string | null;
+    english_proficiency?: string | null;
+    english_score?: string | null;
+  },
+): string {
   const parts: string[] = [];
   if (prof.highest_education || prof.gpa) {
     const edu = prof.highest_education
-      ? `I have completed my ${prof.highest_education}`
-      : 'I have completed my most recent academic program';
-    parts.push(`${edu}${prof.gpa ? ` with a GPA of ${prof.gpa}` : ''}.`);
+      ? t('studentWizard.psCompletedMy', { level: prof.highest_education })
+      : t('studentWizard.psCompletedGeneric');
+    parts.push(`${edu}${prof.gpa ? t('studentWizard.psGpaSuffix', { gpa: prof.gpa }) : ''}.`);
   }
   if (prof.english_proficiency && prof.english_score) {
     parts.push(
-      `My English proficiency is ${prof.english_proficiency} ${prof.english_score}.`,
+      t('studentWizard.psEnglishLine', {
+        proficiency: prof.english_proficiency,
+        score: prof.english_score,
+      }),
     );
   }
   if (prof.target_degree || prof.target_field) {
     const goal = [prof.target_degree, prof.target_field]
       .filter(Boolean)
       .join(' in ');
-    parts.push(`I am applying to study ${goal} to deepen my expertise and contribute to my field.`);
+    parts.push(t('studentWizard.psApplyingTo', { goal }));
   }
   if (parts.length === 0) {
     return '';
   }
-  return `${parts.join(' ')}\n\n[Edit this draft — the admissions team reads this carefully. Tell them why you chose this university, this program, and this career path.]`;
+  return `${parts.join(' ')}\n\n${t('studentWizard.personalStatementDraftFooter')}`;
 }
 
 /**
@@ -97,14 +104,14 @@ function buildPersonalStatementSeed(prof: {
  * default). The badge disappears the moment the student types
  * over the value (we remove the field from the prefilled set).
  */
-function PrefillBadge({ children }: { children?: React.ReactNode }) {
+function PrefillBadge({ t, children }: { t: (key: string, params?: Record<string, string | number>) => string; children?: React.ReactNode }) {
   return (
     <span
       className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 ml-2 align-middle bg-[#1B2A4A]/10 text-[#1B2A4A] border border-[#1B2A4A]/20 rounded-none whitespace-nowrap"
-      title="Auto-filled from your profile. Type to override."
+      title={t('studentWizard.prefilledBadgeTooltip')}
     >
       <UserCircle2 className="h-3 w-3" />
-      from your profile{children}
+      {t('studentWizard.prefilledBadgeText')}{children}
     </span>
   );
 }
@@ -120,10 +127,12 @@ const mapDocCategoryToStudentCategory = (c: string): DocumentCategory =>
 // and DocumentStatus union still resolve.)
 import type { StudentDocument, DocumentStatus } from '@/lib/student-data';
 
+// Step labels are translation keys — resolved via t() at render
+// time so the step indicator flips with the locale.
 const steps = [
-  { id: 1, title: 'University & Program', icon: Building },
-  { id: 2, title: 'Documents', icon: FileCheck },
-  { id: 3, title: 'Review', icon: Check }
+  { id: 1, titleKey: 'studentWizard.step1.title', icon: Building },
+  { id: 2, titleKey: 'studentWizard.step2.title', icon: FileCheck },
+  { id: 3, titleKey: 'studentWizard.step3.title', icon: Check }
 ];
 
 interface SyncableDocument {
@@ -135,6 +144,7 @@ interface SyncableDocument {
 export default function StudentNewApplicationPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t } = useI18n();
   // Phase 1: when the student clicks "Continue Editing" on a draft
   // detail page, the link is /new?resume=<applicationId>. The wizard
   // loads the existing application and pre-fills the form, then uses
@@ -240,7 +250,7 @@ export default function StudentNewApplicationPage() {
         // Non-fatal: just start with an empty form. The student can
         // still create a new application.
         const e = err as { message?: string };
-        setSubmitError(`Couldn't load draft: ${e.message || 'Unknown error'}`);
+        setSubmitError(t('studentWizard.errorCouldNotLoadDraft', { message: e.message || t('studentAppDetail.errorUnknown') }));
       } finally {
         setResuming(false);
       }
@@ -355,7 +365,7 @@ export default function StudentNewApplicationPage() {
             // from the student's profile context. They can edit
             // before submitting — the seed is just a draft.
             if (!prev.personalStatement && (prof.target_field || prof.highest_education)) {
-              next.personalStatement = buildPersonalStatementSeed(prof);
+              next.personalStatement = buildPersonalStatementSeed(t, prof);
               marked.add('personalStatement');
             }
             if (marked.size > 0) {
@@ -430,9 +440,9 @@ export default function StudentNewApplicationPage() {
   // the error inline so they know exactly what to fix.
   const getStepError = (step: number): string | null => {
     if (step === 1) {
-      if (!applicationData.targetDegreeLevel) return 'Pick a degree level';
-      if (!applicationData.targetProgramSlug) return 'Pick a program';
-      if (!applicationData.intendedIntake) return 'Pick an intended intake';
+      if (!applicationData.targetDegreeLevel) return t('studentWizard.requiredError', { field: t('studentWizard.degreeLevelLabel').toLowerCase() });
+      if (!applicationData.targetProgramSlug) return t('studentWizard.requiredError', { field: t('studentWizard.programLabel').toLowerCase() });
+      if (!applicationData.intendedIntake) return t('studentWizard.requiredError', { field: t('studentWizard.intakeLabel').toLowerCase() });
     }
     if (step === 2) {
       // Step 2 is the document upload itself. We only require at
@@ -546,12 +556,12 @@ export default function StudentNewApplicationPage() {
    */
   const handleSaveAsDraft = async () => {
     if (!applicationData.targetUniversity) {
-      setSubmitError('Pick a university first to save a draft.');
+      setSubmitError(t('studentWizard.errorPickUniversity'));
       setCurrentStep(1);
       return;
     }
     if (!applicationData.targetProgramSlug) {
-      setSubmitError('Pick a program first to save a draft.');
+      setSubmitError(t('studentWizard.errorPickProgram'));
       setCurrentStep(1);
       return;
     }
@@ -597,7 +607,7 @@ export default function StudentNewApplicationPage() {
         router.push(`/student/applications/${data.application.id}`);
       }, 1000);
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'Failed to save draft');
+      setSubmitError(err instanceof Error ? err.message : t('studentWizard.errorFailedToSaveDraft'));
       setSavingDraft(false);
     }
   };
@@ -641,7 +651,7 @@ export default function StudentNewApplicationPage() {
       // Brief delay so the success message is visible before navigating
       setTimeout(() => router.push('/student/applications'), 1500);
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'Failed to create application');
+      setSubmitError(err instanceof Error ? err.message : t('studentWizard.errorFailedToCreateApplication'));
       setLoading(false);
     }
   };
@@ -685,21 +695,20 @@ export default function StudentNewApplicationPage() {
         <Button variant="ghost" asChild className="rounded-none">
           <Link href="/student/applications">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
+            {t('studentWizard.backButton')}
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold text-[#1B2A4A]">New Application</h1>
-          <p className="text-[#4B5563] mt-1">Create a new application for yourself</p>
+          <h1 className="text-2xl font-bold text-[#1B2A4A]">{t('studentWizard.pageTitle')}</h1>
+          <p className="text-[#4B5563] mt-1">{t('studentWizard.pageSubtitle')}</p>
         </div>
       </div>
 
       <div className="flex items-start gap-2 p-3 border border-[#D4A853] bg-[#FAF6E8] text-sm text-[#1B2A4A]">
         <Save className="h-4 w-4 mt-0.5 flex-shrink-0 text-[#9B1B30]" />
         <p>
-          <strong>Save as Draft</strong> is available on every step — your
-          progress is saved and you can come back to finish later. Nothing
-          is sent to SICA until you click <strong>Submit Application</strong>.
+          <strong>{t('studentWizard.saveAsDraft')}</strong> {t('studentWizard.saveBannerBody')}{' '}
+          <strong>{t('studentWizard.submit')}</strong>.
         </p>
       </div>
 
@@ -721,7 +730,7 @@ export default function StudentNewApplicationPage() {
                   {isCompleted ? <Check className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
                 </div>
                 <span className={`text-xs mt-2 ${isActive || isCompleted ? 'text-[#1B2A4A] font-medium' : 'text-gray-500'}`}>
-                  {step.title}
+                  {t(step.titleKey)}
                 </span>
               </div>
               {index < steps.length - 1 && (
@@ -738,7 +747,7 @@ export default function StudentNewApplicationPage() {
           {currentStep === 1 && (
             <div className="space-y-6">
               <CardHeader className="px-0 pt-0">
-                <CardTitle className="text-lg text-[#1B2A4A]">Choose University & Program</CardTitle>
+                <CardTitle className="text-lg text-[#1B2A4A]">{t('studentWizard.step1CardTitle')}</CardTitle>
               </CardHeader>
 
               {/* Phase S21: profile prefill banner. Shown when at
@@ -749,16 +758,23 @@ export default function StudentNewApplicationPage() {
                 <div className="flex flex-wrap items-center gap-3 p-3 border border-[#1B2A4A]/30 bg-[#1B2A4A]/5 rounded-none">
                   <UserCircle2 className="h-4 w-4 text-[#1B2A4A] flex-shrink-0" />
                   <p className="text-sm text-[#1B2A4A] flex-1">
-                    We pre-filled <strong>{prefilledFields.size}</strong> field{prefilledFields.size === 1 ? '' : 's'} from your profile.
+                    {t(
+                      prefilledFields.size === 1
+                        ? 'studentWizard.prefillBannerField'
+                        : 'studentWizard.prefillBannerFields',
+                      { n: prefilledFields.size },
+                    )}
                     {prefilledFields.has('personalStatement') && (
-                      <> The personal statement is a <strong>draft</strong> — please edit it before submitting.</>
+                      <> {t('studentWizard.prefillBannerDraftHintStart')}{' '}
+                      <strong>{t('studentWizard.draftWord')}</strong>{' '}
+                      {t('studentWizard.prefillBannerDraftHintEnd')}</>
                     )}
                   </p>
                   <Link
                     href="/student/profile"
                     className="text-xs font-semibold text-[#1B2A4A] hover:text-[#9B1B30] underline underline-offset-2 whitespace-nowrap"
                   >
-                    Edit your profile →
+                    {t('studentWizard.editProfileLink')}
                   </Link>
                 </div>
               )}
@@ -767,8 +783,8 @@ export default function StudentNewApplicationPage() {
                 <div className="space-y-4">
                   <div>
                     <Label className="text-[#1B2A4A]">
-                      Degree Level
-                      {prefilledFields.has('targetDegreeLevel') && <PrefillBadge />}
+                      {t('studentWizard.degreeLevelLabel')}
+                      {prefilledFields.has('targetDegreeLevel') && <PrefillBadge t={t} />}
                     </Label>
                     <Select
                       value={applicationData.targetDegreeLevel}
@@ -795,7 +811,7 @@ export default function StudentNewApplicationPage() {
                       }}
                     >
                       <SelectTrigger className="rounded-none">
-                        <SelectValue placeholder="Select degree level" />
+                        <SelectValue placeholder={t('studentWizard.degreeLevelPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
                         {degreeLevels.map((level) => (
@@ -817,8 +833,8 @@ export default function StudentNewApplicationPage() {
                       flow stays consistent. */}
                   <div>
                     <Label className="text-[#1B2A4A]">
-                      Program
-                      {prefilledFields.has('targetProgramSlug') && <PrefillBadge />}
+                      {t('studentWizard.programLabel')}
+                      {prefilledFields.has('targetProgramSlug') && <PrefillBadge t={t} />}
                     </Label>
                     <SearchableSelect
                       value={applicationData.targetProgramSlug}
@@ -863,13 +879,13 @@ export default function StudentNewApplicationPage() {
                       })}
                       placeholder={
                         dataLoading
-                          ? 'Loading programs…'
+                          ? t('studentWizard.programLoadingPlaceholder')
                           : availablePrograms.length === 0
-                          ? 'No programs available yet'
-                          : 'Type to search by program OR university…'
+                          ? t('studentWizard.programEmptyPlaceholder')
+                          : t('studentWizard.programSearchPrompt')
                       }
-                      emptyText="No programs match"
-                      searchPlaceholder="Program or university name…"
+                      emptyText={t('studentWizard.programEmptyText')}
+                      searchPlaceholder={t('studentWizard.programSearchPlaceholder')}
                       disabled={!applicationData.targetDegreeLevel || dataLoading}
                       loading={dataLoading}
                     />
@@ -877,8 +893,8 @@ export default function StudentNewApplicationPage() {
 
                   <div>
                     <Label className="text-[#1B2A4A]">
-                      Intended Intake
-                      {prefilledFields.has('intendedIntake') && <PrefillBadge />}
+                      {t('studentWizard.intakeLabel')}
+                      {prefilledFields.has('intendedIntake') && <PrefillBadge t={t} />}
                     </Label>
                     <Select
                       value={applicationData.intendedIntake}
@@ -893,7 +909,7 @@ export default function StudentNewApplicationPage() {
                       }}
                     >
                       <SelectTrigger className="rounded-none">
-                        <SelectValue placeholder="Select intake" />
+                        <SelectValue placeholder={t('studentWizard.intakePlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
                         {getIntendedIntakes().map((intake) => (
@@ -908,7 +924,7 @@ export default function StudentNewApplicationPage() {
               {selectedProgram && selectedUniversity && (
                 <Card className="rounded-none bg-[#F3F4F6]">
                   <CardContent className="p-4">
-                    <h3 className="font-semibold text-[#1B2A4A] mb-2">Selected Program</h3>
+                    <h3 className="font-semibold text-[#1B2A4A] mb-2">{t('studentWizard.selectedProgramCardTitle')}</h3>
                     <p className="text-[#1B2A4A]">{selectedUniversity.name}</p>
                     <p className="text-gray-600">{selectedProgram.name}</p>
                     <p className="text-gray-500 text-sm mt-1">{selectedProgram.degree} • {selectedProgram.intake}</p>
@@ -919,15 +935,15 @@ export default function StudentNewApplicationPage() {
               <div className="space-y-4">
                 <div>
                   <Label className="text-[#1B2A4A]">
-                    Personal Statement
+                    {t('studentWizard.personalStatement')}
                     {prefilledFields.has('personalStatement') && (
-                      <PrefillBadge>
-                        <span className="ml-1">— edit before submitting</span>
+                      <PrefillBadge t={t}>
+                        <span className="ml-1">{t('studentWizard.prefilledBadgeEditHint')}</span>
                       </PrefillBadge>
                     )}
                   </Label>
                   <Textarea
-                    placeholder="Tell us why you want to study this program..."
+                    placeholder={t('studentWizard.personalStatementPlaceholder')}
                     className="rounded-none mt-2"
                     rows={6}
                     value={applicationData.personalStatement}
@@ -947,9 +963,9 @@ export default function StudentNewApplicationPage() {
                   />
                 </div>
                 <div>
-                  <Label className="text-[#1B2A4A]">Additional Notes (Optional)</Label>
+                  <Label className="text-[#1B2A4A]">{t('studentWizard.additionalNotesLabel')}</Label>
                   <Textarea 
-                    placeholder="Any additional information..."
+                    placeholder={t('studentWizard.additionalNotesPlaceholder')}
                     className="rounded-none mt-2"
                     rows={3}
                     value={applicationData.additionalNotes}
@@ -964,9 +980,9 @@ export default function StudentNewApplicationPage() {
           {currentStep === 2 && (
             <div className="space-y-6">
               <CardHeader className="px-0 pt-0">
-                <CardTitle className="text-lg text-[#1B2A4A]">Select Documents</CardTitle>
+                <CardTitle className="text-lg text-[#1B2A4A]">{t('studentWizard.step2CardTitle')}</CardTitle>
                 <p className="text-sm text-gray-600 mt-1">
-                  Choose which documents to include from your profile
+                  {t('studentWizard.step2CardSubtitle')}
                 </p>
               </CardHeader>
 
@@ -974,19 +990,19 @@ export default function StudentNewApplicationPage() {
                 <Card className="rounded-none bg-[#F3F4F6]">
                   <CardContent className="p-4 text-center">
                     <p className="text-2xl font-bold text-[#1B2A4A]">{syncStats.total}</p>
-                    <p className="text-sm text-gray-600">Required Documents</p>
+                    <p className="text-sm text-gray-600">{t('studentWizard.step2StatRequired')}</p>
                   </CardContent>
                 </Card>
                 <Card className="rounded-none bg-[#F3F4F6]">
                   <CardContent className="p-4 text-center">
                     <p className="text-2xl font-bold text-[#1B2A4A]">{syncStats.available}</p>
-                    <p className="text-sm text-gray-600">Available</p>
+                    <p className="text-sm text-gray-600">{t('studentWizard.step2StatAvailable')}</p>
                   </CardContent>
                 </Card>
                 <Card className="rounded-none bg-[#F3F4F6]">
                   <CardContent className="p-4 text-center">
                     <p className="text-2xl font-bold text-[#9B1B30]">{syncStats.selected}</p>
-                    <p className="text-sm text-gray-600">Selected</p>
+                    <p className="text-sm text-gray-600">{t('studentWizard.step2StatSelected')}</p>
                   </CardContent>
                 </Card>
               </div>
@@ -1070,20 +1086,20 @@ export default function StudentNewApplicationPage() {
           {currentStep === 3 && (
             <div className="space-y-6">
               <CardHeader className="px-0 pt-0">
-                <CardTitle className="text-lg text-[#1B2A4A]">Review Application</CardTitle>
+                <CardTitle className="text-lg text-[#1B2A4A]">{t('studentWizard.step3CardTitle')}</CardTitle>
                 <p className="text-sm text-gray-600 mt-1">
-                  Please review your application before submitting
+                  {t('studentWizard.step3CardSubtitle')}
                 </p>
               </CardHeader>
 
               <div className="grid gap-6">
                 <Card className="rounded-none">
                   <CardHeader className="border-b border-gray-200">
-                    <CardTitle className="text-base text-[#1B2A4A]">Student Information</CardTitle>
+                    <CardTitle className="text-base text-[#1B2A4A]">{t('studentWizard.step3StudentInfo')}</CardTitle>
                   </CardHeader>
                   <CardContent className="p-4 space-y-2">
                     <p className="font-medium text-[#1B2A4A]">
-                      {user?.user_metadata?.full_name || user?.email || 'Current Student'}
+                      {user?.user_metadata?.full_name || user?.email || t('studentWizard.step3CurrentStudent')}
                     </p>
                     <p className="text-gray-600">{user?.email}</p>
                     <p className="text-gray-600">{user?.user_metadata?.phone || '—'}</p>
@@ -1092,7 +1108,7 @@ export default function StudentNewApplicationPage() {
 
                 <Card className="rounded-none">
                   <CardHeader className="border-b border-gray-200">
-                    <CardTitle className="text-base text-[#1B2A4A]">Program Selection</CardTitle>
+                    <CardTitle className="text-base text-[#1B2A4A]">{t('studentWizard.step3ProgramSelection')}</CardTitle>
                   </CardHeader>
                   <CardContent className="p-4 space-y-2">
                     <p className="font-medium text-[#1B2A4A]">{selectedUniversity?.name}</p>
@@ -1104,7 +1120,7 @@ export default function StudentNewApplicationPage() {
                 <Card className="rounded-none">
                   <CardHeader className="border-b border-gray-200">
                     <CardTitle className="text-base text-[#1B2A4A]">
-                      Documents ({syncStats.selected}/{syncStats.total})
+                      {t('studentWizard.step3DocumentsLabel', { selected: syncStats.selected, total: syncStats.total })}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-4">
@@ -1132,7 +1148,7 @@ export default function StudentNewApplicationPage() {
               disabled={currentStep === 1 || loading || savingDraft}
               className="rounded-none"
             >
-              Previous
+              {t('common.previous')}
             </Button>
             <div className="flex flex-wrap items-center gap-3">
               <Button
@@ -1140,22 +1156,22 @@ export default function StudentNewApplicationPage() {
                 onClick={handleSaveAsDraft}
                 disabled={savingDraft || draftSaved || loading}
                 className="rounded-none border-[#1B2A4A] text-[#1B2A4A] hover:bg-[#1B2A4A] hover:text-white"
-                title="Save as Draft — keep your progress and finish later"
+                title={t('studentWizard.saveAsDraftTooltip')}
               >
                 {savingDraft ? (
                   <>
                     <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Saving Draft...
+                    {t('studentWizard.saving')}
                   </>
                 ) : draftSaved ? (
                   <>
                     <CheckCircle2 className="h-4 w-4 mr-2" />
-                    Draft Saved
+                    {t('studentWizard.draftSaved')}
                   </>
                 ) : (
                   <>
                     <Save className="h-4 w-4 mr-2" />
-                    Save as Draft
+                    {t('studentWizard.saveAsDraft')}
                   </>
                 )}
               </Button>
@@ -1163,16 +1179,16 @@ export default function StudentNewApplicationPage() {
                 <div className="flex flex-col items-end gap-1">
                   {nextBlocked && (
                     <span className="text-xs text-red-700 font-semibold">
-                      {step1Error ?? 'Fill in the required fields above to continue'}
+                      {step1Error ?? t('studentWizard.completeFields')}
                     </span>
                   )}
                   <Button
                     onClick={handleNext}
                     disabled={savingDraft || nextBlocked}
-                    title={nextBlocked ? (step1Error ?? 'Complete required fields to continue') : undefined}
+                    title={nextBlocked ? (step1Error ?? t('studentWizard.completeFieldsShort')) : undefined}
                     className="bg-[#9B1B30] hover:bg-[#7A1525] text-white rounded-none"
                   >
-                    Next
+                    {t('studentWizard.next')}
                     <ChevronRight className="h-4 w-4 ml-2" />
                   </Button>
                 </div>
@@ -1185,15 +1201,15 @@ export default function StudentNewApplicationPage() {
                 {loading ? (
                   <>
                     <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Submitting...
+                    {t('studentWizard.submitting')}
                   </>
                 ) : createdAppId ? (
                   <>
                     <CheckCircle2 className="h-4 w-4 mr-2" />
-                    Submitted!
+                    {t('studentWizard.submitted')}
                   </>
                 ) : (
-                  'Submit Application'
+                  t('studentWizard.submit')
                 )}
               </Button>
               )}
@@ -1202,7 +1218,7 @@ export default function StudentNewApplicationPage() {
 
           {submitError && (
             <div className="mt-4 p-3 border border-red-200 bg-red-50 text-red-800 text-sm rounded">
-              <strong>Error:</strong> {submitError}
+              <strong>{t('studentWizard.errorError')}</strong> {submitError}
             </div>
           )}
         </CardContent>

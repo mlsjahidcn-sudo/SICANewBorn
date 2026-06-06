@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
+import { useI18n } from '@/lib/i18n';
 import { User, Edit, Save, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -62,6 +63,7 @@ const HIGHEST_EDUCATION = ['High School', 'Diploma', 'Bachelor', 'Master', 'PhD'
 
 export default function StudentProfilePage() {
   const { user } = useAuth();
+  const { t } = useI18n();
   const [profile, setProfile] = useState<StudentProfile>(EMPTY_PROFILE);
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -81,7 +83,7 @@ export default function StudentProfilePage() {
       // sign-up may not have run for older accounts. Show empty form
       // and let the user fill it in.
       if (e.status !== 404) {
-        setError(e.message || 'Failed to load profile.');
+        setError(e.message || t('studentProfile.errorFailedToLoad'));
       }
       setProfile(EMPTY_PROFILE);
     } finally {
@@ -125,7 +127,7 @@ export default function StudentProfilePage() {
       setIsEditing(false);
     } catch (err) {
       const e = err as { message?: string };
-      setError(e.message || 'Failed to save profile.');
+      setError(e.message || t('studentProfile.errorFailedToSave'));
     } finally {
       setIsSaving(false);
     }
@@ -152,9 +154,9 @@ export default function StudentProfilePage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-[#1B2A4A]">My Profile</h1>
+          <h1 className="text-2xl font-bold text-[#1B2A4A]">{t('studentProfile.title')}</h1>
           <p className="text-[#4B5563] mt-1">
-            Manage your personal information ·{' '}
+            {t('studentProfile.subtitle')} ·{' '}
             <span className="font-mono text-xs">{user?.email}</span>
           </p>
         </div>
@@ -162,7 +164,7 @@ export default function StudentProfilePage() {
           {savedAt && !isEditing && (
             <span className="inline-flex items-center gap-1 text-xs text-green-700">
               <CheckCircle2 className="h-3.5 w-3.5" />
-              Saved {savedAt.toLocaleTimeString()}
+              {t('studentProfile.saved', { time: savedAt.toLocaleTimeString() })}
             </span>
           )}
           {!isEditing ? (
@@ -171,7 +173,7 @@ export default function StudentProfilePage() {
               onClick={() => { setSavedAt(null); setIsEditing(true); }}
             >
               <Edit className="mr-2 h-4 w-4" />
-              Edit Profile
+              {t('studentProfile.edit')}
             </Button>
           ) : (
             <>
@@ -181,7 +183,7 @@ export default function StudentProfilePage() {
                 onClick={handleCancel}
                 disabled={isSaving}
               >
-                Cancel
+                {t('studentProfile.cancel')}
               </Button>
               <Button
                 className="rounded-none bg-[#9B1B30] hover:bg-[#7A1526]"
@@ -189,7 +191,7 @@ export default function StudentProfilePage() {
                 disabled={isSaving}
               >
                 <Save className="mr-2 h-4 w-4" />
-                {isSaving ? 'Saving…' : 'Save Changes'}
+                {isSaving ? t('studentProfile.saving') : t('studentProfile.save')}
               </Button>
             </>
           )}
@@ -211,14 +213,14 @@ export default function StudentProfilePage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="h-4 w-4" />
-              Personal Information
+              {t('studentProfile.personalInfoTitle')}
             </CardTitle>
-            <CardDescription>Your basic details</CardDescription>
+            <CardDescription>{t('studentProfile.personalInfoDesc')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="first_name">First Name</Label>
+                <Label htmlFor="first_name">{t('studentProfile.firstName')}</Label>
                 <Input
                   id="first_name"
                   value={profile.first_name ?? ''}
@@ -228,7 +230,7 @@ export default function StudentProfilePage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="last_name">Last Name</Label>
+                <Label htmlFor="last_name">{t('studentProfile.lastName')}</Label>
                 <Input
                   id="last_name"
                   value={profile.last_name ?? ''}
@@ -239,7 +241,7 @@ export default function StudentProfilePage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number</Label>
+              <Label htmlFor="phone">{t('studentProfile.phone')}</Label>
               <Input
                 id="phone"
                 type="tel"
@@ -252,7 +254,7 @@ export default function StudentProfilePage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="nationality">Nationality</Label>
+                <Label htmlFor="nationality">{t('studentProfile.nationality')}</Label>
                 <Input
                   id="nationality"
                   value={profile.nationality ?? ''}
@@ -263,7 +265,7 @@ export default function StudentProfilePage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="date_of_birth">Date of Birth</Label>
+                <Label htmlFor="date_of_birth">{t('studentProfile.dateOfBirth')}</Label>
                 <Input
                   id="date_of_birth"
                   type="date"
@@ -275,7 +277,7 @@ export default function StudentProfilePage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="passport_number">Passport Number</Label>
+              <Label htmlFor="passport_number">{t('studentProfile.passportNumber')}</Label>
               <Input
                 id="passport_number"
                 value={profile.passport_number ?? ''}
@@ -286,7 +288,7 @@ export default function StudentProfilePage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="passport_expiry">Passport Expiry</Label>
+              <Label htmlFor="passport_expiry">{t('studentProfile.passportExpiry')}</Label>
               <Input
                 id="passport_expiry"
                 type="date"
@@ -297,7 +299,7 @@ export default function StudentProfilePage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="current_address">Current Address</Label>
+              <Label htmlFor="current_address">{t('studentProfile.currentAddress')}</Label>
               <Input
                 id="current_address"
                 value={profile.current_address ?? ''}
@@ -313,12 +315,12 @@ export default function StudentProfilePage() {
         {/* Education & Preferences */}
         <Card className="rounded-none">
           <CardHeader>
-            <CardTitle>Education & Preferences</CardTitle>
-            <CardDescription>Your academic background + what you want to study</CardDescription>
+            <CardTitle>{t('studentProfile.educationTitle')}</CardTitle>
+            <CardDescription>{t('studentProfile.educationDesc')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="highest_education">Highest Education</Label>
+              <Label htmlFor="highest_education">{t('studentProfile.highestEducation')}</Label>
               <select
                 id="highest_education"
                 value={profile.highest_education ?? ''}
@@ -326,12 +328,12 @@ export default function StudentProfilePage() {
                 disabled={!isEditing}
                 className="w-full h-10 rounded-none border border-gray-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2A4A]/20 disabled:bg-gray-50 disabled:text-gray-500"
               >
-                <option value="">(not set)</option>
+                <option value="">{t('studentProfile.notSet')}</option>
                 {HIGHEST_EDUCATION.map((d) => <option key={d} value={d}>{d}</option>)}
               </select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="school_name">School Name</Label>
+              <Label htmlFor="school_name">{t('studentProfile.schoolName')}</Label>
               <Input
                 id="school_name"
                 value={profile.school_name ?? ''}
@@ -342,7 +344,7 @@ export default function StudentProfilePage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="graduation_year">Graduation Year</Label>
+                <Label htmlFor="graduation_year">{t('studentProfile.graduationYear')}</Label>
                 <Input
                   id="graduation_year"
                   value={profile.graduation_year ?? ''}
@@ -353,7 +355,7 @@ export default function StudentProfilePage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="gpa">GPA / Grade</Label>
+                <Label htmlFor="gpa">{t('studentProfile.gpa')}</Label>
                 <Input
                   id="gpa"
                   value={profile.gpa ?? ''}
@@ -366,7 +368,7 @@ export default function StudentProfilePage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="english_proficiency">English Test</Label>
+                <Label htmlFor="english_proficiency">{t('studentProfile.englishTest')}</Label>
                 <select
                   id="english_proficiency"
                   value={profile.english_proficiency ?? ''}
@@ -374,12 +376,12 @@ export default function StudentProfilePage() {
                   disabled={!isEditing}
                   className="w-full h-10 rounded-none border border-gray-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2A4A]/20 disabled:bg-gray-50 disabled:text-gray-500"
                 >
-                  <option value="">(not set)</option>
+                  <option value="">{t('studentProfile.notSet')}</option>
                   {ENGLISH_PROFICIENCY.map((d) => <option key={d} value={d}>{d}</option>)}
                 </select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="english_score">Test Score</Label>
+                <Label htmlFor="english_score">{t('studentProfile.testScore')}</Label>
                 <Input
                   id="english_score"
                   value={profile.english_score ?? ''}
@@ -392,7 +394,7 @@ export default function StudentProfilePage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="target_degree">Target Degree</Label>
+                <Label htmlFor="target_degree">{t('studentProfile.targetDegree')}</Label>
                 <select
                   id="target_degree"
                   value={profile.target_degree ?? ''}
@@ -400,12 +402,12 @@ export default function StudentProfilePage() {
                   disabled={!isEditing}
                   className="w-full h-10 rounded-none border border-gray-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2A4A]/20 disabled:bg-gray-50 disabled:text-gray-500"
                 >
-                  <option value="">(not set)</option>
+                  <option value="">{t('studentProfile.notSet')}</option>
                   {TARGET_DEGREES.map((d) => <option key={d} value={d}>{d}</option>)}
                 </select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="target_intake">Target Intake</Label>
+                <Label htmlFor="target_intake">{t('studentProfile.targetIntake')}</Label>
                 <Input
                   id="target_intake"
                   value={profile.target_intake ?? ''}
@@ -417,7 +419,7 @@ export default function StudentProfilePage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="target_field">Field of Study</Label>
+              <Label htmlFor="target_field">{t('studentProfile.fieldOfStudy')}</Label>
               <Input
                 id="target_field"
                 value={profile.target_field ?? ''}

@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { apiFetchJson } from '@/lib/api-client';
+import { useI18n } from '@/lib/i18n';
 import { documentTypes, DocumentCategory } from '@/lib/student-data';
 import { DocumentUploader, DocumentCategory as DocCat, UploadedDocument } from '@/components/student/DocumentUploader';
 import { createStudentDocDownloadUrl } from '@/lib/storage-client';
@@ -50,6 +51,7 @@ const CATEGORIES: Array<'All' | DocumentCategory> = [
 
 export default function StudentDocumentsPage() {
   const searchParams = useSearchParams();
+  const { t } = useI18n();
   // ?applicationId=<id> comes in from the application detail
   // "Upload Document" button. We pre-filter the docs list to that
   // application and show a clear "filter active" banner with an X
@@ -97,7 +99,7 @@ export default function StudentDocumentsPage() {
       setApplications(appsRes.applications || []);
     } catch (err) {
       console.error('[student/documents] fetch failed:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load documents.');
+      setError(err instanceof Error ? err.message : t('studentDocs.errorFetch'));
     } finally {
       setIsLoading(false);
     }
@@ -128,7 +130,7 @@ export default function StudentDocumentsPage() {
       setDocuments((prev) =>
         prev.map((d) => (d.id === docId ? { ...d, application_id: previous } : d)),
       );
-      setError(err instanceof Error ? err.message : 'Failed to link document.');
+      setError(err instanceof Error ? err.message : t('studentDocs.errorLink'));
     } finally {
       setLinkingId(null);
     }
@@ -158,7 +160,7 @@ export default function StudentDocumentsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this document? This cannot be undone.')) return;
+    if (!confirm(t('studentDocs.deleteConfirm'))) return;
     try {
       const res = await fetch(`/api/student/documents/${id}`, { method: 'DELETE' });
       if (!res.ok) {
@@ -167,7 +169,7 @@ export default function StudentDocumentsPage() {
       }
       setDocuments((prev) => prev.filter((d) => d.id !== id));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Delete failed.');
+      setError(err instanceof Error ? err.message : t('studentDocs.errorDelete'));
     }
   };
 
@@ -175,21 +177,21 @@ export default function StudentDocumentsPage() {
     if (!doc.file_url) return;
     try {
       const { downloadUrl } = await createStudentDocDownloadUrl(doc.file_url);
-      if (!downloadUrl) throw new Error('Could not generate download URL');
+      if (!downloadUrl) throw new Error(t('studentDocs.errorDownloadUrl'));
       window.open(downloadUrl, '_blank', 'noopener,noreferrer');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Download failed.');
+      setError(err instanceof Error ? err.message : t('studentDocs.errorDownload'));
     }
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }> = {
-      'Pending': { variant: 'outline', label: 'Pending' },
-      'Verified': { variant: 'default', label: 'Verified' },
-      'Rejected': { variant: 'destructive', label: 'Rejected' },
+    const variants: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; labelKey: string }> = {
+      'Pending': { variant: 'outline', labelKey: 'studentDocs.statusBadgePending' },
+      'Verified': { variant: 'default', labelKey: 'studentDocs.statusBadgeVerified' },
+      'Rejected': { variant: 'destructive', labelKey: 'studentDocs.statusBadgeRejected' },
     };
-    const config = variants[status] || { variant: 'outline' as const, label: status };
-    return <Badge variant={config.variant} className="rounded-none">{config.label}</Badge>;
+    const config = variants[status] || { variant: 'outline' as const, labelKey: '' };
+    return <Badge variant={config.variant} className="rounded-none">{config.labelKey ? t(config.labelKey) : status}</Badge>;
   };
 
   const getStatusIcon = (status: string) => {
@@ -233,8 +235,8 @@ export default function StudentDocumentsPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#1B2A4A]">My Documents</h1>
-          <p className="text-[#4B5563] mt-1">Upload and manage your application documents</p>
+          <h1 className="text-2xl font-bold text-[#1B2A4A]">{t('studentDocs.title')}</h1>
+          <p className="text-[#4B5563] mt-1">{t('studentDocs.subtitle')}</p>
         </div>
         <Button
           variant="default"
@@ -242,7 +244,7 @@ export default function StudentDocumentsPage() {
           className="rounded-none bg-[#9B1B30] hover:bg-[#7a1626]"
         >
           <Upload className="mr-2 h-4 w-4" />
-          {showUploadPanel ? 'Close' : 'Upload Document'}
+          {showUploadPanel ? t('common.close') : t('studentDocs.upload')}
         </Button>
       </div>
 
@@ -255,7 +257,7 @@ export default function StudentDocumentsPage() {
       {showUploadPanel && (
         <Card className="rounded-none border-[#1B2A4A]/30">
           <CardHeader>
-            <CardTitle className="text-[#1B2A4A] text-base">Upload a new document</CardTitle>
+            <CardTitle className="text-[#1B2A4A] text-base">{t('studentDocs.uploadNewTitle')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-wrap gap-2">
@@ -273,7 +275,7 @@ export default function StudentDocumentsPage() {
             </div>
 
             {availableDocTypes.length === 0 ? (
-              <p className="text-sm text-[#4B5563]">No document types in this category.</p>
+              <p className="text-sm text-[#4B5563]">{t('studentDocs.noDocTypesInCategory')}</p>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {availableDocTypes.map((dt) => (
@@ -311,10 +313,12 @@ export default function StudentDocumentsPage() {
           <Link
             href="/student/documents"
             className="ml-2 inline-flex items-center gap-1 bg-amber-50 border border-amber-300 text-amber-800 px-2.5 py-1 text-xs font-semibold rounded-none hover:bg-amber-100"
+            title={t('studentDocs.filteredToApp')}
           >
             <X className="h-3 w-3" />
-            Filtered to application
-            {filteredApplication ? `: ${filteredApplication.university ?? filteredApplication.id.slice(0, 8)}` : ''}
+            {filteredApplication
+              ? t('studentDocs.filteredToAppUniversity', { university: filteredApplication.university ?? filteredApplication.id.slice(0, 8) })
+              : t('studentDocs.filteredToApp')}
           </Link>
         )}
       </div>
@@ -349,19 +353,19 @@ export default function StudentDocumentsPage() {
                         <Link
                           href={`/student/applications/${linkedApp.id}`}
                           className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded-none hover:bg-green-100"
-                          title="Open this application"
+                          title={t('studentDocs.openApp')}
                         >
                           <FileCheck className="h-3 w-3" />
-                          Linked to {linkedApp.university}
+                          {t('studentDocs.linkedTo', { app: linkedApp.university })}
                           <ExternalLink className="h-3 w-3" />
                         </Link>
                       ) : (
                         <span
                           className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 bg-orange-50 text-orange-700 border border-orange-200 rounded-none"
-                          title="This document isn't linked to any application yet"
+                          title={t('studentDocs.unlinkedTitle')}
                         >
                           <Link2 className="h-3 w-3" />
-                          Unlinked
+                          {t('studentDocs.unlinked')}
                         </span>
                       )}
                     </div>
@@ -372,12 +376,12 @@ export default function StudentDocumentsPage() {
                     </p>
                     {doc.uploaded_at && (
                       <p className="text-xs text-[#4B5563] mt-1">
-                        Uploaded: {new Date(doc.uploaded_at).toLocaleDateString()}
+                        {t('studentDocs.uploadedLabel')} {new Date(doc.uploaded_at).toLocaleDateString()}
                       </p>
                     )}
                     {doc.status === 'Rejected' && doc.rejection_reason && (
                       <p className="text-sm text-red-700 mt-2 bg-red-50 border border-red-200 px-2 py-1 rounded-none">
-                        <span className="font-semibold">Rejected: </span>
+                        <span className="font-semibold">{t('studentDocs.rejectedLabel')}</span>{' '}
                         {doc.rejection_reason}
                       </p>
                     )}
@@ -391,7 +395,7 @@ export default function StudentDocumentsPage() {
                           htmlFor={`link-${doc.id}`}
                           className="text-xs text-[#4B5563] font-normal"
                         >
-                          {linkedApp ? 'Move to:' : 'Link to:'}
+                          {linkedApp ? t('studentDocs.moveToLabel') : t('studentDocs.linkTo')}
                         </Label>
                         <Select
                           value={doc.application_id ?? 'none'}
@@ -407,11 +411,11 @@ export default function StudentDocumentsPage() {
                             id={`link-${doc.id}`}
                             className="h-8 text-xs rounded-none min-w-[200px]"
                           >
-                            <SelectValue placeholder="(unlinked)" />
+                            <SelectValue placeholder={t('studentDocs.unlinkedValue')} />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="none">
-                              (unlinked — not attached to any app)
+                              {t('studentDocs.unlinkedDesc')}
                             </SelectItem>
                             {applications.map((a) => (
                               <SelectItem key={a.id} value={a.id}>
@@ -422,7 +426,7 @@ export default function StudentDocumentsPage() {
                           </SelectContent>
                         </Select>
                         {isLinking && (
-                          <span className="text-xs text-gray-500">Saving…</span>
+                          <span className="text-xs text-gray-500">{t('studentDocs.savingEllipsis')}</span>
                         )}
                       </div>
                     )}
@@ -435,9 +439,9 @@ export default function StudentDocumentsPage() {
                         size="sm"
                         onClick={() => handleDownload(doc)}
                         className="rounded-none"
-                        title="Download"
+                        title={t('studentDocs.download')}
                       >
-                        Download
+                        {t('studentDocs.download')}
                       </Button>
                     )}
                     <Button
@@ -445,7 +449,7 @@ export default function StudentDocumentsPage() {
                       size="sm"
                       onClick={() => handleDelete(doc.id)}
                       className="rounded-none text-red-600 hover:text-red-800"
-                      title="Delete"
+                      title={t('studentDocs.delete')}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -461,14 +465,14 @@ export default function StudentDocumentsPage() {
         <Card className="rounded-none">
           <CardContent className="p-12 text-center">
             <FileUp className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-[#1B2A4A] mb-2">No documents yet</h3>
-            <p className="text-[#4B5563] mb-6">Upload your first document to get started</p>
+            <h3 className="text-lg font-medium text-[#1B2A4A] mb-2">{t('studentDocs.empty')}</h3>
+            <p className="text-[#4B5563] mb-6">{t('studentDocs.emptyCta')}</p>
             <Button
               onClick={() => setShowUploadPanel(true)}
               className="rounded-none bg-[#9B1B30] hover:bg-[#7a1626]"
             >
               <Upload className="mr-2 h-4 w-4" />
-              Upload Document
+              {t('studentDocs.upload')}
             </Button>
           </CardContent>
         </Card>

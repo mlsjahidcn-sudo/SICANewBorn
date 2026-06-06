@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import { apiFetch, apiFetchJson } from '@/lib/api-client';
+import { useI18n } from '@/lib/i18n';
 
 /**
  * /student/notifications
@@ -50,28 +51,37 @@ const TYPE_BADGE: Record<string, string> = {
   info: 'bg-gray-100 text-gray-600',
 };
 
-const TYPE_LABEL: Record<string, string> = {
-  status_change: 'Status',
-  documents_requested: 'Docs',
-  team: 'Team',
-  info: 'Info',
+// Type → translation key. Resolved via t() at render time so the
+// chip labels flip with the locale.
+const TYPE_LABEL_KEY: Record<string, string> = {
+  status_change: 'studentNotif.typeStatus',
+  documents_requested: 'studentNotif.typeDocs',
+  team: 'studentNotif.typeTeam',
+  info: 'studentNotif.typeInfo',
 };
 
-function timeAgo(iso: string): string {
-  const t = new Date(iso).getTime();
+// i18n-aware time-ago. Returns a translation-key-resolved
+// string for any duration under a week, otherwise a localized
+// date string.
+function timeAgo(
+  t: (key: string, params?: Record<string, string | number>) => string,
+  iso: string,
+): string {
+  const ts = new Date(iso).getTime();
   const now = Date.now();
-  const sec = Math.floor((now - t) / 1000);
-  if (sec < 60) return 'just now';
+  const sec = Math.floor((now - ts) / 1000);
+  if (sec < 60) return t('studentNotif.justNow');
   const min = Math.floor(sec / 60);
-  if (min < 60) return `${min}m ago`;
+  if (min < 60) return t('studentNotif.minutesAgo', { n: min });
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}h ago`;
+  if (hr < 24) return t('studentNotif.hoursAgo', { n: hr });
   const day = Math.floor(hr / 24);
-  if (day < 7) return `${day}d ago`;
+  if (day < 7) return t('studentNotif.daysAgo', { n: day });
   return new Date(iso).toLocaleDateString();
 }
 
 export default function StudentNotificationsPage() {
+  const { t } = useI18n();
   const [notifications, setNotifications] = useState<StudentNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -105,7 +115,7 @@ export default function StudentNotificationsPage() {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load notifications');
+          setError(err instanceof Error ? err.message : t('studentNotif.errorLoad'));
         }
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -161,7 +171,7 @@ export default function StudentNotificationsPage() {
       setUnreadCount(0);
       setRetryNonce((n) => n + 1);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to mark all as read');
+      setError(err instanceof Error ? err.message : t('studentNotif.errorMarkAll'));
     } finally {
       setMarkingAll(false);
     }
@@ -184,10 +194,10 @@ export default function StudentNotificationsPage() {
         <div>
           <h1 className="text-2xl font-bold text-[#1B2A4A] flex items-center gap-2">
             <Bell size={22} className="text-[#9B1B30]" />
-            Notifications
+            {t('studentNotif.title')}
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Updates from the SICA team about your applications.
+            {t('studentNotif.subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -196,7 +206,7 @@ export default function StudentNotificationsPage() {
             size="sm"
             className="rounded-none"
             onClick={() => setRetryNonce((n) => n + 1)}
-            title="Refresh"
+            title={t('studentNotif.refreshTooltip')}
           >
             <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
           </Button>
@@ -209,7 +219,7 @@ export default function StudentNotificationsPage() {
               disabled={markingAll}
             >
               <CheckCheck size={14} className="mr-1.5" />
-              Mark all as read
+              {t('studentNotif.markAllRead')}
             </Button>
           )}
         </div>
@@ -227,7 +237,7 @@ export default function StudentNotificationsPage() {
               : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
           }`}
         >
-          All
+          {t('studentNotif.all')}
         </button>
         <button
           type="button"
@@ -238,7 +248,7 @@ export default function StudentNotificationsPage() {
               : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
           }`}
         >
-          Unread
+          {t('studentNotif.unread')}
           {unreadCount > 0 && (
             <span
               className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-semibold ${
@@ -261,7 +271,7 @@ export default function StudentNotificationsPage() {
             onClick={() => setRetryNonce((n) => n + 1)}
             className="text-red-700"
           >
-            Try again
+            {t('studentNotif.tryAgain')}
           </Button>
         </div>
       )}
@@ -271,7 +281,7 @@ export default function StudentNotificationsPage() {
         <Card className="rounded-none border-gray-200">
           <CardContent className="py-16 text-center">
             <Spinner size="md" className="text-[#1B2A4A] mx-auto" />
-            <p className="text-sm text-gray-500 mt-3">Loading notifications…</p>
+            <p className="text-sm text-gray-500 mt-3">{t('studentNotif.loading')}</p>
           </CardContent>
         </Card>
       ) : notifications.length === 0 ? (
@@ -279,9 +289,7 @@ export default function StudentNotificationsPage() {
           <CardContent className="py-16 text-center">
             <Inbox size={36} className="text-gray-300 mx-auto" />
             <p className="text-sm text-gray-500 mt-3">
-              {filter === 'unread'
-                ? 'No unread notifications. You\'re all caught up.'
-                : 'No notifications yet. You\'ll get an email + in-app update when SICA changes a status on one of your applications.'}
+              {filter === 'unread' ? t('studentNotif.emptyUnread') : t('studentNotif.emptyAll')}
             </p>
           </CardContent>
         </Card>
@@ -291,7 +299,7 @@ export default function StudentNotificationsPage() {
             <ul className="divide-y divide-gray-100">
               {notifications.map((n) => {
                 const typeClass = TYPE_BADGE[n.type] || TYPE_BADGE.info;
-                const typeLabel = TYPE_LABEL[n.type] || n.type;
+                const typeLabel = TYPE_LABEL_KEY[n.type] ? t(TYPE_LABEL_KEY[n.type]) : n.type;
                 return (
                   <li
                     key={n.id}
@@ -333,7 +341,7 @@ export default function StudentNotificationsPage() {
                         {n.message}
                       </p>
                       <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-400">
-                        <span>{timeAgo(n.created_at)}</span>
+                        <span>{timeAgo(t, n.created_at)}</span>
                       </div>
                     </div>
 
@@ -346,7 +354,7 @@ export default function StudentNotificationsPage() {
                           markRead(n.id);
                         }}
                         className="flex-shrink-0 text-gray-400 hover:text-[#1B2A4A] p-1 opacity-0 group-hover:opacity-100 hover:opacity-100 focus:opacity-100"
-                        title="Mark as read"
+                        title={t('studentNotif.markAsReadTooltip')}
                       >
                         <Check size={16} />
                       </button>
@@ -362,8 +370,7 @@ export default function StudentNotificationsPage() {
       {/* Footer hint */}
       {notifications.length > 0 && (
         <p className="text-xs text-gray-400 text-center">
-          Showing the {notifications.length} most recent notifications. Older entries are
-          archived automatically.
+          {t('studentNotif.footer', { n: notifications.length })}
         </p>
       )}
     </div>

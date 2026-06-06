@@ -19,6 +19,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { apiFetchJson } from '@/lib/api-client';
+import { useI18n } from '@/lib/i18n';
 import type { StudentApplication } from '@/lib/application-mapper';
 
 // ---------- Types ----------
@@ -99,6 +100,7 @@ const documentStatusOptions: Array<DocumentStatus | 'all'> = [
 export default function StudentApplicationDetailPage() {
   const params = useParams();
   const applicationId = params.id as string;
+  const { t } = useI18n();
 
   const [application, setApplication] = useState<StudentApplication | null>(null);
   const [documents, setDocuments] = useState<StudentDocument[]>([]);
@@ -166,14 +168,14 @@ export default function StudentApplicationDetailPage() {
       alert(successMessage);
     } catch (err) {
       const e = err as { message?: string };
-      setActionError(e.message || 'Failed to update application');
+      setActionError(e.message || t('studentAppDetail.errorFailedToUpdate'));
     } finally {
       setActionPending(false);
     }
   };
 
   const handleWithdraw = async () => {
-    await runStatusChange('Withdrawn', 'Your application has been withdrawn.');
+    await runStatusChange('Withdrawn', t('studentAppDetail.alertWithdrawn'));
     setWithdrawOpen(false);
   };
 
@@ -186,8 +188,8 @@ export default function StudentApplicationDetailPage() {
     await runStatusChange(
       target,
       target === 'Submitted'
-        ? 'Your application has been resubmitted for review.'
-        : 'Marked as Under Review — admin will re-evaluate your updated materials.',
+        ? t('studentAppDetail.alertResubmittedRejected')
+        : t('studentAppDetail.alertResubmittedDocs'),
     );
     setResubmitOpen(false);
   };
@@ -204,7 +206,7 @@ export default function StudentApplicationDetailPage() {
     } catch (err) {
       const e = err as { status?: number; message?: string };
       if (e.status === 404) setNotFound(true);
-      else setError(e.message || 'Failed to load application');
+      else setError(e.message || t('studentAppDetail.errorFailedToLoad'));
     } finally {
       setIsLoading(false);
     }
@@ -239,11 +241,11 @@ export default function StudentApplicationDetailPage() {
         <Card>
           <CardContent className="p-12 text-center">
             <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h2 className="text-xl font-bold text-[#1B2A4A]">Application Not Found</h2>
-            <p className="text-gray-600 mt-2">This application doesn't exist or you don't have access to it.</p>
+            <h2 className="text-xl font-bold text-[#1B2A4A]">{t('studentAppDetail.notFound')}</h2>
+            <p className="text-gray-600 mt-2">{t('studentAppDetail.notFoundDesc')}</p>
             <Link href="/student/applications" className="mt-4 inline-block">
               <Button className="bg-[#9B1B30] hover:bg-[#7A1525] text-white rounded-none">
-                Back to Applications
+                {t('studentAppDetail.backToApplications')}
               </Button>
             </Link>
           </CardContent>
@@ -256,9 +258,9 @@ export default function StudentApplicationDetailPage() {
     return (
       <Card className="border-red-200 bg-red-50">
         <CardContent className="p-6">
-          <p className="text-red-800 text-sm"><strong>Error:</strong> {error || 'Unknown error'}</p>
+          <p className="text-red-800 text-sm"><strong>{t('studentAppDetail.errorError')}</strong> {error || t('studentAppDetail.errorUnknown')}</p>
           <Button size="sm" variant="outline" onClick={load} className="mt-2">
-            <RefreshCw className="w-4 h-4 mr-1" /> Retry
+            <RefreshCw className="w-4 h-4 mr-1" /> {t('common.retry')}
           </Button>
         </CardContent>
       </Card>
@@ -282,7 +284,7 @@ export default function StudentApplicationDetailPage() {
           </Link>
           <div>
             <h1 className="text-2xl font-bold text-[#1B2A4A]">
-              {application.applicationNumber || 'Application'}
+              {application.applicationNumber || t('studentDocs.titleDefault')}
             </h1>
             <p className="text-gray-600 mt-1">{application.university} · {application.program}</p>
           </div>
@@ -292,7 +294,7 @@ export default function StudentApplicationDetailPage() {
             <Link href={`/student/applications/new?resume=${applicationId}`}>
               <Button className="bg-[#1B2A4A] hover:bg-[#26345A] text-white rounded-none">
                 <Edit className="h-4 w-4 mr-2" />
-                Continue Editing
+                {t('studentAppDetail.continueEditing')}
               </Button>
             </Link>
           )}
@@ -303,7 +305,7 @@ export default function StudentApplicationDetailPage() {
               className="bg-[#1B2A4A] hover:bg-[#26345A] text-white rounded-none"
             >
               <Send className="h-4 w-4 mr-2" />
-              {application.status === 'Rejected' ? 'Resubmit Application' : 'Mark as Resubmitted'}
+              {application.status === 'Rejected' ? t('studentAppDetail.resubmitApplication') : t('studentAppDetail.markResubmittedBtn')}
             </Button>
           )}
           {canWithdraw && (
@@ -314,12 +316,12 @@ export default function StudentApplicationDetailPage() {
               className="rounded-none border-red-300 text-red-700 hover:bg-red-50 hover:border-red-400"
             >
               <Ban className="h-4 w-4 mr-2" />
-              Withdraw
+              {t('studentAppDetail.withdraw')}
             </Button>
           )}
           <Button variant="outline" onClick={load} disabled={isLoading}>
             <RefreshCw className={`h-4 w-4 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
+            {t('common.refresh')}
           </Button>
         </div>
       </div>
@@ -329,7 +331,7 @@ export default function StudentApplicationDetailPage() {
         <div className="flex items-start gap-3 p-4 border border-[#D4A853] bg-[#FAF6E8] rounded-none">
           <MessageSquare className="h-5 w-5 text-[#9B1B30] flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-sm font-semibold text-[#1B2A4A]">Note from SICA</p>
+            <p className="text-sm font-semibold text-[#1B2A4A]">{t('studentAppDetail.notes')}</p>
             <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{application.adminNotes}</p>
           </div>
         </div>
@@ -340,9 +342,7 @@ export default function StudentApplicationDetailPage() {
         <div className="flex items-start gap-3 p-3 border border-gray-300 bg-gray-50 rounded-none">
           <FileText className="h-4 w-4 text-gray-500 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-gray-700">
-            <strong>This is a draft.</strong> SICA has not received this
-            application yet. Continue editing and submit it when you're
-            ready.
+            <strong>{t('studentAppDetail.draftBannerBold')}</strong> {t('studentAppDetail.draftBanner')}
           </p>
         </div>
       )}
@@ -350,9 +350,8 @@ export default function StudentApplicationDetailPage() {
         <div className="flex items-start gap-3 p-3 border border-purple-300 bg-purple-50 rounded-none">
           <FileCheck className="h-4 w-4 text-purple-700 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-purple-900">
-            <strong>Action needed:</strong> SICA has requested additional
-            documents. Review the note above, upload the requested
-            materials, then click <strong>Mark as Resubmitted</strong>.
+            <strong>{t('studentAppDetail.documentsRequestedBold')}</strong> {t('studentAppDetail.documentsRequestedBanner')}{' '}
+            <strong>{t('studentAppDetail.markResubmittedBtn')}</strong>{t('studentAppDetail.documentsRequestedBannerEnd')}
           </p>
         </div>
       )}
@@ -360,9 +359,8 @@ export default function StudentApplicationDetailPage() {
         <div className="flex items-start gap-3 p-3 border border-red-300 bg-red-50 rounded-none">
           <XCircle className="h-4 w-4 text-red-700 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-red-900">
-            <strong>Application was rejected.</strong> You can review the
-            feedback above and <strong>Resubmit</strong> to apply again
-            with a new application record.
+            <strong>{t('studentAppDetail.rejectedBold')}</strong> {t('studentAppDetail.rejectedBanner')}{' '}
+            <strong>{t('studentAppDetail.resubmit')}</strong> {t('studentAppDetail.rejectedBannerEnd')}
           </p>
         </div>
       )}
@@ -370,7 +368,7 @@ export default function StudentApplicationDetailPage() {
       {actionError && (
         <div className="flex items-start gap-3 p-3 border border-red-200 bg-red-50 text-red-800 text-sm rounded-none">
           <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-          <p><strong>Error:</strong> {actionError}</p>
+          <p><strong>{t('studentAppDetail.errorError')}</strong> {actionError}</p>
         </div>
       )}
 
@@ -380,7 +378,7 @@ export default function StudentApplicationDetailPage() {
           <CardContent className="p-6">
             <div className="flex items-center space-x-2">
               <StatusIcon className="h-5 w-5 text-[#1B2A4A]" />
-              <span className="text-sm text-gray-600">Status</span>
+              <span className="text-sm text-gray-600">{t('studentAppDetail.statStatus')}</span>
             </div>
             <Badge className={`mt-2 rounded-none ${statusColors[application.status] || 'bg-gray-100'}`}>
               {application.status}
@@ -391,7 +389,7 @@ export default function StudentApplicationDetailPage() {
           <CardContent className="p-6">
             <div className="flex items-center space-x-2">
               <Building className="h-5 w-5 text-[#1B2A4A]" />
-              <span className="text-sm text-gray-600">University</span>
+              <span className="text-sm text-gray-600">{t('studentAppDetail.statUniversity')}</span>
             </div>
             <p className="mt-2 font-semibold text-[#1B2A4A]">{application.university}</p>
             {application.universityNameCn && (
@@ -403,7 +401,7 @@ export default function StudentApplicationDetailPage() {
           <CardContent className="p-6">
             <div className="flex items-center space-x-2">
               <BookOpen className="h-5 w-5 text-[#1B2A4A]" />
-              <span className="text-sm text-gray-600">Program</span>
+              <span className="text-sm text-gray-600">{t('studentAppDetail.statProgram')}</span>
             </div>
             <p className="mt-2 font-semibold text-[#1B2A4A]">{application.program}</p>
             <p className="text-xs text-gray-500 mt-1">{application.degree} · {application.intake}</p>
@@ -413,12 +411,12 @@ export default function StudentApplicationDetailPage() {
           <CardContent className="p-6">
             <div className="flex items-center space-x-2">
               <Calendar className="h-5 w-5 text-[#1B2A4A]" />
-              <span className="text-sm text-gray-600">Submitted</span>
+              <span className="text-sm text-gray-600">{t('studentAppDetail.statSubmitted')}</span>
             </div>
             <p className="mt-2 font-semibold text-[#1B2A4A]">
               {application.submittedAt
                 ? new Date(application.submittedAt).toLocaleDateString()
-                : 'Not yet'}
+                : t('studentAppDetail.notYet')}
             </p>
           </CardContent>
         </Card>
@@ -431,19 +429,19 @@ export default function StudentApplicationDetailPage() {
             value="overview"
             className="rounded-none data-[state=active]:bg-white data-[state=active]:text-[#1B2A4A] data-[state=active]:shadow-sm"
           >
-            Overview
+            {t('studentAppDetail.tabs.overview')}
           </TabsTrigger>
           <TabsTrigger
             value="documents"
             className="rounded-none data-[state=active]:bg-white data-[state=active]:text-[#1B2A4A] data-[state=active]:shadow-sm"
           >
-            Documents ({documents.length})
+            {t('studentAppDetail.documentsTab', { count: documents.length })}
           </TabsTrigger>
           <TabsTrigger
             value="timeline"
             className="rounded-none data-[state=active]:bg-white data-[state=active]:text-[#1B2A4A] data-[state=active]:shadow-sm"
           >
-            Timeline
+            {t('studentAppDetail.tabs.timeline')}
           </TabsTrigger>
         </TabsList>
 
@@ -451,33 +449,33 @@ export default function StudentApplicationDetailPage() {
         <TabsContent value="overview" className="mt-6">
           <Card className="rounded-none border-0 shadow">
             <CardHeader className="border-b border-gray-200">
-              <CardTitle className="text-lg font-semibold text-[#1B2A4A]">Application Details</CardTitle>
+              <CardTitle className="text-lg font-semibold text-[#1B2A4A]">{t('studentAppDetail.applicationDetails')}</CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-gray-600">Degree Level</Label>
+                  <Label className="text-gray-600">{t('studentAppDetail.degreeLevelLabel')}</Label>
                   <p className="font-medium text-[#1B2A4A]">{application.degree}</p>
                 </div>
                 <div>
-                  <Label className="text-gray-600">Intake</Label>
+                  <Label className="text-gray-600">{t('studentAppDetail.intakeLabelValue')}</Label>
                   <p className="font-medium text-[#1B2A4A]">{application.intake}</p>
                 </div>
               </div>
               {application.personalStatement && (
                 <div>
-                  <Label className="text-gray-600">Personal Statement</Label>
+                  <Label className="text-gray-600">{t('studentAppDetail.personalStatementLabel')}</Label>
                   <p className="mt-2 text-gray-700 whitespace-pre-wrap">{application.personalStatement}</p>
                 </div>
               )}
               {application.additionalNotes && (
                 <div>
-                  <Label className="text-gray-600">Additional Notes</Label>
+                  <Label className="text-gray-600">{t('studentAppDetail.additionalNotesLabel')}</Label>
                   <p className="mt-2 text-gray-700 whitespace-pre-wrap">{application.additionalNotes}</p>
                 </div>
               )}
               {!application.personalStatement && !application.additionalNotes && (
-                <p className="text-sm text-gray-500">No notes added yet.</p>
+                <p className="text-sm text-gray-500">{t('studentAppDetail.noNotesYet')}</p>
               )}
             </CardContent>
           </Card>
@@ -489,7 +487,7 @@ export default function StudentApplicationDetailPage() {
             <div className="flex flex-wrap gap-4 items-center justify-between">
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4 text-[#1B2A4A]" />
-                <Label className="text-sm font-medium text-gray-700">Status</Label>
+                <Label className="text-sm font-medium text-gray-700">{t('studentAppDetail.docStatusFilter')}</Label>
                 <Select
                   value={selectedDocStatus}
                   onValueChange={(value) => {
@@ -499,14 +497,14 @@ export default function StudentApplicationDetailPage() {
                   }}
                 >
                   <SelectTrigger className="w-[180px] rounded-none">
-                    <SelectValue placeholder="All Status" />
+                    <SelectValue placeholder={t('studentAppDetail.docStatusAll')} />
                   </SelectTrigger>
                   <SelectContent className="rounded-none">
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="Pending">Pending</SelectItem>
-                    <SelectItem value="Uploaded">Uploaded</SelectItem>
-                    <SelectItem value="Verified">Verified</SelectItem>
-                    <SelectItem value="Rejected">Rejected</SelectItem>
+                    <SelectItem value="all">{t('studentAppDetail.docStatusAll')}</SelectItem>
+                    <SelectItem value="Pending">{t('studentDocs.statusBadgePending')}</SelectItem>
+                    <SelectItem value="Uploaded">{t('studentDocs.statusBadgeUploaded')}</SelectItem>
+                    <SelectItem value="Verified">{t('studentDocs.statusBadgeVerified')}</SelectItem>
+                    <SelectItem value="Rejected">{t('studentDocs.statusBadgeRejected')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -520,7 +518,7 @@ export default function StudentApplicationDetailPage() {
                     student knows why they're seeing fewer rows. */}
                 <Link href={`/student/documents?applicationId=${application.id}`}>
                   <Upload className="h-4 w-4 mr-2" />
-                  Upload Document
+                  {t('studentAppDetail.uploadDocument')}
                 </Link>
               </Button>
             </div>
@@ -529,11 +527,11 @@ export default function StudentApplicationDetailPage() {
               <Card className="rounded-none border-0 shadow">
                 <CardContent className="p-8 text-center">
                   <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-[#1B2A4A] mb-2">No Documents Found</h3>
+                  <h3 className="text-lg font-semibold text-[#1B2A4A] mb-2">{t('studentAppDetail.noDocumentsFound')}</h3>
                   <p className="text-gray-600">
                     {selectedDocStatus === 'all'
-                      ? 'No documents have been uploaded yet.'
-                      : `No documents with status "${selectedDocStatus}".`}
+                      ? t('studentAppDetail.noDocumentsFoundEmpty')
+                      : t('studentAppDetail.noDocumentsFoundFiltered', { status: selectedDocStatus })}
                   </p>
                 </CardContent>
               </Card>
@@ -562,15 +560,15 @@ export default function StudentApplicationDetailPage() {
                               <p className="text-sm text-gray-600">{doc.file_name}</p>
                             )}
                             <p className="text-sm text-gray-500">
-                              Uploaded: {new Date(doc.uploaded_at).toLocaleDateString()}
+                              {t('studentAppDetail.fileUploadedOn')} {new Date(doc.uploaded_at).toLocaleDateString()}
                             </p>
                             {doc.verified_at && (
                               <p className="text-sm text-green-600">
-                                Verified: {new Date(doc.verified_at).toLocaleDateString()}
+                                {t('studentAppDetail.fileVerifiedOn')} {new Date(doc.verified_at).toLocaleDateString()}
                               </p>
                             )}
                             {doc.status === 'Rejected' && doc.rejection_reason && (
-                              <p className="text-sm text-red-600 mt-2">Reason: {doc.rejection_reason}</p>
+                              <p className="text-sm text-red-600 mt-2">{t('studentAppDetail.reasonLabel')} {doc.rejection_reason}</p>
                             )}
                           </div>
                         </div>
@@ -606,7 +604,7 @@ export default function StudentApplicationDetailPage() {
               {timeline.length === 0 ? (
                 <div className="text-center py-8">
                   <Clock className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500">No timeline events yet.</p>
+                  <p className="text-gray-500">{t('studentAppDetail.timelineEmpty')}</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -643,17 +641,15 @@ export default function StudentApplicationDetailPage() {
         <AlertDialogContent className="rounded-none">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-[#1B2A4A]">
-              Withdraw this application?
+              {t('studentAppDetail.withdrawDialogTitle')}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Once withdrawn, this application is final and cannot be
-              reactivated. You'll need to create a brand new application
-              to apply to {application.university} again.
+              {t('studentAppDetail.withdrawDialogBody', { university: application.university })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={actionPending} className="rounded-none">
-              Keep Application
+              {t('studentAppDetail.withdrawDialogKeep')}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => {
@@ -666,10 +662,10 @@ export default function StudentApplicationDetailPage() {
               {actionPending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Withdrawing...
+                  {t('studentAppDetail.withdrawDialogWithdrawing')}
                 </>
               ) : (
-                'Yes, Withdraw'
+                t('studentAppDetail.withdrawDialogConfirm')
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -682,18 +678,18 @@ export default function StudentApplicationDetailPage() {
           <AlertDialogHeader>
             <AlertDialogTitle className="text-[#1B2A4A]">
               {application.status === 'Rejected'
-                ? 'Resubmit this application?'
-                : 'Mark as Resubmitted?'}
+                ? t('studentAppDetail.resubmitDialogTitleRejected')
+                : t('studentAppDetail.resubmitDialogTitleDocsRequested')}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {application.status === 'Rejected'
-                ? 'Resubmitting will create a fresh review cycle for SICA. The original rejection reason is preserved on your timeline.'
-                : 'SICA will be notified that your requested documents have been re-uploaded and the application is back in the review queue.'}
+                ? t('studentAppDetail.resubmitDialogBodyRejected')
+                : t('studentAppDetail.resubmitDialogBodyDocsRequested')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={actionPending} className="rounded-none">
-              Cancel
+              {t('common.cancel')}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => {
@@ -706,12 +702,12 @@ export default function StudentApplicationDetailPage() {
               {actionPending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Submitting...
+                  {t('studentWizard.submitting')}
                 </>
               ) : application.status === 'Rejected' ? (
-                'Resubmit Application'
+                t('studentAppDetail.resubmitApplication')
               ) : (
-                'Mark as Resubmitted'
+                t('studentAppDetail.markResubmittedBtn')
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

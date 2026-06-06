@@ -10,68 +10,74 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { apiFetchJson } from '@/lib/api-client';
+import { useI18n } from '@/lib/i18n';
 import type { StudentApplication } from '@/lib/application-mapper';
 
 interface ListResponse {
   applications: StudentApplication[];
 }
 
-// Status display config — DB values (8) → user-friendly label + badge style
-const statusDisplay: Record<string, { label: string; badge: string; iconClass: string }> = {
+// Status display config — DB values (8) → user-friendly label + badge style.
+// The label is a translation key (looked up via t()) so the badge text
+// flips with the locale.
+const statusDisplay: Record<string, { labelKey: string; badge: string; iconClass: string }> = {
   Draft: {
-    label: 'Draft',
+    labelKey: 'studentApps.filterDraft',
     badge: 'bg-gray-100 text-gray-800',
     iconClass: 'text-gray-400',
   },
   Submitted: {
-    label: 'Submitted',
+    labelKey: 'studentApps.filterSubmitted',
     badge: 'bg-blue-100 text-blue-800',
     iconClass: 'text-blue-600',
   },
   'Under Review': {
-    label: 'Under Review',
+    labelKey: 'studentApps.filterInReview',
     badge: 'bg-yellow-100 text-yellow-800',
     iconClass: 'text-yellow-600',
   },
   'Documents Requested': {
-    label: 'Docs Needed',
+    labelKey: 'studentApps.filterDocumentsRequested',
     badge: 'bg-purple-100 text-purple-800',
     iconClass: 'text-purple-600',
   },
   'Decision Made': {
-    label: 'Decision',
+    labelKey: 'studentAppDetail.status',
     badge: 'bg-orange-100 text-orange-800',
     iconClass: 'text-orange-600',
   },
   Accepted: {
-    label: 'Accepted',
+    labelKey: 'studentApps.filterAccepted',
     badge: 'bg-green-100 text-green-800',
     iconClass: 'text-green-600',
   },
   Rejected: {
-    label: 'Rejected',
+    labelKey: 'studentApps.filterRejected',
     badge: 'bg-red-100 text-red-800',
     iconClass: 'text-red-600',
   },
   Withdrawn: {
-    label: 'Withdrawn',
+    labelKey: 'studentApps.filterWithdrawn',
     badge: 'bg-gray-100 text-gray-800',
     iconClass: 'text-gray-400',
   },
 };
 
-// Filter chips — show the most relevant statuses (not the raw 8)
-const FILTERS = [
-  { value: 'all', label: 'All' },
-  { value: 'Draft', label: 'Draft' },
-  { value: 'Submitted', label: 'Submitted' },
-  { value: 'Under Review', label: 'In Review' },
-  { value: 'Documents Requested', label: 'Docs Needed' },
-  { value: 'Accepted', label: 'Accepted' },
-  { value: 'Rejected', label: 'Rejected' },
+// Filter chips — show the most relevant statuses (not the raw 8).
+// Labels are translation keys, resolved via t() at render time so
+// they flip with the locale.
+const FILTERS: Array<{ value: string; labelKey: string }> = [
+  { value: 'all', labelKey: 'studentApps.filterAll' },
+  { value: 'Draft', labelKey: 'studentApps.filterDraft' },
+  { value: 'Submitted', labelKey: 'studentApps.filterSubmitted' },
+  { value: 'Under Review', labelKey: 'studentApps.filterInReview' },
+  { value: 'Documents Requested', labelKey: 'studentApps.filterDocumentsRequested' },
+  { value: 'Accepted', labelKey: 'studentApps.filterAccepted' },
+  { value: 'Rejected', labelKey: 'studentApps.filterRejected' },
 ];
 
 export default function StudentApplicationsPage() {
+  const { t } = useI18n();
   const [applications, setApplications] = useState<StudentApplication[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -122,18 +128,18 @@ export default function StudentApplicationsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#1B2A4A]">My Applications</h1>
-          <p className="text-[#4B5563] mt-1">Track your university applications</p>
+          <h1 className="text-2xl font-bold text-[#1B2A4A]">{t('studentApps.title')}</h1>
+          <p className="text-[#4B5563] mt-1">{t('studentApps.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={load} disabled={isLoading}>
             <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
+            {t('common.refresh')}
           </Button>
           <Button asChild variant="default" className="rounded-none bg-[#9B1B30] hover:bg-[#7A1526]">
             <Link href="/student/applications/new">
               <Plus className="mr-2 h-4 w-4" />
-              New Application
+              {t('studentApps.newApplication')}
             </Link>
           </Button>
         </div>
@@ -145,7 +151,7 @@ export default function StudentApplicationsPage() {
           <CardContent className="p-4 flex items-center gap-2">
             <AlertCircle className="h-5 w-5 text-red-600" />
             <p className="text-sm text-red-800">Failed to load: {error}</p>
-            <Button size="sm" variant="outline" onClick={load} className="ml-auto">Retry</Button>
+            <Button size="sm" variant="outline" onClick={load} className="ml-auto">{t('common.retry')}</Button>
           </CardContent>
         </Card>
       )}
@@ -169,7 +175,7 @@ export default function StudentApplicationsPage() {
               onClick={() => setActiveStatus(f.value)}
               size="sm"
             >
-              {f.label}
+              {t(f.labelKey)}
               {countForFilter != null && countForFilter > 0 && (
                 <span
                   className={`ml-2 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-semibold rounded-full ${
@@ -194,14 +200,13 @@ export default function StudentApplicationsPage() {
           <AlertCircle className="h-4 w-4 text-[#9B1B30] flex-shrink-0 mt-0.5" />
           <p>
             <strong>{attentionBreakdown.requested}</strong>{' '}
-            application{attentionBreakdown.requested === 1 ? '' : 's'} need
-            documents from you.{' '}
+            {t('studentApps.attentionBanner')}.{' '}
             <button
               type="button"
               onClick={() => setActiveStatus('Documents Requested')}
               className="font-semibold underline text-[#9B1B30] hover:text-[#7A1525]"
             >
-              Show me which ones
+              {t('common.showMeWhich')}
             </button>
           </p>
         </div>
@@ -210,14 +215,13 @@ export default function StudentApplicationsPage() {
         <div className="flex items-start gap-3 p-3 border border-[#D4A853] bg-[#FAF6E8] text-sm text-[#1B2A4A]">
           <Clock className="h-4 w-4 text-[#9B1B30] flex-shrink-0 mt-0.5" />
           <p>
-            You have <strong>{attentionBreakdown.drafts}</strong> unsent draft
-            {attentionBreakdown.drafts === 1 ? '' : 's'}.{' '}
+            {t('studentApps.draftsYouHave', { n: attentionBreakdown.drafts })}{' '}
             <button
               type="button"
               onClick={() => setActiveStatus('Draft')}
               className="font-semibold underline text-[#9B1B30] hover:text-[#7A1525]"
             >
-              Resume a draft
+              {t('studentApps.resumeDraft')}
             </button>
           </p>
         </div>
@@ -245,18 +249,16 @@ export default function StudentApplicationsPage() {
           <CardContent className="p-12 text-center">
             <GraduationCap className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-[#1B2A4A] mb-2">
-              {activeStatus === 'all' ? 'No applications yet' : 'No applications match this filter'}
+              {activeStatus === 'all' ? t('studentApps.empty') : t('studentApps.emptyFiltered')}
             </h3>
             <p className="text-[#4B5563] mb-6">
-              {activeStatus === 'all'
-                ? 'Create your first application to get started'
-                : 'Try a different status filter, or create a new application.'}
+              {activeStatus === 'all' ? t('studentApps.emptyCta') : t('studentApps.tryDifferentFilter')}
             </p>
             {activeStatus === 'all' && (
               <Button asChild variant="default" className="rounded-none bg-[#9B1B30] hover:bg-[#7A1526]">
                 <Link href="/student/applications/new">
                   <Plus className="mr-2 h-4 w-4" />
-                  New Application
+                  {t('studentApps.newApplication')}
                 </Link>
               </Button>
             )}
@@ -266,7 +268,7 @@ export default function StudentApplicationsPage() {
         <div className="space-y-4">
           {filteredApplications.map((app) => {
             const display = statusDisplay[app.status] || {
-              label: app.status,
+              labelKey: 'studentAppDetail.status',
               badge: 'bg-gray-100 text-gray-800',
               iconClass: 'text-gray-400',
             };
@@ -281,7 +283,7 @@ export default function StudentApplicationsPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3 flex-wrap">
                           <h3 className="font-medium text-[#1B2A4A]">{app.university}</h3>
-                          <Badge className={`rounded-none ${display.badge}`}>{display.label}</Badge>
+                          <Badge className={`rounded-none ${display.badge}`}>{t(display.labelKey)}</Badge>
                           {app.applicationNumber && (
                             <span className="text-xs text-gray-400 font-mono">
                               {app.applicationNumber}
@@ -290,13 +292,13 @@ export default function StudentApplicationsPage() {
                         </div>
                         <p className="text-sm text-[#4B5563] mt-1">{app.program}</p>
                         <p className="text-xs text-[#4B5563] mt-1">
-                          <span className="text-gray-400">Intake:</span> {app.intake} ·
-                          <span className="text-gray-400 ml-1">Degree:</span> {app.degree}
+                          <span className="text-gray-400">{t('studentAppDetail.intake')}:</span> {app.intake} ·
+                          <span className="text-gray-400 ml-1">{t('studentAppDetail.degree')}:</span> {app.degree}
                         </p>
                         {app.submittedAt && (
                           <p className="text-xs text-[#4B5563] mt-1 flex items-center">
                             <Calendar className="h-3 w-3 mr-1" />
-                            Submitted: {new Date(app.submittedAt).toLocaleDateString()}
+                            {t('studentAppDetail.submittedAt')}: {new Date(app.submittedAt).toLocaleDateString()}
                           </p>
                         )}
                       </div>
