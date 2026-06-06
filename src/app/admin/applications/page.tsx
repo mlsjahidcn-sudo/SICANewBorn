@@ -21,7 +21,7 @@ import { APPLICATION_STATUSES, ApplicationStatus } from '@/lib/application-mappe
 
 interface Application {
   id: string;
-  studentId: string;
+  studentId: string | null;
   studentName: string;
   studentEmail: string;
   university: string;
@@ -29,7 +29,12 @@ interface Application {
   degree: string;
   intake: string;
   status: string;
-  source: 'Online' | 'Admin' | 'Partner';
+  // S28: 'Partner CRM' is the partner_applications table;
+  // 'Partner' is a student_applications row whose student's
+  // source='Partner'. They share the same "Partner" tab in
+  // the UI but link to different detail pages.
+  source: 'Online' | 'Admin' | 'Partner' | 'Partner CRM';
+  surface: 'student' | 'partner';
   applicationNumber?: string;
   createdAt: string;
   notes?: string;
@@ -57,7 +62,11 @@ const STATUS_DISPLAY: Record<ApplicationStatus, { label: string; color: string }
 const sourceColors: Record<string, string> = {
   'Online': 'bg-blue-100 text-blue-700',
   'Admin': 'bg-[#9B1B30] text-white',
-  'Partner': 'bg-purple-100 text-purple-700'
+  'Partner': 'bg-purple-100 text-purple-700',
+  // S28: partner_applications rows. Visually distinct from the
+  // purple 'Partner' (student source=Partner) so the admin can
+  // tell at a glance which surface the row came from.
+  'Partner CRM': 'bg-orange-100 text-orange-800',
 };
 
 /**
@@ -68,10 +77,20 @@ const sourceColors: Record<string, string> = {
  * (just a refetch with a new filter).
  */
 type SourceTab = 'all' | 'Online' | 'Partner' | 'Admin';
-const SOURCE_TABS: { value: SourceTab; label: string; shortLabel: string; icon: React.ElementType }[] = [
+// S28: the Partner tab now covers BOTH surfaces — student
+// applications with source='Partner' AND partner_applications
+// rows (the partner's own pipeline). The breakdown shows in the
+// helper text so the admin can see how many of each.
+const SOURCE_TABS: { value: SourceTab; label: string; shortLabel: string; icon: React.ElementType; helper?: (counts: { partner: number; partnerCrm: number } | null) => string }[] = [
   { value: 'all',     label: 'All Applications', shortLabel: 'All',     icon: Users },
   { value: 'Online',  label: 'Student (Online)', shortLabel: 'Student', icon: Users },
-  { value: 'Partner', label: 'Partner Agency',   shortLabel: 'Partner', icon: Building2 },
+  {
+    value: 'Partner',
+    label: 'Partner',
+    shortLabel: 'Partner',
+    icon: Building2,
+    helper: (c) => c ? `${c.partnerCrm} CRM + ${c.partner - c.partnerCrm} student` : '',
+  },
   { value: 'Admin',   label: 'Admin (Offline)',  shortLabel: 'Offline', icon: UserPlus },
 ];
 
@@ -101,7 +120,7 @@ export default function AdminApplicationsPage() {
   const [studentFilter, setStudentFilter] = useState<string>('all');
 
   // Tab badge counts
-  const [counts, setCounts] = useState<{ total: number; online: number; partner: number; offline: number } | null>(null);
+  const [counts, setCounts] = useState<{ total: number; online: number; partner: number; partnerCrm: number; offline: number } | null>(null);
   const [countsError, setCountsError] = useState<string | null>(null);
 
   // Delete dialog
@@ -115,7 +134,7 @@ export default function AdminApplicationsPage() {
   // -----------------------------------------------------------------
   const fetchCounts = useCallback(async () => {
     try {
-      const data = await apiFetchJson<{ total: number; online: number; partner: number; offline: number }>(
+      const data = await apiFetchJson<{ total: number; online: number; partner: number; partnerCrm: number; offline: number }>(
         '/api/admin/applications/counts',
       );
       setCounts(data);
@@ -201,7 +220,14 @@ export default function AdminApplicationsPage() {
     if (!applicationToDelete) return;
     setIsDeleting(true);
     try {
-      await apiFetch(`/api/admin/applications/${applicationToDelete.id}`, { method: 'DELETE' });
+      // S28: partner CRM rows live in a separate table and are
+      // deleted via the partner admin endpoint, not the student-app
+      // endpoint. Pick the right route based on surface.
+      const deleteHref =
+        applicationToDelete.surface === 'partner'
+          ? `/api/admin/partner-applications/${applicationToDelete.id}`
+          : `/api/admin/applications/${applicationToDelete.id}`;
+      await apiFetch(deleteHref, { method: 'DELETE' });
       setApplications((prev) => prev.filter((a) => a.id !== applicationToDelete.id));
       setTotal((prev) => Math.max(0, prev - 1));
       setDeleteDialogOpen(false);
@@ -223,10 +249,21 @@ export default function AdminApplicationsPage() {
   // Client-side safety filter: even after the API call, double-check the
   // active source matches the row. Cheap and makes tab switching feel
   // instant if the user navigates before the refetch lands.
+  //
+  // S28: the "Partner" tab covers BOTH source='Partner' and
+  // source='Partner CRM' (the partner_applications rows). They're
+  // unified in the UI but link to different detail pages.
   const filteredApplications = applications.filter((app) => {
-    const matchesSource = activeTab === 'all' || app.source === activeTab;
+    const matchesSource =
+      activeTab === 'all' ||
+      app.source === activeTab ||
+      (activeTab === 'Partner' && app.source === 'Partner CRM');
     const matchesStatus = statusFilter === 'all' || app.status === statusFilter;
-    const matchesStudent = studentFilter === 'all' || app.studentId === studentFilter;
+    const matchesStudent =
+      studentFilter === 'all' ||
+      // Partner CRM rows have no student_id — they don't match a
+      // student filter.
+      (app.studentId !== null && app.studentId === studentFilter);
     const matchesSearch =
       !searchQuery ||
       app.studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -241,7 +278,7 @@ export default function AdminApplicationsPage() {
     if (!counts) return total;
     switch (activeTab) {
       case 'Online':  return counts.online;
-      case 'Partner': return counts.partner;
+      case 'Partner': return counts.partner; // includes partnerCrm
       case 'Admin':   return counts.offline;
       default:        return counts.total;
     }
@@ -279,14 +316,20 @@ export default function AdminApplicationsPage() {
               counts
                 ? (tab.value === 'all' ? counts.total
                   : tab.value === 'Online' ? counts.online
-                  : tab.value === 'Partner' ? counts.partner
-                  : counts.offline)
+                  // S28: the Partner tab badge now shows the
+                  // combined count of student_source=Partner +
+                  // partner_applications rows. The breakdown
+                  // is shown in the tab label itself.
+                  : tab.value === 'Partner'
+                    ? counts.partner
+                    : counts.offline)
                 : null;
             return (
               <button
                 key={tab.value}
                 type="button"
                 onClick={() => setActiveTab(tab.value)}
+                title={tab.helper?.(counts) || tab.label}
                 className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                   isActive
                     ? 'border-[#9B1B30] text-[#9B1B30]'
@@ -412,80 +455,96 @@ export default function AdminApplicationsPage() {
                       </td>
                     </tr>
                   ) : (
-                    filteredApplications.map((application) => (
-                      <tr key={application.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4">
-                          <div>
-                            <div className="font-medium text-[#1F2937]">
-                              {application.studentName?.trim() ||
-                                (application.studentEmail ? application.studentEmail.split('@')[0] : '—')}
+                    filteredApplications.map((application) => {
+                      // S28: pick the right detail URL based on the
+                      // surface. Partner CRM rows go to the partner
+                      // admin page (where status controls live);
+                      // student application rows go to the existing
+                      // student-app detail page.
+                      const detailsHref =
+                        application.surface === 'partner'
+                          ? `/admin/partner-applications/${application.id}`
+                          : `/admin/applications/${application.id}`;
+                      return (
+                        <tr key={application.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4">
+                            <div>
+                              <div className="font-medium text-[#1F2937]">
+                                {application.studentName?.trim() ||
+                                  (application.studentEmail ? application.studentEmail.split('@')[0] : '—')}
+                              </div>
+                              <div className="text-xs text-[#4B5563]">{application.studentEmail}</div>
                             </div>
-                            <div className="text-xs text-[#4B5563]">{application.studentEmail}</div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div>
-                            <div className="text-[#1F2937]">{application.university}</div>
-                            <div className="text-xs text-[#4B5563]">{application.program} • {application.degree}</div>
-                            <div className="text-xs text-[#6B7280] mt-1">{application.intake}</div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <Badge
-                            className={`${
-                              STATUS_DISPLAY[application.status as ApplicationStatus]?.color ??
-                              'bg-gray-100 text-gray-800'
-                            } rounded-none border`}
-                          >
-                            {STATUS_DISPLAY[application.status as ApplicationStatus]?.label ??
-                              application.status}
-                          </Badge>
-                        </td>
-                        <td className="px-6 py-4">
-                          <Badge className={`${sourceColors[application.source]} rounded-none`}>
-                            {application.source === 'Admin' ? 'Offline' : application.source}
-                          </Badge>
-                        </td>
-                        <td className="px-6 py-4 text-[#4B5563]">
-                          {new Date(application.createdAt).toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center justify-end gap-1">
-                            <Link href={`/admin/applications/${application.id}`}>
-                              <Button variant="ghost" size="sm" className="rounded-none text-[#1B2A4A]">
-                                <Eye className="w-4 h-4" />
-                              </Button>
-                            </Link>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div>
+                              <div className="text-[#1F2937]">{application.university}</div>
+                              <div className="text-xs text-[#4B5563]">{application.program} • {application.degree}</div>
+                              <div className="text-xs text-[#6B7280] mt-1">{application.intake}</div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <Badge
+                              className={`${
+                                STATUS_DISPLAY[application.status as ApplicationStatus]?.color ??
+                                'bg-gray-100 text-gray-800'
+                              } rounded-none border`}
+                            >
+                              {STATUS_DISPLAY[application.status as ApplicationStatus]?.label ??
+                                application.status}
+                            </Badge>
+                          </td>
+                          <td className="px-6 py-4">
+                            <Badge className={`${sourceColors[application.source]} rounded-none`}>
+                              {application.source === 'Admin' ? 'Offline' : application.source}
+                            </Badge>
+                          </td>
+                          <td className="px-6 py-4 text-[#4B5563]">
+                            {new Date(application.createdAt).toLocaleDateString()}
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center justify-end gap-1">
+                              <Link href={detailsHref}>
                                 <Button variant="ghost" size="sm" className="rounded-none text-[#1B2A4A]">
-                                  <MoreHorizontal className="w-4 h-4" />
+                                  <Eye className="w-4 h-4" />
                                 </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="rounded-none">
-                                <DropdownMenuItem asChild>
-                                  <Link href={`/admin/students/${application.studentId}`}>
-                                    View Student
-                                  </Link>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem asChild>
-                                  <Link href={`/admin/applications/${application.id}`}>
-                                    View Details
-                                  </Link>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  className="text-red-600"
-                                  onClick={() => handleDelete(application)}
-                                >
-                                  <Trash2 className="w-4 h-4 mr-2" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
+                              </Link>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="rounded-none text-[#1B2A4A]">
+                                    <MoreHorizontal className="w-4 h-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="rounded-none">
+                                  {/* S28: partner CRM rows have no
+                                      studentId, so the "View Student"
+                                      shortcut is hidden for them. */}
+                                  {application.surface === 'student' && application.studentId && (
+                                    <DropdownMenuItem asChild>
+                                      <Link href={`/admin/students/${application.studentId}`}>
+                                        View Student
+                                      </Link>
+                                    </DropdownMenuItem>
+                                  )}
+                                  <DropdownMenuItem asChild>
+                                    <Link href={detailsHref}>
+                                      View Details
+                                    </Link>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    className="text-red-600"
+                                    onClick={() => handleDelete(application)}
+                                  >
+                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>

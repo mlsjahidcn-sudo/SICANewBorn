@@ -25,7 +25,15 @@ export interface AdminApplication {
   degree: string;
   intake: string;
   status: string;
-  source: 'Admin' | 'Partner' | 'Online';
+  // S28: 'Partner CRM' was added so the unified admin list
+  // can distinguish a partner_applications row (the partner's
+  // own pipeline) from a student_applications row where the
+  // student's source='Partner'. Same 'Partner' tab in the UI
+  // covers both.
+  source: 'Admin' | 'Partner' | 'Online' | 'Partner CRM';
+  // S28: the `surface` distinguishes the two underlying
+  // tables so the page knows which detail URL to link to.
+  surface: 'student' | 'partner';
   applicationNumber: string | null;
   createdAt: string;
   updatedAt: string;
@@ -94,6 +102,10 @@ export function mapApplicationFromDb(row: RawApp): AdminApplication {
     intake: row.intake,
     status: row.status,
     source: isLinked ? ((row.student!.source as 'Admin' | 'Partner' | 'Online') || 'Online') : 'Admin',
+    // S28: surface marks this as a student_applications row
+    // (vs. a partner_applications row, which the unified list
+    // GET handler maps separately).
+    surface: 'student',
     applicationNumber: row.application_number,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

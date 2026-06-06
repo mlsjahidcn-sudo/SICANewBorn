@@ -149,3 +149,49 @@ export async function PATCH(
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+/**
+ * S28: DELETE /api/admin/partner-applications/[id]
+ *
+ * Admin-initiated deletion of a partner_applications row. The
+ * unified /admin/applications list's Delete button points here for
+ * rows with surface='partner'.
+ */
+export async function DELETE(
+  _request: NextRequest,
+  context: { params: Promise<{ id: string }> },
+) {
+  if (!getServerEnv().serviceKey) {
+    return NextResponse.json(
+      { error: 'Supabase is not configured' },
+      { status: 503 },
+    );
+  }
+  const auth = await requireAdmin(_request);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+  const { id } = await context.params;
+  if (!id) {
+    return NextResponse.json({ error: 'Missing id' }, { status: 400 });
+  }
+  try {
+    const service = buildServiceClient();
+    const { error, count } = await service
+      .from('partner_applications')
+      .delete({ count: 'exact' })
+      .eq('id', id);
+    if (error) {
+      console.error('[admin/partner-applications/:id DELETE] supabase error:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    if (!count) {
+      return NextResponse.json({ error: 'Application not found' }, { status: 404 });
+    }
+    return new NextResponse(null, { status: 204 });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[admin/partner-applications/:id DELETE] unhandled:', err);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}

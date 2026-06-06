@@ -8,12 +8,23 @@ import { mapApplicationFromDb, RawApp } from '@/lib/application-mapper';
  * POST /api/admin/applications  — create a new application
  *
  * GET query params:
- *   - student  : filter by student_id
- *   - status   : exact match (Draft | Submitted | Under Review | ...)
- *   - source   : derived from the student's `source` (Admin/Partner/Online)
- *   - search   : free-text on program_name / university_name / application_number
- *   - page     : 1-indexed (default 1)
- *   - limit    : 1..100 (default 20)
+ *   - student   : filter by student_id
+ *   - status    : exact match (Draft | Submitted | Under Review | ...)
+ *   - source    : derived from the student's `source` (Admin/Partner/Online).
+ *                 Setting `source=Partner` returns BOTH the student_applications
+ *                 rows where student.source='Partner' AND the partner_applications
+ *                 CRM rows.
+ *   - search    : free-text on program_name / university_name / application_number
+ *   - page      : 1-indexed (default 1)
+ *   - limit     : 1..100 (default 20)
+ *
+ * S28: the response is a *unified* list across `student_applications` AND
+ * `partner_applications`. Each row carries a `surface` field
+ * ('student' | 'partner') so the page knows which detail URL to link to
+ * and how to render the row. Partner CRM rows are the partner's own
+ * tracking entries (mlsjahid.cn+partner@gmail.com's pipeline) — they
+ * live in a separate table but the admin needs them visible in the
+ * same workflow view.
  *
  * Auth: any admin (requireAdmin). Service-role client.
  *
@@ -21,7 +32,7 @@ import { mapApplicationFromDb, RawApp } from '@/lib/application-mapper';
  */
 export async function GET(request: NextRequest) {
   if (!getServerEnv().serviceKey) {
-    return NextResponse.json({ error: 'Supabase not configured' }, { status: 503 });
+    return NextResponse.json({ error: 'Supabase is not configured' }, { status: 503 });
   }
   const auth = await requireAdmin(request);
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
@@ -35,77 +46,281 @@ export async function GET(request: NextRequest) {
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20', 10)));
 
+    // S28: decide which surfaces to query. By default we return
+    // BOTH student_applications and partner_applications so the
+    // admin sees the full pipeline in one view. Setting
+    // `surface=student` or `surface=partner` narrows to one.
+    const surface = searchParams.get('surface');
+    const wantStudent = !surface || surface === 'student';
+    const wantPartner = !surface || surface === 'partner';
+
+    // S28: a tab on the page can also force a specific source. Map
+    // the existing source= filter to the right surfaces:
+    //   source=Online  → student_applications where student.source=Online
+    //   source=Admin   → student_applications where student_id IS NULL
+    //   source=Partner → student_applications where student.source=Partner
+    //                    PLUS partner_applications (the partner CRM)
+    //   no source      → both tables, all sources
+    const sourceOnly =
+      source && (source === 'Online' || source === 'Admin') ? source : null;
+
     const service = buildServiceClient();
-    // Join student_profiles to get the student's source + name for filtering/display
-    let query = service
-      .from('student_applications')
-      .select(
-        `*,
-         student:student_profiles!student_id (id, first_name, last_name, email, source, status)`,
-        { count: 'exact' },
-      )
-      .order('created_at', { ascending: false });
 
-    if (student) query = query.eq('student_id', student);
-    if (status) query = query.eq('status', status);
-    if (search) {
-      const safe = search.replace(/[%_]/g, '\\$&');
-      query = query.or(
-        `program_name.ilike.%${safe}%,university_name.ilike.%${safe}%,application_number.ilike.%${safe}%`,
-      );
+    // S28: run the two queries in parallel.
+    const studentP = wantStudent
+      ? fetchStudentApplications(service, {
+          student,
+          status: status ?? null,
+          source: sourceOnly,
+          search: search ?? null,
+          // Over-fetch when we'll JS-filter on the source so the
+          // paginated slice still has `limit` rows after filter.
+          fetchLimit: sourceOnly ? Math.min(100, limit * 2) : limit,
+        })
+      : Promise.resolve<{ data: RawApp[]; count: number | null; error?: undefined }>({
+          data: [],
+          count: 0,
+        });
+    const partnerP = wantPartner
+      ? fetchPartnerApplications(service, {
+          status: status ?? null,
+          search: search ?? null,
+          // Partners have no SQL-side `source` filter (the column
+          // doesn't exist on partner_applications) — over-fetch
+          // so we can JS-side filter to source='Partner' later.
+          fetchLimit: source === 'Partner' ? Math.min(100, limit * 2) : limit,
+        })
+      : Promise.resolve<{ rows: UnifiedPartnerRow[]; error?: undefined }>({ rows: [] });
+
+    const [studentRes, partnerRes] = await Promise.all([studentP, partnerP]);
+
+    if (studentRes.error) {
+      console.error('[admin/applications GET] supabase error:', studentRes.error);
+      return NextResponse.json({ error: studentRes.error.message }, { status: 500 });
+    }
+    if (partnerRes.error) {
+      console.error('[admin/applications GET] partner supabase error:', partnerRes.error);
+      return NextResponse.json({ error: partnerRes.error.message }, { status: 500 });
     }
 
-    // For the Admin (offline) source we can push the filter into SQL —
-    // those rows have student_id IS NULL. For Online/Partner we have
-    // to filter in JS after mapping, because the `source` lives on
-    // the joined student_profiles row and PostgREST doesn't let you
-    // filter on a nullable LEFT JOIN relationship the way we'd want.
-    const isOfflineFilter = source === 'Admin';
-    if (isOfflineFilter) {
-      query = query.is('student_id', null);
+    // Map student rows to the unified shape.
+    const studentApps = (studentRes.data || [])
+      .map(mapApplicationFromDb)
+      .map((a) => ({ ...a, surface: 'student' as const }));
+
+    // Map partner rows to a similar shape.
+    const partnerApps = (partnerRes.rows || [])
+      .map(mapPartnerAppForUnifiedList)
+      .map((a) => ({ ...a, surface: 'partner' as const }));
+
+    // S28: when filtering by source=Partner, the student query
+    // also returned source=Partner rows; the partner query
+    // returned CRM rows. Both go in.
+    // When filtering by source=Online or source=Admin, only
+    // student rows are in scope.
+    // When no source filter, both go in.
+    let combined: UnifiedAppRow[] = [...studentApps, ...partnerApps];
+
+    if (source === 'Partner') {
+      combined = combined.filter((a) => a.source === 'Partner' || a.source === 'Partner CRM');
+    } else if (source === 'Online') {
+      combined = combined.filter((a) => a.source === 'Online');
+    } else if (source === 'Admin') {
+      combined = combined.filter((a) => a.source === 'Admin');
     }
 
+    // Sort newest first (created_at desc). Partner rows may have
+    // null createdAt — push them to the bottom.
+    combined.sort((a, b) => {
+      const aT = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const bT = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return bT - aT;
+    });
+
+    const total = combined.length;
     const from = (page - 1) * limit;
-    const to = from + limit - 1;
-    // When filtering by Online/Partner, over-fetch by 2x so the JS
-    // filter still has a chance of returning `limit` rows. For small
-    // data this is a non-issue; for large tables we'd want to push
-    // the filter into SQL via a stored procedure.
-    const fetchLimit = source && !isOfflineFilter ? Math.min(100, limit * 2) : limit;
-    query = query.range(from, from + fetchLimit - 1);
-
-    const { data, count, error } = await query;
-    if (error) {
-      console.error('[admin/applications GET] supabase error:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    let applications = ((data || []) as RawApp[]).map(mapApplicationFromDb);
-
-    // Apply source filter in JS for Online/Partner. The mapper
-    // already resolved the source from the join, so this is a simple
-    // equality check.
-    if (source && !isOfflineFilter) {
-      applications = applications.filter((a) => a.source === source);
-      // Re-slice to the requested page size after filtering
-      applications = applications.slice(0, limit);
-    }
-
-    // When JS-side filtering, the SQL `count` is the unfiltered total.
-    // We report the filtered count instead so pagination is correct.
-    const reportedTotal = source && !isOfflineFilter ? applications.length : (count || 0);
+    const applications = combined.slice(from, from + limit);
 
     return NextResponse.json({
       applications,
-      total: reportedTotal,
+      total,
       page,
       limit,
-      totalPages: Math.max(1, Math.ceil(reportedTotal / limit)),
+      totalPages: Math.max(1, Math.ceil(total / limit)),
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[admin/applications GET] unhandled:', err);
     return NextResponse.json({ error: message }, { status: 500 });
   }
+}
+
+// ----- helpers -----------------------------------------------------------
+
+/**
+ * Fetches student_applications joined with student_profiles. Returns
+ * the raw rows + the exact count so the page can paginate.
+ */
+async function fetchStudentApplications(
+  service: ReturnType<typeof buildServiceClient>,
+  opts: {
+    student: string | null;
+    status: string | null;
+    source: string | null; // 'Online' | 'Admin' (Partner goes via Partner tab)
+    search: string | null;
+    fetchLimit: number;
+  },
+): Promise<{ data: RawApp[]; count: number | null; error?: { message: string } }> {
+  // For the Admin (offline) source we can push the filter into SQL —
+  // those rows have student_id IS NULL. For Online/Partner we have
+  // to filter in JS after mapping, because the `source` lives on
+  // the joined student_profiles row and PostgREST doesn't let you
+  // filter on a nullable LEFT JOIN relationship the way we'd want.
+  const isOfflineFilter = opts.source === 'Admin';
+
+  let query = service
+    .from('student_applications')
+    .select(
+      `*,
+       student:student_profiles!student_id (id, first_name, last_name, email, source, status)`,
+      { count: 'exact' },
+    )
+    .order('created_at', { ascending: false });
+
+  if (opts.student) query = query.eq('student_id', opts.student);
+  if (opts.status) query = query.eq('status', opts.status);
+  if (isOfflineFilter) query = query.is('student_id', null);
+  if (opts.search) {
+    const safe = opts.search.replace(/[%_]/g, '\\$&');
+    query = query.or(
+      `program_name.ilike.%${safe}%,university_name.ilike.%${safe}%,application_number.ilike.%${safe}%`,
+    );
+  }
+
+  // Over-fetch when JS-side source filtering is happening.
+  const fetchLimit = opts.source && !isOfflineFilter ? Math.min(100, opts.fetchLimit) : opts.fetchLimit;
+  query = query.range(0, fetchLimit - 1);
+
+  const { data, count, error } = await query;
+  if (error) return { data: [], count: 0, error: { message: error.message } };
+  return { data: (data || []) as RawApp[], count };
+}
+
+/**
+ * S28: fetches partner_applications for the unified list. The
+ * partner table doesn't have a `source` column — every row is
+ * "Partner CRM" by definition.
+ */
+async function fetchPartnerApplications(
+  service: ReturnType<typeof buildServiceClient>,
+  opts: {
+    status: string | null;
+    search: string | null;
+    fetchLimit: number;
+  },
+): Promise<{ rows: UnifiedPartnerRow[]; error?: { message: string } }> {
+  let query = service
+    .from('partner_applications')
+    .select(
+      'id, student_name, student_email, student_phone, nationality, university, program, intake, degree, status, decision, priority, application_number, created_at, updated_at, partner_id, created_by_user_id',
+      { count: 'exact' },
+    )
+    .order('created_at', { ascending: false });
+
+  // Map partner's status names (Submitted / In Review / Accepted /
+  // Rejected / Withdrawn / Draft) onto the student status taxonomy
+  // is not 1:1 — the admin's filter is on the partner column.
+  if (opts.status) query = query.eq('status', opts.status);
+
+  if (opts.search) {
+    const safe = opts.search.replace(/[%_]/g, '\\$&');
+    query = query.or(
+      `student_name.ilike.%${safe}%,university.ilike.%${safe}%,program.ilike.%${safe}%,application_number.ilike.%${safe}%`,
+    );
+  }
+  query = query.range(0, opts.fetchLimit - 1);
+
+  const { data, error } = await query;
+  if (error) return { rows: [], error: { message: error.message } };
+  return { rows: (data || []) as UnifiedPartnerRow[] };
+}
+
+/**
+ * S28: minimal shape for a partner_applications row in the unified
+ * list. Mirrors the AdminApplication fields the list table cares
+ * about; the rest stays in the detail page.
+ */
+interface UnifiedPartnerRow {
+  id: string;
+  partner_id: string;
+  student_name: string | null;
+  student_email: string | null;
+  student_phone: string | null;
+  nationality: string | null;
+  university: string;
+  program: string;
+  intake: string | null;
+  degree: string | null;
+  status: string;
+  decision: string | null;
+  priority: string | null;
+  application_number: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by_user_id: string | null;
+}
+
+interface UnifiedAppRow {
+  id: string;
+  surface: 'student' | 'partner';
+  studentId: string | null;
+  studentName: string;
+  studentEmail: string;
+  isLinked: boolean;
+  university: string;
+  universityNameCn?: string | null;
+  program: string;
+  programNameCn?: string | null;
+  degree: string;
+  intake: string;
+  status: string;
+  source: 'Admin' | 'Partner' | 'Online' | 'Partner CRM';
+  applicationNumber: string | null;
+  createdAt: string;
+  updatedAt: string;
+  personalStatement?: string | null;
+  additionalNotes?: string | null;
+  adminNotes?: string | null;
+}
+
+/**
+ * S28: shape a partner row into the same shape a student row has
+ * so the list page can render both without branching. The fields
+ * that don't exist on partner_applications (personal statement,
+ * etc.) come back as null — the partner CRM doesn't track those.
+ */
+function mapPartnerAppForUnifiedList(row: UnifiedPartnerRow): Omit<UnifiedAppRow, 'surface'> {
+  return {
+    id: row.id,
+    studentId: null,
+    studentName: row.student_name || '—',
+    studentEmail: row.student_email || '',
+    isLinked: false,
+    university: row.university,
+    program: row.program,
+    degree: row.degree || '',
+    intake: row.intake || '',
+    status: row.status,
+    // S28: new 'Partner CRM' source. The student table only had
+    // 'Online' | 'Partner' | 'Admin' — partner_applications is
+    // a separate concept (the partner's own tracking) so we
+    // distinguish it visually. The existing source filter still
+    // works: 'Partner' selects both 'Partner' and 'Partner CRM'.
+    source: 'Partner CRM',
+    applicationNumber: row.application_number,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
 }
 
 /**

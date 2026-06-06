@@ -4,30 +4,16 @@ import { requireAdmin, buildServiceClient } from '@/lib/supabase-auth';
 /**
  * GET /api/admin/applications/counts
  *
- * Returns per-source application counts:
- *   { total, online, partner, offline }
+ * S28: per-source application counts, now including the partner CRM
+ * surface. Returns:
+ *   { total, online, partner, partnerCrm, offline }
  *
- * Why this is its own endpoint: the main /api/admin/applications
- * endpoint can't easily compute a `count(*)` per source because
- * `source` is derived from the joined student_profiles row. We
- * could call the main endpoint 4 times, but in dev mode each call
- * triggers a cold compile of the route handler — 4 parallel calls
- * queue up and take 10+ seconds. So we do the counts in raw SQL
- * via the service-role client instead.
+ * `partner` = student_applications where the joined student's
+ *             source='Partner' (a partner-sourced student)
+ * `partnerCrm` = partner_applications rows (the partner's own
+ *             tracking entries, distinct from above)
  *
- * Strategy: 4 parallel small queries.
- *   - total    : SELECT count(*) FROM student_applications
- *   - offline  : SELECT count(*) FROM student_applications WHERE student_id IS NULL
- *   - online   : SELECT count(*) FROM student_profiles WHERE source = 'Online'
- *                (one application per student; matches reality for v1)
- *   - partner  : SELECT count(*) FROM student_profiles WHERE source = 'Partner'
- *
- * The online/partner counts use student_profiles because PostgREST
- * doesn't let us filter a count(*) by a joined column directly
- * (`.eq('student.source', X)` silently returns the unfiltered count).
- * For v1, where each student typically has one application at a time,
- * counting students-by-source is a good enough proxy. When students
- * can have multiple in-flight applications, swap this for an RPC.
+ * The admin UI's "Partner" tab adds these two together.
  */
 export async function GET(_request: NextRequest) {
   const auth = await requireAdmin(_request);
@@ -59,22 +45,32 @@ export async function GET(_request: NextRequest) {
       .select('id', { count: 'exact', head: true })
       .eq('source', 'Partner');
 
-    const [total, offline, online, partner] = await Promise.all([
+    // S28: partner CRM surface (partner_applications table) is a
+    // separate count. The admin UI's "Partner" tab blends
+    // `partner + partnerCrm`.
+    const partnerCrmQuery = service
+      .from('partner_applications')
+      .select('id', { count: 'exact', head: true });
+
+    const [total, offline, online, partner, partnerCrm] = await Promise.all([
       totalQuery,
       offlineQuery,
       onlineQuery,
       partnerQuery,
+      partnerCrmQuery,
     ]);
 
     if (total.error) return NextResponse.json({ error: total.error.message }, { status: 500 });
     if (offline.error) return NextResponse.json({ error: offline.error.message }, { status: 500 });
     if (online.error) return NextResponse.json({ error: online.error.message }, { status: 500 });
     if (partner.error) return NextResponse.json({ error: partner.error.message }, { status: 500 });
+    if (partnerCrm.error) return NextResponse.json({ error: partnerCrm.error.message }, { status: 500 });
 
     return NextResponse.json({
-      total: total.count || 0,
+      total: (total.count || 0) + (partnerCrm.count || 0),
       online: online.count || 0,
-      partner: partner.count || 0,
+      partner: (partner.count || 0) + (partnerCrm.count || 0),
+      partnerCrm: partnerCrm.count || 0,
       offline: offline.count || 0,
     });
   } catch (err) {
