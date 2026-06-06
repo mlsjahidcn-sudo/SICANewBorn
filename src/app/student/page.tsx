@@ -64,6 +64,18 @@ export default function StudentDashboardPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [applications, setApplications] = useState<StudentApplication[]>([]);
   const [documents, setDocuments] = useState<StudentDocument[]>([]);
+  // Phase 1.3: latest 3 notifications for the dashboard card.
+  // Keeps the bell badge + the card in sync without a separate
+  // fetch on the dashboard.
+  interface StudentNotifSummary {
+    id: string;
+    title: string;
+    message: string;
+    is_read: boolean;
+    created_at: string;
+    link_url?: string | null;
+  }
+  const [latestNotifs, setLatestNotifs] = useState<StudentNotifSummary[]>([]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -75,13 +87,17 @@ export default function StudentDashboardPage() {
     let cancelled = false;
     (async () => {
       try {
-        const [appsRes, docsRes] = await Promise.all([
+        const [appsRes, docsRes, notifsRes] = await Promise.all([
           apiFetchJson<{ data: StudentApplication[] }>('/api/student/applications'),
           apiFetchJson<{ data: StudentDocument[] }>('/api/student/documents'),
+          apiFetchJson<{ notifications: StudentNotifSummary[] }>(
+            '/api/student/notifications?limit=3',
+          ),
         ]);
         if (cancelled) return;
         setApplications(appsRes.data || []);
         setDocuments(docsRes.data || []);
+        setLatestNotifs(notifsRes.notifications || []);
       } catch (err) {
         if (cancelled) return;
         const msg = err instanceof ApiError ? err.message : 'Failed to load dashboard';
@@ -387,20 +403,57 @@ export default function StudentDashboardPage() {
         </Card>
       </div>
 
-      {/* Empty state for notifications (no real notifications API yet) */}
+      {/* Phase 1.3: latest-3 notifications card. Renders the
+          3 most recent rows from the notifications API.
+          Unread rows get a crimson dot + bold title; read
+          rows are muted. The 'Open →' hint shows when the
+          row has a link_url (Phase 1.2). */}
       <Card className="border-0 shadow-sm">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg font-semibold text-[#1B2A4A]">
               {t('student.notifications')}
             </CardTitle>
-            <Bell className="h-5 w-5 text-[#1B2A4A]" />
+            <Link
+              href="/student/notifications"
+              className="text-xs font-semibold text-[#9B1B30] hover:underline"
+            >
+              {t('student.viewAll')} →
+            </Link>
           </div>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-gray-500 text-center py-4">
-            {t('student.noNotifications')}
-          </p>
+          {latestNotifs.length === 0 ? (
+            <p className="text-sm text-gray-500 text-center py-4">
+              {t('student.noNotifications')}
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {latestNotifs.map((n) => (
+                <Link
+                  key={n.id}
+                  href={n.link_url || '/student/notifications'}
+                  className="block group hover:bg-gray-50 -mx-2 px-2 py-1.5"
+                >
+                  <div className="flex items-start gap-2">
+                    {!n.is_read && (
+                      <div className="mt-1.5 w-2 h-2 rounded-full bg-[#9B1B30] flex-shrink-0" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className={`text-sm truncate ${
+                          n.is_read ? 'font-normal text-gray-700' : 'font-semibold text-[#1B2A4A]'
+                        }`}
+                      >
+                        {n.title}
+                      </p>
+                      <p className="text-xs text-gray-500 truncate mt-0.5">{n.message}</p>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

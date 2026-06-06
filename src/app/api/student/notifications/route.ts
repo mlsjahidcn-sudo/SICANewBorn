@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('student_notifications')
-      .select('id, student_id, title, message, type, is_read, read_at, created_at', { count: 'exact' })
+      .select('id, student_id, title, message, type, is_read, read_at, created_at, link_url', { count: 'exact' })
       .eq('student_id', user.id)
       .order('created_at', { ascending: false });
 

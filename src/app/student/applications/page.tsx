@@ -15,6 +15,10 @@ import type { StudentApplication } from '@/lib/application-mapper';
 
 interface ListResponse {
   applications: StudentApplication[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
 // Status display config — DB values (8) → user-friendly label + badge style.
@@ -82,24 +86,51 @@ export default function StudentApplicationsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeStatus, setActiveStatus] = useState('all');
+  // Phase 1.1: pagination
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
-  const load = useCallback(async () => {
+  const fetchList = useCallback(async (opts?: { append?: boolean; page?: number }) => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await apiFetchJson<ListResponse>('/api/student/applications');
-      setApplications(data.applications);
+      const p = opts?.page ?? 1;
+      const data = await apiFetchJson<ListResponse>(
+        `/api/student/applications?page=${p}&limit=20`,
+      );
+      const list = data.applications || [];
+      if (opts?.append) {
+        setApplications((prev) => [...prev, ...list]);
+      } else {
+        setApplications(list);
+      }
+      setTotal(data.total || 0);
+      setHasMore(applications.length + list.length < (data.total || 0));
+      setPage(p);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load applications');
+      setError(err instanceof Error ? err.message : 'Failed to load aplicaciones');
       setApplications([]);
     } finally {
       setIsLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    fetchList();
+  }, [fetchList]);
+
+  const loadMore = async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      await fetchList({ append: true, page: page + 1 });
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const filteredApplications = activeStatus === 'all'
     ? applications
@@ -132,7 +163,7 @@ export default function StudentApplicationsPage() {
           <p className="text-[#4B5563] mt-1">{t('studentApps.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={load} disabled={isLoading}>
+          <Button variant="outline" onClick={() => fetchList()} disabled={isLoading}>
             <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
             {t('common.refresh')}
           </Button>
@@ -151,7 +182,7 @@ export default function StudentApplicationsPage() {
           <CardContent className="p-4 flex items-center gap-2">
             <AlertCircle className="h-5 w-5 text-red-600" />
             <p className="text-sm text-red-800">Failed to load: {error}</p>
-            <Button size="sm" variant="outline" onClick={load} className="ml-auto">{t('common.retry')}</Button>
+            <Button size="sm" variant="outline" onClick={() => fetchList()} className="ml-auto">{t('common.retry')}</Button>
           </CardContent>
         </Card>
       )}
@@ -312,6 +343,35 @@ export default function StudentApplicationsPage() {
               </Link>
             );
           })}
+        </div>
+      )}
+
+      {/* Phase 1.1: pagination. Renders a "Load more" button
+          when we have more rows than the current page. */}
+      {!isLoading && hasMore && filteredApplications.length > 0 && (
+        <div className="flex flex-col items-center gap-1 py-4">
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-none"
+            onClick={loadMore}
+            disabled={loadingMore}
+          >
+            {loadingMore ? (
+              <span className="flex items-center gap-1">
+                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                {t('studentApps.loadingMore')}
+              </span>
+            ) : (
+              t('studentApps.loadMore')
+            )}
+          </Button>
+          <span className="text-xs text-gray-500">
+            {t('studentApps.loadMoreCount', {
+              shown: applications.length,
+              total: total,
+            })}
+          </span>
         </div>
       )}
     </div>

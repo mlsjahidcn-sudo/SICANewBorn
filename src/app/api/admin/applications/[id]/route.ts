@@ -209,10 +209,15 @@ export async function PATCH(
               title: studentNotificationTitle(newStatus),
               message: studentNotificationMessage(
                 newStatus,
-                (data as { university_name?: string | null }).university_name || 'the university',
+                (data as { universidad_name?: string | null }).universidad_name || 'the universidad',
                 (data as { program_name?: string | null }).program_name || null,
               ),
               type: 'status_change',
+              // Phase 1.2: deep-link to the application detail so
+              // the student lands directly on the app whose
+              // status just changed. The inbox row click uses
+              // this same URL.
+              link_url: `/student/applications/${id}`,
             });
             if (snErr) {
               console.error('[admin/applications PATCH] student_notification insert failed:', snErr);

@@ -253,6 +253,8 @@ export async function POST(request: NextRequest) {
                 title: `Application status: ${value}`,
                 message: `${studentNameForBulk(applicantName)} — your application to ${sr.university_name} is now ${value}.`,
                 type: 'status_change',
+                // Phase 1.2: deep-link to the application detail.
+                link_url: `/student/applications/${id}`,
               });
               if (snErr) {
                 console.error('[admin/applications/bulk] student_notification insert failed for', id, snErr);

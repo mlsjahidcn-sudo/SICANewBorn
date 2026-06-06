@@ -21,18 +21,33 @@ export async function GET(request: Request) {
     }
     const { supabase, user } = auth;
 
-    const { data: rows, error } = await supabase
+    // Phase 1.1: pagination. Default page=1, limit=20. The
+    // student UI uses the same shape as the admin/partner
+    // endpoints so the Load-more pattern just works.
+    const url = new URL(request.url);
+    const page = Math.max(1, parseInt(url.searchParams.get('page') || '1', 10));
+    const limit = Math.min(50, Math.max(1, parseInt(url.searchParams.get('limit') || '20', 10)));
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    const { data: rows, error, count } = await supabase
       .from('student_applications')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('student_id', user.id)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(from, to);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
+    const total = count || 0;
     return NextResponse.json({
       applications: (rows || []).map(mapApplicationForStudent),
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
     });
   } catch (error) {
     console.error('[Student Applications GET]', error);

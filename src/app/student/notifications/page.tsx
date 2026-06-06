@@ -26,12 +26,14 @@ import { useI18n } from '@/lib/i18n';
  * src/app/student/layout.tsx.
  *
  * Differences from the partner inbox:
- *  - No `link_url` field on student_notifications (the student
- *    portal is shorter, no need to deep-link)
  *  - No type-based filter chip for now (only status_change
  *    rows land here today; the chip would always show 0)
  *  - Title and message are in plain English (i18n not wired
  *    here yet)
+ *
+ * Phase 1.2: added `link_url` so the inbox deep-links to the
+ * relevant application. The notify*OnStatusChange helpers
+ * in src/lib/email.ts now populate this column.
  */
 
 interface StudentNotification {
@@ -43,6 +45,7 @@ interface StudentNotification {
   is_read: boolean;
   read_at: string | null;
   created_at: string;
+  link_url?: string | null;
 }
 
 const TYPE_BADGE: Record<string, string> = {
@@ -181,9 +184,13 @@ export default function StudentNotificationsPage() {
   const onRowClick = useCallback(
     (n: StudentNotification) => {
       if (!n.is_read) markRead(n.id);
-      // No link_url on student notifications today — the inbox
-      // is informational. If we add deep links in a future
-      // schema bump, the row click can navigate there.
+      // Phase 1.2: deep-link to the relevant application (or
+      // document) if the notification has a link_url. Falls
+      // through silently if the link is missing — the row
+      // still marks as read on click.
+      if (n.link_url) {
+        window.location.href = n.link_url;
+      }
     },
     [markRead],
   );
@@ -353,6 +360,11 @@ export default function StudentNotificationsPage() {
                       </p>
                       <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-400">
                         <span>{timeAgo(t, n.created_at)}</span>
+                        {n.link_url && (
+                          <span className="text-[#9B1B30] font-semibold">
+                            {t('studentNotif.openLink')} →
+                          </span>
+                        )}
                       </div>
                     </div>
 
