@@ -32,6 +32,11 @@ export default function PartnerSettingsPage() {
   const [contactPerson, setContactPerson] = useState('');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Phase 1.9: password reset flow. `sendingReset` shows a spinner
+  // on the button, `resetSent` flips the label to "Check your inbox"
+  // for 4 seconds.
+  const [sendingReset, setSendingReset] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -58,6 +63,25 @@ export default function PartnerSettingsPage() {
     const tm = setTimeout(() => setMessage(null), 3000);
     return () => clearTimeout(tm);
   }, [message]);
+
+  // Phase 1.9: send password reset link. Calls the server route
+  // which fires Supabase's resetPasswordForEmail. The success
+  // state on the button auto-clears after 4s so the user gets
+  // visual confirmation without it being sticky.
+  const handleSendReset = async () => {
+    setSendingReset(true);
+    setResetSent(false);
+    setError(null);
+    try {
+      await apiFetchJson('/api/partner/me/send-reset', { method: 'POST' });
+      setResetSent(true);
+      setTimeout(() => setResetSent(false), 4000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('partnerSettings.errorReset'));
+    } finally {
+      setSendingReset(false);
+    }
+  };
 
   const handleSaveAccount = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -322,12 +346,29 @@ export default function PartnerSettingsPage() {
                   <p className="text-[#4B5563]">
                     {t('partnerSettings.passwordReset')} <strong>{partner.email}</strong>.
                   </p>
-                </div>
-
-                <div className="p-4 bg-blue-50 border border-blue-200">
-                  <div className="text-sm text-blue-800">
-                    <strong>{t('partnerSettings.comingSoon')}</strong> {t('partnerSettings.comingSoonBody')}
-                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleSendReset}
+                    disabled={sendingReset}
+                  >
+                    {sendingReset ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                        {t('partnerSettings.sendingReset')}
+                      </>
+                    ) : resetSent ? (
+                      <>
+                        <CheckCircle className="h-3.5 w-3.5 mr-1 text-green-700" />
+                        {t('partnerSettings.resetSent')}
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="h-3.5 w-3.5 mr-1" />
+                        {t('partnerSettings.sendReset')}
+                      </>
+                    )}
+                  </Button>
                 </div>
               </CardContent>
             </Card>

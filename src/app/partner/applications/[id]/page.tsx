@@ -47,16 +47,30 @@ export default function PartnerApplicationDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [showDelete, setShowDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  // Phase 1.13: most recent admin-actor on this application.
+  // Surfaces "your case is being reviewed by <admin email>" so
+  // the partner has a real person to follow up with.
+  const [reviewer, setReviewer] = useState<{ email: string | null; at: string } | null>(null);
 
   const load = useCallback(async () => {
     if (!applicationId) return;
     setIsLoading(true);
     setError(null);
     try {
-      const res = await apiFetchJson<{ application: PartnerApplication }>(
-        `/api/partner/applications/${applicationId}`,
-      );
-      setApp(res.application);
+      const [appRes, reviewerRes] = await Promise.all([
+        apiFetchJson<{ application: PartnerApplication }>(
+          `/api/partner/applications/${applicationId}`,
+        ),
+        // Fail-soft: the route returns 200 with reviewer: null
+        // on no admin yet / on error, so we can just `catch` and
+        // leave the reviewer state as-is. The UI shows the
+        // generic "SICA Admissions Team" fallback.
+        apiFetchJson<{ reviewer: { email: string | null; at: string } | null }>(
+          `/api/partner/applications/${applicationId}/reviewer`,
+        ).catch(() => ({ reviewer: null })),
+      ]);
+      setApp(appRes.application);
+      setReviewer(reviewerRes.reviewer);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('partnerAppDetail.errorLoad'));
     } finally {
@@ -303,6 +317,29 @@ export default function PartnerApplicationDetailPage() {
               )}
             </div>
           )}
+          {/* Phase 1.13: show the most recent admin-actor on this
+              case so the partner knows who to follow up with.
+              Falls back to "SICA Admissions Team" if no admin has
+              touched the case yet. */}
+          <div className="text-xs text-[#4B5563] pt-2 border-t border-gray-100 mt-2">
+            <span className="font-semibold text-[#1B2A4A]">
+              {t('partnerAppDetail.assignedTo')}:
+            </span>{' '}
+            {reviewer?.email ? (
+              <>
+                {reviewer.email}
+                {reviewer.at && (
+                  <span className="text-gray-500 ml-1">
+                    ({t('partnerAppDetail.lastActivity', {
+                      date: new Date(reviewer.at).toLocaleDateString(),
+                    })})
+                  </span>
+                )}
+              </>
+            ) : (
+              <span>{t('partnerAppDetail.admissionsTeam')}</span>
+            )}
+          </div>
         </CardContent>
       </Card>
 

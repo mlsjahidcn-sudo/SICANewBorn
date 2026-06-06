@@ -64,6 +64,15 @@ export default function PartnerTeamPage() {
   const [inviteBusy, setInviteBusy] = useState(false);
   const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
   const [actionBusyId, setActionBusyId] = useState<string | null>(null);
+  // Phase 1.7: per-row resend feedback. We track the last successful
+  // resend so the row can show "Invite resent" briefly after a
+  // click. Auto-clears after a few seconds.
+  const [resendSuccess, setResendSuccess] = useState<{ id: string; at: number } | null>(null);
+  useEffect(() => {
+    if (!resendSuccess) return;
+    const timer = setTimeout(() => setResendSuccess(null), 4000);
+    return () => clearTimeout(timer);
+  }, [resendSuccess]);
   const [removeConfirmId, setRemoveConfirmId] = useState<string | null>(null);
 
   // Status enum → display label
@@ -137,6 +146,24 @@ export default function PartnerTeamPage() {
       load();
     } catch (err) {
       setLoadError(err instanceof ApiError ? err.message : t('partnerTeam.errorRemove'));
+    } finally {
+      setActionBusyId(null);
+    }
+  };
+
+  // Phase 1.7: resend a pending invite. Re-fires the accept-invite
+  // email with a fresh token. The server route regenerates the token
+  // (the old one may have expired after 7 days) and refreshes
+  // invited_at so the team table shows the resend.
+  const handleResendInvite = async (id: string) => {
+    setActionBusyId(id);
+    setResendSuccess(null);
+    setLoadError(null);
+    try {
+      await apiFetchJson(`/api/partner/team/${id}/resend`, { method: 'POST' });
+      setResendSuccess({ id, at: Date.now() });
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : t('partnerTeam.errorResend'));
     } finally {
       setActionBusyId(null);
     }
@@ -235,6 +262,37 @@ export default function PartnerTeamPage() {
                         >
                           <Trash2 className="h-3 w-3 mr-1" /> {t('partnerTeam.remove')}
                         </Button>
+                      )}
+                      {/* Phase 1.7: resend + cancel on pending_invite.
+                          A typo in the email means the original invite
+                          never landed; resend regenerates the token and
+                          fires the email again. Cancel just removes the
+                          row, same as Remove. */}
+                      {m.status === 'pending_invite' && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleResendInvite(m.id)}
+                            disabled={actionBusyId === m.id}
+                          >
+                            <Mail className="h-3 w-3 mr-1" /> {t('partnerTeam.resendInvite')}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setRemoveConfirmId(m.id)}
+                            disabled={actionBusyId === m.id}
+                            className="text-red-600 border-red-200"
+                          >
+                            <Trash2 className="h-3 w-3 mr-1" /> {t('partnerTeam.cancelInvite')}
+                          </Button>
+                          {resendSuccess?.id === m.id && (
+                            <span className="text-[10px] font-semibold text-green-700">
+                              ✓ {t('partnerTeam.resendSuccess')}
+                            </span>
+                          )}
+                        </>
                       )}
                     </div>
                   )}

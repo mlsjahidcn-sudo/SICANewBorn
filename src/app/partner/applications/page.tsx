@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, Eye, Edit, MoreHorizontal, Trash2, X, Download, Flag, Mail } from 'lucide-react';
+import { Plus, Search, Eye, Edit, MoreHorizontal, Trash2, X, Download, Flag, Mail, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
@@ -50,6 +50,29 @@ export default function PartnerApplicationsPage() {
   const [isExporting, setIsExporting] = useState(false);
   const [stats, setStats] = useState({ inReview: 0, accepted: 0, submitted: 0, urgent: 0 });
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
+  // Sort state — server-side sort (the API only supports 3 sortable
+  // columns: student_name, created_at, updated_at). Default is
+  // newest-first by created_at.
+  const [sort, setSort] = useState<'created_at' | 'updated_at' | 'student_name'>('created_at');
+  const [order, setOrder] = useState<'asc' | 'desc'>('desc');
+
+  /**
+   * Cycle the sort: clicking an unsorted column sorts desc; clicking
+   * again flips to asc; clicking a third time clears back to the
+   * default (created_at desc). The arrow next to the column header
+   * shows the current state.
+   */
+  const handleSort = (column: 'created_at' | 'updated_at' | 'student_name') => {
+    if (sort !== column) {
+      setSort(column);
+      setOrder('desc');
+    } else if (order === 'desc') {
+      setOrder('asc');
+    } else {
+      setSort('created_at');
+      setOrder('desc');
+    }
+  };
 
   useEffect(() => {
     const tm = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 250);
@@ -64,6 +87,8 @@ export default function PartnerApplicationsPage() {
       if (debouncedSearch) params.set('search', debouncedSearch);
       if (statusFilter !== 'all') params.set('status', statusFilter);
       if (priorityFilter !== 'all') params.set('priority', priorityFilter);
+      params.set('sort', sort);
+      params.set('order', order);
       params.set('limit', '50');
       const res = await apiFetchJson<{ applications: PartnerApplication[]; total: number }>(
         `/api/partner/applications${params.toString() ? `?${params}` : ''}`,
@@ -77,7 +102,7 @@ export default function PartnerApplicationsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [debouncedSearch, statusFilter, priorityFilter, t]);
+  }, [debouncedSearch, statusFilter, priorityFilter, sort, order, t]);
 
   useEffect(() => {
     void fetchApps();
@@ -341,14 +366,33 @@ export default function PartnerApplicationsPage() {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerApps.colStudent')}</th>
+                  <SortHeader
+                    label={t('partnerApps.colStudent')}
+                    column="student_name"
+                    sort={sort}
+                    order={order}
+                    onSort={handleSort}
+                  />
                   <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerApps.colUniversity')}</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerApps.colProgram')}</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerApps.colStatus')}</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerApps.colPriority')}</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerApps.colDecision')}</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerApps.colSubmittedBy')}</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerApps.colSubmitted')}</th>
+                  <SortHeader
+                    label={t('partnerApps.colSubmitted')}
+                    column="created_at"
+                    sort={sort}
+                    order={order}
+                    onSort={handleSort}
+                  />
+                  <SortHeader
+                    label={t('common.updated')}
+                    column="updated_at"
+                    sort={sort}
+                    order={order}
+                    onSort={handleSort}
+                  />
                   <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerApps.colActions')}</th>
                 </tr>
               </thead>
@@ -460,5 +504,44 @@ export default function PartnerApplicationsPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+/**
+ * Sortable column header. Renders a clickable <button> inside the
+ * <th> with a 3-state cycle:
+ *   unsorted → desc → asc → reset to default (created_at desc).
+ * The arrow icon shows the current state so the user knows what's
+ * active. aria-sort reflects the state for screen readers.
+ */
+function SortHeader<T extends string>({
+  label,
+  column,
+  sort,
+  order,
+  onSort,
+}: {
+  label: string;
+  column: T;
+  sort: T;
+  order: 'asc' | 'desc';
+  onSort: (column: T) => void;
+}) {
+  const isActive = sort === column;
+  const Icon = !isActive ? ChevronsUpDown : order === 'desc' ? ChevronDown : ChevronUp;
+  return (
+    <th
+      className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]"
+      aria-sort={isActive ? (order === 'asc' ? 'ascending' : 'descending') : 'none'}
+    >
+      <button
+        type="button"
+        onClick={() => onSort(column)}
+        className="inline-flex items-center gap-1 hover:text-[#9B1B30] transition-colors focus:outline-none focus:ring-2 focus:ring-[#9B1B30] focus:ring-offset-1"
+      >
+        {label}
+        <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-[#9B1B30]' : 'text-gray-400'}`} />
+      </button>
+    </th>
   );
 }
