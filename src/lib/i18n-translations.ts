@@ -1440,6 +1440,13 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerLeadDetail.errorLoad': 'Failed to load lead.',
     'partnerLeadDetail.errorSave': 'Failed to save changes.',
     'partnerLeadDetail.errorLeadNameRequired': 'Lead name is required.',
+    // Phase 1.8: Convert Lead → Student CTA
+    'partnerLeadDetail.convert': 'Convert to student',
+    'partnerLeadDetail.converting': 'Converting…',
+    'partnerLeadDetail.convertTitle': 'Convert lead to student',
+    'partnerLeadDetail.convertBodyFor': 'Create a student record for {{name}} in your CRM? The lead will be marked as "Converted" so you stop seeing them in the lead list.',
+    'partnerLeadDetail.convertSuccess': 'Lead converted — taking you to the new student…',
+    'partnerLeadDetail.convertError': 'Failed to convert lead.',
     // Partner Portal — team
     'partnerTeam.title': 'Team',
     'partnerTeam.subtitle': "Invite team members. They'll be able to add students and applications but only see the ones they created.",
@@ -2959,6 +2966,13 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerLeadDetail.errorLoad': '加载线索失败。',
     'partnerLeadDetail.errorSave': '保存修改失败。',
     'partnerLeadDetail.errorLeadNameRequired': '线索姓名是必填项。',
+    // Phase 1.8: 线索 → 学生 转化按钮
+    'partnerLeadDetail.convert': '转化为学生',
+    'partnerLeadDetail.converting': '转化中…',
+    'partnerLeadDetail.convertTitle': '将线索转化为学生',
+    'partnerLeadDetail.convertBodyFor': '为 {{name}} 在您的 CRM 中创建学生记录？该线索将被标记为「已转化」，之后不再出现在线索列表中。',
+    'partnerLeadDetail.convertSuccess': '线索已转化——正在跳转到新学生…',
+    'partnerLeadDetail.convertError': '转化线索失败。',
     // Partner Portal — team
     'partnerTeam.title': '团队',
     'partnerTeam.subtitle': '邀请团队成员。他们可以添加学生和申请，但只能看到自己创建的内容。',

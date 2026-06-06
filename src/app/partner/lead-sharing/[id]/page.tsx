@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Edit, Trash2, Mail, Phone, Calendar, Save, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Mail, Phone, Calendar, Save, AlertTriangle, UserPlus } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -38,6 +38,15 @@ export default function PartnerLeadDetailPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  // Phase 1.8: Convert-to-Student CTA. Clicking the button opens
+  // a confirm dialog (showConvert), then on confirm we POST to
+  // /api/partner/leads/[id]/convert which creates a partner_students
+  // row + flips the lead to "Converted" + returns the new student id.
+  // We then route to the new student's detail page so the partner
+  // can immediately start an application from there.
+  const [showConvert, setShowConvert] = useState(false);
+  const [isConverting, setIsConverting] = useState(false);
+  const [convertInfo, setConvertInfo] = useState<string | null>(null);
 
   // Edit form state
   const [editData, setEditData] = useState({
@@ -120,6 +129,32 @@ export default function PartnerLeadDetailPage() {
     }
   };
 
+  // Phase 1.8: Convert Lead → Student. Calls the new endpoint, then
+  // navigates to the new student's detail page. We use a short-lived
+  // success banner (convertInfo) so the user sees confirmation even
+  // for half a second before navigation completes.
+  const handleConvert = async () => {
+    setIsConverting(true);
+    setError(null);
+    try {
+      const res = await apiFetchJson<{ student: { id: string } }>(
+        `/api/partner/leads/${leadId}/convert`,
+        { method: 'POST' },
+      );
+      setConvertInfo(t('partnerLeadDetail.convertSuccess'));
+      setShowConvert(false);
+      // Small delay so the success text is visible before the
+      // route change unmounts the page.
+      setTimeout(() => {
+        router.push(`/partner/students/${res.student.id}`);
+      }, 400);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('partnerLeadDetail.convertError'));
+      setIsConverting(false);
+      setShowConvert(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -180,6 +215,34 @@ export default function PartnerLeadDetailPage() {
         </div>
       )}
 
+      {showConvert && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 max-w-md w-full mx-4 border border-gray-200">
+            <h3 className="text-lg font-semibold text-[#1B2A4A] mb-4">{t('partnerLeadDetail.convertTitle')}</h3>
+            <p className="text-[#4B5563] mb-6">
+              {t('partnerLeadDetail.convertBodyFor', { name: lead.leadName })}
+            </p>
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setShowConvert(false)}
+                disabled={isConverting}
+                className="rounded-none"
+              >
+                {t('partnerLeadDetail.cancel')}
+              </Button>
+              <Button
+                onClick={handleConvert}
+                disabled={isConverting}
+                className="rounded-none bg-[#1B2A4A] hover:bg-[#15233d]"
+              >
+                {isConverting ? t('partnerLeadDetail.converting') : t('partnerLeadDetail.convert')}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center gap-4">
         <Link href="/partner/lead-sharing" className="p-2 hover:bg-gray-100 inline-flex">
           <ArrowLeft className="w-5 h-5 text-[#1B2A4A]" />
@@ -196,6 +259,17 @@ export default function PartnerLeadDetailPage() {
           )}
         </div>
         <div className="flex gap-2">
+          {!isEditing && lead.status !== 'Converted' && (
+            <Button
+              variant="outline"
+              onClick={() => setShowConvert(true)}
+              disabled={isConverting}
+              className="rounded-none border-[#1B2A4A] text-[#1B2A4A] hover:bg-[#1B2A4A] hover:text-white"
+            >
+              <UserPlus className="mr-2 h-4 w-4" />
+              {isConverting ? t('partnerLeadDetail.converting') : t('partnerLeadDetail.convert')}
+            </Button>
+          )}
           {!isEditing && (
             <Button variant="outline" onClick={() => setIsEditing(true)} className="rounded-none">
               <Edit className="mr-2 h-4 w-4" />
@@ -227,6 +301,15 @@ export default function PartnerLeadDetailPage() {
       {error && (
         <Card className="rounded-none border-red-200 bg-red-50">
           <CardContent className="p-4 text-sm text-red-700">{error}</CardContent>
+        </Card>
+      )}
+
+      {convertInfo && (
+        <Card className="rounded-none border-emerald-200 bg-emerald-50">
+          <CardContent className="p-4 text-sm text-emerald-700 flex items-center gap-2">
+            <UserPlus className="w-4 h-4" />
+            {convertInfo}
+          </CardContent>
         </Card>
       )}
 
