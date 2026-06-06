@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, buildServiceClient, getServerEnv } from '@/lib/supabase-auth';
 import { insertTimelineEvent } from '@/lib/timeline';
 import { mapApplicationFromDb, RawApp } from '@/lib/application-mapper';
+import { normalizeIntake, parseIntakeFilter } from '@/lib/intake-normalize';
 
 /**
  * GET  /api/admin/applications  — list all applications
@@ -14,6 +15,13 @@ import { mapApplicationFromDb, RawApp } from '@/lib/application-mapper';
  *                 Setting `source=Partner` returns BOTH the student_applications
  *                 rows where student.source='Partner' AND the partner_applications
  *                 CRM rows.
+ *   - intake    : S34 — cohort filter. Slug format "YYYY-season"
+ *                 (e.g. "2026-fall") or "none" for null/empty intakes.
+ *                 Applied JS-side because the intake column is freeform
+ *                 VARCHAR and we normalize via intake-normalize.ts.
+ *                 When this filter is set we over-fetch (up to 200 rows)
+ *                 so the paginated slice still has `limit` rows after
+ *                 filtering.
  *   - search    : free-text on program_name / university_name / application_number
  *   - page      : 1-indexed (default 1)
  *   - limit     : 1..100 (default 20)
@@ -45,6 +53,13 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search')?.trim();
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20', 10)));
+    // S34: cohort filter. parseIntakeFilter() turns the slug
+    // into a structured filter; the actual filtering happens
+    // JS-side after we map each row (intake is freeform). When
+    // the filter is set we over-fetch so the paginated slice
+    // still has `limit` rows.
+    const intakeFilter = parseIntakeFilter(searchParams.get('intake'));
+    const fetchCap = 200; // server-side over-fetch cap when JS-side filtering
 
     // S28: decide which surfaces to query. By default we return
     // BOTH student_applications and partner_applications so the
@@ -67,6 +82,15 @@ export async function GET(request: NextRequest) {
     const service = buildServiceClient();
 
     // S28: run the two queries in parallel.
+    // S34: when intake filter is set, over-fetch to `fetchCap`
+    // so the cohort-filtered slice still has `limit` rows.
+    const studentFetchLimit = intakeFilter
+      ? fetchCap
+      : (sourceOnly ? Math.min(100, limit * 2) : limit);
+    const partnerFetchLimit = intakeFilter
+      ? fetchCap
+      : (source === 'Partner' ? Math.min(100, limit * 2) : limit);
+
     const studentP = wantStudent
       ? fetchStudentApplications(service, {
           student,
@@ -75,7 +99,7 @@ export async function GET(request: NextRequest) {
           search: search ?? null,
           // Over-fetch when we'll JS-filter on the source so the
           // paginated slice still has `limit` rows after filter.
-          fetchLimit: sourceOnly ? Math.min(100, limit * 2) : limit,
+          fetchLimit: studentFetchLimit,
         })
       : Promise.resolve<{ data: RawApp[]; count: number | null; error?: undefined }>({
           data: [],
@@ -88,7 +112,7 @@ export async function GET(request: NextRequest) {
           // Partners have no SQL-side `source` filter (the column
           // doesn't exist on partner_applications) — over-fetch
           // so we can JS-side filter to source='Partner' later.
-          fetchLimit: source === 'Partner' ? Math.min(100, limit * 2) : limit,
+          fetchLimit: partnerFetchLimit,
         })
       : Promise.resolve<{ rows: UnifiedPartnerRow[]; error?: undefined }>({ rows: [] });
 
@@ -127,6 +151,20 @@ export async function GET(request: NextRequest) {
       combined = combined.filter((a) => a.source === 'Online');
     } else if (source === 'Admin') {
       combined = combined.filter((a) => a.source === 'Admin');
+    }
+
+    // S34: cohort filter. We re-normalize each row's intake
+    // string and compare against the requested cohort. We
+    // can't push this into SQL because the column is freeform
+    // text and the bucket logic lives in intake-normalize.ts.
+    if (intakeFilter) {
+      combined = combined.filter((a) => {
+        const norm = normalizeIntake(a.intake || '');
+        if (intakeFilter.kind === 'none') {
+          return norm === null; // raw value was null/empty/unparseable
+        }
+        return norm !== null && norm.cohort === intakeFilter.cohort;
+      });
     }
 
     // Sort newest first (created_at desc). Partner rows may have

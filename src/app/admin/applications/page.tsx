@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Plus, Eye, Trash2, MoreHorizontal, ArrowUpRight, ArrowDownRight, Minus, RefreshCw, AlertCircle, Search, Users, Building2, UserPlus, CheckSquare, Square, X, StickyNote, Flag, Download } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Plus, Eye, Trash2, MoreHorizontal, ArrowUpRight, ArrowDownRight, Minus, RefreshCw, AlertCircle, Search, Users, Building2, UserPlus, CheckSquare, Square, X, StickyNote, Flag, Download, CalendarClock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -19,6 +19,7 @@ import { ListPageSkeleton } from '@/components/partner/skeletons';
 import { useStudentList } from '@/hooks/use-student-list';
 import { apiFetch, apiFetchJson } from '@/lib/api-client';
 import { APPLICATION_STATUSES, ApplicationStatus } from '@/lib/application-mapper';
+import { parseIntakeFilter, getCanonicalCohorts } from '@/lib/intake-normalize';
 
 interface Application {
   id: string;
@@ -97,7 +98,36 @@ const SOURCE_TABS: { value: SourceTab; label: string; shortLabel: string; icon: 
 
 export default function AdminApplicationsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { students } = useStudentList();
+
+  // S34: cohort filter, sourced from the URL on mount. The
+  // cohort dashboard's "View applications" link is
+  //   /admin/applications?intake=2026-fall
+  // and we read it here so the list opens with the cohort
+  // pre-applied. The user can clear it via the active-pill
+  // X button.
+  const initialIntakeSlug = searchParams.get('intake');
+  const initialIntake = parseIntakeFilter(initialIntakeSlug);
+  // Canonical-cohort slugs + a few obvious historical
+  // variants are valid; the "no-intake" bucket maps to "none".
+  // Anything unparseable is treated as no filter.
+  const [intakeFilter, setIntakeFilter] = useState<string | null>(
+    initialIntake
+      ? initialIntake.kind === 'none'
+        ? 'none'
+        : initialIntake.slug
+      : null,
+  );
+  const intakeFilterLabel = (() => {
+    if (!intakeFilter) return null;
+    if (intakeFilter === 'none') return 'Unassigned';
+    // Find the canonical cohort label that matches this slug,
+    // or fall back to the raw slug uppercased.
+    const c = getCanonicalCohorts().find((x) => x.slug === intakeFilter);
+    if (c) return c.cohort;
+    return intakeFilter;
+  })();
 
   // Tab state — defaults to "all" so the user sees everything on first load
   const [activeTab, setActiveTab] = useState<SourceTab>('all');
@@ -194,6 +224,7 @@ export default function AdminApplicationsPage() {
     if (searchQuery.trim()) params.set('search', searchQuery.trim());
     if (statusFilter !== 'all') params.set('status', statusFilter);
     if (studentFilter !== 'all') params.set('student', studentFilter);
+    if (intakeFilter) params.set('intake', intakeFilter);
 
     // Safety timeout — never let the page hang on a stalled network call.
     timeoutId = setTimeout(() => controller.abort(), 15_000);
@@ -226,7 +257,7 @@ export default function AdminApplicationsPage() {
       controller.abort();
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [page, searchQuery, statusFilter, studentFilter, activeTab, retryNonce]);
+  }, [page, searchQuery, statusFilter, studentFilter, activeTab, intakeFilter, retryNonce]);
 
   // Debounce search — wait 300ms after the user stops typing before firing
   useEffect(() => {
@@ -237,7 +268,7 @@ export default function AdminApplicationsPage() {
   // Reset to page 1 when tab or filters change
   useEffect(() => {
     setPage(1);
-  }, [activeTab, statusFilter, studentFilter, searchQuery]);
+  }, [activeTab, statusFilter, studentFilter, searchQuery, intakeFilter]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -294,7 +325,7 @@ export default function AdminApplicationsPage() {
   // and bulk-acting on it would surprise the admin.
   useEffect(() => {
     setSelectedIds(new Set());
-  }, [activeTab, statusFilter, studentFilter, searchQuery]);
+  }, [activeTab, statusFilter, studentFilter, searchQuery, intakeFilter]);
 
   // Client-side safety filter: even after the API call, double-check the
   // active source matches the row. Cheap and makes tab switching feel
@@ -411,6 +442,7 @@ export default function AdminApplicationsPage() {
               if (activeTab !== 'all') params.set('source', activeTab);
               if (statusFilter !== 'all') params.set('status', statusFilter);
               if (searchQuery.trim()) params.set('search', searchQuery.trim());
+              if (intakeFilter) params.set('intake', intakeFilter);
               window.open(`/api/admin/applications/export?${params.toString()}`, '_blank');
             }}
             title="Download the currently visible (filtered) rows as a CSV"
@@ -481,6 +513,43 @@ export default function AdminApplicationsPage() {
       {countsError && (
         <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-2">
           Could not load tab counts: {countsError}. Tab navigation still works.
+        </div>
+      )}
+
+      {/* S34: active cohort filter pill. Set when the admin
+          lands here from /admin/cohorts with ?intake=...; also
+          visible if they re-applied the filter via the API. The
+          X clears the pill AND removes the URL param so a
+          refresh doesn't re-apply the cohort. */}
+      {intakeFilter && (
+        <div className="flex items-center gap-2 bg-[#9B1B30]/5 border border-[#9B1B30]/20 px-3 py-2">
+          <CalendarClock className="w-4 h-4 text-[#9B1B30]" />
+          <span className="text-sm text-[#1B2A4A]">
+            Filtered by cohort: <strong>{intakeFilterLabel}</strong>
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="ml-auto rounded-none h-7 px-2 text-xs text-[#9B1B30] hover:bg-[#9B1B30]/10"
+            onClick={() => {
+              setIntakeFilter(null);
+              // Strip the ?intake= from the URL too, so a refresh
+              // doesn't re-apply the cohort. replaceState avoids
+              // filling the browser back-stack.
+              const url = new URL(window.location.href);
+              url.searchParams.delete('intake');
+              window.history.replaceState({}, '', url.toString());
+            }}
+          >
+            <X size={14} className="mr-1" /> Clear cohort
+          </Button>
+          <Link
+            href="/admin/cohorts"
+            className="text-xs text-[#1B2A4A] hover:underline"
+            title="Back to cohort overview"
+          >
+            ← Cohort overview
+          </Link>
         </div>
       )}
 
@@ -589,7 +658,7 @@ export default function AdminApplicationsPage() {
                     <tr>
                       <td colSpan={6} className="px-6 py-12 text-center text-[#4B5563]">
                         {applications.length === 0
-                          ? `No applications yet in ${SOURCE_TABS.find((t) => t.value === activeTab)?.label.toLowerCase() ?? 'this view'}.`
+                          ? `No applications yet in ${SOURCE_TABS.find((t) => t.value === activeTab)?.label.toLowerCase() ?? 'this view'}${intakeFilter ? ` for cohort ${intakeFilterLabel}` : ''}.`
                           : 'No applications match your filters.'}
                       </td>
                     </tr>
@@ -847,8 +916,10 @@ export default function AdminApplicationsPage() {
                 className="rounded-none"
                 onClick={() => {
                   const idsParam = Array.from(selectedIds).join(',');
+                  const params = new URLSearchParams({ ids: idsParam });
+                  if (intakeFilter) params.set('intake', intakeFilter);
                   window.open(
-                    `/api/admin/applications/export?ids=${encodeURIComponent(idsParam)}`,
+                    `/api/admin/applications/export?${params.toString()}`,
                     '_blank',
                   );
                   // Clear the selection — the export is fire-and-

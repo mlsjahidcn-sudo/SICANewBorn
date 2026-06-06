@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, buildServiceClient, getServerEnv } from '@/lib/supabase-auth';
+import { normalizeIntake, parseIntakeFilter } from '@/lib/intake-normalize';
 
 export const dynamic = 'force-dynamic';
 
@@ -91,6 +92,11 @@ export async function GET(request: NextRequest) {
     const source = searchParams.get('source');
     const status = searchParams.get('status');
     const search = searchParams.get('search')?.trim();
+    // S34: cohort filter (slug "YYYY-season" or "none"). Mirrors
+    // the list endpoint so the cohort card's "View applications"
+    // link can hit "Export CSV" and get the same cohort in the
+    // download. Applied JS-side because intake is freeform.
+    const intakeFilter = parseIntakeFilter(searchParams.get('intake'));
 
     const service = buildServiceClient();
 
@@ -334,6 +340,16 @@ export async function GET(request: NextRequest) {
     // the SQL predicate but slip through because of column name
     // mismatches). Cheap, runs once.
     filtered = filtered.filter(matchesSearch);
+    // S34: cohort filter — same JS-side normalization as the
+    // list endpoint so the cohort card's deep link works
+    // uniformly.
+    if (intakeFilter) {
+      filtered = filtered.filter((r) => {
+        const norm = normalizeIntake(r.intake);
+        if (intakeFilter.kind === 'none') return norm === null;
+        return norm !== null && norm.cohort === intakeFilter.cohort;
+      });
+    }
     const truncated = filtered.length > MAX_EXPORT_ROWS;
     if (truncated) filtered = filtered.slice(0, MAX_EXPORT_ROWS);
 

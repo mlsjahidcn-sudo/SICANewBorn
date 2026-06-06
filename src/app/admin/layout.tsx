@@ -22,6 +22,7 @@ import {
   Newspaper,
   Mail,
   Building2,
+  LayoutGrid,
 } from 'lucide-react';
 import Link from 'next/link';
 import { SicaLogo } from '@/components/sica-logo';
@@ -44,6 +45,10 @@ const navItems = [
   { href: '/admin/fees', label: 'Fees', labelCn: '费用', icon: DollarSign },
   { href: '/admin/assessments', label: 'Assessments', labelCn: '评估', icon: ClipboardList },
   { href: '/admin/applications', label: 'Applications', labelCn: '申请', icon: FileText },
+  // S34: Cohort View — read-only dashboard grouping apps by
+  // intake. Sits right below Applications because it's the
+  // "where am I in the pipeline" companion view.
+  { href: '/admin/cohorts', label: 'Cohort View', labelCn: '入学批次', icon: LayoutGrid },
   { href: '/admin/settings', label: 'Settings', labelCn: '设置', icon: Settings },
 ];
 
