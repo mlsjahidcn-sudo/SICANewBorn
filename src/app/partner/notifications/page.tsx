@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
+import { DateGroupedList } from '@/components/ui/date-grouped-list';
 import { apiFetch, apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 
@@ -317,8 +318,16 @@ export default function PartnerNotificationsPage() {
       ) : (
         <Card className="rounded-none border-gray-200">
           <CardContent className="p-0">
-            <ul className="divide-y divide-gray-100">
-              {notifications.map((n) => {
+            {/*
+             * Phase 1.11: date-group the inbox. Today / Yesterday
+             * / This Week / Earlier sections with thin headers.
+             * Pure client-side grouping, the API already sorts
+             * by created_at desc.
+             */}
+            <DateGroupedList
+              notifications={notifications}
+              getDate={(n: PartnerNotification) => n.created_at}
+              renderItem={(n) => {
                 const typeClass = TYPE_BADGE[n.type] || TYPE_BADGE.info;
                 const typeLabelKey = TYPE_LABEL[n.type] || n.type;
                 const typeLabel = typeLabelKey.startsWith('partnerNotif.') ? t(typeLabelKey) : n.type;
@@ -386,8 +395,8 @@ export default function PartnerNotificationsPage() {
                     )}
                   </li>
                 );
-              })}
-            </ul>
+              }}
+            />
           </CardContent>
         </Card>
       )}

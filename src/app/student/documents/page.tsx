@@ -62,6 +62,12 @@ export default function StudentDocumentsPage() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState<'All' | DocumentCategory>('All');
+  // Phase 1.10: status filter + sort. Defaults are
+  // "All" statuses and newest-first (the current default
+  // since /api/student/documents orders by uploaded_at desc).
+  const [activeStatus, setActiveStatus] = useState<'all' | 'Pending' | 'Uploaded' | 'Verified' | 'Rejected'>('all');
+  const [sortKey, setSortKey] = useState<'uploaded_at' | 'name' | 'status'>('uploaded_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [documents, setDocuments] = useState<DbStudentDocument[]>([]);
   // Phase S20: fetch the student's applications so each doc row
   // can show its "Linked to" app + offer a re-link dropdown.
@@ -219,14 +225,37 @@ export default function StudentDocumentsPage() {
     );
   }
 
-  // Apply both filters: the URL ?applicationId= filter (when set)
-  // AND the category chip filter. The category chip still works
-  // within the filtered scope.
-  const filteredDocuments = documents.filter((d) => {
-    if (filterApplicationId && d.application_id !== filterApplicationId) return false;
-    if (activeCategory !== 'All' && d.category !== activeCategory) return false;
-    return true;
-  });
+  // Apply both filters: the URL ?applicationId= filter (when set),
+  // the category chip filter, the status filter, and the sort key.
+  // Category and status are independent — the student can combine
+  // "Identity" + "Verified" to see only verified ID docs.
+  const filteredDocuments = documents
+    .filter((d) => {
+      if (filterApplicationId && d.application_id !== filterApplicationId) return false;
+      if (activeCategory !== 'All' && d.category !== activeCategory) return false;
+      if (activeStatus !== 'all' && d.status !== activeStatus) return false;
+      return true;
+    })
+    // Phase 1.10: client-side sort. We sort on the already-filtered
+    // set so the user sees a stable order. uploaded_at needs a
+    // null guard (some rows may not have it).
+    .slice()
+    .sort((a, b) => {
+      let av: string | number = '';
+      let bv: string | number = '';
+      if (sortKey === 'uploaded_at') {
+        av = a.uploaded_at ?? '';
+        bv = b.uploaded_at ?? '';
+      } else if (sortKey === 'name') {
+        av = a.name.toLowerCase();
+        bv = b.name.toLowerCase();
+      } else if (sortKey === 'status') {
+        av = a.status;
+        bv = b.status;
+      }
+      const cmp = av < bv ? -1 : av > bv ? 1 : 0;
+      return sortOrder === 'asc' ? cmp : -cmp;
+    });
 
   // Available document types in the picker — by current category
   const availableDocTypes = documentTypes.filter((dt) => dt.category === pickerCategory);
@@ -321,6 +350,50 @@ export default function StudentDocumentsPage() {
               : t('studentDocs.filteredToApp')}
           </Link>
         )}
+      </div>
+
+      {/* Phase 1.10: status filter + sort dropdowns. Sit on a second
+          row so the category chips stay readable. Both are
+          client-side and combine freely with the category chip. */}
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <Label className="text-xs font-semibold uppercase tracking-wider text-[#4B5563]">
+          {t('common.status')}:
+        </Label>
+        <Select value={activeStatus} onValueChange={(v) => setActiveStatus(v as typeof activeStatus)}>
+          <SelectTrigger className="w-[140px] rounded-none h-8 text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="rounded-none">
+            <SelectItem value="all">{t('studentDocs.statusAll')}</SelectItem>
+            <SelectItem value="Pending">{t('studentDocs.statusPending')}</SelectItem>
+            <SelectItem value="Uploaded">{t('studentDocs.statusUploaded')}</SelectItem>
+            <SelectItem value="Verified">{t('studentDocs.statusVerified')}</SelectItem>
+            <SelectItem value="Rejected">{t('studentDocs.statusRejected')}</SelectItem>
+          </SelectContent>
+        </Select>
+        <span className="text-[#4B5563] mx-1">·</span>
+        <Label className="text-xs font-semibold uppercase tracking-wider text-[#4B5563]">
+          {t('studentDocs.sortBy')}:
+        </Label>
+        <Select value={sortKey} onValueChange={(v) => setSortKey(v as typeof sortKey)}>
+          <SelectTrigger className="w-[160px] rounded-none h-8 text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="rounded-none">
+            <SelectItem value="uploaded_at">{t('studentDocs.sortByDate')}</SelectItem>
+            <SelectItem value="name">{t('studentDocs.sortByName')}</SelectItem>
+            <SelectItem value="status">{t('studentDocs.sortByStatus')}</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button
+          size="sm"
+          variant="outline"
+          className="rounded-none h-8"
+          onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+          title={t('studentDocs.toggleSortOrder')}
+        >
+          {sortOrder === 'desc' ? '↓' : '↑'}
+        </Button>
       </div>
 
       <div className="space-y-4">

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
+import { DateGroupedList } from '@/components/ui/date-grouped-list';
 import { apiFetch, apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 
@@ -296,8 +297,18 @@ export default function StudentNotificationsPage() {
       ) : (
         <Card className="rounded-none border-gray-200">
           <CardContent className="p-0">
-            <ul className="divide-y divide-gray-100">
-              {notifications.map((n) => {
+            {/*
+             * Phase 1.11: date-group the inbox. We bucket each
+             * notification into Today / Yesterday / This Week /
+             * Earlier and render a sticky-ish section header for
+             * each bucket. The groups are computed client-side
+             * from the notifications list, sorted newest-first
+             * (the API already orders by created_at desc).
+             */}
+            <DateGroupedList
+              notifications={notifications}
+              getDate={(n: StudentNotification) => n.created_at}
+              renderItem={(n) => {
                 const typeClass = TYPE_BADGE[n.type] || TYPE_BADGE.info;
                 const typeLabel = TYPE_LABEL_KEY[n.type] ? t(TYPE_LABEL_KEY[n.type]) : n.type;
                 return (
@@ -361,8 +372,8 @@ export default function StudentNotificationsPage() {
                     )}
                   </li>
                 );
-              })}
-            </ul>
+              }}
+            />
           </CardContent>
         </Card>
       )}
