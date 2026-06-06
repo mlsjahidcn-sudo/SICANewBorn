@@ -16,6 +16,7 @@ import {
   X,
   ChevronRight,
   GraduationCap,
+  Bell,
 } from 'lucide-react';
 import Link from 'next/link';
 import { SicaLogo } from '@/components/sica-logo';
@@ -23,8 +24,13 @@ import { Chatbot } from '@/components/ai/Chatbot';
 import { apiFetchJson } from '@/lib/api-client';
 import type { StudentApplication } from '@/lib/application-mapper';
 
+// S32: Notifications nav item carries the unread badge. The
+// layout polls the unread-count endpoint every 30s + on
+// focus + on route change. `withUnreadBadge: true` is the
+// marker the nav loop checks to render the red badge.
 const navItems = [
   { href: '/student', label: 'Dashboard', labelCn: '仪表盘', icon: LayoutDashboard },
+  { href: '/student/notifications', label: 'Notifications', labelCn: '通知', icon: Bell, withUnreadBadge: true },
   { href: '/student/profile', label: 'My Profile', labelCn: '个人资料', icon: User },
   { href: '/student/documents', label: 'Documents', labelCn: '文档', icon: FileUp },
   { href: '/student/applications', label: 'Applications', labelCn: '申请', icon: GraduationCap },
@@ -93,6 +99,10 @@ function StudentLayoutInner({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { count: attentionCount, severity: attentionSeverity } = useAttentionCount();
+  // S32: unread student_notifications count for the bell badge.
+  // Polled every 30s + on focus + on route change. Same pattern
+  // as the partner layout (S30).
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
 
   useEffect(() => {
     setMounted(true);
@@ -106,6 +116,35 @@ function StudentLayoutInner({ children }: { children: React.ReactNode }) {
       }
     }
   }, [user, loading, mounted, pathname, router]);
+
+  // S32: poll unread notifications count for the sidebar bell
+  // badge. Mirrors the partner layout (S30). Cheap query
+  // (head:true + RLS-scoped), 30s cadence is fine.
+  useEffect(() => {
+    let cancelled = false;
+    const fetchUnread = async () => {
+      try {
+        const { count } = await apiFetchJson<{ count: number }>(
+          '/api/student/notifications/unread-count',
+        );
+        if (!cancelled) setUnreadNotifCount(count || 0);
+      } catch (err) {
+        // Non-fatal — the badge just keeps its last value.
+        console.warn('[student layout] unread-count fetch failed:', err);
+      }
+    };
+    fetchUnread();
+    const onFocus = () => fetchUnread();
+    window.addEventListener('focus', onFocus);
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') fetchUnread();
+    }, 30_000);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('focus', onFocus);
+      clearInterval(interval);
+    };
+  }, [pathname, user]);
 
   if (!mounted || loading) {
     return (
@@ -164,8 +203,16 @@ function StudentLayoutInner({ children }: { children: React.ReactNode }) {
             {navItems.map((item) => {
               const isActive = pathname === item.href;
               const Icon = item.icon;
-              // Phase 2: only the Applications link carries the badge
-              const showBadge = item.href === '/student/applications' && attentionCount > 0;
+              // Two badge systems run side-by-side here:
+              //   - Phase 2: Applications link shows an attention
+              //     badge (urgent = docs needed, resumable = drafts).
+              //     The existing 'attention' color palette.
+              //   - S32: Notifications link shows a red badge with
+              //     the unread count. Both can show simultaneously.
+              const isAppsAttention =
+                item.href === '/student/applications' && attentionCount > 0;
+              const isUnreadNotif =
+                'withUnreadBadge' in item && item.withUnreadBadge && unreadNotifCount > 0;
               return (
                 <Link
                   key={item.label}
@@ -178,7 +225,7 @@ function StudentLayoutInner({ children }: { children: React.ReactNode }) {
                 >
                   <Icon size={18} />
                   <span className="flex-1">{item.label}</span>
-                  {showBadge && (
+                  {isAppsAttention && (
                     <span
                       title={
                         attentionSeverity === 'urgent'
@@ -192,6 +239,14 @@ function StudentLayoutInner({ children }: { children: React.ReactNode }) {
                       }`}
                     >
                       {attentionCount}
+                    </span>
+                  )}
+                  {isUnreadNotif && (
+                    <span
+                      title={`${unreadNotifCount} unread notification${unreadNotifCount === 1 ? '' : 's'}`}
+                      className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-semibold bg-[#9B1B30] text-white"
+                    >
+                      {unreadNotifCount > 99 ? '99+' : unreadNotifCount}
                     </span>
                   )}
                   {isActive && <ChevronRight size={14} />}
