@@ -3,13 +3,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Plus, Eye, Trash2, MoreHorizontal, ArrowUpRight, ArrowDownRight, Minus, RefreshCw, AlertCircle, Search, Users, Building2, UserPlus } from 'lucide-react';
+import { Plus, Eye, Trash2, MoreHorizontal, ArrowUpRight, ArrowDownRight, Minus, RefreshCw, AlertCircle, Search, Users, Building2, UserPlus, CheckSquare, Square, X, StickyNote, Flag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Spinner } from '@/components/ui/spinner';
+import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -126,6 +127,30 @@ export default function AdminApplicationsPage() {
   // Delete dialog
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [applicationToDelete, setApplicationToDelete] = useState<Application | null>(null);
+
+  // S31: bulk-selection state. The set is keyed by app id. We
+  // clear it whenever the visible list changes (tab/filter/page
+  // change) so a stale id from a previous page never sneaks
+  // into a bulk action. Bulk actions live in a separate sticky
+  // action bar that appears at the bottom of the page when 1+
+  // rows are selected.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkRunning, setBulkRunning] = useState(false);
+  const [bulkResultDialog, setBulkResultDialog] = useState<{
+    open: boolean;
+    action: string;
+    updated: number;
+    failed: Array<{ id: string; error: string }>;
+  }>({ open: false, action: '', updated: 0, failed: [] });
+  const [bulkNoteDialogOpen, setBulkNoteDialogOpen] = useState(false);
+  const [bulkNoteText, setBulkNoteText] = useState('');
+  const [bulkPriorityDialogOpen, setBulkPriorityDialogOpen] = useState(false);
+  const [bulkPriority, setBulkPriority] = useState<string>('Normal');
+  // S31: bulk status picker state. Default to the first selected
+  // row's current status so a cohort of "Submitted" apps can be
+  // moved to "Under Review" in one click.
+  const [bulkStatusDialogOpen, setBulkStatusDialogOpen] = useState(false);
+  const [bulkStatus, setBulkStatus] = useState<string>('Under Review');
 
   // -----------------------------------------------------------------
   // Fetch the per-source counts ONCE on mount so the tab badges can
@@ -246,6 +271,31 @@ export default function AdminApplicationsPage() {
     setDeleteDialogOpen(true);
   };
 
+  // S31: bulk action handlers. Each handler:
+  //   1. Sets a busy flag
+  //   2. POSTs the selection to /api/admin/applications/bulk
+  //   3. On success, clears the selection, refetches the list +
+  //      counts, and shows a result dialog
+  //   4. On per-row failure, surfaces the failure list in the
+  //      result dialog so the admin can retry the bad ones.
+  // Implemented after `filteredApplications` is declared below
+  // so they can read it without a forward reference.
+  const toggleSelected = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  // Clear selection when the active tab or filter changes — a
+  // row id from one tab might not be in the current page set,
+  // and bulk-acting on it would surprise the admin.
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [activeTab, statusFilter, studentFilter, searchQuery]);
+
   // Client-side safety filter: even after the API call, double-check the
   // active source matches the row. Cheap and makes tab switching feel
   // instant if the user navigates before the refetch lands.
@@ -271,6 +321,53 @@ export default function AdminApplicationsPage() {
       app.university.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesSource && matchesStatus && matchesStudent && matchesSearch;
   });
+
+  // S31: bulk action handlers (continued). Now that
+  // `filteredApplications` is in scope, we can implement the
+  // select-all-visible toggle and the bulk runner.
+  const toggleSelectAllVisible = useCallback(() => {
+    setSelectedIds((prev) => {
+      const visibleIds = filteredApplications.map((a) => a.id);
+      const allSelected = visibleIds.length > 0 && visibleIds.every((id) => prev.has(id));
+      const next = new Set(prev);
+      if (allSelected) {
+        visibleIds.forEach((id) => next.delete(id));
+      } else {
+        visibleIds.forEach((id) => next.add(id));
+      }
+      return next;
+    });
+  }, [filteredApplications]);
+
+  const runBulk = useCallback(
+    async (action: 'status' | 'priority' | 'note' | 'delete', value?: string) => {
+      if (selectedIds.size === 0) return;
+      setBulkRunning(true);
+      try {
+        const res = await apiFetchJson<{ updated: number; failed: Array<{ id: string; error: string }> }>(
+          '/api/admin/applications/bulk',
+          {
+            method: 'POST',
+            body: JSON.stringify({ ids: Array.from(selectedIds), action, value }),
+          },
+        );
+        setBulkResultDialog({ open: true, action, updated: res.updated, failed: res.failed || [] });
+        // Clear the selection whether the action fully succeeded
+        // or partially failed — the next page load is the source
+        // of truth, and a stale id could re-target a row that
+        // was deleted by this very call.
+        setSelectedIds(new Set());
+        // Refetch list + counts so the table reflects the change
+        setRetryNonce((n) => n + 1);
+        fetchCounts();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Bulk action failed');
+      } finally {
+        setBulkRunning(false);
+      }
+    },
+    [selectedIds, fetchCounts],
+  );
 
   // Count for the active tab — prefer the badge count from /counts,
   // fall back to `total` from the list (which the API already filtered).
@@ -431,6 +528,23 @@ export default function AdminApplicationsPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-[#F3F4F6] border-b border-gray-200">
+                    {/* S31: select-all checkbox for the visible page.
+                        Indeterminate state (—) when some-but-not-all
+                        visible rows are selected. */}
+                    <th className="text-left px-4 py-3 w-10">
+                      <Checkbox
+                        checked={
+                          filteredApplications.length > 0 &&
+                          filteredApplications.every((a) => selectedIds.has(a.id))
+                            ? true
+                            : filteredApplications.some((a) => selectedIds.has(a.id))
+                            ? 'indeterminate'
+                            : false
+                        }
+                        onChange={toggleSelectAllVisible}
+                        aria-label="Select all visible"
+                      />
+                    </th>
                     <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">Student</th>
                     <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">University & Program</th>
                     <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">Status</th>
@@ -465,8 +579,22 @@ export default function AdminApplicationsPage() {
                         application.surface === 'partner'
                           ? `/admin/partner-applications/${application.id}`
                           : `/admin/applications/${application.id}`;
+                      const isSelected = selectedIds.has(application.id);
                       return (
-                        <tr key={application.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                        <tr
+                          key={application.id}
+                          className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
+                            isSelected ? 'bg-[#9B1B30]/5' : ''
+                          }`}
+                        >
+                          {/* S31: per-row checkbox */}
+                          <td className="px-4 py-4 w-10" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={isSelected}
+                              onChange={() => toggleSelected(application.id)}
+                              aria-label={`Select ${application.studentName || 'application'}`}
+                            />
+                          </td>
                           <td className="px-6 py-4">
                             <div>
                               <div className="font-medium text-[#1F2937]">
@@ -605,6 +733,272 @@ export default function AdminApplicationsPage() {
               disabled={isDeleting}
             >
               {isDeleting ? <><Spinner size="sm" className="text-white mr-2" /> Deleting…</> : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* S31: sticky bulk action bar. Appears at the bottom of the
+          viewport when 1+ rows are selected. Each action either
+          fires immediately (delete) or opens a small confirm
+          dialog (status / priority / note). The result dialog
+          shows updated/failed counts so the admin knows what
+          landed. */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t-2 border-[#9B1B30] shadow-lg">
+          <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="text-sm font-semibold text-[#1B2A4A]">
+                {selectedIds.size} selected
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="rounded-none text-gray-500 hover:text-[#1B2A4A]"
+                onClick={() => setSelectedIds(new Set())}
+                disabled={bulkRunning}
+              >
+                <X size={14} className="mr-1" /> Clear
+              </Button>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-none"
+                onClick={() => {
+                  // Pre-fill the picker with the first selected
+                  // row's current status so the admin can edit
+                  // without having to re-type.
+                  const firstId = Array.from(selectedIds)[0];
+                  const firstApp = applications.find((a) => a.id === firstId);
+                  setBulkStatus(firstApp?.status || 'Under Review');
+                  setBulkStatusDialogOpen(true);
+                }}
+                disabled={bulkRunning}
+                title="Change status"
+              >
+                <RefreshCw size={14} className="mr-1.5" /> Change status
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-none"
+                onClick={() => setBulkPriorityDialogOpen(true)}
+                disabled={bulkRunning}
+              >
+                <Flag size={14} className="mr-1.5" /> Set priority
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-none"
+                onClick={() => setBulkNoteDialogOpen(true)}
+                disabled={bulkRunning}
+              >
+                <StickyNote size={14} className="mr-1.5" /> Add note
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-none text-red-600 border-red-200 hover:bg-red-50"
+                onClick={() => {
+                  if (window.confirm(`Delete ${selectedIds.size} application(s)? This cannot be undone.`)) {
+                    runBulk('delete');
+                  }
+                }}
+                disabled={bulkRunning}
+              >
+                <Trash2 size={14} className="mr-1.5" /> Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* S31: bulk result dialog. Shows updated count + any per-row
+          failures. For the status action the admin picked a target
+          status in the picker dialog; for delete/note/priority the
+          action was either obvious (delete) or applied directly. */}
+      <Dialog open={bulkResultDialog.open} onOpenChange={(o) => setBulkResultDialog((p) => ({ ...p, open: o }))}>
+        <DialogContent className="rounded-none max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[#1B2A4A]">Bulk action complete</DialogTitle>
+            <DialogDescription>
+              {bulkResultDialog.action === 'status' && 'Status updated on the selected applications.'}
+              {bulkResultDialog.action === 'priority' && 'Priority updated on the selected applications.'}
+              {bulkResultDialog.action === 'note' && 'Note appended to the selected applications.'}
+              {bulkResultDialog.action === 'delete' && 'Selected applications deleted.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="flex items-center gap-2 text-sm">
+              <CheckSquare size={16} className="text-green-600" />
+              <span>
+                <strong>{bulkResultDialog.updated}</strong> updated
+              </span>
+            </div>
+            {bulkResultDialog.failed.length > 0 && (
+              <div className="bg-red-50 border border-red-200 p-3 max-h-60 overflow-y-auto">
+                <div className="text-sm font-semibold text-red-800 mb-2 flex items-center gap-2">
+                  <AlertCircle size={14} /> {bulkResultDialog.failed.length} failed
+                </div>
+                <ul className="space-y-1 text-xs text-red-700">
+                  {bulkResultDialog.failed.map((f) => (
+                    <li key={f.id} className="font-mono">
+                      <span className="text-red-500">{f.id.slice(0, 8)}</span>: {f.error}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              className="rounded-none bg-[#9B1B30] hover:bg-[#7A1526]"
+              onClick={() => setBulkResultDialog((p) => ({ ...p, open: false }))}
+            >
+              Done
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* S31: bulk status picker. The admin picks a target
+          status; the endpoint accepts both the 8-state student
+          taxonomy and the 6-state partner taxonomy (it routes
+          per surface). We show the union so the admin sees the
+          full list. Cross-taxonomy writes are an error at the
+          API level; in practice the admin UI shows "Partner"
+          only on the Partner tab and the partner taxonomy there. */}
+      <Dialog open={bulkStatusDialogOpen} onOpenChange={setBulkStatusDialogOpen}>
+        <DialogContent className="rounded-none max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[#1B2A4A]">Change status on {selectedIds.size} applications</DialogTitle>
+            <DialogDescription>
+              All selected applications will move to the chosen status. SICA will email the
+              student (and the partner, for partner-submitted apps) and write a timeline event
+              for each.
+            </DialogDescription>
+          </DialogHeader>
+          <Select value={bulkStatus} onValueChange={setBulkStatus}>
+            <SelectTrigger className="rounded-none">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="rounded-none">
+              {/* Student taxonomy */}
+              <SelectItem value="Draft">Draft</SelectItem>
+              <SelectItem value="Submitted">Submitted</SelectItem>
+              <SelectItem value="Under Review">Under Review (student)</SelectItem>
+              <SelectItem value="Documents Requested">Documents Requested</SelectItem>
+              <SelectItem value="Decision Made">Decision Made</SelectItem>
+              <SelectItem value="Accepted">Accepted</SelectItem>
+              <SelectItem value="Rejected">Rejected</SelectItem>
+              <SelectItem value="Withdrawn">Withdrawn</SelectItem>
+              {/* Partner-only state (sits in the partner taxonomy;
+                  no-op on student surface apps, the API returns
+                  an error per row). */}
+              <SelectItem value="In Review">In Review (partner)</SelectItem>
+            </SelectContent>
+          </Select>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="rounded-none"
+              onClick={() => setBulkStatusDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="rounded-none bg-[#9B1B30] hover:bg-[#7A1526]"
+              disabled={bulkRunning}
+              onClick={async () => {
+                const s = bulkStatus;
+                setBulkStatusDialogOpen(false);
+                await runBulk('status', s);
+              }}
+            >
+              {bulkRunning ? <><Spinner size="sm" className="text-white mr-2" /> Updating…</> : 'Change status'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={bulkNoteDialogOpen} onOpenChange={setBulkNoteDialogOpen}>
+        <DialogContent className="rounded-none max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[#1B2A4A]">Add note to {selectedIds.size} applications</DialogTitle>
+            <DialogDescription>
+              The note will be appended to each application's existing notes with a timestamp.
+            </DialogDescription>
+          </DialogHeader>
+          <textarea
+            value={bulkNoteText}
+            onChange={(e) => setBulkNoteText(e.target.value)}
+            placeholder="e.g. Wait for CSC scholarship decision before processing."
+            className="w-full border border-gray-300 p-2 text-sm rounded-none min-h-[100px] focus:outline-none focus:border-[#9B1B30]"
+          />
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="rounded-none"
+              onClick={() => {
+                setBulkNoteDialogOpen(false);
+                setBulkNoteText('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="rounded-none bg-[#9B1B30] hover:bg-[#7A1526]"
+              disabled={!bulkNoteText.trim() || bulkRunning}
+              onClick={async () => {
+                const text = bulkNoteText.trim();
+                setBulkNoteDialogOpen(false);
+                setBulkNoteText('');
+                await runBulk('note', text);
+              }}
+            >
+              {bulkRunning ? <><Spinner size="sm" className="text-white mr-2" /> Saving…</> : 'Add note'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={bulkPriorityDialogOpen} onOpenChange={setBulkPriorityDialogOpen}>
+        <DialogContent className="rounded-none max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[#1B2A4A]">Set priority on {selectedIds.size} applications</DialogTitle>
+          </DialogHeader>
+          <Select value={bulkPriority} onValueChange={setBulkPriority}>
+            <SelectTrigger className="rounded-none">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="rounded-none">
+              <SelectItem value="Low">Low</SelectItem>
+              <SelectItem value="Normal">Normal</SelectItem>
+              <SelectItem value="High">High</SelectItem>
+              <SelectItem value="Urgent">Urgent</SelectItem>
+            </SelectContent>
+          </Select>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="rounded-none"
+              onClick={() => setBulkPriorityDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="rounded-none bg-[#9B1B30] hover:bg-[#7A1526]"
+              disabled={bulkRunning}
+              onClick={async () => {
+                const p = bulkPriority;
+                setBulkPriorityDialogOpen(false);
+                await runBulk('priority', p);
+              }}
+            >
+              {bulkRunning ? <><Spinner size="sm" className="text-white mr-2" /> Updating…</> : 'Update priority'}
             </Button>
           </DialogFooter>
         </DialogContent>
