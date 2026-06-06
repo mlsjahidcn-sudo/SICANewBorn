@@ -287,25 +287,11 @@ export default async function NewsPostPage({
                     {post.read_time_minutes} min read
                   </span>
                 ) : null}
-                <span className="flex items-center gap-1.5">
+                 <span className="flex items-center gap-1.5">
                   Last updated: {new Date(post.updated_at).toISOString().slice(0, 10)}
                 </span>
               </div>
             </div>
-            {post.cover_image && (
-              <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 pb-10">
-                <div className="relative aspect-[1200/630] bg-gray-100">
-                  <Image
-                    src={post.cover_image}
-                    alt={post.title_en}
-                    fill
-                    sizes="(max-width: 896px) 100vw, 896px"
-                    className="object-cover"
-                    priority
-                  />
-                </div>
-              </div>
-            )}
           </header>
 
           {/* Body */}

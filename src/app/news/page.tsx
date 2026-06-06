@@ -237,21 +237,8 @@ export default async function NewsIndexPage(
               {posts.map((post) => (
                 <article
                   key={post.id}
-                  className="group bg-white border-2 border-gray-200 hover:border-[#9B1B30] transition-colors overflow-hidden flex flex-col"
+                  className="group bg-white border-2 border-gray-200 hover:border-[#9B1B30] transition-colors flex flex-col"
                 >
-                  <Link href={`/news/${post.slug}`} className="block">
-                    {post.cover_image && (
-                      <div className="relative h-44 bg-gray-100">
-                        <Image
-                          src={post.cover_image}
-                          alt={post.title_en}
-                          fill
-                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                          className="object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      </div>
-                    )}
-                  </Link>
                   <div className="p-5 flex-1 flex flex-col">
                     <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
                       <span className="font-semibold uppercase tracking-wider text-[#9B1B30]">
