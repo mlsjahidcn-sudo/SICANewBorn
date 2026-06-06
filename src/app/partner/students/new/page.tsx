@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { apiFetchJson } from '@/lib/api-client';
+import { useI18n } from '@/lib/i18n';
 import {
   PARTNER_STUDENT_STATUSES,
   PartnerStudentStatus,
@@ -41,6 +42,7 @@ const INITIAL: FormData = {
 
 export default function PartnerAddStudentPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [formData, setFormData] = useState<FormData>(INITIAL);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +59,7 @@ export default function PartnerAddStudentPage() {
     setError(null);
 
     if (!formData.studentName.trim()) {
-      setError('Student name is required.');
+      setError(t('partnerStudentNew.errorStudentNameRequired'));
       return;
     }
 
@@ -82,7 +84,7 @@ export default function PartnerAddStudentPage() {
       router.push('/partner/students');
     } catch (err) {
       console.error('[partner/students/new] save failed:', err);
-      setError(err instanceof Error ? err.message : 'Failed to save student.');
+      setError(err instanceof Error ? err.message : t('partnerStudentNew.errorSave'));
     } finally {
       setIsSaving(false);
     }
@@ -95,17 +97,15 @@ export default function PartnerAddStudentPage() {
           <ArrowLeft className="w-5 h-5 text-[#1B2A4A]" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-[#1B2A4A]">Add New Student</h1>
-          <p className="text-[#4B5563] mt-1">Track a new student in your pipeline</p>
+          <h1 className="text-2xl font-bold text-[#1B2A4A]">{t('partnerStudentNew.title')}</h1>
+          <p className="text-[#4B5563] mt-1">{t('partnerStudentNew.subtitle')}</p>
         </div>
       </div>
 
       <Card className="rounded-none border-blue-200 bg-blue-50">
         <CardContent className="p-4 text-sm text-[#1B2A4A]">
-          <strong>What this form does:</strong> creates a lead record in your
-          partner CRM. Once the student signs up for the SICA platform,
-          their full profile (transcripts, language scores, documents) lives
-          there — not here. Use the <em>Notes</em> field for free-form context.
+          <strong>{t('partnerStudentNew.bannerTitle')}</strong> {t('partnerStudentNew.bannerBody')}
+          <em>{t('partnerStudentNew.bannerNotes')}</em>{t('partnerStudentNew.bannerBodyEnd')}
         </CardContent>
       </Card>
 
@@ -119,11 +119,11 @@ export default function PartnerAddStudentPage() {
         <Card className="rounded-none">
           <CardContent className="p-6 space-y-6">
             <div>
-              <h2 className="text-lg font-semibold text-[#1B2A4A] mb-4">Student Information</h2>
+              <h2 className="text-lg font-semibold text-[#1B2A4A] mb-4">{t('partnerStudentNew.sectionInfo')}</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <Label htmlFor="studentName" className="text-[#1B2A4A] mb-2 block">
-                    Student Name <span className="text-red-600">*</span>
+                    {t('partnerStudentNew.fieldStudentName')} <span className="text-red-600">{t('partnerCommon.requiredAsterisk')}</span>
                   </Label>
                   <Input
                     id="studentName"
@@ -132,11 +132,11 @@ export default function PartnerAddStudentPage() {
                     onChange={handleInputChange}
                     required
                     className="rounded-none"
-                    placeholder="Full name"
+                    placeholder={t('partnerStudentNew.fieldStudentNamePlaceholder')}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="studentEmail" className="text-[#1B2A4A] mb-2 block">Email</Label>
+                  <Label htmlFor="studentEmail" className="text-[#1B2A4A] mb-2 block">{t('partnerStudentNew.fieldEmail')}</Label>
                   <Input
                     id="studentEmail"
                     name="studentEmail"
@@ -144,11 +144,11 @@ export default function PartnerAddStudentPage() {
                     value={formData.studentEmail}
                     onChange={handleInputChange}
                     className="rounded-none"
-                    placeholder="student@example.com"
+                    placeholder={t('partnerStudentNew.fieldEmailPlaceholder')}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="studentPhone" className="text-[#1B2A4A] mb-2 block">Phone</Label>
+                  <Label htmlFor="studentPhone" className="text-[#1B2A4A] mb-2 block">{t('partnerStudentNew.fieldPhone')}</Label>
                   <Input
                     id="studentPhone"
                     name="studentPhone"
@@ -156,56 +156,56 @@ export default function PartnerAddStudentPage() {
                     value={formData.studentPhone}
                     onChange={handleInputChange}
                     className="rounded-none"
-                    placeholder="+1 555 0100"
+                    placeholder={t('partnerStudentNew.fieldPhonePlaceholder')}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="nationality" className="text-[#1B2A4A] mb-2 block">Nationality</Label>
+                  <Label htmlFor="nationality" className="text-[#1B2A4A] mb-2 block">{t('partnerStudentNew.fieldNationality')}</Label>
                   <Input
                     id="nationality"
                     name="nationality"
                     value={formData.nationality}
                     onChange={handleInputChange}
                     className="rounded-none"
-                    placeholder="e.g., USA, UK, China"
+                    placeholder={t('partnerStudentNew.fieldNationalityPlaceholder')}
                   />
                 </div>
               </div>
             </div>
 
             <div>
-              <h2 className="text-lg font-semibold text-[#1B2A4A] mb-4">Target Program</h2>
+              <h2 className="text-lg font-semibold text-[#1B2A4A] mb-4">{t('partnerStudentNew.sectionTarget')}</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label htmlFor="targetUniversity" className="text-[#1B2A4A] mb-2 block">Target University</Label>
+                  <Label htmlFor="targetUniversity" className="text-[#1B2A4A] mb-2 block">{t('partnerStudentNew.fieldTargetUniversity')}</Label>
                   <Input
                     id="targetUniversity"
                     name="targetUniversity"
                     value={formData.targetUniversity}
                     onChange={handleInputChange}
                     className="rounded-none"
-                    placeholder="e.g., Tsinghua University"
+                    placeholder={t('partnerStudentNew.fieldTargetUniversityPlaceholder')}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="targetProgram" className="text-[#1B2A4A] mb-2 block">Target Program</Label>
+                  <Label htmlFor="targetProgram" className="text-[#1B2A4A] mb-2 block">{t('partnerStudentNew.fieldTargetProgram')}</Label>
                   <Input
                     id="targetProgram"
                     name="targetProgram"
                     value={formData.targetProgram}
                     onChange={handleInputChange}
                     className="rounded-none"
-                    placeholder="e.g., Computer Science"
+                    placeholder={t('partnerStudentNew.fieldTargetProgramPlaceholder')}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="status" className="text-[#1B2A4A] mb-2 block">Status</Label>
+                  <Label htmlFor="status" className="text-[#1B2A4A] mb-2 block">{t('partnerStudentNew.fieldStatus')}</Label>
                   <Select
                     value={formData.status}
                     onValueChange={(value) => setFormData((prev) => ({ ...prev, status: value as PartnerStudentStatus }))}
                   >
                     <SelectTrigger className="rounded-none">
-                      <SelectValue placeholder="Select status" />
+                      <SelectValue placeholder={t('partnerStudentNew.selectStatus')} />
                     </SelectTrigger>
                     <SelectContent>
                       {PARTNER_STUDENT_STATUSES.map((s) => (
@@ -218,7 +218,7 @@ export default function PartnerAddStudentPage() {
             </div>
 
             <div>
-              <Label htmlFor="notes" className="text-[#1B2A4A] mb-2 block">Notes</Label>
+              <Label htmlFor="notes" className="text-[#1B2A4A] mb-2 block">{t('partnerStudentNew.fieldNotes')}</Label>
               <Textarea
                 id="notes"
                 name="notes"
@@ -226,7 +226,7 @@ export default function PartnerAddStudentPage() {
                 onChange={handleInputChange}
                 rows={4}
                 className="rounded-none"
-                placeholder="Any additional context, follow-up steps, or free-form information..."
+                placeholder={t('partnerStudentNew.fieldNotesPlaceholder')}
               />
             </div>
           </CardContent>
@@ -235,7 +235,7 @@ export default function PartnerAddStudentPage() {
         <div className="flex items-center justify-between mt-6">
           <Link href="/partner/students">
             <Button type="button" variant="outline" className="rounded-none" disabled={isSaving}>
-              Cancel
+              {t('partnerStudentNew.cancel')}
             </Button>
           </Link>
           <Button
@@ -244,7 +244,7 @@ export default function PartnerAddStudentPage() {
             className="rounded-none bg-[#9B1B30] hover:bg-[#7a1626]"
           >
             <Save className="mr-2 h-4 w-4" />
-            {isSaving ? 'Saving…' : 'Save Student'}
+            {isSaving ? t('partnerStudentNew.saving') : t('partnerStudentNew.saveStudent')}
           </Button>
         </div>
       </form>

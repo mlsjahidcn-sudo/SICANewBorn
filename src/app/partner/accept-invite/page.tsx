@@ -21,11 +21,13 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/lib/auth-context';
+import { useI18n } from '@/lib/i18n';
 
 function AcceptInviteInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { signIn, isConfigured } = useAuth();
+  const { t } = useI18n();
   const token = searchParams.get('token') || '';
   const setupMode = searchParams.get('setup') === '1';
 
@@ -54,7 +56,7 @@ function AcceptInviteInner() {
     e.preventDefault();
     setError(null);
     if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+      setError(t('partnerAcceptInvite.passwordTooShort'));
       return;
     }
     setLoading(true);
@@ -66,13 +68,13 @@ function AcceptInviteInner() {
       });
       const body = await res.json();
       if (!res.ok) {
-        throw new Error(body.error || 'Failed to accept invite');
+        throw new Error(body.error || t('partnerAcceptInvite.acceptFailed'));
       }
       setDone(true);
       // After 1.5s, redirect to login so they can sign in with their new password
       setTimeout(() => router.push('/partner/login'), 1500);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Setup failed');
+      setError(err instanceof Error ? err.message : t('partnerAcceptInvite.setupFailed'));
     } finally {
       setLoading(false);
     }
@@ -83,7 +85,7 @@ function AcceptInviteInner() {
     e.preventDefault();
     setError(null);
     if (!isConfigured) {
-      setError('Authentication not configured');
+      setError(t('partnerAcceptInvite.authNotConfigured'));
       return;
     }
     setLoading(true);
@@ -100,12 +102,12 @@ function AcceptInviteInner() {
       });
       const body = await res.json();
       if (!res.ok) {
-        throw new Error(body.error || 'Failed to accept invite');
+        throw new Error(body.error || t('partnerAcceptInvite.acceptFailed'));
       }
       setDone(true);
       setTimeout(() => router.push('/partner'), 1500);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Accept failed');
+      setError(err instanceof Error ? err.message : t('partnerAcceptInvite.acceptFailed'));
     } finally {
       setLoading(false);
     }
@@ -116,10 +118,10 @@ function AcceptInviteInner() {
       <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center px-4">
         <div className="max-w-md w-full bg-white border border-gray-200 p-8 text-center space-y-3">
           <AlertCircle className="h-10 w-10 text-red-600 mx-auto" />
-          <h1 className="text-[#1B2A4A] text-xl font-bold">Invalid invite link</h1>
-          <p className="text-sm text-gray-600">This link is missing a token. Ask your partner admin for a new invite.</p>
+          <h1 className="text-[#1B2A4A] text-xl font-bold">{t('partnerAcceptInvite.invalidTokenTitle')}</h1>
+          <p className="text-sm text-gray-600">{t('partnerAcceptInvite.invalidTokenBody')}</p>
           <Link href="/partner/login" className="text-[#9B1B30] hover:underline text-sm font-medium">
-            Sign in
+            {t('partnerAcceptInvite.signIn')}
           </Link>
         </div>
       </div>
@@ -131,8 +133,8 @@ function AcceptInviteInner() {
       <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center px-4">
         <div className="max-w-md w-full bg-white border border-gray-200 p-8 text-center space-y-3">
           <CheckCircle2 className="h-10 w-10 text-green-600 mx-auto" />
-          <h1 className="text-[#1B2A4A] text-xl font-bold">You&apos;re in!</h1>
-          <p className="text-sm text-gray-600">Redirecting you to the partner portal…</p>
+          <h1 className="text-[#1B2A4A] text-xl font-bold">{t('partnerAcceptInvite.youreIn')}</h1>
+          <p className="text-sm text-gray-600">{t('partnerAcceptInvite.redirecting')}</p>
         </div>
       </div>
     );
@@ -146,9 +148,9 @@ function AcceptInviteInner() {
             <div className="inline-flex items-center justify-center w-14 h-14 bg-[#9B1B30] mb-4">
               <User className="text-white" size={28} />
             </div>
-            <h1 className="text-[#1B2A4A] text-2xl font-bold">Welcome to SICA</h1>
+            <h1 className="text-[#1B2A4A] text-2xl font-bold">{t('partnerAcceptInvite.welcomeTitle')}</h1>
             <p className="text-[#4B5563] mt-1 text-sm">
-              Set your password to accept the team invitation.
+              {t('partnerAcceptInvite.welcomeBody')}
             </p>
           </div>
           <div className="bg-white border border-gray-200 p-8">
@@ -161,13 +163,13 @@ function AcceptInviteInner() {
               )}
               <div>
                 <label className="block text-sm font-medium text-[#1F2937] mb-1.5">
-                  Email
+                  {t('partnerAcceptInvite.emailLabel')}
                 </label>
                 <Input value={email} disabled className="bg-gray-50" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-[#1F2937] mb-1.5">
-                  Password (min 8 chars)
+                  {t('partnerAcceptInvite.passwordLabel')}
                 </label>
                 <Input
                   type="password"
@@ -184,7 +186,7 @@ function AcceptInviteInner() {
                 className="w-full bg-[#9B1B30] hover:bg-[#7a1525]"
               >
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4 mr-2" />}
-                Set password &amp; continue
+                {t('partnerAcceptInvite.setPasswordAndContinue')}
               </Button>
             </form>
           </div>
@@ -200,9 +202,9 @@ function AcceptInviteInner() {
           <div className="inline-flex items-center justify-center w-14 h-14 bg-[#9B1B30] mb-4">
             <User className="text-white" size={28} />
           </div>
-          <h1 className="text-[#1B2A4A] text-2xl font-bold">Join your team</h1>
+          <h1 className="text-[#1B2A4A] text-2xl font-bold">{t('partnerAcceptInvite.joinTeamTitle')}</h1>
           <p className="text-[#4B5563] mt-1 text-sm">
-            Sign in to accept the team invitation.
+            {t('partnerAcceptInvite.joinTeamBody')}
           </p>
         </div>
         <div className="bg-white border border-gray-200 p-8">
@@ -214,7 +216,7 @@ function AcceptInviteInner() {
               </div>
             )}
             <div>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1.5">Email</label>
+              <label className="block text-sm font-medium text-[#1F2937] mb-1.5">{t('partnerAcceptInvite.emailLabel')}</label>
               <Input
                 type="email"
                 value={email}
@@ -225,7 +227,7 @@ function AcceptInviteInner() {
             </div>
             <div>
               <label className="block text-sm font-medium text-[#1F2937] mb-1.5">
-                Password
+                {t('partnerAcceptInvite.passwordLoginLabel')}
               </label>
               <Input
                 type="password"
@@ -241,7 +243,7 @@ function AcceptInviteInner() {
               className="w-full bg-[#9B1B30] hover:bg-[#7a1525]"
             >
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4 mr-2" />}
-              Sign in &amp; accept
+              {t('partnerAcceptInvite.signInAndAccept')}
             </Button>
           </form>
         </div>

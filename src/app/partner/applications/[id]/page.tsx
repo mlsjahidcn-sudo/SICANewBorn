@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { apiFetchJson } from '@/lib/api-client';
+import { useI18n } from '@/lib/i18n';
 import type {
   PartnerApplication,
   PartnerApplicationStatus,
@@ -38,6 +39,7 @@ const PRIORITY_VARIANTS: Record<PartnerApplicationPriority, string> = {
 export default function PartnerApplicationDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { t } = useI18n();
   const applicationId = params.id as string;
 
   const [app, setApp] = useState<PartnerApplication | null>(null);
@@ -56,11 +58,11 @@ export default function PartnerApplicationDetailPage() {
       );
       setApp(res.application);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load application.');
+      setError(err instanceof Error ? err.message : t('partnerAppDetail.errorLoad'));
     } finally {
       setIsLoading(false);
     }
-  }, [applicationId]);
+  }, [applicationId, t]);
 
   useEffect(() => {
     void load();
@@ -72,11 +74,11 @@ export default function PartnerApplicationDetailPage() {
       const res = await fetch(`/api/partner/applications/${applicationId}`, { method: 'DELETE' });
       if (!res.ok && res.status !== 204) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || `Delete failed (HTTP ${res.status})`);
+        throw new Error(body.error || t('partnerAppDetail.errorDelete'));
       }
       router.push('/partner/applications');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Delete failed.');
+      setError(err instanceof Error ? err.message : t('partnerAppDetail.errorDelete'));
       setIsDeleting(false);
       setShowDelete(false);
     }
@@ -95,13 +97,13 @@ export default function PartnerApplicationDetailPage() {
     return (
       <div className="space-y-4">
         <Link href="/partner/applications" className="inline-flex items-center gap-2 text-[#1B2A4A]">
-          <ArrowLeft className="w-4 h-4" /> Back to applications
+          <ArrowLeft className="w-4 h-4" /> {t('partnerAppDetail.backToApplications')}
         </Link>
         <Card className="rounded-none border-red-200 bg-red-50">
           <CardContent className="p-6 text-red-700 flex items-center gap-3">
             <AlertTriangle className="w-5 h-5" />
             <div>
-              <p className="font-medium">Couldn't load application</p>
+              <p className="font-medium">{t('partnerAppDetail.couldNotLoad')}</p>
               <p className="text-sm">{error}</p>
             </div>
           </CardContent>
@@ -117,9 +119,9 @@ export default function PartnerApplicationDetailPage() {
       {showDelete && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white p-6 max-w-md w-full mx-4 border border-gray-200">
-            <h3 className="text-lg font-semibold text-[#1B2A4A] mb-4">Delete Application</h3>
+            <h3 className="text-lg font-semibold text-[#1B2A4A] mb-4">{t('partnerAppDetail.deleteTitle')}</h3>
             <p className="text-[#4B5563] mb-6">
-              Delete application for <strong>{app.studentName}</strong> at {app.university}? This cannot be undone.
+              {t('partnerAppDetail.deleteBodyFor', { student: app.studentName, university: app.university })}
             </p>
             <div className="flex gap-3 justify-end">
               <Button
@@ -128,14 +130,14 @@ export default function PartnerApplicationDetailPage() {
                 disabled={isDeleting}
                 className="rounded-none"
               >
-                Cancel
+                {t('partnerAppDetail.cancel')}
               </Button>
               <Button
                 onClick={handleDelete}
                 disabled={isDeleting}
                 className="rounded-none bg-[#9B1B30] hover:bg-[#7a1626]"
               >
-                {isDeleting ? 'Deleting…' : 'Delete'}
+                {isDeleting ? t('partnerAppDetail.deleting') : t('partnerAppDetail.delete')}
               </Button>
             </div>
           </div>
@@ -158,7 +160,7 @@ export default function PartnerApplicationDetailPage() {
             {app.priority && app.priority !== 'Normal' && (
               <span
                 className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-none ${PRIORITY_VARIANTS[app.priority]}`}
-                title="Partner-set priority"
+                title={t('partnerAppDetail.priorityTitle')}
               >
                 <Flag className="w-3 h-3" /> {app.priority}
               </span>
@@ -177,7 +179,7 @@ export default function PartnerApplicationDetailPage() {
           <Button asChild variant="outline" className="rounded-none">
             <Link href={`/partner/applications/${app.id}/edit`}>
               <Edit className="mr-2 h-4 w-4" />
-              Edit
+              {t('partnerAppDetail.edit')}
             </Link>
           </Button>
           <Button
@@ -186,7 +188,7 @@ export default function PartnerApplicationDetailPage() {
             className="rounded-none border-red-300 text-red-600 hover:bg-red-50"
           >
             <Trash2 className="mr-2 h-4 w-4" />
-            Delete
+            {t('partnerAppDetail.delete')}
           </Button>
         </div>
       </div>
@@ -209,37 +211,37 @@ export default function PartnerApplicationDetailPage() {
         <Card className="rounded-none">
           <CardHeader>
             <CardTitle className="text-[#1B2A4A] flex items-center gap-2">
-              <Building className="w-4 h-4" /> University & Program
+              <Building className="w-4 h-4" /> {t('partnerAppDetail.sectionUniversityProgram')}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <Field label="University" value={app.university} />
-            <Field label="Program" value={app.program} />
-            <Field label="Intake" value={app.intake} />
-            <Field label="Degree" value={app.degree} />
-            <Field label="Application #" value={app.applicationNumber} mono />
+            <Field label={t('partnerAppDetail.fieldUniversity')} value={app.university} />
+            <Field label={t('partnerAppDetail.fieldProgram')} value={app.program} />
+            <Field label={t('partnerAppDetail.fieldIntake')} value={app.intake} />
+            <Field label={t('partnerAppDetail.fieldDegree')} value={app.degree} />
+            <Field label={t('partnerAppDetail.fieldApplicationNumber')} value={app.applicationNumber} mono />
           </CardContent>
         </Card>
 
         <Card className="rounded-none">
           <CardHeader>
             <CardTitle className="text-[#1B2A4A] flex items-center gap-2">
-              <UserIcon name="book" className="w-4 h-4" /> Status
+              <UserIcon name="book" className="w-4 h-4" /> {t('partnerAppDetail.sectionStatus')}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <div className="flex items-center gap-2">
-              <span className="text-[#4B5563] min-w-24">Status:</span>
+              <span className="text-[#4B5563] min-w-24">{t('partnerAppDetail.fieldStatus')}</span>
               <Badge variant={STATUS_VARIANTS[app.status]} className="rounded-none">
                 {app.status}
               </Badge>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-[#4B5563] min-w-24">Decision:</span>
+              <span className="text-[#4B5563] min-w-24">{t('partnerAppDetail.fieldDecision')}</span>
               <Badge variant="outline" className="rounded-none">{app.decision}</Badge>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-[#4B5563] min-w-24">Priority:</span>
+              <span className="text-[#4B5563] min-w-24">{t('partnerAppDetail.fieldPriority')}</span>
               <span
                 className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-none ${PRIORITY_VARIANTS[app.priority]}`}
               >
@@ -247,15 +249,13 @@ export default function PartnerApplicationDetailPage() {
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-[#4B5563] min-w-24">Submitted:</span>
+              <span className="text-[#4B5563] min-w-24">{t('partnerAppDetail.fieldSubmitted')}</span>
               <span className="text-[#1F2937]">
-                {app.submittedAt ? new Date(app.submittedAt).toLocaleDateString() : '—'}
+                {app.submittedAt ? new Date(app.submittedAt).toLocaleDateString() : t('partnerCommon.placeholderDash')}
               </span>
             </div>
             <p className="text-xs text-gray-500 pt-2 border-t border-gray-100">
-              Status and Decision are set by SICA's admin team — you can't
-              change them from the partner portal. Email SICA if you need
-              a status change.
+              {t('partnerAppDetail.statusAdminNote')}
             </p>
           </CardContent>
         </Card>
@@ -264,7 +264,7 @@ export default function PartnerApplicationDetailPage() {
       <Card className="rounded-none">
         <CardHeader>
           <CardTitle className="text-[#1B2A4A] flex items-center gap-2">
-            <Mail className="w-4 h-4" /> Student Contact
+            <Mail className="w-4 h-4" /> {t('partnerAppDetail.sectionStudentContact')}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
@@ -279,7 +279,7 @@ export default function PartnerApplicationDetailPage() {
               </a>
             </div>
           ) : (
-            <p className="text-sm text-[#4B5563] italic">No email on file.</p>
+            <p className="text-sm text-[#4B5563] italic">{t('partnerAppDetail.noEmailOnFile')}</p>
           )}
           {app.studentPhone && (
             <div className="flex items-center gap-2">
@@ -297,9 +297,9 @@ export default function PartnerApplicationDetailPage() {
           )}
           {app.createdByEmail && (
             <div className="text-xs text-[#4B5563] pt-2 border-t border-gray-100 mt-2">
-              Added by <span className="font-medium text-[#1B2A4A]">{app.createdByEmail}</span>
+              {t('partnerAppDetail.addedBy', { email: app.createdByEmail })}
               {app.createdAt && (
-                <> on {new Date(app.createdAt).toLocaleDateString()}</>
+                <> {t('partnerAppDetail.addedOn', { date: new Date(app.createdAt).toLocaleDateString() })}</>
               )}
             </div>
           )}
@@ -321,16 +321,16 @@ export default function PartnerApplicationDetailPage() {
         app.currentAddress) && (
         <Card className="rounded-none">
           <CardHeader>
-            <CardTitle className="text-[#1B2A4A]">Identity & Address</CardTitle>
+            <CardTitle className="text-[#1B2A4A]">{t('partnerAppDetail.sectionIdentityAddress')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <Field label="Date of Birth" value={app.dateOfBirth} />
-            <Field label="Gender" value={app.gender} />
-            <Field label="Marital Status" value={app.maritalStatus} />
-            <Field label="Place of Birth" value={app.placeOfBirth} />
+            <Field label={t('partnerAppDetail.fieldDateOfBirth')} value={app.dateOfBirth} />
+            <Field label={t('partnerAppDetail.fieldGender')} value={app.gender} />
+            <Field label={t('partnerAppDetail.fieldMaritalStatus')} value={app.maritalStatus} />
+            <Field label={t('partnerAppDetail.fieldPlaceOfBirth')} value={app.placeOfBirth} />
             {app.currentAddress && (
               <div>
-                <div className="text-[#4B5563] mb-1">Current Address:</div>
+                <div className="text-[#4B5563] mb-1">{t('partnerAppDetail.fieldCurrentAddress')}</div>
                 <p className="text-[#1F2937] whitespace-pre-wrap">{app.currentAddress}</p>
               </div>
             )}
@@ -342,12 +342,12 @@ export default function PartnerApplicationDetailPage() {
       {(app.passportNumber || app.passportIssueDate || app.passportExpiryDate) && (
         <Card className="rounded-none">
           <CardHeader>
-            <CardTitle className="text-[#1B2A4A]">Passport</CardTitle>
+            <CardTitle className="text-[#1B2A4A]">{t('partnerAppDetail.sectionPassport')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <Field label="Passport #" value={app.passportNumber} mono />
-            <Field label="Issue Date" value={app.passportIssueDate} />
-            <Field label="Expiry Date" value={app.passportExpiryDate} />
+            <Field label={t('partnerAppDetail.fieldPassportNumber')} value={app.passportNumber} mono />
+            <Field label={t('partnerAppDetail.fieldIssueDate')} value={app.passportIssueDate} />
+            <Field label={t('partnerAppDetail.fieldExpiryDate')} value={app.passportExpiryDate} />
           </CardContent>
         </Card>
       )}
@@ -359,13 +359,13 @@ export default function PartnerApplicationDetailPage() {
         app.emergencyContactRelationship) && (
         <Card className="rounded-none">
           <CardHeader>
-            <CardTitle className="text-[#1B2A4A]">Emergency Contact</CardTitle>
+            <CardTitle className="text-[#1B2A4A]">{t('partnerAppDetail.sectionEmergencyContact')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <Field label="Name" value={app.emergencyContactName} />
-            <Field label="Relationship" value={app.emergencyContactRelationship} />
-            <Field label="Phone" value={app.emergencyContactPhone} />
-            <Field label="Email" value={app.emergencyContactEmail} />
+            <Field label={t('partnerAppDetail.fieldName')} value={app.emergencyContactName} />
+            <Field label={t('partnerAppDetail.fieldRelationship')} value={app.emergencyContactRelationship} />
+            <Field label={t('partnerAppDetail.fieldPhone')} value={app.emergencyContactPhone} />
+            <Field label={t('partnerAppDetail.fieldEmail')} value={app.emergencyContactEmail} />
           </CardContent>
         </Card>
       )}
@@ -378,19 +378,19 @@ export default function PartnerApplicationDetailPage() {
         app.graduationYear) && (
         <Card className="rounded-none">
           <CardHeader>
-            <CardTitle className="text-[#1B2A4A]">Academic Background</CardTitle>
+            <CardTitle className="text-[#1B2A4A]">{t('partnerAppDetail.sectionAcademic')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <Field label="Highest Education" value={app.highestEducation} />
-            <Field label="School" value={app.schoolName} />
-            <Field label="Country" value={app.schoolCountry} />
-            <Field label="Major" value={app.major} />
+            <Field label={t('partnerAppDetail.fieldHighestEducation')} value={app.highestEducation} />
+            <Field label={t('partnerAppDetail.fieldSchool')} value={app.schoolName} />
+            <Field label={t('partnerAppDetail.fieldCountry')} value={app.schoolCountry} />
+            <Field label={t('partnerAppDetail.fieldMajor')} value={app.major} />
             <Field
-              label="Graduation Year"
+              label={t('partnerAppDetail.fieldGraduationYear')}
               value={app.graduationYear ? String(app.graduationYear) : null}
             />
-            <Field label="GPA" value={app.gpa} />
-            <Field label="Class Rank" value={app.classRank} />
+            <Field label={t('partnerAppDetail.fieldGPA')} value={app.gpa} />
+            <Field label={t('partnerAppDetail.fieldClassRank')} value={app.classRank} />
           </CardContent>
         </Card>
       )}
@@ -403,12 +403,12 @@ export default function PartnerApplicationDetailPage() {
         app.hskScore) && (
         <Card className="rounded-none">
           <CardHeader>
-            <CardTitle className="text-[#1B2A4A]">Language Proficiency</CardTitle>
+            <CardTitle className="text-[#1B2A4A]">{t('partnerAppDetail.sectionLanguage')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <Field label="Native Language" value={app.nativeLanguage} />
+            <Field label={t('partnerAppDetail.fieldNativeLanguage')} value={app.nativeLanguage} />
             <Field
-              label="English"
+              label={t('partnerAppDetail.fieldEnglish')}
               value={
                 app.englishTest
                   ? `${app.englishTest}${app.englishScore ? ` · ${app.englishScore}` : ''}`
@@ -416,7 +416,7 @@ export default function PartnerApplicationDetailPage() {
               }
             />
             <Field
-              label="HSK"
+              label={t('partnerAppDetail.fieldHSK')}
               value={
                 app.hskLevel
                   ? `${app.hskLevel}${app.hskScore ? ` · ${app.hskScore}` : ''}`
@@ -434,31 +434,31 @@ export default function PartnerApplicationDetailPage() {
         app.scholarshipName) && (
         <Card className="rounded-none">
           <CardHeader>
-            <CardTitle className="text-[#1B2A4A]">Application Context</CardTitle>
+            <CardTitle className="text-[#1B2A4A]">{t('partnerAppDetail.sectionContext')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <Field
-              label="Studied in China before"
+              label={t('partnerAppDetail.fieldStudiedInChinaBefore')}
               value={
                 app.hasStudiedInChina === null
                   ? null
                   : app.hasStudiedInChina
-                  ? 'Yes'
-                  : 'No'
+                  ? t('partnerAppDetail.yes')
+                  : t('partnerAppDetail.no')
               }
             />
             <Field
-              label="Applied to CN uni before"
+              label={t('partnerAppDetail.fieldAppliedToCNUniBefore')}
               value={
                 app.hasAppliedChinaUni === null
                   ? null
                   : app.hasAppliedChinaUni
-                  ? 'Yes'
-                  : 'No'
+                  ? t('partnerAppDetail.yes')
+                  : t('partnerAppDetail.no')
               }
             />
-            <Field label="Funding Source" value={app.fundingSource} />
-            <Field label="Scholarship / Sponsor" value={app.scholarshipName} />
+            <Field label={t('partnerAppDetail.fieldFundingSource')} value={app.fundingSource} />
+            <Field label={t('partnerAppDetail.fieldScholarship')} value={app.scholarshipName} />
           </CardContent>
         </Card>
       )}
@@ -467,18 +467,18 @@ export default function PartnerApplicationDetailPage() {
       {(app.whyProgram || app.careerPlan) && (
         <Card className="rounded-none">
           <CardHeader>
-            <CardTitle className="text-[#1B2A4A]">Personal Statement</CardTitle>
+            <CardTitle className="text-[#1B2A4A]">{t('partnerAppDetail.sectionPersonalStatement')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 text-sm">
             {app.whyProgram && (
               <div>
-                <div className="text-[#4B5563] font-medium mb-1">Why this program?</div>
+                <div className="text-[#4B5563] font-medium mb-1">{t('partnerAppDetail.whyThisProgram')}</div>
                 <p className="text-[#1F2937] whitespace-pre-wrap">{app.whyProgram}</p>
               </div>
             )}
             {app.careerPlan && (
               <div>
-                <div className="text-[#4B5563] font-medium mb-1">Post-graduation plan</div>
+                <div className="text-[#4B5563] font-medium mb-1">{t('partnerAppDetail.careerPlan')}</div>
                 <p className="text-[#1F2937] whitespace-pre-wrap">{app.careerPlan}</p>
               </div>
             )}
@@ -488,19 +488,19 @@ export default function PartnerApplicationDetailPage() {
 
       <Card className="rounded-none">
         <CardHeader>
-          <CardTitle className="text-[#1B2A4A]">Notes</CardTitle>
+          <CardTitle className="text-[#1B2A4A]">{t('partnerAppDetail.sectionNotes')}</CardTitle>
         </CardHeader>
         <CardContent>
           {app.notes ? (
             <p className="text-sm text-[#1F2937] whitespace-pre-wrap">{app.notes}</p>
           ) : (
-            <p className="text-sm text-[#4B5563] italic">No notes recorded yet.</p>
+            <p className="text-sm text-[#4B5563] italic">{t('partnerAppDetail.noNotesYet')}</p>
           )}
           <p className="text-xs text-[#4B5563] mt-4 flex items-center gap-1">
             <Calendar className="w-3 h-3" />
-            Created {app.createdAt ? new Date(app.createdAt).toLocaleString() : '—'}
+            {t('partnerAppDetail.createdOn', { date: app.createdAt ? new Date(app.createdAt).toLocaleString() : t('partnerCommon.placeholderDash') })}
             {app.updatedAt && app.updatedAt !== app.createdAt && (
-              <> · Updated {new Date(app.updatedAt).toLocaleString()}</>
+              <>{t('partnerAppDetail.updatedOn', { date: new Date(app.updatedAt).toLocaleString() })}</>
             )}
           </p>
         </CardContent>

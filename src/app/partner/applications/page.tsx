@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { apiFetchJson } from '@/lib/api-client';
+import { useI18n } from '@/lib/i18n';
 import type {
   PartnerApplication,
   PartnerApplicationStatus,
@@ -34,6 +35,7 @@ const PRIORITY_VARIANTS: Record<PartnerApplicationPriority, string> = {
 };
 
 export default function PartnerApplicationsPage() {
+  const { t } = useI18n();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -50,8 +52,8 @@ export default function PartnerApplicationsPage() {
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 250);
-    return () => clearTimeout(t);
+    const tm = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 250);
+    return () => clearTimeout(tm);
   }, [searchTerm]);
 
   const fetchApps = useCallback(async () => {
@@ -69,13 +71,13 @@ export default function PartnerApplicationsPage() {
       setApplications(res.applications || []);
       setTotal(res.total || 0);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load applications.');
+      setError(err instanceof Error ? err.message : t('partnerApps.errorLoad'));
       setApplications([]);
       setTotal(0);
     } finally {
       setIsLoading(false);
     }
-  }, [debouncedSearch, statusFilter, priorityFilter]);
+  }, [debouncedSearch, statusFilter, priorityFilter, t]);
 
   useEffect(() => {
     void fetchApps();
@@ -127,7 +129,7 @@ export default function PartnerApplicationsPage() {
       );
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || `Export failed (HTTP ${res.status})`);
+        throw new Error(body.error || t('partnerApps.errorExportHttp', { status: res.status }));
       }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -143,7 +145,7 @@ export default function PartnerApplicationsPage() {
       a.remove();
       URL.revokeObjectURL(url);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Export failed.');
+      setError(err instanceof Error ? err.message : t('partnerApps.errorExport'));
     } finally {
       setIsExporting(false);
     }
@@ -156,14 +158,14 @@ export default function PartnerApplicationsPage() {
       const res = await fetch(`/api/partner/applications/${appToDelete}`, { method: 'DELETE' });
       if (!res.ok && res.status !== 204) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || `Delete failed (HTTP ${res.status})`);
+        throw new Error(body.error || t('partnerApps.errorDeleteHttp', { status: res.status }));
       }
       setApplications((prev) => prev.filter((a) => a.id !== appToDelete));
       setTotal((prev) => Math.max(0, prev - 1));
       setShowDeleteModal(false);
       setAppToDelete(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Delete failed.');
+      setError(err instanceof Error ? err.message : t('partnerApps.errorDelete'));
     } finally {
       setIsDeleting(false);
     }
@@ -179,7 +181,7 @@ export default function PartnerApplicationsPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white p-6 max-w-md w-full mx-4 border border-gray-200">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-[#1B2A4A]">Delete Application</h3>
+              <h3 className="text-lg font-semibold text-[#1B2A4A]">{t('partnerApps.deleteTitle')}</h3>
               <button
                 onClick={() => setShowDeleteModal(false)}
                 disabled={isDeleting}
@@ -189,7 +191,7 @@ export default function PartnerApplicationsPage() {
               </button>
             </div>
             <p className="text-[#4B5563] mb-6">
-              Are you sure you want to delete this application? This action cannot be undone.
+              {t('partnerApps.deleteBody')}
             </p>
             <div className="flex gap-3 justify-end">
               <Button
@@ -198,14 +200,14 @@ export default function PartnerApplicationsPage() {
                 disabled={isDeleting}
                 className="rounded-none"
               >
-                Cancel
+                {t('partnerApps.cancel')}
               </Button>
               <Button
                 onClick={confirmDelete}
                 disabled={isDeleting}
                 className="rounded-none bg-[#9B1B30] hover:bg-[#7a1626]"
               >
-                {isDeleting ? 'Deleting…' : 'Delete'}
+                {isDeleting ? t('partnerApps.deleting') : t('partnerApps.delete')}
               </Button>
             </div>
           </div>
@@ -215,8 +217,8 @@ export default function PartnerApplicationsPage() {
       <div>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-[#1B2A4A]">Applications</h1>
-            <p className="text-[#4B5563] mt-1">Manage student university applications</p>
+            <h1 className="text-2xl font-bold text-[#1B2A4A]">{t('partnerApps.title')}</h1>
+            <p className="text-[#4B5563] mt-1">{t('partnerApps.subtitle')}</p>
           </div>
           <div className="flex gap-3">
             <Button
@@ -226,17 +228,17 @@ export default function PartnerApplicationsPage() {
               disabled={isExporting || applications.length === 0}
               title={
                 applications.length === 0
-                  ? 'No applications to export'
-                  : `Download ${applications.length} row(s) as CSV`
+                  ? t('partnerApps.exportNone')
+                  : t('partnerApps.exportCount', { count: applications.length })
               }
             >
               <Download className={`mr-2 h-4 w-4 ${isExporting ? 'animate-spin' : ''}`} />
-              {isExporting ? 'Exporting…' : 'Export'}
+              {isExporting ? t('partnerApps.exporting') : t('partnerApps.export')}
             </Button>
             <Button asChild className="rounded-none bg-[#9B1B30] hover:bg-[#7a1626]">
               <Link href="/partner/applications/new" className="flex items-center">
                 <Plus className="mr-2 h-4 w-4" />
-                New Application
+                {t('partnerApps.newApplication')}
               </Link>
             </Button>
           </div>
@@ -246,40 +248,40 @@ export default function PartnerApplicationsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="rounded-none">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-[#4B5563]">Total Applications</CardTitle>
+            <CardTitle className="text-sm font-medium text-[#4B5563]">{t('partnerApps.totalApplications')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-[#1B2A4A]">{total}</div>
-            <p className="text-sm text-[#4B5563] mt-1">All submissions</p>
+            <p className="text-sm text-[#4B5563] mt-1">{t('partnerApps.totalApplicationsHint')}</p>
           </CardContent>
         </Card>
         <Card className="rounded-none">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-[#4B5563]">In Review</CardTitle>
+            <CardTitle className="text-sm font-medium text-[#4B5563]">{t('partnerApps.inReview')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-[#1B2A4A]">{stats.inReview}</div>
-            <p className="text-sm text-[#4B5563] mt-1">Pending decision</p>
+            <p className="text-sm text-[#4B5563] mt-1">{t('partnerApps.inReviewHint')}</p>
           </CardContent>
         </Card>
         <Card className="rounded-none">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-[#4B5563] flex items-center gap-1">
-              <Flag className="w-3 h-3" /> Urgent / High
+              <Flag className="w-3 h-3" /> {t('partnerApps.urgentHigh')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-[#9B1B30]">{stats.urgent}</div>
-            <p className="text-sm text-[#4B5563] mt-1">Flagged for priority handling</p>
+            <p className="text-sm text-[#4B5563] mt-1">{t('partnerApps.urgentHighHint')}</p>
           </CardContent>
         </Card>
         <Card className="rounded-none">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-[#4B5563]">Accepted</CardTitle>
+            <CardTitle className="text-sm font-medium text-[#4B5563]">{t('partnerApps.accepted')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-[#1B2A4A]">{stats.accepted}</div>
-            <p className="text-sm text-[#4B5563] mt-1">Successful admissions</p>
+            <p className="text-sm text-[#4B5563] mt-1">{t('partnerApps.acceptedHint')}</p>
           </CardContent>
         </Card>
       </div>
@@ -296,7 +298,7 @@ export default function PartnerApplicationsPage() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[#4B5563]" />
             <Input
               type="text"
-              placeholder="Search applications..."
+              placeholder={t('partnerApps.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 rounded-none"
@@ -306,10 +308,10 @@ export default function PartnerApplicationsPage() {
         <div className="flex gap-2">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-48 rounded-none">
-              <SelectValue placeholder="All Status" />
+              <SelectValue placeholder={t('partnerApps.allStatus')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="all">{t('partnerApps.allStatus')}</SelectItem>
               <SelectItem value="Draft">Draft</SelectItem>
               <SelectItem value="Submitted">Submitted</SelectItem>
               <SelectItem value="In Review">In Review</SelectItem>
@@ -320,10 +322,10 @@ export default function PartnerApplicationsPage() {
           </Select>
           <Select value={priorityFilter} onValueChange={setPriorityFilter}>
             <SelectTrigger className="w-40 rounded-none">
-              <SelectValue placeholder="All Priority" />
+              <SelectValue placeholder={t('partnerApps.allPriority')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Priority</SelectItem>
+              <SelectItem value="all">{t('partnerApps.allPriority')}</SelectItem>
               <SelectItem value="Urgent">Urgent</SelectItem>
               <SelectItem value="High">High</SelectItem>
               <SelectItem value="Normal">Normal</SelectItem>
@@ -339,15 +341,15 @@ export default function PartnerApplicationsPage() {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">Student</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">University</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">Program</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">Status</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">Priority</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">Decision</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">Submitted by</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">Submitted</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">Actions</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerApps.colStudent')}</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerApps.colUniversity')}</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerApps.colProgram')}</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerApps.colStatus')}</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerApps.colPriority')}</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerApps.colDecision')}</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerApps.colSubmittedBy')}</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerApps.colSubmitted')}</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerApps.colActions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -373,7 +375,7 @@ export default function PartnerApplicationsPage() {
                           )}
                           {(app.intake || app.degree) && (
                             <span className="text-gray-500">
-                              {app.intake || '—'}{app.degree ? ` · ${app.degree}` : ''}
+                              {app.intake || t('partnerCommon.placeholderDash')}{app.degree ? ` · ${app.degree}` : ''}
                             </span>
                           )}
                           {app.applicationNumber && (
@@ -398,10 +400,10 @@ export default function PartnerApplicationsPage() {
                     </td>
                     <td className="px-6 py-4 text-[#4B5563]">{app.decision}</td>
                     <td className="px-6 py-4 text-[#4B5563] text-sm">
-                      {app.createdByEmail || '—'}
+                      {app.createdByEmail || t('partnerCommon.placeholderDash')}
                     </td>
                     <td className="px-6 py-4 text-[#4B5563]">
-                      {app.submittedAt ? new Date(app.submittedAt).toLocaleDateString() : '—'}
+                      {app.submittedAt ? new Date(app.submittedAt).toLocaleDateString() : t('partnerCommon.placeholderDash')}
                     </td>
                     <td className="px-6 py-4">
                       <DropdownMenu>
@@ -414,13 +416,13 @@ export default function PartnerApplicationsPage() {
                           <DropdownMenuItem asChild>
                             <Link href={`/partner/applications/${app.id}`} className="flex items-center cursor-pointer">
                               <Eye className="mr-2 h-4 w-4" />
-                              View
+                              {t('partnerApps.view')}
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
                             <Link href={`/partner/applications/${app.id}/edit`} className="flex items-center cursor-pointer">
                               <Edit className="mr-2 h-4 w-4" />
-                              Edit
+                              {t('partnerApps.edit')}
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem
@@ -428,7 +430,7 @@ export default function PartnerApplicationsPage() {
                             className="text-red-600 cursor-pointer"
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
+                            {t('partnerApps.delete')}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -442,18 +444,18 @@ export default function PartnerApplicationsPage() {
           {applications.length === 0 && !error && !isLoading && (
             <div className="p-12 text-center">
               <div className="text-[#4B5563]">
-                <p className="text-lg font-medium">No applications found</p>
+                <p className="text-lg font-medium">{t('partnerApps.emptyTitle')}</p>
                 <p className="mt-1">
                   {debouncedSearch || statusFilter !== 'all'
-                    ? 'Try adjusting your filters.'
-                    : 'Click "New Application" to create your first one.'}
+                    ? t('partnerApps.emptyFiltered')
+                    : t('partnerApps.emptyFresh')}
                 </p>
               </div>
             </div>
           )}
 
           {isLoading && applications.length === 0 && (
-            <div className="p-12 text-center text-[#4B5563]">Loading…</div>
+            <div className="p-12 text-center text-[#4B5563]">{t('partnerApps.loading')}</div>
           )}
         </CardContent>
       </Card>

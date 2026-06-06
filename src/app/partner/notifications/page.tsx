@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import { apiFetch, apiFetchJson } from '@/lib/api-client';
+import { useI18n } from '@/lib/i18n';
 
 /**
  * /partner/notifications
@@ -50,26 +51,27 @@ const TYPE_BADGE: Record<string, string> = {
 };
 
 const TYPE_LABEL: Record<string, string> = {
-  status_change: 'Status',
-  team: 'Team',
-  info: 'Info',
+  status_change: 'partnerNotif.typeStatus',
+  team: 'partnerNotif.typeTeam',
+  info: 'partnerNotif.typeInfo',
 };
 
-function timeAgo(iso: string): string {
-  const t = new Date(iso).getTime();
+function timeAgo(t: (key: string, params?: Record<string, string | number>) => string, iso: string): string {
+  const ts = new Date(iso).getTime();
   const now = Date.now();
-  const sec = Math.floor((now - t) / 1000);
-  if (sec < 60) return 'just now';
+  const sec = Math.floor((now - ts) / 1000);
+  if (sec < 60) return t('partnerNotif.timeJustNow');
   const min = Math.floor(sec / 60);
-  if (min < 60) return `${min}m ago`;
+  if (min < 60) return t('partnerNotif.timeMinAgo', { n: min });
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}h ago`;
+  if (hr < 24) return t('partnerNotif.timeHrAgo', { n: hr });
   const day = Math.floor(hr / 24);
-  if (day < 7) return `${day}d ago`;
+  if (day < 7) return t('partnerNotif.timeDayAgo', { n: day });
   return new Date(iso).toLocaleDateString();
 }
 
 export default function PartnerNotificationsPage() {
+  const { t } = useI18n();
   const [notifications, setNotifications] = useState<PartnerNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -109,7 +111,7 @@ export default function PartnerNotificationsPage() {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load notifications');
+          setError(err instanceof Error ? err.message : t('partnerNotif.errorLoad'));
         }
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -120,7 +122,7 @@ export default function PartnerNotificationsPage() {
       cancelled = true;
       controller.abort();
     };
-  }, [filter, retryNonce]);
+  }, [filter, retryNonce, t]);
 
   // -----------------------------------------------------------------
   // 30s polling + window-focus refetch so the inbox stays fresh
@@ -167,7 +169,7 @@ export default function PartnerNotificationsPage() {
     if (unreadCount === 0) return;
     setMarkingAll(true);
     try {
-      const res = await apiFetchJson<{ marked: number }>(
+      await apiFetchJson<{ marked: number }>(
         '/api/partner/notifications/read-all',
         { method: 'POST' },
       );
@@ -180,11 +182,11 @@ export default function PartnerNotificationsPage() {
       // may have marked rows we didn't have on the page).
       setRetryNonce((n) => n + 1);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to mark all as read');
+      setError(err instanceof Error ? err.message : t('partnerNotif.errorMarkAll'));
     } finally {
       setMarkingAll(false);
     }
-  }, [unreadCount]);
+  }, [unreadCount, t]);
 
   const onRowClick = useCallback(
     (n: PartnerNotification) => {
@@ -211,10 +213,10 @@ export default function PartnerNotificationsPage() {
         <div>
           <h1 className="text-2xl font-bold text-[#1B2A4A] flex items-center gap-2">
             <Bell size={22} className="text-[#9B1B30]" />
-            Notifications
+            {t('partnerNotif.title')}
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Updates from the SICA team about your students' applications.
+            {t('partnerNotif.subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -223,7 +225,7 @@ export default function PartnerNotificationsPage() {
             size="sm"
             className="rounded-none"
             onClick={() => setRetryNonce((n) => n + 1)}
-            title="Refresh"
+            title={t('partnerNotif.refresh')}
           >
             <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
           </Button>
@@ -236,7 +238,7 @@ export default function PartnerNotificationsPage() {
               disabled={markingAll}
             >
               <CheckCheck size={14} className="mr-1.5" />
-              Mark all as read
+              {t('partnerNotif.markAllAsRead')}
             </Button>
           )}
         </div>
@@ -254,7 +256,7 @@ export default function PartnerNotificationsPage() {
               : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
           }`}
         >
-          All
+          {t('partnerNotif.filterAll')}
         </button>
         <button
           type="button"
@@ -265,7 +267,7 @@ export default function PartnerNotificationsPage() {
               : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
           }`}
         >
-          Unread
+          {t('partnerNotif.filterUnread')}
           {unreadCount > 0 && (
             <span
               className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-semibold ${
@@ -288,7 +290,7 @@ export default function PartnerNotificationsPage() {
             onClick={() => setRetryNonce((n) => n + 1)}
             className="text-red-700"
           >
-            Try again
+            {t('partnerNotif.tryAgain')}
           </Button>
         </div>
       )}
@@ -298,7 +300,7 @@ export default function PartnerNotificationsPage() {
         <Card className="rounded-none border-gray-200">
           <CardContent className="py-16 text-center">
             <Spinner size="md" className="text-[#1B2A4A] mx-auto" />
-            <p className="text-sm text-gray-500 mt-3">Loading notifications…</p>
+            <p className="text-sm text-gray-500 mt-3">{t('partnerNotif.loading')}</p>
           </CardContent>
         </Card>
       ) : notifications.length === 0 ? (
@@ -307,8 +309,8 @@ export default function PartnerNotificationsPage() {
             <Inbox size={36} className="text-gray-300 mx-auto" />
             <p className="text-sm text-gray-500 mt-3">
               {filter === 'unread'
-                ? 'No unread notifications. You\'re all caught up.'
-                : 'No notifications yet. You\'ll get an email + in-app update when SICA changes a status on one of your applications.'}
+                ? t('partnerNotif.emptyUnread')
+                : t('partnerNotif.emptyAll')}
             </p>
           </CardContent>
         </Card>
@@ -318,7 +320,8 @@ export default function PartnerNotificationsPage() {
             <ul className="divide-y divide-gray-100">
               {notifications.map((n) => {
                 const typeClass = TYPE_BADGE[n.type] || TYPE_BADGE.info;
-                const typeLabel = TYPE_LABEL[n.type] || n.type;
+                const typeLabelKey = TYPE_LABEL[n.type] || n.type;
+                const typeLabel = typeLabelKey.startsWith('partnerNotif.') ? t(typeLabelKey) : n.type;
                 return (
                   <li
                     key={n.id}
@@ -360,9 +363,9 @@ export default function PartnerNotificationsPage() {
                         {n.message}
                       </p>
                       <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-400">
-                        <span>{timeAgo(n.created_at)}</span>
+                        <span>{timeAgo(t, n.created_at)}</span>
                         {n.link_url && (
-                          <span className="text-[#9B1B30]">View application →</span>
+                          <span className="text-[#9B1B30]">{t('partnerNotif.viewApplication')}</span>
                         )}
                       </div>
                     </div>
@@ -376,7 +379,7 @@ export default function PartnerNotificationsPage() {
                           markRead(n.id);
                         }}
                         className="flex-shrink-0 text-gray-400 hover:text-[#1B2A4A] p-1 opacity-0 group-hover:opacity-100 hover:opacity-100 focus:opacity-100"
-                        title="Mark as read"
+                        title={t('partnerNotif.markAsReadTooltip')}
                       >
                         <Check size={16} />
                       </button>
@@ -392,8 +395,7 @@ export default function PartnerNotificationsPage() {
       {/* Footer hint */}
       {notifications.length > 0 && (
         <p className="text-xs text-gray-400 text-center">
-          Showing the {notifications.length} most recent notifications. Older entries are
-          archived automatically.
+          {t('partnerNotif.footer', { n: notifications.length })}
         </p>
       )}
     </div>

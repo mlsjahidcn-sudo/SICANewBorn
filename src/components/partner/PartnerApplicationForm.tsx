@@ -48,6 +48,7 @@ import {
   EmergencyRelationship,
 } from '@/lib/partner-application-mapper';
 import { getIntendedIntakes, type University, type Program } from '@/lib/data';
+import { useI18n } from '@/lib/i18n';
 
 // ----- form state ---------------------------------------------------------
 
@@ -222,7 +223,6 @@ function FormSection({
 }
 
 const NONE = '__none__';
-const NONE_DISPLAY = '(unspecified)';
 
 export interface PartnerApplicationFormProps {
   formData: PartnerApplicationFormData;
@@ -261,6 +261,8 @@ export function PartnerApplicationForm({
   cancelHref,
   stickySubmit = false,
 }: PartnerApplicationFormProps) {
+  const { t } = useI18n();
+  const noneDisplay = t('partnerAppForm.noneDisplay');
   // S26: small typed setter so the per-field change handler doesn't
   // have to repeat the "name is one of the form keys" type assertion.
   const set = <K extends keyof PartnerApplicationFormData>(
@@ -278,14 +280,14 @@ export function PartnerApplicationForm({
     <div className="space-y-4">
       {/* Section 1 — Student & Identity */}
       <FormSection
-        title="Student & Identity"
-        description="Basic contact + personal info. Chinese universities ask for DOB, gender, and home-country address on every form."
+        title={t('partnerAppForm.section1Title')}
+        description={t('partnerAppForm.section1Desc')}
         icon={User}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
             <Label htmlFor="studentName" className="text-[#1B2A4A] mb-2 block">
-              Full Name (as on passport) <span className="text-red-600">*</span>
+              {t('partnerAppForm.fieldFullName')} <span className="text-red-600">{t('partnerCommon.requiredAsterisk')}</span>
             </Label>
             <Input
               id="studentName"
@@ -293,12 +295,12 @@ export function PartnerApplicationForm({
               onChange={(e) => set('studentName', e.target.value)}
               required
               className="rounded-none"
-              placeholder="Last, First Middle"
+              placeholder={t('partnerAppForm.fieldFullNamePlaceholder')}
             />
           </div>
           <div>
             <Label htmlFor="studentEmail" className="text-[#1B2A4A] mb-2 block">
-              Email
+              {t('partnerAppForm.fieldEmail')}
             </Label>
             <Input
               id="studentEmail"
@@ -306,12 +308,12 @@ export function PartnerApplicationForm({
               value={formData.studentEmail}
               onChange={(e) => set('studentEmail', e.target.value)}
               className="rounded-none"
-              placeholder="student@example.com"
+              placeholder={t('partnerAppForm.fieldEmailPlaceholder')}
             />
           </div>
           <div>
             <Label htmlFor="studentPhone" className="text-[#1B2A4A] mb-2 block">
-              Phone (with country code)
+              {t('partnerAppForm.fieldPhone')}
             </Label>
             <Input
               id="studentPhone"
@@ -319,24 +321,24 @@ export function PartnerApplicationForm({
               value={formData.studentPhone}
               onChange={(e) => set('studentPhone', e.target.value)}
               className="rounded-none"
-              placeholder="+234 803 000 0000"
+              placeholder={t('partnerAppForm.fieldPhonePlaceholder')}
             />
           </div>
           <div>
             <Label htmlFor="nationality" className="text-[#1B2A4A] mb-2 block">
-              Nationality
+              {t('partnerAppForm.fieldNationality')}
             </Label>
             <Input
               id="nationality"
               value={formData.nationality}
               onChange={(e) => set('nationality', e.target.value)}
               className="rounded-none"
-              placeholder="e.g., Nigeria, Brazil, Vietnam"
+              placeholder={t('partnerAppForm.fieldNationalityPlaceholder')}
             />
           </div>
           <div>
             <Label htmlFor="dateOfBirth" className="text-[#1B2A4A] mb-2 block">
-              Date of Birth
+              {t('partnerAppForm.fieldDateOfBirth')}
             </Label>
             <Input
               id="dateOfBirth"
@@ -347,16 +349,16 @@ export function PartnerApplicationForm({
             />
           </div>
           <div>
-            <Label className="text-[#1B2A4A] mb-2 block">Gender</Label>
+            <Label className="text-[#1B2A4A] mb-2 block">{t('partnerAppForm.fieldGender')}</Label>
             <Select
               value={formData.gender || NONE}
               onValueChange={(v) => set('gender', v === NONE ? '' : (v as Gender))}
             >
               <SelectTrigger className="rounded-none">
-                <SelectValue placeholder={NONE_DISPLAY} />
+                <SelectValue placeholder={noneDisplay} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={NONE}>{NONE_DISPLAY}</SelectItem>
+                <SelectItem value={NONE}>{noneDisplay}</SelectItem>
                 {GENDERS.map((g) => (
                   <SelectItem key={g} value={g}>
                     {g}
@@ -366,7 +368,7 @@ export function PartnerApplicationForm({
             </Select>
           </div>
           <div>
-            <Label className="text-[#1B2A4A] mb-2 block">Marital Status</Label>
+            <Label className="text-[#1B2A4A] mb-2 block">{t('partnerAppForm.fieldMaritalStatus')}</Label>
             <Select
               value={formData.maritalStatus || NONE}
               onValueChange={(v) =>
@@ -374,10 +376,10 @@ export function PartnerApplicationForm({
               }
             >
               <SelectTrigger className="rounded-none">
-                <SelectValue placeholder={NONE_DISPLAY} />
+                <SelectValue placeholder={noneDisplay} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={NONE}>{NONE_DISPLAY}</SelectItem>
+                <SelectItem value={NONE}>{noneDisplay}</SelectItem>
                 {MARITAL_STATUSES.map((m) => (
                   <SelectItem key={m} value={m}>
                     {m}
@@ -388,19 +390,19 @@ export function PartnerApplicationForm({
           </div>
           <div>
             <Label htmlFor="placeOfBirth" className="text-[#1B2A4A] mb-2 block">
-              Place of Birth
+              {t('partnerAppForm.fieldPlaceOfBirth')}
             </Label>
             <Input
               id="placeOfBirth"
               value={formData.placeOfBirth}
               onChange={(e) => set('placeOfBirth', e.target.value)}
               className="rounded-none"
-              placeholder="e.g., Lagos, Nigeria"
+              placeholder={t('partnerAppForm.fieldPlaceOfBirthPlaceholder')}
             />
           </div>
           <div className="md:col-span-2">
             <Label htmlFor="currentAddress" className="text-[#1B2A4A] mb-2 block">
-              Current Home-Country Address
+              {t('partnerAppForm.fieldCurrentAddress')}
             </Label>
             <Textarea
               id="currentAddress"
@@ -408,7 +410,7 @@ export function PartnerApplicationForm({
               onChange={(e) => set('currentAddress', e.target.value)}
               rows={2}
               className="rounded-none"
-              placeholder="Street, city, state, postal code, country"
+              placeholder={t('partnerAppForm.fieldCurrentAddressPlaceholder')}
             />
           </div>
         </div>
@@ -416,28 +418,28 @@ export function PartnerApplicationForm({
 
       {/* Section 2 — Passport */}
       <FormSection
-        title="Passport"
-        description="Needed for the visa application. Expiry must be > 6 months past the study-end date."
+        title={t('partnerAppForm.section2Title')}
+        description={t('partnerAppForm.section2Desc')}
         icon={IdCard}
         defaultOpen={false}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="passportNumber" className="text-[#1B2A4A] mb-2 block">
-              Passport Number
+              {t('partnerAppForm.fieldPassportNumber')}
             </Label>
             <Input
               id="passportNumber"
               value={formData.passportNumber}
               onChange={(e) => set('passportNumber', e.target.value)}
               className="rounded-none"
-              placeholder="As printed on the bio page"
+              placeholder={t('partnerAppForm.fieldPassportNumberPlaceholder')}
             />
           </div>
           <div />
           <div>
             <Label htmlFor="passportIssueDate" className="text-[#1B2A4A] mb-2 block">
-              Issue Date
+              {t('partnerAppForm.fieldPassportIssueDate')}
             </Label>
             <Input
               id="passportIssueDate"
@@ -449,7 +451,7 @@ export function PartnerApplicationForm({
           </div>
           <div>
             <Label htmlFor="passportExpiryDate" className="text-[#1B2A4A] mb-2 block">
-              Expiry Date
+              {t('partnerAppForm.fieldPassportExpiryDate')}
             </Label>
             <Input
               id="passportExpiryDate"
@@ -464,26 +466,26 @@ export function PartnerApplicationForm({
 
       {/* Section 3 — Emergency contact */}
       <FormSection
-        title="Emergency Contact"
-        description="Required on every Chinese university application form."
+        title={t('partnerAppForm.section3Title')}
+        description={t('partnerAppForm.section3Desc')}
         icon={Phone}
         defaultOpen={false}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="emergencyContactName" className="text-[#1B2A4A] mb-2 block">
-              Full Name
+              {t('partnerAppForm.fieldEmergencyName')}
             </Label>
             <Input
               id="emergencyContactName"
               value={formData.emergencyContactName}
               onChange={(e) => set('emergencyContactName', e.target.value)}
               className="rounded-none"
-              placeholder="Father, mother, spouse, etc."
+              placeholder={t('partnerAppForm.fieldEmergencyNamePlaceholder')}
             />
           </div>
           <div>
-            <Label className="text-[#1B2A4A] mb-2 block">Relationship</Label>
+            <Label className="text-[#1B2A4A] mb-2 block">{t('partnerAppForm.fieldEmergencyRelationship')}</Label>
             <Select
               value={formData.emergencyContactRelationship || NONE}
               onValueChange={(v) =>
@@ -494,10 +496,10 @@ export function PartnerApplicationForm({
               }
             >
               <SelectTrigger className="rounded-none">
-                <SelectValue placeholder={NONE_DISPLAY} />
+                <SelectValue placeholder={noneDisplay} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={NONE}>{NONE_DISPLAY}</SelectItem>
+                <SelectItem value={NONE}>{noneDisplay}</SelectItem>
                 {EMERGENCY_RELATIONSHIPS.map((r) => (
                   <SelectItem key={r} value={r}>
                     {r}
@@ -508,7 +510,7 @@ export function PartnerApplicationForm({
           </div>
           <div>
             <Label htmlFor="emergencyContactPhone" className="text-[#1B2A4A] mb-2 block">
-              Phone (with country code)
+              {t('partnerAppForm.fieldEmergencyPhone')}
             </Label>
             <Input
               id="emergencyContactPhone"
@@ -516,12 +518,12 @@ export function PartnerApplicationForm({
               value={formData.emergencyContactPhone}
               onChange={(e) => set('emergencyContactPhone', e.target.value)}
               className="rounded-none"
-              placeholder="+234 803 000 0000"
+              placeholder={t('partnerAppForm.fieldEmergencyPhonePlaceholder')}
             />
           </div>
           <div>
             <Label htmlFor="emergencyContactEmail" className="text-[#1B2A4A] mb-2 block">
-              Email (optional)
+              {t('partnerAppForm.fieldEmergencyEmail')}
             </Label>
             <Input
               id="emergencyContactEmail"
@@ -529,7 +531,7 @@ export function PartnerApplicationForm({
               value={formData.emergencyContactEmail}
               onChange={(e) => set('emergencyContactEmail', e.target.value)}
               className="rounded-none"
-              placeholder="contact@example.com"
+              placeholder={t('partnerAppForm.fieldEmergencyEmailPlaceholder')}
             />
           </div>
         </div>
@@ -537,14 +539,14 @@ export function PartnerApplicationForm({
 
       {/* Section 4 — Academic background */}
       <FormSection
-        title="Academic Background"
-        description="The student's most recent school + grades. Chinese unis require this for every application."
+        title={t('partnerAppForm.section4Title')}
+        description={t('partnerAppForm.section4Desc')}
         icon={GraduationCap}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label className="text-[#1B2A4A] mb-2 block">
-              Highest Education Completed
+              {t('partnerAppForm.fieldHighestEducation')}
             </Label>
             <Select
               value={formData.highestEducation || NONE}
@@ -553,10 +555,10 @@ export function PartnerApplicationForm({
               }
             >
               <SelectTrigger className="rounded-none">
-                <SelectValue placeholder={NONE_DISPLAY} />
+                <SelectValue placeholder={noneDisplay} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={NONE}>{NONE_DISPLAY}</SelectItem>
+                <SelectItem value={NONE}>{noneDisplay}</SelectItem>
                 {HIGHEST_EDUCATIONS.map((e) => (
                   <SelectItem key={e} value={e}>
                     {e}
@@ -567,7 +569,7 @@ export function PartnerApplicationForm({
           </div>
           <div>
             <Label htmlFor="graduationYear" className="text-[#1B2A4A] mb-2 block">
-              Graduation Year
+              {t('partnerAppForm.fieldGraduationYear')}
             </Label>
             <Input
               id="graduationYear"
@@ -578,67 +580,67 @@ export function PartnerApplicationForm({
               value={formData.graduationYear}
               onChange={(e) => set('graduationYear', e.target.value)}
               className="rounded-none"
-              placeholder="e.g., 2024"
+              placeholder={t('partnerAppForm.fieldGraduationYearPlaceholder')}
             />
           </div>
           <div className="md:col-span-2">
             <Label htmlFor="schoolName" className="text-[#1B2A4A] mb-2 block">
-              School Name
+              {t('partnerAppForm.fieldSchoolName')}
             </Label>
             <Input
               id="schoolName"
               value={formData.schoolName}
               onChange={(e) => set('schoolName', e.target.value)}
               className="rounded-none"
-              placeholder="e.g., University of Lagos"
+              placeholder={t('partnerAppForm.fieldSchoolNamePlaceholder')}
             />
           </div>
           <div>
             <Label htmlFor="schoolCountry" className="text-[#1B2A4A] mb-2 block">
-              School Country
+              {t('partnerAppForm.fieldSchoolCountry')}
             </Label>
             <Input
               id="schoolCountry"
               value={formData.schoolCountry}
               onChange={(e) => set('schoolCountry', e.target.value)}
               className="rounded-none"
-              placeholder="e.g., Nigeria"
+              placeholder={t('partnerAppForm.fieldSchoolCountryPlaceholder')}
             />
           </div>
           <div>
             <Label htmlFor="major" className="text-[#1B2A4A] mb-2 block">
-              Major / Field of Study
+              {t('partnerAppForm.fieldMajor')}
             </Label>
             <Input
               id="major"
               value={formData.major}
               onChange={(e) => set('major', e.target.value)}
               className="rounded-none"
-              placeholder="e.g., Computer Science"
+              placeholder={t('partnerAppForm.fieldMajorPlaceholder')}
             />
           </div>
           <div>
             <Label htmlFor="gpa" className="text-[#1B2A4A] mb-2 block">
-              GPA
+              {t('partnerAppForm.fieldGPA')}
             </Label>
             <Input
               id="gpa"
               value={formData.gpa}
               onChange={(e) => set('gpa', e.target.value)}
               className="rounded-none"
-              placeholder="e.g., 3.85/4.0 or 85% — write whatever the transcript says"
+              placeholder={t('partnerAppForm.fieldGPAPlaceholder')}
             />
           </div>
           <div>
             <Label htmlFor="classRank" className="text-[#1B2A4A] mb-2 block">
-              Class Rank (optional)
+              {t('partnerAppForm.fieldClassRank')}
             </Label>
             <Input
               id="classRank"
               value={formData.classRank}
               onChange={(e) => set('classRank', e.target.value)}
               className="rounded-none"
-              placeholder="e.g., Top 10% or 5/120"
+              placeholder={t('partnerAppForm.fieldClassRankPlaceholder')}
             />
           </div>
         </div>
@@ -646,26 +648,26 @@ export function PartnerApplicationForm({
 
       {/* Section 5 — Language proficiency */}
       <FormSection
-        title="Language Proficiency"
-        description="English for English-taught programs; HSK for Chinese-taught programs. Both are usually required."
+        title={t('partnerAppForm.section5Title')}
+        description={t('partnerAppForm.section5Desc')}
         icon={Languages}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="nativeLanguage" className="text-[#1B2A4A] mb-2 block">
-              Native Language
+              {t('partnerAppForm.fieldNativeLanguage')}
             </Label>
             <Input
               id="nativeLanguage"
               value={formData.nativeLanguage}
               onChange={(e) => set('nativeLanguage', e.target.value)}
               className="rounded-none"
-              placeholder="e.g., Yoruba, Vietnamese, Portuguese"
+              placeholder={t('partnerAppForm.fieldNativeLanguagePlaceholder')}
             />
           </div>
           <div />
           <div>
-            <Label className="text-[#1B2A4A] mb-2 block">English Test</Label>
+            <Label className="text-[#1B2A4A] mb-2 block">{t('partnerAppForm.fieldEnglishTest')}</Label>
             <Select
               value={formData.englishTest || NONE}
               onValueChange={(v) =>
@@ -673,13 +675,13 @@ export function PartnerApplicationForm({
               }
             >
               <SelectTrigger className="rounded-none">
-                <SelectValue placeholder={NONE_DISPLAY} />
+                <SelectValue placeholder={noneDisplay} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={NONE}>{NONE_DISPLAY}</SelectItem>
-                {ENGLISH_TESTS.map((t) => (
-                  <SelectItem key={t} value={t}>
-                    {t}
+                <SelectItem value={NONE}>{noneDisplay}</SelectItem>
+                {ENGLISH_TESTS.map((tt) => (
+                  <SelectItem key={tt} value={tt}>
+                    {tt}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -687,19 +689,19 @@ export function PartnerApplicationForm({
           </div>
           <div>
             <Label htmlFor="englishScore" className="text-[#1B2A4A] mb-2 block">
-              English Score
+              {t('partnerAppForm.fieldEnglishScore')}
             </Label>
             <Input
               id="englishScore"
               value={formData.englishScore}
               onChange={(e) => set('englishScore', e.target.value)}
               className="rounded-none"
-              placeholder="e.g., 7.5 (IELTS) or 100 (TOEFL)"
+              placeholder={t('partnerAppForm.fieldEnglishScorePlaceholder')}
               disabled={formData.englishTest === '' || formData.englishTest === 'None'}
             />
           </div>
           <div>
-            <Label className="text-[#1B2A4A] mb-2 block">HSK Level</Label>
+            <Label className="text-[#1B2A4A] mb-2 block">{t('partnerAppForm.fieldHskLevel')}</Label>
             <Select
               value={formData.hskLevel || NONE}
               onValueChange={(v) =>
@@ -707,13 +709,13 @@ export function PartnerApplicationForm({
               }
             >
               <SelectTrigger className="rounded-none">
-                <SelectValue placeholder={NONE_DISPLAY} />
+                <SelectValue placeholder={noneDisplay} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={NONE}>{NONE_DISPLAY}</SelectItem>
+                <SelectItem value={NONE}>{noneDisplay}</SelectItem>
                 {HSK_LEVELS.filter((l) => l !== 'None').map((l) => (
                   <SelectItem key={l} value={l}>
-                    HSK {l}
+                    {t('partnerAppForm.hskPrefix')}{l}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -721,14 +723,14 @@ export function PartnerApplicationForm({
           </div>
           <div>
             <Label htmlFor="hskScore" className="text-[#1B2A4A] mb-2 block">
-              HSK Score
+              {t('partnerAppForm.fieldHskScore')}
             </Label>
             <Input
               id="hskScore"
               value={formData.hskScore}
               onChange={(e) => set('hskScore', e.target.value)}
               className="rounded-none"
-              placeholder="e.g., 220"
+              placeholder={t('partnerAppForm.fieldHskScorePlaceholder')}
               disabled={formData.hskLevel === '' || formData.hskLevel === 'None'}
             />
           </div>
@@ -737,14 +739,14 @@ export function PartnerApplicationForm({
 
       {/* Section 6 — Program & Application */}
       <FormSection
-        title="Program & Application"
-        description="The university + program the student is applying to. Type to search by program or university name."
+        title={t('partnerAppForm.section6Title')}
+        description={t('partnerAppForm.section6Desc')}
         icon={Building2}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
             <Label htmlFor="program" className="text-[#1B2A4A] mb-2 block">
-              Program <span className="text-red-600">*</span>
+              {t('partnerAppForm.fieldProgram')} <span className="text-red-600">{t('partnerCommon.requiredAsterisk')}</span>
             </Label>
             <SearchableSelect
               value={formData.program}
@@ -768,42 +770,41 @@ export function PartnerApplicationForm({
                   value: program.slug,
                   label: program.name,
                   sublabel: uni
-                    ? `at ${uni.name} · ${program.degree} · ${program.language}`
+                    ? `${t('partnerAppForm.programSublabelAt', { name: uni.name })} · ${program.degree} · ${program.language}`
                     : `${program.degree} · ${program.language}`,
                   logo: uni?.logo || undefined,
                 };
               })}
               placeholder={
                 dataLoading
-                  ? 'Loading programs…'
-                  : 'Type to search by program OR university…'
+                  ? t('partnerAppForm.programLoadingPlaceholder')
+                  : t('partnerAppForm.programSearchPrompt')
               }
-              emptyText="No programs match"
-              searchPlaceholder="Search by program, school, or language…"
+              emptyText={t('partnerAppForm.programEmptyText')}
+              searchPlaceholder={t('partnerAppForm.programSearchPlaceholder')}
               disabled={dataLoading}
               loading={dataLoading}
             />
           </div>
           <div>
             <Label htmlFor="university" className="text-[#1B2A4A] mb-2 block">
-              University <span className="text-red-600">*</span>
+              {t('partnerAppForm.fieldUniversity')} <span className="text-red-600">{t('partnerCommon.requiredAsterisk')}</span>
             </Label>
             <Input
               id="university"
               value={formData.university}
               onChange={(e) => set('university', e.target.value)}
               className="rounded-none bg-gray-50"
-              placeholder="Auto-filled when you pick a program"
+              placeholder={t('partnerAppForm.fieldUniversityPlaceholder')}
               required
             />
             <p className="text-xs text-gray-500 mt-1">
-              Editable in case the program references a school we don't have in
-              the catalogue yet.
+              {t('partnerAppForm.fieldUniversityHint')}
             </p>
           </div>
           <div>
             <Label htmlFor="degree" className="text-[#1B2A4A] mb-2 block">
-              Degree Level
+              {t('partnerAppForm.fieldDegreeLevel')}
             </Label>
             <Select
               value={formData.degree || NONE}
@@ -812,10 +813,10 @@ export function PartnerApplicationForm({
               }
             >
               <SelectTrigger className="rounded-none">
-                <SelectValue placeholder={NONE_DISPLAY} />
+                <SelectValue placeholder={noneDisplay} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={NONE}>{NONE_DISPLAY}</SelectItem>
+                <SelectItem value={NONE}>{noneDisplay}</SelectItem>
                 {PARTNER_APPLICATION_DEGREES.map((d) => (
                   <SelectItem key={d} value={d}>
                     {d}
@@ -826,17 +827,17 @@ export function PartnerApplicationForm({
           </div>
           <div>
             <Label htmlFor="intake" className="text-[#1B2A4A] mb-2 block">
-              Intended Intake
+              {t('partnerAppForm.fieldIntendedIntake')}
             </Label>
             <Select
               value={formData.intake || NONE}
               onValueChange={(v) => set('intake', v === NONE ? '' : v)}
             >
               <SelectTrigger className="rounded-none">
-                <SelectValue placeholder={NONE_DISPLAY} />
+                <SelectValue placeholder={noneDisplay} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={NONE}>{NONE_DISPLAY}</SelectItem>
+                <SelectItem value={NONE}>{noneDisplay}</SelectItem>
                 {intakeOptions.map((i) => (
                   <SelectItem key={i} value={i}>
                     {i}
@@ -853,10 +854,9 @@ export function PartnerApplicationForm({
                 className="rounded-none mt-0.5"
               />
               <span>
-                The student has previously studied in China.
+                {t('partnerAppForm.studiedInChinaBefore')}
                 <span className="block text-xs text-gray-500">
-                  Affects the visa category and may require a release letter
-                  from the previous school.
+                  {t('partnerAppForm.studiedInChinaBeforeHint')}
                 </span>
               </span>
             </label>
@@ -867,9 +867,9 @@ export function PartnerApplicationForm({
                 className="rounded-none mt-0.5"
               />
               <span>
-                The student has previously applied to a Chinese university.
+                {t('partnerAppForm.appliedToChinaUniBefore')}
                 <span className="block text-xs text-gray-500">
-                  Repeat applicants may need a different document set.
+                  {t('partnerAppForm.appliedToChinaUniBeforeHint')}
                 </span>
               </span>
             </label>
@@ -879,14 +879,14 @@ export function PartnerApplicationForm({
 
       {/* Section 7 — Funding */}
       <FormSection
-        title="Funding"
-        description="Required for the visa application. Pick the source closest to the student's reality."
+        title={t('partnerAppForm.section7Title')}
+        description={t('partnerAppForm.section7Desc')}
         icon={Wallet}
         defaultOpen={false}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <Label className="text-[#1B2A4A] mb-2 block">Source of Funding</Label>
+            <Label className="text-[#1B2A4A] mb-2 block">{t('partnerAppForm.fieldFundingSource')}</Label>
             <Select
               value={formData.fundingSource || NONE}
               onValueChange={(v) =>
@@ -894,10 +894,10 @@ export function PartnerApplicationForm({
               }
             >
               <SelectTrigger className="rounded-none">
-                <SelectValue placeholder={NONE_DISPLAY} />
+                <SelectValue placeholder={noneDisplay} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={NONE}>{NONE_DISPLAY}</SelectItem>
+                <SelectItem value={NONE}>{noneDisplay}</SelectItem>
                 {FUNDING_SOURCES.map((f) => (
                   <SelectItem key={f} value={f}>
                     {f}
@@ -908,14 +908,14 @@ export function PartnerApplicationForm({
           </div>
           <div>
             <Label htmlFor="scholarshipName" className="text-[#1B2A4A] mb-2 block">
-              Scholarship / Sponsor Name
+              {t('partnerAppForm.fieldScholarshipName')}
             </Label>
             <Input
               id="scholarshipName"
               value={formData.scholarshipName}
               onChange={(e) => set('scholarshipName', e.target.value)}
               className="rounded-none"
-              placeholder="e.g., Chinese Government Scholarship — Bilateral Program"
+              placeholder={t('partnerAppForm.fieldScholarshipNamePlaceholder')}
               disabled={
                 formData.fundingSource === '' ||
                 (formData.fundingSource !== 'Scholarship' &&
@@ -929,15 +929,15 @@ export function PartnerApplicationForm({
 
       {/* Section 8 — Personal statement */}
       <FormSection
-        title="Personal Statement"
-        description="Most Chinese unis ask for at least a 'why this program' paragraph. Some (especially Master's / PhD) also want a career plan."
+        title={t('partnerAppForm.section8Title')}
+        description={t('partnerAppForm.section8Desc')}
         icon={FileText}
         defaultOpen={false}
       >
         <div className="space-y-4">
           <div>
             <Label htmlFor="whyProgram" className="text-[#1B2A4A] mb-2 block">
-              Why this program?
+              {t('partnerAppForm.fieldWhyProgram')}
             </Label>
             <Textarea
               id="whyProgram"
@@ -945,12 +945,12 @@ export function PartnerApplicationForm({
               onChange={(e) => set('whyProgram', e.target.value)}
               rows={5}
               className="rounded-none"
-              placeholder="1–2 paragraphs. Why this university, why this program, what the student hopes to learn."
+              placeholder={t('partnerAppForm.fieldWhyProgramPlaceholder')}
             />
           </div>
           <div>
             <Label htmlFor="careerPlan" className="text-[#1B2A4A] mb-2 block">
-              Post-graduation plan
+              {t('partnerAppForm.fieldCareerPlan')}
             </Label>
             <Textarea
               id="careerPlan"
@@ -958,7 +958,7 @@ export function PartnerApplicationForm({
               onChange={(e) => set('careerPlan', e.target.value)}
               rows={4}
               className="rounded-none"
-              placeholder="What the student plans to do after graduating. Some unis want this in writing."
+              placeholder={t('partnerAppForm.fieldCareerPlanPlaceholder')}
             />
           </div>
         </div>
@@ -966,14 +966,14 @@ export function PartnerApplicationForm({
 
       {/* Section 9 — Workflow (S27: status + decision are admin-only) */}
       <FormSection
-        title="Workflow"
-        description="Internal pipeline. SICA's admin team sets the application status and decision — you can only flag urgency here."
+        title={t('partnerAppForm.section9Title')}
+        description={t('partnerAppForm.section9Desc')}
         icon={ListChecks}
         defaultOpen={true}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <Label className="text-[#1B2A4A] mb-2 block">Priority</Label>
+            <Label className="text-[#1B2A4A] mb-2 block">{t('partnerAppForm.fieldPriority')}</Label>
             <Select
               value={formData.priority}
               onValueChange={(v) =>
@@ -992,14 +992,13 @@ export function PartnerApplicationForm({
               </SelectContent>
             </Select>
             <p className="text-xs text-gray-500 mt-1">
-              Admin sees this in their queue so they can triage Urgent / High
-              first.
+              {t('partnerAppForm.fieldPriorityHint')}
             </p>
           </div>
         </div>
         <div className="mt-4">
           <Label htmlFor="notes" className="text-[#1B2A4A] mb-2 block">
-            Internal Notes
+            {t('partnerAppForm.fieldNotes')}
           </Label>
           <Textarea
             id="notes"
@@ -1007,7 +1006,7 @@ export function PartnerApplicationForm({
             onChange={(e) => set('notes', e.target.value)}
             rows={4}
             className="rounded-none"
-            placeholder="Free-form context, follow-up steps, partner-side admin notes. Not shown to the student."
+            placeholder={t('partnerAppForm.fieldNotesPlaceholder')}
           />
         </div>
       </FormSection>
@@ -1030,7 +1029,7 @@ export function PartnerApplicationForm({
               className="rounded-none"
               disabled={isSaving}
             >
-              Cancel
+              {t('partnerAppForm.cancel')}
             </Button>
           </a>
           <Button
@@ -1058,7 +1057,7 @@ export function PartnerApplicationForm({
             className="rounded-none"
             disabled={isSaving}
           >
-            Cancel
+            {t('partnerAppForm.cancel')}
           </Button>
         </a>
         <Button

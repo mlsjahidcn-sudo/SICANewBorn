@@ -19,20 +19,23 @@ import {
 import Link from 'next/link';
 import { SicaLogo } from '@/components/sica-logo';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
+import { I18nProvider, useI18n } from '@/lib/i18n';
 import { apiFetchJson } from '@/lib/api-client';
 
 // Fees nav item REMOVED (Phase 3): partner orgs never see fees /
-// service charge. Admin manages those in /admin/fees.
+// service charge. Admin manages those in /admin/fees. Labels are
+// translation keys — resolved via t() at render time so the
+// sidebar flips with the locale.
 const navItems = [
-  { name: 'Dashboard', href: '/partner', icon: LayoutDashboard },
+  { labelKey: 'partnerNav.dashboard', href: '/partner', icon: LayoutDashboard },
   // S30: Notifications nav item surfaces the partner's unread count
   // (badge). The badge is polled every 30s by the layout.
-  { name: 'Notifications', href: '/partner/notifications', icon: Bell, withUnreadBadge: true },
-  { name: 'Students', href: '/partner/students', icon: Users },
-  { name: 'Applications', href: '/partner/applications', icon: FileText },
-  { name: 'Lead Sharing', href: '/partner/lead-sharing', icon: Share2 },
-  { name: 'Team', href: '/partner/team', icon: UserCog, ownerOnly: true },
-  { name: 'Settings', href: '/partner/settings', icon: Settings },
+  { labelKey: 'partnerNav.notifications', href: '/partner/notifications', icon: Bell, withUnreadBadge: true },
+  { labelKey: 'partnerNav.students', href: '/partner/students', icon: Users },
+  { labelKey: 'partnerNav.applications', href: '/partner/applications', icon: FileText },
+  { labelKey: 'partnerNav.leadSharing', href: '/partner/lead-sharing', icon: Share2 },
+  { labelKey: 'partnerNav.team', href: '/partner/team', icon: UserCog, ownerOnly: true },
+  { labelKey: 'partnerNav.settings', href: '/partner/settings', icon: Settings },
 ];
 
 interface PartnerMe {
@@ -46,9 +49,11 @@ interface PartnerMe {
 
 export default function PartnerLayout({ children }: { children: React.ReactNode }) {
   return (
-    <AuthProvider>
-      <PartnerLayoutInner>{children}</PartnerLayoutInner>
-    </AuthProvider>
+    <I18nProvider>
+      <AuthProvider>
+        <PartnerLayoutInner>{children}</PartnerLayoutInner>
+      </AuthProvider>
+    </I18nProvider>
   );
 }
 
@@ -56,6 +61,7 @@ function PartnerLayoutInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { user, loading: authLoading, signOut } = useAuth();
+  const { t } = useI18n();
   const [partner, setPartner] = useState<PartnerMe | null>(null);
   const [role, setRole] = useState<'owner' | 'member' | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -96,7 +102,7 @@ function PartnerLayoutInner({ children }: { children: React.ReactNode }) {
     (async () => {
       const { supabase } = await import('@/lib/supabase-browser');
       if (!supabase) {
-        if (!cancelled) setAuthError('Supabase is not configured');
+        if (!cancelled) setAuthError(t('partnerLayout.configMissing'));
         if (!cancelled) setIsLoading(false);
         return;
       }
@@ -122,9 +128,7 @@ function PartnerLayoutInner({ children }: { children: React.ReactNode }) {
           return;
         }
         if (status === 'suspended') {
-          setAuthError(
-            'Your partner account is suspended. Please contact SICA support.',
-          );
+          setAuthError(t('partnerLayout.suspendedMessage'));
           setIsLoading(false);
           return;
         }
@@ -140,14 +144,14 @@ function PartnerLayoutInner({ children }: { children: React.ReactNode }) {
         setRole(body.teamMember?.role ?? null);
         setIsLoading(false);
       } else {
-        setAuthError('Your account is not linked to a partner profile.');
+        setAuthError(t('partnerLayout.notLinkedToPartner'));
         setIsLoading(false);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [mounted, authLoading, user, pathname, router]);
+  }, [mounted, authLoading, user, pathname, router, t]);
 
   // S30: poll unread notifications count for the sidebar bell
   // badge. Mirrors the S17 student-portal pattern. The fetch
@@ -205,13 +209,13 @@ function PartnerLayoutInner({ children }: { children: React.ReactNode }) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F3F4F6] p-6">
         <div className="max-w-md w-full bg-white p-8 text-center">
-          <h1 className="text-xl font-bold text-[#1B2A4A] mb-3">Access Denied</h1>
+          <h1 className="text-xl font-bold text-[#1B2A4A] mb-3">{t('partnerLayout.accessDeniedTitle')}</h1>
           <p className="text-gray-600 text-sm mb-6">{authError}</p>
           <button
             onClick={handleLogout}
             className="bg-[#9B1B30] text-white px-6 py-2 font-medium hover:bg-[#7A1526]"
           >
-            Sign Out
+            {t('partnerLayout.signOut')}
           </button>
         </div>
       </div>
@@ -242,7 +246,7 @@ function PartnerLayoutInner({ children }: { children: React.ReactNode }) {
           {/* Logo */}
           <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-200">
             <SicaLogo className="h-8 w-auto" />
-            <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Partner</span>
+            <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">{t('partnerNav.partnerBadge')}</span>
             <button
               className="ml-auto lg:hidden text-gray-500 hover:text-[#1B2A4A]"
               onClick={() => setSidebarOpen(false)}
@@ -264,7 +268,7 @@ function PartnerLayoutInner({ children }: { children: React.ReactNode }) {
                   'withUnreadBadge' in item && item.withUnreadBadge && unreadNotifCount > 0;
                 return (
                   <Link
-                    key={item.name}
+                    key={item.href}
                     href={item.href}
                     className={`flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors ${
                       isActive
@@ -273,11 +277,16 @@ function PartnerLayoutInner({ children }: { children: React.ReactNode }) {
                     }`}
                   >
                     <Icon size={18} />
-                    <span className="flex-1">{item.name}</span>
+                    <span className="flex-1">{t(item.labelKey)}</span>
                     {showBadge && (
                       <span
                         className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[11px] font-semibold bg-[#9B1B30] text-white"
-                        title={`${unreadNotifCount} unread notification${unreadNotifCount === 1 ? '' : 's'}`}
+                        title={t(
+                          unreadNotifCount === 1
+                            ? 'partnerNav.unreadNotifTitle'
+                            : 'partnerNav.unreadNotifTitlePlural',
+                          { count: unreadNotifCount },
+                        )}
                       >
                         {unreadNotifCount > 99 ? '99+' : unreadNotifCount}
                       </span>
@@ -300,7 +309,7 @@ function PartnerLayoutInner({ children }: { children: React.ReactNode }) {
                 <div className="text-[#1B2A4A] text-sm truncate">
                   {partner.contact_person || partner.email}
                 </div>
-                <div className="text-gray-500 text-xs">Partner</div>
+                <div className="text-gray-500 text-xs">{t('partnerNav.partnerRole')}</div>
               </div>
             </div>
             <button
@@ -308,7 +317,7 @@ function PartnerLayoutInner({ children }: { children: React.ReactNode }) {
               className="flex items-center gap-3 px-3 py-2.5 w-full text-sm text-gray-600 hover:text-[#1B2A4A] hover:bg-gray-100 transition-colors"
             >
               <LogOut size={18} />
-              <span>Sign Out</span>
+              <span>{t('partnerNav.signOut')}</span>
             </button>
           </div>
         </div>

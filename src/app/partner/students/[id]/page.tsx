@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { apiFetchJson } from '@/lib/api-client';
+import { useI18n } from '@/lib/i18n';
 import type { PartnerStudent, PartnerStudentStatus } from '@/lib/partner-student-mapper';
 import type { PartnerApplication } from '@/lib/partner-application-mapper';
 
@@ -24,6 +25,7 @@ const STATUS_VARIANTS: Record<PartnerStudentStatus, 'secondary' | 'outline' | 'd
 export default function PartnerStudentDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { t } = useI18n();
   const studentId = params.id as string;
 
   const [student, setStudent] = useState<PartnerStudent | null>(null);
@@ -55,11 +57,11 @@ export default function PartnerStudentDetailPage() {
       setApplications(apps.applications || []);
     } catch (err) {
       console.error('[partner/students/:id] fetch failed:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load student.');
+      setError(err instanceof Error ? err.message : t('partnerStudentDetail.errorLoad'));
     } finally {
       setIsLoading(false);
     }
-  }, [studentId]);
+  }, [studentId, t]);
 
   useEffect(() => {
     void fetchStudent();
@@ -71,11 +73,11 @@ export default function PartnerStudentDetailPage() {
       const res = await fetch(`/api/partner/students/${studentId}`, { method: 'DELETE' });
       if (!res.ok && res.status !== 204) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || `Delete failed (HTTP ${res.status})`);
+        throw new Error(body.error || t('partnerStudentDetail.deleting'));
       }
       router.push('/partner/students');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Delete failed.');
+      setError(err instanceof Error ? err.message : t('partnerStudentDetail.deleting'));
       setIsDeleting(false);
       setShowDelete(false);
     }
@@ -95,13 +97,13 @@ export default function PartnerStudentDetailPage() {
     return (
       <div className="space-y-4">
         <Link href="/partner/students" className="inline-flex items-center gap-2 text-[#1B2A4A]">
-          <ArrowLeft className="w-4 h-4" /> Back to students
+          <ArrowLeft className="w-4 h-4" /> {t('partnerStudentDetail.backToStudents')}
         </Link>
         <Card className="rounded-none border-red-200 bg-red-50">
           <CardContent className="p-6 text-red-700 flex items-center gap-3">
             <AlertTriangle className="w-5 h-5" />
             <div>
-              <p className="font-medium">Couldn't load student</p>
+              <p className="font-medium">{t('partnerStudentDetail.couldNotLoad')}</p>
               <p className="text-sm">{error}</p>
             </div>
           </CardContent>
@@ -114,10 +116,10 @@ export default function PartnerStudentDetailPage() {
     return (
       <div className="space-y-4">
         <Link href="/partner/students" className="inline-flex items-center gap-2 text-[#1B2A4A]">
-          <ArrowLeft className="w-4 h-4" /> Back to students
+          <ArrowLeft className="w-4 h-4" /> {t('partnerStudentDetail.backToStudents')}
         </Link>
         <Card className="rounded-none">
-          <CardContent className="p-6 text-[#4B5563]">Student not found.</CardContent>
+          <CardContent className="p-6 text-[#4B5563]">{t('partnerStudentDetail.studentNotFound')}</CardContent>
         </Card>
       </div>
     );
@@ -128,9 +130,9 @@ export default function PartnerStudentDetailPage() {
       {showDelete && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white p-6 max-w-md w-full mx-4 border border-gray-200">
-            <h3 className="text-lg font-semibold text-[#1B2A4A] mb-4">Delete Student</h3>
+            <h3 className="text-lg font-semibold text-[#1B2A4A] mb-4">{t('partnerStudentDetail.deleteTitle')}</h3>
             <p className="text-[#4B5563] mb-6">
-              Delete <strong>{student.studentName}</strong>? This cannot be undone.
+              {t('partnerStudentDetail.deleteBodyFor', { name: student.studentName })}
             </p>
             <div className="flex gap-3 justify-end">
               <Button
@@ -139,14 +141,14 @@ export default function PartnerStudentDetailPage() {
                 disabled={isDeleting}
                 className="rounded-none"
               >
-                Cancel
+                {t('partnerStudentDetail.cancel')}
               </Button>
               <Button
                 onClick={handleDelete}
                 disabled={isDeleting}
                 className="rounded-none bg-[#9B1B30] hover:bg-[#7a1626]"
               >
-                {isDeleting ? 'Deleting…' : 'Delete'}
+                {isDeleting ? t('partnerStudentDetail.deleting') : t('partnerStudentDetail.delete')}
               </Button>
             </div>
           </div>
@@ -165,14 +167,14 @@ export default function PartnerStudentDetailPage() {
             </Badge>
           </div>
           <p className="text-[#4B5563] mt-1 text-sm">
-            Added {student.createdAt ? new Date(student.createdAt).toLocaleDateString() : '—'}
+            {t('partnerStudentDetail.addedOn', { date: student.createdAt ? new Date(student.createdAt).toLocaleDateString() : t('partnerCommon.placeholderDash') })}
           </p>
         </div>
         <div className="flex gap-2">
           <Button asChild variant="outline" className="rounded-none">
             <Link href={`/partner/students/${student.id}/edit`}>
               <Edit className="mr-2 h-4 w-4" />
-              Edit
+              {t('partnerStudentDetail.edit')}
             </Link>
           </Button>
           <Button
@@ -181,7 +183,7 @@ export default function PartnerStudentDetailPage() {
             className="rounded-none border-red-300 text-red-600 hover:bg-red-50"
           >
             <Trash2 className="mr-2 h-4 w-4" />
-            Delete
+            {t('partnerStudentDetail.delete')}
           </Button>
         </div>
       </div>
@@ -194,35 +196,35 @@ export default function PartnerStudentDetailPage() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="rounded-none">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="overview">{t('partnerStudentDetail.tabOverview')}</TabsTrigger>
           <TabsTrigger value="applications">
-            Applications ({applications.length})
+            {t('partnerStudentDetail.tabApplications', { count: applications.length })}
           </TabsTrigger>
-          <TabsTrigger value="notes">Notes</TabsTrigger>
+          <TabsTrigger value="notes">{t('partnerStudentDetail.tabNotes')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card className="rounded-none">
               <CardHeader>
-                <CardTitle className="text-[#1B2A4A]">Contact</CardTitle>
+                <CardTitle className="text-[#1B2A4A]">{t('partnerStudentDetail.sectionContact')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
-                <Field label="Email" value={student.studentEmail} />
-                <Field label="Phone" value={student.studentPhone} />
-                <Field label="Nationality" value={student.nationality} />
+                <Field label={t('partnerStudentDetail.fieldEmail')} value={student.studentEmail} t={t} />
+                <Field label={t('partnerStudentDetail.fieldPhone')} value={student.studentPhone} t={t} />
+                <Field label={t('partnerStudentDetail.fieldNationality')} value={student.nationality} t={t} />
               </CardContent>
             </Card>
 
             <Card className="rounded-none">
               <CardHeader>
-                <CardTitle className="text-[#1B2A4A]">Target Program</CardTitle>
+                <CardTitle className="text-[#1B2A4A]">{t('partnerStudentDetail.sectionTarget')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
-                <Field label="University" value={student.targetUniversity} />
-                <Field label="Program" value={student.targetProgram} />
+                <Field label={t('partnerStudentDetail.fieldUniversity')} value={student.targetUniversity} t={t} />
+                <Field label={t('partnerStudentDetail.fieldProgram')} value={student.targetProgram} t={t} />
                 <div className="flex items-center gap-2 pt-1">
-                  <span className="text-[#4B5563]">Status:</span>
+                  <span className="text-[#4B5563]">{t('partnerStudentDetail.statusLabel')}</span>
                   <Badge variant={STATUS_VARIANTS[student.status]} className="rounded-none">
                     {student.status}
                   </Badge>
@@ -235,26 +237,26 @@ export default function PartnerStudentDetailPage() {
         <TabsContent value="applications">
           <Card className="rounded-none">
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-[#1B2A4A]">Applications</CardTitle>
+              <CardTitle className="text-[#1B2A4A]">{t('partnerStudentDetail.sectionApplications')}</CardTitle>
               <Button asChild variant="outline" className="rounded-none" size="sm">
-                <Link href="/partner/applications/new">+ New application</Link>
+                <Link href="/partner/applications/new">{t('partnerStudentDetail.newApplication')}</Link>
               </Button>
             </CardHeader>
             <CardContent>
               {applications.length === 0 ? (
                 <p className="text-sm text-[#4B5563] py-4 text-center">
-                  No applications for {student.studentName} yet.
+                  {t('partnerStudentDetail.noApplicationsFor', { name: student.studentName })}
                 </p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-4 py-3 text-left text-[#1B2A4A]">University</th>
-                        <th className="px-4 py-3 text-left text-[#1B2A4A]">Program</th>
-                        <th className="px-4 py-3 text-left text-[#1B2A4A]">Status</th>
-                        <th className="px-4 py-3 text-left text-[#1B2A4A]">Decision</th>
-                        <th className="px-4 py-3 text-left text-[#1B2A4A]">Submitted</th>
+                        <th className="px-4 py-3 text-left text-[#1B2A4A]">{t('partnerStudentDetail.colUniversity')}</th>
+                        <th className="px-4 py-3 text-left text-[#1B2A4A]">{t('partnerStudentDetail.colProgram')}</th>
+                        <th className="px-4 py-3 text-left text-[#1B2A4A]">{t('partnerStudentDetail.colStatus')}</th>
+                        <th className="px-4 py-3 text-left text-[#1B2A4A]">{t('partnerStudentDetail.colDecision')}</th>
+                        <th className="px-4 py-3 text-left text-[#1B2A4A]">{t('partnerStudentDetail.colSubmitted')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
@@ -274,7 +276,7 @@ export default function PartnerStudentDetailPage() {
                           </td>
                           <td className="px-4 py-3 text-[#4B5563]">{a.decision}</td>
                           <td className="px-4 py-3 text-[#4B5563]">
-                            {a.submittedAt ? new Date(a.submittedAt).toLocaleDateString() : '—'}
+                            {a.submittedAt ? new Date(a.submittedAt).toLocaleDateString() : t('partnerCommon.placeholderDash')}
                           </td>
                         </tr>
                       ))}
@@ -290,21 +292,20 @@ export default function PartnerStudentDetailPage() {
           <Card className="rounded-none">
             <CardHeader>
               <CardTitle className="text-[#1B2A4A] flex items-center gap-2">
-                <MessageSquare className="w-4 h-4" /> Notes
+                <MessageSquare className="w-4 h-4" /> {t('partnerStudentDetail.sectionNotes')}
               </CardTitle>
             </CardHeader>
             <CardContent>
               {student.notes ? (
                 <p className="text-sm text-[#1F2937] whitespace-pre-wrap">{student.notes}</p>
               ) : (
-                <p className="text-sm text-[#4B5563] italic">No notes recorded yet.</p>
+                <p className="text-sm text-[#4B5563] italic">{t('partnerStudentDetail.noNotesYet')}</p>
               )}
               <p className="text-xs text-[#4B5563] mt-4 flex items-center gap-1">
                 <Calendar className="w-3 h-3" />
-                Last updated{' '}
-                {student.updatedAt
+                {t('partnerStudentDetail.lastUpdated', { date: student.updatedAt
                   ? new Date(student.updatedAt).toLocaleString()
-                  : '—'}
+                  : t('partnerCommon.placeholderDash') })}
               </p>
             </CardContent>
           </Card>
@@ -314,11 +315,11 @@ export default function PartnerStudentDetailPage() {
   );
 }
 
-function Field({ label, value }: { label: string; value: string | null | undefined }) {
+function Field({ label, value, t }: { label: string; value: string | null | undefined; t: (key: string) => string }) {
   return (
     <div className="flex items-center gap-2">
       <span className="text-[#4B5563] min-w-24">{label}:</span>
-      <span className="font-medium text-[#1F2937]">{value || '—'}</span>
+      <span className="font-medium text-[#1F2937]">{value || t('partnerCommon.placeholderDash')}</span>
     </div>
   );
 }

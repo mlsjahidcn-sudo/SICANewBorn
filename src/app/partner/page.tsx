@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Avatar } from '@/components/ui/avatar';
 import { apiFetchJson, ApiError } from '@/lib/api-client';
+import { useI18n } from '@/lib/i18n';
 
 interface PartnerStudent {
   id: string;
@@ -67,6 +68,7 @@ const ACTIVE_APPLICATION_STATUSES = new Set([
 ]);
 
 export default function PartnerDashboard() {
+  const { t } = useI18n();
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [students, setStudents] = useState<PartnerStudent[]>([]);
@@ -94,7 +96,9 @@ export default function PartnerDashboard() {
         );
       } catch (err) {
         if (cancelled) return;
-        setLoadError(err instanceof ApiError ? err.message : 'Failed to load dashboard');
+        setLoadError(
+          err instanceof ApiError ? err.message : t('partnerDashboard.failedToLoad'),
+        );
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -102,7 +106,7 @@ export default function PartnerDashboard() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   // Derive stats from real data
   const totalStudents = students.length;
@@ -116,14 +120,14 @@ export default function PartnerDashboard() {
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }> = {
-      New: { variant: 'secondary', label: 'New' },
-      'In Progress': { variant: 'outline', label: 'In Progress' },
-      Accepted: { variant: 'default', label: 'Accepted' },
+      New: { variant: 'secondary', label: t('partnerStudents.statusNew') },
+      'In Progress': { variant: 'outline', label: t('partnerStudents.statusInProgress') },
+      Accepted: { variant: 'default', label: t('partnerStudents.statusAccepted') },
       'Under Review': { variant: 'outline', label: 'Under Review' },
       'Documents Requested': { variant: 'outline', label: 'Documents Requested' },
       Submitted: { variant: 'outline', label: 'Submitted' },
       Draft: { variant: 'outline', label: 'Draft' },
-      Rejected: { variant: 'destructive', label: 'Rejected' },
+      Rejected: { variant: 'destructive', label: t('partnerStudents.statusRejected') },
     };
     const config = variants[status] || { variant: 'outline' as const, label: status };
     return (
@@ -134,7 +138,7 @@ export default function PartnerDashboard() {
   };
 
   const formatDate = (iso?: string | null) => {
-    if (!iso) return '—';
+    if (!iso) return t('partnerCommon.placeholderDash');
     try {
       return new Date(iso).toLocaleDateString('en-US', {
         year: 'numeric',
@@ -169,20 +173,20 @@ export default function PartnerDashboard() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#1B2A4A]">Dashboard</h1>
-          <p className="text-[#4B5563] mt-1">Your partner overview.</p>
+          <h1 className="text-2xl font-bold text-[#1B2A4A]">{t('partnerDashboard.title')}</h1>
+          <p className="text-[#4B5563] mt-1">{t('partnerDashboard.subtitle')}</p>
         </div>
         <div className="flex gap-2">
           <Button asChild className="bg-[#9B1B30] hover:bg-[#7A1526] rounded-none">
             <Link href="/partner/students/new" className="flex items-center">
               <Plus className="mr-2 h-4 w-4" />
-              Add Student
+              {t('partnerDashboard.addStudent')}
             </Link>
           </Button>
           <Button asChild variant="outline" className="rounded-none">
             <Link href="/partner/applications/new" className="flex items-center">
               <Plus className="mr-2 h-4 w-4" />
-              New Application
+              {t('partnerDashboard.newApplication')}
             </Link>
           </Button>
         </div>
@@ -193,8 +197,8 @@ export default function PartnerDashboard() {
         <Card className="rounded-none">
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
             <div>
-              <CardTitle className="text-sm font-medium text-[#4B5563]">Total Students</CardTitle>
-              <CardDescription>All-time</CardDescription>
+              <CardTitle className="text-sm font-medium text-[#4B5563]">{t('partnerDashboard.totalStudents')}</CardTitle>
+              <CardDescription>{t('partnerDashboard.totalStudentsDesc')}</CardDescription>
             </div>
             <div className="bg-[#9B1B30]/10 p-2 rounded-none">
               <Users className="h-5 w-5 text-[#9B1B30]" />
@@ -202,10 +206,10 @@ export default function PartnerDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-[#1B2A4A]">{totalStudents}</div>
-            <p className="text-sm text-[#4B5563] mt-1">Students you manage</p>
+            <p className="text-sm text-[#4B5563] mt-1">{t('partnerDashboard.totalStudentsHint')}</p>
             <Button asChild variant="outline" size="sm" className="mt-4 w-full rounded-none">
               <Link href="/partner/students" className="flex items-center justify-center">
-                View Students <ChevronRight className="ml-1 h-4 w-4" />
+                {t('partnerDashboard.viewStudents')} <ChevronRight className="ml-1 h-4 w-4" />
               </Link>
             </Button>
           </CardContent>
@@ -214,8 +218,8 @@ export default function PartnerDashboard() {
         <Card className="rounded-none">
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
             <div>
-              <CardTitle className="text-sm font-medium text-[#4B5563]">Active Applications</CardTitle>
-              <CardDescription>In process</CardDescription>
+              <CardTitle className="text-sm font-medium text-[#4B5563]">{t('partnerDashboard.activeApplications')}</CardTitle>
+              <CardDescription>{t('partnerDashboard.activeApplicationsDesc')}</CardDescription>
             </div>
             <div className="bg-[#1B2A4A]/10 p-2 rounded-none">
               <FileText className="h-5 w-5 text-[#1B2A4A]" />
@@ -223,10 +227,10 @@ export default function PartnerDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-[#1B2A4A]">{activeApplications}</div>
-            <p className="text-sm text-[#4B5563] mt-1">In progress</p>
+            <p className="text-sm text-[#4B5563] mt-1">{t('partnerDashboard.activeApplicationsHint')}</p>
             <Button asChild variant="outline" size="sm" className="mt-4 w-full rounded-none">
               <Link href="/partner/applications" className="flex items-center justify-center">
-                View Applications <ChevronRight className="ml-1 h-4 w-4" />
+                {t('partnerDashboard.viewApplications')} <ChevronRight className="ml-1 h-4 w-4" />
               </Link>
             </Button>
           </CardContent>
@@ -235,8 +239,8 @@ export default function PartnerDashboard() {
         <Card className="rounded-none">
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
             <div>
-              <CardTitle className="text-sm font-medium text-[#4B5563]">Accepted</CardTitle>
-              <CardDescription>Successful applications</CardDescription>
+              <CardTitle className="text-sm font-medium text-[#4B5563]">{t('partnerDashboard.accepted')}</CardTitle>
+              <CardDescription>{t('partnerDashboard.acceptedDesc')}</CardDescription>
             </div>
             <div className="bg-green-100 p-2 rounded-none">
               <TrendingUp className="h-5 w-5 text-green-600" />
@@ -244,7 +248,7 @@ export default function PartnerDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-[#1B2A4A]">{acceptedApplications}</div>
-            <p className="text-sm text-[#4B5563] mt-1">Total accepted</p>
+            <p className="text-sm text-[#4B5563] mt-1">{t('partnerDashboard.acceptedHint')}</p>
           </CardContent>
         </Card>
       </div>
@@ -255,21 +259,21 @@ export default function PartnerDashboard() {
           <Card className="rounded-none">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle>Recent Students</CardTitle>
-                <CardDescription>Newest students added</CardDescription>
+                <CardTitle>{t('partnerDashboard.recentStudents')}</CardTitle>
+                <CardDescription>{t('partnerDashboard.recentStudentsDesc')}</CardDescription>
               </div>
               <Button asChild variant="ghost" size="sm" className="rounded-none">
                 <Link href="/partner/students">
-                  View all <ChevronRight className="ml-1 h-4 w-4" />
+                  {t('partnerDashboard.viewAll')} <ChevronRight className="ml-1 h-4 w-4" />
                 </Link>
               </Button>
             </CardHeader>
             <CardContent>
               {recentStudents.length === 0 ? (
                 <div className="text-center py-8 text-sm text-gray-500">
-                  <p className="mb-3">No students yet — add your first to get started.</p>
+                  <p className="mb-3">{t('partnerDashboard.noStudentsYet')}</p>
                   <Button asChild size="sm" className="bg-[#9B1B30] hover:bg-[#7A1526] rounded-none">
-                    <Link href="/partner/students/new">Add Student</Link>
+                    <Link href="/partner/students/new">{t('partnerDashboard.addStudent')}</Link>
                   </Button>
                 </div>
               ) : (
@@ -288,12 +292,12 @@ export default function PartnerDashboard() {
                         </Avatar>
                         <div>
                           <p className="font-medium text-[#1B2A4A] group-hover:text-[#9B1B30]">
-                            {student.studentName || 'Unnamed'}
+                            {student.studentName || t('partnerDashboard.unnamed')}
                           </p>
                           <p className="text-sm text-[#4B5563]">{student.studentEmail}</p>
                           <p className="text-xs text-[#4B5563] flex items-center">
                             <Calendar className="h-3 w-3 mr-1" />
-                            {formatDate(student.createdAt)} • {student.nationality || '—'}
+                            {formatDate(student.createdAt)} • {student.nationality || t('partnerCommon.placeholderDash')}
                           </p>
                         </div>
                       </div>
@@ -312,21 +316,21 @@ export default function PartnerDashboard() {
           <Card className="rounded-none">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle>Recent Applications</CardTitle>
-                <CardDescription>Latest application updates</CardDescription>
+                <CardTitle>{t('partnerDashboard.recentApplications')}</CardTitle>
+                <CardDescription>{t('partnerDashboard.recentApplicationsDesc')}</CardDescription>
               </div>
               <Button asChild variant="ghost" size="sm" className="rounded-none">
                 <Link href="/partner/applications">
-                  View all <ChevronRight className="ml-1 h-4 w-4" />
+                  {t('partnerDashboard.viewAll')} <ChevronRight className="ml-1 h-4 w-4" />
                 </Link>
               </Button>
             </CardHeader>
             <CardContent>
               {recentApplications.length === 0 ? (
                 <div className="text-center py-8 text-sm text-gray-500">
-                  <p className="mb-3">No applications yet.</p>
+                  <p className="mb-3">{t('partnerDashboard.noApplicationsYet')}</p>
                   <Button asChild size="sm" variant="outline" className="rounded-none">
-                    <Link href="/partner/applications/new">Create Application</Link>
+                    <Link href="/partner/applications/new">{t('partnerDashboard.createApplication')}</Link>
                   </Button>
                 </div>
               ) : (
@@ -339,7 +343,7 @@ export default function PartnerDashboard() {
                     >
                       <div>
                         <p className="font-medium text-[#1B2A4A] group-hover:text-[#9B1B30]">
-                          {app.studentName || 'Unnamed'}
+                          {app.studentName || t('partnerDashboard.unnamed')}
                         </p>
                         <p className="text-sm text-[#4B5563]">
                           {app.program} • {app.university}
@@ -364,25 +368,25 @@ export default function PartnerDashboard() {
         <div className="space-y-6">
           <Card className="rounded-none">
             <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
+              <CardTitle>{t('partnerDashboard.quickActions')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <Button asChild variant="secondary" className="w-full justify-start rounded-none bg-white border border-[#1B2A4A] text-[#1B2A4A] hover:bg-gray-50">
                 <Link href="/partner/students/new" className="flex items-center">
                   <Users className="mr-2 h-4 w-4" />
-                  Add New Student
+                  {t('partnerDashboard.addNewStudent')}
                 </Link>
               </Button>
               <Button asChild variant="secondary" className="w-full justify-start rounded-none bg-white border border-[#1B2A4A] text-[#1B2A4A] hover:bg-gray-50">
                 <Link href="/partner/applications/new" className="flex items-center">
                   <FileText className="mr-2 h-4 w-4" />
-                  Create Application
+                  {t('partnerDashboard.createApplication')}
                 </Link>
               </Button>
               <Button asChild variant="secondary" className="w-full justify-start rounded-none bg-white border border-[#1B2A4A] text-[#1B2A4A] hover:bg-gray-50">
                 <Link href="/partner/lead-sharing" className="flex items-center">
                   <MessageSquare className="mr-2 h-4 w-4" />
-                  Share Lead
+                  {t('partnerDashboard.shareLead')}
                 </Link>
               </Button>
             </CardContent>

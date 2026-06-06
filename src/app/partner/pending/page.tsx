@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { Clock, LogOut, Loader2, Mail, ArrowLeft } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/lib/auth-context';
+import { useI18n } from '@/lib/i18n';
 
 interface PartnerStatus {
   partner: {
@@ -29,6 +30,7 @@ interface PartnerStatus {
 export default function PartnerPendingPage() {
   const router = useRouter();
   const { user, signOut, loading: authLoading } = useAuth();
+  const { t } = useI18n();
   const [data, setData] = useState<PartnerStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
@@ -83,6 +85,9 @@ export default function PartnerPendingPage() {
     );
   }
 
+  const companyName = data?.partner?.company_name;
+  const email = data?.partner?.email || user?.email;
+
   return (
     <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-lg">
@@ -90,37 +95,36 @@ export default function PartnerPendingPage() {
           <div className="inline-flex items-center justify-center w-14 h-14 bg-[#D4A853] mb-4">
             <Clock className="text-white" size={28} />
           </div>
-          <h1 className="text-[#1B2A4A] text-2xl font-bold">Application Under Review</h1>
+          <h1 className="text-[#1B2A4A] text-2xl font-bold">{t('partnerPending.title')}</h1>
           <p className="text-[#4B5563] mt-2 text-sm">
-            Thanks for applying{data?.partner?.company_name ? `, ${data.partner.company_name}` : ''}.
-            Our partnerships team is reviewing your application and will email
-            you at <span className="font-medium">{data?.partner?.email || user?.email}</span>{' '}
-            within 2 business days.
+            {companyName
+              ? t('partnerPending.bodyWithCompany', { company: companyName, email: email || '' })
+              : t('partnerPending.bodyGeneric')}
           </p>
         </div>
 
         <div className="bg-white border border-gray-200 p-8 space-y-4">
           <div className="space-y-2 text-sm">
             <p className="text-gray-700">
-              <span className="font-medium">What happens next:</span>
+              <span className="font-medium">{t('partnerPending.whatNextTitle')}</span>
             </p>
             <ol className="list-decimal pl-6 text-gray-600 space-y-1">
-              <li>Our team reviews your organization and student base.</li>
-              <li>If approved, you&apos;ll get an email letting you sign in.</li>
-              <li>If we need more information, we&apos;ll email you directly.</li>
+              <li>{t('partnerPending.whatNext1')}</li>
+              <li>{t('partnerPending.whatNext2')}</li>
+              <li>{t('partnerPending.whatNext3')}</li>
             </ol>
           </div>
 
           <div className="border-t pt-4 space-y-2 text-sm text-gray-600">
             <p>
-              <span className="font-medium">Questions?</span>{' '}
-              Reach us at{' '}
+              <span className="font-medium">{t('partnerPending.questionsTitle')}</span>{' '}
+              {t('partnerPending.reachUs')}{' '}
               <a
                 href="mailto:mlsjahid@qq.com"
                 className="text-[#9B1B30] hover:underline inline-flex items-center gap-1"
               >
                 <Mail size={12} />
-                mlsjahid@qq.com
+                {t('partnerPending.contactEmail')}
               </a>
             </p>
           </div>
@@ -133,13 +137,13 @@ export default function PartnerPendingPage() {
               className="w-full"
             >
               {signingOut ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4 mr-2" />}
-              Sign out
+              {t('partnerPending.signOut')}
             </Button>
             <Link
               href="/"
               className="text-gray-500 hover:text-[#1B2A4A] text-sm flex items-center justify-center gap-1"
             >
-              <ArrowLeft size={14} /> Back to SICA Website
+              <ArrowLeft size={14} /> {t('partnerPending.backToSicaWebsite')}
             </Link>
           </div>
         </div>

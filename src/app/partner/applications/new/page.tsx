@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { apiFetchJson } from '@/lib/api-client';
+import { useI18n } from '@/lib/i18n';
 import {
   PartnerApplicationForm,
   INITIAL_FORM_DATA,
@@ -25,6 +26,7 @@ import type { University, Program } from '@/lib/data';
 
 export default function PartnerNewApplicationPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [formData, setFormData] =
     useState<PartnerApplicationFormData>(INITIAL_FORM_DATA);
   const [students, setStudents] = useState<PartnerStudent[]>([]);
@@ -84,15 +86,15 @@ export default function PartnerNewApplicationPage() {
     setError(null);
 
     if (!formData.studentName.trim()) {
-      setError('Student name is required.');
+      setError(t('partnerAppNew.errorStudentNameRequired'));
       return;
     }
     if (!formData.university.trim()) {
-      setError('University is required.');
+      setError(t('partnerAppNew.errorUniversityRequired'));
       return;
     }
     if (!formData.program.trim()) {
-      setError('Program is required.');
+      setError(t('partnerAppNew.errorProgramRequired'));
       return;
     }
 
@@ -164,7 +166,7 @@ export default function PartnerNewApplicationPage() {
       router.push(`/partner/applications/${res.application.id}`);
     } catch (err) {
       console.error('[partner/applications/new] save failed:', err);
-      setError(err instanceof Error ? err.message : 'Failed to create application.');
+      setError(err instanceof Error ? err.message : t('partnerAppNew.errorCreate'));
     } finally {
       setIsSaving(false);
     }
@@ -181,10 +183,9 @@ export default function PartnerNewApplicationPage() {
           <ArrowLeft className="w-5 h-5 text-[#1B2A4A]" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-[#1B2A4A]">New Application</h1>
+          <h1 className="text-2xl font-bold text-[#1B2A4A]">{t('partnerAppNew.title')}</h1>
           <p className="text-[#4B5563] mt-1 text-sm">
-            Track a new university application — the more you fill in, the
-            less back-and-forth with the student.
+            {t('partnerAppNew.subtitle')}
           </p>
         </div>
       </div>
@@ -194,11 +195,11 @@ export default function PartnerNewApplicationPage() {
         <Card className="rounded-none border-[#D4A853] bg-[#FAF6E8]">
           <CardContent className="p-4">
             <Label className="text-[#1B2A4A] mb-2 block text-sm font-semibold">
-              Save typing — pick from your students
+              {t('partnerAppNew.pickStudentTitle')}
             </Label>
             <Select onValueChange={handleStudentPick}>
               <SelectTrigger className="rounded-none bg-white">
-                <SelectValue placeholder="(autofill name, email, phone, nationality)" />
+                <SelectValue placeholder={t('partnerAppNew.pickStudentPlaceholder')} />
               </SelectTrigger>
               <SelectContent>
                 {students.map((s) => (
@@ -211,7 +212,7 @@ export default function PartnerNewApplicationPage() {
               </SelectContent>
             </Select>
             <p className="text-xs text-gray-600 mt-2">
-              Only the blank fields are filled in — anything you already typed is kept.
+              {t('partnerAppNew.pickStudentHint')}
             </p>
           </CardContent>
         </Card>
@@ -231,7 +232,7 @@ export default function PartnerNewApplicationPage() {
         dataLoading={dataLoading}
         isSaving={isSaving}
         onSubmit={handleSubmit}
-        submitLabel="Create Application"
+        submitLabel={t('partnerApps.newApplication')}
         cancelHref="/partner/applications"
         stickySubmit
       />

@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { apiFetchJson } from '@/lib/api-client';
+import { useI18n } from '@/lib/i18n';
 
 interface Partner {
   id: string;
@@ -22,6 +23,7 @@ interface Partner {
 }
 
 export default function PartnerSettingsPage() {
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState('account');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -40,11 +42,11 @@ export default function PartnerSettingsPage() {
       setCompanyName(res.partner.company_name ?? '');
       setContactPerson(res.partner.contact_person ?? '');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load partner profile.');
+      setError(err instanceof Error ? err.message : t('partnerSettings.errorLoad'));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void load();
@@ -53,8 +55,8 @@ export default function PartnerSettingsPage() {
   // Auto-dismiss toast after 3s
   useEffect(() => {
     if (!message) return;
-    const t = setTimeout(() => setMessage(null), 3000);
-    return () => clearTimeout(t);
+    const tm = setTimeout(() => setMessage(null), 3000);
+    return () => clearTimeout(tm);
   }, [message]);
 
   const handleSaveAccount = async (e: React.FormEvent) => {
@@ -63,7 +65,7 @@ export default function PartnerSettingsPage() {
     setMessage(null);
     try {
       if (!companyName.trim()) {
-        setMessage({ type: 'error', text: 'Company name is required.' });
+        setMessage({ type: 'error', text: t('partnerSettings.errorCompanyNameRequired') });
         return;
       }
       await apiFetchJson<{ partner: Partner }>('/api/partner/me', {
@@ -73,12 +75,12 @@ export default function PartnerSettingsPage() {
           contact_person: contactPerson.trim(),
         }),
       });
-      setMessage({ type: 'success', text: 'Account settings saved successfully.' });
+      setMessage({ type: 'success', text: t('partnerSettings.successSaved') });
       await load();
     } catch (err) {
       setMessage({
         type: 'error',
-        text: err instanceof Error ? err.message : 'Failed to save settings.',
+        text: err instanceof Error ? err.message : t('partnerSettings.errorSave'),
       });
     } finally {
       setIsSaving(false);
@@ -98,7 +100,7 @@ export default function PartnerSettingsPage() {
     return (
       <Card className="rounded-none border-red-200 bg-red-50">
         <CardContent className="p-6 text-red-700">
-          <p className="font-medium">Couldn't load partner profile</p>
+          <p className="font-medium">{t('partnerSettings.errorLoad')}</p>
           <p className="text-sm">{error}</p>
         </CardContent>
       </Card>
@@ -110,8 +112,8 @@ export default function PartnerSettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-[#1B2A4A]">Settings</h1>
-        <p className="text-[#4B5563] mt-1">Manage your partner account settings</p>
+        <h1 className="text-2xl font-bold text-[#1B2A4A]">{t('partnerSettings.title')}</h1>
+        <p className="text-[#4B5563] mt-1">{t('partnerSettings.subtitle')}</p>
       </div>
 
       {message && (
@@ -144,7 +146,7 @@ export default function PartnerSettingsPage() {
                 }`}
               >
                 <Building2 className="w-4 h-4" />
-                <span>Account</span>
+                <span>{t('partnerSettings.tabAccount')}</span>
               </button>
               <button
                 onClick={() => setActiveTab('rates')}
@@ -153,7 +155,7 @@ export default function PartnerSettingsPage() {
                 }`}
               >
                 <Key className="w-4 h-4" />
-                <span>Rates & Status</span>
+                <span>{t('partnerSettings.tabRates')}</span>
               </button>
               <button
                 onClick={() => setActiveTab('security')}
@@ -162,7 +164,7 @@ export default function PartnerSettingsPage() {
                 }`}
               >
                 <Shield className="w-4 h-4" />
-                <span>Security</span>
+                <span>{t('partnerSettings.tabSecurity')}</span>
               </button>
             </nav>
           </div>
@@ -174,16 +176,16 @@ export default function PartnerSettingsPage() {
               <Card className="rounded-none">
                 <CardContent className="p-6 space-y-6">
                   <div>
-                    <h2 className="text-lg font-semibold text-[#1B2A4A]">Company Information</h2>
+                    <h2 className="text-lg font-semibold text-[#1B2A4A]">{t('partnerSettings.sectionCompanyInfo')}</h2>
                     <p className="text-sm text-[#4B5563] mt-1">
-                      The basic info that appears on your partner profile and in reports.
+                      {t('partnerSettings.sectionCompanyInfoDesc')}
                     </p>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <Label htmlFor="companyName" className="text-[#1B2A4A] mb-2 block">
-                        Company Name <span className="text-red-600">*</span>
+                        {t('partnerSettings.fieldCompanyName')} <span className="text-red-600">{t('partnerCommon.requiredAsterisk')}</span>
                       </Label>
                       <Input
                         id="companyName"
@@ -195,7 +197,7 @@ export default function PartnerSettingsPage() {
                     </div>
                     <div>
                       <Label htmlFor="contactPerson" className="text-[#1B2A4A] mb-2 block">
-                        Contact Person
+                        {t('partnerSettings.fieldContactPerson')}
                       </Label>
                       <Input
                         id="contactPerson"
@@ -206,10 +208,10 @@ export default function PartnerSettingsPage() {
                     </div>
                     <div className="md:col-span-2 flex items-center gap-2 pt-1">
                       <Mail className="h-4 w-4 text-[#4B5563]" />
-                      <span className="text-sm text-[#4B5563]">Email:</span>
+                      <span className="text-sm text-[#4B5563]">{t('partnerSettings.emailLabel')}</span>
                       <span className="text-sm font-medium text-[#1B2A4A]">{partner.email}</span>
                       <span className="text-xs text-[#4B5563] italic ml-2">
-                        (managed by SICA admin)
+                        {t('partnerSettings.emailManagedByAdmin')}
                       </span>
                     </div>
                   </div>
@@ -223,12 +225,12 @@ export default function PartnerSettingsPage() {
                       {isSaving ? (
                         <>
                           <Spinner size="sm" className="mr-2" />
-                          Saving…
+                          {t('partnerSettings.saving')}
                         </>
                       ) : (
                         <>
                           <Save className="mr-2 h-4 w-4" />
-                          Save Changes
+                          {t('partnerSettings.saveChanges')}
                         </>
                       )}
                     </Button>
@@ -242,26 +244,26 @@ export default function PartnerSettingsPage() {
             <Card className="rounded-none">
               <CardContent className="p-6 space-y-6">
                 <div>
-                  <h2 className="text-lg font-semibold text-[#1B2A4A]">Rates & Status</h2>
+                  <h2 className="text-lg font-semibold text-[#1B2A4A]">{t('partnerSettings.sectionRates')}</h2>
                   <p className="text-sm text-[#4B5563] mt-1">
-                    Your current service rates and partner status.
+                    {t('partnerSettings.sectionRatesDesc')}
                   </p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="p-4 bg-gray-50 border border-gray-200">
                     <div className="text-sm text-[#4B5563] flex items-center gap-1">
-                      <Percent className="h-4 w-4" /> Service Rate
+                      <Percent className="h-4 w-4" /> {t('partnerSettings.serviceRate')}
                     </div>
                     <div className="text-2xl font-bold text-[#1B2A4A] mt-1">
                       {partner.commission_rate ?? 0}%
                     </div>
                     <div className="text-xs text-[#4B5563] mt-1">
-                      Commission per successful application
+                      {t('partnerSettings.commissionPerApp')}
                     </div>
                   </div>
                   <div className="p-4 bg-gray-50 border border-gray-200">
-                    <div className="text-sm text-[#4B5563]">Partner Status</div>
+                    <div className="text-sm text-[#4B5563]">{t('partnerSettings.partnerStatus')}</div>
                     <div className="mt-1">
                       <span
                         className={`inline-block px-2 py-1 text-xs font-medium ${
@@ -274,7 +276,7 @@ export default function PartnerSettingsPage() {
                       </span>
                     </div>
                     <div className="text-xs text-[#4B5563] mt-1">
-                      Set by SICA admin
+                      {t('partnerSettings.statusSetByAdmin')}
                     </div>
                   </div>
                 </div>
@@ -282,7 +284,7 @@ export default function PartnerSettingsPage() {
                 {partner.created_at && (
                   <div className="flex items-center gap-2 text-sm pt-2">
                     <Calendar className="h-4 w-4 text-[#4B5563]" />
-                    <span className="text-[#4B5563]">Joined:</span>
+                    <span className="text-[#4B5563]">{t('partnerSettings.joined')}</span>
                     <span className="text-[#1B2A4A] font-medium">
                       {new Date(partner.created_at).toLocaleDateString('en-US', {
                         year: 'numeric',
@@ -295,8 +297,7 @@ export default function PartnerSettingsPage() {
 
                 <div className="p-4 bg-yellow-50 border border-yellow-200">
                   <div className="text-sm text-yellow-800">
-                    <strong>Note:</strong> To request changes to your commission rate or status,
-                    please contact the SICA admin team.
+                    <strong>{t('partnerSettings.ratesNote')}</strong> {t('partnerSettings.ratesNoteBody')}
                   </div>
                 </div>
               </CardContent>
@@ -307,27 +308,25 @@ export default function PartnerSettingsPage() {
             <Card className="rounded-none">
               <CardContent className="p-6 space-y-4">
                 <div>
-                  <h2 className="text-lg font-semibold text-[#1B2A4A]">Security</h2>
+                  <h2 className="text-lg font-semibold text-[#1B2A4A]">{t('partnerSettings.sectionSecurity')}</h2>
                   <p className="text-sm text-[#4B5563] mt-1">
-                    Authentication for partner accounts is managed by Supabase.
+                    {t('partnerSettings.sectionSecurityDesc')}
                   </p>
                 </div>
 
                 <div className="p-4 bg-gray-50 border border-gray-200 space-y-3 text-sm">
                   <div className="flex items-center gap-2">
                     <Lock className="h-4 w-4 text-[#4B5563]" />
-                    <span className="text-[#1B2A4A] font-medium">Password</span>
+                    <span className="text-[#1B2A4A] font-medium">{t('partnerSettings.passwordTitle')}</span>
                   </div>
                   <p className="text-[#4B5563]">
-                    To reset your password, use the Supabase "Forgot password" link on the login
-                    page. A password-reset email will be sent to <strong>{partner.email}</strong>.
+                    {t('partnerSettings.passwordReset')} <strong>{partner.email}</strong>.
                   </p>
                 </div>
 
                 <div className="p-4 bg-blue-50 border border-blue-200">
                   <div className="text-sm text-blue-800">
-                    <strong>Coming soon:</strong> In-app password change + 2FA. For now, the
-                    Supabase recovery flow is the canonical path.
+                    <strong>{t('partnerSettings.comingSoon')}</strong> {t('partnerSettings.comingSoonBody')}
                   </div>
                 </div>
               </CardContent>

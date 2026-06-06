@@ -7,6 +7,7 @@ import { ArrowLeft } from 'lucide-react';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { apiFetchJson } from '@/lib/api-client';
+import { useI18n } from '@/lib/i18n';
 import {
   PartnerApplicationForm,
   INITIAL_FORM_DATA,
@@ -28,6 +29,7 @@ import type { University, Program } from '@/lib/data';
 export default function PartnerEditApplicationPage() {
   const params = useParams();
   const router = useRouter();
+  const { t } = useI18n();
   const applicationId = params.id as string;
 
   const [formData, setFormData] =
@@ -119,11 +121,11 @@ export default function PartnerEditApplicationPage() {
         submittedAt: a.submittedAt ?? null,
       });
     } catch (err) {
-      setLoadError(err instanceof Error ? err.message : 'Failed to load application.');
+      setLoadError(err instanceof Error ? err.message : t('partnerAppEdit.errorLoad'));
     } finally {
       setIsLoading(false);
     }
-  }, [applicationId]);
+  }, [applicationId, t]);
 
   useEffect(() => {
     void load();
@@ -135,11 +137,11 @@ export default function PartnerEditApplicationPage() {
     setError(null);
 
     if (!formData.studentName.trim()) {
-      setError('Student name is required.');
+      setError(t('partnerAppEdit.errorStudentNameRequired'));
       return;
     }
     if (!formData.university.trim() || !formData.program.trim()) {
-      setError('University and program are required.');
+      setError(t('partnerAppEdit.errorUniversityProgramRequired'));
       return;
     }
 
@@ -207,7 +209,7 @@ export default function PartnerEditApplicationPage() {
       });
       router.push(`/partner/applications/${applicationId}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save changes.');
+      setError(err instanceof Error ? err.message : t('partnerAppEdit.errorSave'));
     } finally {
       setIsSaving(false);
     }
@@ -229,17 +231,21 @@ export default function PartnerEditApplicationPage() {
           href="/partner/applications"
           className="inline-flex items-center gap-2 text-[#1B2A4A]"
         >
-          <ArrowLeft className="w-4 h-4" /> Back to applications
+          <ArrowLeft className="w-4 h-4" /> {t('partnerAppDetail.backToApplications')}
         </Link>
         <Card className="rounded-none border-red-200 bg-red-50">
           <CardContent className="p-6 text-red-700">
-            <p className="font-medium">Couldn't load application</p>
+            <p className="font-medium">{t('partnerAppEdit.couldNotLoad')}</p>
             <p className="text-sm">{loadError}</p>
           </CardContent>
         </Card>
       </div>
     );
   }
+
+  const subtitle = formData.applicationNumber
+    ? t('partnerAppEdit.subtitleWithNumber', { name: formData.studentName, university: formData.university, number: formData.applicationNumber })
+    : t('partnerAppEdit.subtitle', { name: formData.studentName, university: formData.university });
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
@@ -251,10 +257,9 @@ export default function PartnerEditApplicationPage() {
           <ArrowLeft className="w-5 h-5 text-[#1B2A4A]" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-[#1B2A4A]">Edit Application</h1>
+          <h1 className="text-2xl font-bold text-[#1B2A4A]">{t('partnerAppEdit.title')}</h1>
           <p className="text-[#4B5563] mt-1 text-sm">
-            {formData.studentName} · {formData.university}
-            {formData.applicationNumber ? ` · ${formData.applicationNumber}` : ''}
+            {subtitle}
           </p>
         </div>
       </div>
@@ -278,7 +283,7 @@ export default function PartnerEditApplicationPage() {
         dataLoading={false}
         isSaving={isSaving}
         onSubmit={handleSubmit}
-        submitLabel="Save Changes"
+        submitLabel={t('partnerStudentEdit.saveChanges')}
         cancelHref={`/partner/applications/${applicationId}`}
       />
     </div>

@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { apiFetchJson } from '@/lib/api-client';
+import { useI18n } from '@/lib/i18n';
 import type { PartnerLead, PartnerLeadStatus } from '@/lib/partner-lead-mapper';
 
 const STATUS_VARIANTS: Record<PartnerLeadStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -30,6 +31,7 @@ const STATUS_ICONS: Record<PartnerLeadStatus, React.ComponentType<{ className?: 
 };
 
 export default function PartnerLeadSharingPage() {
+  const { t } = useI18n();
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -43,8 +45,8 @@ export default function PartnerLeadSharingPage() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 250);
-    return () => clearTimeout(t);
+    const tm = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 250);
+    return () => clearTimeout(tm);
   }, [searchTerm]);
 
   const fetchLeads = useCallback(async () => {
@@ -61,13 +63,13 @@ export default function PartnerLeadSharingPage() {
       setLeads(res.leads || []);
       setTotal(res.total || 0);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load leads.');
+      setError(err instanceof Error ? err.message : t('partnerLeads.errorLoad'));
       setLeads([]);
       setTotal(0);
     } finally {
       setIsLoading(false);
     }
-  }, [debouncedSearch, statusFilter]);
+  }, [debouncedSearch, statusFilter, t]);
 
   useEffect(() => {
     void fetchLeads();
@@ -85,14 +87,14 @@ export default function PartnerLeadSharingPage() {
       const res = await fetch(`/api/partner/leads/${leadToDelete}`, { method: 'DELETE' });
       if (!res.ok && res.status !== 204) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || `Delete failed (HTTP ${res.status})`);
+        throw new Error(body.error || t('partnerLeads.errorDelete'));
       }
       setLeads((prev) => prev.filter((l) => l.id !== leadToDelete));
       setTotal((prev) => Math.max(0, prev - 1));
       setShowDeleteModal(false);
       setLeadToDelete(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Delete failed.');
+      setError(err instanceof Error ? err.message : t('partnerLeads.errorDelete'));
     } finally {
       setIsDeleting(false);
     }
@@ -127,9 +129,9 @@ export default function PartnerLeadSharingPage() {
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white p-6 max-w-md w-full mx-4 border border-gray-200">
-            <h3 className="text-lg font-semibold text-[#1B2A4A] mb-4">Delete Lead</h3>
+            <h3 className="text-lg font-semibold text-[#1B2A4A] mb-4">{t('partnerLeads.deleteTitle')}</h3>
             <p className="text-[#4B5563] mb-6">
-              Are you sure you want to delete this lead? This action cannot be undone.
+              {t('partnerLeads.deleteBody')}
             </p>
             <div className="flex gap-3 justify-end">
               <Button
@@ -138,14 +140,14 @@ export default function PartnerLeadSharingPage() {
                 disabled={isDeleting}
                 className="rounded-none"
               >
-                Cancel
+                {t('partnerLeads.cancel')}
               </Button>
               <Button
                 onClick={confirmDelete}
                 disabled={isDeleting}
                 className="rounded-none bg-[#9B1B30] hover:bg-[#7a1626]"
               >
-                {isDeleting ? 'Deleting…' : 'Delete'}
+                {isDeleting ? t('partnerLeads.deleting') : t('partnerLeads.delete')}
               </Button>
             </div>
           </div>
@@ -155,18 +157,18 @@ export default function PartnerLeadSharingPage() {
       <div>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-[#1B2A4A]">Lead Sharing</h1>
-            <p className="text-[#4B5563] mt-1">Manage incoming leads and inquiries</p>
+            <h1 className="text-2xl font-bold text-[#1B2A4A]">{t('partnerLeads.title')}</h1>
+            <p className="text-[#4B5563] mt-1">{t('partnerLeads.subtitle')}</p>
           </div>
           <div className="flex gap-3">
             <Button variant="outline" className="rounded-none" disabled>
               <Download className="mr-2 h-4 w-4" />
-              Export
+              {t('partnerLeads.export')}
             </Button>
             <Button asChild className="rounded-none bg-[#9B1B30] hover:bg-[#7a1626]">
               <Link href="/partner/lead-sharing/new" className="flex items-center">
                 <Plus className="mr-2 h-4 w-4" />
-                New Lead
+                {t('partnerLeads.newLead')}
               </Link>
             </Button>
           </div>
@@ -176,38 +178,38 @@ export default function PartnerLeadSharingPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="rounded-none">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-[#4B5563]">New</CardTitle>
+            <CardTitle className="text-sm font-medium text-[#4B5563]">{t('partnerLeads.statNew')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-[#1B2A4A]">{stats.new}</div>
-            <p className="text-sm text-[#4B5563] mt-1">Awaiting first contact</p>
+            <p className="text-sm text-[#4B5563] mt-1">{t('partnerLeads.statNewHint')}</p>
           </CardContent>
         </Card>
         <Card className="rounded-none">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-[#4B5563]">Qualified</CardTitle>
+            <CardTitle className="text-sm font-medium text-[#4B5563]">{t('partnerLeads.statQualified')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-[#1B2A4A]">{stats.qualified}</div>
-            <p className="text-sm text-[#4B5563] mt-1">Ready to apply</p>
+            <p className="text-sm text-[#4B5563] mt-1">{t('partnerLeads.statQualifiedHint')}</p>
           </CardContent>
         </Card>
         <Card className="rounded-none">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-[#4B5563]">Converted</CardTitle>
+            <CardTitle className="text-sm font-medium text-[#4B5563]">{t('partnerLeads.statConverted')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-[#1B2A4A]">{stats.converted}</div>
-            <p className="text-sm text-[#4B5563] mt-1">Became students</p>
+            <p className="text-sm text-[#4B5563] mt-1">{t('partnerLeads.statConvertedHint')}</p>
           </CardContent>
         </Card>
         <Card className="rounded-none">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-[#4B5563]">Lost</CardTitle>
+            <CardTitle className="text-sm font-medium text-[#4B5563]">{t('partnerLeads.statLost')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-[#1B2A4A]">{stats.lost}</div>
-            <p className="text-sm text-[#4B5563] mt-1">Did not convert</p>
+            <p className="text-sm text-[#4B5563] mt-1">{t('partnerLeads.statLostHint')}</p>
           </CardContent>
         </Card>
       </div>
@@ -224,7 +226,7 @@ export default function PartnerLeadSharingPage() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[#4B5563]" />
             <Input
               type="text"
-              placeholder="Search leads..."
+              placeholder={t('partnerLeads.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 rounded-none"
@@ -234,10 +236,10 @@ export default function PartnerLeadSharingPage() {
         <div className="flex gap-2">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-40 rounded-none">
-              <SelectValue placeholder="All Status" />
+              <SelectValue placeholder={t('partnerLeads.allStatus')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="all">{t('partnerLeads.allStatus')}</SelectItem>
               <SelectItem value="New">New</SelectItem>
               <SelectItem value="Contacted">Contacted</SelectItem>
               <SelectItem value="Qualified">Qualified</SelectItem>
@@ -254,12 +256,12 @@ export default function PartnerLeadSharingPage() {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">Lead</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">Contact</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">Interested in</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">Status</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">Added</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">Actions</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerLeads.colLead')}</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerLeads.colContact')}</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerLeads.colInterestedIn')}</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerLeads.colStatus')}</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerLeads.colAdded')}</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerLeads.colActions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -277,12 +279,12 @@ export default function PartnerLeadSharingPage() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-sm">
-                          <p className="text-[#1B2A4A]">{lead.leadEmail || '—'}</p>
-                          <p className="text-[#4B5563]">{lead.leadPhone || '—'}</p>
+                          <p className="text-[#1B2A4A]">{lead.leadEmail || t('partnerCommon.placeholderDash')}</p>
+                          <p className="text-[#4B5563]">{lead.leadPhone || t('partnerCommon.placeholderDash')}</p>
                         </div>
                       </td>
                       <td className="px-6 py-4 text-[#4B5563]">
-                        {lead.interestedProgram || '—'}
+                        {lead.interestedProgram || t('partnerCommon.placeholderDash')}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
@@ -295,7 +297,7 @@ export default function PartnerLeadSharingPage() {
                       <td className="px-6 py-4 text-[#4B5563]">
                         {lead.createdAt
                           ? new Date(lead.createdAt).toLocaleDateString()
-                          : '—'}
+                          : t('partnerCommon.placeholderDash')}
                       </td>
                       <td className="px-6 py-4">
                         <DropdownMenu>
@@ -308,7 +310,7 @@ export default function PartnerLeadSharingPage() {
                             <DropdownMenuItem asChild>
                               <Link href={`/partner/lead-sharing/${lead.id}`} className="flex items-center cursor-pointer">
                                 <Eye className="mr-2 h-4 w-4" />
-                                View
+                                {t('partnerLeads.view')}
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem
@@ -316,7 +318,7 @@ export default function PartnerLeadSharingPage() {
                               className="text-red-600 cursor-pointer"
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
+                              {t('partnerLeads.delete')}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -331,18 +333,18 @@ export default function PartnerLeadSharingPage() {
           {leads.length === 0 && !error && !isLoading && (
             <div className="p-12 text-center">
               <div className="text-[#4B5563]">
-                <p className="text-lg font-medium">No leads found</p>
+                <p className="text-lg font-medium">{t('partnerLeads.emptyTitle')}</p>
                 <p className="mt-1">
                   {debouncedSearch || statusFilter !== 'all'
-                    ? 'Try adjusting your filters.'
-                    : 'Click "New Lead" to add your first one.'}
+                    ? t('partnerLeads.emptyFiltered')
+                    : t('partnerLeads.emptyFresh')}
                 </p>
               </div>
             </div>
           )}
 
           {isLoading && leads.length === 0 && (
-            <div className="p-12 text-center text-[#4B5563]">Loading…</div>
+            <div className="p-12 text-center text-[#4B5563]">{t('partnerApps.loading')}</div>
           )}
         </CardContent>
       </Card>

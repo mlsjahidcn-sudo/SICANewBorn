@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { apiFetchJson } from '@/lib/api-client';
+import { useI18n } from '@/lib/i18n';
 import {
   PARTNER_STUDENT_STATUSES,
   PartnerStudentStatus,
@@ -31,6 +32,7 @@ interface FormData {
 export default function PartnerEditStudentPage() {
   const params = useParams();
   const router = useRouter();
+  const { t } = useI18n();
   const studentId = params.id as string;
 
   const [formData, setFormData] = useState<FormData | null>(null);
@@ -60,11 +62,11 @@ export default function PartnerEditStudentPage() {
       });
     } catch (err) {
       console.error('[partner/students/:id/edit] load failed:', err);
-      setLoadError(err instanceof Error ? err.message : 'Failed to load student.');
+      setLoadError(err instanceof Error ? err.message : t('partnerStudentEdit.errorLoad'));
     } finally {
       setIsLoading(false);
     }
-  }, [studentId]);
+  }, [studentId, t]);
 
   useEffect(() => {
     void loadStudent();
@@ -83,7 +85,7 @@ export default function PartnerEditStudentPage() {
     setError(null);
 
     if (!formData.studentName.trim()) {
-      setError('Student name is required.');
+      setError(t('partnerStudentEdit.errorStudentNameRequired'));
       return;
     }
 
@@ -106,7 +108,7 @@ export default function PartnerEditStudentPage() {
       router.push(`/partner/students/${studentId}`);
     } catch (err) {
       console.error('[partner/students/:id/edit] save failed:', err);
-      setError(err instanceof Error ? err.message : 'Failed to save changes.');
+      setError(err instanceof Error ? err.message : t('partnerStudentEdit.errorSave'));
     } finally {
       setIsSaving(false);
     }
@@ -125,11 +127,11 @@ export default function PartnerEditStudentPage() {
     return (
       <div className="space-y-4">
         <Link href="/partner/students" className="inline-flex items-center gap-2 text-[#1B2A4A]">
-          <ArrowLeft className="w-4 h-4" /> Back to students
+          <ArrowLeft className="w-4 h-4" /> {t('partnerStudentDetail.backToStudents')}
         </Link>
         <Card className="rounded-none border-red-200 bg-red-50">
           <CardContent className="p-6 text-red-700">
-            <p className="font-medium">Couldn't load student</p>
+            <p className="font-medium">{t('partnerStudentEdit.couldNotLoad')}</p>
             <p className="text-sm">{loadError}</p>
           </CardContent>
         </Card>
@@ -144,7 +146,7 @@ export default function PartnerEditStudentPage() {
           <ArrowLeft className="w-5 h-5 text-[#1B2A4A]" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-[#1B2A4A]">Edit Student</h1>
+          <h1 className="text-2xl font-bold text-[#1B2A4A]">{t('partnerStudentEdit.title')}</h1>
           <p className="text-[#4B5563] mt-1 text-sm">{formData.studentName}</p>
         </div>
       </div>
@@ -159,11 +161,11 @@ export default function PartnerEditStudentPage() {
         <Card className="rounded-none">
           <CardContent className="p-6 space-y-6">
             <div>
-              <h2 className="text-lg font-semibold text-[#1B2A4A] mb-4">Student Information</h2>
+              <h2 className="text-lg font-semibold text-[#1B2A4A] mb-4">{t('partnerStudentEdit.sectionInfo')}</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <Label htmlFor="studentName" className="text-[#1B2A4A] mb-2 block">
-                    Student Name <span className="text-red-600">*</span>
+                    {t('partnerStudentEdit.fieldStudentName')} <span className="text-red-600">{t('partnerCommon.requiredAsterisk')}</span>
                   </Label>
                   <Input
                     id="studentName"
@@ -175,7 +177,7 @@ export default function PartnerEditStudentPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="studentEmail" className="text-[#1B2A4A] mb-2 block">Email</Label>
+                  <Label htmlFor="studentEmail" className="text-[#1B2A4A] mb-2 block">{t('partnerStudentEdit.fieldEmail')}</Label>
                   <Input
                     id="studentEmail"
                     name="studentEmail"
@@ -186,7 +188,7 @@ export default function PartnerEditStudentPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="studentPhone" className="text-[#1B2A4A] mb-2 block">Phone</Label>
+                  <Label htmlFor="studentPhone" className="text-[#1B2A4A] mb-2 block">{t('partnerStudentEdit.fieldPhone')}</Label>
                   <Input
                     id="studentPhone"
                     name="studentPhone"
@@ -197,7 +199,7 @@ export default function PartnerEditStudentPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="nationality" className="text-[#1B2A4A] mb-2 block">Nationality</Label>
+                  <Label htmlFor="nationality" className="text-[#1B2A4A] mb-2 block">{t('partnerStudentEdit.fieldNationality')}</Label>
                   <Input
                     id="nationality"
                     name="nationality"
@@ -210,10 +212,10 @@ export default function PartnerEditStudentPage() {
             </div>
 
             <div>
-              <h2 className="text-lg font-semibold text-[#1B2A4A] mb-4">Target Program</h2>
+              <h2 className="text-lg font-semibold text-[#1B2A4A] mb-4">{t('partnerStudentEdit.sectionTarget')}</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label htmlFor="targetUniversity" className="text-[#1B2A4A] mb-2 block">Target University</Label>
+                  <Label htmlFor="targetUniversity" className="text-[#1B2A4A] mb-2 block">{t('partnerStudentEdit.fieldTargetUniversity')}</Label>
                   <Input
                     id="targetUniversity"
                     name="targetUniversity"
@@ -223,7 +225,7 @@ export default function PartnerEditStudentPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="targetProgram" className="text-[#1B2A4A] mb-2 block">Target Program</Label>
+                  <Label htmlFor="targetProgram" className="text-[#1B2A4A] mb-2 block">{t('partnerStudentEdit.fieldTargetProgram')}</Label>
                   <Input
                     id="targetProgram"
                     name="targetProgram"
@@ -233,7 +235,7 @@ export default function PartnerEditStudentPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="status" className="text-[#1B2A4A] mb-2 block">Status</Label>
+                  <Label htmlFor="status" className="text-[#1B2A4A] mb-2 block">{t('partnerStudentEdit.fieldStatus')}</Label>
                   <Select
                     value={formData.status}
                     onValueChange={(value) =>
@@ -254,7 +256,7 @@ export default function PartnerEditStudentPage() {
             </div>
 
             <div>
-              <Label htmlFor="notes" className="text-[#1B2A4A] mb-2 block">Notes</Label>
+              <Label htmlFor="notes" className="text-[#1B2A4A] mb-2 block">{t('partnerStudentEdit.fieldNotes')}</Label>
               <Textarea
                 id="notes"
                 name="notes"
@@ -270,7 +272,7 @@ export default function PartnerEditStudentPage() {
         <div className="flex items-center justify-between mt-6">
           <Link href={`/partner/students/${studentId}`}>
             <Button type="button" variant="outline" className="rounded-none" disabled={isSaving}>
-              Cancel
+              {t('partnerStudentEdit.cancel')}
             </Button>
           </Link>
           <Button
@@ -279,7 +281,7 @@ export default function PartnerEditStudentPage() {
             className="rounded-none bg-[#9B1B30] hover:bg-[#7a1626]"
           >
             <Save className="mr-2 h-4 w-4" />
-            {isSaving ? 'Saving…' : 'Save Changes'}
+            {isSaving ? t('partnerStudentEdit.saving') : t('partnerStudentEdit.saveChanges')}
           </Button>
         </div>
       </form>

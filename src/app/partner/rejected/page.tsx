@@ -14,6 +14,7 @@ import { XCircle, LogOut, Loader2, Mail, ArrowLeft } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth-context';
+import { useI18n } from '@/lib/i18n';
 
 interface PartnerStatus {
   partner: {
@@ -37,6 +38,7 @@ interface PartnerFull {
 export default function PartnerRejectedPage() {
   const router = useRouter();
   const { user, signOut, loading: authLoading } = useAuth();
+  const { t } = useI18n();
   const [data, setData] = useState<PartnerStatus | null>(null);
   const [full, setFull] = useState<PartnerFull | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -104,6 +106,8 @@ export default function PartnerRejectedPage() {
     );
   }
 
+  const companyName = data?.partner?.company_name;
+
   return (
     <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-lg">
@@ -111,25 +115,25 @@ export default function PartnerRejectedPage() {
           <div className="inline-flex items-center justify-center w-14 h-14 bg-red-600 mb-4">
             <XCircle className="text-white" size={28} />
           </div>
-          <h1 className="text-[#1B2A4A] text-2xl font-bold">Application Not Approved</h1>
+          <h1 className="text-[#1B2A4A] text-2xl font-bold">{t('partnerRejected.title')}</h1>
           <p className="text-[#4B5563] mt-2 text-sm">
-            Thanks for your interest{data?.partner?.company_name ? `, ${data.partner.company_name}` : ''}.
-            After review we were unable to approve your partner application.
+            {companyName
+              ? t('partnerRejected.bodyWithCompany', { company: companyName })
+              : t('partnerRejected.bodyGeneric')}
           </p>
         </div>
 
         <div className="bg-white border border-gray-200 p-8 space-y-4">
           <p className="text-sm text-gray-700">
-            If you believe this was a mistake, or you&apos;d like to provide
-            additional information, please email us at{' '}
+            {t('partnerRejected.contactBody')}
             <a
               href="mailto:mlsjahid@qq.com"
               className="text-[#9B1B30] hover:underline inline-flex items-center gap-1 font-medium"
             >
               <Mail size={12} />
               mlsjahid@qq.com
-            </a>{' '}
-            and we&apos;ll review again.
+            </a>
+            {t('partnerRejected.contactBodyEnd')}
           </p>
 
           <div className="border-t pt-4 flex flex-col gap-2">
@@ -140,13 +144,13 @@ export default function PartnerRejectedPage() {
               className="w-full"
             >
               {signingOut ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4 mr-2" />}
-              Sign out
+              {t('partnerRejected.signOut')}
             </Button>
             <Link
               href="/"
               className="text-gray-500 hover:text-[#1B2A4A] text-sm flex items-center justify-center gap-1"
             >
-              <ArrowLeft size={14} /> Back to SICA Website
+              <ArrowLeft size={14} /> {t('partnerRejected.backToSicaWebsite')}
             </Link>
           </div>
         </div>

@@ -28,6 +28,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { apiFetchJson, ApiError } from '@/lib/api-client';
+import { useI18n } from '@/lib/i18n';
 
 interface TeamMember {
   id: string;
@@ -43,6 +44,8 @@ interface TeamMember {
   created_at: string;
 }
 
+// Map a DB status enum to the display string (DB enum stays raw;
+// we only translate the visible badge text).
 const STATUS_COLOR: Record<string, string> = {
   active: 'bg-green-100 text-green-800',
   pending_approval: 'bg-yellow-100 text-yellow-800',
@@ -52,6 +55,7 @@ const STATUS_COLOR: Record<string, string> = {
 
 export default function PartnerTeamPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -62,6 +66,20 @@ export default function PartnerTeamPage() {
   const [actionBusyId, setActionBusyId] = useState<string | null>(null);
   const [removeConfirmId, setRemoveConfirmId] = useState<string | null>(null);
 
+  // Status enum → display label
+  const STATUS_DISPLAY: Record<string, string> = {
+    active: t('partnerTeam.statusActive'),
+    pending_approval: t('partnerTeam.statusPendingApproval'),
+    pending_invite: t('partnerTeam.statusPendingInvite'),
+    suspended: t('partnerTeam.statusSuspended'),
+  };
+
+  // Role enum → display label
+  const ROLE_DISPLAY: Record<string, string> = {
+    owner: t('partnerTeam.roleOwner'),
+    member: t('partnerTeam.roleMember'),
+  };
+
   const load = useCallback(async () => {
     setIsLoading(true);
     setLoadError(null);
@@ -69,7 +87,7 @@ export default function PartnerTeamPage() {
       const res = await apiFetchJson<{ team: TeamMember[] }>('/api/partner/team');
       setTeam(res.team || []);
     } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : 'Failed to load team');
+      setLoadError(err instanceof ApiError ? err.message : t('partnerTeam.errorLoad'));
       if (err instanceof ApiError && (err.status === 403 || err.status === 401)) {
         // Not authorized (member trying to view team) — bounce
         router.push('/partner');
@@ -77,7 +95,7 @@ export default function PartnerTeamPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [router]);
+  }, [router, t]);
 
   useEffect(() => {
     load();
@@ -97,14 +115,14 @@ export default function PartnerTeamPage() {
       );
       setInviteSuccess(
         res.isNewUser
-          ? `Invite sent to ${res.inviteSentTo}. They need to set a password before signing in.`
-          : `Invite sent to ${res.inviteSentTo}. They can sign in with their existing password.`,
+          ? t('partnerTeam.inviteSuccessNew', { email: res.inviteSentTo })
+          : t('partnerTeam.inviteSuccessExisting', { email: res.inviteSentTo }),
       );
       setInviteOpen(false);
       setInviteEmail('');
       load();
     } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : 'Invite failed');
+      setLoadError(err instanceof ApiError ? err.message : t('partnerTeam.errorInvite'));
     } finally {
       setInviteBusy(false);
       setTimeout(() => setInviteSuccess(null), 4000);
@@ -118,7 +136,7 @@ export default function PartnerTeamPage() {
       setRemoveConfirmId(null);
       load();
     } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : 'Remove failed');
+      setLoadError(err instanceof ApiError ? err.message : t('partnerTeam.errorRemove'));
     } finally {
       setActionBusyId(null);
     }
@@ -129,18 +147,17 @@ export default function PartnerTeamPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-[#1B2A4A] flex items-center gap-2">
-            <Users className="h-6 w-6" /> Team
+            <Users className="h-6 w-6" /> {t('partnerTeam.title')}
           </h1>
           <p className="text-gray-500 mt-1">
-            Invite team members. They&apos;ll be able to add students and
-            applications but only see the ones they created.
+            {t('partnerTeam.subtitle')}
           </p>
         </div>
         <Button
           onClick={() => setInviteOpen(true)}
           className="bg-[#9B1B30] hover:bg-[#7a1525]"
         >
-          <UserPlus className="h-4 w-4 mr-2" /> Invite member
+          <UserPlus className="h-4 w-4 mr-2" /> {t('partnerTeam.inviteMember')}
         </Button>
       </div>
 
@@ -159,7 +176,7 @@ export default function PartnerTeamPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Members ({team.length})</CardTitle>
+          <CardTitle className="text-base">{t('partnerTeam.membersCount', { count: team.length })}</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -168,7 +185,7 @@ export default function PartnerTeamPage() {
             </div>
           ) : team.length === 0 ? (
             <p className="text-sm text-gray-500 text-center py-6">
-              No team members yet. Invite your first colleague above.
+              {t('partnerTeam.emptyTeam')}
             </p>
           ) : (
             <div className="space-y-2">
@@ -189,21 +206,21 @@ export default function PartnerTeamPage() {
                             : 'bg-gray-200 text-gray-700'
                         }
                       >
-                        {m.role}
+                        {ROLE_DISPLAY[m.role] ?? m.role}
                       </Badge>
                       <Badge className={STATUS_COLOR[m.status] || 'bg-gray-100 text-gray-800'}>
                         {m.status === 'pending_invite' && <Clock className="h-3 w-3 mr-1" />}
-                        {m.status.replace(/_/g, ' ')}
+                        {STATUS_DISPLAY[m.status] ?? m.status.replace(/_/g, ' ')}
                       </Badge>
                     </div>
                     <p className="text-xs text-gray-500 mt-1">
                       {m.joined_at
-                        ? `Joined ${new Date(m.joined_at).toLocaleDateString()}`
+                        ? t('partnerTeam.joinedOn', { date: new Date(m.joined_at).toLocaleDateString() })
                         : m.invited_at
-                          ? `Invited ${new Date(m.invited_at).toLocaleDateString()}`
-                          : `Created ${new Date(m.created_at).toLocaleDateString()}`}
-                      {m.suspended_at && ` · suspended ${new Date(m.suspended_at).toLocaleDateString()}`}
-                      {m.suspension_reason && ` (${m.suspension_reason})`}
+                          ? t('partnerTeam.invitedOn', { date: new Date(m.invited_at).toLocaleDateString() })
+                          : t('partnerTeam.createdOn', { date: new Date(m.created_at).toLocaleDateString() })}
+                      {m.suspended_at && t('partnerTeam.suspendedOn', { date: new Date(m.suspended_at).toLocaleDateString() })}
+                      {m.suspension_reason && t('partnerTeam.suspensionReason', { reason: m.suspension_reason })}
                     </p>
                   </div>
                   {m.role !== 'owner' && (
@@ -216,7 +233,7 @@ export default function PartnerTeamPage() {
                           disabled={actionBusyId === m.id}
                           className="text-red-600 border-red-200"
                         >
-                          <Trash2 className="h-3 w-3 mr-1" /> Remove
+                          <Trash2 className="h-3 w-3 mr-1" /> {t('partnerTeam.remove')}
                         </Button>
                       )}
                     </div>
@@ -233,30 +250,29 @@ export default function PartnerTeamPage() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <Card className="max-w-md w-full">
             <CardHeader className="flex flex-row items-start justify-between space-y-0">
-              <CardTitle>Invite team member</CardTitle>
+              <CardTitle>{t('partnerTeam.inviteModalTitle')}</CardTitle>
               <Button variant="ghost" size="sm" onClick={() => setInviteOpen(false)}>
                 <X className="h-4 w-4" />
               </Button>
             </CardHeader>
             <CardContent className="space-y-3">
               <p className="text-sm text-gray-600">
-                We&apos;ll email them an invitation link. If they don&apos;t
-                have an account yet, the link will let them set a password.
+                {t('partnerTeam.inviteModalBody')}
               </p>
               <div>
                 <label className="text-sm font-medium text-gray-700 block mb-1">
-                  Email
+                  {t('partnerTeam.inviteEmailLabel')}
                 </label>
                 <Input
                   type="email"
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
-                  placeholder="colleague@example.com"
+                  placeholder={t('partnerTeam.inviteEmailPlaceholder')}
                 />
               </div>
               <div className="flex justify-end gap-2 pt-2 border-t">
                 <Button variant="ghost" onClick={() => setInviteOpen(false)}>
-                  Cancel
+                  {t('partnerTeam.cancel')}
                 </Button>
                 <Button
                   onClick={sendInvite}
@@ -264,7 +280,7 @@ export default function PartnerTeamPage() {
                   className="bg-[#9B1B30] hover:bg-[#7a1525]"
                 >
                   {inviteBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4 mr-2" />}
-                  Send invite
+                  {t('partnerTeam.sendInvite')}
                 </Button>
               </div>
             </CardContent>
@@ -277,16 +293,15 @@ export default function PartnerTeamPage() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <Card className="max-w-md w-full">
             <CardHeader>
-              <CardTitle>Remove team member</CardTitle>
+              <CardTitle>{t('partnerTeam.removeModalTitle')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <p className="text-sm text-gray-600">
-                They&apos;ll lose access to the partner portal immediately.
-                Their previous data stays in place.
+                {t('partnerTeam.removeModalBody')}
               </p>
               <div className="flex justify-end gap-2 pt-2 border-t">
                 <Button variant="ghost" onClick={() => setRemoveConfirmId(null)}>
-                  Cancel
+                  {t('partnerTeam.cancel')}
                 </Button>
                 <Button
                   onClick={() => removeMember(removeConfirmId)}
@@ -298,7 +313,7 @@ export default function PartnerTeamPage() {
                   ) : (
                     <Trash2 className="h-4 w-4 mr-2" />
                   )}
-                  Remove
+                  {t('partnerTeam.remove')}
                 </Button>
               </div>
             </CardContent>
