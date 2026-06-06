@@ -19,12 +19,9 @@ export default async function AboutPage() {
     { icon: Globe, title: t('about.valueCultural'), desc: t('about.valueCulturalDesc') },
   ];
 
-  const team = [
-    { name: 'Dr. Li Wei', role: 'Founder & Director', desc: 'Former international student advisor at Tsinghua University with 15+ years in education consulting.' },
-    { name: 'Sarah Chen', role: 'Head of Admissions', desc: 'Bilingual consultant specializing in application strategy and university placement.' },
-    { name: 'Zhang Ming', role: 'Scholarship Advisor', desc: 'Expert in CSC and provincial scholarship applications with a 95% success rate.' },
-    { name: 'Emma Liu', role: 'Student Services Manager', desc: 'Dedicated to ensuring smooth transitions for students arriving in China.' },
-  ];
+  // Team section removed per product direction — SICA presents as
+  // an editorial entity, not a people-page. The page now flows
+  // straight from Values into the CTA.
 
   return (
     <div className="min-h-screen bg-[#FAFAF8]">
@@ -102,25 +99,7 @@ export default async function AboutPage() {
         </div>
       </section>
 
-      {/* Team */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16">
-        <h2 className="text-2xl font-bold text-[#1F2937] text-center mb-10">{t('about.teamTitle')}</h2>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {team.map((member) => (
-            <div
-              key={member.name}
-              className="bg-white border border-gray-200 p-6 hover:shadow-md transition-shadow duration-150"
-            >
-              <div className="h-20 w-20 bg-[#F3F4F6] flex items-center justify-center mx-auto mb-4">
-                <Users className="h-10 w-10 text-[#1B2A4A]" />
-              </div>
-              <h3 className="text-lg font-semibold text-[#1F2937] text-center">{member.name}</h3>
-              <p className="text-sm text-[#9B1B30] font-medium text-center mt-1">{member.role}</p>
-              <p className="text-sm text-[#4B5563] leading-relaxed mt-3 text-center">{member.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* Team section removed per product direction. */}
 
       {/* CTA */}
       <section className="relative overflow-hidden">
