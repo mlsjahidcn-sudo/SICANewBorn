@@ -269,7 +269,11 @@ function buildUniLookup(universities: University[]): Map<string, University> {
 
 function formatUniversityLine(u: University): string {
   const parts: string[] = [];
-  parts.push(`- **${u.name}** (${u.city})`);
+  // Phase 4: include the slug right after the name so the LLM
+  // can emit the [[CARD:university:<slug>]] inline tag for
+  // any school in the catalog (was previously only the 9
+  // hardcoded slugs the model had memorized).
+  parts.push(`- **${u.name}** (slug: \`${u.slug}\`) (${u.city})`);
   if (u.ranking) parts.push(`ranked #${u.ranking} in China`);
   if (u.qsRanking) parts.push(u.qsRanking);
   if (u.type) parts.push(u.type);
@@ -285,7 +289,10 @@ function formatProgramLine(p: ProgramSummary, uniLookup: Map<string, University>
   const uni = uniLookup.get(p.universitySlug);
   const uniName = uni?.name ?? p.universitySlug;
   const parts: string[] = [];
-  parts.push(`- **${p.name}** at ${uniName}`);
+  // Phase 4: same — include program slug for [[CARD:program:<slug>]]
+  // so the model can render a program card for any of the
+  // admin-added programs.
+  parts.push(`- **${p.name}** (slug: \`${p.slug}\`) at ${uniName}`);
   if (p.degree) parts.push(p.degree);
   if (p.duration) parts.push(p.duration);
   if (p.language) parts.push(`${p.language}-taught`);
@@ -398,6 +405,282 @@ export async function getLiveUniversities(): Promise<University[]> {
   // will populate the cache as a side effect.
   await getLiveCatalogContext();
   return cache?.universities ?? staticUniversities;
+}
+
+/**
+ * Get the live programs list (program slug + university slug) for
+ * per-query matching. Pulls a fresh batch from Supabase (no cache)
+ * because the program set is small (≤149 rows) and the per-uni
+ * detail query below already filters by university_slug.
+ */
+async function getAllProgramSlugs(): Promise<{ slug: string; name: string; universitySlug: string; degree: string; language: string }[]> {
+  if (!isSupabaseServerConfigured()) return [];
+  const supabase = getSupabaseServer();
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from('programs')
+    .select('slug, name, university_slug, degree, language')
+    .order('name')
+    .limit(2000);
+  if (error || !data) return [];
+  return data.map((r) => ({
+    slug: (r.slug as string) ?? '',
+    name: (r.name as string) ?? '',
+    universitySlug: (r.university_slug as string) ?? '',
+    degree: (r.degree as string) ?? '',
+    language: (r.language as string) ?? '',
+  }));
+}
+
+async function getAllScholarshipSlugs(): Promise<{ slug: string; name: string }[]> {
+  if (!isSupabaseServerConfigured()) return [];
+  const supabase = getSupabaseServer();
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from('scholarships')
+    .select('slug, name')
+    .order('name')
+    .limit(200);
+  if (error || !data) return [];
+  return data.map((r) => ({
+    slug: (r.slug as string) ?? '',
+    name: (r.name as string) ?? '',
+  }));
+}
+
+// Phase 4: per-entity detail blocks for the user's most recent
+// message. We pull a university + its full programs list, or a
+// program + the parent university, or a scholarship — whichever
+// the user asked about. Capped at 2 of each to keep tokens sane.
+
+const MAX_DETAIL_UNIS = 2;
+const MAX_DETAIL_PROGS = 2;
+const MAX_DETAIL_SCHOLS = 2;
+const MAX_PROGRAMS_PER_UNI = 12;
+
+/** Match a user message against a list of named entities. */
+function matchByName<T extends { name: string; nameEn?: string; nameCn?: string | null }>(
+  message: string,
+  items: T[],
+  max: number,
+): T[] {
+  const lower = message.toLowerCase();
+  // Rank by name length (longest match first) so a query for
+  // "Tianjin University" doesn't get swallowed by a generic
+  // "University" partial-match.
+  const matches: { item: T; score: number }[] = [];
+  for (const item of items) {
+    const name = item.name.toLowerCase();
+    if (lower.includes(name)) {
+      matches.push({ item, score: name.length });
+    }
+  }
+  matches.sort((a, b) => b.score - a.score);
+  return matches.slice(0, max).map((m) => m.item);
+}
+
+async function fetchUniversityDetail(slug: string): Promise<string> {
+  const supabase = getSupabaseServer();
+  if (!supabase) return '';
+  const { data: uni } = await supabase
+    .from('universities')
+    .select('*')
+    .eq('slug', slug)
+    .maybeSingle();
+  if (!uni) return '';
+
+  // Pull this university's programs (capped) so the LLM can
+  // answer "what programs does X offer" without needing a
+  // second round-trip from the user.
+  const { data: progs } = await supabase
+    .from('programs')
+    .select('slug, name, degree, language, duration, tuition, discipline')
+    .eq('university_slug', slug)
+    .order('name')
+    .limit(MAX_PROGRAMS_PER_UNI);
+
+  const lines: string[] = [];
+  lines.push(`### ${uni.name as string} (\`${uni.slug as string}\`)`);
+  if (uni.city) lines.push(`- **City:** ${uni.city as string}${uni.city_cn ? ` (${uni.city_cn})` : ''}`);
+  if (uni.ranking) lines.push(`- **Ranking:** #${uni.ranking} in China${uni.qs_ranking ? `, ${uni.qs_ranking}` : ''}`);
+  if (uni.qs_world_ranking) lines.push(`- **QS World:** #${uni.qs_world_ranking}`);
+  if (uni.type) lines.push(`- **Type:** ${uni.type as string}`);
+  if (uni.established) lines.push(`- **Established:** ${uni.established}`);
+  if (uni.students) lines.push(`- **Total students:** ${uni.students}${uni.intl_students ? ` (${uni.intl_students} international)` : ''}`);
+  if (uni.disciplines && (uni.disciplines as string[]).length > 0) {
+    lines.push(`- **Disciplines:** ${(uni.disciplines as string[]).join(', ')}`);
+  }
+  if (uni.popular_programs && (uni.popular_programs as string[]).length > 0) {
+    lines.push(`- **Popular programs (high-level):** ${(uni.popular_programs as string[]).join(', ')}`);
+  }
+  if (uni.tuition_undergrad || uni.tuition_graduate) {
+    const tu = uni.tuition_undergrad ? `Undergraduate: ${uni.tuition_undergrad}` : '';
+    const tg = uni.tuition_graduate ? `Graduate: ${uni.tuition_graduate}` : '';
+    lines.push(`- **Tuition:** ${[tu, tg].filter(Boolean).join(' · ')}`);
+  }
+  if (uni.intake) lines.push(`- **Intake:** ${uni.intake as string}`);
+  if (uni.application_deadline) lines.push(`- **Application deadline:** ${uni.application_deadline as string}`);
+  if (uni.accommodation) lines.push(`- **Accommodation:** ${uni.accommodation as string}`);
+  if (uni.accommodation_cost) lines.push(`- **Accommodation cost:** ${uni.accommodation_cost as string}`);
+  if (uni.scholarship_info) lines.push(`- **Scholarships:** ${uni.scholarship_info as string}`);
+  if (uni.description) {
+    // Truncate long descriptions so a single uni doesn't eat
+    // 2k tokens of context. 600 chars is enough for the LLM
+    // to quote a "what is X like" answer.
+    const d = (uni.description as string).slice(0, 600);
+    lines.push(`- **About:** ${d}${d.length === 600 ? '…' : ''}`);
+  }
+  if (uni.tags && (uni.tags as string[]).length > 0) {
+    lines.push(`- **Tags:** ${(uni.tags as string[]).join(', ')}`);
+  }
+
+  if (progs && progs.length > 0) {
+    lines.push('');
+    lines.push(`#### Programs offered (${progs.length}${progs.length === MAX_PROGRAMS_PER_UNI ? '+' : ''})`);
+    for (const p of progs as Array<Record<string, unknown>>) {
+      const parts: string[] = [];
+      parts.push(`- **${p.name as string}** (\`${p.slug as string}\`)`);
+      const meta: string[] = [];
+      if (p.degree) meta.push(p.degree as string);
+      if (p.duration) meta.push(p.duration as string);
+      if (p.language) meta.push(`${p.language as string}-taught`);
+      if (p.tuition) meta.push(`tuition: ${p.tuition as string}`);
+      if (p.discipline) meta.push(`discipline: ${p.discipline as string}`);
+      if (meta.length > 0) parts.push(`— ${meta.join(' · ')}`);
+      lines.push(parts.join(' '));
+    }
+  }
+
+  return lines.join('\n');
+}
+
+async function fetchProgramDetail(slug: string): Promise<string> {
+  const supabase = getSupabaseServer();
+  if (!supabase) return '';
+  const { data: p } = await supabase
+    .from('programs')
+    .select('*, university_slug')
+    .eq('slug', slug)
+    .maybeSingle();
+  if (!p) return '';
+
+  // Look up the parent university name for the response
+  let uniName = p.university_slug as string;
+  const { data: uni } = await supabase
+    .from('universities')
+    .select('name, slug, city, ranking')
+    .eq('slug', p.university_slug as string)
+    .maybeSingle();
+  if (uni) uniName = `${uni.name as string} (${uni.city as string})`;
+
+  const lines: string[] = [];
+  lines.push(`### ${p.name as string} (\`${p.slug as string}\`)`);
+  lines.push(`- **University:** ${uniName}${uni ? ` (\`${uni.slug as string}\`)` : ''}`);
+  if (p.degree) lines.push(`- **Degree:** ${p.degree as string}`);
+  if (p.language) lines.push(`- **Language:** ${p.language as string}-taught`);
+  if (p.duration) lines.push(`- **Duration:** ${p.duration as string}`);
+  if (p.tuition) lines.push(`- **Tuition:** ${p.tuition as string}`);
+  if (p.discipline) lines.push(`- **Discipline:** ${p.discipline as string}`);
+  if (p.description) {
+    const d = (p.description as string).slice(0, 500);
+    lines.push(`- **About:** ${d}${d.length === 500 ? '…' : ''}`);
+  }
+  return lines.join('\n');
+}
+
+async function fetchScholarshipDetail(slug: string): Promise<string> {
+  const supabase = getSupabaseServer();
+  if (!supabase) return '';
+  const { data: s } = await supabase
+    .from('scholarships')
+    .select('*')
+    .eq('slug', slug)
+    .maybeSingle();
+  if (!s) return '';
+
+  const lines: string[] = [];
+  lines.push(`### ${s.name as string} (\`${s.slug as string}\`)`);
+  if (s.type) lines.push(`- **Type:** ${s.type as string}`);
+  if (s.coverage && (s.coverage as string[]).length > 0) {
+    lines.push(`- **Coverage:** ${(s.coverage as string[]).join(', ')}`);
+  }
+  if (s.degree_levels && (s.degree_levels as string[]).length > 0) {
+    lines.push(`- **Eligible degree levels:** ${(s.degree_levels as string[]).join(', ')}`);
+  }
+  if (s.eligible_regions) lines.push(`- **Eligible regions:** ${s.eligible_regions as string}`);
+  if (s.duration) lines.push(`- **Duration:** ${s.duration as string}`);
+  if (s.deadline) lines.push(`- **Deadline:** ${s.deadline as string}`);
+  if (s.description) {
+    const d = (s.description as string).slice(0, 500);
+    lines.push(`- **About:** ${d}${d.length === 500 ? '…' : ''}`);
+  }
+  if (s.requirements && (s.requirements as string[]).length > 0) {
+    lines.push(`- **Requirements:** ${(s.requirements as string[]).join('; ')}`);
+  }
+  return lines.join('\n');
+}
+
+/**
+ * Phase 4: on-demand detail injection.
+ *
+ * The user mentioned a specific school / program / scholarship
+ * in their last message. We detect which, fetch their full
+ * records from Supabase, and return a markdown RAG block the
+ * route can splice into the system prompt for that one turn.
+ *
+ * Caps at MAX_DETAIL_UNIS / MAX_DETAIL_PROGS / MAX_DETAIL_SCHOLS
+ * so a query like "compare Tsinghua, Peking, Fudan, and
+ * Shanghai Jiao Tong" doesn't explode the context window.
+ *
+ * Returns empty string when nothing matched (so callers can
+ * skip the section).
+ */
+export async function getDetailContext(userMessage: string): Promise<string> {
+  if (!userMessage || userMessage.length < 4) return '';
+
+  // Pull name lists from the cache + a fresh full program list.
+  // University + scholarship name lists are already in cache;
+  // programs are not (the cache only holds 24 sample programs
+  // grouped by discipline).
+  const [universities, allPrograms, allScholarships] = await Promise.all([
+    getLiveUniversities(),
+    getAllProgramSlugs(),
+    getAllScholarshipSlugs(),
+  ]);
+
+  const matchedUnis = matchByName(userMessage, universities, MAX_DETAIL_UNIS);
+  const matchedProgs = matchByName(userMessage, allPrograms, MAX_DETAIL_PROGS);
+  const matchedSchols = matchByName(userMessage, allScholarships, MAX_DETAIL_SCHOLS);
+
+  if (matchedUnis.length === 0 && matchedProgs.length === 0 && matchedSchols.length === 0) {
+    return '';
+  }
+
+  // Fetch all detail blocks in parallel. Failures are silently
+  // skipped (a missing entity just doesn't get a section).
+  const [uniBlocks, progBlocks, scholBlocks] = await Promise.all([
+    Promise.all(matchedUnis.map((u) => fetchUniversityDetail(u.slug))),
+    Promise.all(matchedProgs.map((p) => fetchProgramDetail(p.slug))),
+    Promise.all(matchedSchols.map((s) => fetchScholarshipDetail(s.slug))),
+  ]);
+
+  const sections: string[] = [];
+  const nonEmptyUni = uniBlocks.filter(Boolean);
+  const nonEmptyProg = progBlocks.filter(Boolean);
+  const nonEmptySchol = scholBlocks.filter(Boolean);
+
+  if (nonEmptyUni.length > 0) {
+    sections.push(`## University Details (per-message, on-demand)\n${nonEmptyUni.join('\n\n')}`);
+  }
+  if (nonEmptyProg.length > 0) {
+    sections.push(`## Program Details (per-message, on-demand)\n${nonEmptyProg.join('\n\n')}`);
+  }
+  if (nonEmptySchol.length > 0) {
+    sections.push(`## Scholarship Details (per-message, on-demand)\n${nonEmptySchol.join('\n\n')}`);
+  }
+
+  if (sections.length === 0) return '';
+  return sections.join('\n\n') + '\n';
 }
 
 /**

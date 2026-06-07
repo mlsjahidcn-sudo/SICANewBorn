@@ -3,7 +3,7 @@ import { SICA_CHATBOT_SYSTEM_PROMPT, SICA_UNIVERSITY_CONTEXT_PROMPT } from '@/li
 import { getUniversityContext, getApplicationGuideContext, searchFAQ, sicaFAQ } from '@/lib/ai/knowledge';
 import { type University } from '@/lib/data';
 import { getAIProvider } from '@/lib/ai/provider';
-import { getLiveCatalogContext, getLiveUniversities } from '@/lib/ai/live-data-context';
+import { getLiveCatalogContext, getLiveUniversities, getDetailContext } from '@/lib/ai/live-data-context';
 
 async function buildRAGContext(userMessage: string) {
   let context = '';
@@ -363,10 +363,15 @@ export async function POST(request: NextRequest) {
     // the hardcoded 9 in src/lib/data.ts. Inlined into the system
     // prompt so the LLM can quote/cite without a separate tool call.
     const liveCatalog = await getLiveCatalogContext();
+    // Phase 4: on-demand detail for whatever school/program/
+    // scholarship the user just mentioned. Empty when nothing
+    // matched, so the prompt stays tight on generic questions.
+    const detailContext = await getDetailContext(lastUserMessage);
     const fullSystemPrompt =
       `${SICA_CHATBOT_SYSTEM_PROMPT}\n\n` +
       `${SICA_UNIVERSITY_CONTEXT_PROMPT}` +
       `## SICA Live Catalog Context\n${liveCatalog}\n` +
+      `${detailContext}` +
       `${ragContext}`;
 
     const llmMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
