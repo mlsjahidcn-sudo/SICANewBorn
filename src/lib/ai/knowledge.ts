@@ -1,4 +1,5 @@
-import { universities } from '@/lib/data';
+import { universities as _staticUniversities } from '@/lib/data';
+void _staticUniversities; // Phase 3: searchUniversities now uses the live Supabase cache; static array is kept for the fallback path in live-data-context.
 
 export interface FAQ {
   question: string;
@@ -111,11 +112,17 @@ export const applicationSteps: ApplicationStep[] = [
   }
 ];
 
-export function searchUniversities(query: string) {
+// Phase 3: searchUniversities now uses the live Supabase cache
+// (5-min TTL) so admin-added schools show up in the per-query
+// RAG retrieval — not just the 9 hardcoded fallbacks.
+import { getLiveUniversities } from '@/lib/ai/live-data-context';
+
+export async function searchUniversities(query: string) {
   const lowerQuery = query.toLowerCase();
-  return universities.filter(uni => 
+  const live = await getLiveUniversities();
+  return live.filter(uni =>
     uni.name.toLowerCase().includes(lowerQuery) ||
-    uni.nameCn.includes(query) ||
+    (uni.nameCn && uni.nameCn.toLowerCase().includes(lowerQuery)) ||
     uni.city.toLowerCase().includes(lowerQuery) ||
     uni.disciplines.some(d => d.toLowerCase().includes(lowerQuery)) ||
     uni.popularPrograms.some(p => p.toLowerCase().includes(lowerQuery))
@@ -124,16 +131,16 @@ export function searchUniversities(query: string) {
 
 export function searchFAQ(query: string) {
   const lowerQuery = query.toLowerCase();
-  return sicaFAQ.filter(faq => 
+  return sicaFAQ.filter(faq =>
     faq.question.toLowerCase().includes(lowerQuery) ||
     faq.answer.toLowerCase().includes(lowerQuery)
   );
 }
 
-export function getUniversityContext(query: string) {
-  const relevantUnis = searchUniversities(query);
+export async function getUniversityContext(query: string) {
+  const relevantUnis = await searchUniversities(query);
   if (relevantUnis.length === 0) return '';
-  
+
   return relevantUnis.slice(0, 3).map(uni => `
 ## ${uni.name} (${uni.city})
 - Ranking: #${uni.ranking} in China, ${uni.qsRanking}

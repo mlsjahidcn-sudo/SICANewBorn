@@ -1,37 +1,42 @@
 import { NextRequest } from 'next/server';
 import { SICA_CHATBOT_SYSTEM_PROMPT, SICA_UNIVERSITY_CONTEXT_PROMPT } from '@/lib/ai/prompts';
 import { getUniversityContext, getApplicationGuideContext, searchFAQ, sicaFAQ } from '@/lib/ai/knowledge';
-import { universities, type University } from '@/lib/data';
+import { type University } from '@/lib/data';
 import { getAIProvider } from '@/lib/ai/provider';
+import { getLiveCatalogContext, getLiveUniversities } from '@/lib/ai/live-data-context';
 
-function buildRAGContext(userMessage: string) {
+async function buildRAGContext(userMessage: string) {
   let context = '';
-  
-  const universityContext = getUniversityContext(userMessage);
+
+  const universityContext = await getUniversityContext(userMessage);
   if (universityContext) {
     context += `\n\n## Relevant University Information:\n${universityContext}`;
   }
-  
+
   const relevantFAQs = searchFAQ(userMessage);
   if (relevantFAQs.length > 0) {
-    context += `\n\n## Relevant FAQs:\n${relevantFAQs.slice(0, 3).map(faq => 
+    context += `\n\n## Relevant FAQs:\n${relevantFAQs.slice(0, 3).map(faq =>
       `Q: ${faq.question}\nA: ${faq.answer}`
     ).join('\n\n')}`;
   }
-  
-  if (userMessage.toLowerCase().includes('apply') || 
+
+  if (userMessage.toLowerCase().includes('apply') ||
       userMessage.toLowerCase().includes('application') ||
       userMessage.toLowerCase().includes('process') ||
       userMessage.toLowerCase().includes('step')) {
     context += `\n\n## Application Process Guide:\n${getApplicationGuideContext()}`;
   }
-  
+
   return context;
 }
 
-function generateIntelligentResponse(userMessage: string, conversationHistory: Array<{ role: string; content: string }>): string {
+function generateIntelligentResponse(
+  userMessage: string,
+  conversationHistory: Array<{ role: string; content: string }>,
+  liveUniversities: University[],
+): string {
   const lowerMessage = userMessage.toLowerCase();
-  
+
   // Greeting responses
   if (lowerMessage.match(/^(hi|hello|hey|greetings|good morning|good afternoon|good evening)/)) {
     const greetings = [
@@ -41,11 +46,13 @@ function generateIntelligentResponse(userMessage: string, conversationHistory: A
     ];
     return greetings[Math.floor(Math.random() * greetings.length)];
   }
-  
-  // University specific questions
-  for (const uni of universities) {
-    if (lowerMessage.includes(uni.name.toLowerCase()) || 
-        lowerMessage.includes(uni.nameCn) ||
+
+  // University specific questions — match against live catalog
+  // first, fall back to the static 9 if the cache is cold. Phase
+  // 3: previously this loop only saw 9 hardcoded schools.
+  for (const uni of liveUniversities) {
+    if (lowerMessage.includes(uni.name.toLowerCase()) ||
+        (uni.nameCn && lowerMessage.includes(uni.nameCn.toLowerCase())) ||
         (uni.city.toLowerCase() && lowerMessage.includes(uni.city.toLowerCase()))) {
       return generateUniversityResponse(uni, userMessage);
     }
@@ -349,8 +356,18 @@ export async function POST(request: NextRequest) {
 
     // Build RAG context + full system prompt once (used by both LLM
     // and the rule-based fallback so the prompt surface is identical).
-    const ragContext = buildRAGContext(lastUserMessage);
-    const fullSystemPrompt = `${SICA_CHATBOT_SYSTEM_PROMPT}\n\n${SICA_UNIVERSITY_CONTEXT_PROMPT}${ragContext}`;
+    const ragContext = await buildRAGContext(lastUserMessage);
+    // Phase 3: live catalog context — pulls every university, program,
+    // and scholarship from Supabase (5-min in-memory cache) so the bot
+    // knows about schools added through /admin/universities, not just
+    // the hardcoded 9 in src/lib/data.ts. Inlined into the system
+    // prompt so the LLM can quote/cite without a separate tool call.
+    const liveCatalog = await getLiveCatalogContext();
+    const fullSystemPrompt =
+      `${SICA_CHATBOT_SYSTEM_PROMPT}\n\n` +
+      `${SICA_UNIVERSITY_CONTEXT_PROMPT}` +
+      `## SICA Live Catalog Context\n${liveCatalog}\n` +
+      `${ragContext}`;
 
     const llmMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
       { role: 'system', content: fullSystemPrompt },
@@ -378,7 +395,11 @@ export async function POST(request: NextRequest) {
         );
         if (!success) {
           console.log('[AI Chat] LLM stream failed or unconfigured, using rule-based fallback');
-          await sendIntelligentResponse(lastUserMessage, messages, controller, encoder);
+          // Phase 3: pass live universities so the rule-based
+          // fallback can recognize any school in the catalog,
+          // not just the 9 hardcoded ones.
+          const liveUniversities = await getLiveUniversities();
+          await sendIntelligentResponse(lastUserMessage, messages, liveUniversities, controller, encoder);
           return;
         }
         try {
@@ -413,6 +434,7 @@ export async function POST(request: NextRequest) {
 async function sendIntelligentResponse(
   userMessage: string,
   messages: Array<{ role: string; content: string }>,
+  liveUniversities: University[],
   controller: ReadableStreamDefaultController,
   encoder: TextEncoder
 ) {
@@ -435,7 +457,7 @@ async function sendIntelligentResponse(
   };
 
   try {
-    const response = generateIntelligentResponse(userMessage, messages);
+    const response = generateIntelligentResponse(userMessage, messages, liveUniversities);
     console.log('[AI Chat] Generated intelligent response, length:', response.length);
 
     // Stream word by word for a natural feel

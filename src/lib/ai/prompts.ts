@@ -13,16 +13,7 @@ SICA (Study in China Academy) is a professional education institution that provi
 7. Ask follow-up questions to understand the student's needs better
 
 ## Available Data
-You have access to information about 8 top Chinese universities plus their programs:
-- Tsinghua University (slug: tsinghua-university, Beijing)
-- Peking University (slug: peking-university, Beijing)
-- Fudan University (slug: fudan-university, Shanghai)
-- Shanghai Jiao Tong University (slug: shanghai-jiao-tong-university, Shanghai)
-- Zhejiang University (slug: zhejiang-university, Hangzhou)
-- Nanjing University (slug: nanjing-university, Nanjing)
-- Wuhan University (slug: wuhan-university, Wuhan)
-- Sun Yat-sen University (slug: sun-yat-sen-university, Guangzhou)
-- Lishui University (slug: lishui-university, Lishui) — newer addition, smaller city, very affordable
+You have access to the SICA live catalog of partner universities, programs, and scholarships. The exact list is appended to this prompt in the "## SICA Live Catalog Context" section below — refer to it when answering questions about specific schools, programs, or funding. If a student asks about something that isn't in the catalog, say so honestly and suggest they contact SICA for the latest info. The catalog is refreshed regularly, so anything the SICA team recently added to studyinchina.academy should be available to you.
 
 ## Inline Cards in Replies
 When you mention a specific university or program, the chat UI can render a clickable card so the visitor can jump to the full detail page. To trigger this, append a special inline tag on its own line right after the relevant paragraph (or wherever the card should appear):
@@ -77,67 +68,17 @@ Rules:
 
 Remember: You are representing SICA, a professional and trustworthy education consulting agency. Always maintain the highest standards of professionalism, helpfulness, and genuine care for the student's journey!`;
 
-export const SICA_UNIVERSITY_CONTEXT_PROMPT = `Here is information about universities in China that you can reference:
-
-## Tsinghua University (Beijing)
-- Ranked #1 in China, #20 QS World 2025
-- Type: Public University, established 1911
-- 50,000+ students, 4,000+ international students
-- Popular programs: Computer Science, Electronic Engineering, Business Administration, Architecture, Economics
-- Tuition: ¥23,000-30,000/year (Undergraduate), ¥25,000-40,000/year (Graduate)
-- Intake: September (Fall), March (Spring)
-- Tags: 985, 211, Double First Class
-- Accommodation: Modern on-campus dormitories, ¥800-2,500/month
-
-## Peking University (Beijing)
-- Ranked #2 in China
-- Type: Public University, established 1898
-- 47,000+ students, 3,500+ international students
-- Located in Beijing, near Tsinghua University
-
-## Fudan University (Shanghai)
-- Ranked #3 in China
-- Type: Public University
-- Located in Shanghai
-- Strong in humanities, social sciences, and medicine
-
-## Shanghai Jiao Tong University (Shanghai)
-- Ranked #4 in China
-- Type: Public University
-- Located in Shanghai
-- Strong in engineering and business
-
-## Zhejiang University (Hangzhou)
-- Ranked #5 in China
-- Type: Public University
-- Located in Hangzhou
-- Beautiful campus, strong in engineering
-
-## Nanjing University (Nanjing)
-- Ranked #6 in China
-- Type: Public University
-- Located in Nanjing
-- Rich history and strong academics
-
-## Wuhan University (Wuhan)
-- Ranked #7 in China
-- Type: Public University
-- Located in Wuhan
-- Beautiful cherry blossom campus
-
-## Sun Yat-sen University (Guangzhou)
-- Ranked #8 in China
-- Type: Public University
-- Located in Guangzhou
-- Strong in medicine and international programs
-
-## General Information
-- Application deadlines: Usually 3-6 months before semester start
-- Required documents: Passport, transcripts, diploma, language proficiency (HSK for Chinese-taught programs, TOEFL/IELTS for English-taught)
-- Visa type: X1 (long-term study, over 180 days), X2 (short-term study)
-- Scholarships: Chinese Government Scholarship, University-specific scholarships, Confucius Institute Scholarship
-
-When students ask about specific universities or programs, reference this information and offer to help them with the application process through SICA!`;
+// Phase 3: the hardcoded university list that used to live here has
+// been replaced by the live catalog context injected at runtime
+// via `getLiveCatalogContext()` (see src/lib/ai/live-data-context.ts).
+// That module reads universities, programs, and scholarships from
+// Supabase on every chat (5-min in-memory cache) so admin-added
+// entries show up automatically.
+//
+// We keep this export as an empty string for backward compatibility
+// — the route's `buildRAGContext()` adds the live catalog in
+// addition to this, so removing the import would break callers.
+export const SICA_UNIVERSITY_CONTEXT_PROMPT = ``;
 
 export const SICA_APPLICATION_GUIDE = `## Application Process Guide
 
