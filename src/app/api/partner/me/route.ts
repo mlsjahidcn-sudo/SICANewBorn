@@ -52,6 +52,21 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: memberErr.message }, { status: 500 });
   }
   if (!member) {
+    // Phase 6: detect the "half-finished signup" state — auth
+    // user has role='partner' in metadata but no partner/team
+    // row was ever created. Return a 409 with a specific code
+    // so the login page can offer a recovery form instead of
+    // just signing the user out.
+    const metadataRole = (auth.user.user_metadata?.role as string | undefined) ?? '';
+    if (metadataRole === 'partner') {
+      return NextResponse.json(
+        {
+          code: 'PARTNER_SETUP_INCOMPLETE',
+          error: 'Your partner registration is not complete. Fill in your organization details to finish setting up your account.',
+        },
+        { status: 409 },
+      );
+    }
     return NextResponse.json(
       { error: 'No partner account bound to your user' },
       { status: 403 },
