@@ -48,6 +48,16 @@ export async function POST(request: NextRequest) {
   const userAgent = request.headers.get('user-agent') ?? null;
   const sourcePage = (body.sourcePage as string) || '/assessment';
 
+  // Phase 26: marketing attribution. Mirrors /api/leads —
+  // the client (src/lib/utm.ts) captures UTM + click-id
+  // params and posts them here. Whitelisted explicitly so
+  // unknown keys can't sneak in via `...body`.
+  const utmSource = (body.utmSource as string)?.trim() || null;
+  const utmMedium = (body.utmMedium as string)?.trim() || null;
+  const utmCampaign = (body.utmCampaign as string)?.trim() || null;
+  const gclid = (body.gclid as string)?.trim() || null;
+  const fbclid = (body.fbclid as string)?.trim() || null;
+
   const transcript = (body.transcript as { name?: string; size?: number; type?: string }) || {};
   const transcriptStoragePath = (body.transcriptStoragePath as string) || null;
 
@@ -69,6 +79,12 @@ export async function POST(request: NextRequest) {
       notes: (body.notes as string) || null,
       source_page: sourcePage,
       user_agent: userAgent,
+      // Phase 26: marketing attribution
+      utm_source: utmSource,
+      utm_medium: utmMedium,
+      utm_campaign: utmCampaign,
+      gclid,
+      fbclid,
     };
     if (transcriptStoragePath) {
       insertPayload.transcript_storage_path = transcriptStoragePath;

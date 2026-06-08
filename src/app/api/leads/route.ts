@@ -36,6 +36,23 @@ export async function POST(request: NextRequest) {
   const referrer = request.headers.get('referer') ?? null;
   const userAgent = request.headers.get('user-agent') ?? null;
 
+  // Phase 26: marketing attribution. The client (via
+  // src/lib/utm.ts) captures UTM + click-id params from
+  // the URL on first sight and persists them in
+  // sessionStorage so cross-page nav doesn't lose them.
+  // Every form submission re-reads the current set and
+  // posts it here. The columns are nullable so a non-marketing
+  // visit (direct, organic) just stores NULL.
+  // We re-validate the field names against the DB column
+  // list — never `...body` because PostgREST silently drops
+  // unknown keys, which is exactly the "I sent it but the
+  // DB didn't get it" trap to avoid.
+  const utmSource = (body.utmSource as string)?.trim() || null;
+  const utmMedium = (body.utmMedium as string)?.trim() || null;
+  const utmCampaign = (body.utmCampaign as string)?.trim() || null;
+  const gclid = (body.gclid as string)?.trim() || null;
+  const fbclid = (body.fbclid as string)?.trim() || null;
+
   const kind = (body.kind as string) || 'contact';
 
   try {
@@ -66,6 +83,14 @@ export async function POST(request: NextRequest) {
           source_page: sourcePage || null,
           referrer,
           user_agent: userAgent,
+          // Phase 26: marketing attribution (see comment
+          // above). Whitelisted explicitly so unknown keys
+          // can't be smuggled in via `...body`.
+          utm_source: utmSource,
+          utm_medium: utmMedium,
+          utm_campaign: utmCampaign,
+          gclid,
+          fbclid,
         })
         .select('id, created_at')
         .single();

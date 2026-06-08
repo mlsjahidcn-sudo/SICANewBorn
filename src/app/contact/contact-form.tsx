@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { Spinner } from '@/components/ui/spinner';
+import { getCurrentUtm } from '@/lib/utm';
 import {
   Mail,
   AlertCircle,
@@ -46,6 +47,16 @@ export function ContactForm({ formTitle, labels, successMessages }: Props) {
 
     const form = e.currentTarget;
     const data = new FormData(form);
+    // Phase 26: capture UTM + click-id attribution. The
+    // helper reads from sessionStorage (set by a prior
+    // /?utm_source=... visit on this tab) and falls back
+    // to the current URL if storage is empty. Spreads the
+    // values into the payload so /api/leads can pass them
+    // through to the new utm_* + gclid + fbclid columns.
+    // Empty / undefined values are stripped (the helper
+    // returns {} for non-marketing visits), so a direct
+    // visit just omits the keys.
+    const utm = getCurrentUtm();
     const payload = {
       kind: 'contact',
       name: data.get('name'),
@@ -54,6 +65,7 @@ export function ContactForm({ formTitle, labels, successMessages }: Props) {
       subject: data.get('subject'),
       message: data.get('message'),
       sourcePage: typeof window !== 'undefined' ? window.location.pathname : '/contact',
+      ...utm,
     };
 
     try {

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, type FormEvent, type ChangeEvent } from 'react';
 import { Spinner } from '@/components/ui/spinner';
+import { getCurrentUtm } from '@/lib/utm';
 import {
   CheckCircle,
   Mail,
@@ -279,6 +280,12 @@ export function AssessmentForm({ successMessages }: Props) {
 
     const form = e.currentTarget;
     const data = new FormData(form);
+    // Phase 26: spread UTM + click-id attribution into the
+    // payload. Mirrors the contact-form pattern — helper
+    // reads sessionStorage (cross-page survival) and falls
+    // back to the current URL. Spreads the (possibly empty)
+    // object so a direct visit omits the keys cleanly.
+    const utm = getCurrentUtm();
     const payload = {
       firstName: data.get('firstName'),
       lastName: data.get('lastName'),
@@ -291,6 +298,7 @@ export function AssessmentForm({ successMessages }: Props) {
       targetUniversities: data.get('targetUniversities') || '',
       notes: data.get('notes') || '',
       sourcePage: window.location.pathname,
+      ...utm,
     };
 
     try {
