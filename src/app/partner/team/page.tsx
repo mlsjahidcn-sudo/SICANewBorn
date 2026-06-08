@@ -74,6 +74,32 @@ export default function PartnerTeamPage() {
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // Org identifier for the page header. Pulled from /api/partner/me
+  // so the team page reads "Team · Ednex" instead of a bare "Team" —
+  // lets an owner with multiple org tabs (or a member visiting the
+  // page) immediately see which org's team they're looking at. The
+  // sidebar already shows this, but repeating it in the page header
+  // is the convention used by admin/portals. Fails soft: null = use
+  // the bare "Team" label.
+  const [companyName, setCompanyName] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiFetchJson<{ partner: { company_name?: string | null } }>(
+          '/api/partner/me',
+        );
+        if (!cancelled) {
+          setCompanyName(res?.partner?.company_name ?? null);
+        }
+      } catch {
+        // Soft fail — header just falls back to bare "Team".
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteBusy, setInviteBusy] = useState(false);
@@ -542,8 +568,22 @@ export default function PartnerTeamPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-[#1B2A4A] flex items-center gap-2">
-            <Users className="h-6 w-6" /> {t('partnerTeam.title')}
+          {/* Org-scoped page header: "{Team} · {company name}" so
+              the page is immediately identifiable when the owner
+              has multiple partner orgs in different tabs, and a
+              team member lands on the page and can see which org
+              they're a member of. Falls back to bare "Team" when
+              /api/partner/me fails (transient error) or the org
+              has no company_name set. */}
+          <h1 className="text-2xl font-bold text-[#1B2A4A] flex items-center gap-2 flex-wrap">
+            <Users className="h-6 w-6" />
+            {t('partnerTeam.title')}
+            {companyName && (
+              <>
+                <span className="text-[#9B1B30] font-normal">·</span>
+                <span className="text-[#1B2A4A]">{companyName}</span>
+              </>
+            )}
           </h1>
           <p className="text-gray-500 mt-1">
             {t('partnerTeam.subtitle')}

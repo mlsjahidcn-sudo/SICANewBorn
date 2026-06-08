@@ -311,19 +311,25 @@ function PartnerLayoutInner({ children }: { children: React.ReactNode }) {
               })}
           </nav>
 
-          {/* Partner & Logout */}
+          {/* Org identity (sidebar footer) — company name is the org
+              identifier, not the partner's personal email. Email stays
+              visible as a muted sub-line for "which login is this?"
+              context. Avatar initial falls back to the company name's
+              first letter so the org, not the user, owns this slot. */}
           <div className="px-3 py-4 border-t border-gray-200">
             <div className="flex items-center gap-3 px-3 py-2 mb-2">
               <div className="w-8 h-8 bg-[#9B1B30] flex items-center justify-center">
                 <div className="text-white text-xs font-bold">
-                  {partner.email[0]?.toUpperCase() || 'P'}
+                  {partner.company_name?.[0]?.toUpperCase() || partner.email[0]?.toUpperCase() || 'P'}
                 </div>
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-[#1B2A4A] text-sm truncate">
-                  {partner.contact_person || partner.email}
+                  {partner.company_name || partner.email}
                 </div>
-                <div className="text-gray-500 text-xs">{t('partnerNav.partnerRole')}</div>
+                <div className="text-gray-500 text-xs truncate">
+                  {partner.contact_person ? `${partner.contact_person} · ` : ''}{partner.email}
+                </div>
               </div>
             </div>
             <button
@@ -348,7 +354,7 @@ function PartnerLayoutInner({ children }: { children: React.ReactNode }) {
             <Menu size={22} />
           </button>
           <div className="flex-1" />
-          <div className="text-sm text-[#4B5563]">{partner.email}</div>
+          <div className="text-sm text-[#4B5563]">{partner.company_name || partner.email}</div>
         </header>
 
         {/* Page content */}
