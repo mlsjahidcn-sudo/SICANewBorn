@@ -303,7 +303,7 @@ export default function UniversityDetailPage() {
                       )}
                     </ul>
                     <Link
-                      href="#"
+                      href={`/programs?university=${encodeURIComponent(slug)}`}
                       className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[#9B1B30] hover:underline"
                     >
                       {t('uni.viewAll')}
@@ -327,13 +327,13 @@ export default function UniversityDetailPage() {
                         <p className="text-sm font-semibold text-[#1B2A4A]">{uni.tuitionGraduate}</p>
                       </div>
                     </div>
-                    <Link
-                      href="#"
-                      className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[#9B1B30] hover:underline"
-                    >
-                      {t('uni.viewFees')}
-                      <ArrowRight className="h-3 w-3" />
-                    </Link>
+                    {/* C2: removed 'View Fees' link. Was href="#"
+                        (dead). There's no detailed fees section
+                        to scroll to and no separate fees page —
+                        the card already shows undergrad + grad
+                        tuition inline. If we ever build a fees
+                        detail block or page, this is where the
+                        link should come back. */}
                   </div>
 
                   {/* Intake */}
@@ -345,8 +345,14 @@ export default function UniversityDetailPage() {
                     <p className="mt-3 text-sm text-gray-600 leading-relaxed">
                       {locale === 'en' ? uni.intake : uni.intakeCn}
                     </p>
+                    {/* C2: was href="#". Intake is information-only
+                        here (no detail page). The natural action is
+                        to ask a counselor about admission timing for
+                        this specific university. Send to /contact
+                        with ?interest=<slug> so the form knows
+                        which school the lead is asking about. */}
                     <Link
-                      href="#"
+                      href={`/contact?interest=${encodeURIComponent(slug)}`}
                       className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[#9B1B30] hover:underline"
                     >
                       {t('uni.viewAdmissions')}
@@ -632,9 +638,25 @@ export default function UniversityDetailPage() {
                     ? 'Get personalized guidance from SICA counselors to apply to this university. We handle document prep, submission, and follow-up.'
                     : 'SICA 顾问为你提供个性化申请指导，从文件准备到提交跟进，全程协助。'}
                 </p>
-                <Button className="mt-3 w-full bg-[#9B1B30] hover:bg-[#7A1526] text-white font-semibold text-sm">
-                  {t('cta.apply')}
-                </Button>
+                {/* C1 (funnel audit): was a bare <Button> with no
+                    href/onClick — clicks did nothing. Wrap in a
+                    Link to /contact?interest=<slug> so the lead
+                    lands on the contact form with the university
+                    in the URL. Phase 25 (planned) will read the
+                    ?interest param on the contact form and
+                    pre-fill the subject/message. For now the
+                    param shows up in sourcePage and in the
+                    lead's URL when SICA's admin opens the row —
+                    enough attribution to attribute conversions
+                    to specific universities. */}
+                <Link
+                  href={`/contact?interest=${encodeURIComponent(slug)}`}
+                  className="block"
+                >
+                  <Button className="mt-3 w-full bg-[#9B1B30] hover:bg-[#7A1526] text-white font-semibold text-sm">
+                    {t('cta.apply')}
+                  </Button>
+                </Link>
                  <Link
                   href="/contact"
                   className="mt-2 block text-center text-xs font-semibold text-[#9B1B30] hover:underline"
