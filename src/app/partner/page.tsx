@@ -11,6 +11,7 @@ import {
   Calendar,
   MessageSquare,
   AlertCircle,
+  UserCog,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -59,6 +60,18 @@ interface PaginatedApplications {
   totalPages: number;
 }
 
+interface TeamMember {
+  id: string;
+  user_id: string;
+  role: 'owner' | 'member';
+  status: 'active' | 'pending_invite' | 'suspended';
+  email?: string | null;
+}
+
+interface TeamListResponse {
+  team: TeamMember[];
+}
+
 const ACTIVE_APPLICATION_STATUSES = new Set([
   'Draft',
   'Submitted',
@@ -81,6 +94,11 @@ export default function PartnerDashboard() {
   const [totalApplications, setTotalApplications] = useState(0);
   const [studentCountCapped, setStudentCountCapped] = useState(false);
   const [appCountCapped, setAppCountCapped] = useState(false);
+  // Team count is owner-only (the team GET 403s for non-owner members).
+  // Fetched independently so a 403 here doesn't fail-soft the rest of
+  // the dashboard — members simply don't see the team card.
+  const [team, setTeam] = useState<TeamMember[] | null>(null);
+  const [teamLoaded, setTeamLoaded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -93,11 +111,23 @@ export default function PartnerDashboard() {
         // status breakdowns (active / accepted) and the "Recent" lists
         // work off the capped slice, which is fine — the active count is
         // a directional signal, and "Recent 3" is always the latest 3.
-        const [studentsRes, appsRes] = await Promise.all([
+        //
+        // The team fetch is in a separate Promise.all block so a 403
+        // (non-owner member) doesn't short-circuit the rest of the load
+        // via Promise.all's fail-fast behavior. We catch + log it
+        // locally and keep `team: null` to mean "not an owner / not
+        // available", which the card render uses to hide the card.
+        const dataPromise = Promise.all([
           apiFetchJson<PaginatedStudents>('/api/partner/students?limit=100'),
           apiFetchJson<PaginatedApplications>('/api/partner/applications?limit=100'),
         ]);
+        const teamPromise = apiFetchJson<TeamListResponse>('/api/partner/team').then(
+          (res) => ({ ok: true as const, res }),
+          (err) => ({ ok: false as const, err }),
+        );
+        const [dataRes, teamRes] = await Promise.all([dataPromise, teamPromise]);
         if (cancelled) return;
+        const [studentsRes, appsRes] = dataRes;
         const studentsList = Array.isArray(studentsRes?.students) ? studentsRes.students : [];
         const appsList = Array.isArray(appsRes?.applications) ? appsRes.applications : [];
         setStudents(studentsList);
@@ -109,13 +139,22 @@ export default function PartnerDashboard() {
         // stay exact because they come from the API's count.
         setStudentCountCapped((studentsRes?.total ?? studentsList.length) > studentsList.length);
         setAppCountCapped((appsRes?.total ?? appsList.length) > appsList.length);
+        if (teamRes.ok) {
+          setTeam(Array.isArray(teamRes.res?.team) ? teamRes.res.team : []);
+        }
+        // teamRes.ok === false → 403 for non-owners, network error, etc.
+        // Either way, we just leave team=null and hide the card. Don't
+        // fail the whole dashboard over it.
       } catch (err) {
         if (cancelled) return;
         setLoadError(
           err instanceof ApiError ? err.message : t('partnerDashboard.failedToLoad'),
         );
       } finally {
-        if (!cancelled) setIsLoading(false);
+        if (!cancelled) {
+          setTeamLoaded(true);
+          setIsLoading(false);
+        }
       }
     })();
     return () => {
@@ -131,6 +170,14 @@ export default function PartnerDashboard() {
     ACTIVE_APPLICATION_STATUSES.has(a.status || ''),
   ).length;
   const acceptedApplications = applications.filter((a) => a.status === 'Accepted').length;
+  // Team counts: the team GET is owner-only. `team === null` means the
+  // caller's not an owner (or the fetch failed) — hide the card in that
+  // case. `team` is the full array (not paginated by the team endpoint
+  // — the team page is small enough that the owner wants to see
+  // everyone, so we don't paginate it).
+  const teamMembersTotal = team ? team.length : 0;
+  const teamMembersActive = team ? team.filter((m) => m.status === 'active').length : 0;
+  const teamMembersPending = team ? team.filter((m) => m.status === 'pending_invite').length : 0;
 
   const recentStudents = students.slice(0, 3);
   const recentApplications = applications.slice(0, 3);
@@ -209,7 +256,14 @@ export default function PartnerDashboard() {
         </div>
       </div>
 
-      {/* Stats Grid */}
+      {/* Stats Grid — 3 columns for non-owners, 4 for owners (team
+          card is owner-only). We can't toggle this before teamLoaded
+          resolves (first paint would flash 4 cols then drop to 3),
+          so we use a sentinel class: `lg:grid-cols-4` always, but
+          the team card is the 4th item. On lg, non-owners see 3
+          cards spread across the first 3 cols with the 4th col
+          empty. That's acceptable for now — switching the grid
+          breakpoint based on owner state would flash. */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="rounded-none">
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
@@ -284,6 +338,42 @@ export default function PartnerDashboard() {
             )}
           </CardContent>
         </Card>
+
+        {/* Team Members card — owner-only. The team GET 403s for
+            non-owners, so `team` stays null for them and the card
+            doesn't render. We only know whether the team call
+            succeeded after the fetch resolves, so we wait for
+            teamLoaded to avoid a flash of the card on first paint. */}
+        {team !== null && teamLoaded && (
+          <Card className="rounded-none">
+            <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+              <div>
+                <CardTitle className="text-sm font-medium text-[#4B5563]">{t('partnerDashboard.teamMembers')}</CardTitle>
+                <CardDescription>{t('partnerDashboard.teamMembersDesc')}</CardDescription>
+              </div>
+              <div className="bg-[#D4A853]/15 p-2 rounded-none">
+                <UserCog className="h-5 w-5 text-[#9B1B30]" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-[#1B2A4A]">{teamMembersTotal}</div>
+              <p className="text-sm text-[#4B5563] mt-1">
+                {t('partnerDashboard.teamMembersActiveInline', { count: teamMembersActive })}
+                {teamMembersPending > 0 && (
+                  <>
+                    {' · '}
+                    {t('partnerDashboard.teamMembersPendingInline', { count: teamMembersPending })}
+                  </>
+                )}
+              </p>
+              <Button asChild variant="outline" size="sm" className="mt-4 w-full rounded-none">
+                <Link href="/partner/team" className="flex items-center justify-center">
+                  {t('partnerDashboard.viewTeam')} <ChevronRight className="ml-1 h-4 w-4" />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
