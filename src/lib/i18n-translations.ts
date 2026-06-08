@@ -358,6 +358,12 @@ export const translations: Record<Locale, Record<string, string>> = {
      'stickyContact.title': 'Chat with SICA',
      'stickyContact.subtitle': 'We respond within 24 hours',
      'stickyContact.buttonLabel': 'Open contact options',
+     // Sticky "Apply" bar (long-page conversion widget)
+     'stickyApply.ariaLabel': 'Quick apply bar for this university',
+     'stickyApply.dismissLabel': 'Dismiss apply bar',
+     'stickyApply.applyingTo': 'Applying to',
+     'stickyApply.whatsapp': 'WhatsApp',
+     'stickyApply.apply': 'Apply',
      // Programmatic SEO — city pages (/study-in-china/*)
      'seo.cities.eyebrow': 'Study in China',
      'seo.cities.hubTitle': 'Study in China — Choose Your City',
@@ -2088,6 +2094,12 @@ export const translations: Record<Locale, Record<string, string>> = {
     'stickyContact.title': '联系 SICA',
     'stickyContact.subtitle': '我们将在 24 小时内回复',
     'stickyContact.buttonLabel': '打开联系方式',
+    // Sticky "Apply" bar (long-page conversion widget)
+    'stickyApply.ariaLabel': '该大学的快捷申请栏',
+    'stickyApply.dismissLabel': '关闭申请栏',
+    'stickyApply.applyingTo': '申请院校',
+    'stickyApply.whatsapp': 'WhatsApp',
+    'stickyApply.apply': '申请',
     // Programmatic SEO — city pages (/study-in-china/*)
     'seo.cities.eyebrow': '在中国留学',
     'seo.cities.hubTitle': '在中国留学 — 选择你的城市',

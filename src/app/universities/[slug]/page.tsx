@@ -33,6 +33,7 @@ import {
 
 import UniversityLogo from '@/components/university-logo';
 import { DeadlineCountdown } from '@/components/deadline-countdown';
+import { StickyApplyBar } from '@/components/StickyApplyBar';
 
 export default function UniversityDetailPage() {
   const params = useParams();
@@ -692,6 +693,18 @@ export default function UniversityDetailPage() {
           />
         </div>
       </div>
+
+      {/* Sticky "Apply" bar — once the user has scrolled past
+          the hero on this long page, the primary CTA is
+          otherwise lost above the fold. The bar reads the
+          current university name + slug, labeles itself
+          accordingly, and routes the Apply button into the
+          /contact?interest=<slug> chain wired in Phase 24
+          (so the contact form pre-fills the university). */}
+      <StickyApplyBar
+        universityName={locale === 'en' ? uni.name : uni.nameCn || uni.name}
+        universitySlug={uni.slug}
+      />
     </>
   );
 }
