@@ -13,7 +13,23 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { universities, programs, degreeLevels, intendedIntakes, documentTypes } from '@/lib/data';
+import { degreeLevels, intendedIntakes, documentTypes } from '@/lib/data';
+// Phase 20: universities + programs were imported from the static
+// `data.ts` fallback (the 9-school / 17-program set shipped with
+// the repo). Any school or program an admin added through
+// /admin/universities or /admin/programs was invisible here —
+// admins could create applications for rows that didn't exist in
+// the public catalog. Same root-cause as the Phase 3 chatbot fix
+// (live data context module) and the Phase S20 student-wizard
+// refactor. We now fetch the live catalog on mount from the
+// public APIs.
+//
+// `degreeLevels`, `intendedIntakes`, and `documentTypes` stay
+// as static imports for now — they're closed taxonomies not
+// managed via the admin UI yet (no /admin/intakes or
+// /admin/document-types pages). If we ever add admin UIs for
+// those, they'll need the same treatment.
+import type { University, Program } from '@/lib/data';
 import { useStudentList } from '@/hooks/use-student-list';
 import { apiFetchJson } from '@/lib/api-client';
 import type { AdminStudent } from '@/lib/student-mapper';
@@ -43,9 +59,18 @@ export default function AdminNewApplicationPage() {
   const [selectedStudent, setSelectedStudent] = useState<AdminStudent | null>(null);
   const [studentDocuments, setStudentDocuments] = useState<StudentDocument[]>([]);
   const [studentDocumentsLoading, setStudentDocumentsLoading] = useState(false);
-  const [filteredPrograms, setFilteredPrograms] = useState(programs);
-  const [filteredUniversities, setFilteredUniversities] = useState(universities);
-  
+  // Phase 20: live catalog. Was `useState(programs)` /
+  // `useState(universities)` reading the static `data.ts` fallback
+  // (the 9-school / 17-program set). Admin-added schools + programs
+  // were invisible in the create-app wizard. Now fetched from
+  // /api/universities and /api/programs on mount, with a
+  // `dataLoading` flag the page can show in the dropdown placeholders.
+  const [universities, setUniversities] = useState<University[]>([]);
+  const [programs, setPrograms] = useState<Program[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
+  const [filteredPrograms, setFilteredPrograms] = useState<Program[]>([]);
+  const [filteredUniversities, setFilteredUniversities] = useState<University[]>([]);
+
   const [formData, setFormData] = useState<FormData>({
     studentId: null,
     applicantName: '',
@@ -62,6 +87,37 @@ export default function AdminNewApplicationPage() {
     selectedDocuments: []
   });
 
+  // Phase 20: fetch the live university + program catalog on mount.
+  // The two endpoints are independent — run in parallel; one
+  // failing shouldn't block the other. Limit=500 covers the
+  // realistic catalog size (the live DB has 27 universities +
+  // 149 programs as of Phase 3 — well under the cap).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [u, p] = await Promise.all([
+          apiFetchJson<{ universities: University[] }>('/api/universities?limit=500'),
+          apiFetchJson<{ programs: Program[] }>('/api/programs?limit=500'),
+        ]);
+        if (cancelled) return;
+        setUniversities(u.universities || []);
+        setPrograms(p.programs || []);
+      } catch (err) {
+        if (cancelled) return;
+        // Soft fail — the dropdowns will just show empty. Admin
+        // can retry by reloading the page. Better than a hard
+        // error blocking the whole wizard.
+        console.error('[admin/applications/new] failed to load catalog:', err);
+      } finally {
+        if (!cancelled) setDataLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Filter programs when degree changes
   useEffect(() => {
     if (formData.degree) {
@@ -75,7 +131,7 @@ export default function AdminNewApplicationPage() {
     } else {
       setFilteredPrograms(programs);
     }
-  }, [formData.degree]);
+  }, [formData.degree, programs]);
 
   // Filter universities when program changes
   useEffect(() => {
@@ -92,7 +148,7 @@ export default function AdminNewApplicationPage() {
     } else {
       setFilteredUniversities(universities);
     }
-  }, [formData.program]);
+  }, [formData.program, programs, universities]);
 
   // Load student documents when student is selected
   useEffect(() => {
@@ -618,13 +674,25 @@ export default function AdminNewApplicationPage() {
 
                     <div>
                       <Label className="text-[#1F2937]">Program *</Label>
-                      <Select 
-                        value={formData.program} 
+                      <Select
+                        value={formData.program}
                         onValueChange={(value) => handleChange('program', value)}
-                        disabled={!formData.degree}
+                        // Phase 20: gate the dropdown on the live
+                        // catalog fetch. Without this the admin
+                        // sees a flash of "no programs" between
+                        // mount and the API response settling.
+                        disabled={!formData.degree || dataLoading}
                       >
                         <SelectTrigger className="rounded-none mt-1">
-                          <SelectValue placeholder={formData.degree ? "Select program..." : "First select degree level"} />
+                          <SelectValue
+                            placeholder={
+                              dataLoading
+                                ? 'Loading catalog...'
+                                : formData.degree
+                                  ? 'Select program...'
+                                  : 'First select degree level'
+                            }
+                          />
                         </SelectTrigger>
                         <SelectContent>
                           {filteredPrograms.map(program => (
@@ -632,6 +700,15 @@ export default function AdminNewApplicationPage() {
                               {program.name}
                             </SelectItem>
                           ))}
+                          {/* Empty-state inside the dropdown so the
+                              admin gets feedback when their filter
+                              has no matches (e.g. no programs for
+                              the chosen degree). */}
+                          {filteredPrograms.length === 0 && !dataLoading && formData.degree && (
+                            <div className="px-2 py-3 text-xs text-[#4B5563] text-center">
+                              No programs found for this degree level.
+                            </div>
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
