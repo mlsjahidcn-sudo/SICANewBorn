@@ -1018,6 +1018,32 @@ export function PartnerApplicationForm({
               {t('partnerAppForm.fieldPriorityHint')}
             </p>
           </div>
+          {/* M4: optional applicationNumber field. Some
+              partners have internal CRM IDs they want to
+              track alongside SICA's auto-minted
+              PA-YYYY-NNNN. Default behavior is unchanged:
+              if left blank, the server mints a fresh one
+              via next_partner_app_number RPC. If filled,
+              the partner's CRM ID is what shows on the
+              application detail + the export CSV (paired
+              with the auto-minted one). */}
+          <div>
+            <Label htmlFor="applicationNumber" className="text-[#1B2A4A] mb-2 block">
+              {t('partnerAppForm.fieldApplicationNumber')}
+            </Label>
+            <Input
+              id="applicationNumber"
+              name="applicationNumber"
+              value={formData.applicationNumber}
+              onChange={(e) => set('applicationNumber', e.target.value)}
+              className="rounded-none"
+              placeholder={t('partnerAppForm.fieldApplicationNumberPlaceholder')}
+              maxLength={64}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              {t('partnerAppForm.fieldApplicationNumberHint')}
+            </p>
+          </div>
         </div>
         <div className="mt-4">
           <Label htmlFor="notes" className="text-[#1B2A4A] mb-2 block">

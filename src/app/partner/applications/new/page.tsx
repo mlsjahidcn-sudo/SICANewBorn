@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, CheckCircle } from 'lucide-react';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -35,6 +35,10 @@ export default function PartnerNewApplicationPage() {
   const [dataLoading, setDataLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // L4: success banner shown after create, before navigation.
+  // Cleared on close so the partner can create another row
+  // without seeing a stale success.
+  const [submitSuccess, setSubmitSuccess] = useState(false);
   // Phase 1.6: per-field validation. Map of field name → error
   // message. The form renders each error inline under the
   // corresponding field. The submit handler populates this on
@@ -91,6 +95,7 @@ export default function PartnerNewApplicationPage() {
     e.preventDefault();
     setError(null);
     setFieldErrors({});
+    setSubmitSuccess(false);
 
     // Phase 1.6: per-field validation. We collect all field
     // errors up front so the user sees the full set at once
@@ -110,6 +115,23 @@ export default function PartnerNewApplicationPage() {
         formData.passportIssueDate &&
         formData.passportExpiryDate < formData.passportIssueDate) {
       errs.passportExpiryDate = t('partnerAppNew.errorPassportDateOrder');
+    }
+    // M9: email format validation. studentEmail is optional
+    // (some leads are tracked by name + university first,
+    // email comes later when the student signs up), but IF
+    // filled it must be a real format. The <Input> is
+    // type="email" so the browser does a soft check, but
+    // type="email" doesn't actually block submit on invalid
+    // values — only the visual cue. We add a real check
+    // here so a typo'd "gmial.com" doesn't get stored and
+    // cause a bounce later when SICA tries to email the
+    // student. RFC 5322 lite — good enough for catch obvious
+    // typos without rejecting the long tail of valid RFC
+    // addresses. Trim before checking so a stray space
+    // doesn't look valid.
+    const trimmedEmail = formData.studentEmail.trim();
+    if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      errs.studentEmail = t('partnerAppNew.errorStudentEmailInvalid');
     }
     if (Object.keys(errs).length > 0) {
       setFieldErrors(errs);
@@ -179,6 +201,10 @@ export default function PartnerNewApplicationPage() {
         // API defaults status to 'Draft' and decision to 'Pending'
         // on insert.
         priority: formData.priority,
+        // M4: partner's optional internal CRM ID. If unset,
+        // the server mints one via next_partner_app_number.
+        // Whitespace-only is treated as unset.
+        applicationNumber: formData.applicationNumber.trim() || undefined,
         notes: formData.notes.trim() || undefined,
       };
       const res = await apiFetchJson<{ application: { id: string } }>(
@@ -188,7 +214,16 @@ export default function PartnerNewApplicationPage() {
           body: JSON.stringify(payload),
         },
       );
-      router.push(`/partner/applications/${res.application.id}`);
+      // L4: short success toast before navigation. The
+      // previous flow jumped straight to the detail page
+      // with no feedback — partner wasn't sure the row
+      // saved until the detail page loaded. 1500ms is
+      // long enough to read, short enough to feel
+      // snappy. Matches the student wizard's timing.
+      setSubmitSuccess(true);
+      setTimeout(() => {
+        router.push(`/partner/applications/${res.application.id}`);
+      }, 1500);
     } catch (err) {
       console.error('[partner/applications/new] save failed:', err);
       setError(err instanceof Error ? err.message : t('partnerAppNew.errorCreate'));
@@ -246,6 +281,28 @@ export default function PartnerNewApplicationPage() {
       {error && (
         <Card className="rounded-none border-red-200 bg-red-50">
           <CardContent className="p-4 text-sm text-red-700">{error}</CardContent>
+        </Card>
+      )}
+
+      {/* L4: success banner. "Draft" wording because
+          partner rows always start as Draft — SICA's admin
+          team is the one who moves them to Submitted /
+          In Review / Accepted. Set above the form so it's
+          the last thing the partner sees before the page
+          navigates. The timer in handleSubmit is 1500ms;
+          this card is what they're reading during that
+          window. The form below is greyed-out via the
+          PartnerApplicationForm's own isSaving prop so
+          they can't double-submit. */}
+      {submitSuccess && (
+        <Card className="rounded-none border-green-300 bg-green-50">
+          <CardContent className="p-4 text-sm text-green-800 flex items-center gap-2">
+            <CheckCircle className="h-4 w-4 text-green-700 flex-shrink-0" />
+            <div>
+              <strong>{t('partnerAppNew.successTitle')}</strong>{' '}
+              {t('partnerAppNew.successBody')}
+            </div>
+          </CardContent>
         </Card>
       )}
 
