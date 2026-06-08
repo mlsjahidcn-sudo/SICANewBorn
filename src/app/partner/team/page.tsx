@@ -45,6 +45,11 @@ interface TeamMember {
   suspended_at: string | null;
   suspension_reason: string | null;
   created_at: string;
+  // Phase 12: hydrated from auth.users via the partner-user-lookup
+  // helper. null when the user has never signed in (pending invite,
+  // just-created, or hard-deleted auth.users row). The team page
+  // shows "Last seen: 3 days ago" in the row meta line.
+  lastSignInAt: string | null;
 }
 
 // Map a DB status enum to the display string (DB enum stays raw;
@@ -177,6 +182,25 @@ export default function PartnerTeamPage() {
   const ROLE_DISPLAY: Record<string, string> = {
     owner: t('partnerTeam.roleOwner'),
     member: t('partnerTeam.roleMember'),
+  };
+
+  // Phase 12: relative time helper for "Last seen: 3 days ago".
+  // Mirrors the pattern used on the notifications page (Phase 1.11).
+  // Buckets:
+  //   < 60s         → "just now"
+  //   < 60m         → "Nm ago" (e.g. "12m ago")
+  //   < 24h         → "Nh ago"  (e.g. "3h ago")
+  //   < 7d          → "Nd ago"  (e.g. "2d ago")
+  //   older         → absolute date
+  const formatRelativeTime = (iso: string): string => {
+    const then = new Date(iso).getTime();
+    if (Number.isNaN(then)) return iso;
+    const diffSec = Math.floor((Date.now() - then) / 1000);
+    if (diffSec < 60) return t('partnerTeam.relativeJustNow');
+    if (diffSec < 3600) return t('partnerTeam.relativeMinutesAgo', { count: Math.floor(diffSec / 60) });
+    if (diffSec < 86_400) return t('partnerTeam.relativeHoursAgo', { count: Math.floor(diffSec / 3600) });
+    if (diffSec < 604_800) return t('partnerTeam.relativeDaysAgo', { count: Math.floor(diffSec / 86_400) });
+    return new Date(iso).toLocaleDateString();
   };
 
   // Phase 9: detect "non-owner landed on the team page directly"
@@ -606,6 +630,18 @@ export default function PartnerTeamPage() {
                           : t('partnerTeam.createdOn', { date: new Date(m.created_at).toLocaleDateString() })}
                       {m.suspended_at && t('partnerTeam.suspendedOn', { date: new Date(m.suspended_at).toLocaleDateString() })}
                       {m.suspension_reason && t('partnerTeam.suspensionReason', { reason: m.suspension_reason })}
+                      {/* Phase 12: Last seen — only for active members
+                          who have actually signed in at least once.
+                          Pending invites have null lastSignInAt so we
+                          hide the line. Suspended members keep the
+                          timestamp so the owner can see "they
+                          signed in once on June 5, then went
+                          silent". */}
+                      {m.status === 'active' && m.lastSignInAt && (
+                        <span className="block mt-0.5">
+                          {t('partnerTeam.lastSeen', { when: formatRelativeTime(m.lastSignInAt) })}
+                        </span>
+                      )}
                     </p>
                   </div>
                   {m.role !== 'owner' && (

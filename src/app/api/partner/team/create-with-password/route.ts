@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { buildServiceClient, requireTeamMember, getServerEnv } from '@/lib/supabase-auth';
+import { findUserIdByEmail, primeEmailToUserIdCache } from '@/lib/partner-user-lookup';
 
 /**
  * Phase 5: POST /api/partner/team/create-with-password
@@ -86,15 +87,12 @@ export async function POST(request: NextRequest) {
 
   // 1. Refuse if the email is already a user — we don't want to
   // overwrite someone's existing Supabase password, and we don't
-  // want to silently create a duplicate account.
-  const { data: usersPage } = await service.auth.admin.listUsers({ perPage: 200 });
-  let userId: string | null = null;
-  for (const u of usersPage?.users || []) {
-    if ((u.email || '').toLowerCase() === email) {
-      userId = u.id;
-      break;
-    }
-  }
+  // want to silently create a duplicate account. Direct
+  // single-user lookup via the partner-user-lookup helper
+  // (paginated + cached, see the helper for the why). Replaces the
+  // old listUsers({perPage: 200}) approach which silently
+  // truncated at 201+ users.
+  const userId: string | null = await findUserIdByEmail(service, email);
   if (userId) {
     return NextResponse.json(
       { error: `${email} already has a SICA account. Use "Send invite email" to add them to your team instead.` },
@@ -117,7 +115,12 @@ export async function POST(request: NextRequest) {
       { status: 500 },
     );
   }
-  userId = created.user.id;
+  const createdUserId = created.user.id;
+  // Update the email→userId cache so a follow-up invite / create
+  // with the same email within the 60s TTL doesn't re-scan the
+  // user list (and, more importantly, doesn't try to createUser
+  // again, which Supabase rejects with a 500).
+  primeEmailToUserIdCache(email, createdUserId);
 
   // 3. Refuse if they're already on a partner team. The auth.users
   // row was just created so this should be impossible, but check
@@ -125,11 +128,11 @@ export async function POST(request: NextRequest) {
   const { data: existingMember } = await service
     .from('partner_team_members')
     .select('id, partner_id')
-    .eq('user_id', userId)
+    .eq('user_id', createdUserId)
     .maybeSingle();
   if (existingMember) {
     // Roll back the auth.users row we just created
-    await service.auth.admin.deleteUser(userId);
+    await service.auth.admin.deleteUser(createdUserId);
     return NextResponse.json(
       { error: `${email} is already a member of another partner organization` },
       { status: 409 },
@@ -143,7 +146,7 @@ export async function POST(request: NextRequest) {
     .from('partner_team_members')
     .insert({
       partner_id: auth.partnerId,
-      user_id: userId,
+      user_id: createdUserId,
       role: 'member',
       status: 'active',
       invited_by: auth.user.id,
@@ -155,7 +158,7 @@ export async function POST(request: NextRequest) {
 
   if (mErr || !member) {
     // Roll back the auth.users row
-    await service.auth.admin.deleteUser(userId);
+    await service.auth.admin.deleteUser(createdUserId);
     return NextResponse.json(
       { error: mErr?.message || 'Failed to create team member row' },
       { status: 500 },

@@ -79,7 +79,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Phase 3: hydrate created_by_email via auth.admin.listUsers
+    // Phase 3: hydrate created_by_email via the partner-scoped
+    // helper (one getUserById per unique user_id, parallel, with a
+    // 60s in-memory cache). Replaces the old listUsers({perPage: 200})
+    // approach which silently truncated at 201+ users and pulled
+    // every project user into the partner server's memory. See
+    // src/lib/partner-user-lookup.ts.
     const userIds = Array.from(
       new Set(
         (data || [])
@@ -87,25 +92,20 @@ export async function GET(request: NextRequest) {
           .filter((id): id is string => Boolean(id)),
       ),
     );
-    let emailMap = new Map<string, string>();
+    const emailMap = new Map<string, string | null>();
     if (userIds.length) {
       const { buildServiceClient, getServerEnv: gse } = await import('@/lib/supabase-auth');
       if (gse().serviceKey) {
-        const { data: usersPage } = await buildServiceClient().auth.admin.listUsers({
-          perPage: 200,
-        });
-        for (const u of usersPage?.users || []) {
-          if (userIds.includes(u.id)) {
-            emailMap.set(u.id, u.email || '');
-          }
-        }
+        const { hydrateUserEmails } = await import('@/lib/partner-user-lookup');
+        const hydrated = await hydrateUserEmails(buildServiceClient(), userIds);
+        for (const [id, h] of hydrated) emailMap.set(id, h.email);
       }
     }
     const students = (data || []).map((r) => {
       const id = (r as { created_by_user_id?: string | null }).created_by_user_id;
       return mapPartnerStudentFromDb({
         ...(r as Record<string, unknown>),
-        created_by_email: id ? emailMap.get(id) || null : null,
+        created_by_email: id ? emailMap.get(id) ?? null : null,
       } as Parameters<typeof mapPartnerStudentFromDb>[0]);
     });
     const total = count || 0;

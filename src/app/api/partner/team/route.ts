@@ -13,6 +13,7 @@ import { SITE_URL } from '@/lib/site-url';
 import { NextRequest, NextResponse } from 'next/server';
 import { buildServiceClient, requireTeamMember, getServerEnv } from '@/lib/supabase-auth';
 import { Resend } from 'resend';
+import { findUserIdByEmail, hydrateUserEmails, primeEmailToUserIdCache } from '@/lib/partner-user-lookup';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,18 +43,21 @@ export async function GET(_request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Hydrate emails
+  // Hydrate email + lastSignInAt for the team via the partner-scoped
+  // helper (one getUserById per user, parallel, with a 60s in-memory
+  // cache). Replaces the old listUsers({perPage: 200}) approach which
+  // silently truncated at 201+ users and pulled every project user
+  // into the partner server's memory. See src/lib/partner-user-lookup.ts.
   const userIds = (team || []).map((t) => (t as { user_id: string }).user_id);
-  const { data: usersPage } = userIds.length
-    ? await service.auth.admin.listUsers({ perPage: 200 })
-    : { data: { users: [] } };
-  const emailMap = new Map<string, string>();
-  for (const u of usersPage?.users || []) {
-    emailMap.set(u.id, u.email || '');
-  }
+  const hydrated = await hydrateUserEmails(service, userIds);
   const teamWithEmails = (team || []).map((t) => {
     const r = t as { user_id: string };
-    return { ...t, email: emailMap.get(r.user_id) || null };
+    const h = hydrated.get(r.user_id);
+    return {
+      ...t,
+      email: h?.email ?? null,
+      lastSignInAt: h?.lastSignInAt ?? null,
+    };
   });
 
   return NextResponse.json({ team: teamWithEmails });
@@ -103,15 +107,16 @@ export async function POST(request: NextRequest) {
 
   const service = buildServiceClient();
 
-  // 1. Find or create the auth.users row
-  const { data: usersPage } = await service.auth.admin.listUsers({ perPage: 200 });
-  let userId: string | null = null;
-  for (const u of usersPage?.users || []) {
-    if ((u.email || '').toLowerCase() === email) {
-      userId = u.id;
-      break;
-    }
-  }
+  // 1. Look up the auth.users row by email. The Supabase JS admin
+  // API (2.95.x) doesn't expose getUserByEmail, and the underlying
+  // GoTrue admin HTTP endpoint ignores the ?email= filter. So we
+  // paginate listUsers ourselves via the partner-user-lookup
+  // helper — bounded at 2000 users, stops early on match, cached
+  // for 60s. Replaces the old listUsers({perPage: 200}) + JS
+  // filter which silently truncated at 201+ users (an email at
+  // the bottom of the alphabet was just "not found", no error
+  // surfaced).
+  let userId: string | null = await findUserIdByEmail(service, email);
   let isNewUser = false;
   if (!userId) {
     // Create with a temp password — the user will set their own at
@@ -131,6 +136,13 @@ export async function POST(request: NextRequest) {
     }
     userId = created.user.id;
     isNewUser = true;
+    // Update the cache: this email is now taken. Without this, a
+    // follow-up call (within the 60s TTL) would hit the cache's
+    // "not found" entry and try to createUser again — which would
+    // fail with "A user with this email address has already been
+    // registered" (a 500) instead of cleanly returning the
+    // existing user's id.
+    primeEmailToUserIdCache(email, userId);
   }
 
   // 2. Refuse if they're already a member of any partner

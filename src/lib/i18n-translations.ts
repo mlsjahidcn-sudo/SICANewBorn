@@ -1556,6 +1556,13 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerTeam.errorSuspend': 'Failed to suspend member',
     'partnerTeam.errorReactivate': 'Failed to reactivate member',
     'partnerTeam.errorTransfer': 'Failed to transfer ownership',
+    // Phase 12: "last seen" rendering on the team page. The
+    // formatRelativeTime helper builds these from an ISO date.
+    'partnerTeam.lastSeen': 'Last seen: {{when}}',
+    'partnerTeam.relativeJustNow': 'just now',
+    'partnerTeam.relativeMinutesAgo': '{{count}}m ago',
+    'partnerTeam.relativeHoursAgo': '{{count}}h ago',
+    'partnerTeam.relativeDaysAgo': '{{count}}d ago',
     // Partner Portal — settings
     'partnerSettings.title': 'Settings',
     'partnerSettings.subtitle': 'Manage your partner account settings',
@@ -3216,6 +3223,11 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerTeam.errorSuspend': '暂停成员失败',
     'partnerTeam.errorReactivate': '恢复成员失败',
     'partnerTeam.errorTransfer': '转移所有权失败',
+    'partnerTeam.lastSeen': '最后登录：{{when}}',
+    'partnerTeam.relativeJustNow': '刚刚',
+    'partnerTeam.relativeMinutesAgo': '{{count}} 分钟前',
+    'partnerTeam.relativeHoursAgo': '{{count}} 小时前',
+    'partnerTeam.relativeDaysAgo': '{{count}} 天前',
     // Partner Portal — settings
     'partnerSettings.title': '设置',
     'partnerSettings.subtitle': '管理您的合作方账户设置',
