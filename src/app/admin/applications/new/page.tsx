@@ -192,8 +192,16 @@ export default function AdminNewApplicationPage() {
         intake: formData.intake,
         status: 'Submitted',
         personalStatement: formData.personalStatement,
+        // C4: the form's `notes` field is the same Textarea for
+        // both student-visible additional_notes AND admin-only
+        // admin_notes. Mapping it to BOTH meant the student saw
+        // whatever the admin typed. The form has no separate
+        // "internal notes" field, so the safe default is to only
+        // send additional_notes (visible to student). The admin
+        // can write admin-only notes from the application detail
+        // page after creation, where the field is properly
+        // separated.
         additionalNotes: formData.notes,
-        adminNotes: formData.notes,
       };
       // S12.2: Either link to a registered student OR capture applicant details
       if (formData.studentId) {
@@ -204,10 +212,58 @@ export default function AdminNewApplicationPage() {
         if (formData.applicantPhone) payload.applicantPhone = formData.applicantPhone;
         if (formData.applicantNationality) payload.applicantNationality = formData.applicantNationality;
       }
-      await apiFetchJson<{ application: { id: string } }>('/api/admin/applications', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      });
+      const res = await apiFetchJson<{ application: { id: string } }>(
+        '/api/admin/applications',
+        {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        },
+      );
+
+      // C2: actually link the selected documents. The form has
+      // a full "Documents to Sync" panel with checkboxes +
+      // an "N of M selected" counter + a review step that
+      // shows green badges, but the POST payload never carried
+      // the document IDs — the whole feature was silent
+      // theater. After the application is created, PATCH each
+      // selected doc to set its application_id. Mirrors the
+      // student wizard's linkOrphanDocsToApplication pattern.
+      //
+      // The PATCH is on /api/admin/documents/[id] (the doc
+      // review queue route, extended in Phase 18 to also
+      // accept applicationId). Failures are non-fatal: log
+      // them and let the admin re-attach from the document
+      // detail page if needed. The application itself was
+      // created successfully — that is the user-visible
+      // outcome.
+      if (formData.selectedDocuments.length > 0) {
+        const linkResults = await Promise.allSettled(
+          formData.selectedDocuments.map((docId) =>
+            apiFetchJson(`/api/admin/documents/${docId}`, {
+              method: 'PATCH',
+              // Link-only PATCH: don't touch status. The wizard
+              // filters the auto-selected docs to "Student Basic
+              // + Verified" so the linked docs are already in a
+              // good state. Sending status would risk flipping a
+              // Pending doc to Verified as a side effect of the
+              // link, which isn't what the admin asked for.
+              // Phase 18 extended the PATCH route to accept a
+              // body with just `applicationId` (status is now
+              // optional).
+              body: JSON.stringify({
+                applicationId: res.application.id,
+              }),
+            }),
+          ),
+        );
+        const failed = linkResults.filter((r) => r.status === 'rejected').length;
+        if (failed > 0) {
+          console.error(
+            `[admin/applications/new] ${failed} of ${formData.selectedDocuments.length} document links failed`,
+          );
+        }
+      }
+
       router.push('/admin/applications');
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Failed to create application');
@@ -788,8 +844,16 @@ export default function AdminNewApplicationPage() {
                   className="rounded-none bg-[#9B1B30] hover:bg-[#7A1526] text-white"
                   onClick={() => setStep(step + 1)}
                   disabled={
-                    step === 1 && !formData.studentId ||
-                    step === 2 && (!formData.degree || !formData.program || !formData.intake)
+                    // C3: step 1 can proceed EITHER with a
+                    // selected existing student OR with a valid
+                    // lead (name + email both filled). The
+                    // previous condition `!formData.studentId`
+                    // blocked the lead path entirely — the Next
+                    // button stayed disabled forever for a lead,
+                    // even after filling name + email.
+                    (step === 1 && !formData.studentId &&
+                     !(formData.applicantName.trim() && formData.applicantEmail.trim())) ||
+                    (step === 2 && (!formData.degree || !formData.program || !formData.intake))
                   }
                 >
                   Next
@@ -799,7 +863,14 @@ export default function AdminNewApplicationPage() {
                 <Button
                   className="rounded-none bg-[#9B1B30] hover:bg-[#7A1526] text-white"
                   onClick={handleSubmit}
-                  disabled={isLoading || !formData.studentId}
+                  disabled={
+                    isLoading ||
+                    // C3: same as the Next button — submit
+                    // requires either a linked student OR a
+                    // valid lead pair (name + email).
+                    (!formData.studentId &&
+                     !(formData.applicantName.trim() && formData.applicantEmail.trim()))
+                  }
                 >
                   {isLoading ? (
                     <>

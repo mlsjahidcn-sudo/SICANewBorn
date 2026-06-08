@@ -106,18 +106,40 @@ export async function PATCH(
 
   try {
     const body = await request.json();
-    const { status, rejectionReason } = body as {
+    const { status, rejectionReason, applicationId } = body as {
+      // Phase 18: status is now optional. Previously required,
+      // but the "create application" wizard needs to PATCH a
+      // doc just to link it to the new application (no status
+      // change). If status is omitted we only touch
+      // application_id; the existing status / verified_at /
+      // rejection_reason are preserved as-is.
       status?: string;
       rejectionReason?: string | null;
+      // Phase 18: admin can now PATCH a document's
+      // application_id to link it to a new application. Set to
+      // null to unlink. Used by the "create application" wizard
+      // when the admin picks verified documents to auto-sync.
+      // Whitelisted separately from status/rejectionReason so
+      // a status-only PATCH still works exactly as before.
+      applicationId?: string | null;
     };
 
-    if (!status || !(ALLOWED_STATUSES as readonly string[]).includes(status)) {
+    // At least one of status / applicationId must be present —
+    // a PATCH that touches nothing is a 400, not a silent no-op.
+    if (status === undefined && applicationId === undefined) {
+      return NextResponse.json(
+        { error: 'No editable fields provided (status, applicationId)' },
+        { status: 400 },
+      );
+    }
+
+    if (status !== undefined && !(ALLOWED_STATUSES as readonly string[]).includes(status)) {
       return NextResponse.json(
         { error: "status must be 'Pending' | 'Verified' | 'Rejected'" },
         { status: 400 },
       );
     }
-    const newStatus = status as AdminDocStatus;
+    const newStatus = (status ?? null) as AdminDocStatus | null;
 
     if (newStatus === 'Rejected') {
       const reason = typeof rejectionReason === 'string' ? rejectionReason.trim() : '';
@@ -150,22 +172,39 @@ export async function PATCH(
     // canonical audit fields — set when an admin signs off
     // (Verified or Rejected), cleared when the doc is moved
     // back to Pending.
-    const updates: Record<string, unknown> = { status: newStatus };
-    if (newStatus === 'Verified' || newStatus === 'Rejected') {
-      updates.verified_at = new Date().toISOString();
-      updates.verified_by = auth.user.id;
-    } else {
-      updates.verified_at = null;
-      updates.verified_by = null;
+    //
+    // Phase 18: status is optional. If the caller didn't include
+    // it, we don't touch status / verified_at / rejection_reason —
+    // only application_id (when applicationId is in the body).
+    // This lets the "create application" wizard link docs to a
+    // new application without implicitly auto-verifying them.
+    const updates: Record<string, unknown> = {};
+    if (newStatus !== null) {
+      updates.status = newStatus;
+      if (newStatus === 'Verified' || newStatus === 'Rejected') {
+        updates.verified_at = new Date().toISOString();
+        updates.verified_by = auth.user.id;
+      } else {
+        updates.verified_at = null;
+        updates.verified_by = null;
+      }
+      if (newStatus === 'Rejected') {
+        updates.rejection_reason = (rejectionReason as string).trim();
+      } else {
+        // Clear any prior rejection reason when re-approving or
+        // moving back to pending — otherwise the student would
+        // see a stale "rejected because X" warning on a doc
+        // that's now pending.
+        updates.rejection_reason = null;
+      }
     }
-    if (newStatus === 'Rejected') {
-      updates.rejection_reason = (rejectionReason as string).trim();
-    } else {
-      // Clear any prior rejection reason when re-approving or
-      // moving back to pending — otherwise the student would
-      // see a stale "rejected because X" warning on a doc
-      // that's now pending.
-      updates.rejection_reason = null;
+    // Phase 18: optional application_id update. Only write the
+    // field when the caller explicitly included `applicationId`
+    // in the body — otherwise the existing link is preserved.
+    // Accepts null to unlink (used by the docs-page UI).
+    if (applicationId !== undefined) {
+      updates.application_id =
+        applicationId === null ? null : String(applicationId);
     }
 
     const { data, error } = await service
@@ -187,8 +226,11 @@ export async function PATCH(
 
     // Best-effort student notification. Skip for unowned docs
     // (no student_id) and for moves that don't change anything
-    // user-visible.
-    if (existing.student_id && existing.status !== newStatus) {
+    // user-visible. Phase 18: also skip for link-only PATCHes
+    // (newStatus === null) — a "linked to a new application"
+    // change isn't status-bearing, the student will see the link
+    // when they open the application detail page directly.
+    if (existing.student_id && newStatus !== null && existing.status !== newStatus) {
       const { error: notifErr } = await service
         .from('student_notifications')
         .insert({

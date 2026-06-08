@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireTeamMember, getServerEnv } from '@/lib/supabase-auth';
+import { requireTeamMember, getServerEnv, buildServiceClient } from '@/lib/supabase-auth';
+import { hydrateUserEmails } from '@/lib/partner-user-lookup';
 import {
   mapPartnerApplicationFromDb,
   mapPartnerApplicationToDb,
@@ -95,7 +96,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Phase 3: hydrate created_by_email via auth.admin.listUsers
+    // Phase 18: hydrate created_by_email via the partner-user-lookup
+    // helper. Was using auth.admin.listUsers({perPage: 200}) which
+    // silently truncated at 201+ project users — the exact regression
+    // Phase 12 was supposed to fix everywhere (caught the team GET
+    // + 3 others, missed this one). The helper does parallel
+    // getUserById calls with a 60s cache, so only the team members
+    // who actually appear in the page are fetched, and the partner
+    // server never holds the full user list in memory. Uses the
+    // service client (auth.admin.* needs elevated access; the
+    // session-bound client from requireTeamMember isn't enough).
     const userIds = Array.from(
       new Set(
         (data || [])
@@ -103,25 +113,15 @@ export async function GET(request: NextRequest) {
           .filter((id): id is string => Boolean(id)),
       ),
     );
-    let emailMap = new Map<string, string>();
-    if (userIds.length) {
-      const { buildServiceClient, getServerEnv: gse } = await import('@/lib/supabase-auth');
-      if (gse().serviceKey) {
-        const { data: usersPage } = await buildServiceClient().auth.admin.listUsers({
-          perPage: 200,
-        });
-        for (const u of usersPage?.users || []) {
-          if (userIds.includes(u.id)) {
-            emailMap.set(u.id, u.email || '');
-          }
-        }
-      }
-    }
+    const emailMap = userIds.length
+      ? await hydrateUserEmails(buildServiceClient(), userIds)
+      : new Map();
     const applications = (data || []).map((r) => {
       const id = (r as { created_by_user_id?: string | null }).created_by_user_id;
+      const hydrated = id ? emailMap.get(id) : undefined;
       return mapPartnerApplicationFromDb({
         ...(r as Record<string, unknown>),
-        created_by_email: id ? emailMap.get(id) || null : null,
+        created_by_email: hydrated?.email ?? null,
       } as Parameters<typeof mapPartnerApplicationFromDb>[0]);
     });
     const total = count || 0;
