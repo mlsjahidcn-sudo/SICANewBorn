@@ -28,8 +28,11 @@
  * body because the caller just completed a Supabase signUp — the email
  * is verified before they can sign in anyway.
  *
- * Idempotency: if a `partners` row already exists for this user_id, we
- * return that row + the existing team_members row. (Retry-safe.)
+ * Idempotency: if a `partners` row OR a `partner_team_members` row
+ * already exists for this user_id, we return that state. (Retry-safe,
+ * and refuses to create a second team_members row even if the partners
+ * row is missing — defense in depth against the orphan-state that
+ * triggered the Phase 10 PGRST116.)
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { buildServiceClient, getServerEnv } from '@/lib/supabase-auth';
@@ -88,7 +91,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'auth user has no email' }, { status: 400 });
   }
 
-  // 2. Idempotency: if a partners row already exists for this user, return it.
+  // 2. Idempotency: if a partners row OR a team_members row already
+  //    exists for this user, return the existing state. (Phase 10:
+  //    we also check team_members directly — the partners check alone
+  //    misses the "user was invited to another org but their partners
+  //    row never got created" orphan case, and a fresh INSERT here
+  //    would create a second team_members row that the
+  //    .single()-based two-path lookup can't handle.)
   const { data: existing } = await service
     .from('partners')
     .select('*')
@@ -102,6 +111,28 @@ export async function POST(request: NextRequest) {
       .eq('user_id', body.auth_user_id)
       .maybeSingle();
     return NextResponse.json({ partner: existing, teamMember: existingMember, idempotent: true });
+  }
+
+  // 2b. Defense in depth: even if no partners row exists, the user
+  //     might already be a team member of another org (e.g. they were
+  //     email-invited and the partner row got deleted out from under
+  //     them, or a previous direct-DB recovery insert left a stray
+  //     team_members row). Refuse to silently create a second one.
+  const { data: strayMember } = await service
+    .from('partner_team_members')
+    .select('id, partner_id, role, status')
+    .eq('user_id', body.auth_user_id)
+    .maybeSingle();
+  if (strayMember) {
+    return NextResponse.json(
+      {
+        error:
+          'A partner team membership already exists for this user. Sign in via the partner portal — do not re-register.',
+        code: 'TEAM_MEMBERSHIP_EXISTS',
+        teamMember: strayMember,
+      },
+      { status: 409 },
+    );
   }
 
   // 3. Create the partners row, status='pending'.
