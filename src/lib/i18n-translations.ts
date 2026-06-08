@@ -1606,6 +1606,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerSettings.errorLoad': "Couldn't load partner profile",
     'partnerSettings.successSaved': 'Account settings saved successfully.',
     'partnerSettings.errorSave': 'Failed to save settings.',
+    'partnerSettings.sectionCompanyInfoDescReadOnly': 'Your organization details. Only the org owner can edit them — contact them to request a change.',
+    'partnerSettings.ownerOnlyEditHint': 'Read-only for team members. Ask your org owner to make changes.',
+    'partnerSettings.errorOwnerOnly': 'Only the org owner can edit organization details.',
     // Partner Portal — notifications
     'partnerNotif.title': 'Notifications',
     'partnerNotif.subtitle': "Updates from the SICA team about your students' applications.",
@@ -3277,6 +3280,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerSettings.errorLoad': '加载合作方资料失败。',
     'partnerSettings.successSaved': '账户设置已成功保存。',
     'partnerSettings.errorSave': '保存设置失败。',
+    'partnerSettings.sectionCompanyInfoDescReadOnly': '您的组织信息。仅组织管理员可编辑 — 如需修改，请联系您的组织管理员。',
+    'partnerSettings.ownerOnlyEditHint': '团队成员只读。请联系您的组织管理员进行修改。',
+    'partnerSettings.errorOwnerOnly': '仅组织管理员可以编辑组织信息。',
     // Partner Portal — notifications
     'partnerNotif.title': '通知',
     'partnerNotif.subtitle': 'SICA 团队关于您学生申请的更新。',

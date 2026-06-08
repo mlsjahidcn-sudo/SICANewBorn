@@ -39,7 +39,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: ownerErr.message }, { status: 500 });
   }
   if (partnerAsOwner) {
-    return NextResponse.json({ partner: partnerAsOwner });
+    // Phase 17: tag the viewer's role so the UI (settings page,
+    // sidebar, etc.) can branch on "is this the org owner?" without
+    // an extra /login-status round-trip. Owners see the full row
+    // including commission_rate.
+    return NextResponse.json({ partner: partnerAsOwner, viewerRole: 'owner' });
   }
 
   // Path 2: team member — join via partner_team_members
@@ -88,8 +92,26 @@ export async function GET(request: Request) {
   // requirePartner's new status check. /me and /login-status
   // stay 200 so the UI can show the right message instead of
   // a generic "not linked" error.
+  //
+  // Phase 17: team members (non-owner) get a sanitized view of
+  // the partner row. `commission_rate` is admin-set financial
+  // info (your % cut per successful student application) — not
+  // something a team member should see. Same for the "partner
+  // status" badge (admin lifecycle). The UI also hides the
+  // Rates tab, but stripping server-side is the real guard:
+  // a curious team member looking at network traffic should
+  // never see the rate, full stop. `viewerRole: 'member'`
+  // lets the UI branch without a second round-trip.
+  const { commission_rate: _rate, status: _status, ...safePartner } = partner as Record<
+    string,
+    unknown
+  > & {
+    commission_rate?: number;
+    status?: string;
+  };
   return NextResponse.json({
-    partner,
+    partner: safePartner,
+    viewerRole: 'member',
     teamMember: {
       id: (member as { id: string }).id,
       role: (member as { role: string }).role,
@@ -111,7 +133,16 @@ export async function GET(request: Request) {
  *   - commission_rate (admin-controlled, not partner-self-editable)
  *   - status (admin-controlled)
  *
- * Auth: any logged-in user. The partners.user_id must match auth.uid().
+ * Auth: owner only (Phase 17). A team member hitting this endpoint
+ * gets 403 — they're an active member of the org but they don't
+ * own it, so they can't rename the org or change the contact
+ * person. Previously this was "any logged-in user with a partner
+ * row", but the .eq('user_id', auth.user.id) where-clause
+ * accidentally made it safe-by-coincidence for members (they have
+ * no partners row, so the update affected 0 rows and returned
+ * 404). Now the role check is explicit: members get a clean 403
+ * before any DB write. The team GET is still a fine read-only path
+ * for members.
  */
 export async function PATCH(request: Request) {
   const { serviceKey } = getServerEnv();
@@ -122,6 +153,25 @@ export async function PATCH(request: Request) {
   const auth = await getRequestAuth(request);
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
+  // Phase 17: explicit owner check via the same two-path lookup
+  // the GET uses. We resolve the partner row the same way (Path 1
+  // = owner, Path 2 = team member) and reject Path 2.
+  const service = buildServiceClient();
+  const { data: partnerAsOwner, error: ownerProbeErr } = await service
+    .from('partners')
+    .select('id')
+    .eq('user_id', auth.user.id)
+    .maybeSingle();
+  if (ownerProbeErr) {
+    return NextResponse.json({ error: ownerProbeErr.message }, { status: 500 });
+  }
+  if (!partnerAsOwner) {
+    return NextResponse.json(
+      { error: 'Only the org owner can edit organization details.' },
+      { status: 403 },
+    );
   }
 
   let body: Record<string, unknown>;
@@ -144,7 +194,6 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'No editable fields provided' }, { status: 400 });
   }
 
-  const service = buildServiceClient();
   const { data, error } = await service
     .from('partners')
     .update(updates)
@@ -162,5 +211,5 @@ export async function PATCH(request: Request) {
     );
   }
 
-  return NextResponse.json({ partner: data });
+  return NextResponse.json({ partner: data, viewerRole: 'owner' });
 }

@@ -16,10 +16,22 @@ interface Partner {
   email: string;
   company_name: string;
   contact_person: string;
-  status: string;
-  commission_rate: number;
+  // Phase 17: stripped server-side for non-owner team members
+  // (see /api/partner/me GET). The field is optional here so the
+  // UI can render the page for a member without the rate.
+  status?: string;
+  commission_rate?: number;
   created_at?: string;
   updated_at?: string;
+}
+
+interface MeResponse {
+  partner: Partner;
+  // Phase 17: which role is the caller in this org? 'owner' = the
+  // partners row's user_id, 'member' = partner_team_members.
+  // Drives the company-name edit gate + the Rates tab visibility
+  // (commission_rate is admin-set, members shouldn't see it).
+  viewerRole: 'owner' | 'member';
 }
 
 export default function PartnerSettingsPage() {
@@ -28,6 +40,11 @@ export default function PartnerSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [partner, setPartner] = useState<Partner | null>(null);
+  // Phase 17: viewerRole drives the company-name edit gate and
+  // the Rates tab. Defaults to 'member' (read-only) until the
+  // /me response confirms otherwise — safe render even before
+  // the fetch resolves.
+  const [viewerRole, setViewerRole] = useState<'owner' | 'member'>('member');
   const [companyName, setCompanyName] = useState('');
   const [contactPerson, setContactPerson] = useState('');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -42,8 +59,9 @@ export default function PartnerSettingsPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await apiFetchJson<{ partner: Partner }>('/api/partner/me');
+      const res = await apiFetchJson<MeResponse>('/api/partner/me');
       setPartner(res.partner);
+      setViewerRole(res.viewerRole);
       setCompanyName(res.partner.company_name ?? '');
       setContactPerson(res.partner.contact_person ?? '');
     } catch (err) {
@@ -52,6 +70,7 @@ export default function PartnerSettingsPage() {
       setIsLoading(false);
     }
   }, [t]);
+  const isOwner = viewerRole === 'owner';
 
   useEffect(() => {
     void load();
@@ -85,6 +104,17 @@ export default function PartnerSettingsPage() {
 
   const handleSaveAccount = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Defense in depth: the server is the real guard (Phase 17),
+    // but the form is also disabled for non-owners. If somehow
+    // the form submits (devtools, keypress), bail locally
+    // before making a network call we'll 403 anyway.
+    if (!isOwner) {
+      setMessage({
+        type: 'error',
+        text: t('partnerSettings.errorOwnerOnly'),
+      });
+      return;
+    }
     setIsSaving(true);
     setMessage(null);
     try {
@@ -172,15 +202,22 @@ export default function PartnerSettingsPage() {
                 <Building2 className="w-4 h-4" />
                 <span>{t('partnerSettings.tabAccount')}</span>
               </button>
-              <button
-                onClick={() => setActiveTab('rates')}
-                className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${
-                  activeTab === 'rates' ? 'bg-[#9B1B30]/10 text-[#9B1B30]' : 'text-[#1B2A4A] hover:bg-gray-100'
-                }`}
-              >
-                <Key className="w-4 h-4" />
-                <span>{t('partnerSettings.tabRates')}</span>
-              </button>
+              {/* Phase 17: the Rates tab shows commission_rate +
+                  partner status — both admin-controlled. Hide
+                  entirely for team members (the page also
+                  strips commission_rate server-side, but the
+                  tab is the discoverable surface). */}
+              {isOwner && (
+                <button
+                  onClick={() => setActiveTab('rates')}
+                  className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${
+                    activeTab === 'rates' ? 'bg-[#9B1B30]/10 text-[#9B1B30]' : 'text-[#1B2A4A] hover:bg-gray-100'
+                  }`}
+                >
+                  <Key className="w-4 h-4" />
+                  <span>{t('partnerSettings.tabRates')}</span>
+                </button>
+              )}
               <button
                 onClick={() => setActiveTab('security')}
                 className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${
@@ -202,21 +239,27 @@ export default function PartnerSettingsPage() {
                   <div>
                     <h2 className="text-lg font-semibold text-[#1B2A4A]">{t('partnerSettings.sectionCompanyInfo')}</h2>
                     <p className="text-sm text-[#4B5563] mt-1">
-                      {t('partnerSettings.sectionCompanyInfoDesc')}
+                      {isOwner
+                        ? t('partnerSettings.sectionCompanyInfoDesc')
+                        : t('partnerSettings.sectionCompanyInfoDescReadOnly')}
                     </p>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <Label htmlFor="companyName" className="text-[#1B2A4A] mb-2 block">
-                        {t('partnerSettings.fieldCompanyName')} <span className="text-red-600">{t('partnerCommon.requiredAsterisk')}</span>
+                        {t('partnerSettings.fieldCompanyName')}
+                        {isOwner && (
+                          <span className="text-red-600"> {t('partnerCommon.requiredAsterisk')}</span>
+                        )}
                       </Label>
                       <Input
                         id="companyName"
                         value={companyName}
                         onChange={(e) => setCompanyName(e.target.value)}
-                        required
-                        className="rounded-none"
+                        required={isOwner}
+                        disabled={!isOwner}
+                        className="rounded-none disabled:bg-gray-50 disabled:text-[#4B5563] disabled:cursor-not-allowed"
                       />
                     </div>
                     <div>
@@ -227,7 +270,8 @@ export default function PartnerSettingsPage() {
                         id="contactPerson"
                         value={contactPerson}
                         onChange={(e) => setContactPerson(e.target.value)}
-                        className="rounded-none"
+                        disabled={!isOwner}
+                        className="rounded-none disabled:bg-gray-50 disabled:text-[#4B5563] disabled:cursor-not-allowed"
                       />
                     </div>
                     <div className="md:col-span-2 flex items-center gap-2 pt-1">
@@ -240,31 +284,51 @@ export default function PartnerSettingsPage() {
                     </div>
                   </div>
 
-                  <div className="flex justify-end">
-                    <Button
-                      type="submit"
-                      disabled={isSaving}
-                      className="rounded-none bg-[#9B1B30] hover:bg-[#7a1626]"
-                    >
-                      {isSaving ? (
-                        <>
-                          <Spinner size="sm" className="mr-2" />
-                          {t('partnerSettings.saving')}
-                        </>
-                      ) : (
-                        <>
-                          <Save className="mr-2 h-4 w-4" />
-                          {t('partnerSettings.saveChanges')}
-                        </>
-                      )}
-                    </Button>
-                  </div>
+                  {isOwner ? (
+                    <div className="flex justify-end">
+                      <Button
+                        type="submit"
+                        disabled={isSaving}
+                        className="rounded-none bg-[#9B1B30] hover:bg-[#7a1626]"
+                      >
+                        {isSaving ? (
+                          <>
+                            <Spinner size="sm" className="mr-2" />
+                            {t('partnerSettings.saving')}
+                          </>
+                        ) : (
+                          <>
+                            <Save className="mr-2 h-4 w-4" />
+                            {t('partnerSettings.saveChanges')}
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  ) : (
+                    // Phase 17: non-owner team members see a small
+                    // "why no save button" hint. Mirrors the rates
+                    // tab's "set by admin" copy pattern. Avoids
+                    // the "is the page broken?" confusion when a
+                    // team member visits Settings and the
+                    // form is greyed out.
+                    <div className="flex justify-end">
+                      <span className="text-xs text-[#4B5563] italic">
+                        {t('partnerSettings.ownerOnlyEditHint')}
+                      </span>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </form>
           )}
 
-          {activeTab === 'rates' && (
+          {/* Phase 17: rates body owner-only. The Rates nav button
+              is also owner-only above; this second gate means a
+              member who force-sets activeTab='rates' via devtools
+              still sees no commission_rate value. Combined with
+              the server-side strip on /me GET, the rate never
+              reaches a non-owner's client at all. */}
+          {activeTab === 'rates' && isOwner && (
             <Card className="rounded-none">
               <CardContent className="p-6 space-y-6">
                 <div>
