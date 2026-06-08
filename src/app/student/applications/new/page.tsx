@@ -194,7 +194,14 @@ export default function StudentNewApplicationPage() {
   // can PATCH them with the new application_id after the POST
   // succeeds. Without this they're orphans (the doc was uploaded
   // before the application row existed).
-  const [pendingDocIds, setPendingDocIds] = useState<string[]>([]);
+  // M8: removed dead `pendingDocIds` state. Was used in an
+  // older version of the wizard to track docs uploaded during
+  // the session and attach them to the new application once
+  // POSTed. Phase S25 replaced that with `linkOrphanDocsToApplication`
+  // which re-fetches the full orphan list from the API after
+  // create — simpler and covers every orphan, not just the
+  // ones uploaded in this session. The old state was
+  // initialized, written to, and cleared, but never read.
   const [applicationData, setApplicationData] = useState<ApplicationFormData>({
     targetDegreeLevel: '',
     targetProgramSlug: '',
@@ -509,7 +516,7 @@ export default function StudentNewApplicationPage() {
         (d) => d.application_id === null || d.application_id === undefined,
       );
       if (orphans.length === 0) {
-        setPendingDocIds([]); // nothing to do, clear for next time
+        // Nothing to do — no orphan docs to attach.
         return;
       }
       // Patch each orphan with the new application_id. We do
@@ -533,7 +540,6 @@ export default function StudentNewApplicationPage() {
           return d;
         }),
       );
-      setPendingDocIds([]);
       // Log any failures so the next refactor can address them
       const failed = results.filter((r) => r.status === 'rejected').length;
       if (failed > 0) {
@@ -1061,13 +1067,12 @@ export default function StudentNewApplicationPage() {
                                   .then((d) => setStudentDocuments(d.data || []))
                                   .catch(() => {})
                                   .finally(() => setDocumentsLoading(false));
-                                // Track this upload so we can attach it to
-                                // the new application once it's POSTed. The
-                                // doc was uploaded with application_id = NULL
-                                // because the application doesn't exist yet.
-                                setPendingDocIds((prev) =>
-                                  prev.includes(uploaded.id) ? prev : [...prev, uploaded.id],
-                                );
+                                // M8: the old `pendingDocIds` tracking
+                                // call is gone — linkOrphanDocsToApplication
+                                // (called after POST) re-fetches every
+                                // orphan and links them, so we don't
+                                // need to track per-upload IDs in
+                                // session state anymore.
                                 console.log('[student/new] document uploaded:', uploaded.id);
                               }}
                               compact

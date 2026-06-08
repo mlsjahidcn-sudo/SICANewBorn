@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ChevronRight, Check, User, FileText, GraduationCap } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Check, User, FileText, GraduationCap, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
@@ -48,6 +48,15 @@ interface FormData {
   intake: string;
   personalStatement: string;
   notes: string;
+  // H9: which status to write on create. Was hardcoded to
+  // 'Submitted', so admins couldn't create a Draft at intake
+  // (the partner + student flows both support Draft). Default
+  // 'Submitted' to preserve existing behavior — admins
+  // explicitly opt into Draft when they want to keep the row
+  // in the back office for further info collection before
+  // sending it to the student for review.
+  submitStatus: 'Draft' | 'Submitted';
+  priority: 'Low' | 'Normal' | 'High' | 'Urgent';
   syncDocuments: boolean;
   selectedDocuments: string[];
 }
@@ -87,6 +96,15 @@ export default function AdminNewApplicationPage() {
     intake: '',
     personalStatement: '',
     notes: '',
+    // H9: default to 'Submitted' so existing behavior is
+    // unchanged. The new <Select> on step 2 lets admins
+    // explicitly switch to Draft.
+    submitStatus: 'Submitted',
+    // M1: default to 'Normal' to match the server's default
+    // ('Medium' in the DB schema, but the partner + admin
+    // app taxonomy uses Normal). We send this to the API
+    // explicitly so the DB default doesn't override.
+    priority: 'Normal',
     syncDocuments: false,
     selectedDocuments: []
   });
@@ -250,7 +268,16 @@ export default function AdminNewApplicationPage() {
         programNameCn: program?.nameCn,
         degree: formData.degree,
         intake: formData.intake,
-        status: 'Submitted',
+        // H9: read the chosen status from formData (was
+        // hardcoded 'Submitted' before). Admitting as a
+        // string-typed payload because the API accepts the
+        // literal status; we validated Draft | Submitted
+        // via the FormData union + the new <Select>.
+        status: formData.submitStatus,
+        // M1: surface the priority field. Same closed
+        // taxonomy the partner side uses (Low | Normal |
+        // High | Urgent); default is Normal.
+        priority: formData.priority,
         personalStatement: formData.personalStatement,
         // C4: the form's `notes` field is the same Textarea for
         // both student-visible additional_notes AND admin-only
@@ -350,10 +377,17 @@ export default function AdminNewApplicationPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
+            {/* M7: was `router.back()`. From a step-wizard,
+                "back" through browser history can land on
+                /admin/students, /admin, or anywhere — the
+                wizard's previous step isn't a real URL. Push
+                to the applications list (where post-submit
+                navigates) so the button is consistent with
+                the rest of the page. */}
             <Button
               variant="ghost"
               className="rounded-none text-[#1B2A4A]"
-              onClick={() => router.back()}
+              onClick={() => router.push('/admin/applications')}
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
@@ -441,6 +475,29 @@ export default function AdminNewApplicationPage() {
                         <span className="bg-white px-2 text-[#4B5563]">OR — NEW LEAD (NO ACCOUNT YET)</span>
                       </div>
                     </div>
+
+                    {/* H8: when an admin picks an existing student AND
+                        fills in the lead fields, the API rejects with
+                        400 "Provide either studentId OR applicantEmail,
+                        not both". The wizard USED to surface this as a
+                        raw API error after submit, with no warning
+                        while filling the form. Show an inline amber
+                        banner as soon as the conflict is detected so
+                        the admin knows to clear one path before
+                        continuing. The "either clear" message gives
+                        the explicit fix. */}
+                    {formData.studentId &&
+                     formData.applicantName.trim() &&
+                     formData.applicantEmail.trim() && (
+                      <div className="p-3 bg-amber-50 border border-amber-300 text-sm text-amber-900 flex items-start gap-2">
+                        <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-700" />
+                        <div>
+                          <strong>You can&apos;t fill both.</strong>{' '}
+                          Pick <em>either</em> an existing student <em>or</em> a new lead. Clear one of the two
+                          paths below to continue.
+                        </div>
+                      </div>
+                    )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
@@ -740,6 +797,92 @@ export default function AdminNewApplicationPage() {
                       </Card>
                     )}
 
+                    {/* H9: status select. The form previously
+                        hardcoded 'Submitted' on submit, so admins
+                        couldn't create a Draft at intake. The
+                        partner + student flows both support Draft;
+                        admins should too — useful when the row
+                        needs more info before going to the
+                        student. Default 'Submitted' preserves
+                        existing behavior. */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-[#1F2937]">Initial Status</Label>
+                        <Select
+                          value={formData.submitStatus}
+                          onValueChange={(value) =>
+                            handleChange('submitStatus', value as 'Draft' | 'Submitted')
+                          }
+                        >
+                          <SelectTrigger className="rounded-none mt-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Draft">Draft (save for later)</SelectItem>
+                            <SelectItem value="Submitted">Submitted (go to student)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-[#4B5563] mt-1">
+                          Drafts stay in the back office until you move them.
+                        </p>
+                      </div>
+                      {/* M1: priority select. Same closed
+                          taxonomy the partner side uses (Low |
+                          Normal | High | Urgent). Default Normal.
+                          Admins can now triage at intake instead
+                          of having to edit the row after. */}
+                      <div>
+                        <Label className="text-[#1F2937]">Priority</Label>
+                        <Select
+                          value={formData.priority}
+                          onValueChange={(value) =>
+                            handleChange(
+                              'priority',
+                              value as 'Low' | 'Normal' | 'High' | 'Urgent',
+                            )
+                          }
+                        >
+                          <SelectTrigger className="rounded-none mt-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Low">Low</SelectItem>
+                            <SelectItem value="Normal">Normal</SelectItem>
+                            <SelectItem value="High">High</SelectItem>
+                            <SelectItem value="Urgent">Urgent</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-[#4B5563] mt-1">
+                          Sets the initial triage for this application.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* M2: personal statement field. Was in
+                        formData and in the payload, but the
+                        form had no Textarea for it — the
+                        field was always empty on create. The
+                        student wizard collects a personal
+                        statement, and admins often pre-fill it
+                        on the student's behalf (e.g. when the
+                        student can't write English well yet).
+                        maxLength=4000 mirrors the student
+                        wizard's limit (M3). */}
+                    <div>
+                      <Label className="text-[#1F2937]">Personal Statement</Label>
+                      <Textarea
+                        value={formData.personalStatement}
+                        onChange={(e) => handleChange('personalStatement', e.target.value)}
+                        placeholder="Why does this student want to study this program? Goals, motivation, relevant background..."
+                        className="rounded-none mt-1"
+                        rows={5}
+                        maxLength={4000}
+                      />
+                      <p className="text-xs text-[#4B5563] mt-1">
+                        {formData.personalStatement.length} / 4000
+                      </p>
+                    </div>
+
                     <div>
                       <Label className="text-[#1F2937]">Additional Notes</Label>
                       <Textarea
@@ -748,7 +891,17 @@ export default function AdminNewApplicationPage() {
                         placeholder="Add any additional notes or requirements..."
                         className="rounded-none mt-1"
                         rows={4}
+                        // M3: cap notes at 2000 chars. The DB
+                        // column is TEXT-ish with no length
+                        // limit, but the display layer truncates
+                        // awkwardly past a certain point and a
+                        // runaway paste (100k chars) just isn't
+                        // useful here.
+                        maxLength={2000}
                       />
+                      <p className="text-xs text-[#4B5563] mt-1">
+                        {formData.notes.length} / 2000
+                      </p>
                     </div>
 
                     {formData.selectedDocuments.length > 0 && (
@@ -870,7 +1023,30 @@ export default function AdminNewApplicationPage() {
                               {formData.intake || 'Not selected'}
                             </span>
                           </div>
+                          <div>
+                            <span className="text-[#4B5563]">Initial Status:</span>{' '}
+                            <span className="font-medium text-[#1F2937]">
+                              {formData.submitStatus}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[#4B5563]">Priority:</span>{' '}
+                            <span className="font-medium text-[#1F2937]">
+                              {formData.priority}
+                            </span>
+                          </div>
                         </div>
+                        {formData.personalStatement && (
+                          <>
+                            <Separator className="my-4" />
+                            <div>
+                              <span className="text-[#4B5563]">Personal Statement:</span>
+                              <p className="mt-1 text-[#1F2937] whitespace-pre-wrap">
+                                {formData.personalStatement}
+                              </p>
+                            </div>
+                          </>
+                        )}
                         {formData.notes && (
                           <>
                             <Separator className="my-4" />
