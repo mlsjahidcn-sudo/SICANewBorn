@@ -3,6 +3,10 @@ import { requireAdmin, buildServiceClient, getServerEnv } from '@/lib/supabase-a
 import { insertTimelineEvent } from '@/lib/timeline';
 import { mapApplicationFromDb, RawApp } from '@/lib/application-mapper';
 import { normalizeIntake, parseIntakeFilter } from '@/lib/intake-normalize';
+import {
+  PARTNER_APPLICATION_DEGREES,
+  PARTNER_APPLICATION_PRIORITIES,
+} from '@/lib/partner-application-mapper';
 
 /**
  * GET  /api/admin/applications  — list all applications
@@ -398,6 +402,35 @@ export async function POST(request: NextRequest) {
     if (!body.programName) return NextResponse.json({ error: 'programName is required' }, { status: 400 });
     if (!body.degree) return NextResponse.json({ error: 'degree is required' }, { status: 400 });
     if (!body.intake) return NextResponse.json({ error: 'intake is required' }, { status: 400 });
+
+    // Phase 19: validate `degree` against the closed taxonomy. The
+    // student + partner POSTs already enforce this; the admin POST
+    // was missing it (relying on a DB CHECK constraint the user
+    // pointed out may or may not exist). 400 early with a clear
+    // list. We reuse the partner constants — same enum, single
+    // source of truth.
+    if (
+      typeof body.degree === 'string' &&
+      !(PARTNER_APPLICATION_DEGREES as readonly string[]).includes(body.degree)
+    ) {
+      return NextResponse.json(
+        { error: `degree must be one of: ${PARTNER_APPLICATION_DEGREES.join(', ')}` },
+        { status: 400 },
+      );
+    }
+    // Validate `priority` against the same enum the partner side uses.
+    // Missing priority is fine (defaults to 'Medium' below); an
+    // explicit invalid value is a 400.
+    if (
+      body.priority !== undefined &&
+      body.priority !== null &&
+      !(PARTNER_APPLICATION_PRIORITIES as readonly string[]).includes(String(body.priority))
+    ) {
+      return NextResponse.json(
+        { error: `priority must be one of: ${PARTNER_APPLICATION_PRIORITIES.join(', ')}` },
+        { status: 400 },
+      );
+    }
 
     // Must have either a student link or an applicant email
     const hasStudent = typeof body.studentId === 'string' && body.studentId.length > 0;

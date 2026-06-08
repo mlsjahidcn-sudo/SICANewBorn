@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getRequestAuth } from '@/lib/supabase-auth';
-import { mapApplicationForStudent, parseApplicationStatus } from '@/lib/application-mapper';
+import { mapApplicationForStudent } from '@/lib/application-mapper';
 import { insertTimelineEvent } from '@/lib/timeline';
 
 /**
@@ -97,12 +97,6 @@ export async function POST(request: Request) {
     if (!trimmedIntake && !isDraft) {
       return NextResponse.json({ error: 'intake is required' }, { status: 400 });
     }
-    if (!trimmedDegree && !isDraft) {
-      return NextResponse.json({ error: 'degree is required' }, { status: 400 });
-    }
-    if (!trimmedIntake && !isDraft) {
-      return NextResponse.json({ error: 'intake is required' }, { status: 400 });
-    }
 
     // Degree must be one of the 4 known values (mirrors the DB intent;
     // the schema accepts any string but we want to reject garbage).
@@ -119,7 +113,6 @@ export async function POST(request: Request) {
     // (Status validation done above. The other statuses — Under Review,
     // Documents Requested, Decision Made, Accepted, Rejected, Withdrawn
     // — are admin-set, not student-driven.)
-    void parseApplicationStatus; // imported for future use
 
     // Generate application_number atomically (S5 fix)
     const { data: rpcData, error: rpcError } = await supabase.rpc('generate_application_number');
