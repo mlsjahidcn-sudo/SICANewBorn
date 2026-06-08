@@ -122,7 +122,18 @@ export default async function HomePage() {
                     {t('hero.explore')}
                   </Button>
                 </Link>
-                <Link href="/universities">
+                {/* H1 (funnel audit): was also /universities.
+                    Two CTAs pointing at the same page is a
+                    wasted opportunity. The secondary button
+                    reads "How to Apply" — that's a question,
+                    not a browse action. The /guides/application
+                    page answers it with the actual process
+                    (documents, timeline, fees) at zero
+                    commitment. Funnel split:
+                      - /universities  : browse
+                      - /guides/application : learn
+                      - /assessment    : commit (bottom CTA) */}
+                <Link href="/guides/application">
                   <Button
                     variant="outline"
                     className="border-white bg-transparent text-white hover:bg-white/10 hover:text-white font-semibold px-7 py-3 text-base"
@@ -575,7 +586,20 @@ export default async function HomePage() {
           <h2 className="text-3xl font-bold text-white sm:text-4xl">{t('cta.title')}</h2>
           <p className="mt-4 text-lg text-gray-300">{t('cta.subtitle')}</p>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
-            <Link href="/universities">
+            {/* H2 (funnel audit): was /universities. The
+                bottom-of-page CTA is the highest-intent slot
+                on the home — the user has seen the hero, the
+                why-SICA, the featured schools, the testimonials,
+                the news, and now they're being asked "ready to
+                take the next step?". Sending them back to
+                /universities to browse more is wrong; the
+                right move is the structured 4-step intake
+                (/assessment) which captures goal + background
+                + budget and is the highest-signal funnel
+                path. /contact stays as a softer secondary
+                for users who want to talk first instead of
+                filling the form. */}
+            <Link href="/assessment">
               <Button className="bg-[#9B1B30] hover:bg-[#7A1526] text-white font-semibold px-8 py-3 text-base">
                 {t('cta.apply')}
               </Button>
