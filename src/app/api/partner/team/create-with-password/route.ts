@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { buildServiceClient, requireTeamMember, getServerEnv } from '@/lib/supabase-auth';
 import { findUserIdByEmail, primeEmailToUserIdCache } from '@/lib/partner-user-lookup';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 /**
  * Phase 5: POST /api/partner/team/create-with-password
@@ -46,6 +47,12 @@ interface CreateBody {
 }
 
 const MIN_PASSWORD_LEN = 8;
+// Abuse guard: an owner could loop and create dozens of auth.users
+// rows (free, but it does spam the auth.users table + the email
+// uniqueness check). Cap each owner to 5 direct-creates per 15
+// minutes. Returns 429 when exceeded.
+const CREATE_RATE_MAX = 5;
+const CREATE_RATE_WINDOW_MS = 15 * 60 * 1000;
 
 export async function POST(request: NextRequest) {
   if (!getServerEnv().serviceKey) {
@@ -57,6 +64,29 @@ export async function POST(request: NextRequest) {
   }
   if (auth.role !== 'owner') {
     return NextResponse.json({ error: 'Only owners can create team members' }, { status: 403 });
+  }
+
+  // Per-owner rate limit: 5 direct-creates / 15 min. Each call
+  // creates a real auth.users row, so this guard is mostly to
+  // protect the auth.users table from runaway test loops.
+  const rl = checkRateLimit({
+    action: 'partner-team-create',
+    key: auth.user.id,
+    max: CREATE_RATE_MAX,
+    windowMs: CREATE_RATE_WINDOW_MS,
+  });
+  if (!rl.ok) {
+    return NextResponse.json(
+      {
+        error: `Too many team creations. Try again in ${rl.retryAfterSec} seconds.`,
+        code: 'RATE_LIMITED',
+        retryAfterSec: rl.retryAfterSec,
+      },
+      {
+        status: 429,
+        headers: { 'Retry-After': String(rl.retryAfterSec) },
+      },
+    );
   }
 
   let body: CreateBody;

@@ -14,11 +14,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { buildServiceClient, requireTeamMember, getServerEnv } from '@/lib/supabase-auth';
 import { Resend } from 'resend';
 import { findUserIdByEmail, hydrateUserEmails, primeEmailToUserIdCache } from '@/lib/partner-user-lookup';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
 const FROM = 'SICA <noreply@sica.com.cn>';
 const INVITE_TTL_DAYS = 7;
+// Abuse guard: an owner can hammer this endpoint to spam invites at
+// the same address (or any address) and burn the Resend quota. Cap
+// each owner to 5 invites per 15 minutes. Returns 429 when exceeded.
+const INVITE_RATE_MAX = 5;
+const INVITE_RATE_WINDOW_MS = 15 * 60 * 1000;
 
 export async function GET(_request: NextRequest) {
   if (!getServerEnv().serviceKey) {
@@ -87,6 +93,30 @@ export async function POST(request: NextRequest) {
   }
   if (!process.env.RESEND_API_KEY) {
     return NextResponse.json({ error: 'Resend not configured' }, { status: 503 });
+  }
+
+  // Per-owner rate limit: 5 invites / 15 min. Each invite creates
+  // an auth.users row (free, but it does spam the auth.users table)
+  // AND fires a Resend email (not free on the production tier), so
+  // this guard is mostly to protect the Resend quota.
+  const rl = checkRateLimit({
+    action: 'partner-team-invite',
+    key: auth.user.id,
+    max: INVITE_RATE_MAX,
+    windowMs: INVITE_RATE_WINDOW_MS,
+  });
+  if (!rl.ok) {
+    return NextResponse.json(
+      {
+        error: `Too many invites. Try again in ${rl.retryAfterSec} seconds.`,
+        code: 'RATE_LIMITED',
+        retryAfterSec: rl.retryAfterSec,
+      },
+      {
+        status: 429,
+        headers: { 'Retry-After': String(rl.retryAfterSec) },
+      },
+    );
   }
 
   let body: InviteBody;
