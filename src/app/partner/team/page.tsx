@@ -63,6 +63,22 @@ export default function PartnerTeamPage() {
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteBusy, setInviteBusy] = useState(false);
   const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
+  // Phase 5: tabbed invite modal. 'email' = send a Resend invite
+  // email with an accept-link (existing flow). 'password' =
+  // create the auth user with an owner-chosen password and skip
+  // the email round-trip entirely (new flow). Default to 'email'
+  // so existing behavior is unchanged when the user just opens
+  // the modal.
+  const [inviteMode, setInviteMode] = useState<'email' | 'password'>('email');
+  const [passwordEmail, setPasswordEmail] = useState('');
+  const [passwordValue, setPasswordValue] = useState('');
+  const [passwordFullName, setPasswordFullName] = useState('');
+  const [passwordBusy, setPasswordBusy] = useState(false);
+  // After a successful direct-create, show the email + password
+  // once so the owner can copy them and hand them to the new
+  // member. Cleared when they close the modal.
+  const [createdCreds, setCreatedCreds] = useState<{ email: string; password: string } | null>(null);
+  const [copiedField, setCopiedField] = useState<'email' | 'password' | null>(null);
   const [actionBusyId, setActionBusyId] = useState<string | null>(null);
   // Phase 1.7: per-row resend feedback. We track the last successful
   // resend so the row can show "Invite resent" briefly after a
@@ -127,8 +143,7 @@ export default function PartnerTeamPage() {
           ? t('partnerTeam.inviteSuccessNew', { email: res.inviteSentTo })
           : t('partnerTeam.inviteSuccessExisting', { email: res.inviteSentTo }),
       );
-      setInviteOpen(false);
-      setInviteEmail('');
+      closeInviteModal();
       load();
     } catch (err) {
       setLoadError(err instanceof ApiError ? err.message : t('partnerTeam.errorInvite'));
@@ -136,6 +151,83 @@ export default function PartnerTeamPage() {
       setInviteBusy(false);
       setTimeout(() => setInviteSuccess(null), 4000);
     }
+  };
+
+  // Phase 5: direct-create with password. Bypasses the invite
+  // email entirely — the owner types the email + password, we
+  // create the auth.users row with that password + insert a
+  // partner_team_members row with status='active' immediately.
+  // The new member can log in right away.
+  const sendPasswordInvite = async () => {
+    setPasswordBusy(true);
+    setLoadError(null);
+    try {
+      const res = await apiFetchJson<{ email: string; password: string; member: { id: string } }>(
+        '/api/partner/team/create-with-password',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: passwordEmail,
+            password: passwordValue,
+            fullName: passwordFullName,
+            role: 'member',
+          }),
+        },
+      );
+      // Show the email + password once so the owner can copy
+      // them and hand them to the new member. Don't auto-close
+      // the modal — they need to see the password first.
+      setCreatedCreds({ email: res.email, password: res.password });
+      setInviteSuccess(
+        t('partnerTeam.passwordCreateSuccess', { email: res.email }),
+      );
+      setPasswordEmail('');
+      setPasswordValue('');
+      setPasswordFullName('');
+      load();
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : t('partnerTeam.errorInvite'));
+    } finally {
+      setPasswordBusy(false);
+    }
+  };
+
+  // Copy a string to clipboard with a brief "Copied" indicator
+  // on the matching field. Falls back to a textarea hack if
+  // navigator.clipboard isn't available (older browsers / some
+  // iframes).
+  const copyToClipboard = async (text: string, field: 'email' | 'password') => {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(null), 2000);
+    } catch {
+      // ignore — the user can still read the field manually
+    }
+  };
+
+  // Reset the modal state when closing so reopening it shows
+  // a fresh form, not the creds from the last create.
+  const closeInviteModal = () => {
+    setInviteOpen(false);
+    setInviteMode('email');
+    setPasswordEmail('');
+    setPasswordValue('');
+    setPasswordFullName('');
+    setCreatedCreds(null);
+    setCopiedField(null);
   };
 
   const removeMember = async (id: string) => {
@@ -303,44 +395,216 @@ export default function PartnerTeamPage() {
         </CardContent>
       </Card>
 
-      {/* Invite modal */}
+      {/* Phase 5: tabbed invite modal. Tab 1 (Email) keeps the
+          original Resend-invite flow. Tab 2 (Password) creates
+          the auth user with an owner-chosen password and skips
+          the email round-trip — the new member is active
+          immediately and can log in at /partner/login. */}
       {inviteOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <Card className="max-w-md w-full">
             <CardHeader className="flex flex-row items-start justify-between space-y-0">
               <CardTitle>{t('partnerTeam.inviteModalTitle')}</CardTitle>
-              <Button variant="ghost" size="sm" onClick={() => setInviteOpen(false)}>
+              <Button variant="ghost" size="sm" onClick={closeInviteModal}>
                 <X className="h-4 w-4" />
               </Button>
             </CardHeader>
             <CardContent className="space-y-3">
-              <p className="text-sm text-gray-600">
-                {t('partnerTeam.inviteModalBody')}
-              </p>
-              <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1">
-                  {t('partnerTeam.inviteEmailLabel')}
-                </label>
-                <Input
-                  type="email"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  placeholder={t('partnerTeam.inviteEmailPlaceholder')}
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-2 border-t">
-                <Button variant="ghost" onClick={() => setInviteOpen(false)}>
-                  {t('partnerTeam.cancel')}
-                </Button>
-                <Button
-                  onClick={sendInvite}
-                  disabled={inviteBusy || !inviteEmail.includes('@')}
-                  className="bg-[#9B1B30] hover:bg-[#7a1525]"
+              {/* Tab strip */}
+              <div className="flex border-b border-gray-200 -mx-6 px-6">
+                <button
+                  type="button"
+                  onClick={() => setInviteMode('email')}
+                  className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px ${
+                    inviteMode === 'email'
+                      ? 'border-[#9B1B30] text-[#1B2A4A]'
+                      : 'border-transparent text-gray-500 hover:text-[#1B2A4A]'
+                  }`}
                 >
-                  {inviteBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4 mr-2" />}
-                  {t('partnerTeam.sendInvite')}
-                </Button>
+                  <Mail className="h-4 w-4 inline-block mr-1.5 -mt-0.5" />
+                  {t('partnerTeam.tabEmail')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInviteMode('password')}
+                  className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px ${
+                    inviteMode === 'password'
+                      ? 'border-[#9B1B30] text-[#1B2A4A]'
+                      : 'border-transparent text-gray-500 hover:text-[#1B2A4A]'
+                  }`}
+                >
+                  <UserPlus className="h-4 w-4 inline-block mr-1.5 -mt-0.5" />
+                  {t('partnerTeam.tabPassword')}
+                </button>
               </div>
+
+              {inviteMode === 'email' && (
+                <>
+                  <p className="text-sm text-gray-600">
+                    {t('partnerTeam.inviteModalBody')}
+                  </p>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-1">
+                      {t('partnerTeam.inviteEmailLabel')}
+                    </label>
+                    <Input
+                      type="email"
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      placeholder={t('partnerTeam.inviteEmailPlaceholder')}
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2 pt-2 border-t">
+                    <Button variant="ghost" onClick={closeInviteModal}>
+                      {t('partnerTeam.cancel')}
+                    </Button>
+                    <Button
+                      onClick={sendInvite}
+                      disabled={inviteBusy || !inviteEmail.includes('@')}
+                      className="bg-[#9B1B30] hover:bg-[#7a1525]"
+                    >
+                      {inviteBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4 mr-2" />}
+                      {t('partnerTeam.sendInvite')}
+                    </Button>
+                  </div>
+                </>
+              )}
+
+              {inviteMode === 'password' && !createdCreds && (
+                <>
+                  <p className="text-sm text-gray-600">
+                    {t('partnerTeam.passwordModalBody')}
+                  </p>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-1">
+                      {t('partnerTeam.fieldEmail')}
+                    </label>
+                    <Input
+                      type="email"
+                      value={passwordEmail}
+                      onChange={(e) => setPasswordEmail(e.target.value)}
+                      placeholder={t('partnerTeam.inviteEmailPlaceholder')}
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-1">
+                      {t('partnerTeam.fieldPassword')}
+                    </label>
+                    <Input
+                      type="text"
+                      value={passwordValue}
+                      onChange={(e) => setPasswordValue(e.target.value)}
+                      placeholder={t('partnerTeam.passwordPlaceholder')}
+                      autoComplete="new-password"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      {t('partnerTeam.passwordHint')}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-1">
+                      {t('partnerTeam.fieldFullName')}
+                    </label>
+                    <Input
+                      type="text"
+                      value={passwordFullName}
+                      onChange={(e) => setPasswordFullName(e.target.value)}
+                      placeholder={t('partnerTeam.fieldFullNamePlaceholder')}
+                      autoComplete="off"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      {t('partnerTeam.fieldFullNameHint')}
+                    </p>
+                  </div>
+                  <div className="flex justify-end gap-2 pt-2 border-t">
+                    <Button variant="ghost" onClick={closeInviteModal}>
+                      {t('partnerTeam.cancel')}
+                    </Button>
+                    <Button
+                      onClick={sendPasswordInvite}
+                      disabled={
+                        passwordBusy ||
+                        !passwordEmail.includes('@') ||
+                        passwordValue.length < 8
+                      }
+                      className="bg-[#9B1B30] hover:bg-[#7a1525]"
+                    >
+                      {passwordBusy ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <UserPlus className="h-4 w-4 mr-2" />
+                      )}
+                      {t('partnerTeam.createWithPassword')}
+                    </Button>
+                  </div>
+                </>
+              )}
+
+              {inviteMode === 'password' && createdCreds && (
+                <>
+                  <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 text-sm flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="font-medium">
+                        {t('partnerTeam.createdSuccessTitle')}
+                      </p>
+                      <p className="text-xs mt-1">
+                        {t('partnerTeam.createdSuccessBody')}
+                      </p>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-1">
+                      {t('partnerTeam.fieldEmail')}
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <Input value={createdCreds.email} readOnly className="bg-gray-50" />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => copyToClipboard(createdCreds.email, 'email')}
+                        className="flex-shrink-0"
+                      >
+                        {copiedField === 'email' ? (
+                          <CheckCircle className="h-4 w-4 text-emerald-600" />
+                        ) : (
+                          t('partnerTeam.copy')
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-1">
+                      {t('partnerTeam.fieldPassword')}
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={createdCreds.password}
+                        readOnly
+                        className="bg-gray-50 font-mono"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => copyToClipboard(createdCreds.password, 'password')}
+                        className="flex-shrink-0"
+                      >
+                        {copiedField === 'password' ? (
+                          <CheckCircle className="h-4 w-4 text-emerald-600" />
+                        ) : (
+                          t('partnerTeam.copy')
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2 pt-2 border-t">
+                    <Button onClick={closeInviteModal} className="bg-[#1B2A4A] hover:bg-[#15233d]">
+                      {t('partnerTeam.done')}
+                    </Button>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
