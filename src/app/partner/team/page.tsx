@@ -31,6 +31,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { apiFetchJson, ApiError } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
+import { useAuth } from '@/lib/auth-context';
 
 interface TeamMember {
   id: string;
@@ -58,6 +59,13 @@ const STATUS_COLOR: Record<string, string> = {
 export default function PartnerTeamPage() {
   const router = useRouter();
   const { t } = useI18n();
+  // Phase 11: need the current user's id to (a) detect "is this
+  // owner-row mine?" for the Transfer Ownership button, and (b)
+  // derive the list of valid transfer targets (everyone except
+  // me, and only if they're active). user.id is on the Supabase
+  // User object from useAuth().
+  const { user } = useAuth();
+  const myUserId = user?.id ?? null;
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -100,6 +108,62 @@ export default function PartnerTeamPage() {
   const [resetPassword, setResetPassword] = useState('');
   const [resetBusy, setResetBusy] = useState(false);
   const [resetResult, setResetResult] = useState<{ email: string; password: string } | null>(null);
+  // Phase 11: suspend flow. Soft-removes a member by flipping
+  // status='suspended' + stamping suspended_at + suspension_reason.
+  // The member can't sign in anymore (requireTeamMember refuses
+  // status !== 'active') and their data writes fail at the RLS
+  // layer (is_partner_team_member filters on status='active').
+  // Preferred over Remove when the owner might want to re-activate
+  // the member later.
+  const [suspendTargetId, setSuspendTargetId] = useState<string | null>(null);
+  const [suspendReason, setSuspendReason] = useState('');
+  const [suspendBusy, setSuspendBusy] = useState(false);
+  // Phase 11: reactivate flow. Un-suspends a member by clearing
+  // status='suspended' + suspended_at + suspension_reason.
+  const [reactivateTargetId, setReactivateTargetId] = useState<string | null>(null);
+  const [reactivateBusy, setReactivateBusy] = useState(false);
+  // Phase 11: ownership-transfer flow. The owner picks an active
+  // member, the API demotes the current owner to member and
+  // promotes the target. After success, the current owner's
+  // session still works but the layout's role check will hide
+  // the team sidebar item — we just re-fetch to refresh the
+  // page state.
+  const [transferTargetId, setTransferTargetId] = useState<string | null>(null);
+  const [transferBusy, setTransferBusy] = useState(false);
+  // transferOpen is true when the owner clicks "Transfer
+  // Ownership" — the modal lists every active member except
+  // the caller as a pickable target. Set false on close or
+  // on successful transfer.
+  const [transferOpen, setTransferOpen] = useState(false);
+  // Per-row inline feedback for suspend/reactivate success, so the
+  // row can show a short "Suspended" / "Reactivated" badge. Mirrors
+  // the resendSuccess pattern above.
+  const [suspendSuccess, setSuspendSuccess] = useState<{ id: string; at: number } | null>(null);
+  useEffect(() => {
+    if (!suspendSuccess) return;
+    const timer = setTimeout(() => setSuspendSuccess(null), 4000);
+    return () => clearTimeout(timer);
+  }, [suspendSuccess]);
+  const [reactivateSuccess, setReactivateSuccess] = useState<{ id: string; at: number } | null>(null);
+  useEffect(() => {
+    if (!reactivateSuccess) return;
+    const timer = setTimeout(() => setReactivateSuccess(null), 4000);
+    return () => clearTimeout(timer);
+  }, [reactivateSuccess]);
+  const [transferSuccess, setTransferSuccess] = useState<string | null>(null);
+  useEffect(() => {
+    if (!transferSuccess) return;
+    const timer = setTimeout(() => setTransferSuccess(null), 5000);
+    return () => clearTimeout(timer);
+  }, [transferSuccess]);
+
+  // Phase 11: derive the list of valid transfer targets. We can
+  // only transfer to (a) an active member, (b) who isn't us.
+  // Re-derives on every team refresh so the modal stays in sync
+  // after a re-fetch.
+  const activeMembersExceptMe = team.filter(
+    (m) => m.status === 'active' && m.user_id !== myUserId,
+  );
 
   // Status enum → display label
   const STATUS_DISPLAY: Record<string, string> = {
@@ -373,6 +437,83 @@ export default function PartnerTeamPage() {
     }
   };
 
+  // Phase 11: suspend a member. Soft-deletes their access without
+  // destroying the row. Modal collects an optional reason (shown
+  // on the row so the owner remembers why).
+  const handleSuspend = async () => {
+    if (!suspendTargetId) return;
+    setSuspendBusy(true);
+    setLoadError(null);
+    try {
+      await apiFetchJson(`/api/partner/team/${suspendTargetId}/suspend`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: suspendReason.trim() || undefined }),
+      });
+      setSuspendSuccess({ id: suspendTargetId, at: Date.now() });
+      setSuspendTargetId(null);
+      setSuspendReason('');
+      load();
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : t('partnerTeam.errorSuspend'));
+    } finally {
+      setSuspendBusy(false);
+    }
+  };
+
+  // Phase 11: reactivate a suspended member. Confirms via the
+  // reactivation confirm modal (no reason collected — just a
+  // "are you sure" double-check).
+  const handleReactivate = async (id: string) => {
+    setActionBusyId(id);
+    setLoadError(null);
+    try {
+      await apiFetchJson(`/api/partner/team/${id}/reactivate`, { method: 'POST' });
+      setReactivateSuccess({ id, at: Date.now() });
+      setReactivateTargetId(null);
+      load();
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : t('partnerTeam.errorReactivate'));
+    } finally {
+      setActionBusyId(null);
+    }
+  };
+
+  // Phase 11: transfer ownership. The modal pre-fills the target
+  // (the [id] from the click), warns the current owner that they'll
+  // be demoted to a regular member, and on success reloads the
+  // page so the role check in the layout hides the team sidebar
+  // for the (now demoted) caller.
+  const handleTransferOwnership = async () => {
+    if (!transferTargetId) return;
+    setTransferBusy(true);
+    setLoadError(null);
+    try {
+      const res = await apiFetchJson<{ newOwner: { email: string | null } }>(
+        `/api/partner/team/${transferTargetId}/transfer-ownership`,
+        { method: 'POST' },
+      );
+      setTransferSuccess(
+        res.newOwner.email || t('partnerTeam.transferSuccessNoEmail'),
+      );
+      setTransferTargetId(null);
+      // Reload to refresh state. The layout's role check will
+      // re-run on next render and may hide the team nav item
+      // since the caller is now a member, not the owner.
+      await load();
+      // Force the layout to re-check the role by triggering a
+      // router refresh. (Next 16 App Router: router.refresh()
+      // re-fetches the current route's RSC tree + client
+      // component state. The partner layout's useEffect
+      // depends on pathname, so a navigation re-mounts it.)
+      router.refresh();
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : t('partnerTeam.errorTransfer'));
+    } finally {
+      setTransferBusy(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -480,6 +621,19 @@ export default function PartnerTeamPage() {
                           >
                             <KeyRound className="h-3 w-3 mr-1" /> {t('partnerTeam.resetPassword')}
                           </Button>
+                          {/* Phase 11: Suspend — soft-removes access
+                              without destroying the row. Preferred
+                              over Remove when the owner might want
+                              to re-activate the member later. */}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setSuspendTargetId(m.id)}
+                            disabled={actionBusyId === m.id}
+                            className="text-orange-600 border-orange-200"
+                          >
+                            <AlertTriangle className="h-3 w-3 mr-1" /> {t('partnerTeam.suspend')}
+                          </Button>
                           <Button
                             size="sm"
                             variant="outline"
@@ -489,6 +643,43 @@ export default function PartnerTeamPage() {
                           >
                             <Trash2 className="h-3 w-3 mr-1" /> {t('partnerTeam.remove')}
                           </Button>
+                          {suspendSuccess?.id === m.id && (
+                            <span className="text-[10px] font-semibold text-orange-700">
+                              ✓ {t('partnerTeam.suspendSuccess')}
+                            </span>
+                          )}
+                        </>
+                      )}
+                      {/* Phase 11: Suspended member — show Reactivate
+                          + Remove. Reactivate restores status='active'
+                          and clears the suspension metadata. Remove
+                          hard-deletes (preserves the ex-member's
+                          ability to re-register). */}
+                      {m.status === 'suspended' && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setReactivateTargetId(m.id)}
+                            disabled={actionBusyId === m.id}
+                            className="text-green-700 border-green-200"
+                          >
+                            <RotateCcw className="h-3 w-3 mr-1" /> {t('partnerTeam.reactivate')}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setRemoveConfirmId(m.id)}
+                            disabled={actionBusyId === m.id}
+                            className="text-red-600 border-red-200"
+                          >
+                            <Trash2 className="h-3 w-3 mr-1" /> {t('partnerTeam.remove')}
+                          </Button>
+                          {reactivateSuccess?.id === m.id && (
+                            <span className="text-[10px] font-semibold text-green-700">
+                              ✓ {t('partnerTeam.reactivateSuccess')}
+                            </span>
+                          )}
                         </>
                       )}
                       {/* Phase 1.7: resend + cancel on pending_invite.
@@ -521,6 +712,30 @@ export default function PartnerTeamPage() {
                             </span>
                           )}
                         </>
+                      )}
+                    </div>
+                  )}
+                  {/* Phase 11: Transfer Ownership — the current
+                      owner picks a target member and the API
+                      demotes the caller to member while promoting
+                      the target to owner. Shown only on the
+                      caller's own row (matched by user_id), and
+                      only when at least one other active member
+                      exists to transfer to. */}
+                  {m.role === 'owner' && m.user_id === myUserId && activeMembersExceptMe.length > 0 && (
+                    <div className="flex flex-col gap-1 flex-shrink-0">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setTransferOpen(true)}
+                        className="text-[#1B2A4A] border-[#1B2A4A]/20"
+                      >
+                        <UserCog className="h-3 w-3 mr-1" /> {t('partnerTeam.transferOwnership')}
+                      </Button>
+                      {transferSuccess && (
+                        <span className="text-[10px] font-semibold text-green-700">
+                          ✓ {t('partnerTeam.transferSuccess', { email: transferSuccess })}
+                        </span>
                       )}
                     </div>
                   )}
@@ -909,6 +1124,186 @@ export default function PartnerTeamPage() {
                   </div>
                 </>
               )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Phase 11: suspend modal. Soft-removes the member's
+          access. Optional reason is stored on the row so the
+          owner can remember why later. The member is locked
+          out immediately on success (status flips to 'suspended',
+          requireTeamMember refuses them, RLS data writes fail). */}
+      {suspendTargetId && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <Card className="max-w-md w-full">
+            <CardHeader>
+              <CardTitle>{t('partnerTeam.suspendModalTitle')}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="bg-orange-50 border border-orange-200 text-orange-800 px-4 py-3 text-sm flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <p>{t('partnerTeam.suspendModalBody')}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#1F2937] mb-1.5">
+                  {t('partnerTeam.suspendReasonLabel')}
+                </label>
+                <textarea
+                  value={suspendReason}
+                  onChange={(e) => setSuspendReason(e.target.value)}
+                  rows={3}
+                  maxLength={500}
+                  placeholder={t('partnerTeam.suspendReasonPlaceholder')}
+                  className="w-full px-4 py-2.5 border border-gray-300 text-[#1F2937] placeholder:text-gray-400 focus:outline-none focus:border-[#9B1B30] focus:ring-1 focus:ring-[#9B1B30] text-sm"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  {t('partnerTeam.suspendReasonHint')}
+                </p>
+              </div>
+              <div className="flex justify-end gap-2 pt-2 border-t">
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setSuspendTargetId(null);
+                    setSuspendReason('');
+                  }}
+                  disabled={suspendBusy}
+                >
+                  {t('partnerTeam.cancel')}
+                </Button>
+                <Button
+                  onClick={handleSuspend}
+                  disabled={suspendBusy}
+                  className="bg-orange-600 hover:bg-orange-700"
+                >
+                  {suspendBusy ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                  )}
+                  {t('partnerTeam.suspendSubmit')}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Phase 11: reactivate confirm modal. Simple "are you
+          sure" — no fields. On success the member is unlocked
+          and the team list refreshes. */}
+      {reactivateTargetId && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <Card className="max-w-md w-full">
+            <CardHeader>
+              <CardTitle>{t('partnerTeam.reactivateModalTitle')}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-gray-600">
+                {t('partnerTeam.reactivateModalBody')}
+              </p>
+              <div className="flex justify-end gap-2 pt-2 border-t">
+                <Button
+                  variant="ghost"
+                  onClick={() => setReactivateTargetId(null)}
+                  disabled={actionBusyId !== null}
+                >
+                  {t('partnerTeam.cancel')}
+                </Button>
+                <Button
+                  onClick={() => handleReactivate(reactivateTargetId)}
+                  disabled={actionBusyId !== null}
+                  className="bg-green-700 hover:bg-green-800"
+                >
+                  {actionBusyId === reactivateTargetId ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                  )}
+                  {t('partnerTeam.reactivateSubmit')}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Phase 11: transfer-ownership modal. The owner picks a
+          target from the list of active members (excluding
+          themselves). The modal warns them that they will lose
+          owner powers — this is permanent (the new owner can
+          re-promote them, but won't necessarily). */}
+      {transferOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <Card className="max-w-md w-full">
+            <CardHeader className="flex flex-row items-start justify-between space-y-0">
+              <CardTitle>{t('partnerTeam.transferModalTitle')}</CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setTransferOpen(false);
+                  setTransferTargetId(null);
+                }}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 text-sm flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-medium">{t('partnerTeam.transferWarningTitle')}</p>
+                  <p className="text-xs mt-1">{t('partnerTeam.transferWarningBody')}</p>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#1F2937] mb-1.5">
+                  {t('partnerTeam.transferTargetLabel')}
+                </label>
+                <select
+                  value={transferTargetId ?? ''}
+                  onChange={(e) => setTransferTargetId(e.target.value || null)}
+                  className="w-full px-4 py-2.5 border border-gray-300 text-[#1F2937] focus:outline-none focus:border-[#9B1B30] focus:ring-1 focus:ring-[#9B1B30] text-sm bg-white"
+                >
+                  <option value="">{t('partnerTeam.transferTargetPlaceholder')}</option>
+                  {activeMembersExceptMe.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.email || m.user_id.slice(0, 8)}
+                    </option>
+                  ))}
+                </select>
+                {activeMembersExceptMe.length === 0 && (
+                  <p className="text-xs text-amber-700 mt-1">
+                    {t('partnerTeam.transferNoTargets')}
+                  </p>
+                )}
+              </div>
+              <div className="flex justify-end gap-2 pt-2 border-t">
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setTransferOpen(false);
+                    setTransferTargetId(null);
+                  }}
+                  disabled={transferBusy}
+                >
+                  {t('partnerTeam.cancel')}
+                </Button>
+                <Button
+                  onClick={handleTransferOwnership}
+                  disabled={transferBusy || !transferTargetId}
+                  className="bg-[#1B2A4A] hover:bg-[#15233d]"
+                >
+                  {transferBusy ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <UserCog className="h-4 w-4 mr-2" />
+                  )}
+                  {t('partnerTeam.transferSubmit')}
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>

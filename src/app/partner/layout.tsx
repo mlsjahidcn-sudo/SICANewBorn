@@ -127,6 +127,20 @@ function PartnerLayoutInner({ children }: { children: React.ReactNode }) {
           router.push('/partner/rejected');
           return;
         }
+        // Phase 11: a suspended team member still has a valid
+        // partner org (status='Active' on the partner row) but
+        // their own team_members row says status='suspended'.
+        // We need to lock them out here — otherwise they'd
+        // reach /partner and see red 403 banners on every data
+        // endpoint. Reuse the same suspended message the org-
+        // level check uses, but with a slightly different copy
+        // that mentions "team membership" so they know it's
+        // them, not the org.
+        if (body.teamMember?.status === 'suspended') {
+          setAuthError(t('partnerLayout.teamMemberSuspendedMessage'));
+          setIsLoading(false);
+          return;
+        }
         if (status === 'suspended') {
           setAuthError(t('partnerLayout.suspendedMessage'));
           setIsLoading(false);

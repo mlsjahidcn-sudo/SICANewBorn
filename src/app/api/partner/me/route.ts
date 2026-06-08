@@ -45,7 +45,7 @@ export async function GET(request: Request) {
   // Path 2: team member — join via partner_team_members
   const { data: member, error: memberErr } = await service
     .from('partner_team_members')
-    .select('partner:partners!partner_id (id, email, company_name, contact_person, status, commission_rate, created_at, updated_at)')
+    .select('id, role, status, partner:partners!partner_id (id, email, company_name, contact_person, status, commission_rate, created_at, updated_at)')
     .eq('user_id', auth.user.id)
     .maybeSingle();
   if (memberErr) {
@@ -79,7 +79,23 @@ export async function GET(request: Request) {
       { status: 500 },
     );
   }
-  return NextResponse.json({ partner });
+  // Phase 11: include the teamMember status so callers (the
+  // login page + the partner layout) can detect "this user is
+  // a suspended team member" without a second round-trip. The
+  // partner is returned as-is — the data layer endpoints
+  // (/api/partner/students, /applications, /notifications)
+  // are the ones that 403 for suspended members via
+  // requirePartner's new status check. /me and /login-status
+  // stay 200 so the UI can show the right message instead of
+  // a generic "not linked" error.
+  return NextResponse.json({
+    partner,
+    teamMember: {
+      id: (member as { id: string }).id,
+      role: (member as { role: string }).role,
+      status: (member as { status: string }).status,
+    },
+  });
 }
 
 /**

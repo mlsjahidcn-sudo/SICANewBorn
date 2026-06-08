@@ -167,6 +167,21 @@ export async function requirePartner(request: Request): Promise<PartnerAuthResul
   if (!member) {
     return { ok: false, status: 403, error: 'Partner access required' };
   }
+  // Phase 11: a suspended team member must be locked out. Without
+  // this check, a member with status='suspended' could still hit
+  // /api/partner/me, /api/partner/students, etc. — the suspend
+  // button would be cosmetic. requireTeamMember already has this
+  // check; requirePartner (which is the looser helper used by
+  // /me + /login-status + /students + /applications +
+  // /notifications) now mirrors it. The 403 message matches so
+  // the partner sees the same hint either way.
+  if (member.status !== 'active') {
+    return {
+      ok: false,
+      status: 403,
+      error: `Your team membership is ${member.status}. Please contact your partner owner.`,
+    };
+  }
   // member.partner may be a single object (Supabase infers 1:1) or an
   // array — normalize to the object form.
   const partner = Array.isArray(member.partner) ? member.partner[0] : member.partner;
