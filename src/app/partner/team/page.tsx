@@ -21,6 +21,7 @@ import {
   AlertTriangle,
   RotateCcw,
   Clock,
+  KeyRound,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
@@ -90,6 +91,14 @@ export default function PartnerTeamPage() {
     return () => clearTimeout(timer);
   }, [resendSuccess]);
   const [removeConfirmId, setRemoveConfirmId] = useState<string | null>(null);
+  // Phase 8: reset-password flow. The owner clicks the button,
+  // a modal asks for a new password (with a "generate" helper),
+  // on success the modal shows the email + new password once
+  // for the owner to copy. Cleared on close.
+  const [resetTargetId, setResetTargetId] = useState<string | null>(null);
+  const [resetPassword, setResetPassword] = useState('');
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetResult, setResetResult] = useState<{ email: string; password: string } | null>(null);
 
   // Status enum → display label
   const STATUS_DISPLAY: Record<string, string> = {
@@ -230,6 +239,75 @@ export default function PartnerTeamPage() {
     setCopiedField(null);
   };
 
+  // Phase 8: reset a team member's password. The owner types
+  // (or generates) a new one; we POST to
+  // /api/partner/team/[id]/reset-password which uses
+  // Supabase's auth.admin.updateUserById to apply it. The new
+  // password comes back so the UI can show it once for the
+  // owner to copy + hand to the member.
+  const handleResetPassword = async () => {
+    if (!resetTargetId) return;
+    if (resetPassword.length < 8) {
+      setLoadError(t('partnerTeam.errorPasswordTooShort'));
+      return;
+    }
+    setResetBusy(true);
+    setLoadError(null);
+    try {
+      const res = await apiFetchJson<{ email: string; password: string }>(
+        `/api/partner/team/${resetTargetId}/reset-password`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: resetPassword }),
+        },
+      );
+      setResetResult({ email: res.email, password: res.password });
+      setResetPassword('');
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : t('partnerTeam.errorResetPassword'));
+    } finally {
+      setResetBusy(false);
+    }
+  };
+
+  const closeResetModal = () => {
+    setResetTargetId(null);
+    setResetPassword('');
+    setResetResult(null);
+  };
+
+  // Tiny client-side password generator. Not cryptographically
+  // strong (Math.random isn't), but good enough for a human-
+  // shareable starting password — the member can change it
+  // after signing in. We mix upper + lower + digits + a
+  // symbol so the password satisfies typical strength meters.
+  const generatePassword = () => {
+    const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    const lower = 'abcdefghjkmnpqrstuvwxyz';
+    const digits = '23456789';
+    const symbols = '!@#$%^&*';
+    const all = upper + lower + digits + symbols;
+    // 14 chars total — comfortably above the 8-char minimum
+    const len = 14;
+    const arr = new Uint32Array(len);
+    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+      crypto.getRandomValues(arr);
+    } else {
+      for (let i = 0; i < len; i++) arr[i] = Math.floor(Math.random() * 0xffffffff);
+    }
+    let out = '';
+    // Guarantee one of each category
+    out += upper[arr[0] % upper.length];
+    out += lower[arr[1] % lower.length];
+    out += digits[arr[2] % digits.length];
+    out += symbols[arr[3] % symbols.length];
+    for (let i = 4; i < len; i++) {
+      out += all[arr[i] % all.length];
+    }
+    setResetPassword(out);
+  };
+
   const removeMember = async (id: string) => {
     setActionBusyId(id);
     try {
@@ -345,15 +423,26 @@ export default function PartnerTeamPage() {
                   {m.role !== 'owner' && (
                     <div className="flex flex-col gap-1 flex-shrink-0">
                       {m.status === 'active' && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setRemoveConfirmId(m.id)}
-                          disabled={actionBusyId === m.id}
-                          className="text-red-600 border-red-200"
-                        >
-                          <Trash2 className="h-3 w-3 mr-1" /> {t('partnerTeam.remove')}
-                        </Button>
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setResetTargetId(m.id)}
+                            disabled={actionBusyId === m.id}
+                            className="text-[#1B2A4A] border-[#1B2A4A]/20"
+                          >
+                            <KeyRound className="h-3 w-3 mr-1" /> {t('partnerTeam.resetPassword')}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setRemoveConfirmId(m.id)}
+                            disabled={actionBusyId === m.id}
+                            className="text-red-600 border-red-200"
+                          >
+                            <Trash2 className="h-3 w-3 mr-1" /> {t('partnerTeam.remove')}
+                          </Button>
+                        </>
                       )}
                       {/* Phase 1.7: resend + cancel on pending_invite.
                           A typo in the email means the original invite
@@ -638,6 +727,141 @@ export default function PartnerTeamPage() {
                   {t('partnerTeam.remove')}
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Phase 8: reset-password modal. Owner-only by API
+          (enforced server-side). Two views:
+            - Form: pick a new password (or click Generate)
+            - Result: show the new password once for copy
+          Same "show once, can't see again" pattern as the
+          create-with-password success view. */}
+      {resetTargetId && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <Card className="max-w-md w-full">
+            <CardHeader className="flex flex-row items-start justify-between space-y-0">
+              <CardTitle>{t('partnerTeam.resetModalTitle')}</CardTitle>
+              <Button variant="ghost" size="sm" onClick={closeResetModal}>
+                <X className="h-4 w-4" />
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {!resetResult ? (
+                <>
+                  <p className="text-sm text-gray-600">
+                    {t('partnerTeam.resetModalBody')}
+                  </p>
+                  <div>
+                    <label className="block text-sm font-medium text-[#1F2937] mb-1.5">
+                      {t('partnerTeam.fieldNewPassword')}
+                    </label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="text"
+                        value={resetPassword}
+                        onChange={(e) => setResetPassword(e.target.value)}
+                        placeholder={t('partnerTeam.passwordPlaceholder')}
+                        autoComplete="new-password"
+                        className="flex-1 font-mono"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={generatePassword}
+                        className="flex-shrink-0"
+                        title={t('partnerTeam.generatePasswordHint')}
+                      >
+                        {t('partnerTeam.generatePassword')}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {t('partnerTeam.passwordHint')}
+                    </p>
+                  </div>
+                  <div className="flex justify-end gap-2 pt-2 border-t">
+                    <Button variant="ghost" onClick={closeResetModal} disabled={resetBusy}>
+                      {t('partnerTeam.cancel')}
+                    </Button>
+                    <Button
+                      onClick={handleResetPassword}
+                      disabled={resetBusy || resetPassword.length < 8}
+                      className="bg-[#1B2A4A] hover:bg-[#15233d]"
+                    >
+                      {resetBusy ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <KeyRound className="h-4 w-4 mr-2" />
+                      )}
+                      {t('partnerTeam.resetSubmit')}
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 text-sm flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="font-medium">
+                        {t('partnerTeam.resetSuccessTitle')}
+                      </p>
+                      <p className="text-xs mt-1">
+                        {t('partnerTeam.createdSuccessBody')}
+                      </p>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#1F2937] mb-1.5">
+                      {t('partnerTeam.fieldEmail')}
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <Input value={resetResult.email} readOnly className="bg-gray-50" />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => copyToClipboard(resetResult.email, 'email')}
+                        className="flex-shrink-0"
+                      >
+                        {copiedField === 'email' ? (
+                          <CheckCircle className="h-4 w-4 text-emerald-600" />
+                        ) : (
+                          t('partnerTeam.copy')
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#1F2937] mb-1.5">
+                      {t('partnerTeam.fieldNewPassword')}
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={resetResult.password}
+                        readOnly
+                        className="bg-gray-50 font-mono"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => copyToClipboard(resetResult.password, 'password')}
+                        className="flex-shrink-0"
+                      >
+                        {copiedField === 'password' ? (
+                          <CheckCircle className="h-4 w-4 text-emerald-600" />
+                        ) : (
+                          t('partnerTeam.copy')
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2 pt-2 border-t">
+                    <Button onClick={closeResetModal} className="bg-[#1B2A4A] hover:bg-[#15233d]">
+                      {t('partnerTeam.done')}
+                    </Button>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
