@@ -1504,6 +1504,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerTeam.done': 'Done',
     // Phase 8: reset password for an active team member
     'partnerTeam.resetPassword': 'Reset password',
+    'partnerTeam.ownerOnlyTitle': 'Owner-only section',
+    'partnerTeam.ownerOnlyMessage': 'Only the partner org owner can manage the team. Ask your owner to invite or remove members. You can sign in and use the rest of the partner portal normally.',
     'partnerTeam.resetModalTitle': 'Reset team member password',
     'partnerTeam.resetModalBody': "Pick a new password for this team member. The next time they sign in, they'll use this password — no email is sent. Share it with them out-of-band (Slack, in person, etc.).",
     'partnerTeam.fieldNewPassword': 'New password',
@@ -3123,6 +3125,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerTeam.done': '完成',
     // Phase 8: 重置团队成员密码
     'partnerTeam.resetPassword': '重置密码',
+    'partnerTeam.ownerOnlyTitle': '仅所有者可访问',
+    'partnerTeam.ownerOnlyMessage': '只有合作方组织所有者才能管理团队。请联系所有者来邀请或移除成员。您可以正常登录并使用合作方门户的其他功能。',
     'partnerTeam.resetModalTitle': '重置团队成员密码',
     'partnerTeam.resetModalBody': '为该团队成员设置新密码。下次登录时,需使用此新密码——不会发送邮件。请自行将新密码告知对方(微信、面谈等)。',
     'partnerTeam.fieldNewPassword': '新密码',

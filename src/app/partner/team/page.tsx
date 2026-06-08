@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation';
 import {
   Users,
   UserPlus,
+  UserCog,
   Mail,
   X,
   AlertCircle,
@@ -114,6 +115,16 @@ export default function PartnerTeamPage() {
     member: t('partnerTeam.roleMember'),
   };
 
+  // Phase 9: detect "non-owner landed on the team page directly"
+  // before the API call fires. /api/partner/team is owner-only —
+  // a team member who navigates here by URL would otherwise see
+  // a 403 JSON error rendered as a red banner before the page
+  // redirects them. We check the role via /api/partner/login-status
+  // (which DOES support team members after the Phase 5b fix)
+  // and render a friendly owner-only view instead.
+  const [isOwner, setIsOwner] = useState<boolean | null>(null);
+  const [notOwnerMessage, setNotOwnerMessage] = useState<string | null>(null);
+
   const load = useCallback(async () => {
     setIsLoading(true);
     setLoadError(null);
@@ -121,18 +132,41 @@ export default function PartnerTeamPage() {
       const res = await apiFetchJson<{ team: TeamMember[] }>('/api/partner/team');
       setTeam(res.team || []);
     } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : t('partnerTeam.errorLoad'));
-      if (err instanceof ApiError && (err.status === 403 || err.status === 401)) {
-        // Not authorized (member trying to view team) — bounce
-        router.push('/partner');
+      // For 403 (non-owner) and 401 (unauthenticated), don't
+      // set the load error — we render the dedicated owner-only
+      // view instead and let the auth-context redirect handle
+      // unauthenticated users. Other errors get the normal banner.
+      if (err instanceof ApiError && err.status === 403) {
+        setNotOwnerMessage(t('partnerTeam.ownerOnlyMessage'));
+      } else {
+        setLoadError(err instanceof ApiError ? err.message : t('partnerTeam.errorLoad'));
       }
     } finally {
       setIsLoading(false);
     }
-  }, [router, t]);
+  }, [t]);
 
   useEffect(() => {
-    load();
+    // Pre-check the role so we can render the owner-only view
+    // without flashing the load error on first render.
+    let cancelled = false;
+    (async () => {
+      try {
+        const status = await apiFetchJson<{
+          partner: { id: string; status: string };
+          teamMember: { role: 'owner' | 'member' } | null;
+        }>('/api/partner/login-status');
+        if (cancelled) return;
+        setIsOwner(status.teamMember?.role === 'owner');
+      } catch {
+        // Fall through — the load() call below will surface the
+        // error in the right place.
+      }
+      if (!cancelled) load();
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [load]);
 
   const sendInvite = async () => {
@@ -376,7 +410,20 @@ export default function PartnerTeamPage() {
           <CardTitle className="text-base">{t('partnerTeam.membersCount', { count: team.length })}</CardTitle>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
+          {/* Phase 9: owner-only gate. A non-owner who lands here
+              directly (via URL) sees a friendly explanation instead
+              of a 403 JSON error. We wait for the role check to
+              finish (isOwner !== null) before showing the gate so
+              we don't flash it for owners. */}
+          {isOwner === false ? (
+            <div className="py-8 text-center">
+              <UserCog className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+              <p className="text-[#1B2A4A] font-medium">{t('partnerTeam.ownerOnlyTitle')}</p>
+              <p className="text-sm text-[#4B5563] mt-1 max-w-sm mx-auto">
+                {notOwnerMessage || t('partnerTeam.ownerOnlyMessage')}
+              </p>
+            </div>
+          ) : isLoading ? (
             <div className="flex items-center justify-center py-8">
               <Spinner size="md" className="text-[#1B2A4A]" />
             </div>
