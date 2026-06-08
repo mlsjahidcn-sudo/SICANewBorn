@@ -109,8 +109,16 @@ export type TeamAuthResult = TeamAuthSuccess | AuthFailure;
 
 /**
  * Verify the caller is a partner and return their partner record.
- * The partnerId is server-derived (looked up from auth.users.id → partners.user_id)
- * so callers cannot spoof it via ?partnerId=... in the query string.
+ * The partnerId is server-derived (looked up from auth.users.id → partners.user_id
+ * OR partner_team_members.user_id → partner_team_members.partner_id) so
+ * callers cannot spoof it via ?partnerId=... in the query string.
+ *
+ * Two valid paths:
+ *  1. Caller is the org owner — they have a `partners.user_id = auth.uid()` row
+ *     (legacy direct-link case, still works for any owner who signed up
+ *     before the team_members table was introduced)
+ *  2. Caller is on a partner's team — `partner_team_members.user_id = auth.uid()`
+ *     joins to a `partners` row via partner_team_members.partner_id
  *
  * Kept for back-compat. New code should use `requireTeamMember` which also
  * returns the team-member row (with role + status) and refuses if the
@@ -124,31 +132,67 @@ export async function requirePartner(request: Request): Promise<PartnerAuthResul
     return { ok: false, status: 503, error: 'Database not configured' };
   }
   const service = buildServiceClient();
-  const { data, error } = await service
+
+  // Path 1: caller is the org owner (partners.user_id = auth.uid())
+  const { data: partnerAsOwner, error: pErr } = await service
     .from('partners')
     .select('*')
     .eq('user_id', auth.user.id)
     .maybeSingle();
-  if (error) {
-    return { ok: false, status: 500, error: error.message };
+  if (pErr) {
+    return { ok: false, status: 500, error: pErr.message };
   }
-  if (!data) {
+  if (partnerAsOwner) {
+    return {
+      ok: true,
+      supabase: auth.supabase,
+      user: auth.user,
+      partnerId: partnerAsOwner.id as string,
+      partner: partnerAsOwner,
+    };
+  }
+
+  // Path 2: caller is a team member. Look up partner_team_members,
+  // then JOIN to partners via partner_id. This is what made Phase 5
+  // (direct-create team member) actually work — without this, a
+  // team member with no partners row would 403 on every API call.
+  const { data: member, error: mErr } = await service
+    .from('partner_team_members')
+    .select('id, role, status, partner:partners!partner_id (*)')
+    .eq('user_id', auth.user.id)
+    .maybeSingle();
+  if (mErr) {
+    return { ok: false, status: 500, error: mErr.message };
+  }
+  if (!member) {
     return { ok: false, status: 403, error: 'Partner access required' };
+  }
+  // member.partner may be a single object (Supabase infers 1:1) or an
+  // array — normalize to the object form.
+  const partner = Array.isArray(member.partner) ? member.partner[0] : member.partner;
+  if (!partner) {
+    return { ok: false, status: 500, error: 'Team member has no associated partner org' };
   }
   return {
     ok: true,
     supabase: auth.supabase,
     user: auth.user,
-    partnerId: data.id as string,
-    partner: data,
+    partnerId: (partner as { id: string }).id,
+    partner,
   };
 }
 
 /**
  * Verify the caller is an ACTIVE member of a partner team.
  *
+ * Two valid paths:
+ *  1. Caller is the org owner — they have a `partners.user_id = auth.uid()`
+ *     row + a matching `partner_team_members` row with role='owner'
+ *  2. Caller is a team member — `partner_team_members.user_id = auth.uid()`
+ *     row, joined to a `partners` row via partner_team_members.partner_id
+ *
  * Refuses with 403 if:
- *  - No partner_team_members row exists for (caller, partners.*)
+ *  - No partner_team_members row exists for the caller at all
  *  - That row is not 'active' (i.e. 'pending_approval', 'pending_invite',
  *    'suspended')
  *
@@ -165,31 +209,21 @@ export async function requireTeamMember(request: Request): Promise<TeamAuthResul
   }
   const service = buildServiceClient();
 
-  // Look up the partner record first. Old data has 1:1 with user_id
-  // (the owner); new data has the team_members table.
-  const { data: partner, error: pErr } = await service
-    .from('partners')
-    .select('*')
-    .eq('user_id', auth.user.id)
-    .maybeSingle();
-  if (pErr) {
-    return { ok: false, status: 500, error: pErr.message };
-  }
-  if (!partner) {
-    return { ok: false, status: 403, error: 'Partner access required' };
-  }
-
+  // Look up the team-member row directly by user_id (any role, any
+  // status). The team-member row carries the partner_id; the
+  // partners table just describes the org, not the membership.
+  // This is the inverse of the previous lookup order, which used
+  // partners.user_id first and only worked for org owners.
   const { data: member, error: mErr } = await service
     .from('partner_team_members')
-    .select('id, role, status')
-    .eq('partner_id', partner.id)
+    .select('id, role, status, partner_id, partner:partners!partner_id (*)')
     .eq('user_id', auth.user.id)
     .maybeSingle();
   if (mErr) {
     return { ok: false, status: 500, error: mErr.message };
   }
   if (!member) {
-    return { ok: false, status: 403, error: 'No active team membership' };
+    return { ok: false, status: 403, error: 'No team membership found' };
   }
   if (member.status !== 'active') {
     return {
@@ -199,11 +233,18 @@ export async function requireTeamMember(request: Request): Promise<TeamAuthResul
     };
   }
 
+  // member.partner may be a single object (Supabase infers 1:1) or an
+  // array — normalize to the object form.
+  const partner = Array.isArray(member.partner) ? member.partner[0] : member.partner;
+  if (!partner) {
+    return { ok: false, status: 500, error: 'Team member has no associated partner org' };
+  }
+
   return {
     ok: true,
     supabase: auth.supabase,
     user: auth.user,
-    partnerId: partner.id as string,
+    partnerId: (partner as { id: string }).id,
     role: member.role as 'owner' | 'member',
     teamMemberId: member.id as string,
     partner,

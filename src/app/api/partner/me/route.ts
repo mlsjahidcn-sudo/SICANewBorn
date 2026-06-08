@@ -5,6 +5,16 @@ import { getRequestAuth, buildServiceClient, getServerEnv } from '@/lib/supabase
  * Returns the partner record bound to the caller's auth.users.id.
  * Used by the partner portal to verify the logged-in user is actually a partner
  * (vs. a student/admin who somehow landed on the partner login page).
+ *
+ * Two valid paths (mirrors requireTeamMember / requirePartner):
+ *  1. Caller is the org owner — partners.user_id = auth.uid()
+ *  2. Caller is a team member — partner_team_members.user_id = auth.uid()
+ *     joins to the partner org via partner_team_members.partner_id
+ *
+ * Without Path 2, a team member with no partners row would get
+ * 403 "No partner account bound to your user" — exactly the
+ * message Phase 5's direct-create team-member flow surfaced
+ * when the new member tried to log in. Adding Path 2 fixes it.
  */
 export async function GET(request: Request) {
   const { serviceKey } = getServerEnv();
@@ -18,23 +28,43 @@ export async function GET(request: Request) {
   }
 
   const service = buildServiceClient();
-  const { data, error } = await service
+
+  // Path 1: org owner — direct link via partners.user_id
+  const { data: partnerAsOwner, error: ownerErr } = await service
     .from('partners')
     .select('id, email, company_name, contact_person, status, commission_rate, created_at, updated_at')
     .eq('user_id', auth.user.id)
     .maybeSingle();
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (ownerErr) {
+    return NextResponse.json({ error: ownerErr.message }, { status: 500 });
   }
-  if (!data) {
+  if (partnerAsOwner) {
+    return NextResponse.json({ partner: partnerAsOwner });
+  }
+
+  // Path 2: team member — join via partner_team_members
+  const { data: member, error: memberErr } = await service
+    .from('partner_team_members')
+    .select('partner:partners!partner_id (id, email, company_name, contact_person, status, commission_rate, created_at, updated_at)')
+    .eq('user_id', auth.user.id)
+    .maybeSingle();
+  if (memberErr) {
+    return NextResponse.json({ error: memberErr.message }, { status: 500 });
+  }
+  if (!member) {
     return NextResponse.json(
       { error: 'No partner account bound to your user' },
       { status: 403 },
     );
   }
-
-  return NextResponse.json({ partner: data });
+  const partner = Array.isArray(member.partner) ? member.partner[0] : member.partner;
+  if (!partner) {
+    return NextResponse.json(
+      { error: 'Team member has no associated partner org' },
+      { status: 500 },
+    );
+  }
+  return NextResponse.json({ partner });
 }
 
 /**
