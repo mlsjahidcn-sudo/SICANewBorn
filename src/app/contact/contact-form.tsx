@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
 import { Spinner } from '@/components/ui/spinner';
 import { getCurrentUtm } from '@/lib/utm';
 import {
@@ -37,6 +38,7 @@ interface Props {
  * server-rendered by the page.
  */
 export function ContactForm({ formTitle, labels, successMessages }: Props) {
+  const router = useRouter();
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -80,6 +82,19 @@ export function ContactForm({ formTitle, labels, successMessages }: Props) {
       }
       setStatus('success');
       form.reset();
+      // Phase 27: redirect to the thank-you page so the
+      // lead's last impression is the brand (timeline,
+      // multi-channel reach-out, social proof, related
+      // content) instead of the form. We briefly delay so
+      // the success state is visible to anyone watching the
+      // form's network tab — a pure immediate redirect feels
+      // like the click "didn't work". 250ms is below the
+      // human perception threshold for "I clicked and the
+      // page changed" (~400ms), so the user perceives an
+      // instant redirect while the network has time to flush.
+      setTimeout(() => {
+        router.push('/thank-you?source=contact');
+      }, 250);
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Submission failed');
       setStatus('error');

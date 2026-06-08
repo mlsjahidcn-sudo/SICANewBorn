@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, type FormEvent, type ChangeEvent } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Spinner } from '@/components/ui/spinner';
 import { getCurrentUtm } from '@/lib/utm';
 import {
@@ -43,6 +44,14 @@ const STEPS = [
 ] as const;
 
 export function AssessmentForm({ successMessages }: Props) {
+  const router = useRouter();
+  // If the user arrived on /assessment from a university
+  // detail page's "Apply" CTA (Phase 24 wired ?interest=<slug>
+  // into the redirect chain), pass it through to the
+  // thank-you page so the "you were looking at this" card
+  // lights up.
+  const searchParams = useSearchParams();
+  const interestParam = searchParams.get('interest');
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [currentStep, setCurrentStep] = useState(0);
@@ -323,6 +332,21 @@ export function AssessmentForm({ successMessages }: Props) {
       setStoragePath(null);
       setAssessmentId(null);
       form.reset();
+      // Phase 27: redirect to the thank-you page. Pass through
+      // the ?interest=<slug> param if the user came from a
+      // university detail page's Apply CTA (Phase 24 wired
+      // this on the redirect chain) so the thank-you page
+      // can show a "you were looking at this" personalized
+      // card. Same 250ms delay as the contact form — short
+      // enough to feel instant, long enough to flush the
+      // network state and show the inline success state to
+      // anyone watching devtools.
+      const thankYouUrl = interestParam
+        ? `/thank-you?source=assessment&interest=${encodeURIComponent(interestParam)}`
+        : '/thank-you?source=assessment';
+      setTimeout(() => {
+        router.push(thankYouUrl);
+      }, 250);
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Submission failed');
       setStatus('error');
