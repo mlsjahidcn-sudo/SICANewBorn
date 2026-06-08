@@ -73,27 +73,42 @@ export default function PartnerDashboard() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [students, setStudents] = useState<PartnerStudent[]>([]);
   const [applications, setApplications] = useState<PartnerApplication[]>([]);
+  // Server-side totals from `count: 'exact'` on the paginated endpoints.
+  // The arrays above are capped at 100 rows (the API's hard limit), so
+  // any dashboard stat that should reflect "the whole org" must use these
+  // totals — never `students.length` / `applications.length`.
+  const [totalStudents, setTotalStudents] = useState(0);
+  const [totalApplications, setTotalApplications] = useState(0);
+  const [studentCountCapped, setStudentCountCapped] = useState(false);
+  const [appCountCapped, setAppCountCapped] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        // /api/partner/students and /api/partner/applications both
-        // return { students: [...] } / { applications: [...] } with
-        // pagination metadata. Fees were removed in Phase 3 —
-        // partner orgs don't see fees or service charge (admin
-        // manages them in /admin/fees). limit=100 is enough for the
-        // dashboard stats; full paginated list lives on /partner/
-        // students and /partner/applications.
+        // Both endpoints return { ..., total, page, limit, totalPages }
+        // where `total` is from Supabase's `count: 'exact'`. The response
+        // arrays are capped at limit=100 (the API's hard max). Dashboard
+        // cards use `total` so the counts stay correct past 100 rows; the
+        // status breakdowns (active / accepted) and the "Recent" lists
+        // work off the capped slice, which is fine — the active count is
+        // a directional signal, and "Recent 3" is always the latest 3.
         const [studentsRes, appsRes] = await Promise.all([
           apiFetchJson<PaginatedStudents>('/api/partner/students?limit=100'),
           apiFetchJson<PaginatedApplications>('/api/partner/applications?limit=100'),
         ]);
         if (cancelled) return;
-        setStudents(Array.isArray(studentsRes?.students) ? studentsRes.students : []);
-        setApplications(
-          Array.isArray(appsRes?.applications) ? appsRes.applications : [],
-        );
+        const studentsList = Array.isArray(studentsRes?.students) ? studentsRes.students : [];
+        const appsList = Array.isArray(appsRes?.applications) ? appsRes.applications : [];
+        setStudents(studentsList);
+        setApplications(appsList);
+        setTotalStudents(studentsRes?.total ?? studentsList.length);
+        setTotalApplications(appsRes?.total ?? appsList.length);
+        // Flag the status breakdowns as lower-bound estimates when the
+        // fetched slice doesn't cover the full org. The headline totals
+        // stay exact because they come from the API's count.
+        setStudentCountCapped((studentsRes?.total ?? studentsList.length) > studentsList.length);
+        setAppCountCapped((appsRes?.total ?? appsList.length) > appsList.length);
       } catch (err) {
         if (cancelled) return;
         setLoadError(
@@ -108,8 +123,10 @@ export default function PartnerDashboard() {
     };
   }, [t]);
 
-  // Derive stats from real data
-  const totalStudents = students.length;
+  // Derive stats from real data. The headline counts use the server-side
+  // `total` (exact count, not capped at 100). Status breakdowns still
+  // come from the fetched slice — if the org has more than 100 rows the
+  // hint text flags it as a lower-bound estimate.
   const activeApplications = applications.filter((a) =>
     ACTIVE_APPLICATION_STATUSES.has(a.status || ''),
   ).length;
@@ -228,6 +245,14 @@ export default function PartnerDashboard() {
           <CardContent>
             <div className="text-2xl font-bold text-[#1B2A4A]">{activeApplications}</div>
             <p className="text-sm text-[#4B5563] mt-1">{t('partnerDashboard.activeApplicationsHint')}</p>
+            {appCountCapped && (
+              <p className="text-xs text-amber-700 mt-1">
+                {t('partnerDashboard.statusBreakdownCapped', {
+                  shown: applications.length,
+                  total: totalApplications,
+                })}
+              </p>
+            )}
             <Button asChild variant="outline" size="sm" className="mt-4 w-full rounded-none">
               <Link href="/partner/applications" className="flex items-center justify-center">
                 {t('partnerDashboard.viewApplications')} <ChevronRight className="ml-1 h-4 w-4" />
@@ -249,6 +274,14 @@ export default function PartnerDashboard() {
           <CardContent>
             <div className="text-2xl font-bold text-[#1B2A4A]">{acceptedApplications}</div>
             <p className="text-sm text-[#4B5563] mt-1">{t('partnerDashboard.acceptedHint')}</p>
+            {appCountCapped && (
+              <p className="text-xs text-amber-700 mt-1">
+                {t('partnerDashboard.statusBreakdownCapped', {
+                  shown: applications.length,
+                  total: totalApplications,
+                })}
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>
