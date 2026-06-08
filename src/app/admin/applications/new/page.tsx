@@ -14,7 +14,7 @@ import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { degreeLevels, intendedIntakes, documentTypes } from '@/lib/data';
-// Phase 20: universities + programs were imported from the static
+// Phase 20: universidades + programs were imported from the static
 // `data.ts` fallback (the 9-school / 17-program set shipped with
 // the repo). Any school or program an admin added through
 // /admin/universities or /admin/programs was invisible here —
@@ -30,6 +30,7 @@ import { degreeLevels, intendedIntakes, documentTypes } from '@/lib/data';
 // /admin/document-types pages). If we ever add admin UIs for
 // those, they'll need the same treatment.
 import type { University, Program } from '@/lib/data';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { useStudentList } from '@/hooks/use-student-list';
 import { apiFetchJson } from '@/lib/api-client';
 import type { AdminStudent } from '@/lib/student-mapper';
@@ -52,7 +53,10 @@ interface FormData {
 }
 
 export default function AdminNewApplicationPage() {
-  const { students } = useStudentList();
+  // Phase 21: also surface `isLoading` so the typeahead can show
+  // a "Loading students..." placeholder instead of a confusing
+  // empty popover between mount and the API response settling.
+  const { students, isLoading: studentsLoading } = useStudentList();
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -399,21 +403,31 @@ export default function AdminNewApplicationPage() {
                   <div className="space-y-4">
                     <div>
                       <Label className="text-[#1F2937]">Select Existing Student *</Label>
-                      <Select 
-                        value={formData.studentId || ''} 
-                        onValueChange={(value) => handleChange('studentId', value || null)}
-                      >
-                        <SelectTrigger className="rounded-none mt-1">
-                          <SelectValue placeholder="Select a student..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {students.map(student => (
-                            <SelectItem key={student.id} value={student.id}>
-                              {student.firstName} {student.lastName} ({student.email})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {/* Phase 21: typeahead picker. Was a plain
+                          <Select> capped at 100 rows by
+                          useStudentList — a 200+ student org
+                          silently truncated the visible list and
+                          the admin couldn't pick anyone sorted
+                          below row 100. Now a SearchableSelect
+                          (cmdk-based client filter) over up to
+                          500 rows. Sub-line = nationality for
+                          quick disambiguation when two students
+                          share a name. The popover filters on
+                          name / email / nationality as the admin
+                          types. */}
+                      <SearchableSelect
+                        value={formData.studentId || ''}
+                        onChange={(value) => handleChange('studentId', value || null)}
+                        placeholder="Select a student..."
+                        searchPlaceholder="Search by name, email, or nationality..."
+                        emptyText="No students match your search."
+                        loading={studentsLoading}
+                        options={students.map((s) => ({
+                          value: s.id,
+                          label: `${s.firstName} ${s.lastName}`,
+                          sublabel: [s.email, s.nationality].filter(Boolean).join(' · '),
+                        }))}
+                      />
                       <p className="text-xs text-[#4B5563] mt-1">
                         Select an existing student, OR fill in the manual fields below for a lead without an account.
                       </p>
