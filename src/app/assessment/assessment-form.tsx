@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, type FormEvent, type ChangeEvent } from 'r
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Spinner } from '@/components/ui/spinner';
 import { getCurrentUtm } from '@/lib/utm';
+import { track } from '@/lib/analytics';
+import { useI18n } from '@/lib/i18n';
 import {
   CheckCircle,
   Mail,
@@ -45,6 +47,7 @@ const STEPS = [
 
 export function AssessmentForm({ successMessages }: Props) {
   const router = useRouter();
+  const { locale } = useI18n();
   // If the user arrived on /assessment from a university
   // detail page's "Apply" CTA (Phase 24 wired ?interest=<slug>
   // into the redirect chain), pass it through to the
@@ -52,6 +55,40 @@ export function AssessmentForm({ successMessages }: Props) {
   // lights up.
   const searchParams = useSearchParams();
   const interestParam = searchParams.get('interest');
+
+  // Phase 29: fire the assessment_start event once on mount.
+  // The event fires AFTER first render so the event helpers
+  // have access to the locale + the URL params from the
+  // search-params hook. We capture `referrer` so the funnel
+  // can attribute the lead to the surface that sent them
+  // here (home CTA / university Apply CTA / nav link /
+  // direct visit).
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const ref = document.referrer;
+    let source: 'home' | 'university' | 'nav' | 'direct' | 'other' = 'other';
+    if (!ref) {
+      source = 'direct';
+    } else if (ref.includes('/universities/')) {
+      source = 'university';
+    } else if (ref.endsWith('/') || ref.endsWith(window.location.host)) {
+      source = 'home';
+    } else {
+      try {
+        const refPath = new URL(ref).pathname;
+        if (refPath === '/' || refPath === '') source = 'home';
+        else if (refPath.startsWith('/universities/')) source = 'university';
+      } catch {
+        // malformed referrer — leave as 'other'
+      }
+    }
+    track('assessment_start', {
+      source,
+      locale,
+      interest: interestParam || undefined,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // fire once on mount; locale is stable per session
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [currentStep, setCurrentStep] = useState(0);
@@ -175,6 +212,15 @@ export function AssessmentForm({ successMessages }: Props) {
       focusField(invalid);
       return;
     }
+    // Phase 29: fire step_complete on every successful
+    // forward-advance. The step number is the one the user
+    // just finished (1-indexed). We don't fire on the
+    // initial mount — only on actual advancement — so
+    // the funnel shows "step 1 reached" via assessment_start.
+    track('assessment_step_complete', {
+      step: (currentStep + 1) as 1 | 2 | 3 | 4,
+      locale,
+    });
     setCurrentStep((s) => Math.min(s + 1, STEPS.length - 1));
   };
 
@@ -331,6 +377,16 @@ export function AssessmentForm({ successMessages }: Props) {
       setUploadStatus('idle');
       setStoragePath(null);
       setAssessmentId(null);
+      // Phase 29: assessment_submit on successful submission.
+      // We fire it before the form.reset() so the event captures
+      // the full state. `has_transcript` reflects whether the
+      // upload completed (storagePath is set on successful
+      // signed-URL upload).
+      track('assessment_submit', {
+        locale,
+        has_transcript: storagePath != null,
+        interest: interestParam || undefined,
+      });
       form.reset();
       // Phase 27: redirect to the thank-you page. Pass through
       // the ?interest=<slug> param if the user came from a

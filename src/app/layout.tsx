@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Script from 'next/script';
+import { GoogleAnalytics } from '@next/third-parties/google';
 import { cookies } from 'next/headers';
 import { Inspector } from 'react-dev-inspector';
 import './globals.css';
@@ -102,6 +103,17 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{ __html: editorialTeamJsonLd }}
         />
         <ClientLayout initialLocale={initialLocale}>{children}</ClientLayout>
+        {/* Google Analytics 4 — env-gated. Set
+            NEXT_PUBLIC_GA_MEASUREMENT_ID (G-XXXXXXXXXX) in your env
+            to go live. The component is from @next/third-parties/google
+            (Vercel's official wrapper) — it auto-tracks SPA page
+            views on App Router route changes, so we don't need
+            to wire usePathname + useSearchParams listeners by
+            hand. Custom events (apply_click, assessment_submit,
+            whatsapp_click, etc.) fire from src/lib/analytics.ts. */}
+        {process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID && (
+          <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID} />
+        )}
       </body>
     </html>
   );

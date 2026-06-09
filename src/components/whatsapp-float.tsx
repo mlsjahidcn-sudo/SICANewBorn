@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { MessageCircle, X } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
+import { track } from '@/lib/analytics';
 
 /**
  * WhatsAppFloat — the single most important conversion surface on
@@ -108,6 +109,9 @@ export function WhatsAppFloat() {
         href={buildWaUrl(locale)}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={() => {
+          track('whatsapp_click', { location: 'float_button', locale });
+        }}
         aria-label={locale === 'zh' ? '在 WhatsApp 上咨询 SICA' : 'Chat with SICA on WhatsApp'}
         // The `group` class enables the hover tooltip on the child
         // above. The pulse class is a CSS keyframe that runs for

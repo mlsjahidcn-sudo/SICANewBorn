@@ -11,6 +11,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import UniversityLogo from '@/components/university-logo';
 import { useUrlState } from '@/hooks/use-url-state';
+import { track } from '@/lib/analytics';
 
 // Phase: filter enhancements
 //   - URL sync (refresh-survives, shareable links)
@@ -130,6 +131,26 @@ export default function UniversidadesPage() {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, selectedCity, selectedDiscipline, selectedTag, selectedType, minRating, sortBy]);
+
+  // Phase 29: fire search_performed when the user types
+  // something into the search box. 600ms debounce so we
+  // don't spam GA on every keystroke — by the time the
+  // event fires the user has paused typing. We don't
+  // fire on empty strings (a "cleared" search is a
+  // different intent that we don't currently track; the
+  // results render and the user moves on).
+  useEffect(() => {
+    const term = searchQuery.trim().toLowerCase();
+    if (!term) return;
+    const id = window.setTimeout(() => {
+      track('search_performed', {
+        surface: 'universities',
+        term,
+        locale,
+      });
+    }, 600);
+    return () => window.clearTimeout(id);
+  }, [searchQuery, locale]);
 
   const totalPages = Math.ceil(filtered.length / perPage);
   const paginated = filtered.slice((currentPage - 1) * perPage, currentPage * perPage);
@@ -361,10 +382,23 @@ export default function UniversidadesPage() {
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
         {paginated.length > 0 ? (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {paginated.map((uni) => (
+            {paginated.map((uni, idx) => (
               <Link
                 key={uni.slug}
                 href={`/universities/${uni.slug}`}
+                onClick={() => {
+                  // Phase 29: track which university cards drive
+                  // clicks + their position in the visible list
+                  // (0-indexed). The position is the rank in the
+                  // current page (top-left = 0), which is a
+                  // useful signal for "do users click the
+                  // top-ranked schools, or do they scroll?"
+                  track('university_click', {
+                    slug: uni.slug,
+                    position: idx,
+                    locale,
+                  });
+                }}
                 className="group isolate rounded-none border border-gray-200 bg-white shadow-sm transition-all duration-150 hover:shadow-md hover:-translate-y-0.5 hover:border-[#9B1B30]/30"
               >
                 {/* Image + Logo */}

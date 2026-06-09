@@ -15,6 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Message } from './Message';
+import { track } from '@/lib/analytics';
 
 interface ChatMessage {
   id: string;
@@ -266,6 +267,19 @@ export function ChatWindow({ isOpen, onClose, onMinimize }: ChatWindowProps) {
       role: 'user',
       content: input.trim(),
     };
+
+    // Phase 29: fire chatbot_message_sent BEFORE the API
+    // call (so the event survives a network failure —
+    // we still want to know the user *tried* to send).
+    // `message_length` is the user's typed char count,
+    // useful for "are long questions more or less likely
+    // to convert?" analysis. Locale from <html lang>
+    // matches the Chatbot.tsx readLocale pattern.
+    const lang = typeof document !== 'undefined' ? document.documentElement.lang : 'en';
+    track('chatbot_message_sent', {
+      locale: lang === 'zh' ? 'zh' : 'en',
+      message_length: userMessage.content.length,
+    });
 
     setMessages((prev) => [...prev, userMessage]);
     setInput('');

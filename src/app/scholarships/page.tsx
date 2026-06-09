@@ -12,6 +12,7 @@ import {
 } from '@/lib/data';
 import { Search, Filter, Clock, Globe, GraduationCap, ArrowRight, ChevronLeft, ChevronRight, Gift, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { track } from '@/lib/analytics';
 
 const ITEMS_PER_PAGE = 6;
 
@@ -179,7 +180,7 @@ export default function ScholarshipsPage() {
       {/* Scholarship Cards */}
       <section className="max-w-7xl mx-auto px-6 pb-16">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {paginated.map((scholarship) => (
+          {paginated.map((scholarship, idx) => (
             <div
               key={scholarship.slug}
               className="bg-white border border-gray-200 hover:border-[#9B1B30]/40 hover:shadow-lg transition-all duration-150 group"
@@ -251,6 +252,13 @@ export default function ScholarshipsPage() {
                 </span>
                 <Link
                   href={`/scholarships/${scholarship.slug}`}
+                  onClick={() => {
+                    track('scholarship_click', {
+                      slug: scholarship.slug,
+                      position: idx,
+                      locale,
+                    });
+                  }}
                   className="inline-flex items-center gap-1 text-sm font-semibold text-[#9B1B30] hover:text-[#7A1526] transition-colors group/link"
                 >
                   {t('schol.viewDetails')}

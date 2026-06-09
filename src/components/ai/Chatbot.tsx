@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { MessageSquare, X, Minimize2, Sparkles } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { ChatWindow } from './ChatWindow';
+import { track } from '@/lib/analytics';
 
 const NUDGE_DELAY_MS = 30_000; // 30s of idle dwell on the page
 const NUDGE_HIDE_KEY = 'sica_chat_nudge_dismissed_at';
@@ -32,6 +33,17 @@ export function Chatbot() {
   const pathname = usePathname();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Phase 29: chatbot lifecycle events. We read the locale
+  // from the <html lang> attribute the way ChatWindow does
+  // (see its analytics payload in the /api/ai/chat
+  // request) — keeps the two files in sync without
+  // forcing Chatbot to pull in useI18n (it doesn't need
+  // t() for anything else).
+  const readLocale = (): 'en' | 'zh' => {
+    if (typeof document === 'undefined') return 'en';
+    return document.documentElement.lang === 'zh' ? 'zh' : 'en';
+  };
+
   const handleOpen = () => {
     setIsOpen(true);
     setIsMinimized(false);
@@ -40,11 +52,17 @@ export function Chatbot() {
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
+    // Only fire if we were actually closed (not a re-render).
+    // The handleOpen is bound to the bubble + the nudge "Chat
+    // now" button; both are user-initiated. Firing on every
+    // open is the right granularity.
+    track('chatbot_opened', { locale: readLocale() });
   };
 
   const handleClose = () => {
     setIsOpen(false);
     setIsMinimized(false);
+    track('chatbot_closed', { locale: readLocale() });
   };
 
   const handleMinimize = () => {

@@ -4,6 +4,8 @@ import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Spinner } from '@/components/ui/spinner';
 import { getCurrentUtm } from '@/lib/utm';
+import { track } from '@/lib/analytics';
+import { useI18n } from '@/lib/i18n';
 import {
   Mail,
   AlertCircle,
@@ -39,6 +41,7 @@ interface Props {
  */
 export function ContactForm({ formTitle, labels, successMessages }: Props) {
   const router = useRouter();
+  const { locale } = useI18n();
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -81,6 +84,21 @@ export function ContactForm({ formTitle, labels, successMessages }: Props) {
         throw new Error(body.error || `Submission failed (${res.status})`);
       }
       setStatus('success');
+      // Phase 29: contact_submit on successful submission.
+      // We fire it after the API returns 200 (so failed
+      // submissions don't inflate the count) and before
+      // the form.reset() so the event captures the lead
+      // state. The subject dropdown's value is restricted
+      // by the <select> in the JSX, so the cast is safe.
+      track('contact_submit', {
+        locale,
+        subject: (data.get('subject') as
+          | 'general'
+          | 'application'
+          | 'scholarship'
+          | 'visa'
+          | 'other') || 'general',
+      });
       form.reset();
       // Phase 27: redirect to the thank-you page so the
       // lead's last impression is the brand (timeline,

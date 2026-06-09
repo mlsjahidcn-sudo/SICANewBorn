@@ -16,6 +16,7 @@ import {
 import { Search, Filter, GraduationCap, Globe, Clock, Banknote, ArrowRight, Award, BookOpen, X } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useUrlState } from '@/hooks/use-url-state';
+import { track } from '@/lib/analytics';
 
 const ITEMS_PER_PAGE = 8;
 
@@ -355,12 +356,19 @@ export default function ProgramsPage() {
           </div>
         ) : (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {paginatedPrograms.map((program) => {
+            {paginatedPrograms.map((program, idx) => {
               const uni = getUniversity(program.universitySlug);
               return (
                 <Link
                   key={program.slug}
                   href={`/programs/${program.slug}`}
+                  onClick={() => {
+                    track('program_click', {
+                      slug: program.slug,
+                      position: idx,
+                      locale,
+                    });
+                  }}
                   className="group border border-gray-200 bg-white transition-all duration-150 hover:border-[#9B1B30]/40 hover:shadow-lg"
                 >
                   {/* Top colored bar */}

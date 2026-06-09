@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { X, MessageCircle, ArrowRight } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
+import { track } from '@/lib/analytics';
 
 /**
  * StickyApplyBar — fixed-bottom "Apply to this university"
@@ -41,7 +42,7 @@ interface StickyApplyBarProps {
 }
 
 export function StickyApplyBar({ universityName, universitySlug }: StickyApplyBarProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [visible, setVisible] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
@@ -161,6 +162,13 @@ export function StickyApplyBar({ universityName, universitySlug }: StickyApplyBa
             href={whatsappUrl}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => {
+              track('whatsapp_click', {
+                location: 'sticky_bar',
+                locale,
+                slug: universitySlug,
+              });
+            }}
             className="flex-shrink-0 flex items-center gap-1.5 px-3 sm:px-4 h-9 sm:h-10 bg-[#25D366] hover:bg-[#1DAB56] text-white text-xs sm:text-sm font-semibold transition-colors"
           >
             <MessageCircle className="h-4 w-4" />
@@ -175,6 +183,13 @@ export function StickyApplyBar({ universityName, universitySlug }: StickyApplyBa
               "Or talk to a counselor" link instead. */}
           <Link
             href={applyUrl}
+            onClick={() => {
+              track('apply_click', {
+                location: 'sticky_bar',
+                locale,
+                slug: universitySlug,
+              });
+            }}
             className="flex-shrink-0 flex items-center gap-1.5 px-4 sm:px-5 h-9 sm:h-10 bg-[#9B1B30] hover:bg-[#7A1526] text-white text-xs sm:text-sm font-semibold uppercase tracking-wider transition-colors"
           >
             {t('stickyApply.apply')}

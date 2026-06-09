@@ -34,6 +34,7 @@ import {
 import UniversityLogo from '@/components/university-logo';
 import { DeadlineCountdown } from '@/components/deadline-countdown';
 import { StickyApplyBar } from '@/components/StickyApplyBar';
+import { track } from '@/lib/analytics';
 
 export default function UniversityDetailPage() {
   const params = useParams();
@@ -652,6 +653,13 @@ export default function UniversityDetailPage() {
                     for the "you were looking at this" card. */}
                 <Link
                   href={`/assessment?interest=${encodeURIComponent(slug)}`}
+                  onClick={() => {
+                    track('apply_click', {
+                      location: 'support_card',
+                      locale,
+                      slug,
+                    });
+                  }}
                   className="block"
                 >
                   <Button className="mt-3 w-full bg-[#9B1B30] hover:bg-[#7A1526] text-white font-semibold text-sm">
