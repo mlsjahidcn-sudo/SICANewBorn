@@ -100,7 +100,13 @@ export function StickyApplyBar({ universityName, universitySlug }: StickyApplyBa
 
   const whatsappContext = `Hi SICA, I'd like to apply to ${universityName}. Can you help me?`;
   const whatsappUrl = `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(whatsappContext)}`;
-  const applyUrl = `/contact?interest=${encodeURIComponent(universitySlug)}`;
+  // Apply — the deep-commit CTA. Routes to /assessment (the
+  // structured 4-step intake) with ?interest=<slug> so the
+  // assessment form's thank-you redirect can still surface the
+  // "you were looking at this" personalized card. The softer
+  // /contact path lives in the right-rail "Or talk to a
+  // counselor" link on the university detail page.
+  const applyUrl = `/assessment?interest=${encodeURIComponent(universitySlug)}`;
 
   // If the user already dismissed, render nothing. The slide
   // animation is driven by the `visible` class — when false,
@@ -161,10 +167,12 @@ export function StickyApplyBar({ universityName, universitySlug }: StickyApplyBa
             <span className="hidden sm:inline">{t('stickyApply.whatsapp')}</span>
           </a>
 
-          {/* Apply — primary action. Routes to /contact
-              with ?interest=<slug> (Phase 24 chain) so the
-              contact form knows which university the lead
-              is asking about. */}
+          {/* Apply — primary action. Routes to /assessment
+              (the deep-commit 4-step intake) with
+              ?interest=<slug> so the thank-you page can
+              surface the "you were looking at this" card.
+              The /contact path lives in the right-rail
+              "Or talk to a counselor" link instead. */}
           <Link
             href={applyUrl}
             className="flex-shrink-0 flex items-center gap-1.5 px-4 sm:px-5 h-9 sm:h-10 bg-[#9B1B30] hover:bg-[#7A1526] text-white text-xs sm:text-sm font-semibold uppercase tracking-wider transition-colors"

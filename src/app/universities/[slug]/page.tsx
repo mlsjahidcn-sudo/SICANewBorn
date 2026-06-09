@@ -640,18 +640,18 @@ export default function UniversityDetailPage() {
                     : 'SICA 顾问为你提供个性化申请指导，从文件准备到提交跟进，全程协助。'}
                 </p>
                 {/* C1 (funnel audit): was a bare <Button> with no
-                    href/onClick — clicks did nothing. Wrap in a
-                    Link to /contact?interest=<slug> so the lead
-                    lands on the contact form with the university
-                    in the URL. Phase 25 (planned) will read the
-                    ?interest param on the contact form and
-                    pre-fill the subject/message. For now the
-                    param shows up in sourcePage and in the
-                    lead's URL when SICA's admin opens the row —
-                    enough attribution to attribute conversions
-                    to specific universities. */}
+                    href/onClick — clicks did nothing. Wrapped in
+                    a Link to /assessment?interest=<slug> (the
+                    deep-commit 4-step intake) so the lead lands
+                    on the assessment form with the university
+                    in the URL. The softer /contact path lives
+                    in the "Or talk to a counselor" link right
+                    below — Phase 25's commit gradient in action.
+                    The ?interest param passes through to
+                    /thank-you?source=assessment&interest=<slug>
+                    for the "you were looking at this" card. */}
                 <Link
-                  href={`/contact?interest=${encodeURIComponent(slug)}`}
+                  href={`/assessment?interest=${encodeURIComponent(slug)}`}
                   className="block"
                 >
                   <Button className="mt-3 w-full bg-[#9B1B30] hover:bg-[#7A1526] text-white font-semibold text-sm">
@@ -697,10 +697,11 @@ export default function UniversityDetailPage() {
       {/* Sticky "Apply" bar — once the user has scrolled past
           the hero on this long page, the primary CTA is
           otherwise lost above the fold. The bar reads the
-          current university name + slug, labeles itself
+          current university name + slug, labels itself
           accordingly, and routes the Apply button into the
-          /contact?interest=<slug> chain wired in Phase 24
-          (so the contact form pre-fills the university). */}
+          /assessment?interest=<slug> chain (the deep-commit
+          4-step intake). The ?interest param passes through
+          to /thank-you so the personalized card lights up. */}
       <StickyApplyBar
         universityName={locale === 'en' ? uni.name : uni.nameCn || uni.name}
         universitySlug={uni.slug}
