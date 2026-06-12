@@ -83,6 +83,24 @@ export async function GET(request: NextRequest) {
     const sourceOnly =
       source && (source === 'Online' || source === 'Admin') ? source : null;
 
+    // Phase 32: cross-taxonomy status pass-through for the
+    // Partner tab. The student taxonomy has 'Under Review'; the
+    // partner taxonomy has 'In Review' (same meaning). The list
+    // shows both surfaces in the Partner tab (S28), so when the
+    // user picks one of these statuses we need to query BOTH the
+    // student column AND the partner column with the equivalent
+    // value. Same idea in reverse for the Student tab if a
+    // partner-CRM row could carry an 'In Review' status (it
+    // can — but Student tab only shows student_applications
+    // rows, so no map needed there).
+    const partnerStatusFilter: string[] = [];
+    if (status) {
+      partnerStatusFilter.push(status);
+      if (status === 'Under Review') {
+        partnerStatusFilter.push('In Review');
+      }
+    }
+
     const service = buildServiceClient();
 
     // S28: run the two queries in parallel.
@@ -111,7 +129,13 @@ export async function GET(request: NextRequest) {
         });
     const partnerP = wantPartner
       ? fetchPartnerApplications(service, {
-          status: status ?? null,
+          // Phase 32: pass an array of acceptable statuses so a
+          // student-taxonomy 'Under Review' (which the user picks
+          // from the unified list dropdown) translates to the
+          // partner taxonomy's 'In Review' for partner_applications
+          // rows. The single-string form is just a 1-element
+          // array — same SQL effect for non-cross-taxonomy statuses.
+          statuses: partnerStatusFilter,
           search: search ?? null,
           // Partners have no SQL-side `source` filter (the column
           // doesn't exist on partner_applications) — over-fetch
@@ -233,9 +257,28 @@ async function fetchStudentApplications(
   if (opts.status) query = query.eq('status', opts.status);
   if (isOfflineFilter) query = query.is('student_id', null);
   if (opts.search) {
+    // Phase 32: include the applicant name/email columns so a
+    // search for "John" or "john@gmail.com" actually finds the
+    // row server-side. Before this fix, the API filtered only on
+    // program_name / university_name / application_number, and
+    // the page did a client-side `.includes()` on studentName
+    // + studentEmail — so a search for "John" returned 20
+    // unrelated rows and the client narrowed them to 0 (page
+    // looked empty). The `student:student_profiles(...).first_name`
+    // path is a PostgREST foreign-table filter — the same
+    // pattern the per-student filtering already uses.
     const safe = opts.search.replace(/[%_]/g, '\\$&');
     query = query.or(
-      `program_name.ilike.%${safe}%,university_name.ilike.%${safe}%,application_number.ilike.%${safe}%`,
+      [
+        `program_name.ilike.%${safe}%`,
+        `university_name.ilike.%${safe}%`,
+        `application_number.ilike.%${safe}%`,
+        `applicant_name.ilike.%${safe}%`,
+        `applicant_email.ilike.%${safe}%`,
+        `student.first_name.ilike.%${safe}%`,
+        `student.last_name.ilike.%${safe}%`,
+        `student.email.ilike.%${safe}%`,
+      ].join(','),
     );
   }
 
@@ -256,7 +299,7 @@ async function fetchStudentApplications(
 async function fetchPartnerApplications(
   service: ReturnType<typeof buildServiceClient>,
   opts: {
-    status: string | null;
+    statuses: string[];
     search: string | null;
     fetchLimit: number;
   },
@@ -269,10 +312,16 @@ async function fetchPartnerApplications(
     )
     .order('created_at', { ascending: false });
 
-  // Map partner's status names (Submitted / In Review / Accepted /
-  // Rejected / Withdrawn / Draft) onto the student status taxonomy
-  // is not 1:1 — the admin's filter is on the partner column.
-  if (opts.status) query = query.eq('status', opts.status);
+  // Phase 32: accept a list of acceptable statuses (1 or 2) so
+  // the unified list's student-taxonomy dropdown can match
+  // partner_applications rows that use the partner taxonomy.
+  // Today the only cross-mapping is 'Under Review' → 'In Review'
+  // (the route's caller may pass both, see partnerStatusFilter).
+  if (opts.statuses.length === 1) {
+    query = query.eq('status', opts.statuses[0]);
+  } else if (opts.statuses.length > 1) {
+    query = query.in('status', opts.statuses);
+  }
 
   if (opts.search) {
     const safe = opts.search.replace(/[%_]/g, '\\$&');

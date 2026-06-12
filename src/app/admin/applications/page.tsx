@@ -151,7 +151,24 @@ export default function AdminApplicationsPage() {
   const [studentFilter, setStudentFilter] = useState<string>('all');
 
   // Tab badge counts
-  const [counts, setCounts] = useState<{ total: number; online: number; partner: number; partnerCrm: number; offline: number } | null>(null);
+  // Phase 32: extended to also carry per-status + per-priority
+  // breakdowns (from /api/admin/applications/counts) so the
+  // stat cards below the header can render without a second
+  // roundtrip. The shape is backward-compatible — old callers
+  // reading `total` / `online` etc. still work.
+  const [counts, setCounts] = useState<{
+    total: number;
+    online: number;
+    partner: number;
+    partnerCrm: number;
+    offline: number;
+    submitted: number;
+    inReview: number;
+    urgent: number;
+    byStatus: Record<string, number>;
+    byPriority: Record<string, number>;
+    perStatusCapped: boolean;
+  } | null>(null);
   const [countsError, setCountsError] = useState<string | null>(null);
 
   // Delete dialog
@@ -181,6 +198,14 @@ export default function AdminApplicationsPage() {
   // moved to "Under Review" in one click.
   const [bulkStatusDialogOpen, setBulkStatusDialogOpen] = useState(false);
   const [bulkStatus, setBulkStatus] = useState<string>('Under Review');
+  // Phase 32: when the result dialog has failures, the admin
+  // can sort the failure list by "Errors" vs "All IDs" via a
+  // small inline toggle. The dialog already only renders the
+  // failed list (successes are summarized as a count), but the
+  // toggle can flip between "one row per failed id" and
+  // "grouped by error message" for easier scanning when many
+  // rows fail with the same reason. Default 'list'.
+  const [bulkResultView, setBulkResultView] = useState<'list' | 'grouped'>('list');
 
   // -----------------------------------------------------------------
   // Fetch the per-source counts ONCE on mount so the tab badges can
@@ -189,9 +214,19 @@ export default function AdminApplicationsPage() {
   // -----------------------------------------------------------------
   const fetchCounts = useCallback(async () => {
     try {
-      const data = await apiFetchJson<{ total: number; online: number; partner: number; partnerCrm: number; offline: number }>(
-        '/api/admin/applications/counts',
-      );
+      const data = await apiFetchJson<{
+        total: number;
+        online: number;
+        partner: number;
+        partnerCrm: number;
+        offline: number;
+        submitted: number;
+        inReview: number;
+        urgent: number;
+        byStatus: Record<string, number>;
+        byPriority: Record<string, number>;
+        perStatusCapped: boolean;
+      }>('/api/admin/applications/counts');
       setCounts(data);
       setCountsError(null);
     } catch (err) {
@@ -516,6 +551,81 @@ export default function AdminApplicationsPage() {
         </div>
       )}
 
+      {/* Phase 32: at-a-glance stat cards. Mirrors the partner
+          page's 4-card row so a busy admin can scan the pipeline
+          without clicking into a tab. Per-status totals come from
+          the same /api/admin/applications/counts endpoint the
+          tab badges use, so we never re-fetch. When the pipeline
+          exceeds 5000 rows on either surface, the per-status
+          counts become a lower bound (the API caps the
+          status/priority join at 5000) — we surface a tiny
+          "5000+?" hint on the relevant cards. */}
+      {counts && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="rounded-none">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs uppercase tracking-wider text-[#4B5563] font-normal">
+                Total in {SOURCE_TABS.find((t) => t.value === activeTab)?.shortLabel}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-[#1B2A4A]">{getActiveCount()}</div>
+              <p className="text-xs text-gray-500 mt-0.5">All statuses, all time</p>
+            </CardContent>
+          </Card>
+          <Card className="rounded-none">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs uppercase tracking-wider text-[#4B5563] font-normal">
+                Awaiting Review
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">
+                {counts.submitted ?? 0}
+                {counts.perStatusCapped && counts.submitted >= 5000 && (
+                  <span className="text-xs text-amber-600 ml-1">5000+?</span>
+                )}
+              </div>
+              <p className="text-xs text-gray-500 mt-0.5">Status = Submitted (both taxonomies)</p>
+            </CardContent>
+          </Card>
+          <Card className="rounded-none">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs uppercase tracking-wider text-[#4B5563] font-normal">
+                In Review
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-yellow-600">
+                {counts.inReview ?? 0}
+                {counts.perStatusCapped && counts.inReview >= 5000 && (
+                  <span className="text-xs text-amber-600 ml-1">5000+?</span>
+                )}
+              </div>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Under Review (student) + In Review (partner)
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="rounded-none">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs uppercase tracking-wider text-[#4B5563] font-normal">
+                Urgent
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-[#9B1B30]">
+                {counts.urgent ?? 0}
+                {counts.perStatusCapped && counts.urgent >= 5000 && (
+                  <span className="text-xs text-amber-600 ml-1">5000+?</span>
+                )}
+              </div>
+              <p className="text-xs text-gray-500 mt-0.5">Priority = Urgent or High</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* S34: active cohort filter pill. Set when the admin
           lands here from /admin/cohorts with ?intake=...; also
           visible if they re-applied the filter via the API. The
@@ -657,9 +767,58 @@ export default function AdminApplicationsPage() {
                   ) : filteredApplications.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="px-6 py-12 text-center text-[#4B5563]">
-                        {applications.length === 0
-                          ? `No applications yet in ${SOURCE_TABS.find((t) => t.value === activeTab)?.label.toLowerCase() ?? 'this view'}${intakeFilter ? ` for cohort ${intakeFilterLabel}` : ''}.`
-                          : 'No applications match your filters.'}
+                        {applications.length === 0 ? (
+                          <>
+                            <p>
+                              No applications yet in{' '}
+                              {SOURCE_TABS.find((t) => t.value === activeTab)?.label.toLowerCase() ??
+                                'this view'}
+                              {intakeFilter ? ` for cohort ${intakeFilterLabel}` : ''}.
+                            </p>
+                            <p className="text-xs mt-1">
+                              {activeTab === 'all'
+                                ? 'Get started by clicking "Add Application" above.'
+                                : `Try the "All" tab to see applications from other sources.`}
+                            </p>
+                          </>
+                        ) : (
+                          // Phase 32: filtered-empty state. Show a
+                          // one-click "Reset filters" CTA so the
+                          // admin doesn't have to clear each
+                          // dropdown individually after a too-narrow
+                          // search. The button stays disabled when
+                          // no filter is active (the helper text
+                          // changes to explain that).
+                          <>
+                            <p>No applications match your current filters.</p>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="mt-3 rounded-none"
+                              disabled={
+                                !searchInput &&
+                                statusFilter === 'all' &&
+                                studentFilter === 'all' &&
+                                !intakeFilter
+                              }
+                              onClick={() => {
+                                setSearchInput('');
+                                setSearchQuery('');
+                                setStatusFilter('all');
+                                setStudentFilter('all');
+                                setIntakeFilter(null);
+                                // Strip the ?intake= from the URL too
+                                if (typeof window !== 'undefined') {
+                                  const url = new URL(window.location.href);
+                                  url.searchParams.delete('intake');
+                                  window.history.replaceState({}, '', url.toString());
+                                }
+                              }}
+                            >
+                              <X size={14} className="mr-1" /> Reset filters
+                            </Button>
+                          </>
+                        )}
                       </td>
                     </tr>
                   ) : (
@@ -962,16 +1121,86 @@ export default function AdminApplicationsPage() {
             </div>
             {bulkResultDialog.failed.length > 0 && (
               <div className="bg-red-50 border border-red-200 p-3 max-h-60 overflow-y-auto">
-                <div className="text-sm font-semibold text-red-800 mb-2 flex items-center gap-2">
-                  <AlertCircle size={14} /> {bulkResultDialog.failed.length} failed
+                <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
+                  <div className="text-sm font-semibold text-red-800 flex items-center gap-2">
+                    <AlertCircle size={14} /> {bulkResultDialog.failed.length} failed
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {/* Phase 32: toggle between "list" (one row per
+                        failed id, default) and "grouped" (errors
+                        bucketed by message + count). The grouped
+                        view is the right call when 20+ rows fail
+                        with the same reason (e.g. cross-taxonomy
+                        status move); the list view is the right
+                        call when every row fails for a different
+                        reason. */}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setBulkResultView((v) => (v === 'list' ? 'grouped' : 'list'))
+                      }
+                      className="text-xs text-red-700 hover:text-red-900 underline"
+                    >
+                      Show as {bulkResultView === 'list' ? 'grouped' : 'list'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const ids = bulkResultDialog.failed.map((f) => f.id).join('\n');
+                        if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                          navigator.clipboard.writeText(ids).catch(() => {
+                            // best-effort
+                          });
+                        }
+                      }}
+                      className="text-xs text-red-700 hover:text-red-900 underline"
+                      title="Copy all failed row IDs to clipboard"
+                    >
+                      Copy IDs
+                    </button>
+                  </div>
                 </div>
-                <ul className="space-y-1 text-xs text-red-700">
-                  {bulkResultDialog.failed.map((f) => (
-                    <li key={f.id} className="font-mono">
-                      <span className="text-red-500">{f.id.slice(0, 8)}</span>: {f.error}
-                    </li>
-                  ))}
-                </ul>
+                {bulkResultView === 'list' ? (
+                  <ul className="space-y-1 text-xs text-red-700">
+                    {bulkResultDialog.failed.map((f) => (
+                      <li key={f.id} className="font-mono">
+                        <span className="text-red-500">{f.id.slice(0, 8)}</span>: {f.error}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  // Grouped view: bucket failures by error message
+                  // and render each bucket with a count + the first
+                  // 3 sample ids. Useful for cross-taxonomy
+                  // bulk-status moves where every row may fail
+                  // with the same "Partner-only status on student
+                  // surface" reason.
+                  <ul className="space-y-2 text-xs text-red-700">
+                    {Object.entries(
+                      bulkResultDialog.failed.reduce<Record<string, { ids: string[] }>>(
+                        (acc, f) => {
+                          if (!acc[f.error]) acc[f.error] = { ids: [] };
+                          acc[f.error].ids.push(f.id);
+                          return acc;
+                        },
+                        {},
+                      ),
+                    ).map(([err, bucket]) => (
+                      <li key={err} className="border-l-2 border-red-300 pl-2">
+                        <div className="font-medium text-red-800">
+                          {bucket.ids.length}× {err}
+                        </div>
+                        <div className="text-[10px] text-red-600 font-mono mt-0.5 truncate">
+                          {bucket.ids
+                            .slice(0, 3)
+                            .map((id) => id.slice(0, 8))
+                            .join(', ')}
+                          {bucket.ids.length > 3 && `, +${bucket.ids.length - 3} more`}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             )}
           </div>

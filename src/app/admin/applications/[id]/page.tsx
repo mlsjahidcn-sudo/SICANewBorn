@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { apiFetch, apiFetchJson } from '@/lib/api-client';
+import { APPLICATION_STATUSES, type ApplicationStatus } from '@/lib/application-mapper';
 
 interface AdminApplication {
   id: string;
@@ -29,7 +30,15 @@ interface AdminApplication {
   notes?: string;
 }
 
-const statusDisplay: Record<string, { label: string; color: string }> = {
+/**
+ * Phase 32 fix: the previous version declared `'Approved'` as a status
+ * here, but the DB enum + the PATCH route's allow-list (in
+ * `/api/admin/applications/[id]/route.ts`) only accept `'Accepted'`.
+ * Pressing Approve/Reject/Withdraw was sending an invalid status and
+ * getting 400'd by the API. Now we import APPLICATION_STATUSES from
+ * the canonical mapper so this file can't drift again.
+ */
+const statusDisplay: Record<ApplicationStatus, { label: string; color: string }> = {
   Draft: { label: 'Draft', color: 'bg-gray-100 text-gray-800' },
   Submitted: { label: 'Submitted', color: 'bg-blue-100 text-blue-800' },
   'Under Review': { label: 'Under Review', color: 'bg-yellow-100 text-yellow-800' },
@@ -39,6 +48,11 @@ const statusDisplay: Record<string, { label: string; color: string }> = {
   Rejected: { label: 'Rejected', color: 'bg-red-100 text-red-800' },
   Withdrawn: { label: 'Withdrawn', color: 'bg-gray-100 text-gray-800' },
 };
+
+// Sidebar action set: the only status transitions this page surfaces.
+// 'Submitted' / 'Under Review' apps show the three decision buttons;
+// any other status shows the read-only current-state badge.
+type AdminAction = Extract<ApplicationStatus, 'Accepted' | 'Rejected' | 'Withdrawn'>;
 
 export default function AdminApplicationDetailPage() {
   const params = useParams();
@@ -50,7 +64,10 @@ export default function AdminApplicationDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<'Approved' | 'Rejected' | 'Withdrawn' | null>(null);
+  // Phase 32: typed to the canonical `ApplicationStatus` enum so a
+  // status rename in the mapper is caught at compile-time here, not
+  // at runtime as a 400 from the API.
+  const [confirmAction, setConfirmAction] = useState<AdminAction | null>(null);
   const [notifyApplicant, setNotifyApplicant] = useState(true);
   const [applicantNote, setApplicantNote] = useState('');
 
@@ -77,7 +94,7 @@ export default function AdminApplicationDetailPage() {
   }, [load]);
 
   const handleStatusChange = useCallback(
-    async (newStatus: 'Approved' | 'Rejected' | 'Withdrawn') => {
+    async (newStatus: AdminAction) => {
       if (!app) return;
       setIsUpdating(true);
       try {
@@ -141,7 +158,15 @@ export default function AdminApplicationDetailPage() {
     );
   }
 
-  const status = statusDisplay[app.status] || { label: app.status, color: 'bg-gray-100 text-gray-800' };
+  // Phase 32: `app.status` is a `string` from the API, not the typed
+  // enum — narrow to a valid ApplicationStatus key (or fall back to a
+  // grey badge) so an unknown future status from a stale API cache
+  // doesn't surface a blank badge.
+  const status: { label: string; color: string } = (
+    (APPLICATION_STATUSES as readonly string[]).includes(app.status)
+      ? statusDisplay[app.status as ApplicationStatus]
+      : null
+  ) ?? { label: app.status, color: 'bg-gray-100 text-gray-800' };
 
   return (
     <div className="space-y-6">
@@ -253,7 +278,7 @@ export default function AdminApplicationDetailPage() {
                 <div className="space-y-2">
                   <Button
                     className="w-full bg-green-600 hover:bg-green-700"
-                    onClick={() => setConfirmAction('Approved')}
+                    onClick={() => setConfirmAction('Accepted')}
                     disabled={isUpdating}
                   >
                     <CheckCircle className="w-4 h-4 mr-2" />
@@ -293,7 +318,7 @@ export default function AdminApplicationDetailPage() {
           <Card className="max-w-md w-full">
             <CardHeader>
               <CardTitle>
-                {confirmAction === 'Approved' && 'Approve Application'}
+                {confirmAction === 'Accepted' && 'Accept Application'}
                 {confirmAction === 'Rejected' && 'Reject Application'}
                 {confirmAction === 'Withdrawn' && 'Withdraw Application'}
               </CardTitle>
@@ -337,7 +362,7 @@ export default function AdminApplicationDetailPage() {
                 </Button>
                 <Button
                   className={
-                    confirmAction === 'Approved' ? 'bg-green-600 hover:bg-green-700' :
+                    confirmAction === 'Accepted' ? 'bg-green-600 hover:bg-green-700' :
                     confirmAction === 'Rejected' ? 'bg-red-600 hover:bg-red-700' :
                     'bg-gray-600 hover:bg-gray-700'
                   }
