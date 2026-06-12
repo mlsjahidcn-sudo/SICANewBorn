@@ -22,8 +22,11 @@ import { requireAdmin, buildServiceClient, getServerEnv } from '@/lib/supabase-a
  *   - page, limit : 1-indexed pagination (default 1, 20; max 100)
  *
  * Each row is joined with the student profile (first_name, last_name,
- * email) so the list can render the student name without a second
- * roundtrip. Auth: requireAdmin — student/partner get 403.
+ * email) AND the partner student row (student_name, student_email)
+ * so the list can render the uploader's name without a second
+ * roundtrip — student-uploaded docs get `student`, partner-uploaded
+ * docs get `partnerStudent` (admin sees both, the UI picks the
+ * non-null one). Auth: requireAdmin — student/partner get 403.
  *
  * Response: { documents, total, page, limit, totalPages }
  */
@@ -60,7 +63,8 @@ export async function GET(request: NextRequest) {
       .select(
         `
           *,
-          student:student_profiles!student_id (id, first_name, last_name, email)
+          student:student_profiles!student_id (id, first_name, last_name, email),
+          partnerStudent:partner_students!partner_student_id (id, student_name, student_email)
         `,
         { count: 'exact' },
       )

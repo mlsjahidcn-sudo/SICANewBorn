@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
           .filter((id): id is string => Boolean(id)),
       ),
     );
-    let partnerNameById = new Map<string, string>();
+    const partnerNameById = new Map<string, string>();
     if (partnerIds.length) {
       const { data: partners } = await service
         .from('partners')
@@ -124,7 +124,7 @@ export async function GET(request: NextRequest) {
           .filter((id): id is string => Boolean(id)),
       ),
     );
-    let emailMap = new Map<string, string>();
+    const emailMap = new Map<string, string>();
     if (userIds.length) {
       const { data: usersPage } = await service.auth.admin.listUsers({
         perPage: 200,

@@ -43,10 +43,18 @@ interface StudentRef {
   email: string | null;
 }
 
+interface PartnerStudentRef {
+  id: string;
+  student_name: string | null;
+  student_email: string | null;
+}
+
 interface AdminDocument {
   id: string;
   student_id: string | null;
   application_id: string | null;
+  partner_student_id: string | null;
+  partner_application_id: string | null;
   document_type_id: string;
   name: string;
   name_cn: string | null;
@@ -62,6 +70,7 @@ interface AdminDocument {
   verified_at: string | null;
   verified_by: string | null;
   student: StudentRef | null;
+  partnerStudent: PartnerStudentRef | null;
 }
 
 const STATUS_STYLES: Record<DocStatus, string> = {
@@ -79,6 +88,27 @@ const STATUS_ICONS: Record<DocStatus, React.ElementType> = {
 function fullName(s: StudentRef | null | undefined): string {
   if (!s) return '—';
   return [s.first_name, s.last_name].filter(Boolean).join(' ') || s.email || '—';
+}
+
+/**
+ * Resolve the uploader's display name + email for the Student
+ * card. Phase 31: partner-uploaded docs have student_id = NULL
+ * and partner_student_id = <uuid>, so the original
+ * `fullName(doc.student)` returned "—" for every partner doc.
+ * Falls through to the partner_student join for partner docs.
+ */
+function uploaderLabel(doc: AdminDocument): { name: string; email: string | null; kind: 'student' | 'partner' | 'unknown' } {
+  if (doc.student) {
+    return { name: fullName(doc.student), email: doc.student.email, kind: 'student' };
+  }
+  if (doc.partnerStudent) {
+    return {
+      name: doc.partnerStudent.student_name || '—',
+      email: doc.partnerStudent.student_email,
+      kind: 'partner',
+    };
+  }
+  return { name: '—', email: null, kind: 'unknown' };
 }
 
 function formatDate(iso: string | null | undefined): string {
@@ -103,6 +133,13 @@ function AdminDocumentDetailInner() {
   const [submitting, setSubmitting] = useState<null | 'approve' | 'reject' | 'pending'>(null);
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+  // Phase 31: signed URL for the file preview / "Open file" link.
+  // `file_url` is a storage path, not a public URL — the admin
+  // review queue now mints a 1h signed URL on doc load, same as
+  // the partner docs page does on click. The signed URL is
+  // re-fetched whenever the doc id changes.
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  const [signedUrlLoading, setSignedUrlLoading] = useState(false);
 
   const fetchDoc = useCallback(async () => {
     setLoading(true);
@@ -120,9 +157,28 @@ function AdminDocumentDetailInner() {
     }
   }, [docId]);
 
+  // Phase 31: mint a 1h signed URL for the file preview. Runs in
+  // parallel with fetchDoc — independent errors don't block each
+  // other. Skips when there's no doc to fetch a URL for.
+  const fetchSignedUrl = useCallback(async () => {
+    setSignedUrlLoading(true);
+    try {
+      const res = await apiFetchJson<{ url: string; expiresAt: string }>(
+        `/api/admin/documents/${docId}/download-url`,
+      );
+      setSignedUrl(res.url);
+    } catch (err) {
+      console.error('[admin/documents detail] signed-url fetch failed:', err);
+      setSignedUrl(null);
+    } finally {
+      setSignedUrlLoading(false);
+    }
+  }, [docId]);
+
   useEffect(() => {
     void fetchDoc();
-  }, [fetchDoc]);
+    void fetchSignedUrl();
+  }, [fetchDoc, fetchSignedUrl]);
 
   const submit = async (
     status: 'Verified' | 'Rejected' | 'Pending',
@@ -209,29 +265,39 @@ function AdminDocumentDetailInner() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          {/* Student card */}
+          {/* Student / uploader card */}
           <Card className="rounded-none">
             <CardHeader>
               <CardTitle className="text-[#1B2A4A] text-base">
-                {t('adminDocs.detailStudent')}
+                {(() => {
+                  const u = uploaderLabel(doc);
+                  return u.kind === 'partner'
+                    ? t('adminDocs.detailPartnerStudent')
+                    : t('adminDocs.detailStudent');
+                })()}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <div className="flex items-center gap-2">
                 <User className="w-4 h-4 text-[#4B5563]" />
                 <span className="text-[#4B5563] min-w-24">Name:</span>
-                <span className="font-medium text-[#1F2937]">{fullName(doc.student)}</span>
+                <span className="font-medium text-[#1F2937]">{uploaderLabel(doc).name}</span>
               </div>
-              {doc.student?.email && (
+              {uploaderLabel(doc).email && (
                 <div className="flex items-center gap-2">
                   <Mail className="w-4 h-4 text-[#4B5563]" />
                   <span className="text-[#4B5563] min-w-24">Email:</span>
                   <a
-                    href={`mailto:${doc.student.email}`}
+                    href={`mailto:${uploaderLabel(doc).email}`}
                     className="font-medium text-[#1B2A4A] hover:underline"
                   >
-                    {doc.student.email}
+                    {uploaderLabel(doc).email}
                   </a>
+                </div>
+              )}
+              {uploaderLabel(doc).kind === 'partner' && (
+                <div className="text-xs text-[#4B5563] italic">
+                  {t('adminDocs.detailPartnerStudentHint')}
                 </div>
               )}
             </CardContent>
@@ -247,47 +313,69 @@ function AdminDocumentDetailInner() {
             <CardContent className="space-y-3 text-sm">
               <div>
                 <span className="text-[#4B5563] block mb-1">{t('adminDocs.detailFileUrl')}</span>
-                <a
-                  href={doc.file_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[#1B2A4A] hover:underline break-all inline-flex items-center gap-1"
-                >
-                  {doc.file_url}
-                  <ExternalLink className="w-3 h-3" />
-                </a>
+                {/* Phase 31: signedUrl is the 1h signed URL fetched
+                    from /api/admin/documents/[id]/download-url. The
+                    raw `doc.file_url` is a storage path, not a
+                    public URL — opening it directly 404s. */}
+                {signedUrlLoading && !signedUrl ? (
+                  <span className="text-[#4B5563] text-xs italic">Loading preview…</span>
+                ) : signedUrl ? (
+                  <a
+                    href={signedUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[#1B2A4A] hover:underline break-all inline-flex items-center gap-1"
+                  >
+                    {doc.file_url}
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                ) : (
+                  <span className="text-[#4B5563] text-xs italic">Preview unavailable</span>
+                )}
               </div>
-              {doc.file_type?.startsWith('image/') && (
+              {doc.file_type?.startsWith('image/') && signedUrl && (
                 <div className="border border-gray-200 p-2 bg-gray-50">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={doc.file_url}
+                    src={signedUrl}
                     alt={doc.name}
                     className="max-w-full max-h-96 mx-auto"
                   />
                 </div>
               )}
-              {doc.file_type === 'application/pdf' && (
+              {doc.file_type === 'application/pdf' && signedUrl && (
                 <div className="border border-gray-200 bg-gray-50">
                   <iframe
-                    src={doc.file_url}
+                    src={signedUrl}
                     title={doc.name}
                     className="w-full h-[500px]"
                   />
                 </div>
               )}
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  asChild
-                  className="rounded-none"
-                >
-                  <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
+                {signedUrl ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    asChild
+                    className="rounded-none"
+                  >
+                    <a href={signedUrl} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="w-4 h-4 mr-1" />
+                      {t('adminDocs.detailOpenFile')}
+                    </a>
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled
+                    className="rounded-none"
+                  >
                     <ExternalLink className="w-4 h-4 mr-1" />
                     {t('adminDocs.detailOpenFile')}
-                  </a>
-                </Button>
+                  </Button>
+                )}
                 {doc.file_name && (
                   <span className="text-xs text-[#4B5563]">
                     {doc.file_name}

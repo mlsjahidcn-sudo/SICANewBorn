@@ -98,7 +98,8 @@ export async function GET(
       .select(
         `
           *,
-          student:student_profiles!student_id (id, first_name, last_name, email)
+          student:student_profiles!student_id (id, first_name, last_name, email),
+          partnerStudent:partner_students!partner_student_id (id, student_name, student_email)
         `,
       )
       .eq('id', id)

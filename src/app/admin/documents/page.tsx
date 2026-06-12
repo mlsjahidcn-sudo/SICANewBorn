@@ -57,10 +57,18 @@ interface StudentRef {
   email: string | null;
 }
 
+interface PartnerStudentRef {
+  id: string;
+  student_name: string | null;
+  student_email: string | null;
+}
+
 interface AdminDocument {
   id: string;
   student_id: string | null;
   application_id: string | null;
+  partner_student_id: string | null;
+  partner_application_id: string | null;
   document_type_id: string;
   name: string;
   name_cn: string | null;
@@ -76,6 +84,7 @@ interface AdminDocument {
   verified_at: string | null;
   verified_by: string | null;
   student: StudentRef | null;
+  partnerStudent: PartnerStudentRef | null;
 }
 
 interface DocumentsResponse {
@@ -110,6 +119,28 @@ const FILTER_TABS: { value: DocStatus | 'all'; key: string }[] = [
 function fullName(s: StudentRef | null | undefined): string {
   if (!s) return '—';
   return [s.first_name, s.last_name].filter(Boolean).join(' ') || s.email || '—';
+}
+
+/**
+ * Phase 31: list-page uploader resolver. Student-uploaded docs
+ * have `student` populated; partner-uploaded docs have
+ * `partnerStudent` populated (student_id is NULL on partner
+ * rows). Returns a flag so the UI can render a small "Partner"
+ * badge next to the name and disambiguate two students with
+ * the same name in different portals.
+ */
+function uploaderLabel(doc: AdminDocument): { name: string; email: string | null; kind: 'student' | 'partner' | 'unknown' } {
+  if (doc.student) {
+    return { name: fullName(doc.student), email: doc.student.email, kind: 'student' };
+  }
+  if (doc.partnerStudent) {
+    return {
+      name: doc.partnerStudent.student_name || '—',
+      email: doc.partnerStudent.student_email,
+      kind: 'partner',
+    };
+  }
+  return { name: '—', email: null, kind: 'unknown' };
 }
 
 function formatBytes(n: number | null | undefined): string {
@@ -356,9 +387,16 @@ function AdminDocumentsPageInner() {
                           />
                         </td>
                         <td className="px-3 py-3">
-                          <div className="font-medium text-[#1B2A4A]">{fullName(doc.student)}</div>
-                          {doc.student?.email && (
-                            <div className="text-xs text-[#4B5563]">{doc.student.email}</div>
+                          <div className="font-medium text-[#1B2A4A] inline-flex items-center gap-2">
+                            {uploaderLabel(doc).name}
+                            {uploaderLabel(doc).kind === 'partner' && (
+                              <span className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded-none">
+                                Partner
+                              </span>
+                            )}
+                          </div>
+                          {uploaderLabel(doc).email && (
+                            <div className="text-xs text-[#4B5563]">{uploaderLabel(doc).email}</div>
                           )}
                         </td>
                         <td className="px-3 py-3">
