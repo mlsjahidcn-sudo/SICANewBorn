@@ -51,6 +51,33 @@ function notifyMessageFor(
   return `Your "${docName}" document has been moved back to pending review.`;
 }
 
+// Partner-side mirror of notifyTitleFor / notifyMessageFor. The
+// data-layer partner-documents migration (2026-06-12) added
+// partner_student_id + partner_application_id so admin PATCH on a
+// partner-uploaded row fires a parallel partner_notifications
+// insert. The partner sees the same Verified/Rejected badge in
+// their /partner/notifications inbox.
+function notifyPartnerTitleFor(status: AdminDocStatus, docName: string): string {
+  if (status === 'Verified') return `Document verified: ${docName}`;
+  if (status === 'Rejected') return `Document rejected: ${docName}`;
+  return `Document moved back to pending: ${docName}`;
+}
+
+function notifyPartnerMessageFor(
+  status: AdminDocStatus,
+  docName: string,
+  rejectionReason: string | null,
+): string {
+  if (status === 'Verified') {
+    return `An admin verified ${docName}. No action needed.`;
+  }
+  if (status === 'Rejected') {
+    const reason = rejectionReason ? ` for: ${rejectionReason}` : '';
+    return `An admin rejected ${docName}${reason}. Please upload a corrected version.`;
+  }
+  return `An admin moved ${docName} back to pending review.`;
+}
+
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> },
@@ -156,9 +183,17 @@ export async function PATCH(
     // Fetch the doc first so we can hydrate the student notification
     // with the document name and skip the write if the doc is gone
     // (concurrent delete) or has no student owner.
+    // Also pulls `partner_student_id` so we can mirror the same
+    // status-change signal to the partner portal's notification
+    // inbox (the data-layer partner-documents migration added
+    // partner_student_id + partner_application_id columns; the
+    // partner sees the same Verified/Rejected flow in their
+    // /partner/notifications bell badge).
     const { data: existing, error: fetchErr } = await service
       .from('student_documents')
-      .select('id, name, student_id, application_id, status')
+      .select(
+        'id, name, student_id, application_id, partner_student_id, partner_application_id, status',
+      )
       .eq('id', id)
       .maybeSingle();
     if (fetchErr) {
@@ -256,6 +291,81 @@ export async function PATCH(
           '[admin/documents/:id PATCH] student_notification insert failed (non-fatal):',
           notifErr,
         );
+      }
+    }
+
+    // Best-effort partner notification (mirrors the student
+    // block above). Only fires for partner-uploaded docs
+    // (partner_student_id IS NOT NULL) on a status-bearing
+    // move (not Pending, not a same→same no-op, not a link-only
+    // PATCH). Resolves partner_student_id → partners.user_id
+    // (the column partner_notifications expects — auth.users.id
+    // of the partner org owner, not partners.id). Fire-and-forget
+    // pattern matches the student side: a partner_notification
+    // failure is logged but does NOT fail the admin PATCH.
+    //
+    // Why no Pending notification on back-to-pending moves: same
+    // reason as the student-side skip — a back-to-pending is
+    // admin-internal workflow (typically reopening after a
+    // re-upload) and isn't a signal the partner needs to act on.
+    if (
+      existing.partner_student_id &&
+      newStatus !== null &&
+      existing.status !== newStatus &&
+      newStatus !== 'Pending'
+    ) {
+      // Resolve the partner org's owner user_id (the
+      // partner_notifications.user_id FK). One row per
+      // partner_student_id → one partner.user_id.
+      const { data: psOwner, error: psOwnerErr } = await service
+        .from('partner_students')
+        .select('partner_id, partner:partners!partner_id (user_id)')
+        .eq('id', existing.partner_student_id)
+        .maybeSingle();
+      if (psOwnerErr) {
+        console.error(
+          '[admin/documents/:id PATCH] partner_students lookup failed (non-fatal):',
+          psOwnerErr,
+        );
+      } else if (psOwner) {
+        // partner may be an object (1:1) or an array — normalize.
+        const partnerRel = (psOwner as { partner: unknown }).partner;
+        const partnerObj = Array.isArray(partnerRel) ? partnerRel[0] : partnerRel;
+        const partnerUserId =
+          (partnerObj as { user_id?: string | null } | null)?.user_id || null;
+        if (partnerUserId) {
+          const { error: pNotifErr } = await service
+            .from('partner_notifications')
+            .insert({
+              user_id: partnerUserId,
+              // Phase 1.2: link_url pattern is
+              // /partner/applications/<id> for app-scoped
+              // notifications. For docs we deep-link to
+              // /partner/documents — the new partner docs
+              // index page (Track 3). The path is hard-coded
+              // here because the index page isn't built yet;
+              // the verifier will confirm the eventual path
+              // matches this string.
+              link_url: existing.partner_application_id
+                ? `/partner/documents?applicationId=${existing.partner_application_id}`
+                : '/partner/documents',
+              title: notifyPartnerTitleFor(newStatus, existing.name),
+              message: notifyPartnerMessageFor(
+                newStatus,
+                existing.name,
+                newStatus === 'Rejected'
+                  ? (rejectionReason as string).trim()
+                  : null,
+              ),
+              type: 'document_review',
+            });
+          if (pNotifErr) {
+            console.error(
+              '[admin/documents/:id PATCH] partner_notification insert failed (non-fatal):',
+              pNotifErr,
+            );
+          }
+        }
       }
     }
 

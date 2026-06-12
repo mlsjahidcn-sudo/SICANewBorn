@@ -15,6 +15,7 @@ import {
   X,
   ChevronRight,
   Bell,
+  FolderOpen,
 } from 'lucide-react';
 import Link from 'next/link';
 import { SicaLogo } from '@/components/sica-logo';
@@ -33,6 +34,14 @@ const navItems = [
   { labelKey: 'partnerNav.notifications', href: '/partner/notifications', icon: Bell, withUnreadBadge: true },
   { labelKey: 'partnerNav.students', href: '/partner/students', icon: Users },
   { labelKey: 'partnerNav.applications', href: '/partner/applications', icon: FileText },
+  // Partner Documents nav item — SICA's Phase "partner portal — student
+  // document management" (Approach B). Sits between Applications and
+  // Lead Sharing because it owns the doc workflow for both
+  // applications + lead sharing flows (a doc can be linked to a
+  // partner_application or sit orphan). FolderOpen icon picks up
+  // the file-management semantics without the visual weight of a
+  // stack of file icons.
+  { labelKey: 'partnerNav.documents', href: '/partner/documents', icon: FolderOpen },
   { labelKey: 'partnerNav.leadSharing', href: '/partner/lead-sharing', icon: Share2 },
   { labelKey: 'partnerNav.team', href: '/partner/team', icon: UserCog, ownerOnly: true },
   { labelKey: 'partnerNav.settings', href: '/partner/settings', icon: Settings },

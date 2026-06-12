@@ -149,6 +149,46 @@ export interface AnalyticsEventMap {
   chatbot_closed: {
     locale: 'en' | 'zh';
   };
+  // -----------------------------------------------------------------
+  // Partner portal events (Phase: partner documents UI)
+  //
+  // The three partner events are added to the same map (not split
+  // into a separate PartnerEventMap) so a single `track()` overload
+  // covers all surfaces — call sites get autocomplete for both the
+  // public and partner event names, and a typo on either side
+  // fails at compile time. The `locale` property stays mandatory
+  // across every event for the same segmentation reason documented
+  // at the top of this file.
+  //
+  // Search tracking is intentionally NOT added for the partner
+  // portal — the helper requires keys to be in the map, so simply
+  // not calling track('search_performed', …) from partner code
+  // means partner search is un-instrumented. The public list
+  // pages keep the existing search_performed behavior.
+  // -----------------------------------------------------------------
+  /** Partner opened the /partner/documents page. Fires once on mount. */
+  partner_documents_page_view: {
+    /** Page locale. */
+    locale: 'en' | 'zh';
+    /** Status filter active when the page loaded, or null for "all". */
+    filter_status: 'Pending' | 'Verified' | 'Rejected' | null;
+  };
+  /** Partner uploaded a document (single file) via the upload dialog. */
+  partner_document_upload: {
+    /** Page locale. */
+    locale: 'en' | 'zh';
+    /** Document category (the 6-value closed enum). */
+    category: 'Identity' | 'Academic' | 'Language' | 'Financial' | 'Recommendation' | 'Other';
+    /** File size in bytes (useful for spotting oversized uploads). */
+    file_size: number;
+  };
+  /** Partner deleted one or more documents (single row OR bulk). */
+  partner_document_delete: {
+    /** Page locale. */
+    locale: 'en' | 'zh';
+    /** Number of rows deleted in this action (1 for single-row, >1 for bulk). */
+    count: number;
+  };
 }
 
 /** Convenience alias for the event-name union. */

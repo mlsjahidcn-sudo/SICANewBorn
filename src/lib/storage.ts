@@ -180,6 +180,114 @@ export async function deleteStudentDocFile(storagePath: string): Promise<boolean
 }
 
 // ---------------------------------------------------------------------------
+// Partner document helpers (new in partner-documents phase 1)
+//
+// Namespace convention: partner-uploaded files live in the SAME
+// `student-documents` bucket as student-uploaded files, but under a
+// `partner/{partnerId}/{partnerStudentId}/...` path prefix so the two
+// name-spaces never collide. The student-doc RLS + the new partner-doc
+// RLS (database/2026-06-12_partner_documents.sql) are both scoped to
+// the bucket and already account for which path-prefix a row belongs
+// to (partner_student_id IS NOT NULL for the partner policies).
+//
+// Why one bucket, not two:
+//   - Admin reviewers fetch the doc in the same /api/admin/documents
+//     queue regardless of who uploaded it (student or partner).
+//   - Reuses the same STUDENT_DOC_ALLOWED_TYPES / STUDENT_DOC_MAX_BYTES
+//     rules (PDF/PNG/JPG/WEBP/DOC/DOCX, 10MB) — partner docs have the
+//     same shape as student docs.
+//   - Avoids a second bucket + second signed-URL plumbing.
+// ---------------------------------------------------------------------------
+
+/**
+ * Generate a signed upload URL for a partner document.
+ *
+ * Path layout: `partner/{partnerId}/{partnerStudentId}/{docId}-{safeName}.{ext}`
+ *
+ * The docId is supplied by the caller so it can be reused as the FK
+ * reference in the `student_documents` row. partnerId is the org-level
+ * scope (so the admin review queue can group by partner org) and
+ * partnerStudentId is the per-student scope (matches the RLS helper
+ * `is_doc_partner_member(partner_student_id)`).
+ *
+ * Mirrors `createStudentDocUploadUrl` 1:1 — only the path layout
+ * differs, plus the extra partnerId arg.
+ */
+export async function createPartnerDocUploadUrl(
+  partnerId: string,
+  partnerStudentId: string,
+  documentId: string,
+  originalFileName: string,
+): Promise<StudentDocUploadUrl | null> {
+  const supabase = getStorageClient();
+  if (!supabase) return null;
+
+  const ext = (originalFileName.split('.').pop() || 'pdf').toLowerCase();
+  // Strip any chars that would break the path; allow [a-z0-9-]
+  const safeExt = ext.replace(/[^a-z0-9]/g, '').slice(0, 8) || 'pdf';
+  const safeName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${safeExt}`;
+  const storagePath = `partner/${partnerId}/${partnerStudentId}/${documentId}-${safeName}`;
+
+  const { data, error } = await supabase.storage
+    .from(STUDENT_DOCS_BUCKET)
+    .createSignedUploadUrl(storagePath);
+
+  if (error || !data) {
+    console.error('[createPartnerDocUploadUrl]', error);
+    return null;
+  }
+
+  return {
+    uploadUrl: data.signedUrl,
+    storagePath,
+    token: data.token,
+  };
+}
+
+/**
+ * Generate a signed download URL for a partner document. Returns a URL
+ * valid for 1 hour. The path is whatever was stored on the row
+ * (`student_documents.file_url`), so this works for both student- and
+ * partner-uploaded files in the same bucket.
+ */
+export async function createPartnerDocDownloadUrl(
+  storagePath: string,
+): Promise<string | null> {
+  const supabase = getStorageClient();
+  if (!supabase) return null;
+
+  const { data, error } = await supabase.storage
+    .from(STUDENT_DOCS_BUCKET)
+    .createSignedUrl(storagePath, 3600);
+
+  if (error || !data) {
+    console.error('[createPartnerDocDownloadUrl]', error);
+    return null;
+  }
+
+  return data.signedUrl;
+}
+
+/**
+ * Delete a partner-uploaded file from the student-documents bucket.
+ * Used when a partner removes their own document row, so the storage
+ * object doesn't orphan. Mirrors `deleteStudentDocFile` 1:1 — same
+ * bucket, same `remove([paths])` shape, the only difference is the
+ * function name (and the JSDoc, for grep-ability).
+ */
+export async function deletePartnerDocFile(storagePath: string): Promise<boolean> {
+  const supabase = getStorageClient();
+  if (!supabase) return false;
+
+  const { error } = await supabase.storage.from(STUDENT_DOCS_BUCKET).remove([storagePath]);
+  if (error) {
+    console.error('[deletePartnerDocFile]', error);
+    return false;
+  }
+  return true;
+}
+
+// ---------------------------------------------------------------------------
 // Bucket introspection (existing)
 // ---------------------------------------------------------------------------
 
