@@ -40,11 +40,14 @@ const navItems = [
   { href: '/admin/students', label: 'Students', labelCn: '学生', icon: UserCheck },
   { href: '/admin/documents', label: 'Documents', labelCn: '文档审核', icon: FileCheck },
   { href: '/admin/partners', label: 'Partners', labelCn: '合作方', icon: Building2 },
-  // S27: Partner Pipeline — the only place in the system where the
-  // admin can change a partner application's status / decision.
-  // Distinct from /admin/applications (student applications) because
-  // they live in separate tables.
-  { href: '/admin/partner-applications', label: 'Partner Pipeline', labelCn: '合作方申请', icon: Building2 },
+  // Phase 33: the standalone Partner Pipeline list page is
+  // gone — folded into /admin/applications as a `?surface=partner`
+  // deep-link. The admin still lands on the partner view via
+  // the dashboard's "Pipeline by partner" stat card or the
+  // Applications sidebar item with the "Partner" tab. The
+  // partner detail page at /admin/partner-applications/[id]
+  // is unchanged (admin is still the only role that can flip
+  // status / decision for partner rows).
   { href: '/admin/fees', label: 'Fees', labelCn: '费用', icon: DollarSign },
   { href: '/admin/assessments', label: 'Assessments', labelCn: '评估', icon: ClipboardList },
   { href: '/admin/applications', label: 'Applications', labelCn: '申请', icon: FileText },

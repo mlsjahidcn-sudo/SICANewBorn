@@ -166,8 +166,12 @@ export default function AdminPartnerApplicationDetailPage() {
   if (error && !app) {
     return (
       <div className="space-y-4">
+        {/* Phase 33: the standalone Partner Pipeline list page
+            is now a redirect to /admin/applications?surface=partner.
+            Update the back-link here so the user lands on the
+            unified partner-only view, not the redirect hop. */}
         <Link
-          href="/admin/partner-applications"
+          href="/admin/applications?surface=partner"
           className="inline-flex items-center gap-2 text-[#1B2A4A]"
         >
           <ArrowLeft className="w-4 h-4" /> Back to Partner Pipeline
@@ -187,8 +191,11 @@ export default function AdminPartnerApplicationDetailPage() {
   return (
     <div className="space-y-6 max-w-5xl">
       <div className="flex items-center gap-4 flex-wrap">
+        {/* Phase 33: same redirect fix — back-link to the unified
+            partner-only view, not the now-redirecting standalone
+            list page. */}
         <Link
-          href="/admin/partner-applications"
+          href="/admin/applications?surface=partner"
           className="p-2 hover:bg-gray-100 inline-flex"
         >
           <ArrowLeft className="w-5 h-5 text-[#1B2A4A]" />

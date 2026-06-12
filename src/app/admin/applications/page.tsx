@@ -38,6 +38,15 @@ interface Application {
   source: 'Online' | 'Admin' | 'Partner' | 'Partner CRM';
   surface: 'student' | 'partner';
   applicationNumber?: string;
+  // Phase 33: partner-CRM-only fields, populated for surface='partner'
+  // rows and null for surface='student' rows. The unified table shows
+  // these columns only when `surface === 'partner'` (driven by
+  // `?surface=partner` on the URL), so the Student tab doesn't have to
+  // render a wall of '—' for the partner-only columns.
+  partnerPriority?: string | null;
+  partnerDecision?: string | null;
+  partnerOrgId?: string | null;
+  partnerOrgName?: string | null;
   createdAt: string;
   notes?: string;
 }
@@ -129,8 +138,24 @@ export default function AdminApplicationsPage() {
     return intakeFilter;
   })();
 
-  // Tab state — defaults to "all" so the user sees everything on first load
-  const [activeTab, setActiveTab] = useState<SourceTab>('all');
+  // Tab state — defaults to "all" so the user sees everything on first load.
+  //
+  // Phase 33: when the page loads with `?surface=partner`, the unified
+  // list enters partner-only mode — the source tabs hide, the table
+  // grows partner-specific columns (Priority / Decision / Partner org
+  // / Application #), and the page title says "Partner Pipeline"
+  // instead of "Applications". The Partner Pipeline sidebar link
+  // now redirects here with `?surface=partner`, so deep-linking is
+  // the only entry point — there's no longer a separate /admin/
+  // partner-applications page to navigate from.
+  const initialSurface = searchParams.get('surface');
+  const [partnerOnly, setPartnerOnly] = useState<boolean>(initialSurface === 'partner');
+  // Source tab: forced to 'Partner' in partnerOnly mode (the
+  // API ignores source=Partner when surface=partner, but keeping
+  // the state consistent makes the tab badge logic still work).
+  const [activeTab, setActiveTab] = useState<SourceTab>(
+    initialSurface === 'partner' ? 'Partner' : 'all',
+  );
 
   // Retry counter — bumping it forces the main fetch useEffect to re-run
   // even if all other deps are unchanged. Used by the "Try again" button.
@@ -255,7 +280,18 @@ export default function AdminApplicationsPage() {
       page: String(page),
       limit: String(PAGE_SIZE),
     });
-    if (activeTab !== 'all') params.set('source', activeTab);
+    // Phase 33: in partnerOnly mode, surface=partner is sent so
+    // the API returns only partner_applications rows (no
+    // student_applications join work). This both speeds the
+    // query and guarantees the partner-only columns render
+    // correctly. The Partner tab badge stays accurate because
+    // the counts endpoint also respects surface filtering
+    // server-side.
+    if (partnerOnly) {
+      params.set('surface', 'partner');
+    } else if (activeTab !== 'all') {
+      params.set('source', activeTab);
+    }
     if (searchQuery.trim()) params.set('search', searchQuery.trim());
     if (statusFilter !== 'all') params.set('status', statusFilter);
     if (studentFilter !== 'all') params.set('student', studentFilter);
@@ -292,7 +328,7 @@ export default function AdminApplicationsPage() {
       controller.abort();
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [page, searchQuery, statusFilter, studentFilter, activeTab, intakeFilter, retryNonce]);
+  }, [page, searchQuery, statusFilter, studentFilter, activeTab, intakeFilter, partnerOnly, retryNonce]);
 
   // Debounce search — wait 300ms after the user stops typing before firing
   useEffect(() => {
@@ -457,15 +493,38 @@ export default function AdminApplicationsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#1B2A4A]">Applications</h1>
-          <p className="text-[#4B5563] mt-1">Manage all student applications by source</p>
+          {/* Phase 33: in partnerOnly mode the page title flips to
+              "Partner Pipeline" + subtitle surfaces that the
+              table is partner-CRM only. The "All Applications"
+              link is one click to escape the partner view. */}
+          <h1 className="text-2xl font-bold text-[#1B2A4A] flex items-center gap-2">
+            {partnerOnly && <Building2 className="h-6 w-6" />}
+            {partnerOnly ? 'Partner Pipeline' : 'Applications'}
+          </h1>
+          <p className="text-[#4B5563] mt-1">
+            {partnerOnly
+              ? 'Applications created by partner agencies. Only admins can change status / decision.'
+              : 'Manage all student applications by source'}
+            {partnerOnly && (
+              <>
+                {' · '}
+                <Link
+                  href="/admin/applications"
+                  className="text-[#1B2A4A] hover:underline"
+                >
+                  ← All Applications
+                </Link>
+              </>
+            )}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           {/* S33: Export to CSV. Respects the current filter set
               (status, source, search, tab) so the export matches
               what the admin sees on screen. Capped at 1000 rows
               server-side; the response headers include the
-              actual count. */}
+              actual count. Phase 33: in partnerOnly mode the
+              export also passes surface=partner. */}
           <Button
             variant="outline"
             className="rounded-none"
@@ -474,7 +533,11 @@ export default function AdminApplicationsPage() {
               // endpoint's filter semantics so the export is
               // scoped to what the admin sees.
               const params = new URLSearchParams();
-              if (activeTab !== 'all') params.set('source', activeTab);
+              if (partnerOnly) {
+                params.set('surface', 'partner');
+              } else if (activeTab !== 'all') {
+                params.set('source', activeTab);
+              }
               if (statusFilter !== 'all') params.set('status', statusFilter);
               if (searchQuery.trim()) params.set('search', searchQuery.trim());
               if (intakeFilter) params.set('intake', intakeFilter);
@@ -495,7 +558,13 @@ export default function AdminApplicationsPage() {
         </div>
       </div>
 
-      {/* Source tabs */}
+      {/* Source tabs — hidden in partnerOnly mode (the page is
+          single-purpose when deep-linked from the (now-removed)
+          Partner Pipeline sidebar item). Showing tabs would
+          confuse: clicking "Student" would just be a way back to
+          the unified view, which the "All Applications" link in
+          the header already does. */}
+      {!partnerOnly && (
       <div className="border-b border-gray-200">
         <nav className="flex gap-1 overflow-x-auto" aria-label="Application source tabs">
           {SOURCE_TABS.map((tab) => {
@@ -535,14 +604,15 @@ export default function AdminApplicationsPage() {
                         : 'bg-gray-100 text-[#4B5563]'
                     }`}
                   >
-                    {count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </nav>
-      </div>
+                     {count}
+                   </span>
+                 )}
+               </button>
+             );
+           })}
+         </nav>
+       </div>
+      )}
 
       {/* Counts error (non-fatal — tabs still work, just no badges) */}
       {countsError && (
@@ -750,23 +820,48 @@ export default function AdminApplicationsPage() {
                       />
                     </th>
                     <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">Student</th>
-                    <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">University & Program</th>
-                    <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">Status</th>
-                    <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">Source</th>
-                    <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">Created</th>
-                    <th className="text-right px-6 py-3 font-semibold text-[#1B2A4A]">Actions</th>
+                    {/* Phase 33: in partnerOnly mode the Source
+                        column is dropped (every row is "Partner
+                        CRM" by definition) and four partner-
+                        specific columns are added: Partner org
+                        (company name), Priority (Urgent/High/
+                        Normal/Low), Decision (Accepted/Pending/
+                        Rejected), and Application #. The unified
+                        list previously surfaced none of these;
+                        they lived only on the now-removed
+                        standalone Partner Pipeline page. */}
+                    {partnerOnly ? (
+                      <>
+                        <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">Partner</th>
+                        <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">University & Program</th>
+                        <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">Priority</th>
+                        <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">Decision</th>
+                        <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">App #</th>
+                        <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">Status</th>
+                        <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">Created</th>
+                        <th className="text-right px-6 py-3 font-semibold text-[#1B2A4A]">Actions</th>
+                      </>
+                    ) : (
+                      <>
+                        <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">University & Program</th>
+                        <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">Status</th>
+                        <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">Source</th>
+                        <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">Created</th>
+                        <th className="text-right px-6 py-3 font-semibold text-[#1B2A4A]">Actions</th>
+                      </>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
                   {isLoading && applications.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-6 py-12 text-center">
+                      <td colSpan={partnerOnly ? 9 : 6} className="px-6 py-12 text-center">
                         <Spinner size="md" className="text-[#1B2A4A] mx-auto" />
                       </td>
                     </tr>
                   ) : filteredApplications.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-6 py-12 text-center text-[#4B5563]">
+                      <td colSpan={partnerOnly ? 9 : 6} className="px-6 py-12 text-center text-[#4B5563]">
                         {applications.length === 0 ? (
                           <>
                             <p>
@@ -857,13 +952,54 @@ export default function AdminApplicationsPage() {
                               <div className="text-xs text-[#4B5563]">{application.studentEmail}</div>
                             </div>
                           </td>
-                          <td className="px-6 py-4">
-                            <div>
-                              <div className="text-[#1F2937]">{application.university}</div>
-                              <div className="text-xs text-[#4B5563]">{application.program} • {application.degree}</div>
-                              <div className="text-xs text-[#6B7280] mt-1">{application.intake}</div>
-                            </div>
-                          </td>
+                          {partnerOnly ? (
+                            <>
+                              {/* Phase 33: partner-only table body */}
+                              <td className="px-6 py-4 text-[#4B5563]">
+                                {application.partnerOrgName || '—'}
+                              </td>
+                              <td className="px-6 py-4">
+                                <div>
+                                  <div className="text-[#1F2937]">{application.university}</div>
+                                  <div className="text-xs text-[#4B5563]">{application.program} • {application.degree}</div>
+                                  <div className="text-xs text-[#6B7280] mt-1">{application.intake}</div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                {application.partnerPriority ? (
+                                  <span
+                                    className={`inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-none ${
+                                      application.partnerPriority === 'Urgent'
+                                        ? 'bg-[#9B1B30] text-white'
+                                        : application.partnerPriority === 'High'
+                                        ? 'bg-orange-100 text-orange-800'
+                                        : application.partnerPriority === 'Low'
+                                        ? 'bg-gray-100 text-gray-700'
+                                        : 'bg-blue-50 text-blue-700'
+                                    }`}
+                                  >
+                                    {application.partnerPriority}
+                                  </span>
+                                ) : (
+                                  <span className="text-xs text-gray-400">Normal</span>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 text-[#4B5563]">
+                                {application.partnerDecision || '—'}
+                              </td>
+                              <td className="px-6 py-4 font-mono text-xs text-gray-600">
+                                {application.applicationNumber || '—'}
+                              </td>
+                            </>
+                          ) : (
+                            <td className="px-6 py-4">
+                              <div>
+                                <div className="text-[#1F2937]">{application.university}</div>
+                                <div className="text-xs text-[#4B5563]">{application.program} • {application.degree}</div>
+                                <div className="text-xs text-[#6B7280] mt-1">{application.intake}</div>
+                              </div>
+                            </td>
+                          )}
                           <td className="px-6 py-4">
                             <Badge
                               className={`${
@@ -875,11 +1011,13 @@ export default function AdminApplicationsPage() {
                                 application.status}
                             </Badge>
                           </td>
-                          <td className="px-6 py-4">
-                            <Badge className={`${sourceColors[application.source]} rounded-none`}>
-                              {application.source === 'Admin' ? 'Offline' : application.source}
-                            </Badge>
-                          </td>
+                          {!partnerOnly && (
+                            <td className="px-6 py-4">
+                              <Badge className={`${sourceColors[application.source]} rounded-none`}>
+                                {application.source === 'Admin' ? 'Offline' : application.source}
+                              </Badge>
+                            </td>
+                          )}
                           <td className="px-6 py-4 text-[#4B5563]">
                             {new Date(application.createdAt).toLocaleDateString()}
                           </td>

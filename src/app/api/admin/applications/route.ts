@@ -304,10 +304,15 @@ async function fetchPartnerApplications(
     fetchLimit: number;
   },
 ): Promise<{ rows: UnifiedPartnerRow[]; error?: { message: string } }> {
+  // Phase 33: also pull the partner org's company_name so the
+  // unified list can show "Ziovomart" next to the student name
+  // on the partner-CRM surface. The partner:partners FK returns
+  // a single object (Supabase infers 1:1 from the relation).
   let query = service
     .from('partner_applications')
     .select(
-      'id, student_name, student_email, student_phone, nationality, university, program, intake, degree, status, decision, priority, application_number, created_at, updated_at, partner_id, created_by_user_id',
+      `id, student_name, student_email, student_phone, nationality, university, program, intake, degree, status, decision, priority, application_number, created_at, updated_at, partner_id, created_by_user_id,
+       partner:partners!partner_id (id, company_name, user_id)`,
       { count: 'exact' },
     )
     .order('created_at', { ascending: false });
@@ -340,6 +345,11 @@ async function fetchPartnerApplications(
  * S28: minimal shape for a partner_applications row in the unified
  * list. Mirrors the AdminApplication fields the list table cares
  * about; the rest stays in the detail page.
+ *
+ * Phase 33: `partner` is the joined `partners!partner_id` row,
+ * optional because the join can be absent on direct-SQL rows
+ * (the list page tolerates the missing data — see the
+ * mapPartnerAppForUnifiedList fallback).
  */
 interface UnifiedPartnerRow {
   id: string;
@@ -359,6 +369,24 @@ interface UnifiedPartnerRow {
   created_at: string;
   updated_at: string;
   created_by_user_id: string | null;
+  // Phase 33: Supabase returns 1:1 joins as either a single
+  // object or a single-element array depending on the
+  // underlying PostgREST contract (different SDK versions
+  // have shipped both). We tolerate both shapes here and
+  // in mapPartnerAppForUnifiedList (the `Array.isArray` check
+  // there normalizes to the single-object form).
+  partner?:
+    | {
+        id: string;
+        company_name: string | null;
+        user_id: string | null;
+      }
+    | {
+        id: string;
+        company_name: string | null;
+        user_id: string | null;
+      }[]
+    | null;
 }
 
 interface UnifiedAppRow {
@@ -377,6 +405,17 @@ interface UnifiedAppRow {
   status: string;
   source: 'Admin' | 'Partner' | 'Online' | 'Partner CRM';
   applicationNumber: string | null;
+  // Phase 33: partner-only fields. `student` rows return null
+  // (the column doesn't exist on student_applications for these);
+  // `partner` rows return the actual value. The unified table
+  // shows these columns only when the admin is on the partner
+  // surface (driven by the `?surface=partner` URL param). When
+  // mixed views show these columns, partner rows render the
+  // value + student rows render a '—' placeholder.
+  partnerPriority?: string | null;
+  partnerDecision?: string | null;
+  partnerOrgId?: string | null;
+  partnerOrgName?: string | null;
   createdAt: string;
   updatedAt: string;
   personalStatement?: string | null;
@@ -391,6 +430,13 @@ interface UnifiedAppRow {
  * etc.) come back as null — the partner CRM doesn't track those.
  */
 function mapPartnerAppForUnifiedList(row: UnifiedPartnerRow): Omit<UnifiedAppRow, 'surface'> {
+  // Phase 33: normalize the joined partner row. Supabase returns
+  // 1:1 joins as a single object (not an array), but we tolerate
+  // both shapes since the postgrest contract has been known to
+  // shift across versions. The `partner?: ... | null` on the
+  // type already says it might be missing entirely.
+  const partnerRel = row.partner;
+  const partnerObj = Array.isArray(partnerRel) ? partnerRel[0] : partnerRel;
   return {
     id: row.id,
     studentId: null,
@@ -409,6 +455,12 @@ function mapPartnerAppForUnifiedList(row: UnifiedPartnerRow): Omit<UnifiedAppRow
     // works: 'Partner' selects both 'Partner' and 'Partner CRM'.
     source: 'Partner CRM',
     applicationNumber: row.application_number,
+    // Phase 33: partner-only fields, surfaced into the unified
+    // shape so the page can render them on the partner surface.
+    partnerPriority: row.priority,
+    partnerDecision: row.decision,
+    partnerOrgId: partnerObj?.id || row.partner_id,
+    partnerOrgName: partnerObj?.company_name || null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
