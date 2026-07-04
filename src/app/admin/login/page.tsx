@@ -8,9 +8,11 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, LogIn } from 'lucide-react';
 import { getPostLoginRedirectPath } from '@/lib/auth-redirect';
+import { useI18n } from '@/lib/i18n';
 
 export default function AdminLoginPage() {
   const { signIn, user, isConfigured } = useAuth();
+  const { t } = useI18n();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -52,15 +54,15 @@ export default function AdminLoginPage() {
           <div className="mb-4">
             <SicaLogo className="h-10 w-auto mx-auto" />
           </div>
-          <h1 className="text-[#1B2A4A] text-2xl font-bold">SICA Admin</h1>
-          <p className="text-[#4B5563] mt-1 text-sm">Sign in to your admin account</p>
+          <h1 className="text-[#1B2A4A] text-2xl font-bold">{t('adminAuth.loginTitle')}</h1>
+          <p className="text-[#4B5563] mt-1 text-sm">{t('adminAuth.loginSubtitle')}</p>
         </div>
 
         {/* Login Card */}
         <div className="bg-white border border-gray-200 p-8">
           {!isConfigured && (
             <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 text-sm mb-5">
-              Supabase is not configured. Please set COZE_SUPABASE_URL and COZE_SUPABASE_ANON_KEY environment variables to enable authentication.
+              {t('adminAuth.configMissing')}
             </div>
           )}
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -72,21 +74,21 @@ export default function AdminLoginPage() {
 
             <div>
               <label className="block text-sm font-medium text-[#1F2937] mb-1.5">
-                Email Address
+                {t('adminAuth.emailLabel')}
               </label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                placeholder="admin@sica.edu"
+                placeholder={t('adminAuth.emailPlaceholder')}
                 className="w-full px-4 py-2.5 border border-gray-300 text-[#1F2937] placeholder:text-gray-400 focus:outline-none focus:border-[#9B1B30] focus:ring-1 focus:ring-[#9B1B30] text-sm"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-[#1F2937] mb-1.5">
-                Password
+                {t('adminAuth.passwordLabel')}
               </label>
               <div className="relative">
                 <input
@@ -94,7 +96,7 @@ export default function AdminLoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  placeholder="Enter your password"
+                  placeholder={t('adminAuth.passwordPlaceholderLogin')}
                   className="w-full px-4 py-2.5 border border-gray-300 text-[#1F2937] placeholder:text-gray-400 focus:outline-none focus:border-[#9B1B30] focus:ring-1 focus:ring-[#9B1B30] text-sm pr-10"
                 />
                 <button
@@ -117,16 +119,16 @@ export default function AdminLoginPage() {
               ) : (
                 <>
                   <LogIn size={16} />
-                  SIGN IN
+                  {t('adminAuth.signIn')}
                 </>
               )}
             </button>
           </form>
 
           <div className="mt-6 text-center text-sm text-[#4B5563]">
-            Don&apos;t have an account?{' '}
+            {t('adminAuth.noAccount')}{' '}
             <Link href="/admin/register" className="text-[#9B1B30] font-medium hover:underline">
-              Create Account
+              {t('adminAuth.createAccount')}
             </Link>
           </div>
         </div>
@@ -134,7 +136,7 @@ export default function AdminLoginPage() {
         {/* Back link */}
         <div className="mt-6 text-center">
           <Link href="/" className="text-[#4B5563] text-sm hover:text-[#1B2A4A] transition-colors">
-            &larr; Back to SICA Website
+            {t('adminAuth.backToSite')}
           </Link>
         </div>
       </div>

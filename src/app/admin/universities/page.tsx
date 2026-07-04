@@ -10,11 +10,13 @@ import { ToastProvider, useToast } from '@/components/admin/toast';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
 import { AIGenerateModal } from '@/components/admin/ai-generate-modal';
 import { AIBulkGenerateModal } from '@/components/admin/ai-bulk-generate-modal';
+import { useI18n } from '@/lib/i18n';
 
 function UniversitiesPageInner() {
   const { user } = useAuth();
   const router = useRouter();
   const { addToast } = useToast();
+  const { t } = useI18n();
   const [universities, setUniversities] = useState<University[]>([]);
   const [search, setSearch] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<University | null>(null);
@@ -52,15 +54,15 @@ function UniversitiesPageInner() {
       const res = await fetch(`/api/universities/${uni.slug}`, { method: 'DELETE' });
       if (res.ok) {
         setUniversities(prev => prev.filter(u => u.slug !== uni.slug));
-        addToast('University deleted successfully', 'success');
+        addToast(t('adminUniversities.toastDeleted'), 'success');
       } else {
-        addToast('Failed to delete university', 'error');
+        addToast(t('adminUniversities.toastDeleteFailed'), 'error');
       }
     } catch {
-      addToast('Failed to delete university', 'error');
+      addToast(t('adminUniversities.toastDeleteFailed'), 'error');
     }
     setDeleteTarget(null);
-  }, [addToast]);
+  }, [addToast, t]);
 
   const openAIModalCreate = () => {
     setAiMode('create');
@@ -78,31 +80,31 @@ function UniversitiesPageInner() {
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[#1F2937]">Universities</h1>
-          <p className="text-[#4B5563] text-sm mt-1">Manage university listings and information</p>
+          <h1 className="text-2xl font-bold text-[#1F2937]">{t('adminUniversities.title')}</h1>
+          <p className="text-[#4B5563] text-sm mt-1">{t('adminUniversities.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowBulkModal(true)}
             className="inline-flex items-center gap-2 border-2 border-[#1B2A4A] text-[#1B2A4A] px-4 py-2 text-sm font-semibold hover:bg-[#1B2A4A] hover:text-white transition-colors"
-            title="Generate 5 universities at once with AI"
+            title={t('adminUniversities.bulkGenerateTitle')}
           >
             <Sparkles className="w-4 h-4" />
-            Bulk Generate (5)
+            {t('adminUniversities.bulkGenerate')}
           </button>
           <button
             onClick={openAIModalCreate}
             className="inline-flex items-center gap-2 border-2 border-[#9B1B30] text-[#9B1B30] px-4 py-2 text-sm font-semibold hover:bg-[#9B1B30] hover:text-white transition-colors"
           >
             <Sparkles className="w-4 h-4" />
-            AI Generate
+            {t('adminUniversities.aiGenerate')}
           </button>
           <Link
             href="/admin/universities/new"
             className="inline-flex items-center gap-2 bg-[#9B1B30] text-white px-4 py-2 text-sm font-semibold hover:bg-[#7A1526] transition-colors"
           >
             <Plus className="w-4 h-4" />
-            Add University
+            {t('adminUniversities.addUniversity')}
           </Link>
         </div>
       </div>
@@ -112,7 +114,7 @@ function UniversitiesPageInner() {
         <div className="p-4">
           <input
             type="text"
-            placeholder="Search universities..."
+            placeholder={t('adminUniversities.searchPlaceholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 text-sm focus:outline-none focus:border-[#9B1B30]"
@@ -126,13 +128,13 @@ function UniversitiesPageInner() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-[#F3F4F6] border-b border-gray-200">
-                <th className="text-left px-4 py-3 font-semibold text-[#1B2A4A]">University</th>
-                <th className="text-left px-4 py-3 font-semibold text-[#1B2A4A]">City</th>
-                <th className="text-left px-4 py-3 font-semibold text-[#1B2A4A]">China Rank</th>
-                <th className="text-left px-4 py-3 font-semibold text-[#1B2A4A]">QS World</th>
-                <th className="text-left px-4 py-3 font-semibold text-[#1B2A4A]">Tags</th>
-                <th className="text-left px-4 py-3 font-semibold text-[#1B2A4A]">Rating</th>
-                <th className="text-right px-4 py-3 font-semibold text-[#1B2A4A]">Actions</th>
+                <th className="text-left px-4 py-3 font-semibold text-[#1B2A4A]">{t('adminUniversities.colUniversity')}</th>
+                <th className="text-left px-4 py-3 font-semibold text-[#1B2A4A]">{t('adminUniversities.colCity')}</th>
+                <th className="text-left px-4 py-3 font-semibold text-[#1B2A4A]">{t('adminUniversities.colChinaRank')}</th>
+                <th className="text-left px-4 py-3 font-semibold text-[#1B2A4A]">{t('adminUniversities.colQsWorld')}</th>
+                <th className="text-left px-4 py-3 font-semibold text-[#1B2A4A]">{t('adminUniversities.colTags')}</th>
+                <th className="text-left px-4 py-3 font-semibold text-[#1B2A4A]">{t('adminUniversities.colRating')}</th>
+                <th className="text-right px-4 py-3 font-semibold text-[#1B2A4A]">{t('adminUniversities.colActions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -179,28 +181,28 @@ function UniversitiesPageInner() {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="p-1.5 text-[#1B2A4A] hover:bg-gray-100 transition-colors"
-                        title="View on site"
+                        title={t('adminUniversities.viewOnSite')}
                       >
                         <ExternalLink className="w-4 h-4" />
                       </a>
                       <button
                         onClick={() => openAIModalRegenerate(uni)}
                         className="p-1.5 text-[#9B1B30] hover:bg-[#9B1B30]/10 transition-colors"
-                        title="Re-generate with AI (overwrites AI fields, keeps manual edits)"
+                        title={t('adminUniversities.regenerateAi')}
                       >
                         <Sparkles className="w-4 h-4" />
                       </button>
                       <Link
                         href={`/admin/universities/${uni.slug}/edit`}
                         className="p-1.5 text-[#1B2A4A] hover:bg-gray-100 transition-colors"
-                        title="Edit"
+                        title={t('adminUniversities.edit')}
                       >
                         <Pencil className="w-4 h-4" />
                       </Link>
                       <button
                         onClick={() => setDeleteTarget(uni)}
                         className="p-1.5 text-red-600 hover:bg-red-50 transition-colors"
-                        title="Delete"
+                        title={t('adminUniversities.delete')}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -211,7 +213,7 @@ function UniversitiesPageInner() {
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-[#4B5563]">
-                    No universities found
+                    {t('adminUniversities.emptyRow')}
                   </td>
                 </tr>
               )}
@@ -219,7 +221,7 @@ function UniversitiesPageInner() {
           </table>
         </div>
         <div className="px-4 py-3 border-t border-gray-200 bg-[#F3F4F6] text-xs text-[#4B5563]">
-          Showing {filtered.length} of {universities.length} universities
+          {t('adminUniversities.showing', { shown: filtered.length, total: universities.length })}
         </div>
       </div>
 
@@ -227,9 +229,9 @@ function UniversitiesPageInner() {
         open={!!deleteTarget}
         onCancel={() => setDeleteTarget(null)}
         onConfirm={() => deleteTarget && handleDelete(deleteTarget)}
-        title="Delete University"
-        message={`Are you sure you want to delete "${deleteTarget?.name}"? This action cannot be undone.`}
-        confirmText="Delete"
+        title={t('adminUniversities.deleteConfirmTitle')}
+        message={t('adminUniversities.deleteConfirmMessage', { name: deleteTarget?.name ?? '' })}
+        confirmText={t('adminUniversities.delete')}
       />
 
       <AIGenerateModal
@@ -258,17 +260,17 @@ function UniversitiesPageInner() {
             if (res.ok) {
               addToast(
                 mode === 'regenerate'
-                  ? 'University updated via AI re-generation!'
-                  : 'University created successfully via AI!',
+                  ? t('adminUniversities.toastUpdatedViaAi')
+                  : t('adminUniversities.toastCreatedViaAi'),
                 'success',
               );
               await refreshUniversities();
             } else {
               const err = await res.json().catch(() => ({ error: 'Failed' }));
-              addToast(err.error || `Failed to ${mode} university`, 'error');
+              addToast(err.error || t('adminUniversities.toastFailedAi', { mode }), 'error');
             }
           } catch {
-            addToast(`Failed to ${mode} university`, 'error');
+            addToast(t('adminUniversities.toastFailedAi', { mode }), 'error');
           }
         }}
       />
@@ -277,7 +279,16 @@ function UniversitiesPageInner() {
         isOpen={showBulkModal}
         onClose={() => setShowBulkModal(false)}
         onSaved={(count) => {
-          addToast(`${count} ${count === 1 ? 'university' : 'universities'} created via AI!`, 'success');
+          // Pluralization: count==1 vs >1 — both keys share the
+          // same string for English (no plural form) but Chinese
+          // has no plural distinction at all. Either way the
+          // interpolation works.
+          addToast(
+            count === 1
+              ? t('adminUniversities.toastBulkSaved_one', { count })
+              : t('adminUniversities.toastBulkSaved_other', { count }),
+            'success',
+          );
           refreshUniversities();
         }}
       />

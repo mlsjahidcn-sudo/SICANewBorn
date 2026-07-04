@@ -32,6 +32,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Sparkles, X, Loader2, CheckCircle, AlertCircle, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { apiFetch } from '@/lib/api-client';
+import { useI18n } from '@/lib/i18n';
 
 type DetailStatus = 'idle' | 'pending' | 'generating' | 'ready' | 'error' | 'skipped';
 
@@ -66,15 +67,16 @@ interface AIBulkGenerateModalProps {
 
 type Step = 'idle' | 'suggesting' | 'review-names' | 'generating' | 'review-details' | 'saving' | 'done';
 
-const STEP_LABELS: Array<{ key: Step; label: string }> = [
-  { key: 'idle', label: 'Start' },
-  { key: 'review-names', label: 'Review' },
-  { key: 'generating', label: 'Generate' },
-  { key: 'review-details', label: 'Confirm' },
-  { key: 'saving', label: 'Save' },
+const STEP_KEYS: Array<{ key: Step; labelKey: string }> = [
+  { key: 'idle', labelKey: 'stepStart' },
+  { key: 'review-names', labelKey: 'stepReview' },
+  { key: 'generating', labelKey: 'stepGenerate' },
+  { key: 'review-details', labelKey: 'stepConfirm' },
+  { key: 'saving', labelKey: 'stepSave' },
 ];
 
 export function AIBulkGenerateModal({ isOpen, onClose, onSaved }: AIBulkGenerateModalProps) {
+  const { t } = useI18n();
   const [step, setStep] = useState<Step>('idle');
   const [items, setItems] = useState<SuggestionItem[]>([]);
   const [error, setError] = useState('');
@@ -293,7 +295,7 @@ export function AIBulkGenerateModal({ isOpen, onClose, onSaved }: AIBulkGenerate
 
   const selectedCount = items.filter((it) => it.selected).length;
   const readyCount = items.filter((it) => it.selected && it.status === 'ready').length;
-  const currentStepIndex = STEP_LABELS.findIndex((s) => s.key === step);
+  const currentStepIndex = STEP_KEYS.findIndex((s) => s.key === step);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -302,7 +304,7 @@ export function AIBulkGenerateModal({ isOpen, onClose, onSaved }: AIBulkGenerate
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-[#9B1B30]" />
-            <h2 className="text-lg font-semibold text-[#1F2937]">Bulk Generate Universities</h2>
+            <h2 className="text-lg font-semibold text-[#1F2937]">{t('adminUniversities.bulkModal.title')}</h2>
           </div>
           <button onClick={handleClose} className="text-gray-400 hover:text-gray-600">
             <X className="w-5 h-5" />
@@ -312,7 +314,7 @@ export function AIBulkGenerateModal({ isOpen, onClose, onSaved }: AIBulkGenerate
         {/* Step indicator */}
         {step !== 'idle' && step !== 'done' && (
           <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-100 bg-[#F9FAFB] text-xs">
-            {STEP_LABELS.slice(1).map((s, i) => {
+            {STEP_KEYS.slice(1).map((s, i) => {
               const isActive = s.key === step;
               const isPast = currentStepIndex > i + 1;
               return (
@@ -322,9 +324,9 @@ export function AIBulkGenerateModal({ isOpen, onClose, onSaved }: AIBulkGenerate
                       isActive ? 'text-[#9B1B30]' : isPast ? 'text-green-600' : 'text-[#9CA3AF]'
                     }`}
                   >
-                    {s.label}
+                    {t(`adminUniversities.bulkModal.${s.labelKey}`)}
                   </span>
-                  {i < STEP_LABELS.length - 2 && <span className="text-[#9CA3AF]">→</span>}
+                  {i < STEP_KEYS.length - 2 && <span className="text-[#9CA3AF]">→</span>}
                 </React.Fragment>
               );
             })}
@@ -336,17 +338,14 @@ export function AIBulkGenerateModal({ isOpen, onClose, onSaved }: AIBulkGenerate
           {step === 'idle' && (
             <div>
               <p className="text-sm text-[#4B5563] mb-4">
-                Have AI scan your existing universities and propose <strong>5 new ones</strong> that
-                actively accept international students — public universities with English-taught
-                programs + scholarship tracks. You'll review the names first, then the AI fills in
-                the full details for whichever you keep.
+                {t('adminUniversities.bulkModal.intro')}
               </p>
               <div className="bg-gray-50 border border-gray-200 p-3 mb-4 text-xs text-[#4B5563]">
-                <strong>Two-step AI flow:</strong>
+                <strong>{t('adminUniversities.bulkModal.stepsExplainerTitle')}</strong>
                 <ol className="list-decimal ml-4 mt-2 space-y-1">
-                  <li>Step 1: Suggest 5 names (~10s, sees existing catalog)</li>
-                  <li>Step 2: Generate full details for kept names in parallel (~30s total)</li>
-                  <li>Step 3: Save selected rows to the database</li>
+                  <li>{t('adminUniversities.bulkModal.step1')}</li>
+                  <li>{t('adminUniversities.bulkModal.step2')}</li>
+                  <li>{t('adminUniversities.bulkModal.step3')}</li>
                 </ol>
               </div>
               {error && (
@@ -359,7 +358,7 @@ export function AIBulkGenerateModal({ isOpen, onClose, onSaved }: AIBulkGenerate
                 className="inline-flex items-center gap-2 bg-[#9B1B30] text-white px-4 py-2 text-sm font-semibold hover:bg-[#7A1526] transition-colors"
               >
                 <Sparkles className="w-4 h-4" />
-                Suggest 5 Universities
+                {t('adminUniversities.bulkModal.suggestBtn')}
               </button>
             </div>
           )}
@@ -368,7 +367,7 @@ export function AIBulkGenerateModal({ isOpen, onClose, onSaved }: AIBulkGenerate
             <div className="flex flex-col items-center justify-center py-12">
               <Spinner size="md" className="text-[#9B1B30]" />
               <p className="text-sm text-[#4B5563] mt-4">
-                Scanning existing universities + asking AI for 5 candidates…
+                {t('adminUniversities.bulkModal.suggestingNow')}
               </p>
             </div>
           )}
@@ -376,8 +375,7 @@ export function AIBulkGenerateModal({ isOpen, onClose, onSaved }: AIBulkGenerate
           {step === 'review-names' && (
             <div>
               <p className="text-sm text-[#4B5563] mb-4">
-                Uncheck any you don't want, then continue. Unchecked names will be discarded and
-                no detail generation tokens are spent on them.
+                {t('adminUniversities.bulkModal.reviewInstructions')}
               </p>
               <div className="space-y-2">
                 {items.map((it) => (
@@ -409,8 +407,10 @@ export function AIBulkGenerateModal({ isOpen, onClose, onSaved }: AIBulkGenerate
           {step === 'generating' && (
             <div>
               <p className="text-sm text-[#4B5563] mb-4">
-                Generating full details in parallel ({generatingProgress.done}/{generatingProgress.total} done)
-                — this typically takes ~30 seconds total because the slowest call bounds wall time.
+                {t('adminUniversities.bulkModal.generatingDetails', {
+                  done: generatingProgress.done,
+                  total: generatingProgress.total,
+                })}
               </p>
               <div className="space-y-2">
                 {items
@@ -422,7 +422,7 @@ export function AIBulkGenerateModal({ isOpen, onClose, onSaved }: AIBulkGenerate
                         <div className="font-medium text-sm text-[#1F2937] truncate">
                           {it.name}
                         </div>
-                        <div className="text-xs text-[#6B7280] mt-0.5">{statusLabel(it)}</div>
+                        <div className="text-xs text-[#6B7280] mt-0.5">{statusLabel(it, t)}</div>
                       </div>
                     </div>
                   ))}
@@ -433,9 +433,7 @@ export function AIBulkGenerateModal({ isOpen, onClose, onSaved }: AIBulkGenerate
           {step === 'review-details' && (
             <div>
               <p className="text-sm text-[#4B5563] mb-4">
-                Review the AI-generated data. Uncheck any that look wrong — only checked rows get
-                saved. Rows that failed to generate are listed below so you can retry from the
-                single-university generator.
+                {t('adminUniversities.bulkModal.detailReviewInstructions')}
               </p>
               <div className="space-y-2">
                 {items
@@ -450,14 +448,12 @@ export function AIBulkGenerateModal({ isOpen, onClose, onSaved }: AIBulkGenerate
           {step === 'saving' && (
             <div>
               <p className="text-sm text-[#4B5563] mb-4">
-                Saving {savingProgress.total} universities to the database…
-                {' '}<strong className="text-green-600">{savingProgress.saved} saved</strong>
-                {savingProgress.duplicate > 0 && (
-                  <> · <span className="text-amber-600">{savingProgress.duplicate} duplicate skipped</span></>
-                )}
-                {savingProgress.failed > 0 && (
-                  <> · <span className="text-red-600">{savingProgress.failed} failed</span></>
-                )}
+                {t('adminUniversities.bulkModal.savingProgress', {
+                  total: savingProgress.total,
+                  saved: savingProgress.saved,
+                  duplicate: savingProgress.duplicate > 0 ? ` · ${savingProgress.duplicate} duplicate skipped` : '',
+                  failed: savingProgress.failed > 0 ? ` · ${savingProgress.failed} failed` : '',
+                }).replace(/ \. ·/g, ' ·')}
               </p>
               <div className="space-y-2">
                 {items
@@ -478,10 +474,11 @@ export function AIBulkGenerateModal({ isOpen, onClose, onSaved }: AIBulkGenerate
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-sm text-[#1F2937] truncate">{it.name}</div>
                         <div className="text-xs text-[#6B7280] mt-0.5">
-                          {it.saveResult === 'saved' && 'Saved to database'}
-                          {it.saveResult === 'duplicate' && 'Slug already exists — skipped'}
-                          {it.saveResult === 'error' && `Save failed: ${it.error ?? 'unknown error'}`}
-                          {!it.saveResult && 'Saving…'}
+                          {it.saveResult === 'saved' && t('adminUniversities.bulkModal.savedToDb')}
+                          {it.saveResult === 'duplicate' && t('adminUniversities.bulkModal.slugDuplicate')}
+                          {it.saveResult === 'error' &&
+                            t('adminUniversities.bulkModal.saveFailed', { error: it.error ?? 'unknown' })}
+                          {!it.saveResult && t('adminUniversities.bulkModal.savingNow')}
                         </div>
                       </div>
                     </div>
@@ -494,15 +491,20 @@ export function AIBulkGenerateModal({ isOpen, onClose, onSaved }: AIBulkGenerate
             <div className="text-center py-6">
               <CheckCircle className="w-12 h-12 text-green-600 mx-auto" />
               <h3 className="text-lg font-semibold text-[#1F2937] mt-3">
-                {savingProgress.saved > 0 ? `Saved ${savingProgress.saved} universities` : 'Done'}
+                {savingProgress.saved > 0
+                  ? t('adminUniversities.bulkModal.doneSavedTitle', { n: savingProgress.saved })
+                  : t('adminUniversities.bulkModal.doneTitle')}
               </h3>
               <p className="text-sm text-[#4B5563] mt-2">
-                {savingProgress.saved} saved · {savingProgress.duplicate} duplicate skipped ·{' '}
-                {savingProgress.failed} failed
+                {t('adminUniversities.bulkModal.doneBody', {
+                  saved: savingProgress.saved,
+                  duplicate: savingProgress.duplicate,
+                  failed: savingProgress.failed,
+                })}
               </p>
               {(savingProgress.failed > 0 || savingProgress.duplicate > 0) && (
                 <p className="text-xs text-[#6B7280] mt-3">
-                  Failed/duplicate rows can be retried via the single-row AI Generate.
+                  {t('adminUniversities.bulkModal.retryHint')}
                 </p>
               )}
             </div>
@@ -527,14 +529,14 @@ export function AIBulkGenerateModal({ isOpen, onClose, onSaved }: AIBulkGenerate
                 className="inline-flex items-center gap-1 text-sm text-[#4B5563] hover:text-[#1F2937]"
               >
                 <ChevronLeft className="w-4 h-4" />
-                Restart
+                {t('adminUniversities.bulkModal.restart')}
               </button>
               <button
                 onClick={handleGenerateDetails}
                 disabled={selectedCount === 0}
                 className="inline-flex items-center gap-2 bg-[#9B1B30] text-white px-4 py-2 text-sm font-semibold hover:bg-[#7A1526] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Continue ({selectedCount})
+                {t('adminUniversities.bulkModal.continueWith', { n: selectedCount })}
                 <ChevronRight className="w-4 h-4" />
               </button>
             </>
@@ -547,7 +549,7 @@ export function AIBulkGenerateModal({ isOpen, onClose, onSaved }: AIBulkGenerate
                 onClick={handleCancelGeneration}
                 className="text-sm text-[#4B5563] hover:text-[#1F2937]"
               >
-                Cancel generation
+                {t('adminUniversities.bulkModal.cancelGeneration')}
               </button>
             </>
           )}
@@ -559,7 +561,7 @@ export function AIBulkGenerateModal({ isOpen, onClose, onSaved }: AIBulkGenerate
                 className="inline-flex items-center gap-1 text-sm text-[#4B5563] hover:text-[#1F2937]"
               >
                 <ChevronLeft className="w-4 h-4" />
-                Back to names
+                {t('adminUniversities.bulkModal.restart')}
               </button>
               <button
                 onClick={handleSave}
@@ -567,7 +569,9 @@ export function AIBulkGenerateModal({ isOpen, onClose, onSaved }: AIBulkGenerate
                 className="inline-flex items-center gap-2 bg-[#9B1B30] text-white px-4 py-2 text-sm font-semibold hover:bg-[#7A1526] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <CheckCircle className="w-4 h-4" />
-                Save {readyCount} {readyCount === 1 ? 'University' : 'Universities'}
+                {readyCount === 1
+                  ? t('adminUniversities.bulkModal.saveBtnSingular', { n: readyCount })
+                  : t('adminUniversities.bulkModal.saveBtn', { n: readyCount })}
               </button>
             </>
           )}
@@ -577,7 +581,7 @@ export function AIBulkGenerateModal({ isOpen, onClose, onSaved }: AIBulkGenerate
               <span />
               <span className="text-sm text-[#4B5563]">
                 <Loader2 className="w-4 h-4 inline animate-spin mr-1" />
-                Saving…
+                {t('adminUniversities.bulkModal.savingNow')}
               </span>
             </>
           )}
@@ -589,7 +593,7 @@ export function AIBulkGenerateModal({ isOpen, onClose, onSaved }: AIBulkGenerate
                 onClick={handleFinish}
                 className="bg-[#9B1B30] text-white px-4 py-2 text-sm font-semibold hover:bg-[#7A1526] transition-colors"
               >
-                Done
+                {t('adminUniversities.bulkModal.doneButton')}
               </button>
             </>
           )}
@@ -607,24 +611,25 @@ function StatusIcon({ status }: { status: DetailStatus }) {
   return <div className="w-4 h-4 border border-gray-300 flex-shrink-0" />;
 }
 
-function statusLabel(it: SuggestionItem): string {
+function statusLabel(it: SuggestionItem, t: (key: string, params?: Record<string, string | number>) => string): string {
   switch (it.status) {
     case 'pending':
-      return 'Queued';
+      return t('adminUniversities.bulkModal.statusQueued');
     case 'generating':
-      return 'Generating details…';
+      return t('adminUniversities.bulkModal.statusGenerating');
     case 'ready':
-      return 'Ready to save';
+      return t('adminUniversities.bulkModal.statusReady');
     case 'error':
-      return `Failed: ${it.error ?? 'unknown error'}`;
+      return t('adminUniversities.bulkModal.statusErrorPrefix', { error: it.error ?? 'unknown error' });
     case 'skipped':
-      return 'Skipped';
+      return t('adminUniversities.bulkModal.detailCancel');
     default:
       return '';
   }
 }
 
 function DetailRow({ item, onToggle }: { item: SuggestionItem; onToggle: () => void }) {
+  const { t } = useI18n();
   const showData = item.status === 'ready' && item.data;
   return (
     <div className="border border-gray-200 p-3">
@@ -650,14 +655,14 @@ function DetailRow({ item, onToggle }: { item: SuggestionItem; onToggle: () => v
           </div>
           {showData ? (
             <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-3 text-xs text-[#4B5563]">
-              {dataSummary(item.data as Record<string, unknown>).map((kv) => (
+              {dataSummary(item.data as Record<string, unknown>, t).map((kv) => (
                 <div key={kv.k} className="truncate">
                   <span className="text-[#6B7280]">{kv.k}:</span> {kv.v}
                 </div>
               ))}
             </div>
           ) : item.status === 'error' ? (
-            <div className="mt-2 text-xs text-red-600">{item.error ?? 'Generation failed'}</div>
+            <div className="mt-2 text-xs text-red-600">{item.error ?? t('adminUniversities.aiModal.failed')}</div>
           ) : null}
         </div>
       </label>
@@ -665,23 +670,27 @@ function DetailRow({ item, onToggle }: { item: SuggestionItem; onToggle: () => v
   );
 }
 
-function dataSummary(d: Record<string, unknown>): Array<{ k: string; v: string }> {
+function dataSummary(
+  d: Record<string, unknown>,
+  t: (key: string, params?: Record<string, string | number>) => string,
+): Array<{ k: string; v: string }> {
   // Compact 2-col grid for the review step — too long to inline.
   // Falls back to em-dash for null/undefined.
+  const dash = t('adminUniversities.bulkModal.detailDash');
   const fmt = (v: unknown, max = 80): string => {
-    if (v == null || v === '') return '—';
-    if (Array.isArray(v)) return `${v.length} items`;
+    if (v == null || v === '') return dash;
+    if (Array.isArray(v)) return t('adminUniversities.bulkModal.detailItems', { n: v.length });
     const s = String(v);
     return s.length > max ? s.slice(0, max) + '…' : s;
   };
   return [
-    { k: 'Type', v: fmt(d.type) },
-    { k: 'Est.', v: fmt(d.established) },
-    { k: 'Students', v: fmt(d.students) },
-    { k: 'Intl', v: fmt(d.intlStudents) },
-    { k: 'Tuition UG', v: fmt(d.tuitionUndergrad) },
-    { k: 'Tuition G', v: fmt(d.tuitionGraduate) },
-    { k: 'Rating', v: fmt(d.rating) },
-    { k: 'QS World', v: fmt(d.qsWorldRanking) },
+    { k: t('adminUniversities.bulkModal.detailType'), v: fmt(d.type) },
+    { k: t('adminUniversities.bulkModal.detailEst'), v: fmt(d.established) },
+    { k: t('adminUniversities.bulkModal.detailStudents'), v: fmt(d.students) },
+    { k: t('adminUniversities.bulkModal.detailIntl'), v: fmt(d.intlStudents) },
+    { k: t('adminUniversities.bulkModal.detailTuitionUg'), v: fmt(d.tuitionUndergrad) },
+    { k: t('adminUniversities.bulkModal.detailTuitionG'), v: fmt(d.tuitionGraduate) },
+    { k: t('adminUniversities.bulkModal.detailRating'), v: fmt(d.rating) },
+    { k: t('adminUniversities.bulkModal.detailQsWorld'), v: fmt(d.qsWorldRanking) },
   ];
 }

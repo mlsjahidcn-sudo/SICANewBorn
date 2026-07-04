@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Spinner } from '@/components/ui/spinner';
 import { Sparkles, X, Loader2, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { apiFetch } from '@/lib/api-client';
+import { useI18n } from '@/lib/i18n';
 
 interface AIGenerateModalProps {
   isOpen: boolean;
@@ -38,6 +39,7 @@ export function AIGenerateModal({
   mode = 'create',
   initialName = '',
 }: AIGenerateModalProps) {
+  const { t } = useI18n();
   const [universityName, setUniversityName] = useState(initialName);
   const [state, setState] = useState<GenerationState>({
     status: 'idle',
@@ -64,7 +66,7 @@ export function AIGenerateModal({
     if (!universityName.trim()) return;
 
     abortRef.current = new AbortController();
-    setState({ status: 'generating', progress: 'Connecting to AI...', error: '', generatedData: null, rawContent: '' });
+    setState({ status: 'generating', progress: t('adminUniversities.aiModal.generating', { n: 0 }), error: '', generatedData: null, rawContent: '' });
 
     try {
       // Phase 36: apiFetch attaches Bearer token automatically so the
@@ -115,7 +117,7 @@ export function AIGenerateModal({
                 fullContent += parsed.content;
                 setState(prev => ({
                   ...prev,
-                  progress: `Generating... ${fullContent.length} chars`,
+                  progress: t('adminUniversities.aiModal.generating', { n: fullContent.length }),
                   rawContent: fullContent,
                 }));
               }
@@ -151,14 +153,14 @@ export function AIGenerateModal({
         try {
           generatedData = JSON.parse(fixed);
         } catch {
-          throw new Error('Failed to parse AI response as JSON. Please try again.');
+          throw new Error(t('adminUniversities.aiModal.parseFailed'));
         }
       }
 
       setState(prev => ({
         ...prev,
         status: 'success',
-        progress: `Generated successfully!`,
+        progress: t('adminUniversities.aiModal.generating', { n: fullContent.length }),
         generatedData,
       }));
     } catch (err) {
@@ -231,7 +233,7 @@ export function AIGenerateModal({
               <Sparkles className="w-5 h-5 text-[#9B1B30]" />
             )}
             <h2 className="text-lg font-semibold text-[#1F2937]">
-              {isRegenerate ? 'Re-generate University' : 'AI University Generator'}
+              {isRegenerate ? t('adminUniversities.aiModal.titleRegenerate') : t('adminUniversities.aiModal.titleCreate')}
             </h2>
           </div>
           <button onClick={handleClose} className="text-gray-400 hover:text-gray-600">
@@ -244,16 +246,14 @@ export function AIGenerateModal({
           {state.status === 'idle' && (
             <div>
               <p className="text-sm text-[#4B5563] mb-4">
-                {isRegenerate
-                  ? 'Re-running AI generation with the new prompt. The existing row will be updated in place — only the AI fields get overwritten; your manual edits to other fields are preserved.'
-                  : 'Enter a Chinese university name and AI will generate all the information automatically — description, programs, rankings, accommodation, and more.'}
+                {isRegenerate ? t('adminUniversities.aiModal.bodyRegenerate') : t('adminUniversities.aiModal.bodyCreate')}
               </p>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1">University Name</label>
+              <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('adminUniversities.aiModal.universityNameLabel')}</label>
               <input
                 type="text"
                 value={universityName}
                 onChange={(e) => setUniversityName(e.target.value)}
-                placeholder="e.g. Sichuan University, 四川大学, Beijing Normal University"
+                placeholder={t('adminUniversities.aiModal.universityNamePlaceholder')}
                 className="w-full px-3 py-2 border border-gray-300 text-sm focus:outline-none focus:border-[#9B1B30]"
                 onKeyDown={(e) => { if (e.key === 'Enter') handleGenerate(); }}
               />
@@ -268,7 +268,7 @@ export function AIGenerateModal({
               </div>
               <div className="bg-gray-50 border border-gray-200 p-3 max-h-60 overflow-y-auto">
                 <pre className="text-xs text-[#4B5563] whitespace-pre-wrap font-mono">
-                  {state.rawContent || 'Waiting for response...'}
+                  {state.rawContent || t('adminUniversities.aiModal.generating', { n: 0 })}
                 </pre>
               </div>
             </div>
@@ -278,14 +278,14 @@ export function AIGenerateModal({
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <AlertCircle className="w-5 h-5 text-red-500" />
-                <span className="text-sm text-red-600">Generation failed</span>
+                <span className="text-sm text-red-600">{t('adminUniversities.aiModal.failed')}</span>
               </div>
               <p className="text-sm text-[#4B5563] mb-4">{state.error}</p>
               <button
                 onClick={() => setState({ status: 'idle', progress: '', error: '', generatedData: null, rawContent: '' })}
                 className="text-sm text-[#9B1B30] hover:underline"
               >
-                Try again
+                {t('adminUniversities.aiModal.tryAgain')}
               </button>
             </div>
           )}
@@ -295,7 +295,7 @@ export function AIGenerateModal({
               <div className="flex items-center gap-2 mb-4">
                 <CheckCircle className="w-5 h-5 text-green-600" />
                 <span className="text-sm text-green-700 font-medium">
-                  Generated info for {String(state.generatedData.name || universityName)}
+                  {t('adminUniversities.aiModal.createdFor', { name: String(state.generatedData.name || universityName) })}
                 </span>
               </div>
               <div className="bg-gray-50 border border-gray-200 p-3 max-h-80 overflow-y-auto">
@@ -310,7 +310,7 @@ export function AIGenerateModal({
           {state.status === 'idle' && (
             <>
               <button onClick={handleClose} className="px-4 py-2 text-sm text-[#4B5563] hover:text-[#1F2937]">
-                Cancel
+                {t('adminUniversities.aiModal.cancel')}
               </button>
               <button
                 onClick={handleGenerate}
@@ -318,35 +318,35 @@ export function AIGenerateModal({
                 className="inline-flex items-center gap-2 bg-[#9B1B30] text-white px-4 py-2 text-sm font-semibold hover:bg-[#7A1526] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Sparkles className="w-4 h-4" />
-                Generate
+                {t('adminUniversities.aiModal.generate')}
               </button>
             </>
           )}
 
           {state.status === 'generating' && (
             <button onClick={handleCancel} className="px-4 py-2 text-sm text-[#4B5563] hover:text-[#1F2937]">
-              Cancel
+              {t('adminUniversities.aiModal.cancel')}
             </button>
           )}
 
           {state.status === 'success' && state.generatedData && (
             <>
               <button onClick={handleClose} className="px-4 py-2 text-sm text-[#4B5563] hover:text-[#1F2937]">
-                Discard
+                {t('adminUniversities.aiModal.discard')}
               </button>
               <button
                 onClick={handleUseGenerated}
                 className="inline-flex items-center gap-2 bg-[#9B1B30] text-white px-4 py-2 text-sm font-semibold hover:bg-[#7A1526] transition-colors"
               >
                 <CheckCircle className="w-4 h-4" />
-                {isRegenerate ? 'Update University' : 'Create University'}
+                {isRegenerate ? t('adminUniversities.aiModal.updateSubmit') : t('adminUniversities.aiModal.createSubmit')}
               </button>
             </>
           )}
 
           {state.status === 'error' && (
             <button onClick={handleClose} className="px-4 py-2 text-sm text-[#4B5563] hover:text-[#1F2937]">
-              Close
+              {t('adminUniversities.aiModal.close')}
             </button>
           )}
         </div>

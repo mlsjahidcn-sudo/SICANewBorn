@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { apiFetchJson } from '@/lib/api-client';
 import { StatusBadge } from '@/components/admin/status-badge';
+import { useI18n } from '@/lib/i18n';
 
 interface StatCardProps {
   title: string;
@@ -104,6 +105,7 @@ const statusDisplay: Record<string, { label: string; color: string }> = {
 
 export default function AdminDashboardPage() {
   const { user } = useAuth();
+  const { t } = useI18n();
   const [mounted, setMounted] = useState(false);
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -159,10 +161,10 @@ export default function AdminDashboardPage() {
             <div className="flex items-start gap-2">
               <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
               <div>
-                <h3 className="font-semibold text-red-800">Failed to load dashboard</h3>
+                <h3 className="font-semibold text-red-800">{t('adminDashboard.failedToLoad')}</h3>
                 <p className="text-red-700 text-sm mt-1">{error || 'Unknown error'}</p>
                 <Button size="sm" variant="outline" onClick={() => window.location.reload()} className="mt-3">
-                  Retry
+                  {t('adminDashboard.retry')}
                 </Button>
               </div>
             </div>
@@ -179,37 +181,42 @@ export default function AdminDashboardPage() {
       {/* Welcome */}
       <div>
         <h1 className="text-2xl font-bold text-[#1F2937]">
-          Welcome back, {user?.user_metadata?.full_name || 'Admin'}
+          {t('adminDashboard.welcomeBack', {
+            name: user?.user_metadata?.full_name || t('adminDashboard.welcomeFallback'),
+          })}
         </h1>
         <p className="text-[#4B5563] text-sm mt-1">
-          Here&apos;s an overview of your platform.
+          {t('adminDashboard.overviewBlurb')}
         </p>
       </div>
 
       {/* Stats Grid — 8 cards now (real data) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          title="Students"
+          title={t('adminDashboard.statStudents')}
           value={s.students.toLocaleString()}
-          subtitle={`+${s.studentsLast7d} in the last 7 days`}
+          subtitle={t('adminDashboard.statStudentsSub', { n: s.studentsLast7d })}
           icon={Users}
         />
         <StatCard
-          title="Applications"
+          title={t('adminDashboard.statApplications')}
           value={s.applications.toLocaleString()}
-          subtitle={`${s.activeApplications} active · ${s.leads} unlinked`}
+          subtitle={t('adminDashboard.statApplicationsSub', {
+            active: s.activeApplications,
+            unlinked: s.leads,
+          })}
           icon={FileText}
         />
         <StatCard
-          title="Universities"
+          title={t('adminDashboard.statUniversities')}
           value={s.universities.toLocaleString()}
-          subtitle="Registered institutions"
+          subtitle={t('adminDashboard.statUniversitiesSub')}
           icon={GraduationCap}
         />
         <StatCard
-          title="Programs"
+          title={t('adminDashboard.statPrograms')}
           value={s.programs.toLocaleString()}
-          subtitle={`${s.scholarships} scholarships available`}
+          subtitle={t('adminDashboard.statProgramsSub', { n: s.scholarships })}
           icon={BookOpen}
         />
       </div>
@@ -220,35 +227,35 @@ export default function AdminDashboardPage() {
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white border border-gray-200">
             <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="font-semibold text-[#1F2937]">Recent Applications</h2>
+              <h2 className="font-semibold text-[#1F2937]">{t('adminDashboard.recentApplications')}</h2>
               <Link
                 href="/admin/applications"
                 className="text-sm text-[#9B1B30] font-medium hover:underline flex items-center gap-1"
               >
-                View All <ArrowUpRight size={14} />
+                {t('adminDashboard.viewAll')} <ArrowUpRight size={14} />
               </Link>
             </div>
             <div className="overflow-x-auto">
               {data.recentApplications.length === 0 ? (
                 <div className="p-12 text-center text-gray-500">
                   <FileText className="w-10 h-10 mx-auto mb-2 text-gray-300" />
-                  <p>No applications yet.</p>
+                  <p>{t('adminDashboard.noApplicationsYet')}</p>
                   <Link
                     href="/admin/applications/new"
                     className="text-sm text-[#9B1B30] hover:underline mt-2 inline-block"
                   >
-                    Add the first one →
+                    {t('adminDashboard.addFirstApplication')}
                   </Link>
                 </div>
               ) : (
                 <table className="w-full">
                   <thead>
                     <tr className="bg-[#F3F4F6]">
-                      <th className="text-left text-xs font-medium text-[#4B5563] px-5 py-3">Applicant</th>
-                      <th className="text-left text-xs font-medium text-[#4B5563] px-5 py-3">Program</th>
-                      <th className="text-left text-xs font-medium text-[#4B5563] px-5 py-3">University</th>
-                      <th className="text-left text-xs font-medium text-[#4B5563] px-5 py-3">Date</th>
-                      <th className="text-left text-xs font-medium text-[#4B5563] px-5 py-3">Status</th>
+                      <th className="text-left text-xs font-medium text-[#4B5563] px-5 py-3">{t('adminDashboard.colApplicant')}</th>
+                      <th className="text-left text-xs font-medium text-[#4B5563] px-5 py-3">{t('adminDashboard.colProgram')}</th>
+                      <th className="text-left text-xs font-medium text-[#4B5563] px-5 py-3">{t('adminDashboard.colUniversity')}</th>
+                      <th className="text-left text-xs font-medium text-[#4B5563] px-5 py-3">{t('adminDashboard.colDate')}</th>
+                      <th className="text-left text-xs font-medium text-[#4B5563] px-5 py-3">{t('adminDashboard.colStatus')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -261,7 +268,7 @@ export default function AdminDashboardPage() {
                               {app.studentName}
                             </Link>
                             {!app.isLinked && (
-                              <span className="ml-2 text-xs text-[#9B1B30] font-normal">(no account)</span>
+                              <span className="ml-2 text-xs text-[#9B1B30] font-normal">{t('adminDashboard.noAccountHint')}</span>
                             )}
                           </td>
                           <td className="px-5 py-3 text-sm text-[#4B5563]">
@@ -293,13 +300,13 @@ export default function AdminDashboardPage() {
             <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
               <h2 className="font-semibold text-[#1F2937] flex items-center gap-2">
                 <Inbox size={16} className="text-[#1B2A4A]" />
-                Lead pipeline
+                {t('adminDashboard.leadPipeline')}
               </h2>
               <Link
                 href="/admin/leads"
                 className="text-sm text-[#9B1B30] font-medium hover:underline flex items-center gap-1"
               >
-                View all <ArrowUpRight size={14} />
+                {t('adminDashboard.viewAllLeads')} <ArrowUpRight size={14} />
               </Link>
             </div>
             <div className="p-5">
@@ -310,13 +317,13 @@ export default function AdminDashboardPage() {
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <MessageSquare size={14} className="text-[#1B2A4A]" />
-                    <span className="text-xs text-gray-500">Contact form</span>
+                    <span className="text-xs text-gray-500">{t('adminDashboard.leadContactForm')}</span>
                   </div>
                   <p className="text-2xl font-bold text-[#1F2937]">
                     {s.leadsContact.toLocaleString()}
                   </p>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    +{s.leadsContactLast7d} in 7d
+                    {t('adminDashboard.in7d', { n: s.leadsContactLast7d })}
                   </p>
                 </Link>
                 <Link
@@ -325,13 +332,13 @@ export default function AdminDashboardPage() {
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <MessageCircle size={14} className="text-[#9B1B30]" />
-                    <span className="text-xs text-gray-500">Chat</span>
+                    <span className="text-xs text-gray-500">{t('adminDashboard.leadChat')}</span>
                   </div>
                   <p className="text-2xl font-bold text-[#1F2937]">
                     {s.leadsChat.toLocaleString()}
                   </p>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    +{s.leadsChatLast7d} in 7d
+                    {t('adminDashboard.in7d', { n: s.leadsChatLast7d })}
                   </p>
                 </Link>
                 <Link
@@ -340,13 +347,13 @@ export default function AdminDashboardPage() {
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <ClipboardList size={14} className="text-[#D4A853]" />
-                    <span className="text-xs text-gray-500">Assessment</span>
+                    <span className="text-xs text-gray-500">{t('adminDashboard.leadAssessment')}</span>
                   </div>
                   <p className="text-2xl font-bold text-[#1F2937]">
                     {s.leadsAssessment.toLocaleString()}
                   </p>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    +{s.leadsAssessmentLast7d} in 7d
+                    {t('adminDashboard.in7d', { n: s.leadsAssessmentLast7d })}
                   </p>
                 </Link>
               </div>
@@ -357,7 +364,7 @@ export default function AdminDashboardPage() {
                 >
                   <div className="flex items-center gap-2">
                     <UserPlus size={14} className="text-[#9B1B30]" />
-                    <span className="text-sm text-[#1F2937]">Unassigned leads</span>
+                    <span className="text-sm text-[#1F2937]">{t('adminDashboard.unassignedLeads')}</span>
                   </div>
                   <span className="text-lg font-bold text-[#9B1B30]">
                     {s.leadsUnassigned.toLocaleString()}
@@ -369,7 +376,7 @@ export default function AdminDashboardPage() {
                 >
                   <div className="flex items-center gap-2">
                     <AlertTriangle size={14} className="text-[#D4A853]" />
-                    <span className="text-sm text-[#1F2937]">Needs follow-up</span>
+                    <span className="text-sm text-[#1F2937]">{t('adminDashboard.needsFollowup')}</span>
                   </div>
                   <span className="text-lg font-bold text-[#1B2A4A]">
                     {s.leadsNeedsFollowup.toLocaleString()}
@@ -384,14 +391,14 @@ export default function AdminDashboardPage() {
         <div className="space-y-6">
           {/* Quick Actions */}
           <div className="bg-white border border-gray-200 p-5">
-            <h2 className="font-semibold text-[#1F2937] mb-4">Quick Actions</h2>
+            <h2 className="font-semibold text-[#1F2937] mb-4">{t('adminDashboard.quickActions')}</h2>
             <div className="space-y-2">
               {[
-                { label: 'Add Offline Student', icon: UserPlus, href: '/admin/students/new' },
-                { label: 'Add Application', icon: FileText, href: '/admin/applications/new' },
-                { label: 'Add University', icon: GraduationCap, href: '/admin/universities/new' },
-                { label: 'Add Program', icon: BookOpen, href: '/admin/programs/new' },
-                { label: 'Add Scholarship', icon: Award, href: '/admin/scholarships/new' },
+                { label: t('adminDashboard.quickAddOfflineStudent'), icon: UserPlus, href: '/admin/students/new' },
+                { label: t('adminDashboard.quickAddApplication'), icon: FileText, href: '/admin/applications/new' },
+                { label: t('adminDashboard.quickAddUniversity'), icon: GraduationCap, href: '/admin/universities/new' },
+                { label: t('adminDashboard.quickAddProgram'), icon: BookOpen, href: '/admin/programs/new' },
+                { label: t('adminDashboard.quickAddScholarship'), icon: Award, href: '/admin/scholarships/new' },
               ].map((action) => {
                 const Icon = action.icon;
                 return (
@@ -413,11 +420,11 @@ export default function AdminDashboardPage() {
           <div className="bg-white border border-gray-200 p-5">
             <h2 className="font-semibold text-[#1F2937] mb-4 flex items-center gap-2">
               <Activity size={16} className="text-[#1B2A4A]" />
-              Recent Activity
+              {t('adminDashboard.recentActivity')}
             </h2>
             {data.recentActivity.length === 0 ? (
               <div className="text-center text-sm text-gray-500 py-4">
-                No activity yet.
+                {t('adminDashboard.noActivityYet')}
               </div>
             ) : (
               <div className="space-y-3">

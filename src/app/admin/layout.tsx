@@ -27,19 +27,23 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { SicaLogo } from '@/components/sica-logo';
-import { I18nProvider } from '@/lib/i18n';
+import { I18nProvider, useI18n } from '@/lib/i18n';
 
+// Phase 37: nav items now reference i18n keys instead of inline
+// `label` + `labelCn` pairs. The label value is the key suffix
+// under `adminNav.*` so adding a new sidebar item means one key
+// in each locale + one entry here.
 const navItems = [
-  { href: '/admin/dashboard', label: 'Dashboard', labelCn: '仪表盘', icon: LayoutDashboard },
-  { href: '/admin/universities', label: 'Universities', labelCn: '大学', icon: GraduationCap },
-  { href: '/admin/programs', label: 'Programs', labelCn: '项目', icon: BookOpen },
-  { href: '/admin/scholarships', label: 'Scholarships', labelCn: '奖学金', icon: Award },
-  { href: '/admin/news', label: 'News', labelCn: '新闻', icon: Newspaper },
-  { href: '/admin/emails', label: 'Emails', labelCn: '邮件', icon: Mail },
-  { href: '/admin/leads', label: 'Leads', labelCn: '线索', icon: Users },
-  { href: '/admin/students', label: 'Students', labelCn: '学生', icon: UserCheck },
-  { href: '/admin/documents', label: 'Documents', labelCn: '文档审核', icon: FileCheck },
-  { href: '/admin/partners', label: 'Partners', labelCn: '合作方', icon: Building2 },
+  { href: '/admin/dashboard', key: 'dashboard', icon: LayoutDashboard },
+  { href: '/admin/universities', key: 'universities', icon: GraduationCap },
+  { href: '/admin/programs', key: 'programs', icon: BookOpen },
+  { href: '/admin/scholarships', key: 'scholarships', icon: Award },
+  { href: '/admin/news', key: 'news', icon: Newspaper },
+  { href: '/admin/emails', key: 'emails', icon: Mail },
+  { href: '/admin/leads', key: 'leads', icon: Users },
+  { href: '/admin/students', key: 'students', icon: UserCheck },
+  { href: '/admin/documents', key: 'documents', icon: FileCheck },
+  { href: '/admin/partners', key: 'partners', icon: Building2 },
   // Phase 33: the standalone Partner Pipeline list page is
   // gone — folded into /admin/applications as a `?surface=partner`
   // deep-link. The admin still lands on the partner view via
@@ -48,14 +52,14 @@ const navItems = [
   // partner detail page at /admin/partner-applications/[id]
   // is unchanged (admin is still the only role that can flip
   // status / decision for partner rows).
-  { href: '/admin/fees', label: 'Fees', labelCn: '费用', icon: DollarSign },
-  { href: '/admin/assessments', label: 'Assessments', labelCn: '评估', icon: ClipboardList },
-  { href: '/admin/applications', label: 'Applications', labelCn: '申请', icon: FileText },
+  { href: '/admin/fees', key: 'fees', icon: DollarSign },
+  { href: '/admin/assessments', key: 'assessments', icon: ClipboardList },
+  { href: '/admin/applications', key: 'applications', icon: FileText },
   // S34: Cohort View — read-only dashboard grouping apps by
   // intake. Sits right below Applications because it's the
   // "where am I in the pipeline" companion view.
-  { href: '/admin/cohorts', label: 'Cohort View', labelCn: '入学批次', icon: LayoutGrid },
-  { href: '/admin/settings', label: 'Settings', labelCn: '设置', icon: Settings },
+  { href: '/admin/cohorts', key: 'cohorts', icon: LayoutGrid },
+  { href: '/admin/settings', key: 'settings', icon: Settings },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -70,6 +74,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
 function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const { user, loading, signOut } = useAuth();
+  const { t } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -103,18 +108,18 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
         <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
           <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-200">
             <SicaLogo className="h-8 w-auto" />
-            <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Admin</span>
+            <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">{t('adminNav.brand')}</span>
           </div>
           <div className="flex-1 px-3 py-4 space-y-1">
             {navItems.map((item) => {
               const Icon = item.icon;
               return (
                 <div
-                  key={item.label}
+                  key={item.key}
                   className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-400"
                 >
                   <Icon size={18} />
-                  <span>{item.label}</span>
+                  <span>{t(`adminNav.${item.key}`)}</span>
                 </div>
               );
             })}
@@ -125,7 +130,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
             <div className="flex-1" />
             <div className="text-sm text-[#4B5563] flex items-center gap-2">
               <Spinner size="xs" />
-              <span>Loading session…</span>
+              <span>{t('adminNav.loadingSession')}</span>
             </div>
           </header>
           <main className="flex-1 p-6 overflow-auto">
@@ -142,7 +147,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
     // flash of empty content during the navigation.
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F3F4F6]">
-        <p className="text-sm text-[#4B5563]">Redirecting to sign in…</p>
+        <p className="text-sm text-[#4B5563]">{t('adminNav.redirectingToSignIn')}</p>
       </div>
     );
   }
@@ -168,64 +173,64 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
-        <div className="flex flex-col h-full">
-          {/* Logo */}
-          <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-200">
-            <SicaLogo className="h-8 w-auto" />
-            <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Admin</span>
-            <button
-              className="ml-auto lg:hidden text-gray-500 hover:text-[#1B2A4A]"
-              onClick={() => setSidebarOpen(false)}
-            >
-              <X size={20} />
-            </button>
-          </div>
-
-          {/* Navigation */}
-          <nav className="flex-1 px-3 py-4 space-y-1">
-            {navItems.map((item) => {
-              const isActive = pathname === item.href;
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  className={`flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors ${
-                    isActive
-                      ? 'bg-[#9B1B30]/10 text-[#9B1B30]'
-                      : 'text-gray-600 hover:text-[#1B2A4A] hover:bg-gray-100'
-                  }`}
-                >
-                  <Icon size={18} />
-                  <span>{item.label}</span>
-                  {isActive && <ChevronRight size={14} className="ml-auto" />}
-                </Link>
-              );
-            })}
-          </nav>
-
-          {/* User & Logout */}
-          <div className="px-3 py-4 border-t border-gray-200">
-            <div className="flex items-center gap-3 px-3 py-2 mb-2">
-              <div className="w-8 h-8 bg-[#9B1B30] flex items-center justify-center">
-                <span className="text-white text-xs font-bold">
-                  {user.email?.[0]?.toUpperCase() || 'A'}
-                </span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-[#1B2A4A] text-sm truncate">{user.email}</div>
-                <div className="text-gray-500 text-xs">Administrator</div>
-              </div>
+          <div className="flex flex-col h-full">
+            {/* Logo */}
+            <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-200">
+              <SicaLogo className="h-8 w-auto" />
+              <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">{t('adminNav.brand')}</span>
+              <button
+                className="ml-auto lg:hidden text-gray-500 hover:text-[#1B2A4A]"
+                onClick={() => setSidebarOpen(false)}
+              >
+                <X size={20} />
+              </button>
             </div>
-            <button
-              onClick={handleSignOut}
-              className="flex items-center gap-3 px-3 py-2.5 w-full text-sm text-gray-600 hover:text-[#1B2A4A] hover:bg-gray-100 transition-colors"
-            >
-              <LogOut size={18} />
-              <span>Sign Out</span>
-            </button>
+
+            {/* Navigation */}
+            <nav className="flex-1 px-3 py-4 space-y-1">
+              {navItems.map((item) => {
+                const isActive = pathname === item.href;
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.key}
+                    href={item.href}
+                    className={`flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors ${
+                      isActive
+                        ? 'bg-[#9B1B30]/10 text-[#9B1B30]'
+                        : 'text-gray-600 hover:text-[#1B2A4A] hover:bg-gray-100'
+                    }`}
+                  >
+                    <Icon size={18} />
+                    <span>{t(`adminNav.${item.key}`)}</span>
+                    {isActive && <ChevronRight size={14} className="ml-auto" />}
+                  </Link>
+                );
+              })}
+            </nav>
+
+            {/* User & Logout */}
+            <div className="px-3 py-4 border-t border-gray-200">
+              <div className="flex items-center gap-3 px-3 py-2 mb-2">
+                <div className="w-8 h-8 bg-[#9B1B30] flex items-center justify-center">
+                  <span className="text-white text-xs font-bold">
+                    {user.email?.[0]?.toUpperCase() || 'A'}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[#1B2A4A] text-sm truncate">{user.email}</div>
+                  <div className="text-gray-500 text-xs">{t('adminNav.administrator')}</div>
+                </div>
+              </div>
+              <button
+                onClick={handleSignOut}
+                className="flex items-center gap-3 px-3 py-2.5 w-full text-sm text-gray-600 hover:text-[#1B2A4A] hover:bg-gray-100 transition-colors"
+              >
+                <LogOut size={18} />
+                <span>{t('adminNav.signOut')}</span>
+              </button>
+            </div>
           </div>
-        </div>
       </aside>
 
       {/* Main content */}
