@@ -31,6 +31,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Sparkles, X, Loader2, CheckCircle, AlertCircle, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
+import { apiFetch } from '@/lib/api-client';
 
 type DetailStatus = 'idle' | 'pending' | 'generating' | 'ready' | 'error' | 'skipped';
 
@@ -169,7 +170,10 @@ export function AIBulkGenerateModal({ isOpen, onClose, onSaved }: AIBulkGenerate
       setItems((prev) => prev.map((it) => (it.id === item.id ? { ...it, status: 'generating' } : it)));
 
       try {
-        const response = await fetch('/api/ai/generate-university', {
+        // Phase 36: apiFetch attaches Bearer so per-admin rate
+        // limiting + Sentry capture (keyed on user.id) actually
+        // fire. Raw fetch() here would 401 once we gate the route.
+        const response = await apiFetch('/api/ai/generate-university', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: item.name }),

@@ -317,7 +317,21 @@ export function ChatWindow({ isOpen, onClose, onMinimize }: ChatWindowProps) {
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to send message');
+      if (!response.ok) {
+        // Phase 36: surface the server's actual error message so the
+        // end-user sees "Too many messages. Wait 30s before trying
+        // again." instead of the generic "Failed to send message".
+        // The server returns JSON {error, code, retryAfterSec} for
+        // both 429 (rate-limited) and 500 (AI provider failure).
+        let serverMessage = 'Failed to send message';
+        try {
+          const errBody = (await response.json()) as { error?: string };
+          if (errBody?.error) serverMessage = errBody.error;
+        } catch {
+          // server returned non-JSON; fall back to generic copy
+        }
+        throw new Error(serverMessage);
+      }
 
       const reader = response.body?.getReader();
       if (!reader) throw new Error('No response body');
@@ -357,13 +371,22 @@ export function ChatWindow({ isOpen, onClose, onMinimize }: ChatWindowProps) {
       }
     } catch (error) {
       console.error('Error sending message:', error);
+      // Phase 36: surface the server's actual error message from
+      // the throw above. For 429 the server returns "You're sending
+      // messages too quickly. Please wait 30s before trying again."
+      // so the end-user gets a useful retry countdown instead of a
+      // generic apology. For 500 the server returns the AI provider
+      // error text — the user gets to tell us what happened.
+      const friendly =
+        error instanceof Error
+          ? error.message
+          : 'Sorry, I encountered an error. Please try again or contact SICA directly for assistance.';
       setMessages((prev) =>
         prev.map((m) =>
           m.id === assistantMessage.id
             ? {
                 ...m,
-                content:
-                  'Sorry, I encountered an error. Please try again or contact SICA directly for assistance.',
+                content: friendly,
                 isLoading: false,
               }
             : m,

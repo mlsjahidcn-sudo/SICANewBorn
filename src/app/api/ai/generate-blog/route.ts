@@ -1,5 +1,8 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getAIProvider } from '@/lib/ai/provider';
+import { captureAIError } from '@/lib/ai/with-capture';
+import { checkAdminAIRateLimit } from '@/lib/ai/admin-ai-rate-limit';
+import { getRequestAuth } from '@/lib/supabase-auth';
 import { buildBlogSystemPrompt, buildBlogUserPrompt } from '@/lib/ai/blog-prompts';
 import {
   sanitizeMarkdown,
@@ -31,6 +34,15 @@ import {
  *     tone?: string, targetKeyword?: string, slug?: string }
  */
 export async function POST(request: NextRequest) {
+  // Phase 36: gate on admin auth + per-admin rate limit. Same
+  // security fix as generate-university (Phase 1 had no gate here).
+  const auth = await getRequestAuth(request);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+  const rl = checkAdminAIRateLimit(auth.user.id, 'generate-blog');
+  if (rl.blocked) return rl.response;
+
   try {
     const body = await request.json();
     const topic = (body.topic as string)?.trim();
@@ -116,13 +128,25 @@ export async function POST(request: NextRequest) {
             // client doesn't have to change. The normalized payload
             // already includes every field the old code massaged.
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ parsed: { ...parsed, ...normalized } })}\n\n`));
-          } catch {
+          } catch (parseError) {
+            // Phase 36: capture parse failures specifically — the
+            // user's "AI returns empty/malformed" case.
+            captureAIError('ai-generate-blog', parseError, {
+              stage: 'parse',
+              topic: topic ?? '',
+              responseLength: fullContent.length,
+            });
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ raw: fullContent })}\n\n`));
           }
 
           controller.enqueue(encoder.encode('data: [DONE]\n\n'));
           controller.close();
         } catch (streamError) {
+          // Phase 36: capture stream-level failures.
+          captureAIError('ai-generate-blog', streamError, {
+            stage: 'stream',
+            topic: topic ?? '',
+          });
           const errorMessage =
             streamError instanceof Error ? streamError.message : 'Stream error';
           controller.enqueue(
@@ -141,6 +165,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
+    captureAIError('ai-generate-blog', error, { stage: 'request' });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,

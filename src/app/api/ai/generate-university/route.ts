@@ -1,5 +1,8 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getAIProvider } from '@/lib/ai/provider';
+import { captureAIError } from '@/lib/ai/with-capture';
+import { checkAdminAIRateLimit } from '@/lib/ai/admin-ai-rate-limit';
+import { getRequestAuth } from '@/lib/supabase-auth';
 
 const SYSTEM_PROMPT = `You are a university data generator for a Study in China platform. Given a Chinese university name, generate comprehensive information about it.
 
@@ -75,6 +78,23 @@ Rules:
 - For gallery, use realistic Unsplash photo IDs (e.g. https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=800) related to Chinese universities or campus scenes`;
 
 export async function POST(request: NextRequest) {
+  // Phase 36: gate on admin auth. The admin modal already runs from
+  // the admin layout, so this just enforces that the Bearer token is
+  // present + valid — closes a Phase-1-era security gap where this
+  // route was callable without any auth (anyone could burn the
+  // provider quota). Returns 401 + 503 the same shape as the existing
+  // getRequestAuth contract so the client error path is unchanged.
+  const auth = await getRequestAuth(request);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
+  // Per-admin rate limit (10/15min). Auth above guarantees a real
+  // user.id for the bucket key, so an admin can't burn quota by
+  // rotating IPs or rotating sessions.
+  const rl = checkAdminAIRateLimit(auth.user.id, 'generate-university');
+  if (rl.blocked) return rl.response;
+
   try {
     const { name } = await request.json();
 
@@ -139,14 +159,28 @@ export async function POST(request: NextRequest) {
             const parsed = JSON.parse(jsonStr);
             // Send validated parsed JSON as final event
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ parsed })}\n\n`));
-          } catch {
-            // If server can't parse either, send raw content for client to try
+          } catch (parseError) {
+            // Phase 36: capture AI parse failures (the user's explicit
+            // ask) — "empty / malformed" is the most common AI failure
+            // mode here. We still send raw content for the client to try.
+            captureAIError('ai-generate-university', parseError, {
+              stage: 'parse',
+              universityName: name.trim(),
+              responseLength: fullContent.length,
+            });
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ raw: fullContent })}\n\n`));
           }
 
           controller.enqueue(encoder.encode('data: [DONE]\n\n'));
           controller.close();
         } catch (streamError) {
+          // Phase 36: capture stream-level failures (network timeout,
+          // provider 5xx, socket teardown). The client gets the same
+          // error event either way; this just keeps Sentry informed.
+          captureAIError('ai-generate-university', streamError, {
+            stage: 'stream',
+            universityName: name.trim(),
+          });
           const errorMessage =
             streamError instanceof Error ? streamError.message : 'Stream error';
           controller.enqueue(
@@ -165,6 +199,8 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
+    // Phase 36: capture pre-stream errors (request body parse, etc.).
+    captureAIError('ai-generate-university', error, { stage: 'request' });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,

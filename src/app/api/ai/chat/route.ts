@@ -4,6 +4,8 @@ import { getUniversityContext, getApplicationGuideContext, searchFAQ, sicaFAQ } 
 import { type University } from '@/lib/data';
 import { getAIProvider } from '@/lib/ai/provider';
 import { getLiveCatalogContext, getLiveUniversities, getDetailContext } from '@/lib/ai/live-data-context';
+import { captureAIError } from '@/lib/ai/with-capture';
+import { checkChatbotRateLimit } from '@/lib/ai/admin-ai-rate-limit';
 
 async function buildRAGContext(userMessage: string) {
   let context = '';
@@ -332,12 +334,26 @@ async function streamProviderResponse(
     console.log(`[AI Chat] ${provider.name} stream completed`);
     return true;
   } catch (error) {
+    // Phase 36: surface LLM stream failures to Sentry so the solo
+    // dev sees them. `stage: 'stream'` keeps the dashboard filter
+    // clean for stream-only issues (vs parse / auth / network).
     console.error(`[AI Chat] ${providerName} stream failed:`, error);
+    captureAIError('ai-chat', error, {
+      stage: 'stream',
+      provider: providerName,
+      userMessageLength: llmMessages[llmMessages.length - 1]?.content?.length ?? 0,
+    });
     return false;
   }
 }
 
 export async function POST(request: NextRequest) {
+  // Phase 36: per-IP chatbot rate limit before any work. Even
+  // malformed requests count, so a bot looping on a 400 path
+  // can't burn through the provider quota silently.
+  const rl = checkChatbotRateLimit(request);
+  if (rl.blocked) return rl.response;
+
   try {
     const { messages } = await request.json();
 
@@ -427,7 +443,10 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
+    // Phase 36: surface general failures (request parse, body validation,
+    // pre-stream errors) to Sentry so they don't silently disappear.
     console.error('[AI Chat] General error:', error);
+    captureAIError('ai-chat', error, { stage: 'request' });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,

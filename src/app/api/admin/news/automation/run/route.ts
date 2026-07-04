@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/supabase-auth';
 import { runGenerateNews } from '@/lib/ai/news-automation-runner';
+import { captureAIError } from '@/lib/ai/with-capture';
+import { checkAdminAIRateLimit } from '@/lib/ai/admin-ai-rate-limit';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
@@ -23,6 +25,12 @@ export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
+  // Phase 36: per-admin rate limit (5/15min). Each run can spawn
+  // up to 10 AI generations (~3-5 min total), so this is the
+  // tightest practical limit before it starts feeling broken.
+  const rl = checkAdminAIRateLimit(auth.user.id, 'run-automation');
+  if (rl.blocked) return rl.response;
+
   let body: { count?: number; length?: 'short' | 'medium' | 'long'; topicIds?: string[] } = {};
   try {
     if (request.headers.get('content-type')?.includes('application/json')) {
@@ -34,6 +42,13 @@ export async function POST(request: NextRequest) {
 
   const result = await runGenerateNews({ ...body, triggeredBy: 'admin' });
   if (!result.ok) {
+    // Capture whole-run failures (claim loop dead, DB unreachable,
+    // etc.) — per-topic failures are captured inside the runner.
+    captureAIError('admin-news-automation-run', new Error(result.error ?? 'unknown'), {
+      stage: 'run',
+      triggeredBy: 'admin',
+      count: body.count,
+    });
     return NextResponse.json({ error: result.error }, { status: result.httpStatus });
   }
   return NextResponse.json(result);

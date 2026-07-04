@@ -4,6 +4,7 @@ import { getSupabaseServer } from '@/lib/supabase-server';
 import { getAIProvider } from '@/lib/ai/provider';
 import { buildBlogSystemPrompt, buildBlogUserPrompt } from '@/lib/ai/blog-prompts';
 import { extractJsonObject, normalizeBlogPayload } from '@/lib/ai/blog-sanitize';
+import { captureAIError } from '@/lib/ai/with-capture';
 
 // ──────────────────────────────────────────────────────────────────────────
 // News automation runner
@@ -358,6 +359,17 @@ async function generateOne(
         `[generate-news] topic ${topic.id} attempt ${attempt} failed:`,
         lastError,
       );
+      // Phase 36: capture per-topic AI failures. Both the admin
+      // "Run now" button and the cron endpoint funnel through here,
+      // so per-attempt captures land in Sentry regardless of caller.
+      // The caller-context (cron vs admin) is captured at the route
+      // layer for whole-run failures (e.g. claim loop dead).
+      captureAIError('news-automation-runner', err, {
+        stage: 'topic-attempt',
+        topicId: topic.id,
+        topicName: topic.topic,
+        attempt,
+      });
       if (attempt <= RETRY_DELAYS_MS.length) {
         await sleep(RETRY_DELAYS_MS[attempt - 1] ?? 0);
       }

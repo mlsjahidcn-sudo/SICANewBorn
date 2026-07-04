@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Spinner } from '@/components/ui/spinner';
 import { Sparkles, X, Loader2, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import { apiFetch } from '@/lib/api-client';
 
 interface AIGenerateModalProps {
   isOpen: boolean;
@@ -66,7 +67,11 @@ export function AIGenerateModal({
     setState({ status: 'generating', progress: 'Connecting to AI...', error: '', generatedData: null, rawContent: '' });
 
     try {
-      const response = await fetch('/api/ai/generate-university', {
+      // Phase 36: apiFetch attaches Bearer token automatically so the
+      // route's `getRequestAuth` gate accepts the admin caller. Per-admin
+      // rate limiting + AI failure capture only work when the caller is
+      // authenticated, so this matters.
+      const response = await apiFetch('/api/ai/generate-university', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: universityName.trim() }),

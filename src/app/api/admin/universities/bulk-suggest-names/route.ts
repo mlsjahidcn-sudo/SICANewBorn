@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAIProvider } from '@/lib/ai/provider';
 import { supabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-server';
 import { requireAdmin } from '@/lib/supabase-auth';
+import { captureAIError } from '@/lib/ai/with-capture';
+import { checkAdminAIRateLimit } from '@/lib/ai/admin-ai-rate-limit';
 
 /**
  * POST /api/admin/universities/bulk-suggest-names
@@ -94,6 +96,10 @@ export async function POST(request: NextRequest) {
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
+  // Phase 36: per-admin rate limit (5/15min). Cheaper than the
+  // detail-phase call but still burns 1.5K tokens, so keep it tight.
+  const rl = checkAdminAIRateLimit(auth.user.id, 'bulk-suggest-names');
+  if (rl.blocked) return rl.response;
 
   const provider = getAIProvider();
   if (!provider.isConfigured) {
@@ -148,6 +154,16 @@ ${lines}`;
 
     const parsed = parseSuggestions(response.content, linesFromExisting(existingBlock));
     if ('error' in parsed) {
+      // Phase 36: capture the "AI returned malformed JSON" +
+      // "every suggestion overlapped the existing catalog" failures
+      // explicitly — these are quiet without capture and were the
+      // user's specific ask.
+      captureAIError('admin-bulk-suggest-names', new Error(parsed.error), {
+        stage: 'parse-or-dedup',
+        existingCatalogCount: linesFromExisting(existingBlock).length,
+        responseModel: response.model,
+        responseLength: response.content.length,
+      });
       return NextResponse.json({ error: parsed.error }, { status: 400 });
     }
 
@@ -159,6 +175,8 @@ ${lines}`;
       { status: 200 },
     );
   } catch (err) {
+    // Phase 36: capture network / provider errors.
+    captureAIError('admin-bulk-suggest-names', err, { stage: 'request' });
     const errorMessage = err instanceof Error ? err.message : 'AI request failed';
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
