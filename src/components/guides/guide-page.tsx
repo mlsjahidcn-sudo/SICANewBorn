@@ -133,6 +133,12 @@ export interface GuidePageProps {
   guide: Guide;
   /** Path segment used for the canonical URL and JSON-LD id. */
   pathSegment: string;
+  /**
+   * Optional URL path override for pages that live outside the
+   * /guides/ tree (e.g. /mbbs-in-china, /cheapest-universities-china).
+   * Defaults to `/guides/${pathSegment}` when omitted.
+   */
+  urlPath?: string;
 }
 
 /**
@@ -151,8 +157,8 @@ export interface GuidePageProps {
  * so search engines, ChatGPT, Perplexity, and Gemini can extract the
  * FAQ answers, step lists, and metadata in a single hop.
  */
-export function GuidePage({ guide, pathSegment }: GuidePageProps) {
-  const url = `${SITE_URL}/guides/${pathSegment}`;
+export function GuidePage({ guide, pathSegment, urlPath }: GuidePageProps) {
+  const url = `${SITE_URL}${urlPath ?? `/guides/${pathSegment}`}`;
 
   // Article schema for E-E-A-T signals
   const articleSchema = {
