@@ -9,6 +9,7 @@ import { universities as staticUniversities, type University } from '@/lib/data'
 import { ToastProvider, useToast } from '@/components/admin/toast';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
 import { AIGenerateModal } from '@/components/admin/ai-generate-modal';
+import { AIBulkGenerateModal } from '@/components/admin/ai-bulk-generate-modal';
 
 function UniversitiesPageInner() {
   const { user } = useAuth();
@@ -18,8 +19,17 @@ function UniversitiesPageInner() {
   const [search, setSearch] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<University | null>(null);
   const [showAIModal, setShowAIModal] = useState(false);
+  const [showBulkModal, setShowBulkModal] = useState(false);
   const [aiMode, setAiMode] = useState<'create' | 'regenerate'>('create');
   const [aiInitialName, setAiInitialName] = useState('');
+
+  // Single refetch path used by both the single-row AI modal and
+  // the bulk modal. Pulls a generous limit so admin-added rows
+  // (not yet on the static fallback) show up.
+  const refreshUniversities = useCallback(async () => {
+    const fresh = await fetch('/api/universities?limit=100').then((r) => (r.ok ? r.json() : null));
+    if (fresh?.universities) setUniversities(fresh.universities);
+  }, []);
 
   useEffect(() => {
     fetch('/api/universities?limit=100')
@@ -72,6 +82,14 @@ function UniversitiesPageInner() {
           <p className="text-[#4B5563] text-sm mt-1">Manage university listings and information</p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowBulkModal(true)}
+            className="inline-flex items-center gap-2 border-2 border-[#1B2A4A] text-[#1B2A4A] px-4 py-2 text-sm font-semibold hover:bg-[#1B2A4A] hover:text-white transition-colors"
+            title="Generate 5 universities at once with AI"
+          >
+            <Sparkles className="w-4 h-4" />
+            Bulk Generate (5)
+          </button>
           <button
             onClick={openAIModalCreate}
             className="inline-flex items-center gap-2 border-2 border-[#9B1B30] text-[#9B1B30] px-4 py-2 text-sm font-semibold hover:bg-[#9B1B30] hover:text-white transition-colors"
@@ -244,9 +262,7 @@ function UniversitiesPageInner() {
                   : 'University created successfully via AI!',
                 'success',
               );
-              // Refresh the list
-              const freshData = await fetch('/api/universities?limit=100').then(r => r.json());
-              if (freshData?.universities) setUniversities(freshData.universities);
+              await refreshUniversities();
             } else {
               const err = await res.json().catch(() => ({ error: 'Failed' }));
               addToast(err.error || `Failed to ${mode} university`, 'error');
@@ -254,6 +270,15 @@ function UniversitiesPageInner() {
           } catch {
             addToast(`Failed to ${mode} university`, 'error');
           }
+        }}
+      />
+
+      <AIBulkGenerateModal
+        isOpen={showBulkModal}
+        onClose={() => setShowBulkModal(false)}
+        onSaved={(count) => {
+          addToast(`${count} ${count === 1 ? 'university' : 'universities'} created via AI!`, 'success');
+          refreshUniversities();
         }}
       />
     </div>
