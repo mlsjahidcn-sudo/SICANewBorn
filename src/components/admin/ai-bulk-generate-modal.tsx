@@ -110,7 +110,12 @@ export function AIBulkGenerateModal({ isOpen, onClose, onSaved }: AIBulkGenerate
     setStep('suggesting');
     setError('');
     try {
-      const res = await fetch('/api/admin/universities/bulk-suggest-names', {
+      // Phase 36: apiFetch attaches Bearer so requireAdmin passes.
+      // Raw fetch() here 401s once we gate the route — Phase 36
+      // fixed the detail-phase call but missed this one, so the
+      // very first click of "Suggest 5" was 401-ing on every
+      // admin's screen. Symptom: "Not authenticated" toast.
+      const res = await apiFetch('/api/admin/universities/bulk-suggest-names', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),

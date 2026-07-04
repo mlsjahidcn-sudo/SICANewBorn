@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   X,
   Send,
@@ -86,6 +86,70 @@ const COUNTRY_OPTIONS = [
   'Sri Lanka', 'United States', 'United Kingdom', 'Canada', 'Australia',
   'Germany', 'France', 'Russia', 'Brazil', 'Mexico', 'Other',
 ];
+
+/**
+ * Best-effort name extraction from the visitor's chat messages.
+ *
+ * Matches common self-introduction patterns ("my name is X", "I'm X",
+ * "this is X", "call me X", "name: X") in user-typed messages, latest
+ * first. Returns the most recent match. Returns null if no match.
+ *
+ * Filters common false positives ("I am looking for...", "I am
+ * interested in...") via a small stop-word list on the first captured
+ * word, plus a length sanity check (2-40 chars).
+ *
+ * Used to pre-fill the "Save your progress" form so leads land in the
+ * admin inbox with a real name instead of "(no name)" — the LLM doesn't
+ * ask for the name explicitly, so this is the only signal we get.
+ */
+export function extractNameFromMessages(messages: ReadonlyArray<Pick<ChatMessage, 'role' | 'content'>>): string | null {
+  const userMsgs = messages
+    .filter((m) => m.role === 'user')
+    .map((m) => m.content)
+    .reverse(); // latest first
+
+  // Order matters: more specific patterns first so "my name is John"
+  // wins over the generic "this is John".
+  const patterns: RegExp[] = [
+    /(?:my name(?:'s|\s+is))\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})/,
+    /(?:calls?\s+me|just\s+calls?\s+me|they\s+call\s+me)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})/i,
+    /(?:this is|i'?m|i am)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})/i,
+  ];
+
+  // First-word stop list — common verbs that look like names but aren't
+  const STOP_FIRST_WORDS = new Set([
+    'looking', 'interested', 'a', 'the', 'from', 'in', 'at', 'currently',
+    'student', 'graduate', 'planning', 'hoping', 'trying', 'wondering',
+    'considering', 'researching', 'exploring', 'applying', 'searching',
+  ]);
+
+  for (const content of userMsgs) {
+    for (const pat of patterns) {
+      const m = content.match(pat);
+      if (!m || !m[1]) continue;
+      const candidate = m[1].trim();
+      const firstWord = candidate.split(/\s+/)[0].toLowerCase();
+      if (STOP_FIRST_WORDS.has(firstWord)) continue;
+      if (candidate.length < 2 || candidate.length > 40) continue;
+      return candidate;
+    }
+  }
+  return null;
+}
+
+/**
+ * Best-effort email extraction from the visitor's chat messages.
+ * Returns the first email-looking string in any user message, or null.
+ */
+export function extractEmailFromMessages(messages: ReadonlyArray<Pick<ChatMessage, 'role' | 'content'>>): string | null {
+  const emailRe = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/;
+  for (const m of messages) {
+    if (m.role !== 'user') continue;
+    const match = m.content.match(emailRe);
+    if (match) return match[0];
+  }
+  return null;
+}
 
 export function ChatWindow({ isOpen, onClose, onMinimize }: ChatWindowProps) {
   // ====== Conversation state ======
@@ -519,7 +583,7 @@ export function ChatWindow({ isOpen, onClose, onMinimize }: ChatWindowProps) {
       </div>
 
       {/* Lead capture panel — collapsible, above the conversation */}
-      <LeadPanel lead={lead} setLead={setLead} onSubmit={handleLeadSubmit} />
+      <LeadPanel lead={lead} setLead={setLead} onSubmit={handleLeadSubmit} messages={messages} />
 
       {/* Conversation history badge */}
       {restoredFromLocal && (
@@ -581,12 +645,41 @@ function LeadPanel({
   lead,
   setLead,
   onSubmit,
+  messages,
 }: {
   lead: LeadFormState;
   setLead: React.Dispatch<React.SetStateAction<LeadFormState>>;
   onSubmit: (e: React.FormEvent) => void;
+  messages: ChatMessage[];
 }) {
   const { panel, data, saving, error } = lead;
+
+  // Best-effort extraction from the conversation. Recomputes whenever
+  // messages change so a late self-introduction still surfaces.
+  const detectedName = useMemo(
+    () => extractNameFromMessages(messages),
+    [messages],
+  );
+  const detectedEmail = useMemo(
+    () => extractEmailFromMessages(messages),
+    [messages],
+  );
+
+  // Pre-fill any empty field when the panel opens (or when new
+  // messages arrive while it's open). Only fills empty fields — never
+  // overwrites what the visitor has already typed.
+  useEffect(() => {
+    if (panel !== 'open') return;
+    if (!detectedName && !detectedEmail) return;
+    setLead((prev) => {
+      if (prev.panel !== 'open') return prev;
+      const updates: Partial<LeadForm> = {};
+      if (detectedName && !prev.data.name.trim()) updates.name = detectedName;
+      if (detectedEmail && !prev.data.email.trim()) updates.email = detectedEmail;
+      if (Object.keys(updates).length === 0) return prev;
+      return { ...prev, data: { ...prev.data, ...updates } };
+    });
+  }, [panel, detectedName, detectedEmail, setLead]);
 
   const updateField = <K extends keyof LeadForm>(k: K, v: LeadForm[K]) => {
     setLead((prev) => ({ ...prev, data: { ...prev.data, [k]: v } }));
@@ -681,22 +774,36 @@ function LeadPanel({
       )}
 
       <div className="grid grid-cols-2 gap-2">
-        <input
-          aria-label="Name"
-          placeholder="Name"
-          value={data.name}
-          onChange={(e) => updateField('name', e.target.value)}
-          className="px-2.5 py-1.5 text-xs border border-gray-300 bg-white focus:outline-none focus:border-[#9B1B30] focus:ring-1 focus:ring-[#9B1B30]"
-        />
-        <input
-          aria-label="Email"
-          type="email"
-          placeholder="Email *"
-          value={data.email}
-          onChange={(e) => updateField('email', e.target.value)}
-          required
-          className="px-2.5 py-1.5 text-xs border border-gray-300 bg-white focus:outline-none focus:border-[#9B1B30] focus:ring-1 focus:ring-[#9B1B30]"
-        />
+        <div className="relative">
+          <input
+            aria-label="Name"
+            placeholder="Name"
+            value={data.name}
+            onChange={(e) => updateField('name', e.target.value)}
+            className="w-full px-2.5 py-1.5 text-xs border border-gray-300 bg-white focus:outline-none focus:border-[#9B1B30] focus:ring-1 focus:ring-[#9B1B30]"
+          />
+          {data.name && detectedName && data.name === detectedName && (
+            <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] font-medium text-[#1B2A4A] bg-[#D4A853]/30 px-1.5 py-0.5 pointer-events-none">
+              ✓ from chat
+            </span>
+          )}
+        </div>
+        <div className="relative">
+          <input
+            aria-label="Email"
+            type="email"
+            placeholder="Email *"
+            value={data.email}
+            onChange={(e) => updateField('email', e.target.value)}
+            required
+            className="w-full px-2.5 py-1.5 text-xs border border-gray-300 bg-white focus:outline-none focus:border-[#9B1B30] focus:ring-1 focus:ring-[#9B1B30]"
+          />
+          {data.email && detectedEmail && data.email === detectedEmail && (
+            <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] font-medium text-[#1B2A4A] bg-[#D4A853]/30 px-1.5 py-0.5 pointer-events-none">
+              ✓ from chat
+            </span>
+          )}
+        </div>
         <input
           aria-label="WhatsApp"
           placeholder="WhatsApp"

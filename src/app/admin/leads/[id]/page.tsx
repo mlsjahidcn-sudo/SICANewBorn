@@ -333,7 +333,10 @@ export default function LeadDetailPage() {
   const displayName = pickString(lead, ['name']) ||
     (type === 'assessment'
       ? `${pickString(lead, ['first_name']) || ''} ${pickString(lead, ['last_name']) || ''}`.trim()
-      : '(no name)');
+      : (() => {
+          const email = pickString(lead, ['email']);
+          return email ? email.split('@')[0] : '(no name)';
+        })());
 
   return (
     <div className="space-y-6">

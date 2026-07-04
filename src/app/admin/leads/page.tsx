@@ -592,7 +592,8 @@ export default function LeadsPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-semibold text-[#1B2A4A] truncate">
-                            {lead.name || '(no name)'}
+                            {lead.name ||
+                              (lead.email ? lead.email.split('@')[0] : '(no name)')}
                           </h3>
                           <span
                             className={`text-xs px-2 py-0.5 font-semibold ${TIER_COLOR[lead.score_tier]}`}
