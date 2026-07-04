@@ -1,7 +1,8 @@
 import type { NextConfig } from 'next';
 import path from 'node:path';
+import { withSentryConfig } from '@sentry/nextjs';
 
-const nextConfig: NextConfig = {
+const baseConfig: NextConfig = {
   // Pin Turbopack's workspace root to the SICA project directory so
   // it doesn't wander up the filesystem looking for parent lockfiles
   // (e.g. `~/package-lock.json`) and emit a "multiple lockfiles"
@@ -53,4 +54,33 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Wrap with @sentry/nextjs build-time tooling only when a real DSN
+// is configured. Skipping the wrapper when SENTRY_DSN is unset
+// keeps build logs clean for local dev and preview deploys that
+// don't ship errors to Sentry. The runtime SDK is also env-gated
+// (see src/instrumentation.ts) so this just removes build hooks.
+const sentryDsn = process.env.SENTRY_DSN;
+export default sentryDsn
+  ? withSentryConfig(baseConfig, {
+      // Org + project slugs. Optional — only required if you want
+      // source-map upload + release tracking via `sentry-cli`. SICA
+      // isn't set up for source-map upload yet (manual step), so we
+      // pass empty strings to silence the wizard prompt. Wire these
+      // up when the user has a Sentry account.
+      org: process.env.SENTRY_ORG ?? '',
+      project: process.env.SENTRY_PROJECT ?? '',
+      // Don't fail the build on missing source maps
+      disableLogger: true,
+      // Don't print tree-shaking messages
+      silent: !process.env.CI,
+      // Wider bundles are fine for a server app — Next's per-route
+      // tree-shaking already keeps the client lean.
+      widenClientFileUpload: true,
+      // Strip uploaded source maps from the .next output after
+      // Sentry ingests them (default-true in v10). Don't leak raw
+      // TS to the public bundle.
+      sourcemaps: {
+        deleteSourcemapsAfterUpload: true,
+      },
+    })
+  : baseConfig;

@@ -50,12 +50,34 @@ app.prepare().then(() => {
       await handle(req, res);
     } catch (err) {
       console.error('[server] error handling', req.url, err);
+      // Capture to Sentry before responding. Lazy import keeps the
+      // server.ts bundle thin when SENTRY_DSN is unset (no-op below).
+      // Safe even if init() hasn't run yet — captureException queues
+      // internally and ships once the SDK is ready.
+      if (process.env.SENTRY_DSN) {
+        try {
+          const Sentry = (await import('@sentry/nextjs')).default;
+          Sentry.captureException(err, { tags: { source: 'custom-server', url: req.url ?? '' } });
+        } catch {
+          // Best-effort — never block the error response on Sentry.
+        }
+      }
       res.statusCode = 500;
       res.end('Internal server error');
     }
   });
-  server.once('error', (err) => {
+  server.once('error', async (err) => {
     console.error('[server] fatal', err);
+    if (process.env.SENTRY_DSN) {
+      try {
+        const Sentry = (await import('@sentry/nextjs')).default;
+        Sentry.captureException(err, { tags: { source: 'custom-server-listener' } });
+        // Give Sentry a chance to flush before we exit.
+        await Sentry.flush(2000).catch(() => {});
+      } catch {
+        // Best-effort
+      }
+    }
     process.exit(1);
   });
   server.listen(port, () => {
