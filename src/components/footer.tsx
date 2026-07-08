@@ -253,6 +253,24 @@ export function Footer() {
               <FooterLink href="/guides">
                 {locale === 'en' ? 'All guides' : '全部指南'}
               </FooterLink>
+              {/* Phase 2: Whop community link. The link is the actual
+                  conversion — opens in a new tab since Whop owns the
+                  payment surface. TODO before deploy: replace the
+                  placeholder href with the real SICA Whop URL (the
+                  same one used on /resources). Raw <a> instead of
+                  FooterLink because FooterLink uses next/link which
+                  only supports internal routes; Whop is external. */}
+              <li>
+                <a
+                  href="https://whop.com/sica-resources"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-gray-600 hover:text-[#9B1B30] transition-colors inline-flex items-center gap-1.5 group"
+                >
+                  <span className="h-0.5 w-0 bg-[#9B1B30] group-hover:w-3 transition-all duration-200" />
+                  {locale === 'en' ? 'Whop community' : 'Whop 社区'}
+                </a>
+              </li>
               <FooterLink href="/contact">
                 {t('footer.contact')}
               </FooterLink>

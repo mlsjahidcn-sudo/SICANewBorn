@@ -2106,6 +2106,107 @@ export const translations: Record<Locale, Record<string, string>> = {
     'videoTestimonials.verifiedBadge': 'SICA Student',
     'videoTestimonials.watchCta': 'Watch the story',
     'videoTestimonials.statsBadge': 'Real students · Recorded with consent',
+
+    // ────────────────────────────────────────────────────────────────
+    // Phase 2 funnel: 2-product framework. SICA sells two distinct
+    // products — full-service admission (SICA applies for you) and
+    // self-serve resources (Whop community — you apply with our
+    // templates). The new /resources page surfaces the self-serve
+    // path; the home page above-hero pill (choosePath.*) lets users
+    // pre-select which product they want before any CTA.
+    //
+    // Whop URL is a placeholder (TODO: replace with the real
+    // SICA Whop community URL on deploy). The link is opened in a
+    // new tab with rel="noopener" so users can come back.
+    // ────────────────────────────────────────────────────────────────
+    'nav.resources': 'Resources',
+    'product.fullService.title': 'Done-for-you admission',
+    'product.fullService.shortDesc':
+      'We apply to strategic universities for you — strategic matching, document prep, CSCA, Chinese language, interview coaching, follow-up.',
+    'product.fullService.ctaLabel': 'Get matched',
+    'product.fullService.priceHint': 'Free consultation · success-fee based',
+    'product.selfServe.title': 'Self-serve resources',
+    'product.selfServe.shortDesc':
+      'Apply yourself with our templates, study plans, professors\' emails, and a community of students on the same path. One-time payment, lifetime access.',
+    'product.selfServe.ctaLabel': 'See templates',
+    'product.selfServe.priceHint': 'One-time payment · lifetime access',
+    'productCompare.title': 'Which path fits you?',
+    'productCompare.columnFullService': 'Done-for-you',
+    'productCompare.columnSelfServe': 'Self-serve',
+    'productCompare.rowWhoApplies': 'Who applies?',
+    'productCompare.rowWhoAppliesFs':
+      'SICA applies for you — strategic matching, doc prep, submission, follow-up.',
+    'productCompare.rowWhoAppliesSs':
+      'You apply yourself, with our templates + study plan + professor emails.',
+    'productCompare.rowBestFor': 'Best for',
+    'productCompare.rowBestForFs':
+      'Students who want to focus on studies, not paperwork. Students who picked top-ranked unis and want a second, strategic pass.',
+    'productCompare.rowBestForSs':
+      'Students who want to save money, learn the process, and have time to do the work themselves.',
+    'productCompare.rowIncludes': 'What\'s included',
+    'productCompare.rowIncludesFs':
+      'Counselor, university matching, document review, CSCA prep, Chinese language, visa support, post-arrival follow-up.',
+    'productCompare.rowIncludesSs':
+      'Application templates, study plans, professors\' emails, Whop community, weekly Q&A.',
+    'productCompare.rowPricing': 'Pricing',
+    'productCompare.rowPricingFs': 'Free consultation → success-fee based on placement.',
+    'productCompare.rowPricingSs': 'One-time payment on Whop. Lifetime access.',
+    'choosePath.title': 'Which path fits you?',
+    'choosePath.fullService': 'Let SICA apply for you',
+    'choosePath.fullServiceHint': 'Strategic matching · SICA handles everything',
+    'choosePath.selfServe': 'Apply yourself with our templates',
+    'choosePath.selfServeHint': 'Pay once · templates + study plans + community',
+    'choosePath.browse': 'Or keep browsing →',
+
+    // /resources page — self-serve product landing
+    'resources.hero.eyebrow': 'Self-serve · Whop community',
+    'resources.hero.title': 'Apply yourself, with our help',
+    'resources.hero.subtitle':
+      'One-time payment. Lifetime access. Templates, study plans, professors\' emails, and a community of students going through the same process — for the price of a textbook.',
+    'resources.hero.cta': 'Join the Whop community',
+    'resources.hero.ctaHint': 'One-time payment · cancel anytime',
+    'resources.what.title': 'What\'s in the community',
+    'resources.what.subtitle':
+      'Everything you need to apply yourself, with our 10+ years of experience baked in.',
+    'resources.card.templates.title': 'Application templates',
+    'resources.card.templates.desc':
+      'Personal statement, CV, recommendation letter, study plan — editable in Google Docs or Word. Fill in, submit, done.',
+    'resources.card.study.title': 'Study plans',
+    'resources.card.study.desc':
+      'By degree + program. Timeline, course list, exam prep, lab placement guidance. Built from students who actually got in.',
+    'resources.card.emails.title': 'Professors\' emails',
+    'resources.card.emails.desc':
+      'For masters + PhD applicants. Direct contacts for 500+ Chinese professors in your field, with the email template that gets a response.',
+    'resources.card.community.title': 'Community + Q&A',
+    'resources.card.community.desc':
+      'Whop group of students at every stage. Ask questions, share wins, get unstuck. Weekly live Q&A with SICA counselors.',
+    'resources.howItWorks.title': 'How it works',
+    'resources.howItWorks.step1Title': 'Join the community',
+    'resources.howItWorks.step1Desc':
+      'Pay once on Whop. Lifetime access. No subscription.',
+    'resources.howItWorks.step2Title': 'Grab the templates',
+    'resources.howItWorks.step2Desc':
+      'Personal statement, CV, study plan — editable. Fill in for your program + university.',
+    'resources.howItWorks.step3Title': 'Apply + get support',
+    'resources.howItWorks.step3Desc':
+      'Submit to the universities that match your profile. Stuck? Post in the community or book a counselor.',
+    'resources.faq.title': 'Common questions',
+    'resources.faq.q1': 'Is this a subscription?',
+    'resources.faq.a1': 'No. One-time payment, lifetime access.',
+    'resources.faq.q2': 'Can I upgrade to done-for-you later?',
+    'resources.faq.a2': 'Yes. SICA offers a discount on full-service for community members who need it.',
+    'resources.faq.q3': 'Is the SICA Whop community moderated?',
+    'resources.faq.a3': 'Yes. Counselors check in daily. No spam, no scams, no low-effort \"DM me\" posts.',
+    'resources.cta.title': 'Ready to apply yourself?',
+    'resources.cta.subtitle':
+      'Join the SICA Whop community — one-time payment, lifetime access, every template we use to get our full-service students in.',
+    'resources.cta.button': 'Join Whop community',
+    'resources.proofStat1Value': '500+',
+    'resources.proofStat1Label': 'professors\' emails',
+    'resources.proofStat2Value': '200+',
+    'resources.proofStat2Label': 'community members',
+    'resources.proofStat3Value': '10+',
+    'resources.proofStat3Label': 'degree paths covered',
   },
   zh: {
     // Nav
@@ -4176,6 +4277,97 @@ export const translations: Record<Locale, Record<string, string>> = {
     'videoTestimonials.verifiedBadge': 'SICA 学生',
     'videoTestimonials.watchCta': '观看完整故事',
     'videoTestimonials.statsBadge': '真实学生 · 经本人授权拍摄',
+
+    // ────────────────────────────────────────────────────────────────
+    // Phase 2 funnel: 2-product framework (zh) — see en block for
+    // the full rationale. Whop URL is a placeholder; update before
+    // deploy.
+    // ────────────────────────────────────────────────────────────────
+    'nav.resources': '资源',
+    'product.fullService.title': '全程代办申请',
+    'product.fullService.shortDesc':
+      'SICA 替您申请——策略匹配、文书准备、CSCA、汉语、面试辅导、入学后跟进。',
+    'product.fullService.ctaLabel': '开始匹配',
+    'product.fullService.priceHint': '免费咨询 · 按录取结果收费',
+    'product.selfServe.title': '自助申请资源',
+    'product.selfServe.shortDesc':
+      '用我们的模板、学习计划、教授邮箱和同行社区自己申请。一次付费，永久使用。',
+    'product.selfServe.ctaLabel': '查看模板',
+    'product.selfServe.priceHint': '一次付费 · 永久使用',
+    'productCompare.title': '哪种方案适合你？',
+    'productCompare.columnFullService': '全程代办',
+    'productCompare.columnSelfServe': '自助申请',
+    'productCompare.rowWhoApplies': '谁来申请？',
+    'productCompare.rowWhoAppliesFs':
+      'SICA 帮您申请——策略匹配、文书准备、提交、跟进。',
+    'productCompare.rowWhoAppliesSs':
+      '您自己申请，我们提供模板 + 学习计划 + 教授邮箱。',
+    'productCompare.rowBestFor': '适合谁',
+    'productCompare.rowBestForFs':
+      '想专注学习、不想被文书烦的学生。曾申请顶级大学失利、希望走策略性匹配的学生。',
+    'productCompare.rowBestForSs':
+      '希望省钱、希望了解申请流程、有时间自己做工作的学生。',
+    'productCompare.rowIncludes': '包含什么',
+    'productCompare.rowIncludesFs':
+      '顾问、大学匹配、文书审核、CSCA 备考、汉语、签证支持、入学后跟进。',
+    'productCompare.rowIncludesSs':
+      '申请模板、学习计划、教授邮箱、Whop 社区、每周 Q&A。',
+    'productCompare.rowPricing': '价格',
+    'productCompare.rowPricingFs': '免费咨询 → 按录取结果收费。',
+    'productCompare.rowPricingSs': 'Whop 一次付费，永久使用。',
+    'choosePath.title': '哪种方案适合你？',
+    'choosePath.fullService': '让 SICA 帮您申请',
+    'choosePath.fullServiceHint': '策略匹配 · SICA 全程代办',
+    'choosePath.selfServe': '自己申请，用我们的模板',
+    'choosePath.selfServeHint': '一次付费 · 模板 + 学习计划 + 社区',
+    'choosePath.browse': '或继续浏览 →',
+
+    // /resources page — self-serve product landing (zh)
+    'resources.hero.eyebrow': '自助申请 · Whop 社区',
+    'resources.hero.title': '自己申请，我们提供帮助',
+    'resources.hero.subtitle':
+      '一次付费，永久使用。申请模板、学习计划、教授邮箱，以及同路人社区——价格相当于一本教科书。',
+    'resources.hero.cta': '加入 Whop 社区',
+    'resources.hero.ctaHint': '一次付费 · 随时取消',
+    'resources.what.title': '社区里有什么',
+    'resources.what.subtitle':
+      '自己申请所需的一切——融入 SICA 10+ 年的经验。',
+    'resources.card.templates.title': '申请模板',
+    'resources.card.templates.desc':
+      '个人陈述、简历、推荐信、学习计划——Google Docs 或 Word 可编辑。填写、提交、搞定。',
+    'resources.card.study.title': '学习计划',
+    'resources.card.study.desc':
+      '按学位 + 专业分类。时间线、课程列表、考试准备、实验室安排指导。来自真正录取的学生的经验。',
+    'resources.card.emails.title': '教授邮箱',
+    'resources.card.emails.desc':
+      '面向硕博申请者。500+ 中国教授的直接联系方式，以及能获得回复的邮件模板。',
+    'resources.card.community.title': '社区 + Q&A',
+    'resources.card.community.desc':
+      'Whop 群里有各个阶段的学生。提问、分享进展、寻求帮助。每周 SICA 顾问直播答疑。',
+    'resources.howItWorks.title': '使用流程',
+    'resources.howItWorks.step1Title': '加入社区',
+    'resources.howItWorks.step1Desc': 'Whop 一次付费，永久使用，无订阅。',
+    'resources.howItWorks.step2Title': '下载模板',
+    'resources.howItWorks.step2Desc': '个人陈述、简历、学习计划——可编辑。按你的专业和大学填写。',
+    'resources.howItWorks.step3Title': '申请 + 获得支持',
+    'resources.howItWorks.step3Desc': '提交给匹配你背景的大学。卡住了？在社区发帖或预约顾问。',
+    'resources.faq.title': '常见问题',
+    'resources.faq.q1': '这是订阅制吗？',
+    'resources.faq.a1': '不是。一次付费，永久使用。',
+    'resources.faq.q2': '之后可以升级到全程代办吗？',
+    'resources.faq.a2': '可以。SICA 为社区成员提供全程代办折扣。',
+    'resources.faq.q3': 'Whop 社区有管理吗？',
+    'resources.faq.a3': '有。顾问每天巡查。无垃圾信息、无诈骗、无低质量引流。',
+    'resources.cta.title': '准备好自己申请了吗？',
+    'resources.cta.subtitle':
+      '加入 SICA Whop 社区——一次付费，永久使用，包含我们用于帮全程代办学生录取的所有模板。',
+    'resources.cta.button': '加入 Whop 社区',
+    'resources.proofStat1Value': '500+',
+    'resources.proofStat1Label': '教授邮箱',
+    'resources.proofStat2Value': '200+',
+    'resources.proofStat2Label': '社区成员',
+    'resources.proofStat3Value': '10+',
+    'resources.proofStat3Label': '覆盖的学位方向',
   },
 };
 

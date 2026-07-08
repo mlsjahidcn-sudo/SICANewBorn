@@ -213,6 +213,19 @@ export function MainNav() {
       label: t('nav.guides'),
     },
     {
+      // Phase 2: direct link to the self-serve product landing
+      // (the /resources page with the Whop CTA). Sits between
+      // Guides and About so the nav order reads as: learn →
+      // resources → about. SICA's main nav now surfaces both
+      // products (Guides = free reading material, Resources =
+      // Whop templates, About = brand story) without burying the
+      // self-serve path.
+      type: 'link',
+      href: '/resources',
+      activeMatch: ['/resources'],
+      label: t('nav.resources'),
+    },
+    {
       type: 'menu',
       label: t('nav.about'),
       // About owns /about + /contact. /contact was previously under
