@@ -39,12 +39,28 @@ export const translations: Record<Locale, Record<string, string>> = {
     'nav.admissions.howToApplyDesc': 'Step-by-step application guide',
     'nav.admissions.applyNow': 'Apply Now',
     'nav.admissions.applyNowDesc': 'Start a new application',
+    // S42: Admissions submenu's Contact Us got its own key (was reusing
+    // nav.about.contact, which confused translation writers — the label
+    // was the same string but the IA context was different).
+    'nav.admissions.contact': 'Contact Us',
+    'nav.admissions.contactDesc': 'WhatsApp, WeChat, email, phone',
     'nav.about.about': 'About SICA',
     'nav.about.aboutDesc': 'Our story, values, and team',
     'nav.about.whyChina': 'Why Study in China',
     'nav.about.whyChinaDesc': 'Cost, culture, careers — the full picture',
     'nav.about.contact': 'Contact Us',
     'nav.about.contactDesc': 'WhatsApp, WeChat, email, phone',
+    // S42: Portal Login dropdown strings (were hardcoded as
+    // inline ternaries in header.tsx — moved into the i18n table so
+    // translation writers can find them in one place).
+    'nav.portalLogin': 'Portal Login',
+    'nav.studentPortal': 'Student Portal',
+    'nav.partnerPortal': 'Partner Portal',
+    'nav.adminPortal': 'Admin Portal',
+    // Language switcher toggle — the button text always shows the
+    // OTHER language (so '中文' when current=en, 'EN' when current=zh).
+    'nav.langChinese': '中文',
+    'nav.langEnglish': 'EN',
     // City names for the By City submenu (English)
     'nav.cities.beijing': 'Beijing',
     'nav.cities.shanghai': 'Shanghai',
@@ -2105,12 +2121,22 @@ export const translations: Record<Locale, Record<string, string>> = {
     'nav.admissions.howToApplyDesc': '逐步申请流程',
     'nav.admissions.applyNow': '立即申请',
     'nav.admissions.applyNowDesc': '开始新的申请',
+    // S42: own key (was reusing nav.about.contact)
+    'nav.admissions.contact': '联系我们',
+    'nav.admissions.contactDesc': 'WhatsApp、微信、邮箱、电话',
     'nav.about.about': '关于 SICA',
     'nav.about.aboutDesc': '我们的故事、价值观和团队',
     'nav.about.whyChina': '为什么选择中国留学',
     'nav.about.whyChinaDesc': '费用、文化、就业——全面了解',
     'nav.about.contact': '联系我们',
     'nav.about.contactDesc': 'WhatsApp、微信、邮箱、电话',
+    // S42: Portal Login dropdown (zh)
+    'nav.portalLogin': '门户登录',
+    'nav.studentPortal': '学生门户',
+    'nav.partnerPortal': '合作伙伴门户',
+    'nav.adminPortal': '管理员门户',
+    'nav.langChinese': '中文',
+    'nav.langEnglish': 'EN',
     // 城市名（按城市子菜单用）
     'nav.cities.beijing': '北京',
     'nav.cities.shanghai': '上海',

@@ -52,7 +52,11 @@ export function Header() {
             className="flex items-center gap-1.5 rounded-none border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 transition-colors hover:border-[#9B1B30] hover:text-[#9B1B30]"
           >
             <Globe className="h-4 w-4" />
-            {locale === 'en' ? '中文' : 'EN'}
+            {/* S42: was hardcoded inline ternary — now uses i18n key. The
+                button always shows the OTHER language (中文 when current
+                is en, EN when current is zh) so a Chinese reader sees
+                'EN' as the click target. */}
+            {locale === 'en' ? t('nav.langChinese') : t('nav.langEnglish')}
           </button>
 
           {/* Portal Login Dropdown */}
@@ -60,7 +64,7 @@ export function Header() {
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="border-[#1B2A4A] text-[#1B2A4A] hover:bg-[#1B2A4A] hover:text-white font-semibold text-sm">
                 <Users className="mr-2 h-4 w-4" />
-                {locale === 'en' ? 'Portal Login' : '门户登录'}
+                {t('nav.portalLogin')}
                 <ChevronDown className="ml-1 h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
@@ -68,19 +72,19 @@ export function Header() {
               <Link href="/student/login">
                 <DropdownMenuItem className="cursor-pointer">
                   <Users className="mr-2 h-4 w-4" />
-                  <span>{locale === 'en' ? 'Student Portal' : '学生门户'}</span>
+                  <span>{t('nav.studentPortal')}</span>
                 </DropdownMenuItem>
               </Link>
               <Link href="/partner/login">
                 <DropdownMenuItem className="cursor-pointer">
                   <UserPlus className="mr-2 h-4 w-4" />
-                  <span>{locale === 'en' ? 'Partner Portal' : '合作伙伴门户'}</span>
+                  <span>{t('nav.partnerPortal')}</span>
                 </DropdownMenuItem>
               </Link>
               <Link href="/admin/login">
                 <DropdownMenuItem className="cursor-pointer">
                   <FileText className="mr-2 h-4 w-4" />
-                  <span>{locale === 'en' ? 'Admin Portal' : '管理员门户'}</span>
+                  <span>{t('nav.adminPortal')}</span>
                 </DropdownMenuItem>
               </Link>
             </DropdownMenuContent>
@@ -122,7 +126,7 @@ export function Header() {
             {/* Portal Login Links */}
             <div className="space-y-1 pt-3 mt-2 border-t border-gray-100">
               <p className="text-xs font-medium text-gray-500 uppercase tracking-wide px-3">
-                {locale === 'en' ? 'Portal Login' : '门户登录'}
+                {t('nav.portalLogin')}
               </p>
               <Link
                 href="/student/login"
@@ -130,7 +134,7 @@ export function Header() {
                 className="flex items-center gap-2 rounded-none px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-[#9B1B30]"
               >
                 <Users className="h-4 w-4" />
-                {locale === 'en' ? 'Student Portal' : '学生门户'}
+                {t('nav.studentPortal')}
               </Link>
               <Link
                 href="/partner/login"
@@ -138,7 +142,7 @@ export function Header() {
                 className="flex items-center gap-2 rounded-none px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-[#9B1B30]"
               >
                 <UserPlus className="h-4 w-4" />
-                {locale === 'en' ? 'Partner Portal' : '合作伙伴门户'}
+                {t('nav.partnerPortal')}
               </Link>
               <Link
                 href="/admin/login"
@@ -146,7 +150,7 @@ export function Header() {
                 className="flex items-center gap-2 rounded-none px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-[#9B1B30]"
               >
                 <FileText className="h-4 w-4" />
-                {locale === 'en' ? 'Admin Portal' : '管理员门户'}
+                {t('nav.adminPortal')}
               </Link>
             </div>
 
@@ -157,7 +161,7 @@ export function Header() {
                 className="flex items-center gap-1.5 rounded-none border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600"
               >
                 <Globe className="h-4 w-4" />
-                {locale === 'en' ? '中文' : 'EN'}
+                {locale === 'en' ? t('nav.langChinese') : t('nav.langEnglish')}
               </button>
               <Button
                 asChild
