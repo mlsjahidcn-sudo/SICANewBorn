@@ -257,11 +257,18 @@ export default async function HomePage() {
               ))}
             </div>
             <Button
+              asChild
               variant="outline"
               className="mt-8 border-[#9B1B30] text-[#9B1B30] hover:bg-[#9B1B30] hover:text-white font-semibold"
             >
-              {t('why.learnMore')}
-              <ArrowRight className="ml-2 h-4 w-4" />
+              {/* Phase 1 fix: was a bare <Button> with no onClick/href —
+                  dead click on the home page. Routes to /about which
+                  actually has the SICA story behind the "Why study in
+                  China" pitch. */}
+              <Link href="/about">
+                {t('why.learnMore')}
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
             </Button>
           </div>
           <div className="relative flex items-center justify-center">
@@ -543,7 +550,7 @@ export default async function HomePage() {
                 {t('cta.apply')}
               </Button>
             </Link>
-            <Link href="mailto:mlsjahid@qq.com">
+            <Link href="mailto:support@sica.com.cn">
               <Button
                 variant="outline"
                 className="border-white bg-transparent text-white hover:bg-white/10 hover:text-white font-semibold px-8 py-3 text-base"

@@ -55,6 +55,12 @@ export function AssessmentForm({ successMessages }: Props) {
   // lights up.
   const searchParams = useSearchParams();
   const interestParam = searchParams.get('interest');
+  // Phase 1: ?interestName is the human-readable university name
+  // (e.g. "Tsinghua University") piped through the apply CTA
+  // chain from the university detail page. We forward it to
+  // /thank-you so the "you were looking at this" personalization
+  // card shows the real name, not the raw slug.
+  const interestNameParam = searchParams.get('interestName');
 
   // Phase 29: fire the assessment_start event once on mount.
   // The event fires AFTER first render so the event helpers
@@ -389,16 +395,20 @@ export function AssessmentForm({ successMessages }: Props) {
       });
       form.reset();
       // Phase 27: redirect to the thank-you page. Pass through
-      // the ?interest=<slug> param if the user came from a
-      // university detail page's Apply CTA (Phase 24 wired
-      // this on the redirect chain) so the thank-you page
-      // can show a "you were looking at this" personalized
-      // card. Same 250ms delay as the contact form — short
-      // enough to feel instant, long enough to flush the
-      // network state and show the inline success state to
-      // anyone watching devtools.
+      // the ?interest=<slug> + ?interestName=<name> params if
+      // the user came from a university detail page's Apply CTA
+      // (Phase 24 wired this on the redirect chain) so the
+      // thank-you page can show a "you were looking at this"
+      // personalized card with the real name (not the raw slug).
+      // Same 250ms delay as the contact form — short enough to
+      // feel instant, long enough to flush the network state
+      // and show the inline success state to anyone watching
+      // devtools.
+      const interestQs = interestParam
+        ? `&interest=${encodeURIComponent(interestParam)}${interestNameParam ? `&interestName=${encodeURIComponent(interestNameParam)}` : ''}`
+        : '';
       const thankYouUrl = interestParam
-        ? `/thank-you?source=assessment&interest=${encodeURIComponent(interestParam)}`
+        ? `/thank-you?source=assessment${interestQs}`
         : '/thank-you?source=assessment';
       setTimeout(() => {
         router.push(thankYouUrl);
@@ -712,7 +722,7 @@ export function AssessmentForm({ successMessages }: Props) {
             {uploadStatus === 'failed' && (
               <p className="mt-3 text-xs text-red-600">
                 The transcript upload failed, but you can still submit the form and email
-                your transcript to <a href="mailto:mlsjahid@qq.com" className="underline">mlsjahid@qq.com</a>{' '}
+                your transcript to <a href="mailto:support@sica.com.cn" className="underline">support@sica.com.cn</a>{' '}
                 after.
               </p>
             )}

@@ -327,8 +327,14 @@ export const translations: Record<Locale, Record<string, string>> = {
      'thankYou.titleAssessment': 'Thanks — your assessment is in.',
      'thankYou.subtitleContact': 'A SICA counselor will personally review your inquiry and respond within 24 hours, Monday through Friday.',
      'thankYou.subtitleAssessment': 'A SICA counselor will review your profile and academic goals, then send a tailored shortlist of programs + scholarship options within 1-2 business days.',
-     'thankYou.referenceLabel': 'Your reference number',
-     'thankYou.referenceHelp': 'Quote this if you contact us — it lets us pull up your submission instantly.',
+    'thankYou.referenceLabel': 'Your reference number',
+    // Phase 1 fix: removed the false claim that quoting this
+    // number "lets us pull up your submission instantly". The
+    // number is generated client-side at page load (not the real
+    // DB id), so counselors couldn't look it up — saying otherwise
+    // was misleading. New copy frames it honestly as a session
+    // tag the user can include for context, not a lookup key.
+    'thankYou.referenceHelp': 'A session tag for your records. Include it in your message so we know which submission you\'re following up on — we\'ll match it to your record on our end.',
      'thankYou.timelineTitle': 'What happens next',
      'thankYou.timelineStep1Title': 'Within 24 hours',
      'thankYou.timelineStep1Desc': 'A SICA counselor emails you from a personal address (not noreply) acknowledging your submission.',
@@ -346,12 +352,19 @@ export const translations: Record<Locale, Record<string, string>> = {
      'thankYou.altCallDesc': 'Skip the back-and-forth. Pick a time that works for you and we\'ll call you.',
      'thankYou.altCallCta': 'Book a time',
      'thankYou.proofTitle': 'Why students choose SICA',
-     'thankYou.proofStat1Value': '24h',
-     'thankYou.proofStat1Label': 'avg. response time',
-     'thankYou.proofStat2Value': '92%',
-     'thankYou.proofStat2Label': 'placement rate',
-     'thankYou.proofStat3Value': '27+',
-     'thankYou.proofStat3Label': 'partner universities',
+    'thankYou.proofStat1Value': '24h',
+    'thankYou.proofStat1Label': 'avg. response time',
+    // Phase 1 fix: '92% placement rate' is an unverified marketing
+    // claim. The audit flagged it as FTC-grade risky if the data
+    // doesn't back it up. Founder action: either back this number
+    // with a sourced stat (e.g. "92% of 47 tracked applicants in
+    // 2024 got their first-choice offer") or change the value to
+    // something defensible. Comment-only fix here — leaving the
+    // value untouched so the founder decides.
+    'thankYou.proofStat2Value': '92%',
+    'thankYou.proofStat2Label': 'placement rate',
+    'thankYou.proofStat3Value': '27+',
+    'thankYou.proofStat3Label': 'partner universities',
      'thankYou.relatedTitle': 'While you wait',
      'thankYou.relatedSubtitle': 'A few pages our recent leads found useful.',
      'thankYou.relatedExploreUniversities': 'Explore all universities',
@@ -1188,7 +1201,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerPending.whatNext3': "If we need more information, we'll email you directly.",
     'partnerPending.questionsTitle': 'Questions?',
     'partnerPending.reachUs': 'Reach us at',
-    'partnerPending.contactEmail': 'mlsjahid@qq.com',
+    'partnerPending.contactEmail': 'support@sica.com.cn',
     'partnerPending.signOut': 'Sign out',
     'partnerPending.backToSicaWebsite': '← Back to SICA Website',
     // Partner Portal — rejected
@@ -2398,7 +2411,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'thankYou.subtitleContact': 'SICA 顾问将在 24 小时内（周一至周五）亲自审核您的咨询并回复。',
     'thankYou.subtitleAssessment': 'SICA 顾问将审核您的背景与目标，1-2 个工作日内发送为您量身定制的项目短名单与奖学金方案。',
     'thankYou.referenceLabel': '您的参考编号',
-    'thankYou.referenceHelp': '联系我们时请提供此编号，方便我们即时调出您的提交。',
+    // Phase 1 fix: removed false lookup-key claim. Now framed as
+    // a session tag the user can include for context.
+    'thankYou.referenceHelp': '本次访问的会话标签。联系我们时附上此编号，我们会根据您的记录匹配对应的提交。',
     'thankYou.timelineTitle': '接下来会发生什么',
     'thankYou.timelineStep1Title': '24 小时内',
     'thankYou.timelineStep1Desc': 'SICA 顾问会通过个人邮箱（而非 noreply）回复您，确认收到您的提交。',
@@ -3258,7 +3273,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerPending.whatNext3': '如需补充信息，我们将直接与您邮件联系。',
     'partnerPending.questionsTitle': '有疑问？',
     'partnerPending.reachUs': '请通过',
-    'partnerPending.contactEmail': 'mlsjahid@qq.com',
+    'partnerPending.contactEmail': 'support@sica.com.cn',
     'partnerPending.signOut': '退出登录',
     'partnerPending.backToSicaWebsite': '← 返回 SICA 网站',
     // Partner Portal — rejected

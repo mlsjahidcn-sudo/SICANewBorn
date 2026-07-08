@@ -257,7 +257,7 @@ export async function POST(request: NextRequest) {
 <p style="font-size:13px;color:#6B7280;margin-top:24px">This link expires in ${INVITE_TTL_DAYS} days. If you weren&apos;t expecting this email, you can safely ignore it.</p>
 </td></tr>
 <tr><td style="padding:16px 32px;background:#FAFAF8;border-top:1px solid #E5E7EB;font-size:12px;color:#6B7280">
-<p style="margin:0">SICA · Guangzhou, China · <a href="mailto:mlsjahid@qq.com" style="color:#9B1B30;text-decoration:none">mlsjahid@qq.com</a></p>
+<p style="margin:0">SICA · Guangzhou, China · <a href="mailto:support@sica.com.cn" style="color:#9B1B30;text-decoration:none">support@sica.com.cn</a></p>
 </td></tr>
 </table></td></tr></table>
 </body></html>`,

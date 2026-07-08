@@ -104,10 +104,13 @@ export function StickyApplyBar({ universityName, universitySlug }: StickyApplyBa
   // Apply — the deep-commit CTA. Routes to /assessment (the
   // structured 4-step intake) with ?interest=<slug> so the
   // assessment form's thank-you redirect can still surface the
-  // "you were looking at this" personalized card. The softer
-  // /contact path lives in the right-rail "Or talk to a
-  // counselor" link on the university detail page.
-  const applyUrl = `/assessment?interest=${encodeURIComponent(universitySlug)}`;
+  // "you were looking at this" personalized card. ?interestName
+  // is the human-readable university name (Phase 1 fix) so the
+  // thank-you page can show "Tsinghua University" instead of
+  // the raw "tsinghua-university" slug. The softer /contact path
+  // lives in the right-rail "Or talk to a counselor" link on
+  // the university detail page.
+  const applyUrl = `/assessment?interest=${encodeURIComponent(universitySlug)}&interestName=${encodeURIComponent(universityName)}`;
 
   // If the user already dismissed, render nothing. The slide
   // animation is driven by the `visible` class — when false,

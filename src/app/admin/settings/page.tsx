@@ -11,7 +11,7 @@ function SettingsPageInner() {
   const [profile, setProfile] = useState({ fullName: '', email: '' });
   const [passwords, setPasswords] = useState({ current: '', newPass: '', confirm: '' });
   const [siteSettings, setSiteSettings] = useState({
-    contactEmail: 'mlsjahid@qq.com',
+    contactEmail: 'support@sica.com.cn',
     phone: '+86-173-2576-4171',
     wechat: 'mlsjahid',
     whatsapp: '+8617325764171',

@@ -11,7 +11,6 @@ import {
   type Scholarship,
 } from '@/lib/data';
 import { Search, Filter, Clock, Globe, GraduationCap, ArrowRight, ChevronLeft, ChevronRight, Gift, CheckCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { track } from '@/lib/analytics';
 
 const ITEMS_PER_PAGE = 6;
@@ -150,11 +149,14 @@ export default function ScholarshipsPage() {
             ))}
           </select>
 
-          <Button
-            className="bg-[#9B1B30] hover:bg-[#7A1526] text-white rounded-none px-6"
-          >
-            {t('schol.searchBtn')}
-          </Button>
+          {/* Phase 1 fix: removed the dead "Search" Button. The search
+              input + selects above all filter on every onChange (the
+              list re-renders as the user types/picks), so there was
+              nothing for the button to submit. It was rendering as a
+              crimson CTA that did nothing — a misleading conversion
+              trap. The i18n key schol.searchBtn is now orphaned but
+              left in place so existing translations don't have to be
+              re-translated if a future form-submit pattern is added. */}
 
           <div className="ml-auto flex items-center gap-2">
             <span className="text-sm text-gray-500">{t('schol.sortBy')}:</span>

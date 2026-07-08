@@ -513,7 +513,7 @@ function wrapForApplicant(innerHtml: string): string {
 <tr><td style="background:#1B2A4A;padding:16px 20px;color:#fff;font-weight:800;font-size:18px;letter-spacing:0.05em">SICA</td></tr>
 <tr><td style="padding:32px;font-size:15px;line-height:1.6;color:#374151">${innerHtml}</td></tr>
 <tr><td style="padding:16px 32px;background:#FAFAF8;border-top:1px solid #E5E7EB;font-size:12px;color:#6B7280">
-<p style="margin:0 0 4px 0">SICA · Guangzhou, China · <a href="mailto:mlsjahid@qq.com" style="color:#9B1B30;text-decoration:none">mlsjahid@qq.com</a></p>
+<p style="margin:0 0 4px 0">SICA · Guangzhou, China · <a href="mailto:support@sica.com.cn" style="color:#9B1B30;text-decoration:none">support@sica.com.cn</a></p>
 <p style="margin:0">You're receiving this because you submitted an application through SICA. <a href="${SITE_URL}/student/settings" style="color:#6B7280">Manage email preferences</a></p>
 </td></tr></table></td></tr></table>
 </body></html>`;
@@ -535,7 +535,7 @@ function wrapForPartner(innerHtml: string): string {
 <tr><td style="background:#1B2A4A;padding:16px 20px;color:#fff;font-weight:800;font-size:18px;letter-spacing:0.05em">SICA · Partner</td></tr>
 <tr><td style="padding:32px;font-size:15px;line-height:1.6;color:#374151">${innerHtml}</td></tr>
 <tr><td style="padding:16px 32px;background:#FAFAF8;border-top:1px solid #E5E7EB;font-size:12px;color:#6B7280">
-<p style="margin:0 0 4px 0">SICA · Guangzhou, China · <a href="mailto:mlsjahid@qq.com" style="color:#9B1B30;text-decoration:none">mlsjahid@qq.com</a></p>
+<p style="margin:0 0 4px 0">SICA · Guangzhou, China · <a href="mailto:support@sica.com.cn" style="color:#9B1B30;text-decoration:none">support@sica.com.cn</a></p>
 <p style="margin:0">You're receiving this as a SICA partner agency, regarding a student application you submitted. <a href="${SITE_URL}/partner/settings" style="color:#6B7280">Manage email preferences</a></p>
 </td></tr></table></td></tr></table>
 </body></html>`;

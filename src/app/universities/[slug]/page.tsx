@@ -653,7 +653,7 @@ export default function UniversityDetailPage() {
                     /thank-you?source=assessment&interest=<slug>
                     for the "you were looking at this" card. */}
                 <Link
-                  href={`/assessment?interest=${encodeURIComponent(slug)}`}
+                  href={`/assessment?interest=${encodeURIComponent(slug)}&interestName=${encodeURIComponent(locale === 'en' ? uni.name : uni.nameCn || uni.name)}`}
                   onClick={() => {
                     track('apply_click', {
                       location: 'support_card',

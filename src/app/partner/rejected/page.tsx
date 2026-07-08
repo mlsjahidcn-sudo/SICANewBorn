@@ -127,11 +127,11 @@ export default function PartnerRejectedPage() {
           <p className="text-sm text-gray-700">
             {t('partnerRejected.contactBody')}
             <a
-              href="mailto:mlsjahid@qq.com"
+              href="mailto:support@sica.com.cn"
               className="text-[#9B1B30] hover:underline inline-flex items-center gap-1 font-medium"
             >
               <Mail size={12} />
-              mlsjahid@qq.com
+              support@sica.com.cn
             </a>
             {t('partnerRejected.contactBodyEnd')}
           </p>

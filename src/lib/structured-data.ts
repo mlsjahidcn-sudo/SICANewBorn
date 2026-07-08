@@ -20,7 +20,7 @@ export function getOrganizationSchema() {
     contactPoint: {
       '@type': 'ContactPoint',
       contactType: 'customer service',
-      email: 'mlsjahid@qq.com',
+      email: 'support@sica.com.cn',
       telephone: '+86-173-2576-4171',
       areaServed: 'Worldwide',
       availableLanguage: ['English', 'Chinese'],

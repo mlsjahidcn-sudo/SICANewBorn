@@ -20,6 +20,12 @@ import { FooterNews } from '@/components/FooterNews';
 /**
  * S40: redesigned global footer.
  *
+ * Phase 1 (funnel audit): the public-facing contact email was
+ * migrated site-wide from the founder's personal `mlsjahid@qq.com`
+ * to the canonical `support@sica.com.cn`. 15 files touched —
+ * footer.tsx is one of them. To verify: `grep -r mlsjahid@qq.com src/`
+ * should return zero matches.
+ *
  * Layout (top to bottom):
  *   1. Newsletter band — crimson-stripped top, 1-line email signup.
  *   2. Main 6-col grid (lg):
@@ -41,7 +47,7 @@ import { FooterNews } from '@/components/FooterNews';
  * Why no newsletter form submit handler yet: a form needs a real
  * endpoint + double-opt-in + list provider. We render the UI as a
  * working stub (mailto fallback) so the visual is right; the form
- * submission is wired to mailto:mlsjahid@qq.com for now and the
+ * submission is wired to mailto:support@sica.com.cn for now and the
  * TODO is left as a one-line change once /api/newsletter exists.
  */
 export function Footer() {
@@ -62,7 +68,7 @@ export function Footer() {
     // the mailto for a fetch() once the API lands.
     const subject = encodeURIComponent('SICA newsletter subscribe');
     const body = encodeURIComponent(`Email: ${email}`);
-    window.location.href = `mailto:mlsjahid@qq.com?subject=${subject}&body=${body}`;
+    window.location.href = `mailto:support@sica.com.cn?subject=${subject}&body=${body}`;
   };
 
   return (
@@ -263,7 +269,7 @@ export function Footer() {
         <div className="mt-12 pt-8 border-t border-gray-200">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <a
-              href="mailto:mlsjahid@qq.com"
+              href="mailto:support@sica.com.cn"
               className="flex items-center gap-3 text-sm text-gray-600 hover:text-[#9B1B30] transition-colors group"
             >
               <span className="h-9 w-9 shrink-0 flex items-center justify-center bg-[#1B2A4A]/5 group-hover:bg-[#9B1B30]/10 text-[#1B2A4A] group-hover:text-[#9B1B30] transition-colors">
@@ -273,7 +279,7 @@ export function Footer() {
                 <span className="block text-[10px] uppercase tracking-wider text-gray-500 font-semibold">
                   {t('footer.contact')}
                 </span>
-                <span className="font-medium">mlsjahid@qq.com</span>
+                <span className="font-medium">support@sica.com.cn</span>
               </span>
             </a>
             <a

@@ -498,7 +498,7 @@ export default function ProgramDetailPage() {
                 ))}
               </ul>
               <Link
-                href="/programs"
+                href={`/assessment?major=${encodeURIComponent(locale === 'zh' ? program.nameCn : program.name)}&program=${encodeURIComponent(program.slug)}`}
                 className="flex w-full items-center justify-center gap-2 rounded-none bg-[#9B1B30] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#7A1526]"
               >
                 {t('cta.apply')}

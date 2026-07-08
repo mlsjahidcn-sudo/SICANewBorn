@@ -44,7 +44,7 @@ import { useI18n } from '@/lib/i18n';
  */
 
 const WHATSAPP_PHONE = '8617325764171';
-const CONTACT_EMAIL = 'mlsjahid@qq.com';
+const CONTACT_EMAIL = 'support@sica.com.cn';
 const SITE_URL = 'https://studyinchina.academy';
 
 function generateReferenceNumber(): string {
@@ -77,6 +77,15 @@ export default function ThankYouClient() {
   // enough to make the link work, and SICA's counselor has the
   // full context from the form submission.
   const interest = searchParams.get('interest');
+  // Phase 1: ?interestName is the human-readable name piped
+  // through the Apply CTA chain (university detail page →
+  // StickyApplyBar → assessment form → thank-you). We use it
+  // for the personalization card label so the user sees
+  // "Tsinghua University" instead of the raw slug
+  // "tsinghua-university". Falls back to the slug if the chain
+  // broke (e.g. bookmarked link, missing param).
+  const interestName = searchParams.get('interestName');
+  const interestLabel = interestName || interest;
   // Pre-compute the reference number once per mount so it
   // stays stable across re-renders (e.g. if the user opens
   // the share modal, the number doesn't change).
@@ -292,7 +301,10 @@ export default function ThankYouClient() {
                 className="flex items-center gap-2 font-semibold text-[#1B2A4A] hover:text-[#9B1B30]"
               >
                 <Building2 className="h-4 w-4" />
-                {interest}
+                {/* Phase 1: show the human-readable name (e.g. "Tsinghua
+                    University") when piped through, fall back to the
+                    raw slug if the chain broke. */}
+                {interestLabel}
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
