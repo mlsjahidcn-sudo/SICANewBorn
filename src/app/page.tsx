@@ -228,8 +228,13 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Why Study in China */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
+      {/* Why Study in China — S42: id="why-study-in-china" matches the
+          hash on the About submenu's "Why Study in China" link, so the
+          page actually scrolls here instead of silently reloading. */}
+      <section
+        id="why-study-in-china"
+        className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 lg:py-24 scroll-mt-20"
+      >
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div>
             <h2 className="text-3xl font-bold text-[#1B2A4A] sm:text-4xl">{t('why.title')}</h2>

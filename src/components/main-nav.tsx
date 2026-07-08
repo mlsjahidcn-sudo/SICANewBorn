@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useI18n } from '@/lib/i18n';
 import {
   NavigationMenu,
@@ -12,7 +13,6 @@ import {
 } from '@/components/ui/navigation-menu';
 import {
   GraduationCap,
-  BookOpen,
   Award,
   FileText,
   Info,
@@ -20,9 +20,7 @@ import {
   Globe,
   MessageCircle,
   Compass,
-  Send,
   Mail,
-  Phone,
 } from 'lucide-react';
 
 interface SubItem {
@@ -40,6 +38,9 @@ interface MenuItem {
   label: string;
   type: 'link' | 'menu';
   href?: string;
+  /** Pathname prefixes that mark this menu item as the "current section".
+   *  Direct links match `href` exactly; menus match any of these prefixes. */
+  activeMatch?: string[];
   sections?: SubSection[];
 }
 
@@ -56,6 +57,7 @@ const TOP_COUNTRIES = ['india', 'indonesia', 'pakistan', 'nigeria', 'bangladesh'
  */
 export function MainNav() {
   const { t } = useI18n();
+  const pathname = usePathname() || '/';
 
   const cities = CITY_KEYS.map((slug) => ({
     slug,
@@ -66,11 +68,45 @@ export function MainNav() {
     label: t(`nav.countries.${slug}`),
   }));
 
+  // `isItemActive` decides whether a menu item is the "current section"
+  // — used to apply `aria-current` + crimson text + bottom border on the
+  // matching trigger so the user can see where they are in the IA.
+  //
+  // Direct links: match the exact `href` (Home `/` matches only `/`).
+  // Menus: match any of the explicit `activeMatch` prefixes so the
+  // section is highlighted for every page in that subtree.
+  //   - "Universities" matches /universities/* + /study-in-china/*
+  //     (By City is grouped under Universities in the IA)
+  //   - "About SICA" also matches /contact because the About submenu is
+  //     where Contact lives in the IA (Admissions submenu's Contact was
+  //     deduped in S42).
+  //   - "Admissions" matches /assessment only — /contact goes to About.
+  const isItemActive = (item: MenuItem): boolean => {
+    if (item.type === 'link') {
+      return item.href === pathname;
+    }
+    return (
+      item.activeMatch?.some(
+        (prefix) => pathname === prefix || pathname.startsWith(prefix + '/'),
+      ) ?? false
+    );
+  };
+
+  // Per-sub-item exact-path match — used to bold/highlight a row inside
+  // an open submenu when the user is exactly on that page.
+  const isSubItemActive = (href: string): boolean => {
+    // Strip hash fragments for the comparison so /#why-study-in-china
+    // matches pathname === '/' as a regular Home link.
+    const [path] = href.split('#');
+    return path === pathname;
+  };
+
   const menuItems: MenuItem[] = [
     { type: 'link', href: '/', label: t('nav.home') },
     {
       type: 'menu',
       label: t('nav.universities'),
+      activeMatch: ['/universities', '/study-in-china'],
       sections: [
         {
           title: t('nav.universities'),
@@ -101,25 +137,17 @@ export function MainNav() {
       ],
     },
     {
-      type: 'menu',
+      // S42: flattened to a direct link — the submenu held exactly one
+      // item ("All Programs" → /programs) so a hover step was pure overhead.
+      type: 'link',
+      href: '/programs',
+      activeMatch: ['/programs'],
       label: t('nav.programs'),
-      sections: [
-        {
-          title: t('nav.programs'),
-          items: [
-            {
-              href: '/programs',
-              label: t('nav.programs.all'),
-              desc: t('nav.programs.allDesc'),
-              icon: BookOpen,
-            },
-          ],
-        },
-      ],
     },
     {
       type: 'menu',
       label: t('nav.scholarships'),
+      activeMatch: ['/scholarships'],
       sections: [
         {
           title: t('nav.scholarships'),
@@ -152,6 +180,9 @@ export function MainNav() {
     {
       type: 'menu',
       label: t('nav.admissions'),
+      // Only /assessment highlights Admissions — /contact lives in
+      // the About submenu, so it highlights About.
+      activeMatch: ['/assessment'],
       sections: [
         {
           title: t('nav.admissions'),
@@ -163,16 +194,13 @@ export function MainNav() {
               icon: FileText,
             },
             {
+              // S42: own i18n key (was reusing nav.about.contact) so the
+              // Admissions submenu can label "Contact Us" with copy that
+              // doesn't pretend to live under About.
               href: '/contact',
-              label: t('nav.about.contact'),
-              desc: t('nav.about.contactDesc'),
+              label: t('nav.admissions.contact'),
+              desc: t('nav.admissions.contactDesc'),
               icon: MessageCircle,
-            },
-            {
-              href: '/assessment',
-              label: t('nav.admissions.applyNow'),
-              desc: t('nav.admissions.applyNowDesc'),
-              icon: Send,
             },
           ],
         },
@@ -181,11 +209,16 @@ export function MainNav() {
     {
       type: 'link',
       href: '/guides',
+      activeMatch: ['/guides'],
       label: t('nav.guides'),
     },
     {
       type: 'menu',
       label: t('nav.about'),
+      // About owns /about + /contact. /contact was previously under
+      // both Admissions and About (Phase 40/41 added it to Admissions
+      // for parity); the dedup moved the visual ownership here.
+      activeMatch: ['/about', '/contact'],
       sections: [
         {
           title: t('nav.about'),
@@ -197,7 +230,9 @@ export function MainNav() {
               icon: Info,
             },
             {
-              href: '/',
+              // S42: was '/' which silently dropped the user on the home
+              // page without scrolling. Now anchors to the home section.
+              href: '/#why-study-in-china',
               label: t('nav.about.whyChina'),
               desc: t('nav.about.whyChinaDesc'),
               icon: Compass,
@@ -224,13 +259,22 @@ export function MainNav() {
     // simpler, more predictable layout.
     <NavigationMenu className="hidden lg:flex" viewport={false}>
       <NavigationMenuList>
-        {menuItems.map((item) =>
-          item.type === 'link' ? (
+        {menuItems.map((item) => {
+          // Compute once per item — drives both `aria-current` and the
+          // crimson-text + bottom-border treatment for the active section.
+          const active = isItemActive(item);
+          return item.type === 'link' ? (
             <NavigationMenuItem key={item.href}>
               <NavigationMenuLink asChild>
                 <Link
                   href={item.href!}
-                  className="group inline-flex h-9 w-max items-center justify-center px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:text-[#9B1B30] focus:text-[#9B1B30] focus:outline-none"
+                  aria-current={active ? 'page' : undefined}
+                  className={[
+                    'group inline-flex h-9 w-max items-center justify-center px-3 py-2 text-sm font-medium transition-colors focus:outline-none',
+                    active
+                      ? 'text-[#9B1B30] font-semibold border-b-2 border-[#9B1B30]'
+                      : 'text-gray-700 hover:text-[#9B1B30] focus:text-[#9B1B30]',
+                  ].join(' ')}
                 >
                   {item.label}
                 </Link>
@@ -238,7 +282,15 @@ export function MainNav() {
             </NavigationMenuItem>
           ) : (
             <NavigationMenuItem key={item.label}>
-              <NavigationMenuTrigger className="group inline-flex h-9 w-max items-center justify-center px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:text-[#9B1B30] focus:text-[#9B1B30] focus:outline-none data-[state=open]:text-[#9B1B30]">
+              <NavigationMenuTrigger
+                aria-current={active ? 'page' : undefined}
+                className={[
+                  'group inline-flex h-9 w-max items-center justify-center px-3 py-2 text-sm font-medium transition-colors focus:outline-none data-[state=open]:text-[#9B1B30]',
+                  active
+                    ? 'text-[#9B1B30] font-semibold border-b-2 border-[#9B1B30]'
+                    : 'text-gray-700 hover:text-[#9B1B30] focus:text-[#9B1B30]',
+                ].join(' ')}
+              >
                 {item.label}
               </NavigationMenuTrigger>
               <NavigationMenuContent>
@@ -276,6 +328,10 @@ export function MainNav() {
                           // Compact mode for the right column: no icon,
                           // smaller text, single line.
                           const isCompact = idx > 0;
+                          // Bold + crimson when this exact sub-link matches
+                          // the current route — gives the user a visible
+                          // "you are here" inside an open submenu.
+                          const subActive = isSubItemActive(sub.href);
                           return (
                             // Composite key: a few menu items intentionally
                             // share a destination (e.g. `/assessment` shows
@@ -286,12 +342,19 @@ export function MainNav() {
                               <NavigationMenuLink asChild>
                                 <Link
                                   href={sub.href}
+                                  aria-current={subActive ? 'page' : undefined}
                                   className={[
-                                    'group flex select-none outline-none transition-colors hover:bg-[#1B2A4A]/5',
+                                    'group flex select-none outline-none transition-colors',
                                     isCompact
-                                      ? 'items-center px-1.5 py-1 text-[12px] text-[#1B2A4A] group-hover:text-[#9B1B30]'
+                                      ? 'items-center px-1.5 py-1 text-[12px] group-hover:text-[#9B1B30]'
                                       : 'items-start gap-2 p-1.5',
-                                  ].join(' ')}
+                                    subActive
+                                      ? 'bg-[#1B2A4A]/5'
+                                      : 'hover:bg-[#1B2A4A]/5',
+                                    subActive
+                                      ? (isCompact ? 'text-[#9B1B30] font-semibold' : '[&_div]:text-[#9B1B30] [&_div]:font-semibold')
+                                      : (isCompact ? 'text-[#1B2A4A]' : ''),
+                                  ].filter(Boolean).join(' ')}
                                 >
                                   {!isCompact && (
                                     <div className="flex h-6 w-6 shrink-0 items-center justify-center bg-[#9B1B30] text-white group-hover:bg-[#7A1526] transition-colors">
@@ -301,11 +364,13 @@ export function MainNav() {
                                   <div className="min-w-0 flex-1">
                                     <div
                                       className={[
-                                        'leading-tight group-hover:text-[#9B1B30] transition-colors',
+                                        'leading-tight transition-colors',
                                         isCompact
-                                          ? 'text-[12px] font-medium text-[#1B2A4A] truncate'
-                                          : 'text-[13px] font-semibold text-[#1B2A4A]',
-                                      ].join(' ')}
+                                          ? 'text-[12px] font-medium truncate group-hover:text-[#9B1B30]'
+                                          : 'text-[13px] font-semibold text-[#1B2A4A] group-hover:text-[#9B1B30]',
+                                        subActive && isCompact ? 'text-[#9B1B30] font-semibold' : '',
+                                        subActive && !isCompact ? 'text-[#9B1B30] font-bold' : '',
+                                      ].filter(Boolean).join(' ')}
                                     >
                                       {sub.label}
                                     </div>
@@ -326,8 +391,8 @@ export function MainNav() {
                 </div>
               </NavigationMenuContent>
             </NavigationMenuItem>
-          ),
-        )}
+          );
+        })}
       </NavigationMenuList>
     </NavigationMenu>
   );
