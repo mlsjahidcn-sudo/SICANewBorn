@@ -73,6 +73,12 @@ logs/
 *.f4v
 *.rmvb
 *.vob
+# Whitelist the two VideoTestimonials review videos — they're served
+# from /public/videos/ and need to be in the deploy. The blanket *.mp4
+# rule above stays so future bulk video content (promo reels, course
+# clips) doesn't accidentally bloat the repo without a deliberate add.
+!public/videos/review-1.mp4
+!public/videos/review-2-720p.mp4
 
 # 归档文件
 *.iso
