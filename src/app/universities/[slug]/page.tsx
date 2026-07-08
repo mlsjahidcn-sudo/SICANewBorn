@@ -34,6 +34,7 @@ import {
 import UniversityLogo from '@/components/university-logo';
 import { DeadlineCountdown } from '@/components/deadline-countdown';
 import { StickyApplyBar } from '@/components/StickyApplyBar';
+import { VideoTestimonials } from '@/components/VideoTestimonials';
 import { track } from '@/lib/analytics';
 
 export default function UniversityDetailPage() {
@@ -677,6 +678,24 @@ export default function UniversityDetailPage() {
           </div>
         </Tabs>
       </section>
+
+      {/* Student review videos — trust signal for THIS university.
+          Same <VideoTestimonials /> used on the home page, but
+          with `universityName` so the eyebrow + subtitle swap
+          to "Considering <UniName>? Hear what SICA students say"
+          instead of the generic home-page copy. The two videos
+          themselves are the same Telia + on-campus reviews — they
+          apply to the SICA admission service generally, but
+          contextualizing them with the university name on the
+          detail page is the difference between "students who
+          used SICA" and "students who used SICA to get into
+          <this school>". Sits between the Tabs section and
+          Related News so a reader hits it just as they're
+          forming an opinion about applying. */}
+      <VideoTestimonials
+        universityName={locale === 'en' ? uni.name : uni.nameCn || uni.name}
+        location="university"
+      />
 
       {/* S37: reciprocal news widget — links this university page
           to recent SICA news posts that mention the university.

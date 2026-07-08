@@ -277,7 +277,12 @@ export function MainNav() {
                           // smaller text, single line.
                           const isCompact = idx > 0;
                           return (
-                            <li key={sub.href}>
+                            // Composite key: a few menu items intentionally
+                            // share a destination (e.g. `/assessment` shows
+                            // up under both "Free Assessment" + "Apply Now"
+                            // with different labels) but React still wants
+                            // a unique key per row.
+                            <li key={`${sub.href}::${sub.label}`}>
                               <NavigationMenuLink asChild>
                                 <Link
                                   href={sub.href}
@@ -289,7 +294,7 @@ export function MainNav() {
                                   ].join(' ')}
                                 >
                                   {!isCompact && (
-                                    <div className="flex h-6 w-6 shrink-0 items-center justify-center bg-[#1B2A4A]/8 text-[#1B2A4A] group-hover:bg-[#9B1B30] group-hover:text-white transition-colors">
+                                    <div className="flex h-6 w-6 shrink-0 items-center justify-center bg-[#9B1B30] text-white group-hover:bg-[#7A1526] transition-colors">
                                       <sub.icon className="h-3.5 w-3.5" />
                                     </div>
                                   )}

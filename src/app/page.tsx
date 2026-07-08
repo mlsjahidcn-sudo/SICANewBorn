@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { getAllUniversities } from '@/lib/data-fetcher';
 import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
+import { VideoTestimonials } from '@/components/VideoTestimonials';
 
 // Home page is server-rendered. We re-fetch the live list on every
 // request (with a 60s edge cache via `revalidate`) so newly-added
@@ -405,82 +406,15 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Testimonials — social proof. PLACEHOLDER entries for layout;
-          replace with real student photos + verified quotes from
-          past students (collect via WhatsApp/email after graduation).
-          Each card has Review schema in the JSON-LD below. */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
-        <div className="text-center max-w-3xl mx-auto">
-          <h2 className="text-3xl font-bold text-[#1B2A4A] sm:text-4xl">What Our Students Say</h2>
-          <p className="mt-4 text-gray-600 leading-relaxed">
-            Real students, real outcomes. Hear from international students who used SICA to start their journey at top Chinese universities.
-          </p>
-        </div>
-        <div className="mt-12 grid md:grid-cols-3 gap-6">
-          {[
-            {
-              name: 'Amara O.',
-              country: 'Nigeria',
-              program: 'MBBS, Clinical Medicine',
-              university: 'Fudan University',
-              quote:
-                'SICA guided me through every step — from choosing the right program to getting my X1 visa. The full scholarship changed my life. I am now in my third year and loving every moment in Shanghai.',
-              initials: 'AO',
-            },
-            {
-              name: 'Ravi K.',
-              country: 'India',
-              program: 'MSc Computer Science',
-              university: 'Tsinghua University',
-              quote:
-                'I was confused about the application process, but the SICA team made it simple. They helped me prepare my documents, applied for the Chinese Government Scholarship, and I got accepted with full funding.',
-              initials: 'RK',
-            },
-            {
-              name: 'Maria S.',
-              country: 'Brazil',
-              program: 'BA International Relations',
-              university: 'Peking University',
-              quote:
-                'What I appreciated most was the personal support. My advisor answered every question on WhatsApp, even on weekends. I never felt alone in the process.',
-              initials: 'MS',
-            },
-          ].map((t) => (
-            <figure
-              key={t.name}
-              className="rounded-none border border-gray-200 bg-white p-6 shadow-sm hover:shadow-md transition-shadow flex flex-col"
-            >
-              {/* Quote mark */}
-              <svg
-                aria-hidden="true"
-                className="h-8 w-8 text-[#9B1B30] mb-3"
-                fill="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path d="M9.983 3v7.391c0 5.704-3.731 9.57-8.983 10.609l-.995-2.151c2.432-.917 3.995-3.638 3.995-5.849h-4v-10h9.983zm14.017 0v7.391c0 5.704-3.748 9.571-9 10.609l-.996-2.151c2.433-.917 3.996-3.638 3.996-5.849h-3.983v-10h9.983z" />
-              </svg>
-              <blockquote className="flex-1 text-sm text-gray-700 leading-relaxed">
-                &ldquo;{t.quote}&rdquo;
-              </blockquote>
-              <figcaption className="mt-4 pt-4 border-t border-gray-100 flex items-center gap-3">
-                <div className="h-10 w-10 shrink-0 rounded-full bg-[#1B2A4A] text-white flex items-center justify-center text-sm font-bold">
-                  {t.initials}
-                </div>
-                <div className="min-w-0">
-                  <div className="font-semibold text-[#1B2A4A] text-sm">{t.name}</div>
-                  <div className="text-xs text-gray-500">
-                    {t.program} · {t.university}
-                  </div>
-                  <div className="text-xs text-[#9B1B30] mt-0.5">{t.country}</div>
-                </div>
-              </figcaption>
-            </figure>
-          ))}
-        </div>
-        <p className="mt-6 text-center text-xs text-gray-400">
-          Testimonials shown with consent. Names abbreviated for privacy.
-        </p>
-      </section>
+      {/* Testimonials — social proof. Replaced the previous
+          text-only PLACEHOLDER cards with two real student
+          review videos (Telia from Gabon + a current SICA
+          student on a Chinese university campus). The
+          <VideoTestimonials /> component is reused on every
+          university detail page so the same trust signal
+          surfaces wherever a prospective student is reading
+          about a specific school. */}
+      <VideoTestimonials location="home" />
 
       {/* S38: Latest from SICA News — server-rendered teaser row.
           Closes the home-page → news interlinking loop so the

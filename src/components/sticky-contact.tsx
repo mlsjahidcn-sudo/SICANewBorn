@@ -248,6 +248,7 @@ export function StickyContact() {
             <div className="relative aspect-square w-full bg-white">
               <Image
                 src={zoomedQr === 'wechat' ? '/wechat-qr.jpeg' : '/whatsapp-qr.jpeg'}
+                unoptimized
                 alt={`${zoomedQr === 'wechat' ? 'WeChat' : 'WhatsApp'} QR code`}
                 fill
                 sizes="(max-width: 384px) 100vw, 384px"

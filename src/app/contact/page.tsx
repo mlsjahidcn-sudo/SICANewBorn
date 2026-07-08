@@ -102,8 +102,9 @@ export default async function ContactPage() {
                     <Image
                       src="/wechat-qr.jpeg"
                       alt="WeChat QR Code"
-                      width={140}
-                      height={140}
+                      width={180}
+                      height={180}
+                      unoptimized
                       className="object-contain"
                     />
                   </div>
@@ -117,8 +118,9 @@ export default async function ContactPage() {
                     <Image
                       src="/whatsapp-qr.jpeg"
                       alt="WhatsApp QR Code"
-                      width={140}
-                      height={140}
+                      width={180}
+                      height={180}
+                      unoptimized
                       className="object-contain"
                     />
                   </div>

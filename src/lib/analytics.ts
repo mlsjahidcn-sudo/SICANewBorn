@@ -189,6 +189,26 @@ export interface AnalyticsEventMap {
     /** Number of rows deleted in this action (1 for single-row, >1 for bulk). */
     count: number;
   };
+  // -----------------------------------------------------------------
+  // VideoTestimonials events
+  //
+  // The two student-review videos on the home page and every
+  // university page share these two events. `video_play` fires
+  // when the user clicks the poster thumbnail (intent to watch).
+  // `videoId` is the static identifier so a dashboard can compute
+  // play-through and per-video popularity without parsing URLs.
+  // -----------------------------------------------------------------
+  /** User clicked a video testimonial's poster to open the modal. */
+  video_play: {
+    /** Static video identifier (review-1, review-2). */
+    videoId: 'review-1' | 'review-2';
+    /** Where the section is mounted. */
+    location: 'home' | 'university';
+    /** Page locale. */
+    locale: 'en' | 'zh';
+    /** University slug when location='university', otherwise null. */
+    universitySlug?: string | null;
+  };
 }
 
 /** Convenience alias for the event-name union. */
