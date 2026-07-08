@@ -79,6 +79,7 @@ logs/
 # clips) doesn't accidentally bloat the repo without a deliberate add.
 !public/videos/review-1.mp4
 !public/videos/review-2-720p.mp4
+!public/videos/review-3.mp4
 
 # 归档文件
 *.iso

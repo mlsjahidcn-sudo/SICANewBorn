@@ -61,7 +61,7 @@ export interface VideoTestimonialsProps {
 }
 
 interface VideoCard {
-  id: 'review-1' | 'review-2';
+  id: 'review-1' | 'review-2' | 'review-3';
   titleKey: string;
   descriptionKey: string;
   poster: string;
@@ -89,6 +89,15 @@ const VIDEOS: VideoCard[] = [
     poster: '/videos/review-2-poster.jpg',
     src: '/videos/review-2-720p.mp4',
     durationSec: 48,
+    aspect: 'landscape',
+  },
+  {
+    id: 'review-3',
+    titleKey: 'videoTestimonials.review3.title',
+    descriptionKey: 'videoTestimonials.review3.description',
+    poster: '/videos/review-3-poster.jpg',
+    src: '/videos/review-3.mp4',
+    durationSec: 80,
     aspect: 'landscape',
   },
 ];
@@ -214,8 +223,8 @@ export function VideoTestimonials({
           <div
             className={
               isCompact
-                ? 'mt-0 grid sm:grid-cols-2 gap-4'
-                : 'mt-10 grid md:grid-cols-2 gap-6 lg:gap-8 items-stretch'
+                ? 'mt-0 grid sm:grid-cols-2 lg:grid-cols-3 gap-4'
+                : 'mt-10 grid md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 items-stretch'
             }
           >
             {VIDEOS.map((video) => (
@@ -290,7 +299,11 @@ function VideoCardButton({
   // + description area below the poster lines up across the row.
   const aspectClass = compact ? 'aspect-[3/4]' : 'aspect-[3/4] sm:aspect-[3/4]';
   const objectPosition =
-    video.id === 'review-2' ? 'object-[center_35%]' : 'object-center';
+    video.id === 'review-2'
+      ? 'object-[center_35%]'
+      : video.id === 'review-3'
+        ? 'object-center'
+        : 'object-center';
 
   return (
     <button

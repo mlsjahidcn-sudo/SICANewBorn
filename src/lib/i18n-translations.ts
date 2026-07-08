@@ -2089,20 +2089,23 @@ export const translations: Record<Locale, Record<string, string>> = {
     'videoTestimonials.eyebrow': 'Real students · Real stories',
     'videoTestimonials.title': 'Hear their China study stories',
     'videoTestimonials.subtitle':
-      'They applied through SICA and enrolled at top Chinese universities. Watch two real students share how SICA’s admission service supported them — from application to arrival.',
+      'They applied through SICA and enrolled at top Chinese universities. Watch three real students share how SICA’s admission service supported them — from application to arrival.',
     'videoTestimonials.review1.title': 'Telia from Gabon',
     'videoTestimonials.review1.description':
       'Telia walks through her full journey from Gabon to a top Chinese university — how SICA counselors helped with school selection, documents, the X1 visa, and settling in.',
     'videoTestimonials.review2.title': 'A day at a Chinese university',
     'videoTestimonials.review2.description':
       'A current SICA student, on campus in southern China, shares what daily life really looks like — the classrooms, the campus, and why he chose to study here.',
+    'videoTestimonials.review3.title': 'From application to arrival',
+    'videoTestimonials.review3.description':
+      'A new SICA student walks through the full journey — first SICA consultation, university selection, documents, visa, and the first weeks on a Chinese campus.',
     'videoTestimonials.playLabel': 'Play video',
     'videoTestimonials.durationSec': 'sec',
     'videoTestimonials.closeAria': 'Close video',
     'videoTestimonials.universityContext':
       'Considering {{university}}? Hear what SICA students say',
     'videoTestimonials.universityContextDesc':
-      '{{university}} is one of the universities SICA has helped students gain admission to. Below are two real student stories.',
+      '{{university}} is one of the universities SICA has helped students gain admission to. Below are three real student stories.',
     'videoTestimonials.verifiedBadge': 'SICA Student',
     'videoTestimonials.watchCta': 'Watch the story',
     'videoTestimonials.statsBadge': 'Real students · Recorded with consent',
@@ -4262,20 +4265,23 @@ export const translations: Record<Locale, Record<string, string>> = {
     'videoTestimonials.eyebrow': '真实学生 · 真实故事',
     'videoTestimonials.title': '听听他们的中国留学故事',
     'videoTestimonials.subtitle':
-      '他们通过 SICA 申请并入读了中国顶尖大学。下面是两段真实学生分享的视频——看看 SICA 的申请服务是如何帮助他们的。',
+      '他们通过 SICA 申请并入读了中国顶尖大学。下面是三段真实学生分享的视频——看看 SICA 的申请服务是如何帮助他们的。',
     'videoTestimonials.review1.title': 'Telia 来自加蓬',
     'videoTestimonials.review1.description':
       'Telia 分享了她如何在 SICA 顾问的帮助下，从加蓬申请到中国顶尖大学的全过程——从选校、文书、签证到入学适应。',
     'videoTestimonials.review2.title': '在中国大学校园里',
     'videoTestimonials.review2.description':
       '一位在南方的 SICA 学生实地介绍了他的大学校园、课堂氛围和中国留学的真实日常——给考虑来华留学的同学一个第一视角的参考。',
+    'videoTestimonials.review3.title': '从申请到抵达',
+    'videoTestimonials.review3.description':
+      '一位新加入 SICA 的学生完整记录了从第一次咨询到入学数周的真实过程——选校、文书准备、签证办理、中国校园的最初几周。',
     'videoTestimonials.playLabel': '播放视频',
     'videoTestimonials.durationSec': '秒',
     'videoTestimonials.closeAria': '关闭视频',
     'videoTestimonials.universityContext':
       '正在考虑 {{university}}？看看 SICA 学生怎么说',
     'videoTestimonials.universityContextDesc':
-      '{{university}} 是 SICA 帮助众多学生成功申请的目标院校之一。下方是两段真实学生的分享视频。',
+      '{{university}} 是 SICA 帮助众多学生成功申请的目标院校之一。下方是三段真实学生的分享视频。',
     'videoTestimonials.verifiedBadge': 'SICA 学生',
     'videoTestimonials.watchCta': '观看完整故事',
     'videoTestimonials.statsBadge': '真实学生 · 经本人授权拍摄',
