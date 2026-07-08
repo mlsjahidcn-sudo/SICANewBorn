@@ -1,13 +1,16 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowRight, BookOpen, GraduationCap } from 'lucide-react';
+import { ArrowRight, BookOpen, ChevronLeft, ChevronRight, GraduationCap } from 'lucide-react';
 import { cookies } from 'next/headers';
 import type { Locale } from '@/lib/i18n-translations';
 import { guideCards } from '@/lib/guides/hub-data';
 import { GuideIcons } from '@/components/guides/guide-page';
 
 import { SITE_URL } from '@/lib/site-url';
-export const dynamic = 'force-static';
+
+// Constants for the listicle pagination — process guides section
+// stays static (6 cards fit in 2 rows of 3 with room to breathe).
+const LISTICLES_PER_PAGE = 9;
 
 export async function generateMetadata(): Promise<Metadata> {
   const cookieStore = await cookies();
@@ -32,11 +35,27 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function GuidesHubPage() {
+export default async function GuidesHubPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ page?: string }>;
+}) {
   const cookieStore = await cookies();
   const locale: Locale = cookieStore.get('sica-locale')?.value === 'zh' ? 'zh' : 'en';
   const cards = guideCards[locale];
   const isZh = locale === 'zh';
+
+  // Listicle pagination: 9 cards per page, ?page=N (1-indexed).
+  // Process guides section is not paginated — only 6 cards.
+  const sp: { page?: string } = searchParams ? await searchParams : {};
+  const rawPage = Number.parseInt(sp.page ?? '1', 10);
+  const requestedPage = Number.isFinite(rawPage) && rawPage >= 1 ? rawPage : 1;
+
+  const allListicles = cards.filter((c) => c.category === 'listicle');
+  const totalPages = Math.max(1, Math.ceil(allListicles.length / LISTICLES_PER_PAGE));
+  const currentPage = Math.min(requestedPage, totalPages);
+  const listicleStart = (currentPage - 1) * LISTICLES_PER_PAGE;
+  const pagedListicles = allListicles.slice(listicleStart, listicleStart + LISTICLES_PER_PAGE);
 
   // JSON-LD: ItemList so the hub itself can surface in search results
   const itemListSchema = {
@@ -87,51 +106,157 @@ export default async function GuidesHubPage() {
         </div>
       </section>
 
-      {/* Cards grid */}
+      {/* Cards grid — two sections: process guides + listicles */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
         <h2 className="text-2xl font-bold text-[#1B2A4A] mb-2">
-          {isZh ? '6篇核心指南' : '6 essential guides'}
+          {isZh ? '19 篇深度指南' : '19 in-depth guides'}
         </h2>
-        <p className="text-[#4B5563] mb-8">
+        <p className="text-[#4B5563] mb-10">
           {isZh
             ? '每篇都含 2,000+ 字深度内容、8+ 个常见问答、8 步实操流程，以及问答片段（FAQ schema）、步骤片段（HowTo schema）和文章元数据，便于 AI 引擎和搜索引擎抓取。'
             : 'Each guide ships with 2,000+ words of in-depth content, 8+ FAQs, 8-step process, plus FAQPage and HowTo structured data so search engines and AI assistants can extract the answers directly.'}
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {cards.map((card) => {
-            const Icon = GuideIcons[card.icon] ?? BookOpen;
-            return (
-              <Link
-                key={card.href}
-                href={card.href}
-                className="group flex flex-col bg-white border-2 border-gray-200 hover:border-[#9B1B30] p-6 transition-colors"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="w-12 h-12 bg-[#1B2A4A] flex items-center justify-center">
-                    <Icon className="w-6 h-6 text-[#D4A853]" />
+        {/* Section 1: Process guides (the original /guides/* pages) */}
+        <div className="mb-12">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-[#9B1B30] mb-4">
+            {isZh ? '流程指南 · 6 篇' : 'Process guides · 6 articles'}
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {cards
+              .filter((c) => c.category === 'process')
+              .map((card) => {
+                const Icon = GuideIcons[card.icon] ?? BookOpen;
+                return (
+                  <Link
+                    key={card.href}
+                    href={card.href}
+                    className="group flex flex-col bg-white border-2 border-gray-200 hover:border-[#9B1B30] p-6 transition-colors"
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="w-12 h-12 bg-[#1B2A4A] flex items-center justify-center">
+                        <Icon className="w-6 h-6 text-[#D4A853]" />
+                      </div>
+                      <span className="text-xs text-[#6B7280] uppercase tracking-wider">
+                        {card.readTime}
+                      </span>
+                    </div>
+                    <h4 className="text-xl font-bold text-[#1B2A4A] group-hover:text-[#9B1B30] transition-colors mb-2">
+                      {card.title}
+                    </h4>
+                    <p className="text-sm text-[#4B5563] leading-relaxed mb-4 flex-1">
+                      {card.subtitle}
+                    </p>
+                    <div className="pt-3 border-t border-gray-100 flex items-center justify-between">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-[#9B1B30]">
+                        {card.highlight}
+                      </span>
+                      <span className="text-sm font-medium text-[#9B1B30] flex items-center gap-1 group-hover:gap-2 transition-all">
+                        {isZh ? '阅读' : 'Read'} <ArrowRight className="w-4 h-4" />
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
+          </div>
+        </div>
+
+        {/* Section 2: Evergreen listicles & best-of guides — paginated */}
+        <div>
+          <div className="flex items-baseline justify-between mb-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#9B1B30]">
+              {isZh
+                ? `排名与对比 · ${allListicles.length} 篇`
+                : `Evergreen lists & best-of guides · ${allListicles.length} articles`}
+            </h3>
+            <span className="text-xs text-[#6B7280] uppercase tracking-wider">
+              {isZh
+                ? `第 ${currentPage} / ${totalPages} 页`
+                : `Page ${currentPage} of ${totalPages}`}
+            </span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {pagedListicles.map((card) => {
+              const Icon = GuideIcons[card.icon] ?? BookOpen;
+              return (
+                <Link
+                  key={card.href}
+                  href={card.href}
+                  className="group flex flex-col bg-white border-2 border-gray-200 hover:border-[#9B1B30] p-6 transition-colors"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-12 h-12 bg-[#1B2A4A] flex items-center justify-center">
+                      <Icon className="w-6 h-6 text-[#D4A853]" />
+                    </div>
+                    <span className="text-xs text-[#6B7280] uppercase tracking-wider">
+                      {card.readTime}
+                    </span>
                   </div>
-                  <span className="text-xs text-[#6B7280] uppercase tracking-wider">
-                    {card.readTime}
-                  </span>
-                </div>
-                <h3 className="text-xl font-bold text-[#1B2A4A] group-hover:text-[#9B1B30] transition-colors mb-2">
-                  {card.title}
-                </h3>
-                <p className="text-sm text-[#4B5563] leading-relaxed mb-4 flex-1">
-                  {card.subtitle}
-                </p>
-                <div className="pt-3 border-t border-gray-100 flex items-center justify-between">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-[#9B1B30]">
-                    {card.highlight}
-                  </span>
-                  <span className="text-sm font-medium text-[#9B1B30] flex items-center gap-1 group-hover:gap-2 transition-all">
-                    {isZh ? '阅读' : 'Read'} <ArrowRight className="w-4 h-4" />
-                  </span>
-                </div>
-              </Link>
-            );
-          })}
+                  <h4 className="text-lg font-bold text-[#1B2A4A] group-hover:text-[#9B1B30] transition-colors mb-2">
+                    {card.title}
+                  </h4>
+                  <p className="text-sm text-[#4B5563] leading-relaxed mb-4 flex-1">
+                    {card.subtitle}
+                  </p>
+                  <div className="pt-3 border-t border-gray-100 flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-[#9B1B30]">
+                      {card.highlight}
+                    </span>
+                    <span className="text-sm font-medium text-[#9B1B30] flex items-center gap-1 group-hover:gap-2 transition-all">
+                      {isZh ? '阅读' : 'Read'} <ArrowRight className="w-4 h-4" />
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* Pagination controls — server-side ?page=N URLs so search
+              engines can index every page. Same card aesthetic so it
+              reads as part of the design. */}
+          {totalPages > 1 && (
+            <nav
+              className="flex items-center justify-center gap-2 mt-10"
+              aria-label={isZh ? '分页' : 'Pagination'}
+            >
+              {currentPage > 1 && (
+                <Link
+                  href={currentPage === 2 ? '/guides' : `/guides?page=${currentPage - 1}`}
+                  className="inline-flex items-center gap-1 px-4 py-2 border-2 border-gray-300 hover:border-[#1B2A4A] text-sm font-medium text-[#1B2A4A] transition-colors"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  {isZh ? '上一页' : 'Previous'}
+                </Link>
+              )}
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
+                const isCurrent = p === currentPage;
+                const href = p === 1 ? '/guides' : `/guides?page=${p}`;
+                return (
+                  <Link
+                    key={p}
+                    href={href}
+                    aria-current={isCurrent ? 'page' : undefined}
+                    className={
+                      isCurrent
+                        ? 'inline-flex items-center justify-center w-10 h-10 border-2 border-[#9B1B30] bg-[#9B1B30] text-white text-sm font-bold'
+                        : 'inline-flex items-center justify-center w-10 h-10 border-2 border-gray-300 hover:border-[#1B2A4A] text-sm font-medium text-[#1B2A4A] transition-colors'
+                    }
+                  >
+                    {p}
+                  </Link>
+                );
+              })}
+              {currentPage < totalPages && (
+                <Link
+                  href={`/guides?page=${currentPage + 1}`}
+                  className="inline-flex items-center gap-1 px-4 py-2 border-2 border-gray-300 hover:border-[#1B2A4A] text-sm font-medium text-[#1B2A4A] transition-colors"
+                >
+                  {isZh ? '下一页' : 'Next'}
+                  <ChevronRight className="w-4 h-4" />
+                </Link>
+              )}
+            </nav>
+          )}
         </div>
       </section>
 

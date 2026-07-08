@@ -11,6 +11,18 @@ import {
   Award,
   Wallet,
   BedDouble,
+  Trophy,
+  Briefcase,
+  Settings2,
+  MapPin,
+  Tag,
+  Activity,
+  Building2,
+  Landmark,
+  CalendarClock,
+  GraduationCap,
+  Scale,
+  FileCheck,
   type LucideIcon,
 } from 'lucide-react';
 import type { Guide, GuideBlock } from '@/lib/guides/types';
@@ -473,6 +485,12 @@ export function GuidePage({ guide, pathSegment, urlPath }: GuidePageProps) {
 /**
  * Re-export the icon map so the hub page can pick the right
  * icon for each card without re-declaring the lucide imports.
+ *
+ * Icon set covers both the 6 process guides (compass / clipboard-list /
+ * passport / award / wallet / bed) and the 13 Phase 39-41 listicle
+ * guide cards (trophy / briefcase / cog / map-pin / tag / activity /
+ * building-2 / landmark / calendar-clock / graduation-cap / scale /
+ * file-check).
  */
 export const GuideIcons: Record<string, LucideIcon> = {
   compass: Compass,
@@ -481,4 +499,16 @@ export const GuideIcons: Record<string, LucideIcon> = {
   award: Award,
   wallet: Wallet,
   bed: BedDouble,
+  trophy: Trophy,
+  briefcase: Briefcase,
+  cog: Settings2,
+  'map-pin': MapPin,
+  tag: Tag,
+  activity: Activity,
+  'building-2': Building2,
+  landmark: Landmark,
+  'calendar-clock': CalendarClock,
+  'graduation-cap': GraduationCap,
+  scale: Scale,
+  'file-check': FileCheck,
 };
