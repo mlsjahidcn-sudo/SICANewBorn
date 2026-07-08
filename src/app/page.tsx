@@ -26,6 +26,7 @@ import {
   Newspaper,
   Calendar,
   Clock,
+  Sparkles,
 } from 'lucide-react';
 import { getAllUniversities } from '@/lib/data-fetcher';
 import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
@@ -109,6 +110,45 @@ export default async function HomePage() {
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 lg:py-32">
           <div className="grid lg:grid-cols-5 gap-10 lg:gap-12 items-center">
             <div className="lg:col-span-3 max-w-2xl">
+              {/* Phase 2 funnel: 2-product path selector above the
+                  hero headline. The visitor picks which product they
+                  want before any CTA fires. The 2-pill design is
+                  intentionally low-friction — no "choose your path"
+                  gate, no expanded copy. Just two clear options that
+                  route to the right product. */}
+              <div className="mb-6 inline-flex flex-wrap items-stretch border border-white/20 bg-white/5 backdrop-blur-sm">
+                <Link
+                  href="/assessment"
+                  className="group flex-1 sm:flex-none px-5 py-3 hover:bg-[#9B1B30] transition-colors"
+                >
+                  <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#D4A853] mb-1 group-hover:text-white">
+                    {t('choosePath.path1Label')}
+                  </div>
+                  <div className="flex items-center gap-2 text-white font-semibold text-sm">
+                    <Sparkles className="h-4 w-4 text-[#D4A853] group-hover:text-white" />
+                    {t('choosePath.fullService')}
+                  </div>
+                  <div className="text-xs text-gray-400 mt-1 group-hover:text-white/80">
+                    {t('choosePath.fullServiceHint')}
+                  </div>
+                </Link>
+                <div className="hidden sm:block w-px bg-white/20" />
+                <Link
+                  href="/resources"
+                  className="group flex-1 sm:flex-none px-5 py-3 hover:bg-white/10 transition-colors"
+                >
+                  <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#9B1B30] mb-1 group-hover:text-white">
+                    {t('choosePath.path2Label')}
+                  </div>
+                  <div className="flex items-center gap-2 text-white font-semibold text-sm">
+                    <BookOpen className="h-4 w-4 text-white/80" />
+                    {t('choosePath.selfServe')}
+                  </div>
+                  <div className="text-xs text-gray-400 mt-1 group-hover:text-white/80">
+                    {t('choosePath.selfServeHint')}
+                  </div>
+                </Link>
+              </div>
               <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl leading-[1.05]">
                 {t('hero.title')}
                 <br />

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { X, MessageCircle, ArrowRight } from 'lucide-react';
+import { X, MessageCircle, ArrowRight, BookOpen } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { track } from '@/lib/analytics';
 
@@ -177,6 +177,31 @@ export function StickyApplyBar({ universityName, universitySlug }: StickyApplyBa
             <MessageCircle className="h-4 w-4" />
             <span className="hidden sm:inline">{t('stickyApply.whatsapp')}</span>
           </a>
+
+          {/* Phase 2: DIY escape hatch. The bar previously had
+              2 actions (WhatsApp + Apply), both hard-selling the
+              full-service product. A Whop-shopper on a university
+              page had no in-bar path to "do it myself". Now there's
+              a 3rd action — a text-link "DIY →" — that routes to
+              /resources?university=<slug> so the Whop community
+              landing gets the context. The visual is intentionally
+              low-affordance (text link, no background) so the
+              primary CTA stays the crimson Apply. Same dismiss
+              logic as the rest of the bar. */}
+          <Link
+            href={`/resources?university=${encodeURIComponent(universitySlug)}`}
+            onClick={() => {
+              track('apply_click', {
+                location: 'sticky_bar_diy',
+                locale,
+                slug: universitySlug,
+              });
+            }}
+            className="flex-shrink-0 hidden sm:flex items-center gap-1 px-2 h-9 sm:h-10 text-white/80 hover:text-white text-xs font-semibold uppercase tracking-wider transition-colors"
+          >
+            <BookOpen className="h-3.5 w-3.5" />
+            {t('product.selfServe.ctaLabel')}
+          </Link>
 
           {/* Apply — primary action. Routes to /assessment
               (the deep-commit 4-step intake) with

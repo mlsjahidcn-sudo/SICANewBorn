@@ -475,7 +475,12 @@ export default function ProgramDetailPage() {
               </div>
             )}
 
-            {/* SICA Support Card */}
+            {/* SICA Support Card — full-service + DIY split. Same
+                visual chrome as the university detail's right rail,
+                matching pattern so the user recognizes it across
+                detail pages. Phase 2 funnel: full-service button is
+                the primary, the DIY "Apply yourself with templates"
+                is the secondary escape hatch. */}
             <div className="border border-[#9B1B30]/20 bg-[#9B1B30]/5 p-5">
               <div className="flex items-center gap-2 mb-3">
                 <div className="flex h-8 w-8 items-center justify-center bg-[#9B1B30] text-white text-xs font-bold">
@@ -504,6 +509,25 @@ export default function ProgramDetailPage() {
                 {t('cta.apply')}
                 <ArrowRight className="h-4 w-4" />
               </Link>
+              {/* Phase 2: DIY escape hatch. Same pattern as the
+                  university right-rail — the full-service card body
+                  still hard-sells, but a Whop-shopper now has a
+                  clear self-serve option below it. The ?university
+                  param isn't strictly required by /resources (the
+                  page doesn't yet filter by university) but it's
+                  passed so a future filter UI can pick it up. */}
+              <div className="mt-4 pt-4 border-t border-[#9B1B30]/20">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[#4B5563] mb-2">
+                  {t('productCompare.rowWhoApplies')}
+                </p>
+                <Link
+                  href={`/resources?program=${encodeURIComponent(program.slug)}`}
+                  className="flex w-full items-center justify-center gap-2 border border-[#1B2A4A] text-[#1B2A4A] hover:bg-[#1B2A4A] hover:text-white px-4 py-2.5 text-sm font-semibold transition-colors"
+                >
+                  {t('product.selfServe.ctaLabel')}
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
             </div>
           </div>
         </div>

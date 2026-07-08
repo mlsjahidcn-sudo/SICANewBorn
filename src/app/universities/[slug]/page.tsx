@@ -625,8 +625,14 @@ export default function UniversityDetailPage() {
                 locale={locale}
                 currentSlug={slug}
               />
-              {/* SICA Support Card — same CTA pattern the rest of
-                  the site uses for "talk to a counselor" placements. */}
+              {/* Phase 2 funnel: 2-product Support Card. Same visual
+                  chrome as before (crimson border, "S" mark) but the
+                  body now surfaces BOTH products so a Whop-shopper
+                  on a university page has an honest path forward.
+                  The primary CTA is full-service (SICA does it for
+                  you); the secondary CTA is self-serve (DIY with
+                  templates). Same intent as the StickyApplyBar split
+                  + the home page pill. */}
               <div className="rounded-none border-2 border-[#9B1B30]/25 bg-[#1B2A4A08] p-5">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="flex h-8 w-8 items-center justify-center rounded-none bg-[#9B1B30] text-white text-xs font-bold">
@@ -667,12 +673,42 @@ export default function UniversityDetailPage() {
                     {t('cta.apply')}
                   </Button>
                 </Link>
-                 <Link
+                <Link
                   href="/contact"
                   className="mt-2 block text-center text-xs font-semibold text-[#9B1B30] hover:underline"
                 >
                   {locale === 'en' ? 'Or talk to a counselor' : '或联系顾问'}
                 </Link>
+
+                {/* Phase 2: DIY escape hatch. The card body + the
+                    full-service button above still hard-sell the
+                    service, but a Whop-shopper now has a clear
+                    "I'll do it myself" option that points at our
+                    templates + study plans + community instead of
+                    forcing them into a counselor call. */}
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#4B5563] mb-2">
+                    {t('productCompare.rowWhoApplies')}
+                  </p>
+                  <Link
+                    href={`/resources?university=${encodeURIComponent(slug)}`}
+                    onClick={() => {
+                      track('apply_click', {
+                        location: 'support_card_diy',
+                        locale,
+                        slug,
+                      });
+                    }}
+                    className="block"
+                  >
+                    <Button
+                      variant="outline"
+                      className="w-full border-[#1B2A4A] text-[#1B2A4A] hover:bg-[#1B2A4A] hover:text-white font-semibold text-sm"
+                    >
+                      {t('product.selfServe.ctaLabel')} →
+                    </Button>
+                  </Link>
+                </div>
               </div>
             </aside>
           </div>
