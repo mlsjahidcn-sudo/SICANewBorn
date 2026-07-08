@@ -255,14 +255,14 @@ export function Footer() {
               </FooterLink>
               {/* Phase 2: Whop community link. The link is the actual
                   conversion — opens in a new tab since Whop owns the
-                  payment surface. TODO before deploy: replace the
-                  placeholder href with the real SICA Whop URL (the
-                  same one used on /resources). Raw <a> instead of
-                  FooterLink because FooterLink uses next/link which
-                  only supports internal routes; Whop is external. */}
+                  payment surface. URL is the canonical SICA Whop
+                  product — same value as WHOP_URL on /resources.
+                  Raw <a> instead of FooterLink because FooterLink
+                  uses next/link which only supports internal routes;
+                  Whop is external. */}
               <li>
                 <a
-                  href="https://whop.com/sica-resources"
+                  href="https://whop.com/sica-admission-to-chinese-universities/bachelor-degree-csca-admissions/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm text-gray-600 hover:text-[#9B1B30] transition-colors inline-flex items-center gap-1.5 group"

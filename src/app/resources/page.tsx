@@ -13,12 +13,12 @@ import { getServerT } from '@/lib/server-t';
 // for the i18n lookups, so we don't need a separate `cookies()` call.
 
 /**
- * TODO Phase 2: replace this placeholder with the real SICA Whop
- * community URL on deploy. The Whop community is the entire
- * self-serve product — without the right URL the CTA goes nowhere.
- * Example format: https://whop.com/sica-resources
+ * Real SICA Whop self-serve product — bachelor-degree CSCA
+ * admissions track. The Whop community is the entire self-serve
+ * product; this URL is the canonical link for every CTA on the
+ * /resources page and the footer "Whop community" entry.
  */
-const WHOP_URL = 'https://whop.com/sica-resources';
+const WHOP_URL = 'https://whop.com/sica-admission-to-chinese-universities/bachelor-degree-csca-admissions/';
 
 export default async function ResourcesPage() {
   const t = await getServerT();
