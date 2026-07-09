@@ -2371,6 +2371,26 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminLeadDetail.toastEmailSent': 'Email sent: "{{subject}}"',
     'adminLeadDetail.emailSendFailed': 'Send failed',
 
+    // WABPO WhatsApp send (Phase 45a)
+    'adminLeadDetail.sendWhatsappCardTitle': 'Send WhatsApp',
+    'adminLeadDetail.sendWhatsappCardBlurb':
+      'Send a WhatsApp template via WABPO. The lead\'s name, country, and intended program are auto-injected as template variables.',
+    'adminLeadDetail.composeWhatsapp': 'Send WhatsApp',
+    'adminLeadDetail.noWhatsappOnFile': 'No phone on file',
+    'adminLeadDetail.wabpoNotConfigured': 'WABPO not configured',
+    'adminLeadDetail.wabpoNotConfiguredHint':
+      'Set WABPO_API_KEY / WABPO_PROJECT_ID / WABPO_CAMPAIGN_ID in env to enable WhatsApp sending.',
+    'adminLeadDetail.wabpoNoTemplates': 'No approved templates yet — create one in WABPO → Templates.',
+    'adminLeadDetail.wabpoTemplatePicker': 'Template',
+    'adminLeadDetail.wabpoTemplateVars': 'Template variables',
+    'adminLeadDetail.wabpoOverrideNumber': 'Override phone (optional)',
+    'adminLeadDetail.wabpoOverrideNumberHint':
+      'Leave blank to use the lead\'s saved phone number.',
+    'adminLeadDetail.wabpoSending': 'Sending…',
+    'adminLeadDetail.wabpoSentToast':
+      'WhatsApp queued — messageId {{messageId}}',
+    'adminLeadDetail.wabpoSendingErr': 'Send failed',
+
     // ────────────────────────────────────────────────────────────────
     // VideoTestimonials — student review videos for the SICA
     // Admission service, mounted on the home page and every
@@ -4831,6 +4851,24 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminLeadDetail.toastTestSent': '测试邮件已发送："{{subject}}"',
     'adminLeadDetail.toastEmailSent': '邮件已发送："{{subject}}"',
     'adminLeadDetail.emailSendFailed': '发送失败',
+
+    // WABPO WhatsApp 发送（Phase 45a）
+    'adminLeadDetail.sendWhatsappCardTitle': '发送 WhatsApp',
+    'adminLeadDetail.sendWhatsappCardBlurb':
+      '通过 WABPO 发送 WhatsApp 模板消息。线索的姓名、国籍和目标项目会自动作为模板变量注入。',
+    'adminLeadDetail.composeWhatsapp': '发送 WhatsApp',
+    'adminLeadDetail.noWhatsappOnFile': '该线索未提供电话',
+    'adminLeadDetail.wabpoNotConfigured': 'WABPO 未配置',
+    'adminLeadDetail.wabpoNotConfiguredHint':
+      '请在环境中设置 WABPO_API_KEY / WABPO_PROJECT_ID / WABPO_CAMPAIGN_ID 三个变量后再使用。',
+    'adminLeadDetail.wabpoNoTemplates': '尚无已批准的模板 —— 请到 WABPO → Templates 创建。',
+    'adminLeadDetail.wabpoTemplatePicker': '模板',
+    'adminLeadDetail.wabpoTemplateVars': '模板变量',
+    'adminLeadDetail.wabpoOverrideNumber': '覆盖电话（可选）',
+    'adminLeadDetail.wabpoOverrideNumberHint': '留空则使用线索登记的电话号码。',
+    'adminLeadDetail.wabpoSending': '正在发送…',
+    'adminLeadDetail.wabpoSentToast': 'WhatsApp 已发出 —— 消息 ID {{messageId}}',
+    'adminLeadDetail.wabpoSendingErr': '发送失败',
 
     // ────────────────────────────────────────────────────────────────
     // Admission service, mounted on the home page and every

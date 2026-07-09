@@ -126,6 +126,21 @@ const ACTION_ICON: Record<string, string> = {
   contacted: '☎',
 };
 
+// WABPO WhatsApp template — phase 45a
+interface WabpoTemplate {
+  id: string;
+  templateName: string;
+  category: string;
+  templateType: string;
+  status: string;
+  variableDefinitions: Array<{
+    key: string;
+    placeholder: string;
+    sequence: number;
+    source: string;
+  }>;
+}
+
 export default function LeadDetailPage() {
   const { t } = useI18n();
   const params = useParams<{ id: string }>();
@@ -142,6 +157,16 @@ export default function LeadDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  // WABPO WhatsApp state — phase 45a
+  const [wabpoConfigured, setWabpoConfigured] = useState<boolean | null>(null);
+  const [wabpoTemplates, setWabpoTemplates] = useState<WabpoTemplate[]>([]);
+  const [wabpoModalOpen, setWabpoModalOpen] = useState(false);
+  const [wabpoSelectedTemplateId, setWabpoSelectedTemplateId] = useState('');
+  const [wabpoVariables, setWabpoVariables] = useState<Record<string, string>>({});
+  const [wabpoOverrideNumber, setWabpoOverrideNumber] = useState('');
+  const [wabpoSending, setWabpoSending] = useState(false);
+  const [wabpoSendError, setWabpoSendError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
 
   // Editable form fields
@@ -284,6 +309,72 @@ export default function LeadDetailPage() {
     setEmailModalOpen(true);
   };
 
+  // WABPO WhatsApp — phase 45a
+  // Fetch the approved-template list once on mount; the form just
+  // opens against the cached list. Re-fetch on reload.
+  useEffect(() => {
+    fetch('/api/admin/wabpo/templates')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!data) {
+          setWabpoConfigured(false);
+          return;
+        }
+        setWabpoConfigured(Boolean(data.configured));
+        setWabpoTemplates(Array.isArray(data.templates) ? data.templates : []);
+      })
+      .catch(() => setWabpoConfigured(false));
+  }, []);
+
+  const openWhatsappModal = () => {
+    setWabpoSendError(null);
+    setWabpoSelectedTemplateId(wabpoTemplates[0]?.id || '');
+    setWabpoVariables({});
+    setWabpoOverrideNumber('');
+    setWabpoModalOpen(true);
+  };
+
+  const sendWhatsapp = async () => {
+    if (!wabpoSelectedTemplateId) {
+      setWabpoSendError(t('adminLeadDetail.wabpoNoTemplates'));
+      return;
+    }
+    if (!lead) return;
+    setWabpoSending(true);
+    setWabpoSendError(null);
+    try {
+      const res = await fetch(`/api/admin/leads/${id}/send-whatsapp?type=${type}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          templateId: wabpoSelectedTemplateId,
+          variables: wabpoVariables,
+          ...(wabpoOverrideNumber ? { recipientNumber: wabpoOverrideNumber } : {}),
+        }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        setWabpoSendError(
+          (json && (json.error as string)) ||
+            `${res.status} ${res.statusText || 'send failed'}`,
+        );
+        return;
+      }
+      setSaveSuccess(
+        t('adminLeadDetail.wabpoSentToast', {
+          messageId: (json && (json.messageId as string)) || '—',
+        }),
+      );
+      setTimeout(() => setSaveSuccess(null), 3500);
+      setWabpoModalOpen(false);
+      // Refresh history so the new lead_history row appears
+      void load();
+    } catch (err) {
+      setWabpoSendError(err instanceof Error ? err.message : t('adminLeadDetail.wabpoSendingErr'));
+    } finally {
+      setWabpoSending(false);
+    }
+  };
   const sendEmail = async () => {
     if (!emailTemplateId && !emailOverrideSubject) {
       setEmailError(t('adminLeadDetail.emailSendValidationError'));
@@ -660,6 +751,43 @@ export default function LeadDetailPage() {
             </CardContent>
           </Card>
 
+          {/* WABPO WhatsApp send — phase 45a */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">{t('adminLeadDetail.sendWhatsappCardTitle')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs text-gray-500 mb-3">{t('adminLeadDetail.sendWhatsappCardBlurb')}</p>
+              {wabpoConfigured === false ? (
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  disabled
+                  title={t('adminLeadDetail.wabpoNotConfiguredHint')}
+                >
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  {t('adminLeadDetail.wabpoNotConfigured')}
+                </Button>
+              ) : wabpoConfigured === null ? (
+                <Button variant="outline" className="w-full" disabled>
+                  <Spinner size="xs" />
+                </Button>
+              ) : (
+                <Button
+                  onClick={openWhatsappModal}
+                  variant="outline"
+                  className="w-full"
+                  disabled={!pickString(lead, ['phone']) && !pickString(lead, ['whatsapp'])}
+                >
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  {pickString(lead, ['phone']) || pickString(lead, ['whatsapp'])
+                    ? t('adminLeadDetail.composeWhatsapp')
+                    : t('adminLeadDetail.noWhatsappOnFile')}
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
@@ -861,6 +989,118 @@ export default function LeadDetailPage() {
                 >
                   {emailSending ? <Spinner size="xs" /> : <Send className="h-4 w-4 mr-2" />}
                   {emailSendTest ? t('adminLeadDetail.sendTest') : t('adminLeadDetail.sendEmail')}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* WABPO WhatsApp send modal — phase 45a */}
+      {wabpoModalOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <Card className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <CardHeader className="flex flex-row items-start justify-between space-y-0">
+              <div>
+                <CardTitle>{t('adminLeadDetail.sendWhatsappCardTitle')}</CardTitle>
+                <p className="text-sm text-gray-500 mt-1">
+                  {t('adminLeadDetail.emailToLabel', {
+                    email:
+                      pickString(lead, ['phone']) || pickString(lead, ['whatsapp']) || '—',
+                  }).replace('To:', 'To phone:')}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setWabpoModalOpen(false)}
+                disabled={wabpoSending}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {wabpoSendError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 text-sm flex items-start gap-2">
+                  <AlertCircle size={14} className="mt-0.5 flex-shrink-0" />
+                  <span>{wabpoSendError}</span>
+                </div>
+              )}
+
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-1">
+                  {t('adminLeadDetail.wabpoTemplatePicker')}
+                </label>
+                <Select
+                  value={wabpoSelectedTemplateId}
+                  onValueChange={setWabpoSelectedTemplateId}
+                  disabled={wabpoSending || wabpoTemplates.length === 0}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('adminLeadDetail.emailTemplatePlaceholder')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {wabpoTemplates.length === 0 && (
+                      <SelectItem value="__none__" disabled>
+                        {t('adminLeadDetail.wabpoNoTemplates')}
+                      </SelectItem>
+                    )}
+                    {wabpoTemplates.map((tpl) => (
+                      <SelectItem key={tpl.id} value={tpl.id}>
+                        {tpl.templateName}{' '}
+                        <span className="text-gray-400 ml-1">
+                          — {tpl.templateType} / {tpl.category}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {wabpoSelectedTemplateId && (() => {
+                  const tpl = wabpoTemplates.find((t) => t.id === wabpoSelectedTemplateId);
+                  if (!tpl || !tpl.variableDefinitions?.length) return null;
+                  return (
+                    <p className="text-xs text-gray-500 mt-1">
+                      {t('adminLeadDetail.wabpoTemplateVars')}:{' '}
+                      {tpl.variableDefinitions
+                        .sort((a, b) => a.sequence - b.sequence)
+                        .map((v) => v.placeholder)
+                        .join(', ')}
+                    </p>
+                  );
+                })()}
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-1">
+                  {t('adminLeadDetail.wabpoOverrideNumber')}
+                </label>
+                <Input
+                  value={wabpoOverrideNumber}
+                  onChange={(e) => setWabpoOverrideNumber(e.target.value)}
+                  placeholder={pickString(lead, ['phone']) || '+86 138 0000 0000'}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  {t('adminLeadDetail.wabpoOverrideNumberHint')}
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t">
+                <Button
+                  variant="ghost"
+                  onClick={() => setWabpoModalOpen(false)}
+                  disabled={wabpoSending}
+                >
+                  {t('common.cancel')}
+                </Button>
+                <Button
+                  onClick={sendWhatsapp}
+                  disabled={wabpoSending || !wabpoSelectedTemplateId}
+                  className="bg-[#9B1B30] hover:bg-[#7A1526]"
+                >
+                  {wabpoSending ? <Spinner size="xs" /> : <MessageCircle className="h-4 w-4 mr-2" />}
+                  {wabpoSending
+                    ? t('adminLeadDetail.wabpoSending')
+                    : t('adminLeadDetail.composeWhatsapp')}
                 </Button>
               </div>
             </CardContent>
