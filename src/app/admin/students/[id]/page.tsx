@@ -1,10 +1,19 @@
 'use client';
 
+/**
+ * Admin: student detail page — banner + 5 tabs (Overview, Documents,
+ * Applications, Notes, Activity).
+ *
+ * Phase 44b: i18n — uses `adminStudentDetail.*` namespace in
+ * src/lib/i18n-translations.ts. Document/application status enum
+ * values stay untranslated (DB round-trip); only human-readable
+ * chrome (labels, banners, empty states, note copy) translates.
+ */
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
-  ArrowLeft, Edit, AlertCircle, FileText, FileCheck, FileX, Clock, Loader2,
-  Plus, Mail, ChevronRight, RefreshCw, Trash2,
+  ArrowLeft, Edit, AlertCircle, FileText, FileCheck, FileX, Clock,
+  Plus, Mail, RefreshCw, Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
@@ -14,6 +23,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { apiFetchJson } from '@/lib/api-client';
+import { useI18n } from '@/lib/i18n';
 import type { AdminStudent } from '@/lib/student-mapper';
 
 type DocumentStatus = 'Pending' | 'Uploaded' | 'Verified' | 'Rejected';
@@ -55,6 +65,7 @@ interface ActivityEvent {
   meta?: Record<string, unknown>;
 }
 
+// Status colors stay tied to the DB enum values — no translation.
 const statusColors: Record<string, string> = {
   Active: 'bg-green-100 text-green-800',
   Inactive: 'bg-gray-100 text-gray-800',
@@ -81,6 +92,7 @@ const appStatusColor: Record<ApplicationStatus, string> = {
 };
 
 export default function AdminStudentDetailPage() {
+  const { t } = useI18n();
   const params = useParams();
   const router = useRouter();
   const studentId = params.id as string;
@@ -108,11 +120,11 @@ export default function AdminStudentDetailPage() {
     } catch (err) {
       const e = err as { status?: number; message?: string };
       if (e.status === 404) setNotFound(true);
-      else setError(e.message || 'Failed to load student');
+      else setError(e.message || t('adminStudentDetail.errorFailedLoad'));
     } finally {
       setIsLoading(false);
     }
-  }, [studentId]);
+  }, [studentId, t]);
 
   useEffect(() => {
     loadStudent();
@@ -166,16 +178,16 @@ export default function AdminStudentDetailPage() {
         <div className="flex items-center gap-2 mb-6">
           <Button variant="ghost" onClick={() => router.push('/admin/students')}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Students
+            {t('adminStudentDetail.backToStudents')}
           </Button>
         </div>
         <Card>
           <CardContent className="pt-6 text-center py-12">
             <AlertCircle className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-            <h3 className="text-lg font-semibold mb-2">Student Not Found</h3>
-            <p className="text-gray-500 mb-4">This student may have been deleted or doesn't exist.</p>
+            <h3 className="text-lg font-semibold mb-2">{t('adminStudentDetail.notFoundTitle')}</h3>
+            <p className="text-gray-500 mb-4">{t('adminStudentDetail.notFoundBody')}</p>
             <Button onClick={() => router.push('/admin/students')}>
-              Back to Students
+              {t('adminStudentDetail.backToStudents')}
             </Button>
           </CardContent>
         </Card>
@@ -188,9 +200,9 @@ export default function AdminStudentDetailPage() {
       <div className="space-y-6">
         <Card className="border-red-200 bg-red-50">
           <CardContent className="pt-4 pb-4">
-            <p className="text-red-800 text-sm"><strong>Error:</strong> {error || 'Unknown error'}</p>
+            <p className="text-red-800 text-sm"><strong>{t('adminStudentDetail.errorPrefix')}</strong> {error || t('adminStudentDetail.unknownError')}</p>
             <Button size="sm" variant="outline" onClick={loadStudent} className="mt-2">
-              <RefreshCw className="w-4 h-4 mr-1" /> Retry
+              <RefreshCw className="w-4 h-4 mr-1" /> {t('adminStudentDetail.retry')}
             </Button>
           </CardContent>
         </Card>
@@ -200,7 +212,7 @@ export default function AdminStudentDetailPage() {
 
   const fullName = `${student.firstName} ${student.lastName}`.trim() || '—';
   const sourceLabel = student.isOffline
-    ? 'Offline Student'
+    ? t('adminStudents.badgeOffline')
     : student.source === 'Partner'
       ? 'Partner'
       : 'Online';
@@ -212,20 +224,20 @@ export default function AdminStudentDetailPage() {
         <div className="flex items-center gap-4">
           <Button variant="ghost" onClick={() => router.push('/admin/students')}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Students
+            {t('adminStudentDetail.backToStudents')}
           </Button>
         </div>
         <div className="flex items-center gap-3">
           <Button variant="outline" onClick={loadStudent}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
+            <RefreshCw className="h-4 h-4 mr-2" />
+            {t('adminStudents.buttonRefresh')}
           </Button>
           <Button
             className="bg-[#9B1B30] hover:bg-[#7A1526]"
             onClick={() => router.push(`/admin/students/${studentId}/edit`)}
           >
             <Edit className="h-4 w-4 mr-2" />
-            Edit Student
+            {t('adminStudentDetail.buttonEdit')}
           </Button>
         </div>
       </div>
@@ -249,10 +261,10 @@ export default function AdminStudentDetailPage() {
                 </Badge>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600">
-                <div><span className="text-gray-400">Email:</span> {student.email}</div>
-                <div><span className="text-gray-400">Phone:</span> {student.phone || '—'}</div>
-                <div><span className="text-gray-400">Nationality:</span> {student.nationality || '—'}</div>
-                <div><span className="text-gray-400">Created:</span> {new Date(student.createdAt).toLocaleDateString()}</div>
+                <div><span className="text-gray-400">{t('adminStudentDetail.bannerEmail')}</span> {student.email}</div>
+                <div><span className="text-gray-400">{t('adminStudentDetail.bannerPhone')}</span> {student.phone || '—'}</div>
+                <div><span className="text-gray-400">{t('adminStudentDetail.bannerNationality')}</span> {student.nationality || '—'}</div>
+                <div><span className="text-gray-400">{t('adminStudentDetail.bannerCreated')}</span> {new Date(student.createdAt).toLocaleDateString()}</div>
               </div>
             </div>
           </div>
@@ -266,52 +278,52 @@ export default function AdminStudentDetailPage() {
         if (v === 'activity') loadTab('activity');
       }}>
         <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
-          <TabsTrigger value="applications">Applications</TabsTrigger>
-          <TabsTrigger value="notes">Notes</TabsTrigger>
-          <TabsTrigger value="activity">Activity</TabsTrigger>
+          <TabsTrigger value="overview">{t('adminStudentDetail.tabOverview')}</TabsTrigger>
+          <TabsTrigger value="documents">{t('adminStudentDetail.tabDocuments')}</TabsTrigger>
+          <TabsTrigger value="applications">{t('adminStudentDetail.tabApplications')}</TabsTrigger>
+          <TabsTrigger value="notes">{t('adminStudentDetail.tabNotes')}</TabsTrigger>
+          <TabsTrigger value="activity">{t('adminStudentDetail.tabActivity')}</TabsTrigger>
         </TabsList>
 
         {/* Overview */}
         <TabsContent value="overview" className="space-y-6">
           <Card>
-            <CardHeader><CardTitle>Student Information</CardTitle></CardHeader>
+            <CardHeader><CardTitle>{t('adminStudentDetail.studentInfoTitle')}</CardTitle></CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <h4 className="font-semibold mb-4">Basic Info</h4>
+                  <h4 className="font-semibold mb-4">{t('adminStudentDetail.basicInfoTitle')}</h4>
                   <div className="space-y-3 text-sm">
-                    <Row label="First Name" value={student.firstName} />
-                    <Row label="Last Name" value={student.lastName} />
-                    <Row label="Date of Birth" value={student.dateOfBirth} />
-                    <Row label="Nationality" value={student.nationality} />
-                    <Row label="Gender" value={student.extra?.gender as string | undefined} />
+                    <Row label={t('adminStudentDetail.fieldFirstName')} value={student.firstName} />
+                    <Row label={t('adminStudentDetail.fieldLastName')} value={student.lastName} />
+                    <Row label={t('adminStudentDetail.fieldDateOfBirth')} value={student.dateOfBirth} />
+                    <Row label={t('adminStudentDetail.fieldNationality')} value={student.nationality} />
+                    <Row label={t('adminStudentDetail.fieldGender')} value={student.extra?.gender as string | undefined} />
                   </div>
                 </div>
                 <div>
-                  <h4 className="font-semibold mb-4">Contact</h4>
+                  <h4 className="font-semibold mb-4">{t('adminStudentDetail.contactTitle')}</h4>
                   <div className="space-y-3 text-sm">
-                    <Row label="Email" value={student.email} />
-                    <Row label="Phone" value={student.phone} />
-                    <Row label="WhatsApp" value={student.extra?.whatsapp as string | undefined} />
-                    <Row label="Address" value={student.extra?.address as string | undefined} />
+                    <Row label={t('adminStudentDetail.fieldEmail')} value={student.email} />
+                    <Row label={t('adminStudentDetail.fieldPhone')} value={student.phone} />
+                    <Row label={t('adminStudentDetail.fieldWhatsapp')} value={student.extra?.whatsapp as string | undefined} />
+                    <Row label={t('adminStudentDetail.fieldAddress')} value={student.extra?.address as string | undefined} />
                   </div>
                 </div>
               </div>
               <Separator className="my-6" />
               <div>
-                <h4 className="font-semibold mb-4">Study Target</h4>
+                <h4 className="font-semibold mb-4">{t('adminStudentDetail.studyTargetTitle')}</h4>
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-3 text-sm">
-                    <Row label="Target Degree" value={student.targetDegree} />
-                    <Row label="Target Intake" value={student.targetIntake} />
-                    <Row label="Source" value={student.source} />
+                    <Row label={t('adminStudentDetail.fieldTargetDegree')} value={student.targetDegree} />
+                    <Row label={t('adminStudentDetail.fieldTargetIntake')} value={student.targetIntake} />
+                    <Row label={t('adminStudentDetail.fieldSource')} value={student.source} />
                   </div>
                   <div className="space-y-3 text-sm">
-                    <Row label="HSK Level" value={student.extra?.hskLevel as string | undefined} />
-                    <Row label="IELTS" value={student.extra?.ieltsScore as string | undefined} />
-                    <Row label="TOEFL" value={student.extra?.toeflScore as string | undefined} />
+                    <Row label={t('adminStudentDetail.fieldHskLevel')} value={student.extra?.hskLevel as string | undefined} />
+                    <Row label={t('adminStudentDetail.fieldIelts')} value={student.extra?.ieltsScore as string | undefined} />
+                    <Row label={t('adminStudentDetail.fieldToefl')} value={student.extra?.toeflScore as string | undefined} />
                   </div>
                 </div>
               </div>
@@ -330,8 +342,8 @@ export default function AdminStudentDetailPage() {
               ) : documents.length === 0 ? (
                 <div className="text-center py-12 text-gray-500">
                   <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p>No documents uploaded yet.</p>
-                  <p className="text-xs mt-1">Documents are added by the student via the student portal.</p>
+                  <p>{t('adminStudentDetail.docsEmpty')}</p>
+                  <p className="text-xs mt-1">{t('adminStudentDetail.docsEmptyHint')}</p>
                 </div>
               ) : (
                 <div className="divide-y">
@@ -347,10 +359,15 @@ export default function AdminStudentDetailPage() {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm truncate">{doc.name}</p>
                         <p className="text-xs text-gray-500">
-                          {doc.category} • {doc.file_name || 'no file'} • uploaded {new Date(doc.uploaded_at).toLocaleDateString()}
+                          {doc.category} • {doc.file_name || 'no file'} •{' '}
+                          {t('adminStudentDetail.docUploadedOn', {
+                            date: new Date(doc.uploaded_at).toLocaleDateString(),
+                          })}
                         </p>
                         {doc.rejection_reason && (
-                          <p className="text-xs text-red-600 mt-1">Rejected: {doc.rejection_reason}</p>
+                          <p className="text-xs text-red-600 mt-1">
+                            {t('adminStudentDetail.docRejectedWith', { reason: doc.rejection_reason })}
+                          </p>
                         )}
                       </div>
                       <Badge className={docStatusColor[doc.status] || 'bg-gray-100'}>
@@ -375,8 +392,8 @@ export default function AdminStudentDetailPage() {
               ) : applications.length === 0 ? (
                 <div className="text-center py-12 text-gray-500">
                   <FileCheck className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p>No applications yet for this student.</p>
-                  <p className="text-xs mt-1">Applications are created via the student portal or the partner portal.</p>
+                  <p>{t('adminStudentDetail.appsEmpty')}</p>
+                  <p className="text-xs mt-1">{t('adminStudentDetail.appsEmptyHint')}</p>
                 </div>
               ) : (
                 <div className="divide-y">
@@ -390,7 +407,9 @@ export default function AdminStudentDetailPage() {
                           {app.target_degree || '—'} • {app.target_intake || '—'} • {app.university_slug || '—'}
                         </p>
                         <p className="text-xs text-gray-400 mt-1">
-                          Created {new Date(app.created_at).toLocaleString()}
+                          {t('adminStudentDetail.appCreatedOn', {
+                            date: new Date(app.created_at).toLocaleString(),
+                          })}
                         </p>
                       </div>
                       <Badge className={appStatusColor[app.status as ApplicationStatus] || 'bg-gray-100'}>
@@ -420,7 +439,7 @@ export default function AdminStudentDetailPage() {
               ) : activity.length === 0 ? (
                 <div className="text-center py-12 text-gray-500">
                   <Clock className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p>No activity yet.</p>
+                  <p>{t('adminStudentDetail.activityEmpty')}</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -453,8 +472,6 @@ function Row({ label, value }: { label: string; value: string | undefined | null
   );
 }
 
-// NotesTab is defined below — kept after the main component for readability.
-
 interface StudentNote {
   id: string;
   student_id: string;
@@ -467,6 +484,7 @@ interface StudentNote {
 }
 
 function NotesTab({ studentId }: { studentId: string }) {
+  const { t } = useI18n();
   const [notes, setNotes] = useState<StudentNote[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [newBody, setNewBody] = useState('');
@@ -482,11 +500,11 @@ function NotesTab({ studentId }: { studentId: string }) {
       );
       setNotes(notes);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load notes');
+      setError(err instanceof Error ? err.message : t('adminStudentDetail.errorFailedLoad'));
     } finally {
       setIsLoading(false);
     }
-  }, [studentId]);
+  }, [studentId, t]);
 
   useEffect(() => {
     load();
@@ -505,21 +523,21 @@ function NotesTab({ studentId }: { studentId: string }) {
       setIsPinned(false);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add note');
+      setError(err instanceof Error ? err.message : t('adminStudentDetail.errorFailedAddNote'));
     } finally {
       setIsPosting(false);
     }
   };
 
   const handleDelete = async (noteId: string) => {
-    if (!confirm('Delete this note?')) return;
+    if (!confirm(t('adminStudentDetail.notesDeleteConfirm'))) return;
     try {
       await apiFetchJson(`/api/admin/students/${studentId}/notes/${noteId}`, {
         method: 'DELETE',
       });
       setNotes((prev) => prev.filter((n) => n.id !== noteId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete note');
+      setError(err instanceof Error ? err.message : t('adminStudentDetail.errorFailedDeleteNote'));
     }
   };
 
@@ -531,7 +549,7 @@ function NotesTab({ studentId }: { studentId: string }) {
       });
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update note');
+      setError(err instanceof Error ? err.message : t('adminStudentDetail.errorFailedTogglePin'));
     }
   };
 
@@ -540,7 +558,7 @@ function NotesTab({ studentId }: { studentId: string }) {
       <Card>
         <CardContent className="pt-6 space-y-3">
           <Textarea
-            placeholder="Add an internal note about this student..."
+            placeholder={t('adminStudentDetail.notesPlaceholder')}
             value={newBody}
             onChange={(e) => setNewBody(e.target.value)}
             rows={3}
@@ -554,7 +572,7 @@ function NotesTab({ studentId }: { studentId: string }) {
                 onChange={(e) => setIsPinned(e.target.checked)}
                 className="rounded"
               />
-              Pin to top
+              {t('adminStudentDetail.notesPinLabel')}
             </label>
             <Button
               onClick={handleAdd}
@@ -563,7 +581,7 @@ function NotesTab({ studentId }: { studentId: string }) {
               size="sm"
             >
               {isPosting ? <Spinner size="sm" className="mr-1" /> : <Plus className="w-4 h-4 mr-1" />}
-              Add Note
+              {t('adminStudentDetail.buttonAddNote')}
             </Button>
           </div>
         </CardContent>
@@ -572,7 +590,7 @@ function NotesTab({ studentId }: { studentId: string }) {
       {error && (
         <Card className="border-red-200 bg-red-50">
           <CardContent className="pt-3 pb-3">
-            <p className="text-red-800 text-sm"><strong>Error:</strong> {error}</p>
+            <p className="text-red-800 text-sm"><strong>{t('adminStudentDetail.errorPrefix')}</strong> {error}</p>
           </CardContent>
         </Card>
       )}
@@ -587,10 +605,8 @@ function NotesTab({ studentId }: { studentId: string }) {
         <Card>
           <CardContent className="pt-6 text-center py-12">
             <Mail className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-            <p className="text-gray-500">No notes yet.</p>
-            <p className="text-xs text-gray-400 mt-1">
-              Internal notes are admin-only. Students never see these.
-            </p>
+            <p className="text-gray-500">{t('adminStudentDetail.notesEmpty')}</p>
+            <p className="text-xs text-gray-400 mt-1">{t('adminStudentDetail.notesEmptyHint')}</p>
           </CardContent>
         </Card>
       ) : (
@@ -601,11 +617,11 @@ function NotesTab({ studentId }: { studentId: string }) {
                 <div className="flex items-start gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-                      <span className="font-medium text-gray-700">{note.author_name || 'Admin'}</span>
+                      <span className="font-medium text-gray-700">{note.author_name || t('adminStudentDetail.notesAuthorFallback')}</span>
                       <span>•</span>
                       <span>{new Date(note.created_at).toLocaleString()}</span>
                       {note.is_pinned && (
-                        <Badge className="bg-[#9B1B30] text-white text-xs">Pinned</Badge>
+                        <Badge className="bg-[#9B1B30] text-white text-xs">{t('adminStudentDetail.notesPinnedBadge')}</Badge>
                       )}
                     </div>
                     <p className="text-sm whitespace-pre-wrap">{note.body}</p>
@@ -615,7 +631,7 @@ function NotesTab({ studentId }: { studentId: string }) {
                       variant="ghost"
                       size="icon"
                       onClick={() => handleTogglePin(note)}
-                      title={note.is_pinned ? 'Unpin' : 'Pin'}
+                      title={note.is_pinned ? t('adminStudentDetail.notesUnpinTitle') : t('adminStudentDetail.notesPinTitle')}
                     >
                       {note.is_pinned ? '📌' : '📍'}
                     </Button>
@@ -624,7 +640,7 @@ function NotesTab({ studentId }: { studentId: string }) {
                       size="icon"
                       onClick={() => handleDelete(note.id)}
                       className="text-red-600 hover:text-red-700"
-                      title="Delete"
+                      title={t('adminStudentDetail.notesDeleteTitle')}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>

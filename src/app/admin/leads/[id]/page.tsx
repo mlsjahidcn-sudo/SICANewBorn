@@ -8,8 +8,12 @@
  * (lead_history rows, newest first).
  *
  * URL: /admin/leads/[id]?type=contact|chat|assessment
+ *
+ * Phase 44b: i18n — `adminLeadDetail.*` namespace in
+ * src/lib/i18n-translations.ts. Status/tier enum values stay
+ * untranslated (DB round-trip), only human-readable chrome moves.
  */
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
@@ -34,7 +38,6 @@ import {
   GraduationCap,
   FileText,
   ExternalLink,
-  User as UserIcon,
   History,
   PhoneCall,
   Send,
@@ -43,6 +46,7 @@ import {
 import { apiFetchJson, ApiError } from '@/lib/api-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useI18n } from '@/lib/i18n';
 
 type LeadType = 'contact' | 'chat' | 'assessment';
 
@@ -80,12 +84,7 @@ interface LeadDetail {
   history: HistoryRow[];
 }
 
-const STATUS_WHITELIST: Record<LeadType, string[]> = {
-  contact: ['New', 'In Progress', 'Resolved', 'Spam'],
-  chat: ['New', 'Contacted', 'Qualified', 'Unqualified'],
-  assessment: ['Pending', 'Reviewed', 'Contacted', 'Accepted', 'Rejected'],
-};
-
+// Status colors are untranslated because the status values are DB enums.
 const STATUS_COLOR: Record<string, string> = {
   New: 'bg-blue-100 text-blue-800',
   Pending: 'bg-blue-100 text-blue-800',
@@ -100,6 +99,15 @@ const STATUS_COLOR: Record<string, string> = {
   Contacted: 'bg-purple-100 text-purple-800',
 };
 
+const STATUS_WHITELIST: Record<LeadType, string[]> = {
+  contact: ['New', 'In Progress', 'Resolved', 'Spam'],
+  chat: ['New', 'Contacted', 'Qualified', 'Unqualified'],
+  assessment: ['Pending', 'Reviewed', 'Contacted', 'Accepted', 'Rejected'],
+};
+
+// ACTION_LABEL and ACTION_ICON stay English — `action` is a DB enum that
+// round-trips through lead_history rows; translating it would break the
+// `ACTION_ICON[action]` lookup below and the action-tracking semantics.
 const ACTION_LABEL: Record<string, string> = {
   created: 'Lead created',
   status_changed: 'Status changed',
@@ -119,6 +127,7 @@ const ACTION_ICON: Record<string, string> = {
 };
 
 export default function LeadDetailPage() {
+  const { t } = useI18n();
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -151,6 +160,29 @@ export default function LeadDetailPage() {
   const [emailError, setEmailError] = useState<string | null>(null);
   const [emailSendTest, setEmailSendTest] = useState(false);
 
+  // Lead type labels depend on locale — re-derive on every render so a
+  // locale switch repaints them. The values themselves remain DB
+  // constants; only the user-visible badge label moves.
+  const TYPE_LABEL: Record<LeadType, string> = useMemo(
+    () => ({
+      contact: t('adminLeads.typeContact'),
+      chat: t('adminLeads.typeChat'),
+      assessment: t('adminLeads.typeAssessment'),
+    }),
+    [t],
+  );
+
+  const CHANNEL_LABEL: Record<string, string> = useMemo(
+    () => ({
+      whatsapp: t('adminLeadDetail.channelWhatsapp'),
+      email: t('adminLeadDetail.channelEmail'),
+      phone: t('adminLeadDetail.channelPhoneCall'),
+      sms: t('adminLeadDetail.channelSms'),
+      other: t('adminLeadDetail.channelOther'),
+    }),
+    [t],
+  );
+
   // Load lead + history + team in parallel
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -169,14 +201,13 @@ export default function LeadDetailPage() {
         leadRes.lead.assigned_to ? String(leadRes.lead.assigned_to) : 'unassigned',
       );
       setTeam(teamRes.team || []);
-      // Only show active oneoff templates in the picker
       setTemplates((tplRes.templates || []).filter((t) => t.category === 'oneoff'));
     } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : 'Failed to load lead');
+      setLoadError(err instanceof ApiError ? err.message : t('adminLeadDetail.errorFailedLoad'));
     } finally {
       setIsLoading(false);
     }
-  }, [id, type]);
+  }, [id, type, t]);
 
   useEffect(() => {
     load();
@@ -203,10 +234,10 @@ export default function LeadDetailPage() {
       );
       setLead(res.lead);
       setHistory(res.history || []);
-      setSaveSuccess('Saved');
+      setSaveSuccess(t('adminLeadDetail.toastSaved'));
       setTimeout(() => setSaveSuccess(null), 2000);
     } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : 'Save failed');
+      setLoadError(err instanceof ApiError ? err.message : t('adminLeadDetail.toastSaveFailed'));
     } finally {
       setIsSaving(false);
     }
@@ -230,10 +261,14 @@ export default function LeadDetailPage() {
       );
       setLead(res.lead);
       setHistory(res.history || []);
-      setSaveSuccess(`Contact recorded via ${contactChannel}`);
+      setSaveSuccess(
+        t('adminLeadDetail.toastContactRecorded', { channel: CHANNEL_LABEL[contactChannel] }),
+      );
       setTimeout(() => setSaveSuccess(null), 2500);
     } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : 'Failed to record contact');
+      setLoadError(
+        err instanceof ApiError ? err.message : t('adminLeadDetail.errorFailedRecordContact'),
+      );
     } finally {
       setIsSaving(false);
     }
@@ -251,7 +286,7 @@ export default function LeadDetailPage() {
 
   const sendEmail = async () => {
     if (!emailTemplateId && !emailOverrideSubject) {
-      setEmailError('Pick a template or write a custom subject + body');
+      setEmailError(t('adminLeadDetail.emailSendValidationError'));
       return;
     }
     if (!lead) return;
@@ -289,15 +324,14 @@ export default function LeadDetailPage() {
       );
       setSaveSuccess(
         emailSendTest
-          ? `Test sent: "${res.rendered.subject}"`
-          : `Email sent: "${res.rendered.subject}"`,
+          ? t('adminLeadDetail.toastTestSent', { subject: res.rendered.subject })
+          : t('adminLeadDetail.toastEmailSent', { subject: res.rendered.subject }),
       );
       setTimeout(() => setSaveSuccess(null), 3000);
       setEmailModalOpen(false);
-      // Refresh history to show the new lead_history row
       load();
     } catch (err) {
-      setEmailError(err instanceof ApiError ? err.message : 'Send failed');
+      setEmailError(err instanceof ApiError ? err.message : t('adminLeadDetail.emailSendFailed'));
     } finally {
       setEmailSending(false);
     }
@@ -315,7 +349,7 @@ export default function LeadDetailPage() {
     return (
       <div className="space-y-4">
         <Button variant="ghost" onClick={() => router.push('/admin/leads')}>
-          <ArrowLeft className="h-4 w-4 mr-2" /> Back to leads
+          <ArrowLeft className="h-4 w-4 mr-2" /> {t('adminLeadDetail.backToLeads')}
         </Button>
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm flex items-start gap-2">
           <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
@@ -344,14 +378,14 @@ export default function LeadDetailPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={() => router.push('/admin/leads')}>
-            <ArrowLeft className="h-4 w-4 mr-2" /> Leads
+            <ArrowLeft className="h-4 w-4 mr-2" /> {t('adminLeads.title')}
           </Button>
           <div>
             <h1 className="text-2xl font-bold text-[#1B2A4A]">{displayName}</h1>
             <p className="text-sm text-gray-500">
-              {type === 'contact' && 'Contact form submission'}
-              {type === 'chat' && 'Chat assistant lead'}
-              {type === 'assessment' && 'Public assessment submission'}
+              {type === 'contact' && t('adminLeadDetail.typeContact')}
+              {type === 'chat' && t('adminLeadDetail.typeChat')}
+              {type === 'assessment' && t('adminLeadDetail.typeAssessment')}
             </p>
           </div>
         </div>
@@ -378,7 +412,7 @@ export default function LeadDetailPage() {
         <div className="lg:col-span-2 space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Contact info</CardTitle>
+              <CardTitle className="text-base">{t('adminLeadDetail.contactInfoTitle')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               {pickString(lead, ['email']) && (
@@ -430,18 +464,18 @@ export default function LeadDetailPage() {
             pickString(lead, ['message'])) && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Lead details</CardTitle>
+                <CardTitle className="text-base">{t('adminLeadDetail.cardLeadDetails')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 {pickString(lead, ['interested_program']) && (
                   <div>
-                    <span className="font-medium text-gray-600">Interested program:</span>{' '}
+                    <span className="font-medium text-gray-600">{t('adminLeadDetail.fieldInterestedProgram')}</span>{' '}
                     {pickString(lead, ['interested_program'])}
                   </div>
                 )}
                 {pickString(lead, ['interested_degree']) && (
                   <div>
-                    <span className="font-medium text-gray-600">Degree:</span>{' '}
+                    <span className="font-medium text-gray-600">{t('adminLeadDetail.fieldDegree')}</span>{' '}
                     {pickString(lead, ['interested_degree'])}
                   </div>
                 )}
@@ -449,14 +483,14 @@ export default function LeadDetailPage() {
                   <div className="flex items-start gap-2">
                     <GraduationCap className="h-4 w-4 mt-0.5" />
                     <div>
-                      <span className="font-medium text-gray-600">Intended major:</span>{' '}
+                      <span className="font-medium text-gray-600">{t('adminLeadDetail.fieldIntendedMajor')}</span>{' '}
                       {pickString(lead, ['intended_major'])}
                     </div>
                   </div>
                 )}
                 {pickString(lead, ['current_education']) && (
                   <div>
-                    <span className="font-medium text-gray-600">Current education:</span>{' '}
+                    <span className="font-medium text-gray-600">{t('adminLeadDetail.fieldCurrentEducation')}</span>{' '}
                     {pickString(lead, ['current_education'])}
                   </div>
                 )}
@@ -464,14 +498,14 @@ export default function LeadDetailPage() {
                   <div className="flex items-start gap-2">
                     <FileText className="h-4 w-4 mt-0.5" />
                     <div>
-                      <span className="font-medium text-gray-600">Subject:</span>{' '}
+                      <span className="font-medium text-gray-600">{t('adminLeadDetail.fieldSubject')}</span>{' '}
                       {pickString(lead, ['subject'])}
                     </div>
                   </div>
                 )}
                 {pickString(lead, ['message']) && (
                   <div className="border-t pt-3">
-                    <p className="font-medium text-gray-600 mb-1">Message</p>
+                    <p className="font-medium text-gray-600 mb-1">{t('adminLeadDetail.fieldMessage')}</p>
                     <p className="text-gray-800 whitespace-pre-wrap">
                       {pickString(lead, ['message'])}
                     </p>
@@ -480,7 +514,7 @@ export default function LeadDetailPage() {
                 {pickString(lead, ['conversation_context']) && (
                   <details className="border-t pt-3">
                     <summary className="text-sm text-gray-600 cursor-pointer">
-                      Chat conversation context
+                      {t('adminLeadDetail.chatContextLabel')}
                     </summary>
                     <pre className="mt-2 text-xs text-gray-700 whitespace-pre-wrap max-h-64 overflow-y-auto">
                       {JSON.stringify(
@@ -498,11 +532,13 @@ export default function LeadDetailPage() {
           {/* Edit form */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Workflow</CardTitle>
+              <CardTitle className="text-base">{t('adminLeadDetail.workflowTitle')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1">Status</label>
+                <label className="text-sm font-medium text-gray-700 block mb-1">
+                  {t('adminLeadDetail.labelStatus')}
+                </label>
                 <Select value={statusVal} onValueChange={setStatusVal}>
                   <SelectTrigger>
                     <SelectValue />
@@ -519,14 +555,14 @@ export default function LeadDetailPage() {
 
               <div>
                 <label className="text-sm font-medium text-gray-700 block mb-1">
-                  Assignee
+                  {t('adminLeadDetail.labelAssignee')}
                 </label>
                 <Select value={assigneeVal} onValueChange={setAssigneeVal}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Unassigned" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                    <SelectItem value="unassigned">{t('adminLeads.filterUnassigned')}</SelectItem>
                     {team.map((m) => (
                       <SelectItem key={m.user_id} value={m.user_id}>
                         {m.display_name} ({m.role})
@@ -537,12 +573,14 @@ export default function LeadDetailPage() {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1">Notes</label>
+                <label className="text-sm font-medium text-gray-700 block mb-1">
+                  {t('adminLeadDetail.labelNotes')}
+                </label>
                 <Textarea
                   value={notesVal}
                   onChange={(e) => setNotesVal(e.target.value)}
                   rows={5}
-                  placeholder="Internal notes about this lead..."
+                  placeholder={t('adminLeadDetail.notesPlaceholder')}
                 />
               </div>
 
@@ -553,7 +591,7 @@ export default function LeadDetailPage() {
                   className="bg-[#1B2A4A] hover:bg-[#152033]"
                 >
                   {isSaving ? <Spinner size="xs" /> : <Save className="h-4 w-4 mr-2" />}
-                  Save changes
+                  {t('adminLeadDetail.saveChanges')}
                 </Button>
               </div>
             </CardContent>
@@ -564,21 +602,21 @@ export default function LeadDetailPage() {
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Record contact</CardTitle>
+              <CardTitle className="text-base">{t('adminLeadDetail.recordContactTitle')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div>
-                <label className="text-sm text-gray-700 block mb-1">Channel</label>
+                <label className="text-sm text-gray-700 block mb-1">{t('adminLeadDetail.labelChannel')}</label>
                 <Select value={contactChannel} onValueChange={setContactChannel}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                    <SelectItem value="email">Email</SelectItem>
-                    <SelectItem value="phone">Phone call</SelectItem>
-                    <SelectItem value="sms">SMS</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
+                    <SelectItem value="whatsapp">{CHANNEL_LABEL.whatsapp}</SelectItem>
+                    <SelectItem value="email">{CHANNEL_LABEL.email}</SelectItem>
+                    <SelectItem value="phone">{CHANNEL_LABEL.phone}</SelectItem>
+                    <SelectItem value="sms">{CHANNEL_LABEL.sms}</SelectItem>
+                    <SelectItem value="other">{CHANNEL_LABEL.other}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -589,14 +627,15 @@ export default function LeadDetailPage() {
                 className="w-full"
               >
                 <PhoneCall className="h-4 w-4 mr-2" />
-                Log contact attempt
+                {t('adminLeadDetail.logContactAttempt')}
               </Button>
               {Number(lead.contact_attempts || 0) > 0 && (
                 <p className="text-xs text-gray-500">
-                  {String(lead.contact_attempts)} previous attempt
-                  {Number(lead.contact_attempts) === 1 ? '' : 's'}
+                  {t('adminLeadDetail.contactAttempts', { count: Number(lead.contact_attempts) })}
                   {lead.last_contacted_at
-                    ? ` · last ${new Date(String(lead.last_contacted_at)).toLocaleDateString()}`
+                    ? ` · ${t('adminLeadDetail.contactLastOn', {
+                        date: new Date(String(lead.last_contacted_at)).toLocaleDateString(),
+                      })}`
                     : null}
                 </p>
               )}
@@ -605,13 +644,10 @@ export default function LeadDetailPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Send email</CardTitle>
+              <CardTitle className="text-base">{t('adminLeadDetail.sendEmailTitle')}</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-xs text-gray-500 mb-3">
-                Pick a one-off template or write a custom message. The lead's first name,
-                country, and intended program are auto-injected as variables.
-              </p>
+              <p className="text-xs text-gray-500 mb-3">{t('adminLeadDetail.sendEmailBlurb')}</p>
               <Button
                 onClick={openEmailModal}
                 variant="outline"
@@ -619,7 +655,7 @@ export default function LeadDetailPage() {
                 disabled={!pickString(lead, ['email'])}
               >
                 <Send className="h-4 w-4 mr-2" />
-                {pickString(lead, ['email']) ? 'Compose email' : 'No email on file'}
+                {pickString(lead, ['email']) ? t('adminLeadDetail.composeEmail') : t('adminLeadDetail.noEmailOnFile')}
               </Button>
             </CardContent>
           </Card>
@@ -627,12 +663,12 @@ export default function LeadDetailPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
-                <History className="h-4 w-4" /> Timeline
+                <History className="h-4 w-4" /> {t('adminLeadDetail.timelineTitle')}
               </CardTitle>
             </CardHeader>
             <CardContent>
               {history.length === 0 ? (
-                <p className="text-sm text-gray-500">No history yet.</p>
+                <p className="text-sm text-gray-500">{t('adminLeadDetail.historyEmpty')}</p>
               ) : (
                 <ul className="space-y-3">
                   {history.map((h) => (
@@ -668,37 +704,31 @@ export default function LeadDetailPage() {
           {/* Meta */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Meta</CardTitle>
+              <CardTitle className="text-base">{t('adminLeadDetail.metaTitle')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-1 text-xs text-gray-600">
               <div>
-                <span className="font-medium">Created:</span>{' '}
+                <span className="font-medium">{t('adminLeadDetail.metaCreated')}</span>{' '}
                 {lead.created_at
                   ? new Date(String(lead.created_at)).toLocaleString()
                   : '—'}
               </div>
-              {lead.updated_at
-                ? (
+              {lead.updated_at ? (
                 <div>
-                  <span className="font-medium">Updated:</span>{' '}
+                  <span className="font-medium">{t('adminLeadDetail.metaUpdated')}</span>{' '}
                   {new Date(String(lead.updated_at)).toLocaleString()}
                 </div>
-                  )
-                : null}
-              {lead.source_page
-                ? (
+              ) : null}
+              {lead.source_page ? (
                 <div>
-                  <span className="font-medium">Source page:</span> {String(lead.source_page)}
+                  <span className="font-medium">{t('adminLeadDetail.metaSourcePage')}</span> {String(lead.source_page)}
                 </div>
-                  )
-                : null}
-              {lead.referrer
-                ? (
+              ) : null}
+              {lead.referrer ? (
                 <div>
-                  <span className="font-medium">Referrer:</span> {String(lead.referrer)}
+                  <span className="font-medium">{t('adminLeadDetail.metaReferrer')}</span> {String(lead.referrer)}
                 </div>
-                  )
-                : null}
+              ) : null}
             </CardContent>
           </Card>
         </div>
@@ -710,9 +740,9 @@ export default function LeadDetailPage() {
           <Card className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <CardHeader className="flex flex-row items-start justify-between space-y-0">
               <div>
-                <CardTitle>Send email to {displayName}</CardTitle>
+                <CardTitle>{t('adminLeadDetail.emailModalTitle', { name: displayName })}</CardTitle>
                 <p className="text-sm text-gray-500 mt-1">
-                  To: {pickString(lead, ['email']) || '—'}
+                  {t('adminLeadDetail.emailToLabel', { email: pickString(lead, ['email']) ?? '—' })}
                 </p>
               </div>
               <Button
@@ -734,7 +764,7 @@ export default function LeadDetailPage() {
 
               <div>
                 <label className="text-sm font-medium text-gray-700 block mb-1">
-                  Template
+                  {t('adminLeadDetail.emailTemplateLabel')}
                 </label>
                 <Select
                   value={emailTemplateId}
@@ -742,60 +772,61 @@ export default function LeadDetailPage() {
                   disabled={emailSending}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Pick a one-off template…" />
+                    <SelectValue placeholder={t('adminLeadDetail.emailTemplatePlaceholder')} />
                   </SelectTrigger>
                   <SelectContent>
                     {templates.length === 0 && (
                       <SelectItem value="__none__" disabled>
-                        No one-off templates yet — create one in /admin/emails
+                        {t('adminLeadDetail.emailNoTemplates')}
                       </SelectItem>
                     )}
-                    {templates.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>
-                        {t.name} <span className="text-gray-400 ml-1">— {t.slug}</span>
+                    {templates.map((tpl) => (
+                      <SelectItem key={tpl.id} value={tpl.id}>
+                        {tpl.name} <span className="text-gray-400 ml-1">— {tpl.slug}</span>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-gray-500 mt-1">
-                  Variables: <code className="bg-gray-100 px-1">firstName</code>,{' '}
-                  <code className="bg-gray-100 px-1">country</code>,{' '}
-                  <code className="bg-gray-100 px-1">intendedMajor</code>{' '}
-                  (auto-filled from the lead row)
+                  {t('adminLeadDetail.emailVariablesIntro')}
+                  <code className="bg-gray-100 px-1">{t('adminLeadDetail.emailVarFirstName')}</code>,{' '}
+                  <code className="bg-gray-100 px-1">{t('adminLeadDetail.emailVarCountry')}</code>,{' '}
+                  <code className="bg-gray-100 px-1">{t('adminLeadDetail.emailVarIntendedMajor')}</code>{' '}
+                  {t('adminLeadDetail.emailVarsBlurb')}
                 </p>
               </div>
 
               <details className="border border-gray-200 p-3">
                 <summary className="text-sm text-gray-700 cursor-pointer">
-                  Custom override (subject + body)
+                  {t('adminLeadDetail.emailCustomOverride')}
                 </summary>
                 <div className="mt-3 space-y-3">
                   <div>
-                    <label className="text-xs text-gray-600 block mb-1">Subject</label>
+                    <label className="text-xs text-gray-600 block mb-1">{t('adminLeadDetail.labelSubjectOverride')}</label>
                     <Input
                       value={emailOverrideSubject}
                       onChange={(e) => setEmailOverrideSubject(e.target.value)}
-                      placeholder="Leave blank to use the template subject"
+                      placeholder={t('adminLeadDetail.subjectOverridePlaceholder')}
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-gray-600 block mb-1">Body (HTML)</label>
+                    <label className="text-xs text-gray-600 block mb-1">{t('adminLeadDetail.labelBodyHtml')}</label>
                     <textarea
                       value={emailOverrideHtml}
                       onChange={(e) => setEmailOverrideHtml(e.target.value)}
                       rows={6}
                       className="w-full border border-gray-300 px-2 py-1 text-xs font-mono"
-                      placeholder="<p>Hi {{firstName}}, ...</p>"
+                      placeholder={t('adminLeadDetail.bodyHtmlPlaceholder')}
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-gray-600 block mb-1">Body (text)</label>
+                    <label className="text-xs text-gray-600 block mb-1">{t('adminLeadDetail.labelBodyText')}</label>
                     <textarea
                       value={emailOverrideText}
                       onChange={(e) => setEmailOverrideText(e.target.value)}
                       rows={3}
                       className="w-full border border-gray-300 px-2 py-1 text-xs font-mono"
-                      placeholder="Hi {{firstName}}, ..."
+                      placeholder={t('adminLeadDetail.bodyTextPlaceholder')}
                     />
                   </div>
                 </div>
@@ -808,9 +839,9 @@ export default function LeadDetailPage() {
                   onChange={(e) => setEmailSendTest(e.target.checked)}
                 />
                 <span>
-                  <span className="font-medium">Send to me (test)</span>
+                  <span className="font-medium">{t('adminLeadDetail.labelSendTest')}</span>
                   <span className="block text-xs text-gray-500">
-                    Redirects to your admin email instead of the lead.
+                    {t('adminLeadDetail.sendTestHint')}
                   </span>
                 </span>
               </label>
@@ -821,7 +852,7 @@ export default function LeadDetailPage() {
                   onClick={() => setEmailModalOpen(false)}
                   disabled={emailSending}
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
                 <Button
                   onClick={sendEmail}
@@ -829,7 +860,7 @@ export default function LeadDetailPage() {
                   className="bg-[#1B2A4A] hover:bg-[#152033]"
                 >
                   {emailSending ? <Spinner size="xs" /> : <Send className="h-4 w-4 mr-2" />}
-                  {emailSendTest ? 'Send test' : 'Send email'}
+                  {emailSendTest ? t('adminLeadDetail.sendTest') : t('adminLeadDetail.sendEmail')}
                 </Button>
               </div>
             </CardContent>
