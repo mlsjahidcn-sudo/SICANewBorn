@@ -1,7 +1,5 @@
 'use client';
 
-import type { Metadata } from "next";
-import { SITE_URL } from "@/lib/site-url";
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useI18n } from '@/lib/i18n';
@@ -14,10 +12,6 @@ import {
 } from '@/lib/data';
 import { Search, Filter, Clock, Globe, GraduationCap, ArrowRight, ChevronLeft, ChevronRight, Gift, CheckCircle } from 'lucide-react';
 import { track } from '@/lib/analytics';
-
-export const metadata: Metadata = {
-  alternates: { canonical: `${SITE_URL}/scholarships` },
-};
 
 const ITEMS_PER_PAGE = 6;
 

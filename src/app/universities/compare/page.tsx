@@ -1,16 +1,10 @@
 'use client';
 
-import type { Metadata } from "next";
-import { SITE_URL } from "@/lib/site-url";
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowRight, GraduationCap, Check } from 'lucide-react';
 import { universities as staticUniversities, type University } from '@/lib/data';
-
-export const metadata: Metadata = {
-  alternates: { canonical: `${SITE_URL}/universities/compare` },
-};
 
 /**
  * Picker UI for the /universities/compare feature.

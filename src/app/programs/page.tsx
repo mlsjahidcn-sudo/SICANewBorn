@@ -1,7 +1,5 @@
 'use client';
 
-import type { Metadata } from "next";
-import { SITE_URL } from "@/lib/site-url";
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useI18n } from '@/lib/i18n';
@@ -19,10 +17,6 @@ import { Search, Filter, GraduationCap, Globe, Clock, Banknote, ArrowRight, Awar
 import { useSearchParams } from 'next/navigation';
 import { useUrlState } from '@/hooks/use-url-state';
 import { track } from '@/lib/analytics';
-
-export const metadata: Metadata = {
-  alternates: { canonical: `${SITE_URL}/programs` },
-};
 
 const ITEMS_PER_PAGE = 8;
 

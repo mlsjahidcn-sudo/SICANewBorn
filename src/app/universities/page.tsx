@@ -1,7 +1,5 @@
 'use client';
 
-import type { Metadata } from "next";
-import { SITE_URL } from "@/lib/site-url";
 import Link from 'next/link';
 import { useI18n } from '@/lib/i18n';
 import { cities, citiesCn, disciplines, disciplinesCn, type University } from '@/lib/data';
@@ -14,10 +12,6 @@ import { useSearchParams } from 'next/navigation';
 import UniversityLogo from '@/components/university-logo';
 import { useUrlState } from '@/hooks/use-url-state';
 import { track } from '@/lib/analytics';
-
-export const metadata: Metadata = {
-  alternates: { canonical: `${SITE_URL}/universities` },
-};
 
 // Phase: filter enhancements
 //   - URL sync (refresh-survives, shareable links)
