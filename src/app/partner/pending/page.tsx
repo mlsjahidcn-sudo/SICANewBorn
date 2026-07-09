@@ -120,7 +120,7 @@ export default function PartnerPendingPage() {
               <span className="font-medium">{t('partnerPending.questionsTitle')}</span>{' '}
               {t('partnerPending.reachUs')}{' '}
               <a
-                href="mailto:support@sica.com.cn"
+                href="mailto:info@studyinchina.academy"
                 className="text-[#9B1B30] hover:underline inline-flex items-center gap-1"
               >
                 <Mail size={12} />

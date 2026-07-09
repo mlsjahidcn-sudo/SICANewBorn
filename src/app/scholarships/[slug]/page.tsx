@@ -47,8 +47,56 @@ export default function ScholarshipDetailPage() {
   const deadline = locale === 'zh' ? scholarship.deadlineCn : scholarship.deadline;
   const regions = locale === 'zh' ? scholarship.eligibleRegionsCn : scholarship.eligibleRegions;
 
+  // Phase 46 GEO/AEO: FAQPage JSON-LD. Built from the scholarship
+  // data so the questions + answers are always consistent with
+  // what's shown on the page. LLM engines (ChatGPT, Perplexity,
+  // Google AI) read this directly when composing answers.
+  const faqSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: `What does the ${name} scholarship cover?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `The ${name} scholarship covers: ${coverageItems.join(', ')}.`,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `Who is eligible for the ${name} scholarship?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `Eligible applicants: ${regions}. Applicable degree levels: ${degreeItems.join(', ')}. Additional requirements: ${reqItems.join('; ')}.`,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `What is the application deadline for the ${name}?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `The ${name} application deadline is ${deadline}. SICA recommends applying at least 8 weeks before the deadline to allow for document preparation and translation.`,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `How do I apply for the ${name} scholarship?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `${appMethod} SICA's admissions team can help with application preparation, document review, and submission. Submit a free assessment at https://studyinchina.academy/assessment to get started.`,
+        },
+      },
+    ],
+  };
+
   return (
-    <main className="min-h-screen bg-[#FAFAF8]">
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
+      <main className="min-h-screen bg-[#FAFAF8]">
       {/* Breadcrumb */}
       <div className="max-w-7xl mx-auto px-6 py-4">
         <nav className="flex items-center gap-2 text-sm text-gray-500">
@@ -379,5 +427,6 @@ export default function ScholarshipDetailPage() {
         </div>
       </div>
     </main>
+    </>
   );
 }

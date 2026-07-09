@@ -148,8 +148,72 @@ export default function UniversityDetailPage() {
   const galleryImages =
     safeArray(uni.gallery).length > 0 ? safeArray(uni.gallery) : uni.image ? [uni.image] : [];
 
+  // Phase 46 GEO/AEO: FAQPage JSON-LD. Built from the university
+  // data + program count. Ships after hydration (page is 'use
+  // client' with on-mount data fetch); modern crawlers run JS.
+  const uniName = locale === 'zh' ? uni.nameCn : uni.name;
+  const tuitionText = uni.tuitionUndergrad
+    ? `Undergraduate tuition at ${uniName} is ${uni.tuitionUndergrad} per year; graduate tuition is ${uni.tuitionGraduate || uni.tuitionUndergrad} per year.`
+    : `Tuition at ${uniName} varies by program and degree level. SICA provides a precise quote per program.`;
+  const rankingText = uni.ranking
+    ? `${uniName} is ranked #${uni.ranking} in China${uni.qsWorldRanking ? ` (QS World #${uni.qsWorldRanking})` : ''}.`
+    : `${uniName} is a recognized Chinese university${uni.type ? ` (${uni.type})` : ''}.`;
+  const programsCountText = programs && programs.length > 0
+    ? `${uniName} offers ${programs.length}+ international programs (Bachelor's, Master's, PhD, Chinese Language) through SICA's network.`
+    : `${uniName} hosts international Bachelor's, Master's, and PhD programs in partnership with SICA.`;
+  const faqSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: `What is ${uniName} known for?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `${uniName} is a leading Chinese university. ${rankingText} Known for strengths in ${(uni.disciplines || []).slice(0, 3).join(', ') || 'engineering, business, and sciences'}.`,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `How much is tuition at ${uniName}?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: tuitionText,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `What programs are available at ${uniName} for international students?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: programsCountText,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `Does ${uniName} offer scholarships for international students?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `Yes. ${uniName} participates in the Chinese Government Scholarship (CSC) program and offers its own university-specific scholarships for international students. SICA helps you identify the right scholarship for your profile and handles the application end-to-end.`,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `How do I apply to ${uniName}?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `Apply through SICA's network. Submit a free academic assessment at https://studyinchina.academy/assessment — SICA's admissions team will confirm your eligibility for ${uniName}, prepare your application, and submit on your behalf.`,
+        },
+      },
+    ],
+  };
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
       {/* Breadcrumb */}
       <div className="border-b border-gray-200 bg-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3">

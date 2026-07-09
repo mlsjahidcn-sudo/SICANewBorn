@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
-import { Calendar, Clock, ChevronRight, Tag, User, ArrowLeft, ArrowRight, Share2, ListChecks, HelpCircle, BookOpen, ExternalLink } from 'lucide-react';
+import { Calendar, Clock, ChevronRight, Tag, User, ArrowLeft, ArrowRight, Share2, ListChecks, HelpCircle, BookOpen, ExternalLink, History } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
@@ -281,15 +281,16 @@ export default async function NewsPostPage({
                     })}
                   </span>
                 )}
-                {post.read_time_minutes ? (
+                 {post.read_time_minutes ? (
                   <span className="flex items-center gap-1.5">
                     <Clock className="h-4 w-4" />
                     {post.read_time_minutes} min read
                   </span>
                 ) : null}
                  <span className="flex items-center gap-1.5">
-                  Last updated: {new Date(post.updated_at).toISOString().slice(0, 10)}
-                </span>
+                   <History className="h-4 w-4" />
+                   Last updated: {new Date(post.updated_at).toISOString().slice(0, 10)}
+                 </span>
               </div>
             </div>
           </header>

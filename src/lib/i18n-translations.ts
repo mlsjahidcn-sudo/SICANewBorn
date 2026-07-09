@@ -1201,7 +1201,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerPending.whatNext3': "If we need more information, we'll email you directly.",
     'partnerPending.questionsTitle': 'Questions?',
     'partnerPending.reachUs': 'Reach us at',
-    'partnerPending.contactEmail': 'support@sica.com.cn',
+    'partnerPending.contactEmail': 'info@studyinchina.academy',
     'partnerPending.signOut': 'Sign out',
     'partnerPending.backToSicaWebsite': '← Back to SICA Website',
     // Partner Portal — rejected
@@ -3736,7 +3736,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerPending.whatNext3': '如需补充信息，我们将直接与您邮件联系。',
     'partnerPending.questionsTitle': '有疑问？',
     'partnerPending.reachUs': '请通过',
-    'partnerPending.contactEmail': 'support@sica.com.cn',
+    'partnerPending.contactEmail': 'info@studyinchina.academy',
     'partnerPending.signOut': '退出登录',
     'partnerPending.backToSicaWebsite': '← 返回 SICA 网站',
     // Partner Portal — rejected

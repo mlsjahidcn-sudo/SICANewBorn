@@ -172,8 +172,64 @@ export default function ProgramDetailPage() {
     }
   };
 
+  // Phase 46 GEO/AEO: FAQPage JSON-LD. Built from program + university
+  // data. Note: this page fetches data client-side, so the schema
+  // ships after hydration — modern crawlers (Googlebot, GPTBot,
+  // ClaudeBot) run JS and will see it.
+  const programName = locale === 'zh' ? program.nameCn : program.name;
+  const universityName = university
+    ? (locale === 'zh' ? university.nameCn : university.name)
+    : 'the partner university';
+  const faqSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: `How much does the ${programName} cost?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: program.tuition
+            ? `Tuition for the ${programName} at ${universityName} is ${program.tuition} per year. The SICA admissions team can confirm the exact figure for your intake and help you apply for partial or full scholarships that often cover 50–100% of tuition.`
+            : `Tuition for the ${programName} at ${universityName} varies by intake. Submit a free assessment at https://studyinchina.academy/assessment for an exact quote.`,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `What language is the ${programName} taught in?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: program.language
+            ? `The ${programName} is taught in ${program.language}. ${program.language === 'English' ? 'No Chinese proficiency is required for admission. HSK is recommended for daily life but not for entry.' : 'Students need HSK 4–5 (intermediate Chinese) for admission. SICA offers a 1-year language preparatory year option for students who need to reach the required level.'}`
+            : `The ${programName} is offered in English and Chinese tracks. SICA matches you to the right track based on your language background.`,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `What are the admission requirements for the ${programName}?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `Admission to the ${programName} typically requires a bachelor's degree (for Master's) or master's degree (for PhD), GPA 3.0+, IELTS 6.0+ or TOEFL 80+, and 2 recommendation letters. Specific requirements vary by intake — the SICA team will confirm the exact list for your application.`,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `When can I start the ${programName}?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `The ${programName} typically has two intakes per year: September (Fall) and February/March (Spring). Most students apply 6–9 months in advance. SICA's admissions timeline helps you hit every key milestone.`,
+        },
+      },
+    ],
+  };
+
   return (
-    <main className="min-h-screen bg-[#FAFAF8]">
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
+      <main className="min-h-screen bg-[#FAFAF8]">
       {/* Breadcrumb */}
       <div className="border-b border-gray-200 bg-white">
         <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
@@ -556,5 +612,6 @@ export default function ProgramDetailPage() {
         </div>
       )}
     </main>
+    </>
   );
 }

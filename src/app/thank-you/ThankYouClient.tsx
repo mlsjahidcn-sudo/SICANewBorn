@@ -44,7 +44,7 @@ import { useI18n } from '@/lib/i18n';
  */
 
 const WHATSAPP_PHONE = '8617325764171';
-const CONTACT_EMAIL = 'support@sica.com.cn';
+const CONTACT_EMAIL = 'info@studyinchina.academy';
 const SITE_URL = 'https://studyinchina.academy';
 
 function generateReferenceNumber(): string {

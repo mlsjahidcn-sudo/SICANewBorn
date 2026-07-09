@@ -20,7 +20,7 @@ export function getOrganizationSchema() {
     contactPoint: {
       '@type': 'ContactPoint',
       contactType: 'customer service',
-      email: 'support@sica.com.cn',
+      email: 'info@studyinchina.academy',
       telephone: '+86-173-2576-4171',
       areaServed: 'Worldwide',
       availableLanguage: ['English', 'Chinese'],

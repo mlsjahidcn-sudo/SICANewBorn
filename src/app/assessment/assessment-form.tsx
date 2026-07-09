@@ -722,7 +722,7 @@ export function AssessmentForm({ successMessages }: Props) {
             {uploadStatus === 'failed' && (
               <p className="mt-3 text-xs text-red-600">
                 The transcript upload failed, but you can still submit the form and email
-                your transcript to <a href="mailto:support@sica.com.cn" className="underline">support@sica.com.cn</a>{' '}
+                your transcript to <a href="mailto:info@studyinchina.academy" className="underline">info@studyinchina.academy</a>{' '}
                 after.
               </p>
             )}

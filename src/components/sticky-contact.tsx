@@ -155,7 +155,7 @@ export function StickyContact() {
 
               {/* Email */}
               <a
-                href="mailto:support@sica.com.cn"
+                href="mailto:info@studyinchina.academy"
                 className="w-full flex items-center gap-3 p-3 border border-gray-200 hover:border-[#1B2A4A] hover:bg-gray-50 transition-colors"
               >
                 <div className="shrink-0 w-12 h-12 bg-[#1B2A4A] flex items-center justify-center">
@@ -166,7 +166,7 @@ export function StickyContact() {
                     {t('contact.emailLabel')}
                   </div>
                   <div className="text-xs text-[#4B5563] truncate">
-                    support@sica.com.cn
+                    info@studyinchina.academy
                   </div>
                 </div>
                 <div className="text-xs text-[#9B1B30] font-medium shrink-0">

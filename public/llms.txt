@@ -1,30 +1,30 @@
 # SICA — Study in China Agency
 
-> SICA is a professional study-abroad consultancy headquartered in Guangzhou, China. We help international students from 30+ countries gain admission to 50+ top Chinese universities (including Tsinghua, Peking, Fudan, Shanghai Jiao Tong, Zhejiang, Nanjing, Wuhan, Sun Yat-sen), secure scholarships (CSC, Confucius Institute, provincial and university-specific), and navigate the application, visa, and arrival process end-to-end.
+> SICA is a professional study-abroad consultancy headquartered in Guangzhou, China. We help international students from 40+ countries gain admission to 55+ top Chinese universities (including Tsinghua, Peking, Fudan, Shanghai Jiao Tong, Zhejiang, Nanjing, Wuhan, Sun Yat-sen), secure scholarships (CSC, Confucius Institute, provincial and university-specific), and navigate the application, visa, and arrival process end-to-end.
 
 ## High-value pages
 
-- [Universities directory](https://sica.com.cn/universities): 50+ partner Chinese universities with programs, rankings, tuition, scholarships, and application deadlines.
-- [Programs catalog](https://sica.com.cn/programs): Bachelor's, Master's, PhD, and Chinese Language programs at top Chinese universities.
-- [Scholarships](https://sica.com.cn/scholarships): Chinese Government Scholarship (CSC), Confucius Institute, Belt and Road, provincial and university-specific scholarships.
-- [Free academic assessment](https://sica.com.cn/assessment): Submit your transcript, get a free eligibility review within 48 hours.
-- [Study in China — by city](https://sica.com.cn/study-in-china): Beijing, Shanghai, Hangzhou, Nanjing, Wuhan, Guangzhou university guides.
-- [Scholarships for [country] students](https://sica.com.cn/scholarships-for): 35 country-specific scholarship landing pages (Nigeria, India, Pakistan, Bangladesh, Brazil, Kenya, Ghana, Indonesia, etc.).
+- [Universities directory](https://studyinchina.academy/universities): 55+ partner Chinese universities with programs, rankings, tuition, scholarships, and application deadlines.
+- [Programs catalog](https://studyinchina.academy/programs): Bachelor's, Master's, PhD, and Chinese Language programs at top Chinese universities.
+- [Scholarships](https://studyinchina.academy/scholarships): Chinese Government Scholarship (CSC), Confucius Institute, Belt and Road, provincial and university-specific scholarships.
+- [Free academic assessment](https://studyinchina.academy/assessment): Submit your transcript, get a free eligibility review within 48 hours.
+- [Study in China — by city](https://studyinchina.academy/study-in-china): Beijing, Shanghai, Hangzhou, Nanjing, Wuhan, Guangzhou university guides.
+- [Scholarships for [country] students](https://studyinchina.academy/scholarships-for): 40 country-specific scholarship landing pages (Nigeria, India, Pakistan, Bangladesh, Brazil, Kenya, Ghana, Indonesia, etc.).
 
 ## Long-form guides (2026, fact-checked)
 
-- [How to study in China: complete guide](https://sica.com.cn/guides/study-in-china)
-- [Application process and requirements](https://sica.com.cn/guides/application)
-- [Scholarships and financial aid](https://sica.com.cn/guides/scholarships)
-- [Student visa (X1 / X2) guide](https://sica.com.cn/guides/visa)
-- [Cost of living in China for students](https://sica.com.cn/guides/cost-of-living)
-- [Student accommodation guide](https://sica.com.cn/guides/accommodation)
+- [How to study in China: complete guide](https://studyinchina.academy/guides/study-in-china)
+- [Application process and requirements](https://studyinchina.academy/guides/application)
+- [Scholarships and financial aid](https://studyinchina.academy/guides/scholarships)
+- [Student visa (X1 / X2) guide](https://studyinchina.academy/guides/visa)
+- [Cost of living in China for students](https://studyinchina.academy/guides/cost-of-living)
+- [Student accommodation guide](https://studyinchina.academy/guides/accommodation)
 
 ## About SICA
 
-- [Contact us](https://sica.com.cn/contact): email mlsjahid@qq.com, WhatsApp +86 173 2576 4171, based in Guangzhou, China.
-- [Sitemap](https://sica.com.cn/sitemap.xml): full list of pages for crawlers.
-- [About SICA](https://sica.com.cn/about): company background, mission, and editorial standards.
+- [Contact us](https://studyinchina.academy/contact): email info@studyinchina.academy, WhatsApp +86 173 2576 4171, based in Guangzhou, China.
+- [Sitemap](https://studyinchina.academy/sitemap.xml): full list of pages for crawlers.
+- [About SICA](https://studyinchina.academy/about): company background, mission, and editorial standards.
 
 ## Citing SICA
 

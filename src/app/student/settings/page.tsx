@@ -143,10 +143,10 @@ export default function StudentSettingsPage() {
               <p className="text-sm text-[#4B5563]">
                 Need to close your account? Email{' '}
                 <a
-                  href="mailto:support@sica.com.cn"
+                  href="mailto:info@studyinchina.academy"
                   className="text-[#9B1B30] font-semibold hover:underline"
                 >
-                  support@sica.com.cn
+                  info@studyinchina.academy
                 </a>{' '}
                 — we'll process deletion within 7 business days.
               </p>
@@ -252,10 +252,10 @@ export default function StudentSettingsPage() {
               handled by our authentication provider. Use the password reset link above to
               change your password, or contact{' '}
               <a
-                href="mailto:support@sica.com.cn"
+                href="mailto:info@studyinchina.academy"
                 className="text-[#9B1B30] font-semibold hover:underline"
               >
-                support@sica.com.cn
+                info@studyinchina.academy
               </a>{' '}
               for help locking your account.
             </p>
