@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
+import { SITE_URL } from "@/lib/site-url";
 import { FileText, Mail, MessageCircle, MapPin } from 'lucide-react';
 import Image from 'next/image';
 import { AssessmentForm } from './assessment-form';
+
+export const metadata: Metadata = {
+  alternates: { canonical: `${SITE_URL}/assessment` },
+};
 
 export default function AssessmentPage() {
   return (

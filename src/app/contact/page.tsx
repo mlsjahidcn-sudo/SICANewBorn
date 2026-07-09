@@ -1,7 +1,13 @@
+import type { Metadata } from "next";
+import { SITE_URL } from "@/lib/site-url";
 import { Mail, Phone, MapPin, Clock, MessageCircle } from 'lucide-react';
 import Image from 'next/image';
 import { getServerT } from '@/lib/server-t';
 import { ContactForm } from './contact-form';
+
+export const metadata: Metadata = {
+  alternates: { canonical: `${SITE_URL}/contact` },
+};
 
 export default async function ContactPage() {
   const t = await getServerT();

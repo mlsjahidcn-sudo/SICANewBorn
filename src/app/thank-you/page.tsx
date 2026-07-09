@@ -1,5 +1,12 @@
+import type { Metadata } from "next";
+import { SITE_URL } from "@/lib/site-url";
 import { Suspense } from 'react';
 import ThankYouClient from './ThankYouClient';
+
+export const metadata: Metadata = {
+  alternates: { canonical: `${SITE_URL}/thank-you` },
+  robots: { index: false, follow: false },
+};
 
 /**
  * /thank-you — post-conversion confirmation page.

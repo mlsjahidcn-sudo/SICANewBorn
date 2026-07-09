@@ -64,7 +64,7 @@ export async function generateMetadata({
     title,
     description,
     alternates: {
-      canonical: `/universities/compare/${a}/vs/${b}`,
+      canonical: `${SITE_URL}/universities/compare/${a}/vs/${b}`,
     },
     openGraph: {
       title,

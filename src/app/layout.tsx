@@ -35,6 +35,17 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || SITE_URL),
   alternates: {
     canonical: '/',
+    // hreflang: SICA uses cookie-based i18n (single URL serves both en
+    // and zh based on the sica-locale cookie). We declare both language
+    // variants pointing at the same URL so Google indexes the page for
+    // both English and Chinese users. x-default signals the fallback
+    // for any other locale. Per-page canonicals (in each route's own
+    // metadata) override the root for deeper pages.
+    languages: {
+      'en': '/',
+      'zh': '/',
+      'x-default': '/',
+    },
   },
   openGraph: {
     type: 'website',

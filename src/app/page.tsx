@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { SITE_URL } from "@/lib/site-url";
 import Link from 'next/link';
 import Image from 'next/image';
 import { getServerT } from '@/lib/server-t';
@@ -31,6 +33,10 @@ import {
 import { getAllUniversities } from '@/lib/data-fetcher';
 import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
 import { VideoTestimonials } from '@/components/VideoTestimonials';
+
+export const metadata: Metadata = {
+  alternates: { canonical: `${SITE_URL}/` },
+};
 
 // Home page is server-rendered. We re-fetch the live list on every
 // request (with a 60s edge cache via `revalidate`) so newly-added

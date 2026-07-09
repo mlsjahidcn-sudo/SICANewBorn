@@ -22,12 +22,12 @@ export async function generateMetadata(): Promise<Metadata> {
     title: t('seo.cities.hubTitle'),
     description: t('seo.cities.hubDescription'),
     alternates: {
-      canonical: '${SITE_URL}/study-in-china',
+      canonical: `${SITE_URL}/study-in-china`,
     },
     openGraph: {
       title: t('seo.cities.hubTitle'),
       description: t('seo.cities.hubDescription'),
-      url: '${SITE_URL}/study-in-china',
+      url: `${SITE_URL}/study-in-china`,
       type: 'website',
     },
   };

@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
+import { SITE_URL } from "@/lib/site-url";
 import Link from 'next/link';
 import { FileText, BookOpen, Mail, Users, CheckCircle2, ArrowRight, Sparkles, Clock } from 'lucide-react';
 import { getServerT } from '@/lib/server-t';
+
+export const metadata: Metadata = {
+  alternates: { canonical: `${SITE_URL}/resources` },
+};
 
 // Phase 2 funnel: self-serve product landing. Mirrors the structure
 // of /about (hero + product cards + comparison + how-it-works + FAQ

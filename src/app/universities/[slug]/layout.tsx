@@ -1,0 +1,29 @@
+/**
+ * Server layout for /universities/[slug] — sets the canonical URL.
+ *
+ * The page itself is a 'use client' component (it fetches university
+ * data on the client). For client pages, canonical can only be set
+ * via a server-side layout or `generateMetadata` in a server parent.
+ * This layout does the latter.
+ */
+import type { Metadata } from 'next';
+import { SITE_URL } from '@/lib/site-url';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  return {
+    alternates: { canonical: `${SITE_URL}/universities/${slug}` },
+  };
+}
+
+export default function UniversitySlugLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return children;
+}

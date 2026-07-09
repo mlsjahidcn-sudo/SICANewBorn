@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
+import { SITE_URL } from "@/lib/site-url";
 import Link from 'next/link';
 import { Users, Eye, Heart, Globe, Building, GraduationCap, Award, Clock } from 'lucide-react';
 import { getServerT } from '@/lib/server-t';
+
+export const metadata: Metadata = {
+  alternates: { canonical: `${SITE_URL}/about` },
+};
 
 export default async function AboutPage() {
   const t = await getServerT();
