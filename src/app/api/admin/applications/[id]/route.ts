@@ -3,6 +3,8 @@ import { requireAdmin, buildServiceClient, getServerEnv } from '@/lib/supabase-a
 import { insertTimelineEvent } from '@/lib/timeline';
 import { mapApplicationFromDb } from '@/lib/application-mapper';
 import { notifyApplicantOnStatusChange } from '@/lib/email';
+import { getWabpoConfig, listApprovedTemplates, sendTemplateMessage, normalizePhone, WabpoApiError, WabpoNotConfiguredError } from '@/lib/wabpo';
+import { captureAIError } from '@/lib/ai/with-capture';
 
 const ALLOWED_STATUSES = [
   'Draft', 'Submitted', 'Under Review', 'Documents Requested',
@@ -156,10 +158,12 @@ export async function PATCH(
         // back to applicant_email (unlinked application).
         let toEmail: string | null = null;
         let applicantName: string | null = null;
+        let applicantPhone: string | null = null;
+        let applicantCountry: string | null = null;
         if (data.student_id) {
           const { data: profile } = await service
             .from('student_profiles')
-            .select('email, first_name, last_name')
+            .select('email, first_name, last_name, phone, nationality')
             .eq('id', data.student_id)
             .maybeSingle();
           if (profile) {
@@ -167,6 +171,8 @@ export async function PATCH(
             applicantName = [profile.first_name, profile.last_name]
               .filter(Boolean)
               .join(' ') || null;
+            applicantPhone = profile.phone || null;
+            applicantCountry = profile.nationality || null;
           }
         }
         if (!toEmail) {
@@ -221,6 +227,71 @@ export async function PATCH(
             });
             if (snErr) {
               console.error('[admin/applications PATCH] student_notification insert failed:', snErr);
+            }
+          }
+
+          // Phase 46: WhatsApp status notify. Best-effort, no-throw.
+          // Uses the `application_status_update_v1` template — admin
+          // must author + submit to Meta. Set notify_whatsapp=false
+          // in the PATCH body to opt out for a single update.
+          const shouldNotifyWhatsapp = body.notify_whatsapp !== false;
+          if (shouldNotifyWhatsapp) {
+            const phone = normalizePhone(applicantPhone || '');
+            const wabpoConfig = getWabpoConfig();
+            if (!wabpoConfig) {
+              console.info('[admin/applications PATCH] WhatsApp skipped: WABPO not configured');
+            } else if (phone.length < 7) {
+              console.info(`[admin/applications PATCH] WhatsApp skipped: no phone for application ${id}`);
+            } else {
+              // Look up the approved template by name → get its
+              // WABPO id. Templates list is cached for 5 min in
+              // wabpo-fire.ts so a flurry of status changes
+              // doesn't hammer the WABPO list endpoint.
+              listApprovedTemplates()
+                .then((templates) => {
+                  const template = templates.find((t) => t.templateName === 'application_status_update_v1');
+                  if (!template) {
+                    console.info(`[admin/applications PATCH] WhatsApp skipped: application_status_update_v1 not in approved list`);
+                    return;
+                  }
+                  if (template.status !== 'APPROVED' && template.metaStatus !== 'APPROVED') {
+                    console.info(`[admin/applications PATCH] WhatsApp skipped: template status=${template.status}/${template.metaStatus}`);
+                    return;
+                  }
+                  const firstName = applicantName?.split(' ')[0] || 'there';
+                  const universityName =
+                    (data as { university_name?: string | null }).university_name || '';
+                  const programName =
+                    (data as { program_name?: string | null }).program_name || '';
+                  const applicationNumber =
+                    (data as { application_number?: string | null }).application_number || '';
+                  return sendTemplateMessage({
+                    templateId: template.id,
+                    recipientNumber: phone,
+                    variables: {
+                      first_name: firstName,
+                      name: applicantName || firstName,
+                      status: newStatus,
+                      university_name: universityName,
+                      program_name: programName,
+                      application_number: applicationNumber,
+                      country: applicantCountry || '',
+                    },
+                    externalReference: `application:${id}:${newStatus}`,
+                    idempotencyKey: `sica-appstatus-${id}-${newStatus}-${Date.now()}`,
+                  });
+                })
+                .catch((err) => {
+                  if (err instanceof WabpoNotConfiguredError) return;
+                  const code = err instanceof WabpoApiError ? `${err.status}/${err.code}` : 'unknown';
+                  captureAIError('admin/applications PATCH', err, {
+                    stage: 'whatsapp-status-send',
+                    applicationId: id,
+                    newStatus,
+                    code,
+                  });
+                  console.error(`[admin/applications PATCH] WhatsApp failed: ${code}`, err);
+                });
             }
           }
         }

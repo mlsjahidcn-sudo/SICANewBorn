@@ -29,6 +29,10 @@ __pycache__/
 coverage
 storybook-static
 
+# Runtime tool data (Mavis session plans, OpenCode cache)
+.mavis/
+.opencode/
+
 # Package manager artifacts
 .pnp*
 .npm

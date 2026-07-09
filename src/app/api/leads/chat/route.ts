@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
 import { sendChatLeadNotification } from '@/lib/email';
+import { fireAndForget } from '@/lib/wabpo-fire';
 
 export const dynamic = 'force-dynamic';
 
@@ -124,6 +125,22 @@ export async function POST(request: NextRequest) {
     sourcePage,
     submittedAt: lead.created_at,
   }).catch((err) => console.error('[POST /api/leads/chat] email notification failed:', err));
+
+  // 4. Phase 46: auto-welcome WhatsApp. Best-effort, no-throw.
+  fireAndForget({
+    leadType: 'chat',
+    leadId: lead.id,
+    leadRow: {
+      name: name || null,
+      email,
+      whatsapp: whatsapp || null,
+      country: country || null,
+      interested_program: interested_program || null,
+    },
+    templateName: 'lead_welcome_v1',
+    historyAction: 'whatsapp_welcome_sent',
+    historyNote: `source=chat | degree=${interested_degree || 'n/a'}`,
+  }).catch(() => {/* never throws — defensive only */});
 
   return NextResponse.json({ success: true, id: lead.id });
 }
