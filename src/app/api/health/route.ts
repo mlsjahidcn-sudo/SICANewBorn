@@ -66,6 +66,20 @@ function envPresence(name: string): boolean {
   return typeof v === 'string' && v.length > 0;
 }
 
+/**
+ * Some secrets are stored under COZE_-prefixed names in this
+ * project (carried over from the original Vercel/Coze deploy
+ * conventions). Accept either prefix so the health readout
+ * stays honest — otherwise a fully-working deploy looks
+ * half-configured to the uptime monitor.
+ */
+function supabaseServerKeyPresent(): boolean {
+  return (
+    envPresence('SUPABASE_SERVICE_ROLE_KEY') ||
+    envPresence('COZE_SUPABASE_SERVICE_ROLE_KEY')
+  );
+}
+
 export async function GET(): Promise<NextResponse> {
   const [dbStatus] = await Promise.all([probeDb()]);
 
@@ -74,7 +88,7 @@ export async function GET(): Promise<NextResponse> {
     env: {
       SUPABASE_URL: envPresence('NEXT_PUBLIC_SUPABASE_URL'),
       SUPABASE_ANON_KEY: envPresence('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
-      SUPABASE_SERVICE_ROLE_KEY: envPresence('SUPABASE_SERVICE_ROLE_KEY'),
+      SUPABASE_SERVICE_ROLE_KEY: supabaseServerKeyPresent(),
       RESEND_API_KEY: envPresence('RESEND_API_KEY'),
       SENTRY_DSN: envPresence('SENTRY_DSN'),
       // Newsletter cron secrets — these being set means the
