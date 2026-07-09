@@ -9,6 +9,10 @@
  *
  * Phase 2.2 adds bulk actions + CSV export so the admin can
  * process a full inbox in minutes instead of one click per lead.
+ *
+ * Phase 44: i18n — string keys live under the adminLeads.* namespace
+ * in src/lib/i18n-translations.ts. Status/tier enum values stay
+ * untranslated (Phase 37 precedent: DB enum round-trip contract).
  */
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
@@ -28,7 +32,6 @@ import {
   Mail,
   Phone,
   MessageCircle,
-  Loader2,
   AlertCircle,
   ArrowRight,
   Globe,
@@ -43,6 +46,7 @@ import {
 } from 'lucide-react';
 import { apiFetchJson, ApiError } from '@/lib/api-client';
 import { Badge } from '@/components/ui/badge';
+import { useI18n } from '@/lib/i18n';
 
 type LeadType = 'contact' | 'chat' | 'assessment';
 
@@ -78,6 +82,7 @@ interface LeadsResponse {
   counts: { contact: number; chat: number; assessment: number; total: number };
 }
 
+// Status colors are untranslated because the status values are DB enums.
 const STATUS_COLOR: Record<string, string> = {
   New: 'bg-blue-100 text-blue-800',
   Pending: 'bg-blue-100 text-blue-800',
@@ -97,22 +102,11 @@ const TIER_COLOR: Record<string, string> = {
   warm: 'bg-[#D4A853] text-[#1B2A4A]',
   cold: 'bg-gray-200 text-gray-700',
 };
-const TIER_LABEL: Record<string, string> = {
-  hot: '🔥 Hot',
-  warm: '🌡 Warm',
-  cold: '❄ Cold',
-};
 
 const TYPE_COLOR: Record<LeadType, string> = {
   contact: 'bg-[#1B2A4A] text-white',
   chat: 'bg-[#9B1B30] text-white',
   assessment: 'bg-[#D4A853] text-[#1B2A4A]',
-};
-
-const TYPE_LABEL: Record<LeadType, string> = {
-  contact: 'Contact',
-  chat: 'Chat',
-  assessment: 'Assessment',
 };
 
 const STATUS_OPTIONS: Record<LeadType, string[]> = {
@@ -123,6 +117,7 @@ const STATUS_OPTIONS: Record<LeadType, string[]> = {
 
 export default function LeadsPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [leads, setLeads] = useState<UnifiedLead[]>([]);
   const [counts, setCounts] = useState({ contact: 0, chat: 0, assessment: 0, total: 0 });
   const [isLoading, setIsLoading] = useState(true);
@@ -166,11 +161,11 @@ export default function LeadsPage() {
       setLeads(res.leads || []);
       setCounts(res.counts || { contact: 0, chat: 0, assessment: 0, total: 0 });
     } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : 'Failed to load leads');
+      setLoadError(err instanceof ApiError ? err.message : t('adminLeads.errorFailedLoad'));
     } finally {
       setIsLoading(false);
     }
-  }, [typeFilter, statusFilter, countryFilter, assigneeFilter, fromDate, toDate, q]);
+  }, [typeFilter, statusFilter, countryFilter, assigneeFilter, fromDate, toDate, q, t]);
 
   useEffect(() => {
     load();
@@ -226,7 +221,7 @@ export default function LeadsPage() {
       setSelected(new Set());
       load(); // refresh
     } catch (err) {
-      setBulkError(err instanceof ApiError ? err.message : 'Bulk action failed');
+      setBulkError(err instanceof ApiError ? err.message : t('adminLeads.errorBulkFailed'));
     } finally {
       setBulkBusy(false);
     }
@@ -257,7 +252,7 @@ export default function LeadsPage() {
       const sessionRaw =
         typeof window !== 'undefined' ? localStorage.getItem('sica-auth-v1') : null;
       if (!sessionRaw) {
-        setBulkError('No session — please re-login');
+        setBulkError(t('adminLeads.errorNoSession'));
         return;
       }
       const session = JSON.parse(sessionRaw);
@@ -266,7 +261,7 @@ export default function LeadsPage() {
         session?.access_token ||
         session?.accessToken;
       if (!token) {
-        setBulkError('No access token in session');
+        setBulkError(t('adminLeads.errorNoToken'));
         return;
       }
       const res = await fetch(`/api/admin/leads/export${qs ? `?${qs}` : ''}`, {
@@ -286,7 +281,7 @@ export default function LeadsPage() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (err) {
-      setBulkError(err instanceof Error ? err.message : 'Export failed');
+      setBulkError(err instanceof Error ? err.message : t('adminLeads.errorExportFailed'));
     } finally {
       setBulkBusy(false);
     }
@@ -310,24 +305,42 @@ export default function LeadsPage() {
     router.push(`/admin/leads/${lead.lead_id}?type=${lead.lead_type}`);
   };
 
+  // Tier labels depend on locale so they live in a memoized helper.
+  // The emoji prefix stays in both locales — visual signal, not text.
+  const TIER_LABEL: Record<string, string> = useMemo(
+    () => ({
+      hot: t('adminLeads.tierHot'),
+      warm: t('adminLeads.tierWarm'),
+      cold: t('adminLeads.tierCold'),
+    }),
+    [t],
+  );
+
+  const TYPE_LABEL: Record<LeadType, string> = useMemo(
+    () => ({
+      contact: t('adminLeads.typeContact'),
+      chat: t('adminLeads.typeChat'),
+      assessment: t('adminLeads.typeAssessment'),
+    }),
+    [t],
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#1B2A4A]">Leads</h1>
-          <p className="text-gray-500 mt-1">
-            Unified inbox across contact form, chat, and assessment submissions.
-          </p>
+          <h1 className="text-2xl font-bold text-[#1B2A4A]">{t('adminLeads.title')}</h1>
+          <p className="text-gray-500 mt-1">{t('adminLeads.subtitle')}</p>
         </div>
         <div className="flex flex-wrap gap-2 text-sm">
           <span className="px-3 py-1 bg-[#1B2A4A] text-white">
-            Contact {counts.contact}
+            {TYPE_LABEL.contact} {counts.contact}
           </span>
           <span className="px-3 py-1 bg-[#9B1B30] text-white">
-            Chat {counts.chat}
+            {TYPE_LABEL.chat} {counts.chat}
           </span>
           <span className="px-3 py-1 bg-[#D4A853] text-[#1B2A4A]">
-            Assessment {counts.assessment}
+            {TYPE_LABEL.assessment} {counts.assessment}
           </span>
         </div>
       </div>
@@ -345,7 +358,7 @@ export default function LeadsPage() {
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             <Input
-              placeholder="Search name, email, WhatsApp, program, message..."
+              placeholder={t('adminLeads.searchPlaceholder')}
               value={q}
               onChange={(e) => setQ(e.target.value)}
               className="pl-10"
@@ -355,22 +368,22 @@ export default function LeadsPage() {
             <SelectTrigger className="w-[150px]">
               <div className="flex items-center gap-2">
                 <Filter size={16} />
-                <SelectValue placeholder="Type" />
+                <SelectValue placeholder={t('adminLeads.filterType')} />
               </div>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="contact">Contact</SelectItem>
-              <SelectItem value="chat">Chat</SelectItem>
-              <SelectItem value="assessment">Assessment</SelectItem>
+              <SelectItem value="all">{t('adminLeads.filterAllTypes')}</SelectItem>
+              <SelectItem value="contact">{TYPE_LABEL.contact}</SelectItem>
+              <SelectItem value="chat">{TYPE_LABEL.chat}</SelectItem>
+              <SelectItem value="assessment">{TYPE_LABEL.assessment}</SelectItem>
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Status" />
+              <SelectValue placeholder={t('adminLeads.filterStatus')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="all">{t('adminLeads.filterAllStatus')}</SelectItem>
               {statusOptions.map((s: string) => (
                 <SelectItem key={s} value={s}>
                   {s}
@@ -380,12 +393,12 @@ export default function LeadsPage() {
           </Select>
           <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
             <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Assignee" />
+              <SelectValue placeholder={t('adminLeads.filterAssignee')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Assignees</SelectItem>
-              <SelectItem value="me">Me</SelectItem>
-              <SelectItem value="unassigned">Unassigned</SelectItem>
+              <SelectItem value="all">{t('adminLeads.filterAllAssignees')}</SelectItem>
+              <SelectItem value="me">{t('adminLeads.filterMe')}</SelectItem>
+              <SelectItem value="unassigned">{t('adminLeads.filterUnassigned')}</SelectItem>
             </SelectContent>
           </Select>
           <Select
@@ -393,13 +406,13 @@ export default function LeadsPage() {
             onValueChange={(v) => setTierFilter(v as 'all' | 'cold' | 'warm' | 'hot')}
           >
             <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Priority" />
+              <SelectValue placeholder={t('adminLeads.filterPriority')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Priority</SelectItem>
-              <SelectItem value="hot">🔥 Hot</SelectItem>
-              <SelectItem value="warm">🌡 Warm</SelectItem>
-              <SelectItem value="cold">❄ Cold</SelectItem>
+              <SelectItem value="all">{t('adminLeads.filterAllPriority')}</SelectItem>
+              <SelectItem value="hot">{TIER_LABEL.hot}</SelectItem>
+              <SelectItem value="warm">{TIER_LABEL.warm}</SelectItem>
+              <SelectItem value="cold">{TIER_LABEL.cold}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -407,14 +420,14 @@ export default function LeadsPage() {
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <Globe size={14} />
             <Input
-              placeholder="Country"
+              placeholder={t('adminLeads.filterCountryPlaceholder')}
               value={countryFilter}
               onChange={(e) => setCountryFilter(e.target.value)}
               className="w-[150px]"
             />
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-600">
-            <span>From</span>
+            <span>{t('adminLeads.filterFrom')}</span>
             <Input
               type="date"
               value={fromDate}
@@ -423,7 +436,7 @@ export default function LeadsPage() {
             />
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-600">
-            <span>To</span>
+            <span>{t('adminLeads.filterTo')}</span>
             <Input
               type="date"
               value={toDate}
@@ -443,7 +456,7 @@ export default function LeadsPage() {
                 setQ('');
               }}
             >
-              Clear
+              {t('adminLeads.clearFilters')}
             </Button>
           )}
         </div>
@@ -453,7 +466,7 @@ export default function LeadsPage() {
       {selected.size > 0 && (
         <div className="bg-[#1B2A4A] text-white p-3 flex flex-wrap items-center gap-3 sticky top-0 z-10 shadow-md">
           <span className="text-sm font-medium">
-            {selected.size} selected
+            {t('adminLeads.selectedCount', { count: selected.size })}
           </span>
           <div className="flex-1" />
           <Button
@@ -464,7 +477,7 @@ export default function LeadsPage() {
             className="bg-white text-[#1B2A4A] border-white hover:bg-gray-100"
           >
             {bulkBusy ? <Spinner size="xs" /> : <PhoneCall className="h-3.5 w-3.5 mr-1" />}
-            Mark contacted
+            {t('adminLeads.markContacted')}
           </Button>
           <Button
             size="sm"
@@ -474,7 +487,7 @@ export default function LeadsPage() {
             className="bg-white text-[#1B2A4A] border-white hover:bg-gray-100"
           >
             <Users className="h-3.5 w-3.5 mr-1" />
-            Assign to me
+            {t('adminLeads.assignToMe')}
           </Button>
           <Button
             size="sm"
@@ -483,7 +496,7 @@ export default function LeadsPage() {
             onClick={() => bulkAction('unassign')}
             className="bg-white text-[#1B2A4A] border-white hover:bg-gray-100"
           >
-            Unassign
+            {t('adminLeads.unassign')}
           </Button>
           <Button
             size="sm"
@@ -526,11 +539,11 @@ export default function LeadsPage() {
                   <Square className="h-4 w-4" />
                 )}
                 {selected.size === visibleLeads.length && visibleLeads.length > 0
-                  ? 'Deselect all'
-                  : 'Select all'}
+                  ? t('adminLeads.deselectAll')
+                  : t('adminLeads.selectAll')}
               </button>
             )}
-            <span>{visibleLeads.length} leads</span>
+            <span>{t('adminLeads.leadsCount', { count: visibleLeads.length })}</span>
           </div>
           <Button
             size="sm"
@@ -539,7 +552,7 @@ export default function LeadsPage() {
             disabled={bulkBusy || visibleLeads.length === 0}
           >
             <Download className="h-3.5 w-3.5 mr-1.5" />
-            Export CSV
+            {t('adminLeads.exportCsv')}
           </Button>
         </div>
         {isLoading ? (
@@ -548,7 +561,7 @@ export default function LeadsPage() {
           </div>
         ) : visibleLeads.length === 0 ? (
           <div className="bg-white border border-gray-200 px-4 py-12 text-center text-gray-500">
-            No leads match your filters.
+            {t('adminLeads.noLeadsMatch')}
           </div>
         ) : (
           <div className="space-y-2">
@@ -571,7 +584,7 @@ export default function LeadsPage() {
                       setSelected(next);
                     }}
                     className="flex-shrink-0 mt-1"
-                    aria-label={isSelected ? 'Deselect' : 'Select'}
+                    aria-label={isSelected ? t('adminLeads.ariaDeselect') : t('adminLeads.ariaSelect')}
                   >
                     {isSelected ? (
                       <CheckSquare className="h-4 w-4 text-[#1B2A4A]" />
@@ -593,11 +606,11 @@ export default function LeadsPage() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-semibold text-[#1B2A4A] truncate">
                             {lead.name ||
-                              (lead.email ? lead.email.split('@')[0] : '(no name)')}
+                              (lead.email ? lead.email.split('@')[0] : t('adminDashboard.noAccountHint'))}
                           </h3>
                           <span
                             className={`text-xs px-2 py-0.5 font-semibold ${TIER_COLOR[lead.score_tier]}`}
-                            title={lead.score_reasons.join(' · ') || 'No signal yet'}
+                            title={lead.score_reasons.join(' · ') || t('adminLeads.scoreNoSignal')}
                           >
                             {TIER_LABEL[lead.score_tier]} {lead.score}
                           </span>
@@ -607,13 +620,13 @@ export default function LeadsPage() {
                             </Badge>
                           )}
                           {lead.assigned_to ? (
-                            <span className="text-xs text-gray-500">Assigned</span>
+                            <span className="text-xs text-gray-500">{t('adminLeads.assigned')}</span>
                           ) : (
-                            <span className="text-xs text-[#9B1B30]">Unassigned</span>
+                            <span className="text-xs text-[#9B1B30]">{t('adminLeads.unassigned')}</span>
                           )}
                           {lead.contact_attempts > 0 && (
                             <span className="text-xs text-gray-500">
-                              · {lead.contact_attempts} contact{lead.contact_attempts === 1 ? '' : 's'}
+                              · {t('adminLeads.contactAttempts', { count: lead.contact_attempts })}
                             </span>
                           )}
                         </div>

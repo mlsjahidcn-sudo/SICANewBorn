@@ -12,8 +12,6 @@ import {
   Users,
   Clock,
   CheckCircle2,
-  XCircle,
-  UserCheck,
   RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -33,11 +31,13 @@ import {
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { apiFetch, apiFetchJson } from '@/lib/api-client';
+import { useI18n } from '@/lib/i18n';
 import type { AdminStudent } from '@/lib/student-mapper';
 
 const PAGE_SIZE = 20;
 
 export default function AdminStudentsPage() {
+  const { t } = useI18n();
   const [students, setStudents] = useState<AdminStudent[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -76,7 +76,7 @@ export default function AdminStudentsPage() {
       })
       .catch((err) => {
         if (err.name !== 'AbortError') {
-          setError(err.message || 'Failed to load students');
+          setError(err.message || t('adminStudents.errorFailedLoad'));
           setStudents([]);
           setTotal(0);
         }
@@ -86,7 +86,7 @@ export default function AdminStudentsPage() {
       });
 
     return () => controller.abort();
-  }, [page, searchQuery, statusFilter, sourceFilter]);
+  }, [page, searchQuery, statusFilter, sourceFilter, t]);
 
   // Debounce search input so we don't fire a request on every keystroke.
   // The `useEffect` above re-runs on `searchQuery` change, but we wrap
@@ -122,7 +122,7 @@ export default function AdminStudentsPage() {
       setDeleteDialogOpen(false);
       setStudentToDelete(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete student');
+      setError(err instanceof Error ? err.message : t('adminStudents.errorFailedDelete'));
     } finally {
       setIsDeleting(false);
     }
@@ -133,29 +133,35 @@ export default function AdminStudentsPage() {
     setPage((p) => p);
   };
 
+  // Status badges keep their DB enum values (Active / Inactive /
+  // Pending / Suspended) as-is — translating them would break the
+  // round-trip with the DB and the /api/admin/students?status= filter.
+  // Color-only changes are also intentionally omitted so the badge
+  // stays visually scannable across locales.
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'Active': return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Active</Badge>;
-      case 'Inactive': return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Inactive</Badge>;
-      case 'Pending': return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Pending</Badge>;
-      case 'Suspended': return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Suspended</Badge>;
+      case 'Active': return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">{status}</Badge>;
+      case 'Inactive': return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">{status}</Badge>;
+      case 'Pending': return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">{status}</Badge>;
+      case 'Suspended': return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">{status}</Badge>;
       default: return <Badge>{status}</Badge>;
     }
   };
 
+  // Source badges also keep DB enum values untranslated.
   const getSourceBadge = (student: AdminStudent) => {
     if (student.isOffline || student.source === 'Admin') {
       return (
         <Badge className="bg-[#9B1B30]/10 text-[#9B1B30] hover:bg-[#9B1B30]/10">
-          Offline Student
+          {t('adminStudents.badgeOffline')}
         </Badge>
       );
     }
     switch (student.source) {
       case 'Partner':
-        return <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">Partner</Badge>;
+        return <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">{student.source}</Badge>;
       case 'Online':
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Online</Badge>;
+        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">{student.source}</Badge>;
       default:
         return <Badge>{student.source}</Badge>;
     }
@@ -176,20 +182,20 @@ export default function AdminStudentsPage() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#1F2937]">Students</h1>
+          <h1 className="text-2xl font-bold text-[#1F2937]">{t('adminStudents.title')}</h1>
           <p className="text-[#4B5563] text-sm mt-1">
-            Manage all students (Offline and Online)
+            {t('adminStudents.subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={refresh} disabled={isLoading}>
             <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
+            {t('adminStudents.buttonRefresh')}
           </Button>
           <Link href="/admin/students/new">
             <Button className="bg-[#9B1B30] hover:bg-[#7A1526]">
               <Plus className="w-4 h-4 mr-2" />
-              Add Offline Student
+              {t('adminStudents.buttonAddOfflineStudent')}
             </Button>
           </Link>
         </div>
@@ -200,7 +206,7 @@ export default function AdminStudentsPage() {
         <Card className="border-red-200 bg-red-50">
           <CardContent className="pt-4 pb-4">
             <p className="text-red-800 text-sm">
-              <strong>Error:</strong> {error}
+              <strong>{t('adminStudents.errorPrefix')}</strong> {error}
             </p>
           </CardContent>
         </Card>
@@ -210,7 +216,7 @@ export default function AdminStudentsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription className="text-[#4B5563]">Total Students</CardDescription>
+            <CardDescription className="text-[#4B5563]">{t('adminStudents.statTotal')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-3">
@@ -221,7 +227,7 @@ export default function AdminStudentsPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription className="text-[#4B5563]">Active (this page)</CardDescription>
+            <CardDescription className="text-[#4B5563]">{t('adminStudents.statActive')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-3">
@@ -232,7 +238,7 @@ export default function AdminStudentsPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription className="text-[#4B5563]">Pending (this page)</CardDescription>
+            <CardDescription className="text-[#4B5563]">{t('adminStudents.statPending')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-3">
@@ -243,7 +249,7 @@ export default function AdminStudentsPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription className="text-[#4B5563]">Offline (this page)</CardDescription>
+            <CardDescription className="text-[#4B5563]">{t('adminStudents.statOffline')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-3">
@@ -261,7 +267,7 @@ export default function AdminStudentsPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
-                placeholder="Search students by name or email..."
+                placeholder={t('adminStudents.searchPlaceholder')}
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 className="pl-10"
@@ -269,10 +275,10 @@ export default function AdminStudentsPage() {
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-full sm:w-40">
-                <SelectValue placeholder="Filter by status" />
+                <SelectValue placeholder={t('adminStudents.filterStatusPlaceholder')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="all">{t('adminStudents.filterAllStatus')}</SelectItem>
                 <SelectItem value="Active">Active</SelectItem>
                 <SelectItem value="Inactive">Inactive</SelectItem>
                 <SelectItem value="Pending">Pending</SelectItem>
@@ -281,10 +287,10 @@ export default function AdminStudentsPage() {
             </Select>
             <Select value={sourceFilter} onValueChange={setSourceFilter}>
               <SelectTrigger className="w-full sm:w-40">
-                <SelectValue placeholder="Filter by source" />
+                <SelectValue placeholder={t('adminStudents.filterSourcePlaceholder')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Sources</SelectItem>
+                <SelectItem value="all">{t('adminStudents.filterAllSources')}</SelectItem>
                 <SelectItem value="Admin">Admin</SelectItem>
                 <SelectItem value="Partner">Partner</SelectItem>
                 <SelectItem value="Online">Online</SelectItem>
@@ -311,21 +317,21 @@ export default function AdminStudentsPage() {
           ) : students.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               {searchQuery || statusFilter !== 'all' || sourceFilter !== 'all'
-                ? 'No students match your filters.'
-                : 'No students yet. Click "Add Offline Student" to create one.'}
+                ? t('adminStudents.emptyFiltered')
+                : t('adminStudents.emptyNone')}
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Student</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Nationality</TableHead>
-                  <TableHead>Target Degree</TableHead>
-                  <TableHead>Source</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{t('adminStudents.colStudent')}</TableHead>
+                  <TableHead>{t('adminStudents.colEmail')}</TableHead>
+                  <TableHead>{t('adminStudents.colNationality')}</TableHead>
+                  <TableHead>{t('adminStudents.colTargetDegree')}</TableHead>
+                  <TableHead>{t('adminStudents.colSource')}</TableHead>
+                  <TableHead>{t('adminStudents.colStatus')}</TableHead>
+                  <TableHead>{t('adminStudents.colCreated')}</TableHead>
+                  <TableHead className="text-right">{t('adminStudents.colActions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -365,13 +371,13 @@ export default function AdminStudentsPage() {
                           <DropdownMenuItem asChild>
                             <Link href={`/admin/students/${student.id}`} className="flex items-center cursor-pointer">
                               <Eye className="w-4 h-4 mr-2" />
-                              View
+                              {t('adminStudents.actionView')}
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
                             <Link href={`/admin/students/${student.id}/edit`} className="flex items-center cursor-pointer">
                               <Edit className="w-4 h-4 mr-2" />
-                              Edit
+                              {t('adminStudents.actionEdit')}
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem
@@ -380,7 +386,9 @@ export default function AdminStudentsPage() {
                             disabled={student.status === 'Suspended'}
                           >
                             <Trash2 className="w-4 h-4 mr-2" />
-                            {student.status === 'Suspended' ? 'Already Suspended' : 'Suspend'}
+                            {student.status === 'Suspended'
+                              ? t('adminStudents.actionAlreadySuspended')
+                              : t('adminStudents.actionSuspend')}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -395,7 +403,11 @@ export default function AdminStudentsPage() {
           {!isLoading && total > 0 && (
             <div className="flex items-center justify-between mt-4 pt-4 border-t">
               <p className="text-sm text-gray-500">
-                Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} of {total}
+                {t('adminStudents.paginationShowing', {
+                  from: (page - 1) * PAGE_SIZE + 1,
+                  to: Math.min(page * PAGE_SIZE, total),
+                  total,
+                })}
               </p>
               <div className="flex items-center gap-2">
                 <Button
@@ -404,10 +416,10 @@ export default function AdminStudentsPage() {
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page <= 1}
                 >
-                  Previous
+                  {t('adminStudents.paginationPrev')}
                 </Button>
                 <span className="text-sm text-gray-600">
-                  Page {page} of {totalPages}
+                  {t('adminStudents.paginationPageOf', { page, total: totalPages })}
                 </span>
                 <Button
                   variant="outline"
@@ -415,7 +427,7 @@ export default function AdminStudentsPage() {
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page >= totalPages}
                 >
-                  Next
+                  {t('adminStudents.paginationNext')}
                 </Button>
               </div>
             </div>
@@ -427,11 +439,9 @@ export default function AdminStudentsPage() {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Suspend Student</DialogTitle>
+            <DialogTitle>{t('adminStudents.suspendDialogTitle')}</DialogTitle>
             <DialogDescription>
-              This will set the student's status to <strong>Suspended</strong>.
-              The record is preserved for audit. You can find suspended students
-              via the Status filter.
+              {t('adminStudents.suspendDialogBody')}
             </DialogDescription>
           </DialogHeader>
 
@@ -454,14 +464,14 @@ export default function AdminStudentsPage() {
 
           <DialogFooter>
             <Button variant="ghost" onClick={() => setDeleteDialogOpen(false)} disabled={isDeleting}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               className="bg-red-600 hover:bg-red-700"
               onClick={confirmDeleteStudent}
               disabled={isDeleting}
             >
-              {isDeleting ? 'Suspending...' : 'Suspend Student'}
+              {isDeleting ? t('adminStudents.suspendDialogSubmitting') : t('adminStudents.suspendDialogConfirm')}
             </Button>
           </DialogFooter>
         </DialogContent>
