@@ -5,12 +5,13 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft, Edit, Trash2, Calendar, Building, BookOpen, AlertTriangle,
-  Mail, Phone, Globe, Hash, Flag,
+  Mail, Phone, Globe, Hash, Flag, Info, Copy, ClipboardCopy, RotateCcw, CheckCircle,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 import type {
@@ -47,6 +48,21 @@ export default function PartnerApplicationDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [showDelete, setShowDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  // Phase 49.3: disable the Clone button while we write the
+  // sessionStorage entry + navigate. Prevents a partner who
+  // double-clicks from creating two clone entries (only the
+  // latest sessionStorage value matters, but the button
+  // being grey is the visible signal).
+  const [cloning, setCloning] = useState(false);
+  // Phase 49.4: "Request withdrawal" — modal + busy state +
+  // success banner. The actual API call goes to
+  // /api/partner/applications/[id]/request-withdrawal which
+  // inserts a timeline event the admin sees.
+  const [showWithdrawal, setShowWithdrawal] = useState(false);
+  const [withdrawalReason, setWithdrawalReason] = useState('');
+  const [withdrawalBusy, setWithdrawalBusy] = useState(false);
+  const [withdrawalSent, setWithdrawalSent] = useState(false);
+  const [withdrawalErr, setWithdrawalErr] = useState<string | null>(null);
   // Phase 1.13: most recent admin-actor on this application.
   // Surfaces "your case is being reviewed by <admin email>" so
   // the partner has a real person to follow up with.
@@ -95,6 +111,121 @@ export default function PartnerApplicationDetailPage() {
       setError(err instanceof Error ? err.message : t('partnerAppDetail.errorDelete'));
       setIsDeleting(false);
       setShowDelete(false);
+    }
+  };
+
+  // Phase 49.3: serialize the application into sessionStorage
+  // and route to the new-app page with ?clone=1. The new page
+  // reads the entry on mount, hydrates the form, then clears
+  // it (so a refresh doesn't re-apply stale data).
+  const handleClone = () => {
+    if (!app) return;
+    setCloning(true);
+    try {
+      // The fields the partner will re-pick on the clone —
+      // explicitly clear them so the form opens with a blank
+      // program picker. Everything else (student contact info,
+      // academic background, passport, personal statement,
+      // funding) carries over.
+      const cloneData = {
+        studentName: app.studentName,
+        studentEmail: app.studentEmail ?? '',
+        studentPhone: app.studentPhone ?? '',
+        nationality: app.nationality ?? '',
+        dateOfBirth: app.dateOfBirth ?? '',
+        gender: (app.gender as string) ?? '',
+        maritalStatus: (app.maritalStatus as string) ?? '',
+        placeOfBirth: app.placeOfBirth ?? '',
+        currentAddress: app.currentAddress ?? '',
+        passportNumber: app.passportNumber ?? '',
+        passportIssueDate: app.passportIssueDate ?? '',
+        passportExpiryDate: app.passportExpiryDate ?? '',
+        emergencyContactName: app.emergencyContactName ?? '',
+        emergencyContactRelationship: (app.emergencyContactRelationship as string) ?? '',
+        emergencyContactPhone: app.emergencyContactPhone ?? '',
+        emergencyContactEmail: app.emergencyContactEmail ?? '',
+        highestEducation: (app.highestEducation as string) ?? '',
+        schoolName: app.schoolName ?? '',
+        schoolCountry: app.schoolCountry ?? '',
+        major: app.major ?? '',
+        graduationYear: app.graduationYear ? String(app.graduationYear) : '',
+        gpa: app.gpa ?? '',
+        classRank: app.classRank ?? '',
+        nativeLanguage: app.nativeLanguage ?? '',
+        englishTest: (app.englishTest as string) ?? '',
+        englishScore: app.englishScore ?? '',
+        hskLevel: (app.hskLevel as string) ?? '',
+        hskScore: app.hskScore ?? '',
+        // university / program / intake / degree intentionally
+        // blank — the partner will pick a new program.
+        university: '',
+        program: '',
+        intake: '',
+        degree: '',
+        hasStudiedInChina: app.hasStudiedInChina ?? false,
+        hasAppliedChinaUni: app.hasAppliedChinaUni ?? false,
+        fundingSource: (app.fundingSource as string) ?? '',
+        scholarshipName: app.scholarshipName ?? '',
+        whyProgram: app.whyProgram ?? '',
+        careerPlan: app.careerPlan ?? '',
+        // Notes are blank — the new app's notes should start
+        // fresh. The partner can re-use the prior app's notes
+        // from the detail page if they want.
+        notes: '',
+        // priority is per-app; default to Normal on the clone.
+        priority: 'Normal' as const,
+        applicationNumber: '',
+        submittedAt: null,
+        // Source app id so the new-app page can show a "Cloned
+        // from <name>" hint (Phase 49.3 follow-up — not yet
+        // surfaced in the UI but the data is here).
+        _clonedFrom: app.id,
+      };
+      sessionStorage.setItem('partner-clone-application', JSON.stringify(cloneData));
+      router.push('/partner/applications/new?clone=1');
+    } catch (err) {
+      console.error('[partner/applications/:id] clone failed:', err);
+      setError(err instanceof Error ? err.message : t('partnerAppDetail.errorClone'));
+      setCloning(false);
+    }
+  };
+
+  // Phase 49.4: "Request withdrawal" — POSTs to
+  // /api/partner/applications/[id]/request-withdrawal with the
+  // optional reason. The endpoint inserts a 'Withdrawal Requested'
+  // timeline event the admin sees on the partner-application
+  // detail. We then show a success banner instead of immediately
+  // closing the modal — gives the partner a confirmation
+  // message and time to read it.
+  const handleWithdrawalSubmit = async () => {
+    if (!app) return;
+    setWithdrawalBusy(true);
+    setWithdrawalErr(null);
+    try {
+      const res = await fetch(
+        `/api/partner/applications/${applicationId}/request-withdrawal`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason: withdrawalReason }),
+        },
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || t('partnerAppDetail.errorWithdrawal'));
+      }
+      setWithdrawalSent(true);
+      // Auto-close after a short read window.
+      setTimeout(() => {
+        setShowWithdrawal(false);
+        setWithdrawalSent(false);
+        setWithdrawalReason('');
+      }, 2500);
+    } catch (err) {
+      console.error('[partner/applications/:id] request-withdrawal failed:', err);
+      setWithdrawalErr(err instanceof Error ? err.message : t('partnerAppDetail.errorWithdrawal'));
+    } finally {
+      setWithdrawalBusy(false);
     }
   };
 
@@ -158,6 +289,72 @@ export default function PartnerApplicationDetailPage() {
         </div>
       )}
 
+      {/* Phase 49.4: "Request withdrawal" modal. Optional reason
+          (capped at 1000 chars server-side). On success we
+          show a confirmation banner inside the modal for 2.5s
+          before auto-closing. The endpoint inserts a
+          'Withdrawal Requested' timeline event the admin sees
+          on the partner-application detail. */}
+      {showWithdrawal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 max-w-md w-full mx-4 border border-gray-200">
+            <h3 className="text-lg font-semibold text-[#1B2A4A] mb-4">
+              {t('partnerAppDetail.withdrawalTitle')}
+            </h3>
+            {!withdrawalSent ? (
+              <>
+                <p className="text-[#4B5563] mb-4 text-sm">
+                  {t('partnerAppDetail.withdrawalBody', { student: app.studentName, university: app.university })}
+                </p>
+                <label className="block text-sm font-medium text-[#1B2A4A] mb-1">
+                  {t('partnerAppDetail.withdrawalReasonLabel')}
+                </label>
+                <Textarea
+                  value={withdrawalReason}
+                  onChange={(e) => setWithdrawalReason(e.target.value)}
+                  maxLength={1000}
+                  rows={4}
+                  className="rounded-none mb-1"
+                  placeholder={t('partnerAppDetail.withdrawalReasonPlaceholder')}
+                />
+                <p className="text-xs text-gray-500 mb-4">
+                  {t('partnerAppDetail.withdrawalReasonHint', { count: withdrawalReason.length })}
+                </p>
+                {withdrawalErr && (
+                  <p className="text-sm text-red-700 mb-3">{withdrawalErr}</p>
+                )}
+                <div className="flex gap-3 justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowWithdrawal(false);
+                      setWithdrawalReason('');
+                      setWithdrawalErr(null);
+                    }}
+                    disabled={withdrawalBusy}
+                    className="rounded-none"
+                  >
+                    {t('partnerAppDetail.cancel')}
+                  </Button>
+                  <Button
+                    onClick={handleWithdrawalSubmit}
+                    disabled={withdrawalBusy}
+                    className="rounded-none bg-[#9B1B30] hover:bg-[#7a1626]"
+                  >
+                    {withdrawalBusy ? t('partnerAppDetail.withdrawalSending') : t('partnerAppDetail.withdrawalSubmit')}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="text-sm text-green-800 flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-green-700 flex-shrink-0" />
+                <p>{t('partnerAppDetail.withdrawalSent')}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center gap-4">
         <Link href="/partner/applications" className="p-2 hover:bg-gray-100 inline-flex">
           <ArrowLeft className="w-5 h-5 text-[#1B2A4A]" />
@@ -196,6 +393,43 @@ export default function PartnerApplicationDetailPage() {
               {t('partnerAppDetail.edit')}
             </Link>
           </Button>
+          {/* Phase 49.3: "Clone as new application" — partners
+              often submit the same student to multiple
+              universities. This stores the form-ready data in
+              sessionStorage and routes to /partner/applications/new
+              with ?clone=1. The new-app page reads sessionStorage
+              on mount and pre-fills every field except
+              university/program/intake/degree/applicationNumber
+              (the partner will re-pick these — that's the whole
+              point of cloning). sessionStorage is per-tab and
+              auto-clears on tab close, so this is safe. */}
+          <Button
+            variant="outline"
+            className="rounded-none"
+            onClick={() => handleClone()}
+            disabled={cloning}
+          >
+            <ClipboardCopy className="mr-2 h-4 w-4" />
+            {t('partnerAppDetail.clone')}
+          </Button>
+          {/* Phase 49.4: "Request withdrawal" — opens the
+              modal with an optional reason textarea. Disabled
+              when the row is already Withdrawn (no need to ask
+              again). The modal posts to
+              /api/partner/applications/[id]/request-withdrawal
+              which inserts a 'Withdrawal Requested' timeline
+              event the admin sees in the partner-application
+              detail. */}
+          {app.status !== 'Withdrawn' && (
+            <Button
+              variant="outline"
+              className="rounded-none"
+              onClick={() => setShowWithdrawal(true)}
+            >
+              <RotateCcw className="mr-2 h-4 w-4" />
+              {t('partnerAppDetail.requestWithdrawal')}
+            </Button>
+          )}
           <Button
             variant="outline"
             onClick={() => setShowDelete(true)}
@@ -268,9 +502,23 @@ export default function PartnerApplicationDetailPage() {
                 {app.submittedAt ? new Date(app.submittedAt).toLocaleDateString() : t('partnerCommon.placeholderDash')}
               </span>
             </div>
-            <p className="text-xs text-gray-500 pt-2 border-t border-gray-100">
-              {t('partnerAppDetail.statusAdminNote')}
-            </p>
+            {/* Phase 49.1: prominent "why can't I change status?" callout.
+                S27 removed the partner's ability to change status +
+                decision (admins drive the workflow). Partners were
+                left wondering why the Edit button doesn't surface
+                those fields. The old copy was a tiny gray sentence
+                at the bottom of the status card — easy to miss. This
+                callout is now a real amber notice with an Info icon,
+                explains the rule, and points at the request-withdrawal
+                action below as the partner's recourse when the admin
+                hasn't moved the status fast enough for them. */}
+            <div className="flex items-start gap-2 pt-3 mt-1 border-t border-gray-100">
+              <Info className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-900">
+                <strong>{t('partnerAppDetail.statusAdminNoteTitle')}</strong>{' '}
+                {t('partnerAppDetail.statusAdminNote')}
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>

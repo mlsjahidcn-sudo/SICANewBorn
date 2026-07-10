@@ -18,6 +18,7 @@ import {
   PARTNER_STUDENT_STATUSES,
   PartnerStudentStatus,
 } from '@/lib/partner-student-mapper';
+import { COMMON_COUNTRIES, NATIONALITY_CUSTOM } from '@/lib/common-countries';
 import type { University, Program } from '@/lib/data';
 
 interface FormData {
@@ -53,6 +54,13 @@ export default function PartnerAddStudentPage() {
   // application form's L4 success banner. Cleared on each new
   // submit attempt.
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  // Phase 49.2: when the partner picks "Other" in the
+  // nationality <Select>, we show a free-text <Input> for them
+  // to type the country name. The select value is NATIONALITY_CUSTOM
+  // and the actual value lives in formData.nationality. When
+  // they pick a real country, we set nationality to that value
+  // and clear the custom flag.
+  const [showCustomNationality, setShowCustomNationality] = useState(false);
   // Phase 47.4: load the live catalog so the target-university and
   // target-program fields are searchable pickers (not free-text).
   // Free-text gave us "Tsingha University" / "Tsinghua Univ" /
@@ -245,15 +253,66 @@ export default function PartnerAddStudentPage() {
                 </div>
                 <div>
                   <Label htmlFor="nationality" className="text-[#1B2A4A] mb-2 block">{t('partnerStudentNew.fieldNationality')}</Label>
-                  <Input
-                    id="nationality"
-                    name="nationality"
-                    value={formData.nationality}
-                    onChange={handleInputChange}
-                    maxLength={100}
-                    className="rounded-none"
-                    placeholder={t('partnerStudentNew.fieldNationalityPlaceholder')}
-                  />
+                  {/* Phase 49.2: <Select> over the curated top-40
+                      country list (src/lib/common-countries.ts).
+                      Free-text gave us "USA" / "United States" /
+                      "America" / "U.S.A." as 4 different rows
+                      for the same country. The "Other" option
+                      preserves the old free-text path so partners
+                      with students from rare countries can still
+                      type a value. */}
+                  <Select
+                    value={
+                      showCustomNationality
+                        ? NATIONALITY_CUSTOM
+                        : formData.nationality === ''
+                          ? ''
+                          : COMMON_COUNTRIES.some((c) => c.value === formData.nationality)
+                            ? formData.nationality
+                            : NATIONALITY_CUSTOM
+                    }
+                    onValueChange={(value) => {
+                      if (value === NATIONALITY_CUSTOM) {
+                        setShowCustomNationality(true);
+                        // Keep the typed value in formData.nationality
+                        // (don't clear — partner may have already
+                        // started typing before clicking Other).
+                      } else {
+                        setShowCustomNationality(false);
+                        setFormData((prev) => ({ ...prev, nationality: value }));
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="rounded-none">
+                      <SelectValue placeholder={t('partnerStudentNew.fieldNationalityPlaceholder')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">{t('partnerCommon.placeholderDash')}</SelectItem>
+                      {COMMON_COUNTRIES.map((c) => (
+                        <SelectItem key={c.code} value={c.value}>
+                          {c.label} ({c.code})
+                        </SelectItem>
+                      ))}
+                      <SelectItem value={NATIONALITY_CUSTOM}>
+                        {t('partnerStudentNew.fieldNationalityOther')}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {/* Free-text fallback when "Other" is picked
+                      (or when the loaded value isn't in the
+                      catalog). Same field, just an <Input> for
+                      the long tail of countries. */}
+                  {showCustomNationality && (
+                    <Input
+                      id="nationality"
+                      name="nationality"
+                      value={formData.nationality}
+                      onChange={handleInputChange}
+                      maxLength={100}
+                      className="rounded-none mt-2"
+                      placeholder={t('partnerStudentNew.fieldNationalityPlaceholder')}
+                    />
+                  )}
                 </div>
               </div>
             </div>

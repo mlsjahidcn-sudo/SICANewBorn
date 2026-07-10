@@ -1278,6 +1278,28 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerAppDetail.couldNotLoad': "Couldn't load application",
     'partnerAppDetail.edit': 'Edit',
     'partnerAppDetail.delete': 'Delete',
+    // Phase 49.3: "Clone as new application" button. Copies
+    // every field except university/program/intake/degree
+    // into sessionStorage, then routes to the new-app page
+    // with ?clone=1 so the partner can pick a new program
+    // for the same student.
+    'partnerAppDetail.clone': 'Clone as new',
+    'partnerAppDetail.errorClone': 'Could not start the clone — please try again.',
+    // Phase 49.4: "Request withdrawal" — partner cannot change
+    // status (admin-only per S27). Instead, this opens a modal
+    // with an optional reason, posts to a new endpoint that
+    // inserts a 'Withdrawal Requested' timeline event the
+    // admin sees in the partner-application detail.
+    'partnerAppDetail.requestWithdrawal': 'Request withdrawal',
+    'partnerAppDetail.withdrawalTitle': 'Request withdrawal',
+    'partnerAppDetail.withdrawalBody': "SICA's admin team handles all status changes. Tell us why {{student}}'s application to {{university}} should be withdrawn — we'll review and confirm.",
+    'partnerAppDetail.withdrawalReasonLabel': 'Reason (optional)',
+    'partnerAppDetail.withdrawalReasonPlaceholder': 'e.g., student changed their mind, found another program, financial reasons...',
+    'partnerAppDetail.withdrawalReasonHint': '{{count}} / 1000 characters',
+    'partnerAppDetail.withdrawalSubmit': 'Send request',
+    'partnerAppDetail.withdrawalSending': 'Sending...',
+    'partnerAppDetail.withdrawalSent': "Request sent. SICA's admin team will review and confirm.",
+    'partnerAppDetail.errorWithdrawal': 'Could not send the request — please try again.',
     'partnerAppDetail.deleteTitle': 'Delete Application',
     'partnerAppDetail.deleteBodyFor': 'Delete application for {{student}} at {{university}}? This cannot be undone.',
     'partnerAppDetail.cancel': 'Cancel',
@@ -1295,6 +1317,10 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerAppDetail.fieldPriority': 'Priority:',
     'partnerAppDetail.fieldSubmitted': 'Submitted:',
     'partnerAppDetail.statusAdminNote': "Status and Decision are set by SICA's admin team — you can't change them from the partner portal. Email SICA if you need a status change.",
+    // Phase 49.1: bolded lead-in for the "why can't I change status?"
+    // callout on the application detail page. The body (statusAdminNote)
+    // was already there but easy to miss as a tiny gray sentence.
+    'partnerAppDetail.statusAdminNoteTitle': 'Why is status read-only?',
     'partnerAppDetail.noEmailOnFile': 'No email on file.',
     'partnerAppDetail.addedBy': 'Added by {{email}}',
     'partnerAppDetail.addedOn': ' on {{date}}',
@@ -1527,6 +1553,12 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerStudentNew.fieldPhonePlaceholder': '+1 555 0100',
     'partnerStudentNew.fieldNationality': 'Nationality',
     'partnerStudentNew.fieldNationalityPlaceholder': 'e.g., USA, UK, China',
+    // Phase 49.2: the "Other" option in the nationality
+    // <Select>. When picked, the form reveals a free-text
+    // <Input> so partners can type a country not in the
+    // top-40 list (long-tail countries). The placeholder
+    // stays the same so the partner knows what to type.
+    'partnerStudentNew.fieldNationalityOther': 'Other (type below)',
     'partnerStudentNew.sectionTarget': 'Target Program',
     'partnerStudentNew.fieldTargetUniversity': 'Target University',
     'partnerStudentNew.fieldTargetUniversityPlaceholder': 'e.g., Tsinghua University',
@@ -3825,6 +3857,20 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerAppDetail.couldNotLoad': '无法加载申请',
     'partnerAppDetail.edit': '编辑',
     'partnerAppDetail.delete': '删除',
+    // Phase 49.3: see the en counterpart.
+    'partnerAppDetail.clone': '克隆为新申请',
+    'partnerAppDetail.errorClone': '无法开始克隆——请重试。',
+    // Phase 49.4: see the en counterpart.
+    'partnerAppDetail.requestWithdrawal': '请求撤回',
+    'partnerAppDetail.withdrawalTitle': '请求撤回',
+    'partnerAppDetail.withdrawalBody': 'SICA 管理员团队负责所有状态变更。请告诉我们为什么 {{student}} 申请 {{university}} 的撤回请求应该被批准——我们会审核并确认。',
+    'partnerAppDetail.withdrawalReasonLabel': '原因（可选）',
+    'partnerAppDetail.withdrawalReasonPlaceholder': '例如：学生改变了主意、找到了其他项目、经济原因...',
+    'partnerAppDetail.withdrawalReasonHint': '{{count}} / 1000 字符',
+    'partnerAppDetail.withdrawalSubmit': '发送请求',
+    'partnerAppDetail.withdrawalSending': '发送中...',
+    'partnerAppDetail.withdrawalSent': '请求已发送。SICA 管理员团队将审核并确认。',
+    'partnerAppDetail.errorWithdrawal': '无法发送请求——请重试。',
     'partnerAppDetail.deleteTitle': '删除申请',
     'partnerAppDetail.deleteBodyFor': '确认删除 {{student}} 在 {{university}} 的申请？此操作无法撤销。',
     'partnerAppDetail.cancel': '取消',
@@ -3842,6 +3888,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerAppDetail.fieldPriority': '优先级：',
     'partnerAppDetail.fieldSubmitted': '提交时间：',
     'partnerAppDetail.statusAdminNote': '状态和决定由 SICA 管理员设置——您无法在合作方门户中更改。如需变更状态，请联系 SICA。',
+    // Phase 49.1: see the en counterpart.
+    'partnerAppDetail.statusAdminNoteTitle': '为什么状态是只读的？',
     'partnerAppDetail.noEmailOnFile': '暂无邮箱信息。',
     'partnerAppDetail.addedBy': '由 {{email}} 添加',
     'partnerAppDetail.addedOn': '于 {{date}} 添加',
@@ -4072,6 +4120,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerStudentNew.fieldPhonePlaceholder': '+1 555 0100',
     'partnerStudentNew.fieldNationality': '国籍',
     'partnerStudentNew.fieldNationalityPlaceholder': '例如：美国、英国、中国',
+    // Phase 49.2: see the en counterpart.
+    'partnerStudentNew.fieldNationalityOther': '其他（在下方输入）',
     'partnerStudentNew.sectionTarget': '目标专业',
     'partnerStudentNew.fieldTargetUniversity': '目标大学',
     'partnerStudentNew.fieldTargetUniversityPlaceholder': '例如：清华大学',

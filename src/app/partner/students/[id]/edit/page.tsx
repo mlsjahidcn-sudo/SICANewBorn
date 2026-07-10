@@ -18,6 +18,7 @@ import {
   PARTNER_STUDENT_STATUSES,
   PartnerStudentStatus,
 } from '@/lib/partner-student-mapper';
+import { COMMON_COUNTRIES, NATIONALITY_CUSTOM } from '@/lib/common-countries';
 import type { University, Program } from '@/lib/data';
 
 interface FormData {
@@ -42,6 +43,14 @@ export default function PartnerEditStudentPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // Phase 49.2: same logic as the new-student form. When the
+  // partner picks "Other" in the nationality <Select>, we
+  // show a free-text <Input> for them to type the long tail
+  // of countries. Pre-populated from the loaded value: if
+  // the existing nationality isn't in the common list, we
+  // treat it as "Other" so the free-text input shows up
+  // with the current value pre-filled.
+  const [showCustomNationality, setShowCustomNationality] = useState(false);
   // Phase 48.6: snapshot of the form as it was loaded from the
   // server, used by the beforeunload guard to detect "dirty"
   // (the partner has typed something that hasn't been saved).
@@ -103,6 +112,19 @@ export default function PartnerEditStudentPage() {
         notes: s.notes ?? '',
       };
       setFormData(loaded);
+      // Phase 49.2: if the existing nationality isn't in the
+      // top-40 catalog, show the free-text "Other" fallback
+      // input pre-filled with the current value, so the
+      // partner sees their existing free-text data instead
+      // of an empty select. We only set the flag once on
+      // load — changing it after that is the partner's
+      // choice via the select.
+      if (
+        s.nationality &&
+        !COMMON_COUNTRIES.some((c) => c.value === s.nationality)
+      ) {
+        setShowCustomNationality(true);
+      }
       // Phase 48.6: snapshot for the beforeunload guard. The
       // ref is set here, after the row is fetched, so the
       // guard has a stable reference to compare against.
@@ -282,14 +304,54 @@ export default function PartnerEditStudentPage() {
                 </div>
                 <div>
                   <Label htmlFor="nationality" className="text-[#1B2A4A] mb-2 block">{t('partnerStudentEdit.fieldNationality')}</Label>
-                  <Input
-                    id="nationality"
-                    name="nationality"
-                    value={formData.nationality}
-                    onChange={handleInputChange}
-                    maxLength={100}
-                    className="rounded-none"
-                  />
+                  {/* Phase 49.2: <Select> over the curated top-40
+                      country list. Mirrors the partner student
+                      new form. See src/lib/common-countries.ts. */}
+                  <Select
+                    value={
+                      showCustomNationality
+                        ? NATIONALITY_CUSTOM
+                        : formData.nationality === ''
+                          ? ''
+                          : COMMON_COUNTRIES.some((c) => c.value === formData.nationality)
+                            ? formData.nationality
+                            : NATIONALITY_CUSTOM
+                    }
+                    onValueChange={(value) => {
+                      if (value === NATIONALITY_CUSTOM) {
+                        setShowCustomNationality(true);
+                      } else {
+                        setShowCustomNationality(false);
+                        setFormData((prev) => (prev ? { ...prev, nationality: value } : prev));
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="rounded-none">
+                      <SelectValue placeholder={t('partnerStudentNew.fieldNationalityPlaceholder')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">{t('partnerCommon.placeholderDash')}</SelectItem>
+                      {COMMON_COUNTRIES.map((c) => (
+                        <SelectItem key={c.code} value={c.value}>
+                          {c.label} ({c.code})
+                        </SelectItem>
+                      ))}
+                      <SelectItem value={NATIONALITY_CUSTOM}>
+                        {t('partnerStudentNew.fieldNationalityOther')}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {showCustomNationality && (
+                    <Input
+                      id="nationality"
+                      name="nationality"
+                      value={formData.nationality}
+                      onChange={handleInputChange}
+                      maxLength={100}
+                      className="rounded-none mt-2"
+                      placeholder={t('partnerStudentNew.fieldNationalityPlaceholder')}
+                    />
+                  )}
                 </div>
               </div>
             </div>

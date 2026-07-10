@@ -52,6 +52,13 @@ export default function PartnerNewApplicationPage() {
   // ref is a guard so the user can clear/edit the fields
   // without us re-applying the pick on every render.
   const autoPickedRef = useRef<string | null>(null);
+  // Phase 49.3: when the partner navigates here from
+  // /partner/applications/[id] via the "Clone" button, the
+  // detail page stored the form-ready data in sessionStorage
+  // and routed us with ?clone=1. We read it on mount, merge
+  // it into formData, then clear the storage entry so a
+  // page refresh doesn't re-apply stale data.
+  const cloneAppliedRef = useRef<boolean>(false);
 
   // Phase S20: load this partner's students, plus the live university
   // and program lists. S26: this list feeds the combined program
@@ -112,6 +119,34 @@ export default function PartnerNewApplicationPage() {
     autoPickedRef.current = studentIdFromUrl;
     handleStudentPick(studentIdFromUrl);
   }, [searchParams, dataLoading, students]);
+
+  // Phase 49.3: read the sessionStorage entry written by the
+  // "Clone as new application" button on the application
+  // detail page. Merge it into formData once, then clear the
+  // entry so a refresh doesn't re-apply stale data. The
+  // ref guard ensures we only apply once per page load, even
+  // if this effect re-fires for other reasons.
+  useEffect(() => {
+    if (cloneAppliedRef.current) return;
+    const isClone = searchParams.get('clone');
+    if (!isClone) return;
+    if (typeof window === 'undefined') return; // SSR safety
+    const raw = sessionStorage.getItem('partner-clone-application');
+    if (!raw) return;
+    try {
+      const data = JSON.parse(raw) as Record<string, unknown>;
+      // Drop the helper field before merging.
+      const { _clonedFrom, ...formFields } = data;
+      setFormData((prev) => ({ ...prev, ...formFields }) as typeof prev);
+      cloneAppliedRef.current = true;
+    } catch (err) {
+      console.error('[partner/applications/new] clone parse failed:', err);
+    } finally {
+      // Always clear the storage entry — successful apply or
+      // not, so a refresh doesn't try again with stale data.
+      sessionStorage.removeItem('partner-clone-application');
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
