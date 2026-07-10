@@ -11,6 +11,16 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 import type {
@@ -49,7 +59,6 @@ export default function PartnerApplicationsPage() {
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  const [stats, setStats] = useState({ inReview: 0, accepted: 0, submitted: 0, urgent: 0 });
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   // Sort state — server-side sort (the API only supports 3 sortable
   // columns: student_name, created_at, updated_at). Default is
@@ -68,6 +77,13 @@ export default function PartnerApplicationsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkResult, setBulkResult] = useState<{ ok: number; fail: number } | null>(null);
+  // Phase 48.5: open/close state for the bulk-delete confirmation
+  // dialog. We use the project's <AlertDialog> (shadcn/Radix) so
+  // destructive confirms are consistent with the rest of the
+  // partner portal and work properly on mobile. window.confirm
+  // used to do this job but it freezes the JS thread + renders
+  // poorly on iOS Safari.
+  const [showBulkDelete, setShowBulkDelete] = useState(false);
 
   const toggleSelected = (id: string, on: boolean) => {
     setSelectedIds((prev) => {
@@ -169,14 +185,31 @@ export default function PartnerApplicationsPage() {
     }
   };
 
-  // Lightweight stats: a single unfiltered fetch on first mount.
+  // Phase 48.4: stats are derived from a single unfiltered fetch
+  // capped at 100 rows. The headline "Total Applications" card
+  // uses the real DB total from the main paginated response (so
+  // 200 applications shows 200, not 50). The breakdown cards (In
+  // Review / Urgent / Accepted) are still lower-bound estimates
+  // from the 100-row slice — when the org has more than 100
+  // applications we show a small amber hint so the partner knows
+  // the number is a snapshot, not the full count. (Phase 13 fix
+  // on the partner dashboard followed the same pattern.)
+  const STATS_FETCH_CAP = 100;
+  const [stats, setStats] = useState<{
+    inReview: number;
+    accepted: number;
+    submitted: number;
+    urgent: number;
+    capped: boolean;
+  }>({ inReview: 0, accepted: 0, submitted: 0, urgent: 0, capped: false });
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const res = await apiFetchJson<{ applications: PartnerApplication[] }>(
-          '/api/partner/applications?limit=100',
-        );
+        const res = await apiFetchJson<{
+          applications: PartnerApplication[];
+          total: number;
+        }>(`/api/partner/applications?limit=${STATS_FETCH_CAP}`);
         if (cancelled) return;
         const apps = res.applications || [];
         setStats({
@@ -184,6 +217,7 @@ export default function PartnerApplicationsPage() {
           accepted: apps.filter((a) => a.status === 'Accepted').length,
           submitted: apps.filter((a) => a.status === 'Submitted').length,
           urgent: apps.filter((a) => a.priority === 'High' || a.priority === 'Urgent').length,
+          capped: (res.total || 0) > STATS_FETCH_CAP,
         });
       } catch {
         // ignore — non-fatal
@@ -383,6 +417,11 @@ export default function PartnerApplicationsPage() {
           <CardContent>
             <div className="text-2xl font-bold text-[#1B2A4A]">{stats.inReview}</div>
             <p className="text-sm text-[#4B5563] mt-1">{t('partnerApps.inReviewHint')}</p>
+            {stats.capped && (
+              <p className="text-xs text-amber-700 mt-1">
+                {t('partnerDashboard.statusBreakdownCapped', { shown: STATS_FETCH_CAP, total: total })}
+              </p>
+            )}
           </CardContent>
         </Card>
         <Card className="rounded-none">
@@ -394,6 +433,11 @@ export default function PartnerApplicationsPage() {
           <CardContent>
             <div className="text-2xl font-bold text-[#9B1B30]">{stats.urgent}</div>
             <p className="text-sm text-[#4B5563] mt-1">{t('partnerApps.urgentHighHint')}</p>
+            {stats.capped && (
+              <p className="text-xs text-amber-700 mt-1">
+                {t('partnerDashboard.statusBreakdownCapped', { shown: STATS_FETCH_CAP, total: total })}
+              </p>
+            )}
           </CardContent>
         </Card>
         <Card className="rounded-none">
@@ -403,6 +447,11 @@ export default function PartnerApplicationsPage() {
           <CardContent>
             <div className="text-2xl font-bold text-[#1B2A4A]">{stats.accepted}</div>
             <p className="text-sm text-[#4B5563] mt-1">{t('partnerApps.acceptedHint')}</p>
+            {stats.capped && (
+              <p className="text-xs text-amber-700 mt-1">
+                {t('partnerDashboard.statusBreakdownCapped', { shown: STATS_FETCH_CAP, total: total })}
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -693,19 +742,15 @@ export default function PartnerApplicationsPage() {
            >
              {t('partnerApps.bulkSetNormal')}
            </Button>
-           <Button
-             size="sm"
-             variant="destructive"
-             className="rounded-none"
-             onClick={() => {
-               if (window.confirm(t('partnerApps.bulkDeleteConfirm', { n: selectedIds.size }))) {
-                 handleBulkAction('delete');
-               }
-             }}
-             disabled={bulkBusy}
-           >
-             <Trash2 className="h-3.5 w-3.5 mr-1" /> {t('partnerApps.bulkDelete')}
-           </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              className="rounded-none"
+              onClick={() => setShowBulkDelete(true)}
+              disabled={bulkBusy}
+            >
+              <Trash2 className="h-3.5 w-3.5 mr-1" /> {t('partnerApps.bulkDelete')}
+            </Button>
            <Button
              size="sm"
              variant="ghost"
@@ -723,6 +768,38 @@ export default function PartnerApplicationsPage() {
         )}
       </div>
     )}
+
+    {/* Phase 48.5: bulk-delete confirmation dialog. Replaces
+        window.confirm so the destructive action is consistent
+        with the rest of the partner portal and works on
+        mobile (window.confirm freezes the JS thread + renders
+        poorly on iOS Safari). Uses the shadcn <AlertDialog>
+        which S18 introduced for status changes. */}
+    <AlertDialog open={showBulkDelete} onOpenChange={setShowBulkDelete}>
+      <AlertDialogContent className="rounded-none">
+        <AlertDialogHeader>
+          <AlertDialogTitle>{t('partnerApps.bulkDeleteTitle')}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {t('partnerApps.bulkDeleteConfirm', { n: selectedIds.size })}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={bulkBusy} className="rounded-none">
+            {t('partnerApps.cancel')}
+          </AlertDialogCancel>
+          <AlertDialogAction
+            disabled={bulkBusy}
+            className="rounded-none bg-[#9B1B30] hover:bg-[#7a1626]"
+            onClick={() => {
+              setShowBulkDelete(false);
+              void handleBulkAction('delete');
+            }}
+          >
+            {t('partnerApps.bulkDelete')}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     </>
   );
 }

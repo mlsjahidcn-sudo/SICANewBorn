@@ -121,16 +121,23 @@ export default function PartnerStudentsPage() {
     return <Badge variant={config.variant} className="rounded-none">{config.label}</Badge>;
   };
 
-  // Stats are derived from the full unfiltered list. We don't have a
-  // /stats endpoint, so we do a single unfiltered fetch on first
-  // mount and tally from that. This keeps the cards cheap.
-  const [stats, setStats] = useState({ new: 0, inProgress: 0, accepted: 0 });
+  // Phase 48.4: stats are derived from a single unfiltered fetch
+  // capped at 100 rows. The headline "Total Students" card uses
+  // the real DB total from the main paginated response (so 200
+  // students shows 200, not 50). The breakdown cards (New / In
+  // Progress / Accepted) are still lower-bound estimates from the
+  // 100-row slice — when the org has more than 100 students we
+  // show a small amber hint so the partner knows the number is
+  // a snapshot, not the full count. (Phase 13 fix on the
+  // partner dashboard followed the same pattern.)
+  const STATS_FETCH_CAP = 100;
+  const [stats, setStats] = useState({ new: 0, inProgress: 0, accepted: 0, capped: false });
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const res = await apiFetchJson<{ students: PartnerStudent[] }>(
-          '/api/partner/students?limit=100',
+        const res = await apiFetchJson<{ students: PartnerStudent[]; total: number }>(
+          `/api/partner/students?limit=${STATS_FETCH_CAP}`,
         );
         if (cancelled) return;
         const s = res.students || [];
@@ -138,6 +145,10 @@ export default function PartnerStudentsPage() {
           new: s.filter((x) => x.status === 'New').length,
           inProgress: s.filter((x) => x.status === 'In Progress').length,
           accepted: s.filter((x) => x.status === 'Accepted').length,
+          // Mark capped if the DB total exceeds what we fetched.
+          // (The fetch caps the response at 100; if the total is
+          // larger, the breakdown is a snapshot not a full count.)
+          capped: (res.total || 0) > STATS_FETCH_CAP,
         });
       } catch {
         // Non-fatal: stats just stay at 0
@@ -232,6 +243,11 @@ export default function PartnerStudentsPage() {
               <CardContent>
                 <div className="text-2xl font-bold text-[#1B2A4A]">{stats.new}</div>
                 <p className="text-sm text-[#4B5563] mt-1">{t('partnerStudents.newHint')}</p>
+                {stats.capped && (
+                  <p className="text-xs text-amber-700 mt-1">
+                    {t('partnerDashboard.statusBreakdownCapped', { shown: STATS_FETCH_CAP, total: total })}
+                  </p>
+                )}
               </CardContent>
             </Card>
             <Card className="rounded-none">
@@ -241,6 +257,11 @@ export default function PartnerStudentsPage() {
               <CardContent>
                 <div className="text-2xl font-bold text-[#1B2A4A]">{stats.inProgress}</div>
                 <p className="text-sm text-[#4B5563] mt-1">{t('partnerStudents.inProgressHint')}</p>
+                {stats.capped && (
+                  <p className="text-xs text-amber-700 mt-1">
+                    {t('partnerDashboard.statusBreakdownCapped', { shown: STATS_FETCH_CAP, total: total })}
+                  </p>
+                )}
               </CardContent>
             </Card>
             <Card className="rounded-none">
@@ -250,6 +271,11 @@ export default function PartnerStudentsPage() {
               <CardContent>
                 <div className="text-2xl font-bold text-[#1B2A4A]">{stats.accepted}</div>
                 <p className="text-sm text-[#4B5563] mt-1">{t('partnerStudents.acceptedHint')}</p>
+                {stats.capped && (
+                  <p className="text-xs text-amber-700 mt-1">
+                    {t('partnerDashboard.statusBreakdownCapped', { shown: STATS_FETCH_CAP, total: total })}
+                  </p>
+                )}
               </CardContent>
             </Card>
           </div>

@@ -1244,6 +1244,10 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerApps.bulkDelete': 'Delete',
     'partnerApps.bulkCancel': 'Clear',
     'partnerApps.bulkDeleteConfirm': 'Delete {{n}} application(s)? This cannot be undone.',
+    // Phase 48.5: title for the bulk-delete confirmation dialog.
+    // The body copy (bulkDeleteConfirm) was already there for the
+    // old window.confirm call.
+    'partnerApps.bulkDeleteTitle': 'Delete applications',
     'partnerApps.bulkResult': 'Done: {{ok}} updated, {{fail}} failed.',
     'partnerApps.loadMore': 'Load more',
     'partnerApps.loadingMore': 'Loading…',
@@ -1537,6 +1541,11 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerStudentNew.saving': 'Saving…',
     'partnerStudentNew.errorStudentNameRequired': 'Student name is required.',
     'partnerStudentNew.errorSave': 'Failed to save student.',
+    // Phase 48.1: success banner shown between the create POST
+    // and the redirect to the new student's detail page. Mirrors
+    // the partnerAppNew.successTitle/Body keys from Phase 23 L4.
+    'partnerStudentNew.successTitle': 'Student added.',
+    'partnerStudentNew.successBody': 'Redirecting to the student detail page...',
     // Partner Portal — student detail
     'partnerStudentDetail.backToStudents': 'Back to students',
     'partnerStudentDetail.couldNotLoad': "Couldn't load student",
@@ -3784,6 +3793,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerApps.bulkDelete': '删除',
     'partnerApps.bulkCancel': '清除',
     'partnerApps.bulkDeleteConfirm': '确认删除 {{n}} 条申请？此操作无法撤销。',
+    // Phase 48.5: see the en counterpart.
+    'partnerApps.bulkDeleteTitle': '删除申请',
     'partnerApps.bulkResult': '已完成：{{ok}} 条已更新，{{fail}} 条失败。',
     'partnerApps.loadMore': '加载更多',
     'partnerApps.loadingMore': '加载中…',
@@ -4075,6 +4086,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerStudentNew.saving': '保存中…',
     'partnerStudentNew.errorStudentNameRequired': '学生姓名是必填项。',
     'partnerStudentNew.errorSave': '保存学生失败。',
+    // Phase 48.1: see the en counterpart.
+    'partnerStudentNew.successTitle': '已添加学生。',
+    'partnerStudentNew.successBody': '正在跳转到学生详情页...',
     // Partner Portal — student detail
     'partnerStudentDetail.backToStudents': '返回学生列表',
     'partnerStudentDetail.couldNotLoad': '无法加载学生',

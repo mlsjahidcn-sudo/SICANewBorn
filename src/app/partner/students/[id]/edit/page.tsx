@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Save } from 'lucide-react';
 import Link from 'next/link';
@@ -42,6 +42,14 @@ export default function PartnerEditStudentPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // Phase 48.6: snapshot of the form as it was loaded from the
+  // server, used by the beforeunload guard to detect "dirty"
+  // (the partner has typed something that hasn't been saved).
+  // Without this, a partner who edits 8 fields and accidentally
+  // hits the browser back button loses everything. The guard
+  // listens for unload events while dirty and prompts the
+  // browser's native "Leave site?" dialog.
+  const initialFormDataRef = useRef<FormData | null>(null);
   // Phase 47.4: live catalog for the target-university and
   // target-program pickers. Same data source the application form
   // uses, so a program added via /admin/programs shows up here
@@ -84,7 +92,7 @@ export default function PartnerEditStudentPage() {
         `/api/partner/students/${studentId}`,
       );
       const s = res.student;
-      setFormData({
+      const loaded: FormData = {
         studentName: s.studentName,
         studentEmail: s.studentEmail ?? '',
         studentPhone: s.studentPhone ?? '',
@@ -93,7 +101,12 @@ export default function PartnerEditStudentPage() {
         targetProgram: s.targetProgram ?? '',
         status: s.status,
         notes: s.notes ?? '',
-      });
+      };
+      setFormData(loaded);
+      // Phase 48.6: snapshot for the beforeunload guard. The
+      // ref is set here, after the row is fetched, so the
+      // guard has a stable reference to compare against.
+      initialFormDataRef.current = loaded;
     } catch (err) {
       console.error('[partner/students/:id/edit] load failed:', err);
       setLoadError(err instanceof Error ? err.message : t('partnerStudentEdit.errorLoad'));
@@ -105,6 +118,29 @@ export default function PartnerEditStudentPage() {
   useEffect(() => {
     void loadStudent();
   }, [loadStudent]);
+
+  // Phase 48.6: beforeunload guard. Watches the form for
+  // unsaved changes (deep-equal against the initial snapshot
+  // stored in initialFormDataRef). When dirty, prompts the
+  // browser's native "Changes you made may not be saved"
+  // dialog on tab close / reload / back. The custom
+  // message is ignored by most modern browsers — they
+  // always show their own copy — but returning a non-empty
+  // string is the standard trigger.
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (isSaving) return; // mid-save: let the navigation happen
+      const initial = initialFormDataRef.current;
+      if (!initial || !formData) return;
+      // Cheap dirty check: stringify + compare. We only
+      // call this on beforeunload so the cost is fine.
+      if (JSON.stringify(initial) === JSON.stringify(formData)) return;
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [formData, isSaving]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,

@@ -48,6 +48,11 @@ export default function PartnerAddStudentPage() {
   const [formData, setFormData] = useState<FormData>(INITIAL);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Phase 48.1: success banner shown after create, before the
+  // navigation to the detail page. Mirrors the partner
+  // application form's L4 success banner. Cleared on each new
+  // submit attempt.
+  const [submitSuccess, setSubmitSuccess] = useState(false);
   // Phase 47.4: load the live catalog so the target-university and
   // target-program fields are searchable pickers (not free-text).
   // Free-text gave us "Tsingha University" / "Tsinghua Univ" /
@@ -91,6 +96,7 @@ export default function PartnerAddStudentPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSubmitSuccess(false);
 
     if (!formData.studentName.trim()) {
       setError(t('partnerStudentNew.errorStudentNameRequired'));
@@ -122,11 +128,23 @@ export default function PartnerAddStudentPage() {
         status: formData.status || undefined,
         notes: formData.notes.trim() || undefined,
       };
-      await apiFetchJson<{ student: { id: string } }>('/api/partner/students', {
+      const res = await apiFetchJson<{ student: { id: string } }>('/api/partner/students', {
         method: 'POST',
         body: JSON.stringify(payload),
       });
-      router.push('/partner/students');
+      // Phase 48.1: redirect to the newly-created student's
+      // detail page instead of the list. Mirrors the partner
+      // application form's L4 pattern (Phase 23). The detail
+      // page has the "+ New application" link right in the
+      // header, so a partner who creates a student usually
+      // wants to start an application immediately — saving
+      // them one click + one find-the-row-in-the-list step.
+      // Short success banner gives visual confirmation since
+      // the form will be unmounted by the navigation.
+      setSubmitSuccess(true);
+      setTimeout(() => {
+        router.push(`/partner/students/${res.student.id}`);
+      }, 800);
     } catch (err) {
       console.error('[partner/students/new] save failed:', err);
       setError(err instanceof Error ? err.message : t('partnerStudentNew.errorSave'));
@@ -157,6 +175,24 @@ export default function PartnerAddStudentPage() {
       {error && (
         <Card className="rounded-none border-red-200 bg-red-50">
           <CardContent className="p-4 text-sm text-red-700">{error}</CardContent>
+        </Card>
+      )}
+
+      {/* Phase 48.1: success banner. Shown briefly between the
+          successful POST and the navigation to the detail page.
+          Mirrors the partner application form's L4 banner (Phase
+          23). Without this the partner had no visual confirmation
+          — the page just disappeared, and on a slow connection
+          they could have hit Submit again and created a duplicate. */}
+      {submitSuccess && (
+        <Card className="rounded-none border-green-300 bg-green-50">
+          <CardContent className="p-4 text-sm text-green-800 flex items-center gap-2">
+            <Save className="h-4 w-4 text-green-700 flex-shrink-0" />
+            <div>
+              <strong>{t('partnerStudentNew.successTitle')}</strong>{' '}
+              {t('partnerStudentNew.successBody')}
+            </div>
+          </CardContent>
         </Card>
       )}
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
@@ -40,6 +40,12 @@ export default function PartnerEditApplicationPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // Phase 48.6: snapshot of the form as it was loaded from the
+  // server. Used by the beforeunload guard to detect dirty
+  // (the partner has typed something not yet saved) and prompt
+  // the browser's native dialog on tab close / reload / back.
+  // Same pattern as the partner student edit page.
+  const initialFormDataRef = useRef<PartnerApplicationFormData | null>(null);
 
   // S26: load the application row + the university / program lists in
   // parallel so the form can pre-fill from the row and the
@@ -63,7 +69,7 @@ export default function PartnerEditApplicationPage() {
       const a = res.application;
       setUniversities(u.universities || []);
       setPrograms(p.programs || []);
-      setFormData({
+      const loaded: PartnerApplicationFormData = {
         studentName: a.studentName,
         studentEmail: a.studentEmail ?? '',
         studentPhone: a.studentPhone ?? '',
@@ -119,7 +125,9 @@ export default function PartnerEditApplicationPage() {
 
         applicationNumber: a.applicationNumber ?? '',
         submittedAt: a.submittedAt ?? null,
-      });
+      };
+      setFormData(loaded);
+      initialFormDataRef.current = loaded;
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : t('partnerAppEdit.errorLoad'));
     } finally {
@@ -130,6 +138,24 @@ export default function PartnerEditApplicationPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Phase 48.6: beforeunload guard. Same pattern as the partner
+  // student edit page — when the form is dirty (any field
+  // differs from the loaded snapshot), prompt the browser's
+  // native "Changes you made may not be saved" dialog on
+  // tab close / reload / back.
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (isSaving) return;
+      const initial = initialFormDataRef.current;
+      if (!initial || !formData) return;
+      if (JSON.stringify(initial) === JSON.stringify(formData)) return;
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [formData, isSaving]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

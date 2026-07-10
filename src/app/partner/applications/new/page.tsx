@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
 
@@ -26,6 +26,7 @@ import type { University, Program } from '@/lib/data';
 
 export default function PartnerNewApplicationPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useI18n();
   const [formData, setFormData] =
     useState<PartnerApplicationFormData>(INITIAL_FORM_DATA);
@@ -45,6 +46,12 @@ export default function PartnerNewApplicationPage() {
   // failed validation; clearing on every new attempt.
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const formRef = useRef<HTMLFormElement>(null);
+  // Phase 48.2: when the partner navigates here from
+  // /partner/students/[id] via the "+ New application" link,
+  // we auto-pick the student by URL param. The auto-pick
+  // ref is a guard so the user can clear/edit the fields
+  // without us re-applying the pick on every render.
+  const autoPickedRef = useRef<string | null>(null);
 
   // Phase S20: load this partner's students, plus the live university
   // and program lists. S26: this list feeds the combined program
@@ -90,6 +97,21 @@ export default function PartnerNewApplicationPage() {
       nationality: prev.nationality || s.nationality || '',
     }));
   };
+
+  // Phase 48.2: auto-pick the student passed via ?studentId=<id>.
+  // Runs once the students list is loaded and the URL has a
+  // studentId. The ref guard ensures we only run once per page
+  // load, even if the data-loading effect re-fires.
+  useEffect(() => {
+    const studentIdFromUrl = searchParams.get('studentId');
+    if (!studentIdFromUrl) return;
+    if (dataLoading) return; // wait until the students list is loaded
+    if (autoPickedRef.current === studentIdFromUrl) return; // already picked
+    const s = students.find((x) => x.id === studentIdFromUrl);
+    if (!s) return; // partner-org scope may not include this student
+    autoPickedRef.current = studentIdFromUrl;
+    handleStudentPick(studentIdFromUrl);
+  }, [searchParams, dataLoading, students]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

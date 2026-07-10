@@ -238,7 +238,16 @@ export default function PartnerStudentDetailPage() {
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-[#1B2A4A]">{t('partnerStudentDetail.sectionApplications')}</CardTitle>
               <Button asChild variant="outline" className="rounded-none" size="sm">
-                <Link href="/partner/applications/new">{t('partnerStudentDetail.newApplication')}</Link>
+                {/* Phase 48.2: pass ?studentId=<id> so the new
+                    application form's "Pick from your students"
+                    helper auto-picks this student. Saves the
+                    partner a click + a scroll-to-find step. The
+                    form's existing useEffect just reads
+                    searchParams.get('studentId') and triggers the
+                    auto-pick — no new wiring needed. */}
+                <Link href={`/partner/applications/new?studentId=${student.id}`}>
+                  {t('partnerStudentDetail.newApplication')}
+                </Link>
               </Button>
             </CardHeader>
             <CardContent>
