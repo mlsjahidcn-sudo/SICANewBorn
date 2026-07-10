@@ -22,6 +22,12 @@ export default function PartnerStudentsPage() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  // Phase 50b: "Show archived" toggle. Off by default — partners
+  // see only the active list. When ON, the API returns archived
+  // rows in addition to active (archived=true). The list row
+  // shows a small "Archived" badge so the partner can tell
+  // soft-deleted from active at a glance.
+  const [showArchived, setShowArchived] = useState(false);
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<string | null>(null);
@@ -45,6 +51,9 @@ export default function PartnerStudentsPage() {
       const params = new URLSearchParams();
       if (debouncedSearch) params.set('search', debouncedSearch);
       if (statusFilter !== 'all') params.set('status', statusFilter);
+      // Phase 50b: when showArchived is ON, ask the API for
+      // both active + archived rows. Default (off) only active.
+      if (showArchived) params.set('archived', 'true');
       params.set('limit', '50');
       const qs = params.toString();
       const res = await apiFetchJson<{
@@ -64,7 +73,7 @@ export default function PartnerStudentsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [debouncedSearch, statusFilter, t]);
+  }, [debouncedSearch, statusFilter, showArchived, t]);
 
   useEffect(() => {
     void fetchStudents();
@@ -314,6 +323,21 @@ export default function PartnerStudentsPage() {
                 </SelectContent>
               </Select>
             </div>
+            {/* Phase 50b: "Show archived" toggle. Off by default;
+                flips showArchived in state and refetches with
+                ?archived=true. The list row's status column
+                gets a small "Archived" badge when archivedAt
+                is non-null so the partner can tell soft-deleted
+                from active at a glance. */}
+            <label className="flex items-center gap-2 text-sm text-[#1B2A4A] cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showArchived}
+                onChange={(e) => setShowArchived(e.target.checked)}
+                className="rounded-none"
+              />
+              {t('partnerStudents.showArchived')}
+            </label>
           </div>
 
           <Card className="rounded-none">
@@ -357,7 +381,20 @@ export default function PartnerStudentsPage() {
                               }`
                             : t('partnerCommon.placeholderDash')}
                         </td>
-                        <td className="px-6 py-4">{getStatusBadge(student.status)}</td>
+                        <td className="px-6 py-4">
+                          {getStatusBadge(student.status)}
+                          {/* Phase 50b: small "Archived" badge for
+                              soft-deleted rows when the showArchived
+                              toggle is on. Survives the status
+                              filter so a partner who archived an
+                              "Accepted" row still sees the Archived
+                              marker. */}
+                          {student.archivedAt && (
+                            <span className="ml-2 inline-flex items-center text-xs text-gray-500 italic">
+                              ({t('partnerStudents.archived')})
+                            </span>
+                          )}
+                        </td>
                         <td className="px-6 py-4 text-[#4B5563] text-sm">
                           {student.createdByEmail || t('partnerCommon.placeholderDash')}
                         </td>

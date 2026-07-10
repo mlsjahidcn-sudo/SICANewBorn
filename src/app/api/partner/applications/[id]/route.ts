@@ -166,20 +166,30 @@ export async function DELETE(
   }
 
   try {
-    let delQ = auth.supabase
+    // Phase 50b: soft delete. Mirrors the partner_students/[id]
+    // DELETE — PATCH archived_at = NOW() instead of hard delete.
+    // The list page hides archived rows by default; an admin can
+    // restore an archived row via a single PATCH (archived_at =
+    // NULL) from a future "Show archived" toggle on the admin
+    // side. For partners, restore is a support request — we
+    // don't expose the SQL surface to them.
+    let updQ = auth.supabase
       .from('partner_applications')
-      .delete({ count: 'exact' })
+      .update({
+        archived_at: new Date().toISOString(),
+        archived_by_user_id: auth.user.id,
+      })
       .eq('id', id);
     if (auth.role === 'member') {
-      delQ = delQ.eq('created_by_user_id', auth.user.id);
+      updQ = updQ.eq('created_by_user_id', auth.user.id);
     }
-    const { error, count } = await delQ;
+    const { data, error } = await updQ.select('id').maybeSingle();
 
     if (error) {
       console.error('[partner/applications/:id DELETE] supabase error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
-    if (!count) {
+    if (!data) {
       return NextResponse.json({ error: 'Application not found' }, { status: 404 });
     }
 

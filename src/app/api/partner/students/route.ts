@@ -44,6 +44,11 @@ export async function GET(request: NextRequest) {
     const orderRaw = searchParams.get('order') || 'desc';
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20', 10)));
+    // Phase 50b: ?archived=true includes soft-deleted rows in
+    // the result. Default (no param) hides them — the partner's
+    // "active" view. ?archived=only returns ONLY archived rows
+    // (the dedicated "Show archived" toggle on the list page).
+    const archivedParam = searchParams.get('archived') || 'false';
 
     const allowedSort = ['created_at', 'updated_at', 'student_name'];
     const sort = allowedSort.includes(sortRaw) ? sortRaw : 'created_at';
@@ -53,6 +58,15 @@ export async function GET(request: NextRequest) {
       .from('partner_students')
       .select('*', { count: 'exact' })
       .order(sort, { ascending });
+
+    // Phase 50b: soft-delete filter. The 'active' index is the
+    // partial index on (partner_id, created_at DESC) WHERE
+    // archived_at IS NULL — fast for the default view.
+    if (archivedParam === 'only') {
+      query = query.not('archived_at', 'is', null);
+    } else if (archivedParam !== 'true') {
+      query = query.is('archived_at', null);
+    }
 
     // Phase 3: role='member' sees ONLY rows they created.
     // role='owner' sees everything for the partner org (back-compat).

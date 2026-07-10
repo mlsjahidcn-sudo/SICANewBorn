@@ -244,6 +244,11 @@ export interface PartnerApplication {
   // Phase 3: who created this row
   createdByUserId?: string | null;
   createdByEmail?: string | null;
+  // Phase 50b: soft-delete markers. NULL = active. Non-null =
+  // archived at this time. Set via the DELETE handler which
+  // PATCHes archived_at = NOW() instead of hard delete.
+  archivedAt?: string | null;
+  archivedByUserId?: string | null;
 }
 
 // Type guard for the new closed-set fields. Returns the narrowed type
@@ -330,6 +335,9 @@ interface RawPartnerApplication {
   submitted_at?: string | null;
   decision?: string | null;
   notes?: string | null;
+  // Phase 50b: soft-delete markers
+  archived_at?: string | null;
+  archived_by_user_id?: string | null;
   // S26 extended
   date_of_birth?: string | null;
   gender?: string | null;
@@ -426,6 +434,8 @@ export function mapPartnerApplicationFromDb(row: RawPartnerApplication): Partner
     updatedAt: row.updated_at ?? '',
     createdByUserId: row.created_by_user_id ?? null,
     createdByEmail: row.created_by_email ?? null,
+    archivedAt: row.archived_at ?? null,
+    archivedByUserId: row.archived_by_user_id ?? null,
   };
 }
 

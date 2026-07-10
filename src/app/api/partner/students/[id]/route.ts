@@ -149,25 +149,31 @@ export async function DELETE(
   }
 
   try {
-    // We do a soft-delete (status='Rejected' is the closest, but
-    // `partner_students` doesn't have a generic 'Archived' state
-    // matching the SICA design). Use hard delete for now — partners
-    // shouldn't accidentally delete their students, but if they do,
-    // the action is reversible only by re-creating. Document this.
-    let delQ = auth.supabase
+    // Phase 50b: soft delete. The old hard-delete would orphan
+    // any partner_applications with student_id = id (FK to
+    // partner_students). A partner with one bad click could lose
+    // 3 applications silently. Now we PATCH archived_at = NOW()
+    // and require a future "Show archived" toggle on the list
+    // to even see archived rows. Restoring an archived row is
+    // a single PATCH (archived_at = NULL) — admin or owner can
+    // do it from the partner list page in a follow-up.
+    let updQ = auth.supabase
       .from('partner_students')
-      .delete({ count: 'exact' })
+      .update({
+        archived_at: new Date().toISOString(),
+        archived_by_user_id: auth.user.id,
+      })
       .eq('id', id);
     if (auth.role === 'member') {
-      delQ = delQ.eq('created_by_user_id', auth.user.id);
+      updQ = updQ.eq('created_by_user_id', auth.user.id);
     }
-    const { error, count } = await delQ;
+    const { data, error } = await updQ.select('id').maybeSingle();
 
     if (error) {
       console.error('[partner/students/:id DELETE] supabase error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
-    if (!count) {
+    if (!data) {
       return NextResponse.json({ error: 'Student not found' }, { status: 404 });
     }
 

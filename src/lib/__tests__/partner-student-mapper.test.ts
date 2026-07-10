@@ -42,11 +42,12 @@ describe('partner-student-mapper', () => {
         updated_at: '2026-05-02T00:00:00Z',
       };
       const result = mapPartnerStudentFromDb(row);
-      // The mapper always includes `createdByUserId` and
-      // `createdByEmail` (nullable) — they were added in an
-      // earlier phase for the "added by" column on the partner
-      // students list. Even when the input row doesn't carry
-      // them, the mapper fills them in as null.
+      // The mapper always includes the nullable author + soft-
+      // delete fields so a missing source row produces a
+      // well-formed PartnerStudent (the call site never has to
+      // null-check). Phase 50b added archivedAt /
+      // archivedByUserId alongside the existing createdByUserId
+      // / createdByEmail pair.
       expect(result).toEqual<PartnerStudent>({
         id: 'p-1',
         partnerId: 'partner-1',
@@ -62,6 +63,8 @@ describe('partner-student-mapper', () => {
         updatedAt: '2026-05-02T00:00:00Z',
         createdByUserId: null,
         createdByEmail: null,
+        archivedAt: null,
+        archivedByUserId: null,
       });
     });
 

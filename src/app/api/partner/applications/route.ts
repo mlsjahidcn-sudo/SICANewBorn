@@ -51,6 +51,11 @@ export async function GET(request: NextRequest) {
     const orderRaw = searchParams.get('order') || 'desc';
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20', 10)));
+    // Phase 50b: same soft-delete filter pattern as
+    // /api/partner/students. ?archived=true includes archived
+    // rows, ?archived=only returns ONLY archived, default
+    // hides them.
+    const archivedParam = searchParams.get('archived') || 'false';
 
     const allowedSort = ['created_at', 'updated_at', 'student_name'];
     const sort = allowedSort.includes(sortRaw) ? sortRaw : 'created_at';
@@ -70,6 +75,12 @@ export async function GET(request: NextRequest) {
     if (decision) query = query.eq('decision', decision);
     if (priority && validPriorities.includes(priority)) {
       query = query.eq('priority', priority);
+    }
+    // Phase 50b: soft-delete filter
+    if (archivedParam === 'only') {
+      query = query.not('archived_at', 'is', null);
+    } else if (archivedParam !== 'true') {
+      query = query.is('archived_at', null);
     }
     if (studentId) {
       // Defense: the partner can only filter by their own students.

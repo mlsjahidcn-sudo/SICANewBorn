@@ -1499,6 +1499,12 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerAppForm.hskPrefix': 'HSK ',
     // Partner Portal — students list
     'partnerStudents.title': 'Students',
+    // Phase 50b: "Show archived" toggle on the students list.
+    // When ON, the page shows soft-deleted rows in addition
+    // to active ones. Default OFF — partners see only the
+    // active list.
+    'partnerStudents.showArchived': 'Show archived',
+    'partnerStudents.archived': 'archived',
     'partnerStudents.subtitle': 'Manage your student applications',
     'partnerStudents.totalStudents': 'Total Students',
     'partnerStudents.totalStudentsHint': 'Registered students',
@@ -4066,6 +4072,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerAppForm.hskPrefix': 'HSK ',
     // Partner Portal — students list
     'partnerStudents.title': '学生',
+    // Phase 50b: see the en counterpart.
+    'partnerStudents.showArchived': '显示已归档',
+    'partnerStudents.archived': '已归档',
     'partnerStudents.subtitle': '管理您的学生申请',
     'partnerStudents.totalStudents': '学生总数',
     'partnerStudents.totalStudentsHint': '已注册学生',
