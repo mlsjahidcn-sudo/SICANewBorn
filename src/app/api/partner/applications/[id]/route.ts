@@ -69,6 +69,17 @@ export async function PATCH(
     // API gate, *before* they ever reach the mapper / DB, so a
     // tampered request body can't sneak a status flip through.
     //
+    // Phase 47: studentId is also server-derived. The DB has
+    // `student_id` (FK → partner_students.id) AND a denormalized
+    // `student_name` for query performance. Partners can create an
+    // app with a studentId at create time (the new form's "Pick
+    // from your students" helper sets it), but the link between
+    // an application and its student is set at create time only —
+    // re-linking would orphan the application and could let a
+    // partner point an app at another org's student via a guessed
+    // UUID (RLS prevents the read but a blank 200 would still be
+    // a confusing failure mode).
+    //
     // For the camelCase→snake_case translation, the key sent by the
     // client is the camelCase form (matches our mapper input). We
     // check both `status` and the rest explicitly.
@@ -77,6 +88,8 @@ export async function PATCH(
       { key: 'decision', snakeKey: 'decision' },
       { key: 'submittedAt', snakeKey: 'submitted_at' },
       { key: 'submitted_at', snakeKey: 'submitted_at' },
+      { key: 'studentId', snakeKey: 'student_id' },
+      { key: 'student_id', snakeKey: 'student_id' },
     ];
     for (const { key } of partnerForbiddenFields) {
       if (body[key] !== undefined) {

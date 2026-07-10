@@ -283,7 +283,11 @@ export default function PartnerEditApplicationPage() {
         dataLoading={false}
         isSaving={isSaving}
         onSubmit={handleSubmit}
-        submitLabel={t('partnerStudentEdit.saveChanges')}
+        // Phase 47.5: was partnerStudentEdit.saveChanges (typo —
+        // copy-pasta from the student edit form). That key lives
+        // in the wrong namespace and would have rendered the
+        // Chinese text on an English application-edit page.
+        submitLabel={t('partnerAppEdit.saveChanges')}
         cancelHref={`/partner/applications/${applicationId}`}
       />
     </div>

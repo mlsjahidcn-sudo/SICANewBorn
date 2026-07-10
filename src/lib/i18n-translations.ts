@@ -1364,6 +1364,11 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerAppEdit.errorStudentNameRequired': 'Student name is required.',
     'partnerAppEdit.errorUniversityProgramRequired': 'University and program are required.',
     'partnerAppEdit.errorSave': 'Failed to save changes.',
+    // Phase 47.5: the edit-application save button. Was incorrectly
+    // using partnerStudentEdit.saveChanges (typo / copy-pasta from
+    // the student edit form), which gave non-English users the
+    // Chinese text "保存修改" on an English application-edit page.
+    'partnerAppEdit.saveChanges': 'Save Changes',
     // Partner Portal — application form (shared 9-section form)
     'partnerAppForm.cancel': 'Cancel',
     'partnerAppForm.noneDisplay': '(unspecified)',
@@ -3899,6 +3904,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerAppEdit.errorStudentNameRequired': '学生姓名是必填项。',
     'partnerAppEdit.errorUniversityProgramRequired': '大学和专业都是必填项。',
     'partnerAppEdit.errorSave': '保存修改失败。',
+    // Phase 47.5: see the en counterpart — was using
+    // partnerStudentEdit.saveChanges incorrectly.
+    'partnerAppEdit.saveChanges': '保存修改',
     // Partner Portal — application form (shared 9-section form)
     'partnerAppForm.cancel': '取消',
     'partnerAppForm.noneDisplay': '（未指定）',

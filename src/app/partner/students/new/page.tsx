@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save } from 'lucide-react';
 import Link from 'next/link';
@@ -11,12 +11,14 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 import {
   PARTNER_STUDENT_STATUSES,
   PartnerStudentStatus,
 } from '@/lib/partner-student-mapper';
+import type { University, Program } from '@/lib/data';
 
 interface FormData {
   studentName: string;
@@ -46,6 +48,38 @@ export default function PartnerAddStudentPage() {
   const [formData, setFormData] = useState<FormData>(INITIAL);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Phase 47.4: load the live catalog so the target-university and
+  // target-program fields are searchable pickers (not free-text).
+  // Free-text gave us "Tsingha University" / "Tsinghua Univ" /
+  // "Tsinghua" as three different rows for the same school; the
+  // catalog is the single source of truth for what's offered. The
+  // picker is empty-allowed (clearValue='') so the partner can
+  // skip the field if the student hasn't decided yet.
+  const [universities, setUniversities] = useState<University[]>([]);
+  const [programs, setPrograms] = useState<Program[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setCatalogLoading(true);
+    Promise.all([
+      apiFetchJson<{ universities: University[] }>('/api/universities?limit=500', {
+        signal: controller.signal,
+      }).catch(() => ({ universities: [] })),
+      apiFetchJson<{ programs: Program[] }>('/api/programs?limit=1000', {
+        signal: controller.signal,
+      }).catch(() => ({ programs: [] })),
+    ])
+      .then(([u, p]) => {
+        if (controller.signal.aborted) return;
+        setUniversities(u.universities || []);
+        setPrograms(p.programs || []);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setCatalogLoading(false);
+      });
+    return () => controller.abort();
+  }, []);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
@@ -60,6 +94,17 @@ export default function PartnerAddStudentPage() {
 
     if (!formData.studentName.trim()) {
       setError(t('partnerStudentNew.errorStudentNameRequired'));
+      return;
+    }
+    // Phase 47: client-side email format check, mirrors the server
+    // check in src/lib/partner-validation.ts. type="email" gives a
+    // soft browser cue but doesn't block submit on invalid values
+    // — a "gmial.com" typo used to silently store and bounce when
+    // SICA emailed the student. Same RFC 5322 lite regex as the
+    // partner application form (Phase 23 M9).
+    const trimmedEmail = formData.studentEmail.trim();
+    if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setError(t('partnerAppNew.errorStudentEmailInvalid'));
       return;
     }
 
@@ -131,6 +176,7 @@ export default function PartnerAddStudentPage() {
                     value={formData.studentName}
                     onChange={handleInputChange}
                     required
+                    maxLength={200}
                     className="rounded-none"
                     placeholder={t('partnerStudentNew.fieldStudentNamePlaceholder')}
                   />
@@ -143,6 +189,7 @@ export default function PartnerAddStudentPage() {
                     type="email"
                     value={formData.studentEmail}
                     onChange={handleInputChange}
+                    maxLength={200}
                     className="rounded-none"
                     placeholder={t('partnerStudentNew.fieldEmailPlaceholder')}
                   />
@@ -155,6 +202,7 @@ export default function PartnerAddStudentPage() {
                     type="tel"
                     value={formData.studentPhone}
                     onChange={handleInputChange}
+                    maxLength={50}
                     className="rounded-none"
                     placeholder={t('partnerStudentNew.fieldPhonePlaceholder')}
                   />
@@ -166,6 +214,7 @@ export default function PartnerAddStudentPage() {
                     name="nationality"
                     value={formData.nationality}
                     onChange={handleInputChange}
+                    maxLength={100}
                     className="rounded-none"
                     placeholder={t('partnerStudentNew.fieldNationalityPlaceholder')}
                   />
@@ -178,24 +227,40 @@ export default function PartnerAddStudentPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <Label htmlFor="targetUniversity" className="text-[#1B2A4A] mb-2 block">{t('partnerStudentNew.fieldTargetUniversity')}</Label>
-                  <Input
-                    id="targetUniversity"
-                    name="targetUniversity"
+                  {/* Phase 47.4: SearchableSelect over the live
+                      university catalog. value=name so existing
+                      free-text data still works (and the API
+                      keeps accepting strings). clearValue=''
+                      lets the partner leave the field blank when
+                      the student hasn't decided yet. */}
+                  <SearchableSelect
                     value={formData.targetUniversity}
-                    onChange={handleInputChange}
-                    className="rounded-none"
+                    onChange={(v) => setFormData((prev) => ({ ...prev, targetUniversity: v }))}
+                    options={universities.map((u) => ({
+                      value: u.name,
+                      label: u.name,
+                      sublabel: u.nameCn || undefined,
+                    }))}
                     placeholder={t('partnerStudentNew.fieldTargetUniversityPlaceholder')}
+                    clearValue=""
+                    clearLabel={t('partnerCommon.placeholderDash')}
+                    loading={catalogLoading}
                   />
                 </div>
                 <div>
                   <Label htmlFor="targetProgram" className="text-[#1B2A4A] mb-2 block">{t('partnerStudentNew.fieldTargetProgram')}</Label>
-                  <Input
-                    id="targetProgram"
-                    name="targetProgram"
+                  <SearchableSelect
                     value={formData.targetProgram}
-                    onChange={handleInputChange}
-                    className="rounded-none"
+                    onChange={(v) => setFormData((prev) => ({ ...prev, targetProgram: v }))}
+                    options={programs.map((p) => ({
+                      value: p.name,
+                      label: p.name,
+                      sublabel: p.nameCn || undefined,
+                    }))}
                     placeholder={t('partnerStudentNew.fieldTargetProgramPlaceholder')}
+                    clearValue=""
+                    clearLabel={t('partnerCommon.placeholderDash')}
+                    loading={catalogLoading}
                   />
                 </div>
                 <div>
@@ -225,6 +290,7 @@ export default function PartnerAddStudentPage() {
                 value={formData.notes}
                 onChange={handleInputChange}
                 rows={4}
+                maxLength={4000}
                 className="rounded-none"
                 placeholder={t('partnerStudentNew.fieldNotesPlaceholder')}
               />

@@ -11,12 +11,14 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 import {
   PARTNER_STUDENT_STATUSES,
   PartnerStudentStatus,
 } from '@/lib/partner-student-mapper';
+import type { University, Program } from '@/lib/data';
 
 interface FormData {
   studentName: string;
@@ -40,6 +42,38 @@ export default function PartnerEditStudentPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // Phase 47.4: live catalog for the target-university and
+  // target-program pickers. Same data source the application form
+  // uses, so a program added via /admin/programs shows up here
+  // immediately. We also keep the previous free-text value as a
+  // fallback option in the list, so any existing data that doesn't
+  // match a catalog entry stays editable (and visible) rather than
+  // silently disappearing into an empty select.
+  const [universities, setUniversities] = useState<University[]>([]);
+  const [programs, setPrograms] = useState<Program[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setCatalogLoading(true);
+    Promise.all([
+      apiFetchJson<{ universities: University[] }>('/api/universities?limit=500', {
+        signal: controller.signal,
+      }).catch(() => ({ universities: [] })),
+      apiFetchJson<{ programs: Program[] }>('/api/programs?limit=1000', {
+        signal: controller.signal,
+      }).catch(() => ({ programs: [] })),
+    ])
+      .then(([u, p]) => {
+        if (controller.signal.aborted) return;
+        setUniversities(u.universities || []);
+        setPrograms(p.programs || []);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setCatalogLoading(false);
+      });
+    return () => controller.abort();
+  }, []);
 
   const loadStudent = useCallback(async () => {
     if (!studentId) return;
@@ -86,6 +120,15 @@ export default function PartnerEditStudentPage() {
 
     if (!formData.studentName.trim()) {
       setError(t('partnerStudentEdit.errorStudentNameRequired'));
+      return;
+    }
+    // Phase 47: client-side email format check, mirrors the server
+    // check in src/lib/partner-validation.ts and the new-student
+    // form. type="email" doesn't actually block submit on invalid
+    // values — a "gmial.com" typo used to silently store.
+    const trimmedEmail = formData.studentEmail.trim();
+    if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setError(t('partnerAppNew.errorStudentEmailInvalid'));
       return;
     }
 
@@ -173,6 +216,7 @@ export default function PartnerEditStudentPage() {
                     value={formData.studentName}
                     onChange={handleInputChange}
                     required
+                    maxLength={200}
                     className="rounded-none"
                   />
                 </div>
@@ -184,6 +228,7 @@ export default function PartnerEditStudentPage() {
                     type="email"
                     value={formData.studentEmail}
                     onChange={handleInputChange}
+                    maxLength={200}
                     className="rounded-none"
                   />
                 </div>
@@ -195,6 +240,7 @@ export default function PartnerEditStudentPage() {
                     type="tel"
                     value={formData.studentPhone}
                     onChange={handleInputChange}
+                    maxLength={50}
                     className="rounded-none"
                   />
                 </div>
@@ -205,6 +251,7 @@ export default function PartnerEditStudentPage() {
                     name="nationality"
                     value={formData.nationality}
                     onChange={handleInputChange}
+                    maxLength={100}
                     className="rounded-none"
                   />
                 </div>
@@ -216,22 +263,34 @@ export default function PartnerEditStudentPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <Label htmlFor="targetUniversity" className="text-[#1B2A4A] mb-2 block">{t('partnerStudentEdit.fieldTargetUniversity')}</Label>
-                  <Input
-                    id="targetUniversity"
-                    name="targetUniversity"
+                  {/* Phase 47.4: live catalog picker. If the existing
+                      value isn't in the catalog (old free-text data),
+                      we inject it as a "custom" option so it stays
+                      editable and the partner can re-pick or clear
+                      it explicitly — never silently lost. */}
+                  <SearchableSelect
                     value={formData.targetUniversity}
-                    onChange={handleInputChange}
-                    className="rounded-none"
+                    onChange={(v) => setFormData((prev) => (prev ? { ...prev, targetUniversity: v } : prev))}
+                    options={buildUniversityOptions(
+                      universities,
+                      formData.targetUniversity,
+                    )}
+                    placeholder={t('partnerStudentNew.fieldTargetUniversityPlaceholder')}
+                    clearValue=""
+                    clearLabel={t('partnerCommon.placeholderDash')}
+                    loading={catalogLoading}
                   />
                 </div>
                 <div>
                   <Label htmlFor="targetProgram" className="text-[#1B2A4A] mb-2 block">{t('partnerStudentEdit.fieldTargetProgram')}</Label>
-                  <Input
-                    id="targetProgram"
-                    name="targetProgram"
+                  <SearchableSelect
                     value={formData.targetProgram}
-                    onChange={handleInputChange}
-                    className="rounded-none"
+                    onChange={(v) => setFormData((prev) => (prev ? { ...prev, targetProgram: v } : prev))}
+                    options={buildProgramOptions(programs, formData.targetProgram)}
+                    placeholder={t('partnerStudentNew.fieldTargetProgramPlaceholder')}
+                    clearValue=""
+                    clearLabel={t('partnerCommon.placeholderDash')}
+                    loading={catalogLoading}
                   />
                 </div>
                 <div>
@@ -263,6 +322,7 @@ export default function PartnerEditStudentPage() {
                 value={formData.notes}
                 onChange={handleInputChange}
                 rows={4}
+                maxLength={4000}
                 className="rounded-none"
               />
             </div>
@@ -287,4 +347,57 @@ export default function PartnerEditStudentPage() {
       </form>
     </div>
   );
+}
+
+// Phase 47.4: build picker options for the target-university
+// SearchableSelect. If the existing value (pre-Phase 47 free-text
+// data) isn't in the live catalog, we inject it as a synthetic
+// "(not in catalog)" option so it stays selectable + the partner
+// can re-pick or clear it explicitly. Without this, old data would
+// render as an empty select on edit and the partner would have to
+// guess why.
+function buildUniversityOptions(
+  universities: University[],
+  currentValue: string,
+): { value: string; label: string; sublabel?: string }[] {
+  const opts = universities.map((u) => ({
+    value: u.name,
+    label: u.name,
+    sublabel: u.nameCn || undefined,
+  }));
+  if (
+    currentValue &&
+    currentValue.trim() &&
+    !universities.some((u) => u.name === currentValue)
+  ) {
+    opts.unshift({
+      value: currentValue,
+      label: currentValue,
+      sublabel: '(not in catalog)',
+    });
+  }
+  return opts;
+}
+
+function buildProgramOptions(
+  programs: Program[],
+  currentValue: string,
+): { value: string; label: string; sublabel?: string }[] {
+  const opts = programs.map((p) => ({
+    value: p.name,
+    label: p.name,
+    sublabel: p.nameCn || undefined,
+  }));
+  if (
+    currentValue &&
+    currentValue.trim() &&
+    !programs.some((p) => p.name === currentValue)
+  ) {
+    opts.unshift({
+      value: currentValue,
+      label: currentValue,
+      sublabel: '(not in catalog)',
+    });
+  }
+  return opts;
 }

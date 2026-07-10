@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireTeamMember, getServerEnv } from '@/lib/supabase-auth';
 import { mapPartnerStudentFromDb, mapPartnerStudentToDb, parsePartnerStudentStatus } from '@/lib/partner-student-mapper';
+import { validatePartnerStudentPayload } from '@/lib/partner-validation';
 
 /**
  * GET /api/partner/students
@@ -151,12 +152,19 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    if (!body.studentName || typeof body.studentName !== 'string' || !body.studentName.trim()) {
+    // Phase 47: full field validation (length + email format).
+    // Returns the first error to the partner with a 400. Partner
+    // forms are short — they only need to know the next thing to
+    // fix. The validator lives in src/lib/partner-validation.ts so
+    // the same rules apply to the PATCH route below.
+    const fieldErrors = validatePartnerStudentPayload(body, 'create');
+    if (fieldErrors.length > 0) {
       return NextResponse.json(
-        { error: 'studentName is required' },
+        { error: fieldErrors[0].message, field: fieldErrors[0].field },
         { status: 400 },
       );
     }
+
     if (body.status !== undefined && !parsePartnerStudentStatus(body.status)) {
       return NextResponse.json(
         { error: "status must be 'New' | 'In Progress' | 'Applied' | 'Accepted' | 'Rejected'" },

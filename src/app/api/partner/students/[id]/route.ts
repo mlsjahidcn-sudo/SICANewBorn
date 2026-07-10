@@ -5,6 +5,7 @@ import {
   mapPartnerStudentToDb,
   parsePartnerStudentStatus,
 } from '@/lib/partner-student-mapper';
+import { validatePartnerStudentPayload } from '@/lib/partner-validation';
 
 /**
  * GET /api/partner/students/[id]
@@ -73,6 +74,20 @@ export async function PATCH(
 
   try {
     const body = await request.json();
+
+    // Phase 47: full field validation. PATCH is partial — studentName
+    // is required only if the client includes it (so partners can
+    // update a single field). But if it's included it must not be
+    // empty. Same email-format + length caps as create. The
+    // validator returns the first error as a 400; partner forms are
+    // short and the partner only needs the next thing to fix.
+    const fieldErrors = validatePartnerStudentPayload(body, 'update');
+    if (fieldErrors.length > 0) {
+      return NextResponse.json(
+        { error: fieldErrors[0].message, field: fieldErrors[0].field },
+        { status: 400 },
+      );
+    }
 
     if (body.status !== undefined && !parsePartnerStudentStatus(body.status)) {
       return NextResponse.json(
