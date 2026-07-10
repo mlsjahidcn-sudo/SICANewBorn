@@ -21,11 +21,12 @@ import { SearchableSelect } from '@/components/ui/searchable-select';
 // The university + program lists are now fetched from the API so
 // admin-added entries show up immediately. The intake list is
 // generated at runtime from the current date (see
-// getIntendedIntakes in data.ts) so the dropdown always shows
-// what's actually available to apply for.
+// Live intake catalog (Phase 50a). The dropdown is fed from
+// /api/intakes?active=true which reads the database/intake_periods
+// table. Admin-added intakes show up immediately; we no longer
+// depend on the hardcoded getIntendedIntakes() from src/lib/data.ts.
 import {
   degreeLevels,
-  getIntendedIntakes,
   documentTypes,
   DegreeLevel,
   DocumentType,
@@ -163,6 +164,12 @@ export default function StudentNewApplicationPage() {
   // the API is unreachable we fall back to the static arrays below.
   const [universities, setUniversities] = useState<University[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
+  // Phase 50a: live intake catalog. Filled by the same
+  // useEffect that loads universities + programs. Replaces
+  // the static getIntendedIntakes() array — admin-added
+  // intakes now show up in the Intended Intake dropdown
+  // without a code change.
+  const [intakes, setIntakes] = useState<{ slug: string; label: string }[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   // Phase S21: profile prefill. The student already filled out
   // their academic info on /student/profile (target degree, intake,
@@ -323,6 +330,12 @@ export default function StudentNewApplicationPage() {
       apiFetchJson<{ programs: Program[] }>('/api/programs?limit=500', {
         signal: controller.signal,
       }),
+      // Phase 50a: live intakes. Falls through silently on error
+      // so the form still works if the DB is down.
+      apiFetchJson<{ intakes: { slug: string; label: string }[] }>(
+        '/api/intakes?active=true',
+        { signal: controller.signal },
+      ).catch(() => ({ intakes: [] })),
       // Phase S21: also fetch the student's profile so we can
       // pre-fill target_degree / target_intake / target_field in
       // the wizard. 404 is fine (the profile trigger may not have
@@ -346,10 +359,11 @@ export default function StudentNewApplicationPage() {
         throw err;
       }),
     ])
-      .then(([u, p, profRes]) => {
+      .then(([u, p, i, profRes]) => {
         if (controller.signal.aborted) return;
         setUniversities((u as { universities: University[] }).universities || []);
         setPrograms((p as { programs: Program[] }).programs || []);
+        setIntakes(((i as { intakes?: { slug: string; label: string }[] }).intakes) || []);
         const prof = profRes?.data ?? null;
         setProfile(prof);
         // Phase S21: prefill the wizard with profile values, but
@@ -391,6 +405,7 @@ export default function StudentNewApplicationPage() {
           console.error('[student/new] failed to load universities/programs:', err);
           setUniversities([]);
           setPrograms([]);
+          setIntakes([]);
         }
       })
       .finally(() => {
@@ -918,8 +933,10 @@ export default function StudentNewApplicationPage() {
                         <SelectValue placeholder={t('studentWizard.intakePlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
-                        {getIntendedIntakes().map((intake) => (
-                          <SelectItem key={intake} value={intake}>{intake}</SelectItem>
+                        {intakes.map((intake) => (
+                          <SelectItem key={intake.slug} value={intake.label}>
+                            {intake.label}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>

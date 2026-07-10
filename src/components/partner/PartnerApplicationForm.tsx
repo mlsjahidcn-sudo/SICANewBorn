@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import {
   ArrowLeft,
   Save,
@@ -47,7 +48,8 @@ import {
   FundingSource,
   EmergencyRelationship,
 } from '@/lib/partner-application-mapper';
-import { getIntendedIntakes, type University, type Program } from '@/lib/data';
+import { type University, type Program } from '@/lib/data';
+import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 
 // ----- form state ---------------------------------------------------------
@@ -280,9 +282,33 @@ export function PartnerApplicationForm({
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
-  // S26: list of intake options, generated at runtime from the
-  // current date. Same helper the student wizard uses.
-  const intakeOptions = getIntendedIntakes();
+  // Phase 50a: intake options now come from /api/intakes?active=true
+  // — admin-managed live catalog (database/intake_periods table).
+  // The API was added in 2026-07-11_intake_periods.sql; the
+  // migration seeded 4 years of Fall + Spring. Old code used
+  // the static getIntendedIntakes() from src/lib/data.ts — admin
+  // additions weren't visible.
+  const [intakeOptions, setIntakeOptions] = useState<string[]>([]);
+  useEffect(() => {
+    const controller = new AbortController();
+    apiFetchJson<{ intakes: { slug: string; label: string }[] }>(
+      '/api/intakes?active=true',
+      { signal: controller.signal },
+    )
+      .then((res) => {
+        if (controller.signal.aborted) return;
+        setIntakeOptions((res.intakes || []).map((i) => i.label));
+      })
+      .catch(() => {
+        // Fallback: keep the form usable even if the API is
+        // down. We don't fall back to getIntendedIntakes() here
+        // because that function was the source of the bug we're
+        // fixing (admin additions invisible). Better to show an
+        // empty dropdown than stale data.
+        if (!controller.signal.aborted) setIntakeOptions([]);
+      });
+    return () => controller.abort();
+  }, []);
 
   const formContent = (
     <div className="space-y-4">
