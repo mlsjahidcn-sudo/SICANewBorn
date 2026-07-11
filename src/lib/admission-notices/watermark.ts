@@ -7,14 +7,17 @@
  *
  * Design:
  *
- *   1. Tiled diagonal SICA logo + `sica.com.cn` text, 30% opacity.
- *      The tile pattern covers the entire image so a casual user
- *      can't crop the watermark out without losing the visible
- *      content of the notice (passport numbers, signatures, etc.).
+ *   1. Tiled diagonal SICA logo (the actual brand mark from
+ *      public/sica-logo.svg) at 20% opacity. The tile pattern
+ *      covers the entire image so a casual user can't crop the
+ *      watermark out without losing the visible content of the
+ *      notice (passport numbers, signatures, etc.).
  *
- *   2. The SICA logo is rendered as an inline SVG (with the brand
- *      colors #9B1B30 + #1B2A4A) so we don't need to ship a
- *      separate PNG asset. Sharp handles SVG → raster natively.
+ *   2. The SICA logo is rendered as an inline SVG via `<use>`
+ *      references to a single `<defs>` block. The logo is the
+ *      brand colors (#9B1B30 crimson + #1B2A4A navy) so the
+ *      watermark is recognizably SICA without obscuring the
+ *      underlying notice.
  *
  *   3. Output is JPEG quality 85% to keep file size small while
  *      preserving readability of the notice text. Width is capped
@@ -32,6 +35,8 @@
  *     anyone tries.
  */
 import sharp from 'sharp';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 /** Max output width. Larger uploads get downscaled. */
 const MAX_WIDTH = 1600;
@@ -39,8 +44,49 @@ const MAX_WIDTH = 1600;
 const JPEG_QUALITY = 85;
 /** Watermark tile width. The tile is rotated 30° and tiled. */
 const TILE_WIDTH = 360;
-/** Watermark opacity (0-1). 0.3 is visible without obscuring text. */
-const TILE_OPACITY = 0.3;
+/** Watermark opacity (0-1). Tuned to be visible but not dominant. */
+const TILE_OPACITY = 0.10;
+
+/**
+ * Load the SICA brand logo SVG from public/sica-logo.svg and
+ * extract the inner content (everything inside the outer <svg>
+ * element). Cached at module load — the file is small (~7KB)
+ * and immutable.
+ *
+ * If the file isn't found (e.g. dev environment with a missing
+ * public/), fall back to a simple "SICA" text tile so the
+ * watermark feature still works (better than a hard failure on
+ * the upload route).
+ */
+function loadSicaLogoInner(): string {
+  try {
+    // __dirname is set by tsx (for the seed script) and by the
+    // Next.js build. We look up from process.cwd() which is
+    // always the project root for both contexts.
+    const candidates = [
+      join(process.cwd(), 'public/sica-logo.svg'),
+      join(process.cwd(), '..', 'public/sica-logo.svg'),
+    ];
+    let raw = '';
+    for (const c of candidates) {
+      try {
+        raw = readFileSync(c, 'utf-8');
+        break;
+      } catch {
+        // try next candidate
+      }
+    }
+    if (!raw) throw new Error('sica-logo.svg not found');
+    // Extract the inner content. Strip the outer <svg ...> wrapper.
+    const m = raw.match(/<svg[^>]*>([\s\S]*)<\/svg>\s*$/);
+    return m ? m[1] : raw;
+  } catch {
+    // Fallback: a plain "SICA" wordmark so the watermark still works.
+    return `<text x="0" y="50" font-family="Arial, Helvetica, sans-serif" font-size="64" font-weight="900" fill="#9B1B30">SICA</text>`;
+  }
+}
+
+const SICA_LOGO_INNER = loadSicaLogoInner();
 
 /**
  * Build a tiled-watermark SVG sized to the input image. The tile
@@ -71,24 +117,35 @@ function buildTiledWatermarkSvg(width: number, height: number): string {
   const cols = Math.ceil(gridW / tileW) + 1;
   const rows = Math.ceil(gridH / tileH) + 1;
 
-  // Build N tile elements positioned in a grid.
+  // Build N tile elements positioned in a grid. Each tile renders
+  // the actual SICA brand logo (from public/sica-logo.svg) at
+  // 20% opacity, rotated to follow the tile's position. Using
+  // <defs> + <use> avoids duplicating the logo's path content
+  // N times in the SVG.
+  //
+  // The logo's natural viewBox is 300x75 (4:1). We render each
+  // tile at 280px wide × 70px tall (preserving aspect), with the
+  // tile cell slightly taller to leave breathing room.
+  const LOGO_W = 280;
+  const LOGO_H = 70;
+  // The original logo has clipPath IDs that would collide if
+  // we duplicated the markup N times. <use> + <defs> avoids that.
   let tiles = '';
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      tiles += `<g transform="translate(${c * tileW}, ${r * tileH})">
-        <text x="0" y="${Math.round(tileH * 0.6)}" font-family="Arial, Helvetica, sans-serif" font-size="60" font-weight="900" fill="white" fill-opacity="${TILE_OPACITY}" stroke="white" stroke-opacity="${TILE_OPACITY * 0.4}" stroke-width="0.5">SICA</text>
-        <text x="0" y="${Math.round(tileH * 0.95)}" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="white" fill-opacity="${TILE_OPACITY}">www.sica.com.cn</text>
-      </g>`;
+      tiles += `<use href="#sica-logo" x="${c * tileW}" y="${r * tileH}" width="${LOGO_W}" height="${LOGO_H}" opacity="${TILE_OPACITY}" />`;
     }
   }
 
-  // Outer wrapper: rotate the tile grid around its own center, then
-  // translate so the rotated grid is centered on the (width, height)
-  // canvas. The viewBox ensures anything outside is clipped.
+  // Wrap the tile group in the rotation. Logo IDs are namespaced
+  // inside <defs> so they don't collide with anything else.
   const gridCenterX = (cols * tileW) / 2;
   const gridCenterY = (rows * tileH) / 2;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-    <g transform="rotate(${rotate} ${gridCenterX} ${gridCenterY}) translate(${-((cols * tileW - width) / 2)}, ${-((rows * tileH - height) / 2)})">${tiles}</g>
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+    <defs>
+      <g id="sica-logo">${SICA_LOGO_INNER}</g>
+    </defs>
+    <g transform="rotate(${rotate} ${gridCenterX} ${gridCenterY}) translate(${(-((cols * tileW - width) / 2))}, ${(-((rows * tileH - height) / 2))})">${tiles}</g>
   </svg>`;
 }
 

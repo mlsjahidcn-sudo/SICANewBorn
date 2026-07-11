@@ -29,6 +29,7 @@ import {
   Calendar,
   Clock,
   Sparkles,
+  Trophy,
 } from 'lucide-react';
 import { getAllUniversities } from '@/lib/data-fetcher';
 import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
@@ -99,6 +100,51 @@ export default async function HomePage() {
         .limit(3);
       if (data) latestNews = data as NewsTeaser[];
     }
+  }
+
+  // Phase 51: latest 3 published admission notices for the home
+  // page Success Stories block. RLS on admission_notices already
+  // scopes to is_published=TRUE so we don't need to add the filter
+  // here — but we add it explicitly so the page is robust if RLS
+  // is ever weakened in a future migration.
+  interface AdmissionTeaser {
+    id: string;
+    student_name: string;
+    university_name: string;
+    program: string | null;
+    degree: string | null;
+    intake: string | null;
+    country: string | null;
+    image_path: string;
+  }
+  let latestAdmissions: AdmissionTeaser[] = [];
+  let admissionCount = 0;
+  if (isSupabaseServerConfigured()) {
+    const supabase = getSupabaseServer();
+    if (supabase) {
+      // First get the total count (for the "of N on file" line)
+      const { count } = await supabase
+        .from('admission_notices')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_published', true);
+      admissionCount = count || 0;
+      // Then the top 3 by display_order
+      const { data } = await supabase
+        .from('admission_notices')
+        .select('id, student_name, university_name, program, degree, intake, country, image_path')
+        .eq('is_published', true)
+        .order('display_order', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(3);
+      if (data) latestAdmissions = data as AdmissionTeaser[];
+    }
+  }
+  // Build the public URL for each image. The admission-notices
+  // bucket is public-read so getPublicUrl() is sufficient.
+  function admissionImageUrl(imagePath: string): string {
+    const supabaseUrl =
+      process.env.COZE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    return `${supabaseUrl}/storage/v1/object/public/admission-notices/${imagePath}`;
   }
 
   return (
@@ -557,6 +603,95 @@ export default async function HomePage() {
                 className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#9B1B30] hover:underline"
               >
                 View all news
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Phase 51: Success Stories — top 3 published admission
+          notices as visual social proof. Renders before the final
+          CTA so the user sees real admit letters right before the
+          conversion ask. */}
+      {latestAdmissions.length > 0 && (
+        <section className="bg-white border-t border-gray-200 py-16 lg:py-20">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
+              <div>
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-[#9B1B30] mb-2">
+                  <Trophy className="h-4 w-4" />
+                  Success Stories
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-bold text-[#1B2A4A]">
+                  Real admission results
+                </h2>
+                <p className="mt-2 text-sm text-[#4B5563] max-w-2xl">
+                  {admissionCount > 0
+                    ? `Browse ${admissionCount} recent admission notice${admissionCount === 1 ? '' : 's'} from SICA students — verified, current intake.`
+                    : 'Real admission notices from SICA students — verified, current intake.'}
+                </p>
+              </div>
+              <Link
+                href="/success-stories"
+                className="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold text-[#9B1B30] hover:underline whitespace-nowrap"
+              >
+                View all success stories
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {latestAdmissions.map((a) => (
+                <Link
+                  key={a.id}
+                  href="/success-stories"
+                  className="group block bg-white border-2 border-gray-200 hover:border-[#9B1B30] transition-colors overflow-hidden"
+                >
+                  <div className="relative aspect-[3/4] bg-gray-100">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={admissionImageUrl(a.image_path)}
+                      alt={`${a.student_name} — ${a.university_name}`}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  </div>
+                  <div className="p-4">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <h3 className="font-bold text-[#1B2A4A] group-hover:text-[#9B1B30] transition-colors leading-snug line-clamp-2 text-sm">
+                        {a.university_name}
+                      </h3>
+                      {a.degree && (
+                        <span className="flex-shrink-0 text-[10px] font-bold uppercase tracking-wider text-[#9B1B30] border border-[#9B1B30] px-1.5 py-0.5 rounded-none">
+                          {a.degree}
+                        </span>
+                      )}
+                    </div>
+                    {a.program && (
+                      <p className="text-xs text-gray-600 line-clamp-1 mb-2">
+                        {a.program}
+                      </p>
+                    )}
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-500">
+                      {a.country && (
+                        <span className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {a.country}
+                        </span>
+                      )}
+                      {a.intake && <span>{a.intake}</span>}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+            <div className="mt-10 text-center">
+              <Link
+                href="/success-stories"
+                className="inline-flex items-center gap-2 px-8 py-3 bg-[#9B1B30] hover:bg-[#7a1626] text-white font-semibold rounded-none transition-colors"
+              >
+                <Trophy className="h-4 w-4" />
+                See all {admissionCount} success stories
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>

@@ -342,9 +342,6 @@ export default function SuccessStoriesPage() {
                   </div>
                 )}
               </div>
-              <p className="text-[11px] text-[#4B5563] mt-4 italic">
-                {t('successStories.watermarkNote')}
-              </p>
             </div>
             <div className="p-4 border-t flex gap-3 sticky bottom-0 bg-white">
               {lightbox.publicImageUrl && (
