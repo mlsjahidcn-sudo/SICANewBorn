@@ -10,8 +10,6 @@ import {
   GraduationCap,
   Languages,
   Building2,
-  FileText,
-  Wallet,
   ListChecks,
 } from 'lucide-react';
 
@@ -36,7 +34,6 @@ import {
   HIGHEST_EDUCATIONS,
   ENGLISH_TESTS,
   HSK_LEVELS,
-  FUNDING_SOURCES,
   EMERGENCY_RELATIONSHIPS,
   PartnerApplicationPriority,
   PartnerApplicationDegree,
@@ -45,7 +42,6 @@ import {
   HighestEducation,
   EnglishTest,
   HskLevel,
-  FundingSource,
   EmergencyRelationship,
 } from '@/lib/partner-application-mapper';
 import { type University, type Program } from '@/lib/data';
@@ -108,15 +104,7 @@ export interface PartnerApplicationFormData {
   hasStudiedInChina: boolean;
   hasAppliedChinaUni: boolean;
 
-  // Section 7 — Funding
-  fundingSource: Emptyable<FundingSource>;
-  scholarshipName: string;
-
-  // Section 8 — Personal statement
-  whyProgram: string;
-  careerPlan: string;
-
-  // Section 9 — Workflow
+  // Section 7 — Workflow
   // S27: status and decision are admin-only — the partner can never
   // change them. They live in the partner_applications row (set by
   // SICA's admin team) and shown on the detail page, but the
@@ -169,12 +157,6 @@ export const INITIAL_FORM_DATA: PartnerApplicationFormData = {
   degree: '',
   hasStudiedInChina: false,
   hasAppliedChinaUni: false,
-
-  fundingSource: '',
-  scholarshipName: '',
-
-  whyProgram: '',
-  careerPlan: '',
 
   priority: 'Normal',
   notes: '',
@@ -926,97 +908,10 @@ export function PartnerApplicationForm({
         </div>
       </FormSection>
 
-      {/* Section 7 — Funding */}
+      {/* Section 7 — Workflow (S27: status + decision are admin-only) */}
       <FormSection
         title={t('partnerAppForm.section7Title')}
         description={t('partnerAppForm.section7Desc')}
-        icon={Wallet}
-        defaultOpen={false}
-      >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label className="text-[#1B2A4A] mb-2 block">{t('partnerAppForm.fieldFundingSource')}</Label>
-            <Select
-              value={formData.fundingSource || NONE}
-              onValueChange={(v) =>
-                set('fundingSource', v === NONE ? '' : (v as FundingSource))
-              }
-            >
-              <SelectTrigger className="rounded-none">
-                <SelectValue placeholder={noneDisplay} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NONE}>{noneDisplay}</SelectItem>
-                {FUNDING_SOURCES.map((f) => (
-                  <SelectItem key={f} value={f}>
-                    {f}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="scholarshipName" className="text-[#1B2A4A] mb-2 block">
-              {t('partnerAppForm.fieldScholarshipName')}
-            </Label>
-            <Input
-              id="scholarshipName"
-              value={formData.scholarshipName}
-              onChange={(e) => set('scholarshipName', e.target.value)}
-              className="rounded-none"
-              placeholder={t('partnerAppForm.fieldScholarshipNamePlaceholder')}
-              disabled={
-                formData.fundingSource === '' ||
-                (formData.fundingSource !== 'Scholarship' &&
-                  formData.fundingSource !== 'Sponsor' &&
-                  formData.fundingSource !== 'Government')
-              }
-            />
-          </div>
-        </div>
-      </FormSection>
-
-      {/* Section 8 — Personal statement */}
-      <FormSection
-        title={t('partnerAppForm.section8Title')}
-        description={t('partnerAppForm.section8Desc')}
-        icon={FileText}
-        defaultOpen={false}
-      >
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="whyProgram" className="text-[#1B2A4A] mb-2 block">
-              {t('partnerAppForm.fieldWhyProgram')}
-            </Label>
-            <Textarea
-              id="whyProgram"
-              value={formData.whyProgram}
-              onChange={(e) => set('whyProgram', e.target.value)}
-              rows={5}
-              className="rounded-none"
-              placeholder={t('partnerAppForm.fieldWhyProgramPlaceholder')}
-            />
-          </div>
-          <div>
-            <Label htmlFor="careerPlan" className="text-[#1B2A4A] mb-2 block">
-              {t('partnerAppForm.fieldCareerPlan')}
-            </Label>
-            <Textarea
-              id="careerPlan"
-              value={formData.careerPlan}
-              onChange={(e) => set('careerPlan', e.target.value)}
-              rows={4}
-              className="rounded-none"
-              placeholder={t('partnerAppForm.fieldCareerPlanPlaceholder')}
-            />
-          </div>
-        </div>
-      </FormSection>
-
-      {/* Section 9 — Workflow (S27: status + decision are admin-only) */}
-      <FormSection
-        title={t('partnerAppForm.section9Title')}
-        description={t('partnerAppForm.section9Desc')}
         icon={ListChecks}
         defaultOpen={true}
       >

@@ -48,10 +48,10 @@
  *   hskScore                 ↔        hsk_score
  *   hasStudiedInChina        ↔        has_studied_in_china
  *   hasAppliedChinaUni       ↔        has_applied_china_uni
- *   fundingSource            ↔        funding_source
- *   scholarshipName          ↔        scholarship_name
- *   whyProgram               ↔        why_program
- *   careerPlan               ↔        career_plan
+ *
+ *   (S26 funding + personal-statement columns are no longer
+ *   written by the form, but the read-side mapper still surfaces
+ *   them for any existing data.)
  *   createdAt                ↔        created_at
  *   updatedAt                ↔        updated_at
  *   createdByUserId          ↔        created_by_user_id
@@ -233,9 +233,12 @@ export interface PartnerApplication {
 
   hasStudiedInChina?: boolean | null;
   hasAppliedChinaUni?: boolean | null;
+
+  // S26 funding + personal-statement columns. The form no longer
+  // writes these (Phase 51f), but the read-side surfaces them for
+  // any existing data so the detail page still renders correctly.
   fundingSource?: FundingSource | null;
   scholarshipName?: string | null;
-
   whyProgram?: string | null;
   careerPlan?: string | null;
 
@@ -602,20 +605,6 @@ export function mapPartnerApplicationToDb(
   if (payload.hasAppliedChinaUni !== undefined) {
     row.has_applied_china_uni = toBool(payload.hasAppliedChinaUni);
   }
-  if (payload.fundingSource !== undefined) {
-    const f = pickEnumOrNull(FUNDING_SOURCES, payload.fundingSource);
-    if (payload.fundingSource && !f) {
-      throw new Error(`fundingSource must be one of: ${FUNDING_SOURCES.join(', ')}`);
-    }
-    row.funding_source = f;
-  }
-  if (payload.scholarshipName !== undefined) {
-    row.scholarship_name = payload.scholarshipName || null;
-  }
-
-  // S26 — personal statement
-  if (payload.whyProgram !== undefined) row.why_program = payload.whyProgram || null;
-  if (payload.careerPlan !== undefined) row.career_plan = payload.careerPlan || null;
 
   return row;
 }

@@ -246,13 +246,7 @@ export default function PartnerNewApplicationPage() {
         degree: formData.degree || undefined,
         hasStudiedInChina: formData.hasStudiedInChina,
         hasAppliedChinaUni: formData.hasAppliedChinaUni,
-        // Section 7 — funding
-        fundingSource: formData.fundingSource || undefined,
-        scholarshipName: formData.scholarshipName.trim() || undefined,
-        // Section 8 — personal statement
-        whyProgram: formData.whyProgram.trim() || undefined,
-        careerPlan: formData.careerPlan.trim() || undefined,
-        // Section 9 — workflow
+        // Section 7 — workflow
         // S27: status + decision are admin-only. The form doesn't
         // expose them, so we don't include them in the payload. The
         // API defaults status to 'Draft' and decision to 'Pending'

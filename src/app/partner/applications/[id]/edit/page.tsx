@@ -21,7 +21,6 @@ import {
   HighestEducation,
   EnglishTest,
   HskLevel,
-  FundingSource,
   EmergencyRelationship,
 } from '@/lib/partner-application-mapper';
 import type { University, Program } from '@/lib/data';
@@ -110,12 +109,6 @@ export default function PartnerEditApplicationPage() {
         degree: (a.degree as PartnerApplicationDegree | null) || '',
         hasStudiedInChina: a.hasStudiedInChina ?? false,
         hasAppliedChinaUni: a.hasAppliedChinaUni ?? false,
-
-        fundingSource: (a.fundingSource as FundingSource | null) || '',
-        scholarshipName: a.scholarshipName ?? '',
-
-        whyProgram: a.whyProgram ?? '',
-        careerPlan: a.careerPlan ?? '',
 
         // S27: status + decision are admin-only. The edit page
         // doesn't expose them; the load() just reads the current
@@ -214,13 +207,7 @@ export default function PartnerEditApplicationPage() {
         degree: formData.degree || null,
         hasStudiedInChina: formData.hasStudiedInChina,
         hasAppliedChinaUni: formData.hasAppliedChinaUni,
-        // Section 7 — funding
-        fundingSource: formData.fundingSource || null,
-        scholarshipName: formData.scholarshipName.trim() || null,
-        // Section 8 — personal statement
-        whyProgram: formData.whyProgram.trim() || null,
-        careerPlan: formData.careerPlan.trim() || null,
-        // Section 9 — workflow
+        // Section 7 — workflow
         // S27: status + decision are admin-only — the partner can
         // never change them via the edit form. We omit them from the
         // PATCH payload; the API would 403 if a partner tried
