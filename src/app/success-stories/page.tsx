@@ -133,11 +133,9 @@ export default function SuccessStoriesPage() {
           <p className="text-lg text-white/80 max-w-2xl">
             {t('successStories.subtitle')}
           </p>
-          {total > 0 && (
-            <p className="text-sm text-white/60 mt-4">
-              {t('successStories.countLabel', { count: total })}
-            </p>
-          )}
+          <p className="text-sm text-white/60 mt-4">
+            {t('successStories.countLabel')}
+          </p>
         </div>
       </section>
 

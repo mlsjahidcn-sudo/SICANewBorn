@@ -106,7 +106,10 @@ export default async function HomePage() {
   // page Success Stories block. RLS on admission_notices already
   // scopes to is_published=TRUE so we don't need to add the filter
   // here — but we add it explicitly so the page is robust if RLS
-  // is ever weakened in a future migration.
+  // is ever weakened in a future migration. The headline "10,000+
+  // students admitted" number is a hardcoded marketing stat
+  // (see i18n.successStories.countLabel) — not derived from the
+  // showcase count.
   interface AdmissionTeaser {
     id: string;
     student_name: string;
@@ -118,17 +121,9 @@ export default async function HomePage() {
     image_path: string;
   }
   let latestAdmissions: AdmissionTeaser[] = [];
-  let admissionCount = 0;
   if (isSupabaseServerConfigured()) {
     const supabase = getSupabaseServer();
     if (supabase) {
-      // First get the total count (for the "of N on file" line)
-      const { count } = await supabase
-        .from('admission_notices')
-        .select('id', { count: 'exact', head: true })
-        .eq('is_published', true);
-      admissionCount = count || 0;
-      // Then the top 3 by display_order
       const { data } = await supabase
         .from('admission_notices')
         .select('id, student_name, university_name, program, degree, intake, country, image_path')
@@ -627,9 +622,7 @@ export default async function HomePage() {
                   Real admission results
                 </h2>
                 <p className="mt-2 text-sm text-[#4B5563] max-w-2xl">
-                  {admissionCount > 0
-                    ? `Browse ${admissionCount} recent admission notice${admissionCount === 1 ? '' : 's'} from SICA students — verified, current intake.`
-                    : 'Real admission notices from SICA students — verified, current intake.'}
+                  Over 10,000+ SICA students admitted to top Chinese universities — verified, current intake.
                 </p>
               </div>
               <Link
@@ -691,7 +684,7 @@ export default async function HomePage() {
                 className="inline-flex items-center gap-2 px-8 py-3 bg-[#9B1B30] hover:bg-[#7a1626] text-white font-semibold rounded-none transition-colors"
               >
                 <Trophy className="h-4 w-4" />
-                See all {admissionCount} success stories
+                See 10,000+ success stories
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
