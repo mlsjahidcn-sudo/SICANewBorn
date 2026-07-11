@@ -14,8 +14,6 @@
  *   - Filter chips: country, degree
  *   - Card grid: 1 col mobile, 2 col tablet, 3 col desktop
  *   - Lightbox: click a card to open the full image
- *   - Download button in lightbox (uses <a download> on the
- *     public storage URL — file has watermark baked in)
  *
  * The "real" proof of admission is the visible text content
  * of the notice (university name, student name, program,
@@ -29,7 +27,7 @@ import { useI18n } from '@/lib/i18n';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Download, X, GraduationCap, MapPin, Award, Filter } from 'lucide-react';
+import { X, GraduationCap, MapPin, Award, Filter } from 'lucide-react';
 import type { AdmissionDegree } from '@/lib/admission-notices/types';
 import { ADMISSION_DEGREES } from '@/lib/admission-notices/types';
 
@@ -343,17 +341,7 @@ export default function SuccessStoriesPage() {
                 )}
               </div>
             </div>
-            <div className="p-4 border-t flex gap-3 sticky bottom-0 bg-white">
-              {lightbox.publicImageUrl && (
-                <a
-                  href={lightbox.publicImageUrl}
-                  download={`SICA-success-${lightbox.universityName.replace(/\s+/g, '-')}.jpg`}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#9B1B30] text-white text-sm font-semibold hover:bg-[#7a1626] rounded-none"
-                >
-                  <Download className="h-4 w-4" />
-                  {t('successStories.download')}
-                </a>
-              )}
+            <div className="p-4 border-t flex justify-end sticky bottom-0 bg-white">
               <Button
                 variant="outline"
                 onClick={() => setLightbox(null)}
