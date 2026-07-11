@@ -2646,7 +2646,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     // Phase 51: Success Stories (public page)
     'successStories.eyebrow': 'Real admission results',
     'successStories.title': 'Success Stories',
-    'successStories.subtitle': 'Real admission notices from SICA students — every image is watermarked with the SICA logo so it can be shared as proof without losing the brand.',
+    'successStories.subtitle': 'Real students. Real offer letters. Browse admission notices from SICA students admitted to top universities in China.',
     'successStories.countLabel': '{{count}} admission notice(s) on file',
     'successStories.filterLabel': 'Filter',
     'successStories.filterAllDegrees': 'All degree levels',
@@ -5279,7 +5279,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     // Phase 51: Success Stories (public page)
     'successStories.eyebrow': '真实录取结果',
     'successStories.title': '录取战绩',
-    'successStories.subtitle': 'SICA 学员的真实录取通知书——每张图片都已嵌入 SICA 水印，可作为录取凭证分享，同时不会丢失品牌信息。',
+    'successStories.subtitle': '真实的学员，真实的录取通知书。查看 SICA 学员被中国顶尖大学录取的真实案例。',
     'successStories.countLabel': '共 {{count}} 份录取通知',
     'successStories.filterLabel': '筛选',
     'successStories.filterAllDegrees': '全部学位',
