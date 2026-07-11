@@ -25,6 +25,7 @@ import {
   LayoutGrid,
   FileCheck,
   Send,
+  Trophy,
 } from 'lucide-react';
 import Link from 'next/link';
 import { SicaLogo } from '@/components/sica-logo';
@@ -56,6 +57,9 @@ const navItems = [
   { href: '/admin/fees', key: 'fees', icon: DollarSign },
   { href: '/admin/assessments', key: 'assessments', icon: ClipboardList },
   { href: '/admin/applications', key: 'applications', icon: FileText },
+  // Phase 51: Success Stories — public showcase of admission notices.
+  // Sits next to Applications because both surface student outcomes.
+  { href: '/admin/admission-notices', key: 'admissionNotices', icon: Trophy },
   // Phase 46: Bulk WhatsApp send — admin tool for promotional blasts
   { href: '/admin/leads/bulk-send', key: 'bulkSend', icon: Send },
   // S34: Cohort View — read-only dashboard grouping apps by
