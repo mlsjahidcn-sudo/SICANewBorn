@@ -2,12 +2,24 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Edit, Trash2, MessageSquare, Calendar, FileText, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, MessageSquare, Calendar, FileText, AlertTriangle, Pin, X, Plus } from 'lucide-react';
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
@@ -34,6 +46,29 @@ export default function PartnerStudentDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [showDelete, setShowDelete] = useState(false);
+  // Phase 50c: per-event notes state. Fetched on tab open
+  // (not on mount) so the page load is fast for the common
+  // case where the partner lands on the Overview tab. New
+  // notes added via the composer go through the API and we
+  // re-fetch the list to get the canonical server response
+  // (including the joined author_email).
+  interface PartnerStudentNote {
+    id: string;
+    partnerStudentId: string;
+    authorUserId: string | null;
+    authorEmail: string | null;
+    body: string;
+    pinned: boolean;
+    createdAt: string;
+    updatedAt: string;
+  }
+  const [notes, setNotes] = useState<PartnerStudentNote[]>([]);
+  const [notesLoading, setNotesLoading] = useState(false);
+  const [notesError, setNotesError] = useState<string | null>(null);
+  const [newNoteBody, setNewNoteBody] = useState('');
+  const [noteAdding, setNoteAdding] = useState(false);
+  const [noteBusyId, setNoteBusyId] = useState<string | null>(null);
+  const [noteDeleteId, setNoteDeleteId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchStudent = useCallback(async () => {
@@ -79,6 +114,96 @@ export default function PartnerStudentDetailPage() {
       setError(err instanceof Error ? err.message : t('partnerStudentDetail.deleting'));
       setIsDeleting(false);
       setShowDelete(false);
+    }
+  };
+
+  // Phase 50c: notes fetch. Lazy — only runs when the partner
+  // opens the Notes tab, so the Overview load is fast. The
+  // API already orders pinned-first then created_at desc.
+  const fetchNotes = useCallback(async () => {
+    setNotesLoading(true);
+    setNotesError(null);
+    try {
+      const res = await apiFetchJson<{ notes: PartnerStudentNote[] }>(
+        `/api/partner/students/${studentId}/notes`,
+      );
+      setNotes(res.notes || []);
+    } catch (err) {
+      setNotesError(
+        err instanceof Error ? err.message : t('partnerStudentDetail.notesLoadError'),
+      );
+      setNotes([]);
+    } finally {
+      setNotesLoading(false);
+    }
+  }, [studentId, t]);
+
+  // Phase 50c: handler for the composer. Optimistic add so
+  // the new note appears immediately, then re-fetch to get
+  // the canonical server-side row (with author_email, id,
+  // timestamps). The user sees a smooth animation; the
+  // server's response is the source of truth.
+  const handleAddNote = async () => {
+    const body = newNoteBody.trim();
+    if (!body) return;
+    setNoteAdding(true);
+    try {
+      const res = await apiFetchJson<{ note: PartnerStudentNote }>(
+        `/api/partner/students/${studentId}/notes`,
+        { method: 'POST', body: JSON.stringify({ body }) },
+      );
+      // Re-fetch to get the canonical ordering. The optimistic
+      // append would be fine for a single-user app but the
+      // server's pinned-first ordering depends on the full list.
+      await fetchNotes();
+      setNewNoteBody('');
+    } catch (err) {
+      setNotesError(
+        err instanceof Error ? err.message : t('partnerStudentDetail.notesAddError'),
+      );
+    } finally {
+      setNoteAdding(false);
+    }
+  };
+
+  // Phase 50c: pin / unpin. Toggles the `pinned` flag server-
+  // side, then re-fetches so the new ordering is canonical.
+  const handleTogglePin = async (note: PartnerStudentNote) => {
+    setNoteBusyId(note.id);
+    try {
+      await apiFetchJson(`/api/partner/student-notes/${note.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ pinned: !note.pinned }),
+      });
+      await fetchNotes();
+    } catch (err) {
+      setNotesError(err instanceof Error ? err.message : t('partnerStudentDetail.notesLoadError'));
+    } finally {
+      setNoteBusyId(null);
+    }
+  };
+
+  // Phase 50c: delete. The actual DELETE call runs after the
+  // AlertDialog confirms (we use the showDelete state pair —
+  // the existing student-delete modal is "showDelete" + the
+  // note-delete modal is "noteDeleteId").
+  const handleConfirmDeleteNote = async () => {
+    if (!noteDeleteId) return;
+    const id = noteDeleteId;
+    setNoteBusyId(id);
+    try {
+      const res = await fetch(`/api/partner/student-notes/${id}`, { method: 'DELETE' });
+      if (!res.ok && res.status !== 204) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || t('partnerStudentDetail.notesLoadError'));
+      }
+      // Local remove + close — no need to re-fetch.
+      setNotes((prev) => prev.filter((n) => n.id !== id));
+    } catch (err) {
+      setNotesError(err instanceof Error ? err.message : t('partnerStudentDetail.notesLoadError'));
+    } finally {
+      setNoteBusyId(null);
+      setNoteDeleteId(null);
     }
   };
 
@@ -193,7 +318,15 @@ export default function PartnerStudentDetailPage() {
         </Card>
       )}
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+      <Tabs value={activeTab} onValueChange={(v) => {
+        setActiveTab(v);
+        // Phase 50c: lazy-load notes on tab open. Idempotent —
+        // repeated opens are cheap because fetchNotes overwrites
+        // state every time.
+        if (v === 'notes' && !notesLoading) {
+          void fetchNotes();
+        }
+      }} className="space-y-4">
         <TabsList className="rounded-none">
           <TabsTrigger value="overview">{t('partnerStudentDetail.tabOverview')}</TabsTrigger>
           <TabsTrigger value="applications">
@@ -300,15 +433,111 @@ export default function PartnerStudentDetailPage() {
           <Card className="rounded-none">
             <CardHeader>
               <CardTitle className="text-[#1B2A4A] flex items-center gap-2">
-                <MessageSquare className="w-4 h-4" /> {t('partnerStudentDetail.sectionNotes')}
+                <MessageSquare className="w-4 h-4" /> {t('partnerStudentDetail.notesTitle')}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {student.notes ? (
-                <p className="text-sm text-[#1F2937] whitespace-pre-wrap">{student.notes}</p>
-              ) : (
-                <p className="text-sm text-[#4B5563] italic">{t('partnerStudentDetail.noNotesYet')}</p>
+              {/* Phase 50c: composer + activity feed. Replaces
+                  the old single read-only <p> showing the legacy
+                  notes column. Newest first; pinned notes rise
+                  to the top via the API's order by pinned DESC. */}
+              <p className="text-sm text-[#4B5563] mb-4">
+                {t('partnerStudentDetail.notesHint')}
+              </p>
+
+              <div className="space-y-2 mb-4">
+                <Label htmlFor="newNote" className="text-[#1B2A4A] mb-2 block">
+                  {t('partnerStudentDetail.notesComposerLabel')}
+                </Label>
+                <Textarea
+                  id="newNote"
+                  value={newNoteBody}
+                  onChange={(e) => setNewNoteBody(e.target.value)}
+                  maxLength={4000}
+                  rows={3}
+                  className="rounded-none"
+                  placeholder={t('partnerStudentDetail.notesComposerPlaceholder')}
+                />
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500">
+                    {t('partnerStudentDetail.notesComposerCount', { count: newNoteBody.length })}
+                  </span>
+                  <Button
+                    size="sm"
+                    disabled={noteAdding || !newNoteBody.trim()}
+                    onClick={handleAddNote}
+                    className="rounded-none bg-[#9B1B30] hover:bg-[#7a1626]"
+                  >
+                    <Plus className="mr-1 h-3 w-3" />
+                    {noteAdding
+                      ? t('partnerStudentDetail.notesComposerAdding')
+                      : t('partnerStudentDetail.notesComposerAdd')}
+                  </Button>
+                </div>
+              </div>
+
+              {notesError && (
+                <p className="text-sm text-red-700 mb-3">{notesError}</p>
               )}
+
+              {notesLoading ? (
+                <p className="text-sm text-[#4B5563] py-4 text-center">…</p>
+              ) : notes.length === 0 ? (
+                <p className="text-sm text-[#4B5563] italic py-4 text-center">
+                  {t('partnerStudentDetail.notesEmpty')}
+                </p>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {notes.map((n) => (
+                    <div
+                      key={n.id}
+                      className={`py-3 flex items-start gap-3 ${n.pinned ? 'bg-amber-50/40 -mx-3 px-3' : ''}`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          {n.pinned && (
+                            <Badge variant="outline" className="rounded-none text-xs">
+                              <Pin className="w-3 h-3 mr-1" /> {t('partnerStudentDetail.notesPinned')}
+                            </Badge>
+                          )}
+                          <span className="text-xs text-[#4B5563]">
+                            {n.authorEmail || t('partnerCommon.placeholderDash')}
+                          </span>
+                          <span className="text-xs text-gray-400">
+                            · {new Date(n.createdAt).toLocaleString()}
+                          </span>
+                        </div>
+                        <p className="text-sm text-[#1F2937] whitespace-pre-wrap break-words">
+                          {n.body}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="rounded-none h-7 px-2"
+                          onClick={() => handleTogglePin(n)}
+                          disabled={noteBusyId === n.id}
+                          title={n.pinned ? t('partnerStudentDetail.notesUnpin') : t('partnerStudentDetail.notesPin')}
+                        >
+                          <Pin className={`h-3.5 w-3.5 ${n.pinned ? 'text-amber-600' : 'text-gray-400'}`} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="rounded-none h-7 px-2 text-red-600 hover:text-red-700"
+                          onClick={() => setNoteDeleteId(n.id)}
+                          disabled={noteBusyId === n.id}
+                          title={t('partnerStudentDetail.notesDelete')}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <p className="text-xs text-[#4B5563] mt-4 flex items-center gap-1">
                 <Calendar className="w-3 h-3" />
                 {t('partnerStudentDetail.lastUpdated', { date: student.updatedAt
@@ -317,6 +546,40 @@ export default function PartnerStudentDetailPage() {
               </p>
             </CardContent>
           </Card>
+
+          {/* Phase 50c: per-note delete confirmation. Reuses the
+              same shadcn AlertDialog the bulk-delete and status-
+              change dialogs use. Two-step confirm (button click
+              + dialog confirm) so a partner can't lose a note
+              with a single misclick. */}
+          <AlertDialog
+            open={!!noteDeleteId}
+            onOpenChange={(open) => { if (!open) setNoteDeleteId(null); }}
+          >
+            <AlertDialogContent className="rounded-none">
+              <AlertDialogHeader>
+                <AlertDialogTitle>{t('partnerStudentDetail.notesDeleteTitle')}</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {t('partnerStudentDetail.notesDeleteBody')}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel
+                  className="rounded-none"
+                  disabled={!!noteBusyId}
+                >
+                  {t('partnerAppDetail.cancel')}
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  className="rounded-none bg-[#9B1B30] hover:bg-[#7a1626]"
+                  disabled={!!noteBusyId}
+                  onClick={handleConfirmDeleteNote}
+                >
+                  {t('partnerStudentDetail.notesDelete')}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </TabsContent>
       </Tabs>
     </div>
