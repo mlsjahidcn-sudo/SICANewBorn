@@ -74,6 +74,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
@@ -316,6 +326,13 @@ export default function PartnerDocumentsPage() {
   const [bulkResult, setBulkResult] = useState<{ ok: number; fail: number } | null>(null);
   const [bulkMoveOpen, setBulkMoveOpen] = useState(false);
   const [bulkMoveAppId, setBulkMoveAppId] = useState<string>('');
+  // Phase 52: shadcn AlertDialog-driven bulk-delete confirmation.
+  // Replaces the old window.confirm() call which (a) was
+  // inconsistent with the partner applications list (which uses
+  // AlertDialog), (b) froze the JS thread, and (c) rendered
+  // poorly on iOS Safari. The actual delete is still handled by
+  // handleBulk('delete') below.
+  const [showBulkDelete, setShowBulkDelete] = useState(false);
 
   // Dialog state
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -510,9 +527,7 @@ export default function PartnerDocumentsPage() {
 
   const confirmBulkDelete = () => {
     if (selectedIds.size === 0) return;
-    if (window.confirm(t('partnerDocs.bulkBar.confirmDelete', { n: selectedIds.size }))) {
-      void handleBulk('delete');
-    }
+    setShowBulkDelete(true);
   };
 
   const handleDownload = async (doc: PartnerDocument) => {
@@ -524,7 +539,9 @@ export default function PartnerDocumentsPage() {
       window.open(url, '_blank', 'noopener,noreferrer');
     } catch (err) {
       console.error('[partner/documents] download failed:', err);
-      setError(err instanceof Error ? err.message : t('partnerDocs.errors.uploadFailed'));
+      // Phase 52: dedicated download-error key (was reusing
+      // uploadFailed, which read wrong in context).
+      setError(err instanceof Error ? err.message : t('partnerDocs.errors.downloadFailed'));
     }
   };
 
@@ -1171,6 +1188,40 @@ export default function PartnerDocumentsPage() {
         }}
         onShowToast={showToast}
       />
+
+      {/* Phase 52: bulk-delete AlertDialog. Replaces the old
+          window.confirm() with the project's shadcn AlertDialog
+          for consistency with the partner applications list and
+          to fix the iOS Safari rendering + JS-thread-freeze
+          issues that Phase 48.5 already cited when fixing the
+          same pattern elsewhere. The destructive action still
+          runs through handleBulk('delete') so the per-row
+          failure report + GA tracking stay in one place. */}
+      <AlertDialog open={showBulkDelete} onOpenChange={setShowBulkDelete}>
+        <AlertDialogContent className="rounded-none">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('partnerDocs.bulkBar.deleteTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('partnerDocs.bulkBar.deleteBody', { n: selectedIds.size })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkBusy} className="rounded-none">
+              {t('partnerDocs.deleteDialog.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={bulkBusy}
+              className="rounded-none bg-[#9B1B30] hover:bg-[#7a1626]"
+              onClick={() => {
+                setShowBulkDelete(false);
+                void handleBulk('delete');
+              }}
+            >
+              {t('partnerDocs.bulkBar.deleteAction', { n: selectedIds.size })}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Inline self-managed toast (top-right, 3.5s) */}
       {toast && (

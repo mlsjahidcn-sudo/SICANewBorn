@@ -1042,7 +1042,16 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerDocs.bulkBar.result': '{{ok}} updated, {{fail}} failed.',
     'partnerDocs.bulkBar.chooseApp': 'Choose an application',
     'partnerDocs.bulkBar.confirmDelete': 'Delete {{n}} document(s)? This will also remove the files from storage.',
+    // Phase 52: bulk-delete dialog copy. Replaces the old
+    // window.confirm() call — matches the pattern the partner
+    // applications list uses (shadcn AlertDialog).
+    'partnerDocs.bulkBar.deleteTitle': 'Delete selected documents?',
+    'partnerDocs.bulkBar.deleteBody': '{{n}} document(s) and their files will be permanently removed. This action cannot be undone.',
+    'partnerDocs.bulkBar.deleteAction': 'Delete {{n}}',
     'partnerDocs.errors.uploadFailed': 'Upload failed. Please try again.',
+    // Phase 52: dedicated key for download errors. Previously
+    // reused uploadFailed, which read wrong in context.
+    'partnerDocs.errors.downloadFailed': 'Download failed. Please try again.',
     'partnerDocs.errors.tooBig': 'File is too large. Max 10MB.',
     'partnerDocs.errors.wrongType': 'File type is not allowed. Use PDF, PNG, JPG, WEBP, DOC, or DOCX.',
     'partnerDocs.errors.network': 'Network error. Check your connection.',
@@ -1138,6 +1147,20 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerLogin.setupSubmit': 'Complete setup & enter portal',
     'partnerLogin.setupError': 'Failed to complete setup. Please try again.',
     'partnerLogin.useDifferentAccount': 'Use a different account',
+    // Phase 52: pre-login password recovery. Replaces the
+    // "use Settings after login" dead-end for partners who
+    // forgot the password. Calls Supabase's
+    // resetPasswordForEmail anonymously from the browser
+    // client; the email link lands back on
+    // /partner/login?reset=1 (handled by the existing
+    // /api/partner/me/send-reset's redirectTo param — the
+    // canonical Supabase recovery URL).
+    'partnerLogin.forgotTitle': 'Reset your password',
+    'partnerLogin.forgotBody': "Enter your account email and we'll send a password reset link.",
+    'partnerLogin.forgotLink': 'Forgot password?',
+    'partnerLogin.forgotBack': '← Back to sign in',
+    'partnerLogin.forgotSent': 'Reset link sent — check your inbox at {{email}}.',
+    'partnerLogin.forgotError': 'Failed to send reset link. Please try again.',
     // Partner Portal — register
     'partnerRegister.title': 'Become a SICA Partner',
     'partnerRegister.subtitle': "Create your account. We'll review and approve within 2 business days.",
@@ -3713,7 +3736,11 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerDocs.bulkBar.result': '已更新 {{ok}} 项，失败 {{fail}} 项。',
     'partnerDocs.bulkBar.chooseApp': '选择申请',
     'partnerDocs.bulkBar.confirmDelete': '确认删除 {{n}} 份文档？文件将一并从存储中删除。',
+    'partnerDocs.bulkBar.deleteTitle': '删除所选文档？',
+    'partnerDocs.bulkBar.deleteBody': '将永久删除 {{n}} 份文档及其文件，此操作无法撤销。',
+    'partnerDocs.bulkBar.deleteAction': '删除 {{n}} 项',
     'partnerDocs.errors.uploadFailed': '上传失败，请重试。',
+    'partnerDocs.errors.downloadFailed': '下载失败，请重试。',
     'partnerDocs.errors.tooBig': '文件过大，最大 10MB。',
     'partnerDocs.errors.wrongType': '不支持该文件类型，请使用 PDF、PNG、JPG、WEBP、DOC 或 DOCX。',
     'partnerDocs.errors.network': '网络错误，请检查连接。',
@@ -3798,6 +3825,12 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerLogin.setupSubmit': '完成设置并进入门户',
     'partnerLogin.setupError': '完成设置失败,请重试。',
     'partnerLogin.useDifferentAccount': '使用其他账户',
+    'partnerLogin.forgotTitle': '重置您的密码',
+    'partnerLogin.forgotBody': '请输入您的账户邮箱，我们会发送密码重置链接给您。',
+    'partnerLogin.forgotLink': '忘记密码？',
+    'partnerLogin.forgotBack': '← 返回登录',
+    'partnerLogin.forgotSent': '重置链接已发送，请查看 {{email}} 邮箱。',
+    'partnerLogin.forgotError': '发送重置链接失败，请重试。',
     'partnerLogin.emailLabel': '邮箱地址',
     'partnerLogin.emailPlaceholder': 'partner@example.com',
     'partnerLogin.passwordLabel': '密码',

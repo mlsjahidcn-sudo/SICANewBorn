@@ -4,10 +4,11 @@ import React, { useState, useEffect } from 'react';
 import { Spinner } from '@/components/ui/spinner';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Eye, EyeOff, LogIn, Users, AlertCircle, CheckCircle, Building2 } from 'lucide-react';
+import { Eye, EyeOff, LogIn, Users, AlertCircle, CheckCircle, Building2, KeyRound, Mail } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useI18n } from '@/lib/i18n';
 import { getPostLoginRedirectPath } from '@/lib/auth-redirect';
+import { SITE_URL } from '@/lib/site-url';
 
 export default function PartnerLoginPage() {
   const router = useRouter();
@@ -32,6 +33,16 @@ export default function PartnerLoginPage() {
     notes: '',
   });
   const [setupBusy, setSetupBusy] = useState(false);
+  // Phase 52: pre-login password recovery. The form has three
+  // views: login (default), forgot-password (when the user
+  // clicks "Forgot password?"), and the success state after
+  // the reset email is sent. Anonymous flow — calls Supabase's
+  // resetPasswordForEmail directly via the browser client, no
+  // partner API involved (the existing /api/partner/me/send-reset
+  // route is for in-portal use and requires a session).
+  const [forgotMode, setForgotMode] = useState(false);
+  const [forgotBusy, setForgotBusy] = useState(false);
+  const [forgotSent, setForgotSent] = useState(false);
 
   // If already signed in, check whether they're a partner.
   useEffect(() => {
@@ -191,6 +202,50 @@ export default function PartnerLoginPage() {
     setError('');
   };
 
+  // Phase 52: anonymous password recovery. Uses the browser's
+  // Supabase client (anon key) — Supabase's resetPasswordForEmail
+  // is designed to be called pre-login. The redirectTo points
+  // back to /partner/login?reset=1; when the user clicks the
+  // link, Supabase attaches the access_token to the URL and the
+  // recovery form (a future Phase 52b) picks it up to set a new
+  // password. Today, the link just lands the user back on the
+  // login form; we surface a "check your inbox" confirmation
+  // and a "back to sign in" link.
+  const handleForgotSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    if (!email.trim() || !email.includes('@')) {
+      setError(t('partnerLogin.forgotError'));
+      return;
+    }
+    setForgotBusy(true);
+    try {
+      const { supabase } = await import('@/lib/supabase-browser');
+      if (!supabase) {
+        setError(t('partnerLogin.supabaseNotConfigured'));
+        return;
+      }
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${SITE_URL}/partner/login?reset=1`,
+      });
+      if (resetError) {
+        setError(resetError.message);
+        return;
+      }
+      setForgotSent(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('partnerLogin.forgotError'));
+    } finally {
+      setForgotBusy(false);
+    }
+  };
+
+  const cancelForgot = () => {
+    setForgotMode(false);
+    setForgotSent(false);
+    setError('');
+  };
+
   return (
     <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center px-4">
       <div className="w-full max-w-md">
@@ -318,6 +373,78 @@ export default function PartnerLoginPage() {
                 {t('partnerLogin.useDifferentAccount')}
               </button>
             </form>
+          ) : forgotMode ? (
+            // Phase 52: forgot-password view. Three states:
+            // 1. forgotSent=false → form: email + send button
+            // 2. forgotSent=true  → success banner + back link
+            // 3. error           → red banner above the form
+            // Calls Supabase's anonymous resetPasswordForEmail.
+            // The link in the email lands on
+            // /partner/login?reset=1 (a future Phase 52b will
+            // pick up the access_token from the URL fragment and
+            // show a "set new password" form; today it just
+            // surfaces the success message).
+            <form onSubmit={handleForgotSubmit} className="space-y-5">
+              {!forgotSent ? (
+                <>
+                  <div className="flex items-center gap-2 text-[#1B2A4A]">
+                    <KeyRound size={20} className="text-[#9B1B30]" />
+                    <h2 className="text-base font-semibold">{t('partnerLogin.forgotTitle')}</h2>
+                  </div>
+                  <p className="text-sm text-[#4B5563] -mt-2">
+                    {t('partnerLogin.forgotBody')}
+                  </p>
+                  {error && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm flex items-start gap-2">
+                      <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
+                      <span>{error}</span>
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-sm font-medium text-[#1F2937] mb-1.5">
+                      {t('partnerLogin.emailLabel')}
+                    </label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      placeholder={t('partnerLogin.emailPlaceholder')}
+                      className="w-full px-4 py-2.5 border border-gray-300 text-[#1F2937] placeholder:text-gray-400 focus:outline-none focus:border-[#9B1B30] focus:ring-1 focus:ring-[#9B1B30] text-sm"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={forgotBusy}
+                    className="w-full bg-[#9B1B30] text-white py-2.5 font-medium hover:bg-[#7a1525] transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {forgotBusy ? (
+                      <Spinner size="sm" className="text-white" />
+                    ) : (
+                      <>
+                        <Mail size={18} />
+                        {t('partnerSettings.sendReset')}
+                      </>
+                    )}
+                  </button>
+                </>
+              ) : (
+                <div className="space-y-4">
+                  <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 text-sm flex items-start gap-2">
+                    <CheckCircle size={16} className="mt-0.5 flex-shrink-0" />
+                    <p>{t('partnerLogin.forgotSent', { email })}</p>
+                  </div>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={cancelForgot}
+                disabled={forgotBusy}
+                className="w-full text-sm text-gray-500 hover:text-[#1B2A4A] py-2"
+              >
+                {t('partnerLogin.forgotBack')}
+              </button>
+            </form>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
               {error && (
@@ -362,6 +489,19 @@ export default function PartnerLoginPage() {
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForgotMode(true);
+                    setError('');
+                  }}
+                  className="text-sm text-[#9B1B30] hover:text-[#7a1525] font-medium"
+                >
+                  {t('partnerLogin.forgotLink')}
+                </button>
               </div>
 
               <button

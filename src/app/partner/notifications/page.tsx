@@ -334,7 +334,13 @@ export default function PartnerNotificationsPage() {
                 return (
                   <li
                     key={n.id}
-                    className={`px-5 py-4 flex items-start gap-4 hover:bg-gray-50 transition-colors cursor-pointer ${
+                    // group + group-hover:opacity-100 on the mark-read
+                    // button below; without the `group` class on the
+                    // <li>, the hover-reveal is dead and the per-row
+                    // check button is permanently opacity-0 for mouse
+                    // users. Keyboard users still get it via
+                    // focus:opacity-100.
+                    className={`group px-5 py-4 flex items-start gap-4 hover:bg-gray-50 transition-colors cursor-pointer ${
                       n.is_read ? 'bg-white' : 'bg-blue-50/30'
                     }`}
                     onClick={() => onRowClick(n)}

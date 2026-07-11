@@ -40,8 +40,43 @@ const PRIORITY_VARIANTS: Record<PartnerApplicationPriority, string> = {
 export default function PartnerApplicationDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const applicationId = params.id as string;
+
+  // Phase 52: locale-aware date formatter. The page used to
+  // call `new Date(...).toLocaleDateString()` which respects
+  // the browser's locale, not the chosen i18n locale. Now we
+  // pass the active locale explicitly so switching to 中文
+  // produces zh-CN-style dates (e.g. "2026年7月12日") instead
+  // of en-US (e.g. "7/12/2026"). Used by the Status card's
+  // "submitted" date and the bottom Created/Updated line.
+  const localeTag = locale === 'zh' ? 'zh-CN' : 'en-US';
+  const fmtDate = (iso: string | null | undefined): string => {
+    if (!iso) return t('partnerCommon.placeholderDash');
+    try {
+      return new Date(iso).toLocaleDateString(localeTag, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+    } catch {
+      return iso;
+    }
+  };
+  const fmtDateTime = (iso: string | null | undefined): string => {
+    if (!iso) return t('partnerCommon.placeholderDash');
+    try {
+      return new Date(iso).toLocaleString(localeTag, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return iso;
+    }
+  };
 
   const [app, setApp] = useState<PartnerApplication | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -499,7 +534,7 @@ export default function PartnerApplicationDetailPage() {
             <div className="flex items-center gap-2">
               <span className="text-[#4B5563] min-w-24">{t('partnerAppDetail.fieldSubmitted')}</span>
               <span className="text-[#1F2937]">
-                {app.submittedAt ? new Date(app.submittedAt).toLocaleDateString() : t('partnerCommon.placeholderDash')}
+                {fmtDate(app.submittedAt)}
               </span>
             </div>
             {/* Phase 49.1: prominent "why can't I change status?" callout.
@@ -561,7 +596,7 @@ export default function PartnerApplicationDetailPage() {
             <div className="text-xs text-[#4B5563] pt-2 border-t border-gray-100 mt-2">
               {t('partnerAppDetail.addedBy', { email: app.createdByEmail })}
               {app.createdAt && (
-                <> {t('partnerAppDetail.addedOn', { date: new Date(app.createdAt).toLocaleDateString() })}</>
+                <> {t('partnerAppDetail.addedOn', { date: fmtDate(app.createdAt) })}</>
               )}
             </div>
           )}
@@ -579,7 +614,7 @@ export default function PartnerApplicationDetailPage() {
                 {reviewer.at && (
                   <span className="text-gray-500 ml-1">
                     ({t('partnerAppDetail.lastActivity', {
-                      date: new Date(reviewer.at).toLocaleDateString(),
+                      date: fmtDate(reviewer.at),
                     })})
                   </span>
                 )}
@@ -712,11 +747,18 @@ export default function PartnerApplicationDetailPage() {
         </Card>
       )}
 
-      {/* Application context (prior China study, funding) */}
-      {(app.hasStudiedInChina !== null ||
-        app.hasAppliedChinaUni !== null ||
-        app.fundingSource ||
-        app.scholarshipName) && (
+      {/* Application context (prior China study, funding) — Phase 52
+          narrowed to just the China-history fields. The Funding
+          sub-card (fundingSource/scholarshipName) was dropped from
+          the partner application form in Phase 51f, so new rows
+          can never populate it. Pre-51f rows still show their
+          stored values via the read-side mapper, but rendering
+          them here would just confuse partners ("why is there a
+          field I can't edit?"). Same for the Personal Statement
+          card below — Phase 51f removed the form, so we hide the
+          card entirely. Read-side data is preserved on the
+          PartnerApplication interface for any future restore. */}
+      {(app.hasStudiedInChina !== null || app.hasAppliedChinaUni !== null) && (
         <Card className="rounded-none">
           <CardHeader>
             <CardTitle className="text-[#1B2A4A]">{t('partnerAppDetail.sectionContext')}</CardTitle>
@@ -742,34 +784,18 @@ export default function PartnerApplicationDetailPage() {
                   : t('partnerAppDetail.no')
               }
             />
-            <Field label={t('partnerAppDetail.fieldFundingSource')} value={app.fundingSource} />
-            <Field label={t('partnerAppDetail.fieldScholarship')} value={app.scholarshipName} />
           </CardContent>
         </Card>
       )}
 
-      {/* Personal statement */}
-      {(app.whyProgram || app.careerPlan) && (
-        <Card className="rounded-none">
-          <CardHeader>
-            <CardTitle className="text-[#1B2A4A]">{t('partnerAppDetail.sectionPersonalStatement')}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 text-sm">
-            {app.whyProgram && (
-              <div>
-                <div className="text-[#4B5563] font-medium mb-1">{t('partnerAppDetail.whyThisProgram')}</div>
-                <p className="text-[#1F2937] whitespace-pre-wrap">{app.whyProgram}</p>
-              </div>
-            )}
-            {app.careerPlan && (
-              <div>
-                <div className="text-[#4B5563] font-medium mb-1">{t('partnerAppDetail.careerPlan')}</div>
-                <p className="text-[#1F2937] whitespace-pre-wrap">{app.careerPlan}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+      {/* Personal statement — Phase 52 hidden. The form no longer
+          writes to whyProgram/careerPlan (Phase 51f removed
+          Section 8 from the create/edit wizard). New rows will
+          never have data; pre-51f rows keep their stored values
+          but showing the card invites the "why can't I edit?"
+          question. Hide the card and rely on the read-side
+          PartnerApplication interface to preserve the data for
+          any future restore. */}
 
       <Card className="rounded-none">
         <CardHeader>
@@ -783,9 +809,9 @@ export default function PartnerApplicationDetailPage() {
           )}
           <p className="text-xs text-[#4B5563] mt-4 flex items-center gap-1">
             <Calendar className="w-3 h-3" />
-            {t('partnerAppDetail.createdOn', { date: app.createdAt ? new Date(app.createdAt).toLocaleString() : t('partnerCommon.placeholderDash') })}
+            {t('partnerAppDetail.createdOn', { date: fmtDateTime(app.createdAt) })}
             {app.updatedAt && app.updatedAt !== app.createdAt && (
-              <>{t('partnerAppDetail.updatedOn', { date: new Date(app.updatedAt).toLocaleString() })}</>
+              <>{t('partnerAppDetail.updatedOn', { date: fmtDateTime(app.updatedAt) })}</>
             )}
           </p>
         </CardContent>

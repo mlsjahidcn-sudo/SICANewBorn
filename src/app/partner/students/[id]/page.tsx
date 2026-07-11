@@ -76,19 +76,28 @@ export default function PartnerStudentDetailPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await apiFetchJson<{ student: PartnerStudent }>(
-        `/api/partner/students/${studentId}`,
-      );
-      setStudent(res.student);
-
-      // Also fetch this partner's applications and filter by name match
-      // Phase 1.12: use the new student_id FK instead of a soft
-      // name join. Two students named "Mohammed Ali" used to
-      // cross-link each other's applications.
-      const apps = await apiFetchJson<{ applications: PartnerApplication[] }>(
-        `/api/partner/applications?studentId=${encodeURIComponent(res.student.id)}&limit=50`,
-      );
-      setApplications(apps.applications || []);
+      // Phase 52: parallel fetch. Was sequentially awaiting the
+      // student GET, then issuing the applications query with
+      // the student's id. The two are independent once we know
+      // the id — the student GET gives us the id, but the
+      // applications filter actually uses the URL param
+      // (studentId=...) which is already in scope, so we can
+      // fire both in parallel with a single studentId value.
+      // Halves first-paint latency on the common case where
+      // the page loads with the Applications tab active.
+      const [studentRes, appsRes] = await Promise.all([
+        apiFetchJson<{ student: PartnerStudent }>(
+          `/api/partner/students/${studentId}`,
+        ),
+        apiFetchJson<{ applications: PartnerApplication[] }>(
+          `/api/partner/applications?studentId=${encodeURIComponent(studentId)}&limit=50`,
+        ),
+      ]);
+      setStudent(studentRes.student);
+      // Phase 1.12: student_id FK on partner_applications
+      // replaces the old soft name match (two "Mohammed Ali"
+      // students used to cross-link each other's apps).
+      setApplications(appsRes.applications || []);
     } catch (err) {
       console.error('[partner/students/:id] fetch failed:', err);
       setError(err instanceof Error ? err.message : t('partnerStudentDetail.errorLoad'));
