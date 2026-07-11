@@ -38,6 +38,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/guides/visa`, lastModified: now, changeFrequency: 'monthly', priority: 0.85 },
     { url: `${SITE_URL}/guides/cost-of-living`, lastModified: now, changeFrequency: 'monthly', priority: 0.85 },
     { url: `${SITE_URL}/guides/accommodation`, lastModified: now, changeFrequency: 'monthly', priority: 0.85 },
+    { url: `${SITE_URL}/guides/health-insurance`, lastModified: now, changeFrequency: 'monthly', priority: 0.85 },
   ];
 
   // City pages — /study-in-china/[city]

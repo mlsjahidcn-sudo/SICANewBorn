@@ -109,7 +109,7 @@ export default async function GuidesHubPage({
       {/* Cards grid — two sections: process guides + listicles */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
         <h2 className="text-2xl font-bold text-[#1B2A4A] mb-2">
-          {isZh ? '19 篇深度指南' : '19 in-depth guides'}
+          {isZh ? '20 篇深度指南' : '20 in-depth guides'}
         </h2>
         <p className="text-[#4B5563] mb-10">
           {isZh
@@ -120,7 +120,7 @@ export default async function GuidesHubPage({
         {/* Section 1: Process guides (the original /guides/* pages) */}
         <div className="mb-12">
           <h3 className="text-xs font-bold uppercase tracking-wider text-[#9B1B30] mb-4">
-            {isZh ? '流程指南 · 6 篇' : 'Process guides · 6 articles'}
+            {isZh ? '流程指南 · 7 篇' : 'Process guides · 7 articles'}
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {cards

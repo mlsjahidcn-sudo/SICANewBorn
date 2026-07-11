@@ -87,6 +87,17 @@ export const guideCards: LocalizedGuideCards = {
       readTime: '8 min read',
       highlight: 'Best for housing decisions',
     },
+    {
+      slug: 'health-insurance',
+      href: '/guides/health-insurance',
+      icon: 'heart-pulse',
+      category: 'process',
+      title: 'Health insurance for international students',
+      subtitle:
+        "Mandatory Ping An plan (¥800/yr), what's covered, how to claim, network hospitals, and when to upgrade to an international plan.",
+      readTime: '10 min read',
+      highlight: 'Required for registration',
+    },
 
     // ───── Evergreen listicles & best-of guides (Phase 39b / 40 / 41) ─────
     {
@@ -300,6 +311,17 @@ export const guideCards: LocalizedGuideCards = {
         '校内宿舍 vs 校外公寓：费用、合同、室友匹配、注意事项。',
       readTime: '8分钟阅读',
       highlight: '适合做住宿决策',
+    },
+    {
+      slug: 'health-insurance',
+      href: '/guides/health-insurance',
+      icon: 'heart-pulse',
+      category: 'process',
+      title: '中国留学生医疗保险',
+      subtitle:
+        '强制平安方案（¥800/年）、保障范围、理赔流程、网络医院、何时升级国际计划。',
+      readTime: '10分钟阅读',
+      highlight: '注册必备',
     },
 
     // ───── Evergreen listicles & best-of guides (Phase 39b / 40 / 41) ─────

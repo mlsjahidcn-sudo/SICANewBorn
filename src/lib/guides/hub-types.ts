@@ -31,7 +31,11 @@ export interface GuideCard {
     | 'calendar-clock'
     | 'graduation-cap'
     | 'scale'
-    | 'file-check';
+    | 'file-check'
+    | 'heart-pulse'
+    | 'credit-card'
+    | 'clock'
+    | 'book-open';
   category: 'process' | 'listicle';
   title: string;
   subtitle: string;

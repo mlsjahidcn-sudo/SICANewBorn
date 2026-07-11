@@ -23,6 +23,9 @@ import {
   GraduationCap,
   Scale,
   FileCheck,
+  HeartPulse,
+  CreditCard,
+  Clock,
   type LucideIcon,
 } from 'lucide-react';
 import type { Guide, GuideBlock } from '@/lib/guides/types';
@@ -511,4 +514,8 @@ export const GuideIcons: Record<string, LucideIcon> = {
   'graduation-cap': GraduationCap,
   scale: Scale,
   'file-check': FileCheck,
+  'heart-pulse': HeartPulse,
+  'credit-card': CreditCard,
+  clock: Clock,
+  'book-open': BookOpen,
 };
