@@ -98,6 +98,39 @@ export const guideCards: LocalizedGuideCards = {
       readTime: '10 min read',
       highlight: 'Required for registration',
     },
+    {
+      slug: 'banking',
+      href: '/guides/banking',
+      icon: 'credit-card',
+      category: 'process',
+      title: 'Banking, Alipay & WeChat Pay setup',
+      subtitle:
+        'Open a Chinese bank account, link Alipay + WeChat Pay, and move money in/out. Workarounds for sanctioned-country and KYC-blocked students.',
+      readTime: '10 min read',
+      highlight: 'First-week setup',
+    },
+    {
+      slug: 'part-time-work',
+      href: '/guides/part-time-work',
+      icon: 'clock',
+      category: 'process',
+      title: 'Part-time work & post-study visa',
+      subtitle:
+        "Work legally during your X1 visa (on-campus 勤工助学 + off-campus in 9 pilot cities) and switch to a Z work visa or stay-back visa after graduation.",
+      readTime: '11 min read',
+      highlight: 'Career & income',
+    },
+    {
+      slug: 'hsk',
+      href: '/guides/hsk',
+      icon: 'book-open',
+      category: 'process',
+      title: 'HSK Chinese language test prep',
+      subtitle:
+        'Exam format, score requirements by program type, study plans for HSK 1-6, and 10 best free + paid prep resources.',
+      readTime: '12 min read',
+      highlight: 'Required for CSC',
+    },
 
     // ───── Evergreen listicles & best-of guides (Phase 39b / 40 / 41) ─────
     {
@@ -198,6 +231,17 @@ export const guideCards: LocalizedGuideCards = {
         'Top Shanghai universities (SJTU, Fudan, Tongji + others) — tuition, programs, international community.',
       readTime: '11 min read',
       highlight: "China's #1 city",
+    },
+    {
+      slug: 'best-universities-in-beijing',
+      href: '/best-universities-in-beijing',
+      icon: 'landmark',
+      category: 'listicle',
+      title: 'Best universities in Beijing',
+      subtitle:
+        'Top Beijing universities (Tsinghua, Peking, Renmin + 15 more) — tuition, programs, scholarships, and cost of living.',
+      readTime: '11 min read',
+      highlight: "China's #2 city",
     },
     {
       slug: 'chinese-government-scholarship-csc',
@@ -323,6 +367,39 @@ export const guideCards: LocalizedGuideCards = {
       readTime: '10分钟阅读',
       highlight: '注册必备',
     },
+    {
+      slug: 'banking',
+      href: '/guides/banking',
+      icon: 'credit-card',
+      category: 'process',
+      title: '银行、支付宝、微信支付开户',
+      subtitle:
+        '开中国银行账户、绑定支付宝+微信支付、跨境汇款。受制裁国家与KYC被拒学生的替代方案。',
+      readTime: '10分钟阅读',
+      highlight: '第一周必办',
+    },
+    {
+      slug: 'part-time-work',
+      href: '/guides/part-time-work',
+      icon: 'clock',
+      category: 'process',
+      title: '兼职与毕业后工签',
+      subtitle:
+        'X1签证合法打工（校内勤工助学 + 9试点城市校外），毕业后转Z工签或留居签。',
+      readTime: '11分钟阅读',
+      highlight: '职业与收入',
+    },
+    {
+      slug: 'hsk',
+      href: '/guides/hsk',
+      icon: 'book-open',
+      category: 'process',
+      title: 'HSK汉语水平考试备考',
+      subtitle:
+        '考试形式、按项目类型的分数要求、HSK 1-6备考计划、10个最佳免费+付费资源。',
+      readTime: '12分钟阅读',
+      highlight: 'CSC奖学金必备',
+    },
 
     // ───── Evergreen listicles & best-of guides (Phase 39b / 40 / 41) ─────
     {
@@ -423,6 +500,17 @@ export const guideCards: LocalizedGuideCards = {
         '上海顶尖大学（上交、复旦、同济等）——学费、项目、国际社区。',
       readTime: '11分钟阅读',
       highlight: '中国第一城',
+    },
+    {
+      slug: 'best-universities-in-beijing',
+      href: '/best-universities-in-beijing',
+      icon: 'landmark',
+      category: 'listicle',
+      title: '北京最好的大学',
+      subtitle:
+        '北京顶尖大学（清华、北大、人大等15+）——学费、项目、奖学金、生活费。',
+      readTime: '11分钟阅读',
+      highlight: '中国第二城',
     },
     {
       slug: 'chinese-government-scholarship-csc',
