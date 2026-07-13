@@ -19,6 +19,10 @@ import {
   PartnerStudentStatus,
 } from '@/lib/partner-student-mapper';
 import { COMMON_COUNTRIES, NATIONALITY_CUSTOM } from '@/lib/common-countries';
+// Phase 54: shadcn <Select> reserves '' for the placeholder state —
+// can't use empty string as a SelectItem value. Same sentinel as
+// the new-student form.
+const NATIONALITY_NONE = '__none__';
 import type { University, Program } from '@/lib/data';
 
 interface FormData {
@@ -312,7 +316,7 @@ export default function PartnerEditStudentPage() {
                       showCustomNationality
                         ? NATIONALITY_CUSTOM
                         : formData.nationality === ''
-                          ? ''
+                          ? NATIONALITY_NONE
                           : COMMON_COUNTRIES.some((c) => c.value === formData.nationality)
                             ? formData.nationality
                             : NATIONALITY_CUSTOM
@@ -320,6 +324,10 @@ export default function PartnerEditStudentPage() {
                     onValueChange={(value) => {
                       if (value === NATIONALITY_CUSTOM) {
                         setShowCustomNationality(true);
+                      } else if (value === NATIONALITY_NONE) {
+                        // Phase 54: __none__ sentinel → real empty
+                        setShowCustomNationality(false);
+                        setFormData((prev) => (prev ? { ...prev, nationality: '' } : prev));
                       } else {
                         setShowCustomNationality(false);
                         setFormData((prev) => (prev ? { ...prev, nationality: value } : prev));
@@ -330,7 +338,12 @@ export default function PartnerEditStudentPage() {
                       <SelectValue placeholder={t('partnerStudentNew.fieldNationalityPlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">{t('partnerCommon.placeholderDash')}</SelectItem>
+                      {/* Phase 54: shadcn <Select> reserves '' for the
+                          placeholder state. Use a sentinel that maps
+                          back to real empty on onValueChange. */}
+                      <SelectItem value={NATIONALITY_NONE}>
+                        {t('partnerCommon.placeholderDash')}
+                      </SelectItem>
                       {COMMON_COUNTRIES.map((c) => (
                         <SelectItem key={c.code} value={c.value}>
                           {c.label} ({c.code})
