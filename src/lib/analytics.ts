@@ -87,6 +87,15 @@ export interface AnalyticsEventMap {
     /** Subject category from the dropdown. */
     subject: 'general' | 'application' | 'scholarship' | 'visa' | 'other';
   };
+  /** User clicked a service-tier CTA on the /get-started sales page. */
+  service_card_click: {
+    /** Which tier the user clicked toward. */
+    tier: 'diy' | 'full_service';
+    /** Which CTA on the page (hero, pricing, compare, final). */
+    location: string;
+    /** Page locale. */
+    locale: 'en' | 'zh';
+  };
   /** User clicked a university card on the list page. */
   university_click: {
     /** University slug. */
