@@ -21,6 +21,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/about`, lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${SITE_URL}/contact`, lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${SITE_URL}/assessment`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
+    // Phase 57: /get-started is the influencer-traffic sales
+    // landing page. Higher priority than /contact (0.5) because
+    // it's the conversion page for paid-traffic channels.
+    { url: `${SITE_URL}/get-started`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
   ];
 
   // Programmatic SEO hub pages
