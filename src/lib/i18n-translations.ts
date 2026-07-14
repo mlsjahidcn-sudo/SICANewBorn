@@ -2758,9 +2758,17 @@ export const translations: Record<Locale, Record<string, string>> = {
     'sales.heroCtaWhatsapp': 'Chat with SICA on WhatsApp',
     'sales.heroCtaFree': 'Or get a free consultation first',
     'sales.trustCount1': '10,000+ students admitted',
-    'sales.trustCount2': '27+ partner universities',
+    'sales.trustCount2': '100+ partner universities',
     'sales.trustCount3': '90% admission success rate',
     'sales.trustCount4': '24h response time',
+    // Phase 57 hotfix: split the trust strip into number + label
+    // so the new iconified TrustStat cell can render them on
+    // separate lines. Old keys above are kept for the in-page
+    // copy elsewhere (the AGENTS log reference).
+    'sales.trustLabelStudents': 'students admitted',
+    'sales.trustLabelUniversities': 'partner universities',
+    'sales.trustLabelSuccess': 'admission success rate',
+    'sales.trustLabelResponse': 'response time',
     'sales.servicesTitle': 'Two ways to work with us',
     'sales.servicesSubtitle': 'Pick the level of help you need. Both include WhatsApp support throughout.',
     'sales.tierDiyBadge': 'Do it yourself',
@@ -5483,9 +5491,13 @@ export const translations: Record<Locale, Record<string, string>> = {
     'sales.heroCtaWhatsapp': '在 WhatsApp 上联系 SICA',
     'sales.heroCtaFree': '或先预约一次免费咨询',
     'sales.trustCount1': '10,000+ 名学生成功入学',
-    'sales.trustCount2': '27+ 所合作大学',
+    'sales.trustCount2': '100+ 所合作大学',
     'sales.trustCount3': '90% 录取成功率',
     'sales.trustCount4': '24 小时内回复',
+    'sales.trustLabelStudents': '名学生成功入学',
+    'sales.trustLabelUniversities': '所合作大学',
+    'sales.trustLabelSuccess': '录取成功率',
+    'sales.trustLabelResponse': '内回复',
     'sales.servicesTitle': '两种合作方式',
     'sales.servicesSubtitle': '按你需要的帮助程度选择。两种都包含全程 WhatsApp 支持。',
     'sales.tierDiyBadge': 'DIY 自助',
