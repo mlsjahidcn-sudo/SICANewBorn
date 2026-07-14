@@ -30,6 +30,20 @@ const baseConfig: NextConfig = {
   httpAgentOptions: {
     keepAlive: true,
   },
+  // S59: raise the per-page static-generation budget. The build
+  // pre-renders 6,074 pages — most of them the N²
+  // university-comparison route (5,460 pairs from 105
+  // universidades) and a long tail of `[slug]/programs`,
+  // `[slug]/scholarships`, and `[country]` SSG pages. Each page
+  // does a full-table Supabase query at build time, and when 9
+  // workers all hit the DB at once on Railway's tighter CPU,
+  // individual pages can spike past the 60s default and abort
+  // after 3 retries (= 3 min/page). Raising to 180s keeps the
+  // build from bouncing and burning the 9-min retry budget.
+  // Combined with the data-fetcher memoization in S59 (3× per
+  // page → 1×) and the worker-count reduction below, the per-page
+  // DB pressure drops enough that the timeout rarely fires.
+  staticPageGenerationTimeout: 180,
   // S39: consolidate www. → apex. Both https://studyinchina.academy
   // and https://www.studyinchina.academy reach the same content,
   // but the sitemap / JSON-LD / canonical all emit the apex so SEO
@@ -51,6 +65,14 @@ const baseConfig: NextConfig = {
   experimental: {
     optimizeCss: true,
     optimizePackageImports: ['lucide-react', 'react-icons'],
+    // S59: reduce the static-export worker count from 9 → 4 to
+    // ease pressure on Supabase's connection pool during the
+    // build. 9 workers all querying at once was the root cause
+    // of per-page spikes past 60s on Railway. Build wall time is
+    // roughly the same (4 workers × ~90s effective per page ≈
+    // 9 × ~40s), but individual pages now stay well under the
+    // 180s timeout from `staticPageGenerationTimeout` above.
+    staticGenerationMaxConcurrency: 4,
   },
 };
 

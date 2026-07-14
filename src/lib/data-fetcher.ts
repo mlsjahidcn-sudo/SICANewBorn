@@ -23,6 +23,7 @@
  * If volume ever justifies it, add `export const revalidate = 60`
  * to the consuming page to cache the result.
  */
+import { cache } from 'react';
 import { supabaseServer, isSupabaseServerConfigured } from './supabase-server';
 import {
   universities as staticUniversities,
@@ -183,106 +184,124 @@ function mapScholarship(row: Record<string, unknown>): Scholarship {
   };
 }
 
-/** All universities, DB first, static fallback. */
-export async function getAllUniversities(): Promise<University[]> {
-  if (isSupabaseServerConfigured() && supabaseServer) {
-    const { data, error } = await supabaseServer
-      .from('universities')
-      .select('*')
-      .order('ranking', { ascending: true });
-    if (!error && data && data.length > 0) {
-      return data.map(mapUniversity);
+/** All universities, DB first, static fallback.
+ *  S59: wrapped in React `cache()` so the 3× calls in the compare
+ *  route's generateStaticParams + generateMetadata + Page body
+ *  collapse to a single DB query per page. Request-scoped — each
+ *  static-generated page still gets its own query, but the 3
+ *  per-page calls collapse to 1, cutting the build's Supabase
+ *  load by ~3x. */
+export const getAllUniversities = cache(
+  async (): Promise<University[]> => {
+    if (isSupabaseServerConfigured() && supabaseServer) {
+      const { data, error } = await supabaseServer
+        .from('universities')
+        .select('*')
+        .order('ranking', { ascending: true });
+      if (!error && data && data.length > 0) {
+        return data.map(mapUniversity);
+      }
     }
-  }
-  return staticUniversities;
-}
+    return staticUniversities;
+  },
+);
 
-/** All programs, DB first, static fallback. */
-export async function getAllPrograms(): Promise<Program[]> {
-  if (isSupabaseServerConfigured() && supabaseServer) {
-    const { data, error } = await supabaseServer
-      .from('programs')
-      .select('*')
-      .order('name', { ascending: true });
-    if (!error && data && data.length > 0) {
-      return data.map((row) =>
-        mapProgram(row, row.slug as string),
-      );
+/** All programs, DB first, static fallback. Memoized per-request —
+ *  most pages read this at most once, but the program-scholarships
+ *  and study-in-china/[city] routes use it in both generateMetadata
+ *  and the page body. */
+export const getAllPrograms = cache(
+  async (): Promise<Program[]> => {
+    if (isSupabaseServerConfigured() && supabaseServer) {
+      const { data, error } = await supabaseServer
+        .from('programs')
+        .select('*')
+        .order('name', { ascending: true });
+      if (!error && data && data.length > 0) {
+        return data.map((row) =>
+          mapProgram(row, row.slug as string),
+        );
+      }
     }
-  }
-  return staticPrograms;
-}
+    return staticPrograms;
+  },
+);
 
-/** All scholarships, DB first, static fallback. */
-export async function getAllScholarships(): Promise<Scholarship[]> {
-  if (isSupabaseServerConfigured() && supabaseServer) {
-    const { data, error } = await supabaseServer
-      .from('scholarships')
-      .select('*')
-      .order('name', { ascending: true });
-    if (!error && data && data.length > 0) {
-      return data.map(mapScholarship);
+/** All scholarships, DB first, static fallback. Memoized per-request. */
+export const getAllScholarships = cache(
+  async (): Promise<Scholarship[]> => {
+    if (isSupabaseServerConfigured() && supabaseServer) {
+      const { data, error } = await supabaseServer
+        .from('scholarships')
+        .select('*')
+        .order('name', { ascending: true });
+      if (!error && data && data.length > 0) {
+        return data.map(mapScholarship);
+      }
     }
-  }
-  return staticScholarships;
-}
+    return staticScholarships;
+  },
+);
 
 /** DB-only scholarship + program getters for subpages that need a
  *  single source. Returned Promise resolves to [] if the DB is
  *  empty / unconfigured — callers can then fall back to the static
- *  list themselves if they want. */
-export async function getScholarshipsForUniversity(
-  _universitySlug: string,
-): Promise<Scholarship[]> {
-  if (!isSupabaseServerConfigured() || !supabaseServer) return [];
-  // Scholarships are not directly linked to a university in the
-  // schema. The closest relation is via the scholarship's
-  // eligible_regions. For now return the full list — pages that
-  // need filtering can do it client-side.
-  const { data, error } = await supabaseServer
-    .from('scholarships')
-    .select('*')
-    .order('name', { ascending: true });
-  if (error || !data) return [];
-  return data.map(mapScholarship);
-}
+ *  list themselves if they want.
+ *  S59: also memoized. `getScholarshipsForUniversity` ignores its
+ *  slug (the schema has no direct link), so without cache() the
+ *  same no-op query fires 3× per page. */
+export const getScholarshipsForUniversity = cache(
+  async (_universitySlug: string): Promise<Scholarship[]> => {
+    if (!isSupabaseServerConfigured() || !supabaseServer) return [];
+    // Scholarships are not directly linked to a university in the
+    // schema. The closest relation is via the scholarship's
+    // eligible_regions. For now return the full list — pages that
+    // need filtering can do it client-side.
+    const { data, error } = await supabaseServer
+      .from('scholarships')
+      .select('*')
+      .order('name', { ascending: true });
+    if (error || !data) return [];
+    return data.map(mapScholarship);
+  },
+);
 
-export async function getProgramsForUniversity(
-  universitySlug: string,
-): Promise<Program[]> {
-  if (!isSupabaseServerConfigured() || !supabaseServer) return [];
-  const { data, error } = await supabaseServer
-    .from('programs')
-    .select('*')
-    .eq('university_slug', universitySlug)
-    .order('name', { ascending: true });
-  if (error || !data) return [];
-  return data.map((row) => mapProgram(row, row.slug as string));
-}
+export const getProgramsForUniversity = cache(
+  async (universitySlug: string): Promise<Program[]> => {
+    if (!isSupabaseServerConfigured() || !supabaseServer) return [];
+    const { data, error } = await supabaseServer
+      .from('programs')
+      .select('*')
+      .eq('university_slug', universitySlug)
+      .order('name', { ascending: true });
+    if (error || !data) return [];
+    return data.map((row) => mapProgram(row, row.slug as string));
+  },
+);
 
-export async function getProgramsForDiscipline(
-  discipline: string,
-): Promise<Program[]> {
-  if (!isSupabaseServerConfigured() || !supabaseServer) return [];
-  const { data, error } = await supabaseServer
-    .from('programs')
-    .select('*')
-    .eq('discipline', discipline)
-    .order('name', { ascending: true });
-  if (error || !data) return [];
-  return data.map((row) => mapProgram(row, row.slug as string));
-}
+export const getProgramsForDiscipline = cache(
+  async (discipline: string): Promise<Program[]> => {
+    if (!isSupabaseServerConfigured() || !supabaseServer) return [];
+    const { data, error } = await supabaseServer
+      .from('programs')
+      .select('*')
+      .eq('discipline', discipline)
+      .order('name', { ascending: true });
+    if (error || !data) return [];
+    return data.map((row) => mapProgram(row, row.slug as string));
+  },
+);
 
-export async function getScholarshipsForProgram(
-  programSlug: string,
-): Promise<Scholarship[]> {
-  if (!isSupabaseServerConfigured() || !supabaseServer) return [];
-  // Programs don't have a direct link to scholarships. Return the
-  // full list for now — the page can filter client-side if needed.
-  const { data, error } = await supabaseServer
-    .from('scholarships')
-    .select('*')
-    .order('name', { ascending: true });
-  if (error || !data) return [];
-  return data.map(mapScholarship);
-}
+export const getScholarshipsForProgram = cache(
+  async (programSlug: string): Promise<Scholarship[]> => {
+    if (!isSupabaseServerConfigured() || !supabaseServer) return [];
+    // Programs don't have a direct link to scholarships. Return the
+    // full list for now — the page can filter client-side if needed.
+    const { data, error } = await supabaseServer
+      .from('scholarships')
+      .select('*')
+      .order('name', { ascending: true });
+    if (error || !data) return [];
+    return data.map(mapScholarship);
+  },
+);
