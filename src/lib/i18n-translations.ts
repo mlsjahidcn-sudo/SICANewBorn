@@ -2088,6 +2088,14 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminUniversities.delete': 'Delete',
     'adminUniversities.emptyRow': 'No universities found',
     'adminUniversities.showing': 'Showing {{shown}} of {{total}} universities',
+    // Phase 55: pagination. The page fetches 25 rows per page
+    // and shows a "Load more" button while there are more rows
+    // in the API. The search filter is server-side via ?search=
+    // (the API already does name+nameCn+city ilike).
+    'adminUniversities.loadMore': 'Load more',
+    'adminUniversities.loadMoreBusy': 'Loading…',
+    'adminUniversities.loadMoreCount': 'Showing {{shown}} of {{total}}',
+    'adminUniversities.loadMoreEnd': '— end of list —',
     'adminUniversities.deleteConfirmTitle': 'Delete University',
     'adminUniversities.deleteConfirmMessage': 'Are you sure you want to delete "{{name}}"? This action cannot be undone.',
     'adminUniversities.toastDeleted': 'University deleted successfully',
@@ -4741,6 +4749,11 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminUniversities.delete': '删除',
     'adminUniversities.emptyRow': '未找到匹配的大学',
     'adminUniversities.showing': '显示 {{shown}} / {{total}} 所',
+    // Phase 55: pagination
+    'adminUniversities.loadMore': '加载更多',
+    'adminUniversities.loadMoreBusy': '加载中…',
+    'adminUniversities.loadMoreCount': '显示 {{shown}} / {{total}}',
+    'adminUniversities.loadMoreEnd': '— 已加载全部 —',
     'adminUniversities.deleteConfirmTitle': '删除大学',
     'adminUniversities.deleteConfirmMessage': '确定删除「{{name}}」吗？此操作无法撤销。',
     'adminUniversities.toastDeleted': '已成功删除大学',
