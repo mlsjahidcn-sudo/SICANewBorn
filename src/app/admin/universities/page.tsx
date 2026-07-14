@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Plus, Pencil, Trash2, ExternalLink, Sparkles } from 'lucide-react';
+import { Plus, Pencil, Trash2, ExternalLink, Sparkles, Loader2 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { universities as staticUniversities, type University } from '@/lib/data';
 import { ToastProvider, useToast } from '@/components/admin/toast';
@@ -12,13 +12,34 @@ import { AIGenerateModal } from '@/components/admin/ai-generate-modal';
 import { AIBulkGenerateModal } from '@/components/admin/ai-bulk-generate-modal';
 import { useI18n } from '@/lib/i18n';
 
+// Phase 55: page size for the admin table. 25 keeps the table
+// scannable on a 1080p screen without scrolling for the first
+// page; the API caps at 100 per call. Partners/students use 20
+// (smaller dataset, more pages); admin users want to see more
+// rows per page because they're triaging, not browsing.
+const PAGE_SIZE = 25;
+
+interface UniversitiesResponse {
+  universities: University[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 function UniversitiesPageInner() {
   const { user } = useAuth();
   const router = useRouter();
   const { addToast } = useToast();
   const { t } = useI18n();
   const [universities, setUniversities] = useState<University[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<University | null>(null);
   const [showAIModal, setShowAIModal] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
@@ -26,34 +47,85 @@ function UniversitiesPageInner() {
   const [aiInitialName, setAiInitialName] = useState('');
 
   // Single refetch path used by both the single-row AI modal and
-  // the bulk modal. Pulls a generous limit so admin-added rows
-  // (not yet on the static fallback) show up.
+  // the bulk modal. Resets to page 1 (since new rows shift the
+  // existing set) — same pattern the partner documents list uses
+  // after mutations.
   const refreshUniversities = useCallback(async () => {
-    const fresh = await fetch('/api/universities?limit=100').then((r) => (r.ok ? r.json() : null));
-    if (fresh?.universities) setUniversities(fresh.universities);
-  }, []);
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (debouncedSearch) params.set('search', debouncedSearch);
+      params.set('page', '1');
+      params.set('limit', String(PAGE_SIZE));
+      const res = await fetch(`/api/universities?${params.toString()}`);
+      const data: UniversitiesResponse | null = res.ok ? await res.json() : null;
+      if (data?.universities) {
+        setUniversities(data.universities);
+        setTotal(data.total);
+        setPage(data.page);
+        setHasMore(data.universities.length < (data.total || 0));
+      } else {
+        // Fallback to static data when API fails
+        setUniversities(staticUniversities);
+        setTotal(staticUniversities.length);
+        setPage(1);
+        setHasMore(false);
+      }
+    } catch {
+      setUniversities(staticUniversities);
+      setTotal(staticUniversities.length);
+      setPage(1);
+      setHasMore(false);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [debouncedSearch]);
 
+  // Phase 55: 300ms debounce on the search box. Same UX as the
+  // public /universities page (Phase 19 S19) — typing a full
+  // name doesn't fire 8 separate fetches, but the result lands
+  // fast enough that the user doesn't notice the delay.
   useEffect(() => {
-    fetch('/api/universities?limit=100')
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (data?.universities) setUniversities(data.universities);
-        else setUniversities(staticUniversities);
-      })
-      .catch(() => setUniversities(staticUniversities));
-  }, []);
+    const tm = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(tm);
+  }, [search]);
 
-  const filtered = universities.filter(u =>
-    u.name.toLowerCase().includes(search.toLowerCase()) ||
-    u.nameCn.includes(search) ||
-    u.city.toLowerCase().includes(search.toLowerCase())
-  );
+  // Initial + search-driven fetch
+  useEffect(() => {
+    void refreshUniversities();
+  }, [refreshUniversities]);
+
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const params = new URLSearchParams();
+      if (debouncedSearch) params.set('search', debouncedSearch);
+      params.set('page', String(page + 1));
+      params.set('limit', String(PAGE_SIZE));
+      const res = await fetch(`/api/universities?${params.toString()}`);
+      const data: UniversitiesResponse | null = res.ok ? await res.json() : null;
+      if (data?.universities) {
+        setUniversities((prev) => [...prev, ...data.universities]);
+        setPage(data.page);
+        setHasMore((universities.length + data.universities.length) < (data.total || 0));
+      }
+    } catch {
+      addToast(t('adminUniversities.toastDeleteFailed'), 'error');
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, hasMore, debouncedSearch, page, universities.length, addToast, t]);
 
   const handleDelete = useCallback(async (uni: University) => {
     try {
       const res = await fetch(`/api/universities/${uni.slug}`, { method: 'DELETE' });
       if (res.ok) {
-        setUniversities(prev => prev.filter(u => u.slug !== uni.slug));
+        // Remove the row locally instead of re-fetching the full
+        // page (the API is paginated; the deleted row is the last
+        // one we want to disappear visually).
+        setUniversities((prev) => prev.filter((u) => u.slug !== uni.slug));
+        setTotal((prev) => Math.max(0, prev - 1));
         addToast(t('adminUniversities.toastDeleted'), 'success');
       } else {
         addToast(t('adminUniversities.toastDeleteFailed'), 'error');
@@ -138,7 +210,7 @@ function UniversitiesPageInner() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((uni) => (
+              {universities.map((uni) => (
                 <tr key={uni.slug} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
@@ -210,7 +282,7 @@ function UniversitiesPageInner() {
                   </td>
                 </tr>
               ))}
-              {filtered.length === 0 && (
+              {universities.length === 0 && !isLoading && (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-[#4B5563]">
                     {t('adminUniversities.emptyRow')}
@@ -220,8 +292,32 @@ function UniversitiesPageInner() {
             </tbody>
           </table>
         </div>
-        <div className="px-4 py-3 border-t border-gray-200 bg-[#F3F4F6] text-xs text-[#4B5563]">
-          {t('adminUniversities.showing', { shown: filtered.length, total: universities.length })}
+        {/* Phase 55: footer now drives the pagination. Three
+            states: (a) loading initial, (b) more available
+            (Load more button), (c) end of list (small caption). */}
+        <div className="px-4 py-3 border-t border-gray-200 bg-[#F3F4F6] flex items-center justify-between text-xs text-[#4B5563]">
+          <span>{t('adminUniversities.loadMoreCount', { shown: universities.length, total })}</span>
+          <div className="flex items-center gap-3">
+            {isLoading && (
+              <span className="flex items-center gap-1.5">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                {t('adminUniversities.loadMoreBusy')}
+              </span>
+            )}
+            {!isLoading && hasMore && (
+              <button
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="inline-flex items-center gap-1.5 border border-[#1B2A4A] text-[#1B2A4A] px-3 py-1 hover:bg-[#1B2A4A] hover:text-white transition-colors disabled:opacity-50"
+              >
+                {loadingMore && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                {t('adminUniversities.loadMore')}
+              </button>
+            )}
+            {!isLoading && !hasMore && total > 0 && (
+              <span className="text-[#4B5563]/60">{t('adminUniversities.loadMoreEnd')}</span>
+            )}
+          </div>
         </div>
       </div>
 
