@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { cache } from 'react';
 import {
   ArrowRight,
   MapPin,
@@ -23,12 +24,18 @@ import { SITE_URL } from '@/lib/site-url';
 // for a known pair. Reads the live DB at render time (with static
 // fallback) so newly-added AI-generated or admin-imported
 // universidades are picked up automatically.
-async function getRankedUnis() {
+//
+// S59: wrapped in React's `cache()` so the 3× calls in
+// generateStaticParams + generateMetadata + page body collapse to a
+// single fetch + filter + sort per page. Combined with the
+// memoization inside `getAllUniversities` itself, the entire
+// per-page DB work is now a single SELECT.
+const getRankedUnis = cache(async () => {
   const unis = await getAllUniversities();
   return unis
     .filter((u) => u.ranking > 0)
     .sort((a, b) => a.ranking - b.ranking);
-}
+});
 
 // Pre-render every valid pair. 8 ranked universidades → 28 unique
 // pairs; 9 → 36; etc. Reads the live list at build time so newly

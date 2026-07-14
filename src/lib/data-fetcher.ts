@@ -16,12 +16,21 @@
  * - One place to add a new column (e.g. when the schema gains a new
  *   field, every RSC page picks it up).
  *
- * Trade-off: each render does a fresh DB query. Pages that read
- * these at render time are not statically pre-rendered. For SICA's
- * traffic profile (a few hundred RPS at peak) this is fine — Supabase
- * connection pooling + Postgres reads of 8-26 rows are sub-10ms.
- * If volume ever justifies it, add `export const revalidate = 60`
- * to the consuming page to cache the result.
+ * Memoization (S59): every export is wrapped in React's `cache()`,
+ * so the 3× per-page calls in compare routes (generateStaticParams +
+ * generateMetadata + page body) collapse to a single DB query. The
+ * cache is request-scoped — it dedups within a single page render,
+ * not across pages. Each static-generated page still does ≥1 query,
+ * but the per-page DB pressure drops dramatically (3× → 1× on the
+ * compare route, which is the worst offender at 5,460 pairs).
+ *
+ * Trade-off: each static-generated page does at least one DB query.
+ * For SICA's traffic profile (a few hundred RPS at peak) this is fine
+ * — Supabase connection pooling + Postgres reads of 8-26 rows are
+ * sub-10ms. If volume ever justifies it, add `export const revalidate
+ * = 60` to the consuming page to cache the result. (Beware:
+ * `unstable_cache` returns stale data after direct DB writes — see
+ * the cross-project hard rules in the user-memory tail for details.)
  */
 import { cache } from 'react';
 import { supabaseServer, isSupabaseServerConfigured } from './supabase-server';

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { cache } from 'react';
 import { Award, ChevronRight, ArrowRight, MapPin, Trophy, GraduationCap } from 'lucide-react';
 import {
   getAllUniversities,
@@ -14,12 +15,15 @@ import { SITE_URL } from '@/lib/site-url';
 // Cached at the edge for 60s.
 export const revalidate = 60;
 
-async function getRankedUnis() {
+// S59: wrapped in React's `cache()` so the 3× calls in
+// generateStaticParams + generateMetadata + page body collapse to
+// a single fetch + filter + sort per page.
+const getRankedUnis = cache(async () => {
   const unis = await getAllUniversities();
   return unis
     .filter((u) => u.ranking > 0)
     .sort((a, b) => a.ranking - b.ranking);
-}
+});
 
 export async function generateStaticParams() {
   const unis = await getRankedUnis();
