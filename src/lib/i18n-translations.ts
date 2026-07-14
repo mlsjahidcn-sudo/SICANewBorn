@@ -2753,6 +2753,13 @@ export const translations: Record<Locale, Record<string, string>> = {
     // in under 30 seconds. Copy below mirrors the funnel audit
     // pattern: hook → proof → price → CTA.
     'sales.eyebrow': 'For YouTube & TikTok viewers',
+    // Phase 58: cross-page "Get started" CTA. Same wording
+    // across home, university list, university detail, program
+    // list, program detail. The single source of truth lives
+    // here so a wording change rolls out to all 5 surfaces.
+    'getStarted.heroCta': 'Get started — pick your package',
+    'getStarted.bannerCta': 'Get started — pick your package',
+    'getStarted.inlineCta': 'Get started — pick your package',
     'sales.heroTitle': 'Get into a top Chinese university — without the chaos',
     'sales.heroSubtitle': 'Real students. Real offer letters. 90% success rate with our partner universities, or your money back.',
     'sales.heroCtaWhatsapp': 'Chat with SICA on WhatsApp',
@@ -5486,6 +5493,10 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminAdmissionNotices.cancel': '取消',
     // Phase 57: /get-started sales landing page (zh)
     'sales.eyebrow': '为 YouTube 与 TikTok 观众准备',
+    // Phase 58: cross-page "Get started" CTA (zh)
+    'getStarted.heroCta': '立即开始 — 选择你的套餐',
+    'getStarted.bannerCta': '立即开始 — 选择你的套餐',
+    'getStarted.inlineCta': '立即开始 — 选择你的套餐',
     'sales.heroTitle': '进入中国顶尖大学 — 不再手忙脚乱',
     'sales.heroSubtitle': '真实学生。真实录取通知书。合作大学录取率 90%，不成功按比例退款。',
     'sales.heroCtaWhatsapp': '在 WhatsApp 上联系 SICA',

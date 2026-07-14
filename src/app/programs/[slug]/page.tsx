@@ -8,6 +8,7 @@ import { programs as staticPrograms, universities as staticUniversities, degreeT
 import { ChevronRight, Clock, Banknote, GraduationCap, Globe, Award, BookOpen, CheckCircle, ArrowRight, MapPin } from 'lucide-react';
 import UniversityLogo from '@/components/university-logo';
 import { RelatedNews } from '@/components/RelatedNews';
+import { GetStartedCta } from '@/components/GetStartedCta';
 
 type TabKey = 'overview' | 'requirements' | 'curriculum' | 'tuition';
 type LoadState = 'loading' | 'ok' | 'not-found' | 'error';
@@ -583,6 +584,22 @@ export default function ProgramDetailPage() {
                   {t('product.selfServe.ctaLabel')}
                   <ArrowRight className="h-4 w-4" />
                 </Link>
+              </div>
+              {/* Phase 58: explicit "Get started" link
+                  pointing at the /get-started sales page so
+                  visitors who want to see both packages +
+                  pricing in one place don't have to
+                  backtrack to the home page. Same inline
+                  variant + low-affordance styling as the
+                  university detail Support Card so the
+                  full-service Apply above stays the visual
+                  primary CTA. */}
+              <div className="mt-3 text-center">
+                <GetStartedCta
+                  variant="inline"
+                  location="program_detail_support_card"
+                  program={program.slug}
+                />
               </div>
             </div>
           </div>

@@ -34,6 +34,7 @@ import {
 import { getAllUniversities } from '@/lib/data-fetcher';
 import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
 import { VideoTestimonials } from '@/components/VideoTestimonials';
+import { GetStartedCta } from '@/components/GetStartedCta';
 
 export const metadata: Metadata = {
   alternates: { canonical: `${SITE_URL}/` },
@@ -220,6 +221,7 @@ export default async function HomePage() {
                     commitment. Funnel split:
                       - /universities  : browse
                       - /guides/application : learn
+                      - /get-started  : compare packages
                       - /assessment    : commit (bottom CTA) */}
                 <Link href="/guides/application">
                   <Button
@@ -229,6 +231,17 @@ export default async function HomePage() {
                     {t('hero.howToApply')}
                   </Button>
                 </Link>
+                {/* Phase 58: explicit "Get started" CTA pointing
+                    at the /get-started sales page (Phase 57).
+                    Distinct from /assessment (the 4-step
+                    commit-level intake) and /resources (the
+                    self-serve DIY escape). This is the
+                    mid-commit slot — visitor is interested
+                    enough to want a quote, not ready for a
+                    4-step form yet. Sparkles icon + crimson
+                    hero button makes it visually distinct
+                    from the existing 2 buttons. */}
+                <GetStartedCta variant="hero" location="home_hero" />
               </div>
             </div>
 
