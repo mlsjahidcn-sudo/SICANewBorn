@@ -2328,6 +2328,17 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminPrograms.delete': 'Delete',
     'adminPrograms.emptyNone': 'No programs found',
     'adminPrograms.footerShowing': 'Showing {{shown}} of {{total}} programs',
+    // Phase 56: pagination. The page merges the static fallback
+    // (32 pre-seeded programs) with the DB rows by slug, then
+    // paginates the merged list client-side (the API only knows
+    // the DB side, and the merge is a client concern). Page size
+    // 25 to match the universities page — admin is triaging, not
+    // browsing. Search + degree filter still work over the full
+    // merged set.
+    'adminPrograms.loadMore': 'Load more',
+    'adminPrograms.loadMoreBusy': 'Loading…',
+    'adminPrograms.loadMoreCount': 'Showing {{shown}} of {{total}}',
+    'adminPrograms.loadMoreEnd': '— end of list —',
     'adminPrograms.syncingLatest': 'Syncing latest…',
     'adminPrograms.toastDeleted': 'Program deleted successfully',
     'adminPrograms.toastDeleteFailed': 'Failed to delete program',
@@ -4986,6 +4997,11 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminPrograms.delete': '删除',
     'adminPrograms.emptyNone': '未找到项目',
     'adminPrograms.footerShowing': '显示 {{shown}} / {{total}} 个项目',
+    // Phase 56: pagination
+    'adminPrograms.loadMore': '加载更多',
+    'adminPrograms.loadMoreBusy': '加载中…',
+    'adminPrograms.loadMoreCount': '显示 {{shown}} / {{total}}',
+    'adminPrograms.loadMoreEnd': '— 已加载全部 —',
     'adminPrograms.syncingLatest': '正在同步最新数据…',
     'adminPrograms.toastDeleted': '项目已成功删除',
     'adminPrograms.toastDeleteFailed': '删除项目失败',

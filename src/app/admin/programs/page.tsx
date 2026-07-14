@@ -1,12 +1,20 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { Plus, Pencil, Trash2, ExternalLink, Upload } from 'lucide-react';
+import { Plus, Pencil, Trash2, ExternalLink, Upload, Loader2 } from 'lucide-react';
 import { programs as staticPrograms, universities as staticUniversities, type Program } from '@/lib/data';
 import { ToastProvider, useToast } from '@/components/admin/toast';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
 import { useI18n } from '@/lib/i18n';
+
+// Phase 56: page size for the admin programs table. 25 keeps
+// the table scannable, matches the universities page (admin is
+// triaging, not browsing). The API supports up to ~500 rows per
+// call — we fetch the whole merged set once (DB + static) and
+// paginate client-side because the merge happens here, not on
+// the server (the API only knows the DB side).
+const PAGE_SIZE = 25;
 
 /**
  * Merge DB-fetched programs with the static fallback by slug.
@@ -32,7 +40,15 @@ function ProgramsPageInner() {
   // everything that exists in either source.
   const [programs, setPrograms] = useState<Program[]>(staticPrograms);
   const [loading, setLoading] = useState(true);
+  // Phase 56: pagination state. We track how many of the
+  // filtered+merged list we've actually rendered. Load more
+  // bumps this by PAGE_SIZE. Unlike universities, this is
+  // client-side because the API only paginates the DB side and
+  // we need the merge with the static fallback to be the source
+  // of truth.
+  const [shown, setShown] = useState(PAGE_SIZE);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filterDegree, setFilterDegree] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<Program | null>(null);
 
@@ -44,14 +60,20 @@ function ProgramsPageInner() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch('/api/programs?limit=200');
+        // Phase 56: cap bumped from 200 → 500 so the page can
+        // render the entire merged set (151 DB + ~32 static in
+        // dev, but production will be higher). 500 is a
+        // pragmatic ceiling — the API caps at 100 per call by
+        // default but accepts up to 500. Anything past that
+        // would need a server-side search endpoint, not in scope.
+        const res = await fetch('/api/programs?limit=500');
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         const dbPrograms: Program[] = data.programs || [];
         if (cancelled) return;
         const merged = mergeBySlug(dbPrograms, staticPrograms);
         setPrograms(merged);
-      } catch (err) {
+      } catch {
         // Keep the static list on error. Admin still sees the
         // pre-seeded set; the only loss is admin-imported programs
         // added since the page last loaded. Surface a hint toast
@@ -68,33 +90,71 @@ function ProgramsPageInner() {
     };
   }, [addToast, t]);
 
-  const filtered = programs.filter(p => {
-    const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.nameCn.includes(search) ||
-      p.universitySlug.toLowerCase().includes(search.toLowerCase());
-    const matchDegree = !filterDegree || p.degree === filterDegree;
-    return matchSearch && matchDegree;
-  });
+  // 300ms debounce on the search box — matches the universities
+  // + partner list pattern (Phase 19 S19). The filter is
+  // client-side on the merged list, so no extra round trip.
+  useEffect(() => {
+    const tm = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(tm);
+  }, [search]);
+
+  // Filter the merged set. Memoized so the filtered list is
+  // stable across re-renders that don't change inputs. Reset
+  // shown-count to PAGE_SIZE on filter/search change so the
+  // user lands on the first page of the new view.
+  const filtered = useMemo(() => {
+    const s = debouncedSearch.toLowerCase();
+    return programs.filter((p) => {
+      const matchSearch =
+        !s ||
+        p.name.toLowerCase().includes(s) ||
+        p.nameCn.includes(s) ||
+        p.universitySlug.toLowerCase().includes(s);
+      const matchDegree = !filterDegree || p.degree === filterDegree;
+      return matchSearch && matchDegree;
+    });
+  }, [programs, debouncedSearch, filterDegree]);
+
+  // Reset shown-count when the filtered list changes. We track
+  // this via a useEffect on the filtered identity so the reset
+  // happens once per filter change, not on every render.
+  useEffect(() => {
+    setShown(PAGE_SIZE);
+  }, [debouncedSearch, filterDegree]);
+
+  const visible = useMemo(() => filtered.slice(0, shown), [filtered, shown]);
+  const hasMore = shown < filtered.length;
 
   const getUniName = (slug: string) => {
-    const uni = staticUniversities.find(u => u.slug === slug);
+    const uni = staticUniversities.find((u) => u.slug === slug);
     return uni ? uni.name : slug;
   };
 
-  const handleDelete = useCallback(async (prog: Program) => {
-    try {
-      const res = await fetch(`/api/programs/${prog.slug}`, { method: 'DELETE' });
-      if (res.ok) {
-        setPrograms(prev => prev.filter(p => p.slug !== prog.slug));
-        addToast(t('adminPrograms.toastDeleted'), 'success');
-      } else {
+  const handleDelete = useCallback(
+    async (prog: Program) => {
+      try {
+        const res = await fetch(`/api/programs/${prog.slug}`, { method: 'DELETE' });
+        if (res.ok) {
+          // Local remove: the DB still serves the merged list as
+          // the source of truth, but we patch the in-memory copy
+          // to match. The next mount will re-fetch.
+          setPrograms((prev) => prev.filter((p) => p.slug !== prog.slug));
+          addToast(t('adminPrograms.toastDeleted'), 'success');
+        } else {
+          addToast(t('adminPrograms.toastDeleteFailed'), 'error');
+        }
+      } catch {
         addToast(t('adminPrograms.toastDeleteFailed'), 'error');
       }
-    } catch {
-      addToast(t('adminPrograms.toastDeleteFailed'), 'error');
-    }
-    setDeleteTarget(null);
-  }, [addToast, t]);
+      setDeleteTarget(null);
+    },
+    [addToast, t],
+  );
+
+  const loadMore = useCallback(() => {
+    if (!hasMore) return;
+    setShown((prev) => prev + PAGE_SIZE);
+  }, [hasMore]);
 
   // Degree enum values stay untranslated (DB round-trip).
   const degreeColor: Record<string, string> = {
@@ -167,7 +227,7 @@ function ProgramsPageInner() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((prog) => (
+              {visible.map((prog) => (
                 <tr key={prog.slug} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-3">
                     <div>
@@ -213,7 +273,7 @@ function ProgramsPageInner() {
                   </td>
                 </tr>
               ))}
-              {filtered.length === 0 && (
+              {visible.length === 0 && !loading && (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-[#4B5563]">{t('adminPrograms.emptyNone')}</td>
                 </tr>
@@ -221,16 +281,32 @@ function ProgramsPageInner() {
             </tbody>
           </table>
         </div>
-        <div className="px-4 py-3 border-t border-gray-200 bg-[#F3F4F6] text-xs text-[#4B5563] flex items-center justify-between">
-          <span>
-            {t('adminPrograms.footerShowing', { shown: filtered.length, total: programs.length })}
-          </span>
-          {loading && (
-            <span className="inline-flex items-center gap-1.5">
-              <span className="inline-block h-2.5 w-2.5 border-2 border-[#1B2A4A] border-t-transparent rounded-full animate-spin" />
-              {t('adminPrograms.syncingLatest')}
-            </span>
-          )}
+        {/* Phase 56: pagination footer. Three states: (a) initial
+            load in progress, (b) more available (Load more button),
+            (c) end of list. The "Showing N of M" count reflects
+            the filtered+merged list (not just the DB side) so
+            the user sees the real number of items in their view. */}
+        <div className="px-4 py-3 border-t border-gray-200 bg-[#F3F4F6] flex items-center justify-between text-xs text-[#4B5563]">
+          <span>{t('adminPrograms.loadMoreCount', { shown: visible.length, total: filtered.length })}</span>
+          <div className="flex items-center gap-3">
+            {loading && (
+              <span className="flex items-center gap-1.5">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                {t('adminPrograms.syncingLatest')}
+              </span>
+            )}
+            {!loading && hasMore && (
+              <button
+                onClick={loadMore}
+                className="inline-flex items-center gap-1.5 border border-[#1B2A4A] text-[#1B2A4A] px-3 py-1 hover:bg-[#1B2A4A] hover:text-white transition-colors"
+              >
+                {t('adminPrograms.loadMore')}
+              </button>
+            )}
+            {!loading && !hasMore && filtered.length > 0 && (
+              <span className="text-[#4B5563]/60">{t('adminPrograms.loadMoreEnd')}</span>
+            )}
+          </div>
         </div>
       </div>
 
