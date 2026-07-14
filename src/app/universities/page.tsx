@@ -12,6 +12,7 @@ import { useSearchParams } from 'next/navigation';
 import UniversityLogo from '@/components/university-logo';
 import { useUrlState } from '@/hooks/use-url-state';
 import { track } from '@/lib/analytics';
+import { GetStartedCta } from '@/components/GetStartedCta';
 
 // Phase: filter enhancements
 //   - URL sync (refresh-survives, shareable links)
@@ -240,7 +241,7 @@ export default function UniversidadesPage() {
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
           <h1 className="text-3xl font-bold text-white sm:text-4xl">{t('uni.title')}</h1>
           <p className="mt-3 text-gray-300 max-w-xl">{t('uni.subtitle')}</p>
-          <div className="mt-5">
+          <div className="mt-5 flex flex-wrap items-center gap-3">
             <Link
               href="/universities/compare"
               className="inline-flex items-center gap-2 bg-white/10 border border-white/20 text-white px-4 py-2 text-sm font-semibold hover:bg-white/20 transition-colors"
@@ -248,6 +249,17 @@ export default function UniversidadesPage() {
               Compare two universities side by side
               <ArrowRight className="h-4 w-4" />
             </Link>
+            {/* Phase 58: /get-started sales CTA in the hero.
+                Visitors browsing the list are mid-funnel —
+                some want to keep browsing, some are ready to
+                see packages + prices. The crimson outline +
+                sparkles icon makes it visually distinct from
+                the white-outline "Compare" button. */}
+            <GetStartedCta
+              variant="banner"
+              location="universities_list_hero"
+              className="!border-white/40 !text-white hover:!bg-white hover:!text-[#9B1B30]"
+            />
           </div>
         </div>
       </section>

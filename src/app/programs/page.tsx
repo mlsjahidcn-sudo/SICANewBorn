@@ -17,6 +17,7 @@ import { Search, Filter, GraduationCap, Globe, Clock, Banknote, ArrowRight, Awar
 import { useSearchParams } from 'next/navigation';
 import { useUrlState } from '@/hooks/use-url-state';
 import { track } from '@/lib/analytics';
+import { GetStartedCta } from '@/components/GetStartedCta';
 
 const ITEMS_PER_PAGE = 8;
 
@@ -203,6 +204,18 @@ export default function ProgramsPage() {
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
           <h1 className="text-3xl font-bold text-white sm:text-4xl">{t('prog.title')}</h1>
           <p className="mt-3 text-lg text-gray-300 max-w-xl">{t('prog.subtitle')}</p>
+          <div className="mt-5">
+            {/* Phase 58: /get-started sales CTA. Programs-list
+                visitors are mid-funnel — same intent as the
+                universities list page. Sparkles icon + crimson
+                outline button makes it distinct from the
+                white-on-transparent headline. */}
+            <GetStartedCta
+              variant="banner"
+              location="programs_list_hero"
+              className="!border-white/40 !text-white hover:!bg-white hover:!text-[#9B1B30]"
+            />
+          </div>
         </div>
       </section>
 

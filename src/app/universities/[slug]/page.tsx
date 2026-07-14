@@ -35,6 +35,7 @@ import UniversityLogo from '@/components/university-logo';
 import { DeadlineCountdown } from '@/components/deadline-countdown';
 import { StickyApplyBar } from '@/components/StickyApplyBar';
 import { VideoTestimonials } from '@/components/VideoTestimonials';
+import { GetStartedCta } from '@/components/GetStartedCta';
 import { track } from '@/lib/analytics';
 
 export default function UniversityDetailPage() {
@@ -772,6 +773,21 @@ export default function UniversityDetailPage() {
                       {t('product.selfServe.ctaLabel')} →
                     </Button>
                   </Link>
+                </div>
+                {/* Phase 58: explicit "Get started" link
+                    pointing at the /get-started sales page so
+                    visitors who want to see both packages +
+                    pricing in one place don't have to
+                    backtrack to the home page. The inline
+                    variant keeps it low-affordance so the
+                    full-service + DIY buttons above stay
+                    the visual primary CTAs. */}
+                <div className="mt-3 text-center">
+                  <GetStartedCta
+                    variant="inline"
+                    location="university_detail_support_card"
+                    university={slug}
+                  />
                 </div>
               </div>
             </aside>
