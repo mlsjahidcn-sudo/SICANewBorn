@@ -55,13 +55,13 @@ SENTRY_TRACES_SAMPLE_RATE=0.1       # 10% perf — errors are 100%
 
 ## 2. GA4 — verify it's actually firing (~5 min)
 
-`NEXT_PUBLIC_GA_MEASUREMENT_ID=G-E1BZFW6LLH` is already in `.env`. Let's verify it's the right one and producing real events.
+`NEXT_PUBLIC_GA_MEASUREMENT_ID=G-LJBV8BF5Q8` is in `.env` (this is the live property; previous build was wired to `G-E1BZFW6LLH` which was a different, unused property). Let's verify it's the right one and producing real events.
 
 ### Step 1 — Confirm property ownership
 
 1. Go to https://analytics.google.com
 2. **Admin → Property column → Property Settings**
-3. The Measurement ID should be `G-E1BZFW6LLH`. If not, swap to whatever your real property is.
+3. The Measurement ID should be `G-LJBV8BF5Q8`. If not, swap to whatever your real property is.
 4. (Re-set the env var on Railway if needed, redeploy.)
 
 ### Step 2 — Real-time check
