@@ -34,6 +34,9 @@ import {
   Globe,
   GraduationCap,
   ChevronDown,
+  Users,
+  Building2,
+  Clock,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { track } from '@/lib/analytics';
@@ -141,19 +144,44 @@ export function GetStartedClient({ initialNotices }: GetStartedClientProps) {
       </section>
 
       {/* ============== TRUST STRIP ============== */}
+      {/*
+        * Trust strip — 4 stats in a row (desktop) or 2×2 (mobile).
+        * Each cell: small icon + leading number + short label.
+        * Old version: raw text "10,000+ students admitted" wrapped
+        * to 3 lines on mobile and the sub-label was redundant
+        * ("students" / "universities" repeated the unit). New
+        * version splits number from label so the cell reads
+        * top-down ("100+" / "partner universities") and uses
+        * a small icon to break the visual monotony.
+        *
+        * Why 2×2 on mobile: at 390px the previous 4-col grid
+        * wrapped the long values ugly. 2×2 keeps each cell
+        * ~180px wide — enough for "10,000+" + "students admitted".
+        */}
       <section className="bg-white border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-          {[
-            { value: t('sales.trustCount1'), label: 'students' },
-            { value: t('sales.trustCount2'), label: 'universities' },
-            { value: t('sales.trustCount3'), label: 'success' },
-            { value: t('sales.trustCount4'), label: 'response' },
-          ].map((item, i) => (
-            <div key={i} className="py-2">
-              <div className="text-2xl sm:text-3xl font-bold text-[#1B2A4A]">{item.value}</div>
-              <div className="text-xs text-[#4B5563] mt-1">{item.label}</div>
-            </div>
-          ))}
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-4">
+            <TrustStat
+              icon={<Users className="w-5 h-5" />}
+              value="10,000+"
+              label={t('sales.trustLabelStudents')}
+            />
+            <TrustStat
+              icon={<Building2 className="w-5 h-5" />}
+              value="100+"
+              label={t('sales.trustLabelUniversities')}
+            />
+            <TrustStat
+              icon={<Award className="w-5 h-5" />}
+              value="90%"
+              label={t('sales.trustLabelSuccess')}
+            />
+            <TrustStat
+              icon={<Clock className="w-5 h-5" />}
+              value="24h"
+              label={t('sales.trustLabelResponse')}
+            />
+          </div>
         </div>
       </section>
 
@@ -326,6 +354,32 @@ export function GetStartedClient({ initialNotices }: GetStartedClientProps) {
           </div>
         </div>
       </section>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// TrustStat — one cell of the trust strip. Icon + big number on
+// top, short label below. Kept in this file (not a separate
+// component) because it's used exactly once and the 4 callsite
+// props read better inline than as a shared component file.
+// ---------------------------------------------------------------------------
+function TrustStat({
+  icon,
+  value,
+  label,
+}: {
+  icon: React.ReactNode;
+  value: string;
+  label: string;
+}) {
+  return (
+    <div className="flex flex-col items-center text-center">
+      <div className="w-10 h-10 rounded-full bg-[#1B2A4A]/5 text-[#1B2A4A] flex items-center justify-center mb-2">
+        {icon}
+      </div>
+      <div className="text-2xl sm:text-3xl font-bold text-[#1B2A4A] leading-tight">{value}</div>
+      <div className="text-xs sm:text-sm text-[#4B5563] mt-1 leading-snug">{label}</div>
     </div>
   );
 }
