@@ -16,7 +16,7 @@ SICA (Study in China Academy) - 面向国际学生的中国高校及项目信息
 - **AI**: 火山引擎豆包 Ark (`@supabase/supabase-js` 2.95+)
 - **字体**: Inter (next/font/google 自托管，**已不再**用 fonts.googleapis.cn)
 - **认证**: Supabase Auth + `src/lib/supabase-auth.ts` (Bearer token 模式，admin/partner/role helpers)
-- **部署**: Railway (`pnpm start`)，Coze 平台开发 (Node 24)
+- **部署**: Hostinger Cloud (`npm start` → `node dist/server.js`)，本地 Coze 平台开发 (Node 24)
 
 ## 目录结构
 ```
@@ -83,11 +83,12 @@ SICA (Study in China Academy) - 面向国际学生的中国高校及项目信息
 ```
 
 ## 构建和测试命令
-- **开发**: `pnpm dev` (脚本启动 `pnpm tsx watch src/server.ts`，端口 5000，**Mac 上会被 ControlCe 占用**，改用 `pnpm next dev -p 5050`)
-- **构建**: `pnpm build`
-- **类型检查**: `pnpm ts-check` (0 errors 是硬性要求)
-- **Lint**: `pnpm lint` / `pnpm lint:build`
-- **生产启动**: `pnpm start` (走 `src/server.ts` 自定义服务器)
+- **包管理**: npm 10.9.0 (S60 — was pnpm, switched for Hostinger Cloud PATH compatibility). Corepack auto-fetches the version pinned in `packageManager`.
+- **开发**: `npm run dev` (脚本启动 `npx tsx watch src/server.ts`，端口 5000，**Mac 上会被 ControlCe 占用**，改用 `npx next dev -p 5050`)
+- **构建**: `npm run build` (走 `scripts/build.sh` → `npm ci` + `npx next build` + `npx tsup`)
+- **类型检查**: `npm run ts-check` (0 errors 是硬性要求)
+- **Lint**: `npm run lint` / `npm run lint:build`
+- **生产启动**: `npm start` (走 `src/server.ts` 自定义服务器)
 - **数据库迁移**: 在新 Supabase 项目 SQL 编辑器跑 `database/migration-supabase-cloud.sql`
 - **引导 auth.users**: 迁移后跑 `bash scripts/bootstrap-auth.sh`
 
