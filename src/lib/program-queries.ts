@@ -6,6 +6,49 @@ export interface GetProgramsOptions {
 }
 
 /**
+ * Server-only helper for fetching a single program by slug.
+ * Tries Supabase first, then falls back to the curated static data.
+ */
+export async function getProgramBySlug(slug: string): Promise<Program | null> {
+  if (isSupabaseServerConfigured() && supabaseServer) {
+    const { data, error } = await supabaseServer
+      .from('programs')
+      .select('*')
+      .eq('slug', slug)
+      .single();
+
+    if (!error && data) {
+      return mapProgramFromDb(data);
+    }
+  }
+
+  return staticPrograms.find((p) => p.slug === slug) ?? null;
+}
+
+/**
+ * Server-only helper for fetching programs linked to a university.
+ * Tries Supabase first, then falls back to the curated static data.
+ */
+export async function getProgramsByUniversity(universitySlug: string, limit = 50): Promise<Program[]> {
+  if (isSupabaseServerConfigured() && supabaseServer) {
+    const { data, error } = await supabaseServer
+      .from('programs')
+      .select('*')
+      .eq('university_slug', universitySlug)
+      .order('name', { ascending: true })
+      .limit(limit);
+
+    if (!error && data && data.length > 0) {
+      return data.map(mapProgramFromDb);
+    }
+  }
+
+  return staticPrograms
+    .filter((p) => p.universitySlug === universitySlug)
+    .slice(0, limit);
+}
+
+/**
  * Server-only helper for fetching the program list.
  * Tries Supabase first, then falls back to the curated static data.
  * Used by the listing API and by the /programs server page so the

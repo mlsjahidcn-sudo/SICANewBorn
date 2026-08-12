@@ -6,6 +6,26 @@ export interface GetUniversitiesOptions {
 }
 
 /**
+ * Server-only helper for fetching a single university by slug.
+ * Tries Supabase first, then falls back to the curated static data.
+ */
+export async function getUniversityBySlug(slug: string): Promise<University | null> {
+  if (isSupabaseServerConfigured() && supabaseServer) {
+    const { data, error } = await supabaseServer
+      .from('universities')
+      .select('*')
+      .eq('slug', slug)
+      .single();
+
+    if (!error && data) {
+      return mapUniversityFromDb(data);
+    }
+  }
+
+  return staticUniversities.find((u) => u.slug === slug) ?? null;
+}
+
+/**
  * Server-only helper for fetching the university list.
  * Tries Supabase first, then falls back to the curated static data.
  * Used by the listing API and by the /universities server page so the
@@ -27,6 +47,12 @@ export async function getUniversities(options: GetUniversitiesOptions = {}): Pro
   }
 
   return staticUniversities.slice(0, limit);
+}
+
+function withStaticFallback<T>(slug: string, key: keyof University, value: T): T {
+  if (value !== undefined && value !== null) return value;
+  const staticRow = staticUniversities.find((u) => u.slug === slug);
+  return (staticRow?.[key] as T) ?? value;
 }
 
 function toStringArray(value: unknown): string[] {
@@ -88,8 +114,10 @@ function mapUniversityFromDb(row: Record<string, unknown>): University {
         : { en: [], zh: [] },
     scholarshipInfo: row.scholarship_info ? String(row.scholarship_info) : undefined,
     scholarshipInfoCn: row.scholarship_info_cn ? String(row.scholarship_info_cn) : undefined,
-    applicationDeadline: row.application_deadline
-      ? String(row.application_deadline)
-      : undefined,
+    applicationDeadline: withStaticFallback(
+      String(row.slug),
+      'applicationDeadline',
+      row.application_deadline ? String(row.application_deadline) : undefined,
+    ),
   };
 }
