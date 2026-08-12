@@ -3,6 +3,7 @@ import { Metadata } from 'next';
 import { getProgramBySlug } from '@/lib/program-queries';
 import { getUniversityBySlug } from '@/lib/university-queries';
 import { getServerLocale, t } from '@/lib/server-t';
+import { buildLanguageAlternates } from '@/lib/alternates';
 import ProgramDetailClient from './_components/program-detail-client';
 
 export const dynamic = 'force-dynamic';
@@ -29,9 +30,7 @@ export async function generateMetadata({ params }: ProgramPageProps): Promise<Me
   return {
     title,
     description,
-    alternates: {
-      canonical: `/programs/${slug}`,
-    },
+    alternates: buildLanguageAlternates(`/programs/${slug}`),
     openGraph: {
       title,
       description,

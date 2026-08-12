@@ -4,6 +4,7 @@ import type { Locale } from '@/lib/i18n-translations';
 import { getAllUniversities } from '@/lib/data-fetcher';
 import { bestUniversitiesGuide } from '@/lib/guides/best-universities';
 import { GuidePage } from '@/components/guides/guide-page';
+import { buildLanguageAlternates } from '@/lib/alternates';
 import { SITE_URL } from '@/lib/site-url';
 
 export const revalidate = 60;
@@ -22,7 +23,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: guide.title,
     description: guide.description,
-    alternates: { canonical: `${SITE_URL}/best-universities-china` },
+    alternates: buildLanguageAlternates('/best-universities-china'),
     openGraph: {
       title: guide.title,
       description: guide.description,

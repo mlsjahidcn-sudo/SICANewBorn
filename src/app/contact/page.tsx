@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { SITE_URL } from "@/lib/site-url";
+import { buildLanguageAlternates } from "@/lib/alternates";
 import { Mail, Phone, MapPin, Clock, MessageCircle } from 'lucide-react';
 import Image from 'next/image';
 import { getServerT } from '@/lib/server-t';
@@ -10,7 +10,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t('contact.title'),
     description: t('contact.subtitle'),
-    alternates: { canonical: `${SITE_URL}/contact` },
+    alternates: buildLanguageAlternates('/contact'),
     openGraph: {
       title: t('contact.title'),
       description: t('contact.subtitle'),

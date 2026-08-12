@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import type { Locale } from '@/lib/i18n-translations';
 import { admissionRequirementsGuide } from '@/lib/guides/china-university-admission-requirements';
 import { GuidePage } from '@/components/guides/guide-page';
+import { buildLanguageAlternates } from '@/lib/alternates';
 import { SITE_URL } from '@/lib/site-url';
 
 export const revalidate = 60;
@@ -14,7 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: guide.title,
     description: guide.description,
-    alternates: { canonical: `${SITE_URL}/china-university-admission-requirements` },
+    alternates: buildLanguageAlternates('/china-university-admission-requirements'),
     openGraph: {
       title: guide.title,
       description: guide.description,

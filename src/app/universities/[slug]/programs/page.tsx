@@ -5,6 +5,7 @@ import { cache } from 'react';
 import { ChevronRight, ArrowRight, MapPin, Trophy, GraduationCap, Clock, Banknote, Globe, Award } from 'lucide-react';
 import { getAllUniversities, getAllPrograms } from '@/lib/data-fetcher';
 
+import { buildLanguageAlternates } from '@/lib/alternates';
 import { SITE_URL } from '@/lib/site-url';
 // Render on demand with ISR — reads the live DB so newly-added
 // universidades (post-build) show up automatically, and the
@@ -43,7 +44,7 @@ export async function generateMetadata({
   return {
     title,
     description,
-    alternates: { canonical: `${SITE_URL}/universities/${slug}/programs` },
+    alternates: buildLanguageAlternates(`/universities/${slug}/programs`),
     openGraph: { title, description, type: 'article' },
   };
 }

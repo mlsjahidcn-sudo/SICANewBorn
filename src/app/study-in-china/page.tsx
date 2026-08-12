@@ -4,6 +4,7 @@ import { Building2, GraduationCap, ArrowRight, MapPin } from 'lucide-react';
 import { cities } from '@/lib/seo-data';
 import { universities } from '@/lib/data';
 import { getServerT } from '@/lib/server-t';
+import { buildLanguageAlternates } from '@/lib/alternates';
 import { SITE_URL } from "@/lib/site-url";
 
 /**
@@ -21,9 +22,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t('seo.cities.hubTitle'),
     description: t('seo.cities.hubDescription'),
-    alternates: {
-      canonical: `${SITE_URL}/study-in-china`,
-    },
+    alternates: buildLanguageAlternates('/study-in-china'),
     openGraph: {
       title: t('seo.cities.hubTitle'),
       description: t('seo.cities.hubDescription'),

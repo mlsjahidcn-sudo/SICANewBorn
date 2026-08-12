@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowRight, GraduationCap, ChevronRight } from 'lucide-react';
 import { getAllPrograms } from '@/lib/data-fetcher';
+import { buildLanguageAlternates } from '@/lib/alternates';
 
-import { SITE_URL } from '@/lib/site-url';
 const slugifyDiscipline = (s: string) => s.toLowerCase().replace(/\s+/g, '-');
 
 // Render on demand with ISR — reads the live DB so newly-added
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   title: 'Study by Major in China: All Fields of Study (2026)',
   description:
     'Browse all academic fields (majors) available to international students at top Chinese universities. Computer Science, Engineering, Business, Medicine, and more.',
-  alternates: { canonical: `${SITE_URL}/majors` },
+  alternates: buildLanguageAlternates('/majors'),
 };
 
 export default async function MajorsIndexPage() {

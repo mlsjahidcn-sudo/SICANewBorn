@@ -3,6 +3,7 @@ import { Metadata } from 'next';
 import { getUniversityBySlug, getUniversities } from '@/lib/university-queries';
 import { getProgramsByUniversity } from '@/lib/program-queries';
 import { getServerLocale, t } from '@/lib/server-t';
+import { buildLanguageAlternates } from '@/lib/alternates';
 import UniversityDetailClient from './_components/university-detail-client';
 
 interface UniversityPageProps {
@@ -33,9 +34,7 @@ export async function generateMetadata({ params }: UniversityPageProps): Promise
   return {
     title,
     description,
-    alternates: {
-      canonical: `/universities/${slug}`,
-    },
+    alternates: buildLanguageAlternates(`/universities/${slug}`),
     openGraph: {
       title,
       description,

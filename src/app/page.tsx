@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { SITE_URL } from "@/lib/site-url";
+import { buildLanguageAlternates } from "@/lib/alternates";
 import Link from 'next/link';
 import Image from 'next/image';
 import { getServerT } from '@/lib/server-t';
@@ -37,7 +37,7 @@ import { VideoTestimonials } from '@/components/VideoTestimonials';
 import { GetStartedCta } from '@/components/GetStartedCta';
 
 export const metadata: Metadata = {
-  alternates: { canonical: `${SITE_URL}/` },
+  alternates: buildLanguageAlternates('/'),
 };
 
 // Home page is server-rendered. We re-fetch the live list on every

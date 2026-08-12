@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Gift, ArrowRight, Globe } from 'lucide-react';
 import { COUNTRIES, getScholarshipsForCountry } from '@/lib/seo-data';
 import { getServerT } from '@/lib/server-t';
+import { buildLanguageAlternates } from '@/lib/alternates';
 import { SITE_URL } from '@/lib/site-url';
 
 /**
@@ -20,7 +21,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t('seo.scholarships.hubTitle'),
     description: t('seo.scholarships.hubDescription'),
-    alternates: { canonical: `${SITE_URL}/scholarships-for` },
+    alternates: buildLanguageAlternates('/scholarships-for'),
     openGraph: {
       title: t('seo.scholarships.hubTitle'),
       description: t('seo.scholarships.hubDescription'),

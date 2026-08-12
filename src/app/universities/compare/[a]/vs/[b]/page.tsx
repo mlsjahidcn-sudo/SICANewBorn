@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { getAllUniversities } from '@/lib/data-fetcher';
 import { getServerLocale, t } from '@/lib/server-t';
+import { buildLanguageAlternates } from '@/lib/alternates';
 import { SITE_URL } from '@/lib/site-url';
 
 // All ranked universities, sorted. The picker and the slug validation
@@ -78,9 +79,7 @@ export async function generateMetadata({
   return {
     title,
     description,
-    alternates: {
-      canonical: `${SITE_URL}/universities/compare/${a}/vs/${b}`,
-    },
+    alternates: buildLanguageAlternates(`${SITE_URL}/universities/compare/${a}/vs/${b}`),
     openGraph: {
       title,
       description,

@@ -5,7 +5,7 @@
  * See src/app/universities/[slug]/layout.tsx for the same pattern.
  */
 import type { Metadata } from 'next';
-import { SITE_URL } from '@/lib/site-url';
+import { buildLanguageAlternates } from '@/lib/alternates';
 
 export async function generateMetadata({
   params,
@@ -14,7 +14,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   return {
-    alternates: { canonical: `${SITE_URL}/programs/${slug}` },
+    alternates: buildLanguageAlternates(`/programs/${slug}`),
   };
 }
 

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { SITE_URL } from '@/lib/site-url';
+import { buildLanguageAlternates } from '@/lib/alternates';
 import { getServerT } from '@/lib/server-t';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -7,7 +7,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t('successStories.title'),
     description: t('successStories.subtitle'),
-    alternates: { canonical: `${SITE_URL}/success-stories` },
+    alternates: buildLanguageAlternates('/success-stories'),
     openGraph: {
       title: t('successStories.title'),
       description: t('successStories.subtitle'),

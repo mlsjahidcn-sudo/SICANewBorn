@@ -10,7 +10,8 @@ import { getOrganizationSchema, getWebsiteSchema, getEditorialTeamSchema } from 
 import type { Locale } from '@/lib/i18n-translations';
 
 import { SITE_URL } from '@/lib/site-url';
-export const metadata: Metadata = {
+
+const baseMetadata: Metadata = {
   title: {
     default: 'SICA | Study in China - Your Gateway to Top Chinese Universities',
     template: '%s | SICA',
@@ -33,20 +34,6 @@ export const metadata: Metadata = {
   creator: 'SICA',
   publisher: 'SICA',
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || SITE_URL),
-  alternates: {
-    canonical: '/',
-    // hreflang: SICA uses cookie-based i18n (single URL serves both en
-    // and zh based on the sica-locale cookie). We declare both language
-    // variants pointing at the same URL so Google indexes the page for
-    // both English and Chinese users. x-default signals the fallback
-    // for any other locale. Per-page canonicals (in each route's own
-    // metadata) override the root for deeper pages.
-    languages: {
-      'en': '/',
-      'zh': '/',
-      'x-default': '/',
-    },
-  },
   openGraph: {
     type: 'website',
     locale: 'en_US',
@@ -80,6 +67,23 @@ export const metadata: Metadata = {
   },
   manifest: '/manifest.json',
 };
+
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await readLocaleCookie();
+  return {
+    ...baseMetadata,
+    // Note: alternates / hreflang are set per-page so the canonical URL
+    // always matches the rendered route. The root page sets its own in
+    // src/app/page.tsx. The helper in src/lib/alternates.ts uses a
+    // `?lang=` query parameter for the language variants; the middleware
+    // in src/middleware.ts turns that query parameter into the
+    // `sica-locale` cookie so the alternate URLs render the right language.
+    openGraph: {
+      ...baseMetadata.openGraph,
+      locale: locale === 'zh' ? 'zh_CN' : 'en_US',
+    },
+  };
+}
 
 async function readLocaleCookie(): Promise<Locale> {
   const cookieStore = await cookies();

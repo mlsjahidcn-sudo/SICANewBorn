@@ -8,10 +8,10 @@
  * The canonical URL must live in a sibling server `layout.tsx`.
  */
 import type { Metadata } from 'next';
-import { SITE_URL } from '@/lib/site-url';
+import { buildLanguageAlternates } from '@/lib/alternates';
 
 export const metadata: Metadata = {
-  alternates: { canonical: `${SITE_URL}/universities` },
+  alternates: buildLanguageAlternates('/universities'),
 };
 
 export default function UniversitiesLayout({

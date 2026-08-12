@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import type { Locale } from '@/lib/i18n-translations';
 import { partTimeWorkGuide } from '@/lib/guides/part-time-work';
 import { GuidePage } from '@/components/guides/guide-page';
-
+import { buildLanguageAlternates } from '@/lib/alternates';
 import { SITE_URL } from '@/lib/site-url';
 export const dynamic = 'force-static';
 
@@ -14,7 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: guide.title,
     description: guide.description,
-    alternates: { canonical: `${SITE_URL}/guides/part-time-work` },
+    alternates: buildLanguageAlternates('/guides/part-time-work'),
     openGraph: {
       title: guide.title,
       description: guide.description,

@@ -5,6 +5,7 @@ import { mapAdmissionNoticeFromDb } from '@/lib/admission-notices/mapper';
 import { getSupabaseServer } from '@/lib/supabase-server';
 import { getAdmissionNoticePublicUrl } from '@/lib/admission-notices/storage';
 import type { AdmissionNotice, RawAdmissionNotice } from '@/lib/admission-notices/types';
+import { buildLanguageAlternates } from '@/lib/alternates';
 import { SITE_URL } from '@/lib/site-url';
 
 /**
@@ -32,12 +33,7 @@ const PAGE_DESCRIPTION =
 export const metadata: Metadata = {
   title: PAGE_TITLE,
   description: PAGE_DESCRIPTION,
-  alternates: {
-    // Phase 57: this page is the only canonical /get-started
-    // surface (no per-locale variants). Cookie-based i18n
-    // doesn't need hreflang here.
-    canonical: `${SITE_URL}/get-started`,
-  },
+  alternates: buildLanguageAlternates('/get-started'),
   openGraph: {
     title: PAGE_TITLE,
     description: PAGE_DESCRIPTION,

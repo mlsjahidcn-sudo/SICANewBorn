@@ -4,6 +4,7 @@ import type { Locale } from '@/lib/i18n-translations';
 import { getAllScholarships } from '@/lib/data-fetcher';
 import { cscScholarshipGuide } from '@/lib/guides/chinese-government-scholarship-csc';
 import { GuidePage } from '@/components/guides/guide-page';
+import { buildLanguageAlternates } from '@/lib/alternates';
 import { SITE_URL } from '@/lib/site-url';
 
 export const revalidate = 60;
@@ -23,7 +24,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: guide.title,
     description: guide.description,
-    alternates: { canonical: `${SITE_URL}/chinese-government-scholarship-csc` },
+    alternates: buildLanguageAlternates('/chinese-government-scholarship-csc'),
     openGraph: {
       title: guide.title,
       description: guide.description,

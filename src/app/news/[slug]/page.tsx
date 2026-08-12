@@ -8,6 +8,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
 import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
 import { getServerLocale, t } from '@/lib/server-t';
+import { buildLanguageAlternates } from '@/lib/alternates';
 
 import { SITE_URL } from '@/lib/site-url';
 /** S36: structured FAQ pair used for FAQPage JSON-LD + visible accordion. */
@@ -131,7 +132,7 @@ export async function generateMetadata({
   return {
     title,
     description,
-    alternates: { canonical },
+    alternates: buildLanguageAlternates(canonical),
     openGraph: {
       title,
       description,

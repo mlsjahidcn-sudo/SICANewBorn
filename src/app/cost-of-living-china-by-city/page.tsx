@@ -4,6 +4,7 @@ import type { Locale } from '@/lib/i18n-translations';
 import { getAllUniversities } from '@/lib/data-fetcher';
 import { costOfLivingByCityGuide } from '@/lib/guides/cost-of-living-by-city';
 import { GuidePage } from '@/components/guides/guide-page';
+import { buildLanguageAlternates } from '@/lib/alternates';
 import { SITE_URL } from '@/lib/site-url';
 
 export const revalidate = 60;
@@ -15,7 +16,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: guide.title,
     description: guide.description,
-    alternates: { canonical: `${SITE_URL}/cost-of-living-china-by-city` },
+    alternates: buildLanguageAlternates('/cost-of-living-china-by-city'),
     openGraph: {
       title: guide.title,
       description: guide.description,

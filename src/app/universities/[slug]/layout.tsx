@@ -7,7 +7,7 @@
  * This layout does the latter.
  */
 import type { Metadata } from 'next';
-import { SITE_URL } from '@/lib/site-url';
+import { buildLanguageAlternates } from '@/lib/alternates';
 
 export async function generateMetadata({
   params,
@@ -16,7 +16,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   return {
-    alternates: { canonical: `${SITE_URL}/universities/${slug}` },
+    alternates: buildLanguageAlternates(`/universities/${slug}`),
   };
 }
 

@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { ArrowRight, GraduationCap, ChevronRight, MapPin, Clock, Banknote, Globe, Award } from 'lucide-react';
 import { getAllUniversities, getAllPrograms, type Program, type University } from '@/lib/data-fetcher';
 import { getServerLocale, t } from '@/lib/server-t';
+import { buildLanguageAlternates } from '@/lib/alternates';
 
 import { SITE_URL } from '@/lib/site-url';
 // URL slug ↔ discipline. Slugs are URL-safe variants of the
@@ -52,7 +53,7 @@ export async function generateMetadata({
   return {
     title,
     description,
-    alternates: { canonical: `${SITE_URL}/majors/${disciplineSlug}` },
+    alternates: buildLanguageAlternates(`${SITE_URL}/majors/${disciplineSlug}`),
     openGraph: { title, description, type: 'article' },
   };
 }

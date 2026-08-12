@@ -5,6 +5,7 @@ import { MapPin, GraduationCap, Star, Building, ArrowRight, Award, Globe } from 
 import UniversityLogo from '@/components/university-logo';
 import { cities, getCityBySlug, getUniversitiesByCity } from '@/lib/seo-data';
 import { getServerT } from '@/lib/server-t';
+import { buildLanguageAlternates } from '@/lib/alternates';
 import { SITE_URL } from "@/lib/site-url";
 
 /**
@@ -42,7 +43,7 @@ export async function generateMetadata({
   return {
     title,
     description,
-    alternates: { canonical: `${SITE_URL}/study-in-china/${city.slug}` },
+    alternates: buildLanguageAlternates(`${SITE_URL}/study-in-china/${city.slug}`),
     openGraph: {
       title,
       description,

@@ -8,6 +8,7 @@ import {
   getAllScholarships,
   getAllPrograms,
 } from '@/lib/data-fetcher';
+import { buildLanguageAlternates } from '@/lib/alternates';
 import { SITE_URL } from '@/lib/site-url';
 
 // Render on demand with ISR — reads the live DB so newly-added
@@ -46,7 +47,7 @@ export async function generateMetadata({
   return {
     title,
     description,
-    alternates: { canonical: `${SITE_URL}/universities/${slug}/scholarships` },
+    alternates: buildLanguageAlternates(`/universities/${slug}/scholarships`),
     openGraph: { title, description, type: 'article' },
   };
 }

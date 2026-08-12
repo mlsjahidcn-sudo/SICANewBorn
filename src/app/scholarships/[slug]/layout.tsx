@@ -6,9 +6,9 @@
  * See src/app/universities/[slug]/layout.tsx for the same pattern.
  */
 import type { Metadata } from 'next';
-import { SITE_URL } from '@/lib/site-url';
 import { scholarships } from '@/lib/data';
 import { getServerLocale, t } from '@/lib/server-t';
+import { buildLanguageAlternates } from '@/lib/alternates';
 
 export async function generateMetadata({
   params,
@@ -32,7 +32,7 @@ export async function generateMetadata({
   return {
     title,
     description,
-    alternates: { canonical: `${SITE_URL}/scholarships/${slug}` },
+    alternates: buildLanguageAlternates(`/scholarships/${slug}`),
     openGraph: {
       title,
       description,

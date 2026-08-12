@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { SITE_URL } from "@/lib/site-url";
+import { buildLanguageAlternates } from "@/lib/alternates";
 import Link from 'next/link';
 import { Users, Eye, Heart, Globe, Building, GraduationCap, Award, Clock } from 'lucide-react';
 import { getServerT } from '@/lib/server-t';
@@ -9,7 +9,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t('about.title'),
     description: t('about.subtitle'),
-    alternates: { canonical: `${SITE_URL}/about` },
+    alternates: buildLanguageAlternates('/about'),
     openGraph: {
       title: t('about.title'),
       description: t('about.subtitle'),

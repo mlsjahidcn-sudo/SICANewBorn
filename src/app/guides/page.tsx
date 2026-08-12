@@ -5,7 +5,7 @@ import { cookies } from 'next/headers';
 import type { Locale } from '@/lib/i18n-translations';
 import { guideCards } from '@/lib/guides/hub-data';
 import { GuideIcons } from '@/components/guides/guide-page';
-
+import { buildLanguageAlternates } from '@/lib/alternates';
 import { SITE_URL } from '@/lib/site-url';
 
 // Constants for the listicle pagination — process guides section
@@ -23,7 +23,7 @@ export async function generateMetadata(): Promise<Metadata> {
     description: isZh
       ? 'SICA指南库：系统讲解来华留学的申请流程、签证办理、奖学金、校园生活与职业发展。'
       : 'SICA\'s definitive guides to studying in China: applications, visas, scholarships, student life, and career outcomes.',
-    alternates: { canonical: `${SITE_URL}/guides` },
+    alternates: buildLanguageAlternates('/guides'),
     openGraph: {
       title: isZh ? '中国留学完整指南' : 'SICA Guides',
       description: isZh

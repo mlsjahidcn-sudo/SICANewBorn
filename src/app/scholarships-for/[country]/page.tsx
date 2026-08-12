@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { Gift, Globe, Calendar, CheckCircle, ArrowRight, Clock, BookOpen } from 'lucide-react';
 import { COUNTRIES, getCountryBySlug, getScholarshipsForCountry } from '@/lib/seo-data';
 import { getServerT } from '@/lib/server-t';
+import { buildLanguageAlternates } from '@/lib/alternates';
 import { SITE_URL } from "@/lib/site-url";
 
 /**
@@ -40,9 +41,7 @@ export async function generateMetadata({
   return {
     title,
     description,
-    alternates: {
-      canonical: `${SITE_URL}/scholarships-for/${country.slug}`,
-    },
+    alternates: buildLanguageAlternates(`${SITE_URL}/scholarships-for/${country.slug}`),
     openGraph: {
       title,
       description,

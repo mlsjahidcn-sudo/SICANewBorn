@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import type { Locale } from '@/lib/i18n-translations';
 import { healthInsuranceGuide } from '@/lib/guides/health-insurance';
 import { GuidePage } from '@/components/guides/guide-page';
-
+import { buildLanguageAlternates } from '@/lib/alternates';
 import { SITE_URL } from '@/lib/site-url';
 export const dynamic = 'force-static';
 
@@ -14,7 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: guide.title,
     description: guide.description,
-    alternates: { canonical: `${SITE_URL}/guides/health-insurance` },
+    alternates: buildLanguageAlternates('/guides/health-insurance'),
     openGraph: {
       title: guide.title,
       description: guide.description,

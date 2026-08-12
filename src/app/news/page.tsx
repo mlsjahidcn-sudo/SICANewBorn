@@ -3,6 +3,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowRight, Calendar, Clock, ChevronRight, Newspaper, X, Tag } from 'lucide-react';
 import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
+import { buildLanguageAlternates } from '@/lib/alternates';
 
 import { SITE_URL } from '@/lib/site-url';
 interface NewsRow {
@@ -64,7 +65,7 @@ export async function generateMetadata(
   return {
     title,
     description,
-    alternates: { canonical },
+    alternates: buildLanguageAlternates(canonical),
     openGraph: { title, description, type: 'website' },
   };
 }

@@ -5,10 +5,10 @@
  * for the same pattern.
  */
 import type { Metadata } from 'next';
-import { SITE_URL } from '@/lib/site-url';
+import { buildLanguageAlternates } from '@/lib/alternates';
 
 export const metadata: Metadata = {
-  alternates: { canonical: `${SITE_URL}/scholarships` },
+  alternates: buildLanguageAlternates('/scholarships'),
 };
 
 export default function ScholarshipsLayout({
