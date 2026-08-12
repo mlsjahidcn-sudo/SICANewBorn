@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import { getProgramBySlug } from '@/lib/program-queries';
 import { getUniversityBySlug } from '@/lib/university-queries';
+import { getServerLocale, t } from '@/lib/server-t';
 import ProgramDetailClient from './_components/program-detail-client';
 
 export const dynamic = 'force-dynamic';
@@ -12,11 +13,18 @@ interface ProgramPageProps {
 
 export async function generateMetadata({ params }: ProgramPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const program = await getProgramBySlug(slug);
-  if (!program) return { title: 'Program not found | SICA' };
+  const [program, locale] = await Promise.all([
+    getProgramBySlug(slug),
+    getServerLocale(),
+  ]);
+  if (!program) {
+    return { title: t(locale, 'seo.dynamic.notFoundTitle') };
+  }
 
-  const title = `${program.name} | ${program.degree} Program in China | SICA`;
-  const description = program.description.slice(0, 160);
+  const name = locale === 'zh' && program.nameCn ? program.nameCn : program.name;
+  const rawDescription = locale === 'zh' && program.descriptionCn ? program.descriptionCn : program.description;
+  const description = rawDescription.slice(0, 160);
+  const title = t(locale, 'seo.dynamic.programTitle', { name, degree: program.degree });
 
   return {
     title,

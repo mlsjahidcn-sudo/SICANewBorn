@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowRight, GraduationCap, ChevronRight, MapPin, Clock, Banknote, Globe, Award } from 'lucide-react';
 import { getAllUniversities, getAllPrograms, type Program, type University } from '@/lib/data-fetcher';
+import { getServerLocale, t } from '@/lib/server-t';
 
 import { SITE_URL } from '@/lib/site-url';
 // URL slug ↔ discipline. Slugs are URL-safe variants of the
@@ -31,12 +32,22 @@ export async function generateMetadata({
   params: Promise<{ discipline: string }>;
 }): Promise<Metadata> {
   const { discipline: disciplineSlug } = await params;
-  const disciplines = await getDisciplines();
+  const [disciplines, locale] = await Promise.all([
+    getDisciplines(),
+    getServerLocale(),
+  ]);
   const discipline = disciplines.find((d) => slugifyDiscipline(d) === disciplineSlug);
-  if (!discipline) return { title: 'Not Found' };
+  if (!discipline) {
+    return { title: t(locale, 'seo.dynamic.notFoundTitle') };
+  }
 
-  const title = `${discipline} Programs in China for International Students (2026)`;
-  const description = `Study ${discipline} at top Chinese universities. ${discipline} bachelor's, master's, and PhD programs with English and Chinese tracks, tuition, duration, and scholarship info.`;
+  const programs = await getAllPrograms();
+  const representative = programs.find((p) => p.discipline === discipline);
+  const disciplineCn = representative?.disciplineCn || discipline;
+  const displayDiscipline = locale === 'zh' && disciplineCn ? disciplineCn : discipline;
+
+  const title = t(locale, 'seo.dynamic.majorTitle', { discipline: displayDiscipline });
+  const description = t(locale, 'seo.dynamic.majorDescription', { discipline: displayDiscipline });
 
   return {
     title,

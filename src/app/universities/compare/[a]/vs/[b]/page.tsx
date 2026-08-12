@@ -17,6 +17,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import { getAllUniversities } from '@/lib/data-fetcher';
+import { getServerLocale, t } from '@/lib/server-t';
 import { SITE_URL } from '@/lib/site-url';
 
 // All ranked universities, sorted. The picker and the slug validation
@@ -59,13 +60,20 @@ export async function generateMetadata({
   params: Promise<{ a: string; b: string }>;
 }): Promise<Metadata> {
   const { a, b } = await params;
-  const unis = await getRankedUnis();
+  const [unis, locale] = await Promise.all([
+    getRankedUnis(),
+    getServerLocale(),
+  ]);
   const uniA = unis.find((u) => u.slug === a);
   const uniB = unis.find((u) => u.slug === b);
-  if (!uniA || !uniB) return { title: 'Compare universities' };
+  if (!uniA || !uniB) {
+    return { title: t(locale, 'seo.dynamic.notFoundTitle') };
+  }
 
-  const title = `${uniA.name} vs ${uniB.name}: Side-by-Side Comparison (2026)`;
-  const description = `Compare ${uniA.name} and ${uniB.name} side by side: rankings, tuition, scholarships, programs, location, and more. Data updated for 2026.`;
+  const nameA = locale === 'zh' && uniA.nameCn ? uniA.nameCn : uniA.name;
+  const nameB = locale === 'zh' && uniB.nameCn ? uniB.nameCn : uniB.name;
+  const title = t(locale, 'seo.dynamic.compareTitle', { a: nameA, b: nameB });
+  const description = t(locale, 'seo.dynamic.compareDescription', { a: nameA, b: nameB });
 
   return {
     title,

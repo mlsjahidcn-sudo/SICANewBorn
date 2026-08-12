@@ -7,6 +7,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
 import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
+import { getServerLocale, t } from '@/lib/server-t';
 
 import { SITE_URL } from '@/lib/site-url';
 /** S36: structured FAQ pair used for FAQPage JSON-LD + visible accordion. */
@@ -99,19 +100,32 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const post = await fetchPostBySlug(slug);
-  if (!post) return { title: 'Not Found' };
+  const [post, locale] = await Promise.all([
+    fetchPostBySlug(slug),
+    getServerLocale(),
+  ]);
+  if (!post) {
+    return { title: t(locale, 'seo.dynamic.notFoundTitle') };
+  }
 
-  const title = post.seo_title || post.title_en;
+  const title = locale === 'zh'
+    ? (post.title_zh || post.seo_title || post.title_en)
+    : (post.seo_title || post.title_en);
   // S36: when no SEO description is set, prefer the key_takeaways
   // (1-2 of them joined) over the raw first-paragraph excerpt —
   // the takeaways are distilled for snippet capture so they
   // typically read better as a meta description.
-  const description = post.seo_description
-    || (Array.isArray(post.key_takeaways) && post.key_takeaways.length > 0
-      ? post.key_takeaways.slice(0, 2).join(' ')
-      : post.excerpt_en)
-    || post.content_en.slice(0, 155);
+  let description = '';
+  if (locale === 'zh' && post.excerpt_zh) {
+    description = post.excerpt_zh;
+  } else {
+    description = post.seo_description
+      || (Array.isArray(post.key_takeaways) && post.key_takeaways.length > 0
+        ? post.key_takeaways.slice(0, 2).join(' ')
+        : post.excerpt_en)
+      || post.content_en.slice(0, 155);
+  }
+  description = description.slice(0, 160);
   const canonical = `${SITE_URL}/news/${post.slug}`;
   const ogImage = post.cover_image || undefined;
   return {

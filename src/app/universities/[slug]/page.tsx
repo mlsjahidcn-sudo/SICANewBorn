@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import { getUniversityBySlug, getUniversities } from '@/lib/university-queries';
 import { getProgramsByUniversity } from '@/lib/program-queries';
+import { getServerLocale, t } from '@/lib/server-t';
 import UniversityDetailClient from './_components/university-detail-client';
 
 interface UniversityPageProps {
@@ -16,18 +17,28 @@ export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: UniversityPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const uni = await getUniversityBySlug(slug);
-  if (!uni) return { title: 'University not found | SICA' };
+  const [uni, locale] = await Promise.all([
+    getUniversityBySlug(slug),
+    getServerLocale(),
+  ]);
+  if (!uni) {
+    return { title: t(locale, 'seo.dynamic.notFoundTitle') };
+  }
+
+  const name = locale === 'zh' && uni.nameCn ? uni.nameCn : uni.name;
+  const rawDescription = locale === 'zh' && uni.descriptionCn ? uni.descriptionCn : uni.description;
+  const description = rawDescription.slice(0, 160);
+  const title = t(locale, 'seo.dynamic.universityTitle', { name });
 
   return {
-    title: `${uni.name} | Study in China | SICA`,
-    description: uni.description.slice(0, 160),
+    title,
+    description,
     alternates: {
       canonical: `/universities/${slug}`,
     },
     openGraph: {
-      title: `${uni.name} | Study in China | SICA`,
-      description: uni.description.slice(0, 160),
+      title,
+      description,
       images: uni.image ? [uni.image] : [],
     },
   };

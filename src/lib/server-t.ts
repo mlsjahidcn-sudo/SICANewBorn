@@ -23,9 +23,17 @@ export async function getServerT(): Promise<(
   key: string,
   params?: Record<string, string | number>,
 ) => string> {
-  const cookieStore = await cookies();
-  const locale: Locale = cookieStore.get('sica-locale')?.value === 'zh' ? 'zh' : 'en';
+  const locale = await getServerLocale();
   return (key, params) => t(locale, key, params);
+}
+
+/**
+ * Read the active locale from the `sica-locale` cookie. Falls back to
+ * the default locale (`en`) when the cookie is missing or invalid.
+ */
+export async function getServerLocale(): Promise<Locale> {
+  const cookieStore = await cookies();
+  return cookieStore.get('sica-locale')?.value === 'zh' ? 'zh' : 'en';
 }
 
 export { t, DEFAULT_LOCALE, type Locale };
