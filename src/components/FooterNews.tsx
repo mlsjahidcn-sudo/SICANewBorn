@@ -21,6 +21,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Newspaper, ArrowRight, Calendar } from 'lucide-react';
+import { useI18n } from '@/lib/i18n';
 
 interface NewsTeaser {
   id: string;
@@ -32,16 +33,17 @@ interface NewsTeaser {
   published_at: string | null;
 }
 
-const CATEGORY_LABEL: Record<string, string> = {
-  announcement: 'Announcement',
-  partnership: 'Partnership',
-  scholarship: 'Scholarship',
-  university: 'University news',
-  event: 'Event',
-  guide: 'Study guide',
+const categoryKeys: Record<string, string> = {
+  announcement: 'news.category.announcement',
+  partnership: 'news.category.partnership',
+  scholarship: 'news.category.scholarship',
+  university: 'news.category.university',
+  event: 'news.category.event',
+  guide: 'news.category.guide',
 };
 
 export function FooterNews() {
+  const { t, locale } = useI18n();
   const [posts, setPosts] = useState<NewsTeaser[] | null>(null);
 
   useEffect(() => {
@@ -72,7 +74,7 @@ export function FooterNews() {
     <div>
       <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[#1B2A4A] flex items-center gap-2">
         <Newspaper className="h-4 w-4" />
-        Latest News
+        {t('footer.latestNews')}
       </h4>
       <ul className="space-y-3">
         {posts.map((p) => (
@@ -82,15 +84,15 @@ export function FooterNews() {
               className="block group"
             >
               <p className="text-[10px] font-semibold uppercase tracking-wider text-[#9B1B30] mb-0.5">
-                {CATEGORY_LABEL[p.category] || p.category}
+                {t(categoryKeys[p.category] || 'news.category.announcement')}
               </p>
               <p className="text-sm text-[#1B2A4A] group-hover:text-[#9B1B30] transition-colors leading-snug line-clamp-2 font-medium">
-                {p.title_en}
+                {locale === 'zh' && p.title_zh ? p.title_zh : p.title_en}
               </p>
               {p.published_at && (
                 <p className="mt-0.5 text-[10px] text-gray-500 flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
-                  {new Date(p.published_at).toLocaleDateString('en-US', {
+                  {new Date(p.published_at).toLocaleDateString(locale === 'zh' ? 'zh-CN' : 'en-US', {
                     year: 'numeric',
                     month: 'short',
                     day: 'numeric',
@@ -105,7 +107,7 @@ export function FooterNews() {
         href="/news"
         className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[#9B1B30] hover:underline"
       >
-        All news
+        {t('footer.allNews')}
         <ArrowRight className="h-3 w-3" />
       </Link>
     </div>

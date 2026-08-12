@@ -81,12 +81,12 @@ export default async function HomePage() {
   // dictionary the /news index uses so the badges look identical
   // across pages.
   const CATEGORY_LABEL_HOME: Record<string, string> = {
-    announcement: 'Announcement',
-    partnership: 'Partnership',
-    scholarship: 'Scholarship',
-    university: 'University news',
-    event: 'Event',
-    guide: 'Study guide',
+    announcement: t('news.category.announcement'),
+    partnership: t('news.category.partnership'),
+    scholarship: t('news.category.scholarship'),
+    university: t('news.category.university'),
+    event: t('news.category.event'),
+    guide: t('news.category.guide'),
   };
   let latestNews: NewsTeaser[] = [];
   if (isSupabaseServerConfigured()) {
@@ -259,7 +259,7 @@ export default async function HomePage() {
             <div className="hidden lg:block lg:col-span-2 space-y-3">
               <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/60 mb-2 flex items-center gap-2">
                 <span className="h-px w-6 bg-white/40" />
-                {t('hero.featured', { default: 'Featured Top Universities' })}
+                {t('hero.featured')}
               </div>
               {featured.map((u) => (
                 <Link
@@ -294,7 +294,7 @@ export default async function HomePage() {
                     </div>
                     <div className="flex items-center gap-1.5 text-xs text-[#4B5563] mt-0.5">
                       <MapPin className="h-3 w-3 shrink-0" />
-                      <span className="truncate">{u.city}, China</span>
+                      <span className="truncate">{u.city}, {t('common.china')}</span>
                       {u.qsWorldRanking ? (
                         <span className="ml-auto text-[10px] font-semibold text-[#1B2A4A] shrink-0">
                           QS #{u.qsWorldRanking}
@@ -399,10 +399,10 @@ export default async function HomePage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 text-center">
             {[
-              { value: '50+', label: 'Partner Universities' },
-              { value: '200+', label: 'Programs Available' },
-              { value: '30+', label: 'Countries Represented' },
-              { value: '95%', label: 'Visa Success Rate' },
+              { value: '50+', label: t('home.stats.partnerUniversities') },
+              { value: '200+', label: t('home.stats.programsAvailable') },
+              { value: '30+', label: t('home.stats.countriesRepresented') },
+              { value: '95%', label: t('home.stats.visaSuccessRate') },
             ].map((stat) => (
               <div key={stat.label}>
                 <div className="text-4xl sm:text-5xl font-extrabold text-[#D4A853]">
@@ -422,7 +422,7 @@ export default async function HomePage() {
       <section className="bg-[#FAFAF8] border-y border-gray-200">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
           <p className="text-center text-xs font-bold uppercase tracking-[0.2em] text-gray-500 mb-6">
-            Trusted by students at China's top universities
+            {t('home.trustBadge')}
           </p>
           <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-8 gap-4 sm:gap-6 items-center">
             {liveUnis.slice(0, 8).map((u) => (
@@ -551,21 +551,20 @@ export default async function HomePage() {
               <div>
                 <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-[#9B1B30] mb-2">
                   <Newspaper className="h-4 w-4" />
-                  Newsroom
+                  {t('home.news.eyebrow')}
                 </div>
                 <h2 className="text-2xl sm:text-3xl font-bold text-[#1B2A4A]">
-                  Latest from SICA
+                  {t('home.news.title')}
                 </h2>
                 <p className="mt-2 text-sm text-[#4B5563] max-w-2xl">
-                  Updates on Chinese universidades, scholarships, and
-                  partnerships — curated by the SICA Editorial Team.
+                  {t('home.news.subtitle')}
                 </p>
               </div>
               <Link
                 href="/news"
                 className="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold text-[#9B1B30] hover:underline whitespace-nowrap"
               >
-                View all news
+                {t('home.news.viewAll')}
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
@@ -597,7 +596,7 @@ export default async function HomePage() {
                         <>
                           <span>·</span>
                           <Clock className="h-3 w-3" />
-                          {post.read_time_minutes} min read
+                          {t('home.news.minRead', { minutes: post.read_time_minutes })}
                         </>
                       ) : null}
                     </div>
@@ -617,7 +616,7 @@ export default async function HomePage() {
                 href="/news"
                 className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#9B1B30] hover:underline"
               >
-                View all news
+                {t('home.news.viewAll')}
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
@@ -636,20 +635,20 @@ export default async function HomePage() {
               <div>
                 <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-[#9B1B30] mb-2">
                   <Trophy className="h-4 w-4" />
-                  Success Stories
+                  {t('successStories.eyebrow')}
                 </div>
                 <h2 className="text-2xl sm:text-3xl font-bold text-[#1B2A4A]">
-                  Real admission results
+                  {t('successStories.title')}
                 </h2>
                 <p className="mt-2 text-sm text-[#4B5563] max-w-2xl">
-                  Over 10,000+ SICA students admitted to top Chinese universities — verified, current intake.
+                  {t('successStories.countLabel')}
                 </p>
               </div>
               <Link
                 href="/success-stories"
                 className="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold text-[#9B1B30] hover:underline whitespace-nowrap"
               >
-                View all success stories
+                {t('successStories.viewAll')}
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
@@ -704,7 +703,7 @@ export default async function HomePage() {
                 className="inline-flex items-center gap-2 px-8 py-3 bg-[#9B1B30] hover:bg-[#7a1626] text-white font-semibold rounded-none transition-colors"
               >
                 <Trophy className="h-4 w-4" />
-                See 10,000+ success stories
+                {t('successStories.ctaButton')}
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>

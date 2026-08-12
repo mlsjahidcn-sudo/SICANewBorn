@@ -219,7 +219,7 @@ export default function UniversitiesClient({ initialUniversities }: Universities
               href="/universities/compare"
               className="inline-flex items-center gap-2 bg-white/10 border border-white/20 text-white px-4 py-2 text-sm font-semibold hover:bg-white/20 transition-colors"
             >
-              Compare two universities side by side
+              {t('uni.compareCta')}
               <ArrowRight className="h-4 w-4" />
             </Link>
             <GetStartedCta
@@ -271,9 +271,9 @@ export default function UniversitiesClient({ initialUniversities }: Universities
               value={selectedTag}
               onChange={(e) => setSelectedTag(e.target.value)}
               className="h-10 rounded-none border border-gray-200 bg-white px-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#1B2A4A]/20"
-              title={locale === 'zh' ? '院校标签' : 'Classification tag'}
+              title={t('uni.tagsTooltip')}
             >
-              <option value="">Tags: {locale === 'zh' ? '全部' : 'All'}</option>
+              <option value="">{t('uni.tagsSelectAll')}</option>
               {TAG_OPTIONS.map((tag) => (
                 <option key={tag} value={tag}>{tag}</option>
               ))}
@@ -304,7 +304,7 @@ export default function UniversitiesClient({ initialUniversities }: Universities
           </div>
           <div className="mt-3 flex items-center justify-between flex-wrap gap-2">
             <p className="text-sm text-gray-500">
-              {filtered.length} {locale === 'en' ? 'universities found' : '所大学'}
+              {t('uni.resultsFound', { count: filtered.length })}
             </p>
             <select
               value={sortBy}
@@ -318,7 +318,7 @@ export default function UniversitiesClient({ initialUniversities }: Universities
                 {t('uni.sortBy')}: {t('uni.qsWorldRanking')}
               </option>
               <option value="rating">
-                {t('uni.sortBy')}: {locale === 'zh' ? '评分' : 'Rating'}
+                {t('uni.sortBy')}: {t('uni.rating')}
               </option>
               <option value="name">
                 {t('uni.sortBy')}: {t('uni.name')}
@@ -387,11 +387,11 @@ export default function UniversitiesClient({ initialUniversities }: Universities
                 <div className="flex items-center justify-between px-5 py-2.5 bg-[#FAFAF8] border-b border-gray-100">
                   <div className={`flex items-center gap-2 ${uni.logo && uni.logo.startsWith('http') ? 'pl-24' : ''}`}>
                     <span className="inline-flex items-center gap-1.5 bg-[#9B1B30] text-white text-xs font-bold px-2.5 py-1 rounded-none">
-                      #{uni.ranking} {locale === 'en' ? 'in China' : '中国'}
+                      #{uni.ranking} {t('uni.inChina')}
                     </span>
                     <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#1B2A4A]">
                       <Globe className="h-3.5 w-3.5" />
-                      QS #{uni.qsWorldRanking}
+                      {t('uni.qsWorldRankingValue', { ranking: uni.qsWorldRanking })}
                     </span>
                   </div>
                   <span className="flex items-center gap-1 text-sm">
@@ -421,12 +421,12 @@ export default function UniversitiesClient({ initialUniversities }: Universities
                   </div>
                   <div className="mt-2 flex items-center gap-1.5 text-xs text-gray-500">
                     <span className="font-medium text-[#1B2A4A]">{locale === 'en' ? uni.accommodationCost : uni.accommodationCostCn}</span>
-                    <span>{locale === 'en' ? 'accommodation' : '住宿'}</span>
+                    <span>{t('uni.accommodationLabel')}</span>
                   </div>
 
                   <div className="mt-4 pt-3 border-t border-gray-100">
                     <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#9B1B30] group-hover:gap-2.5 transition-all">
-                      {locale === 'en' ? 'View Details' : '查看详情'}
+                      {t('uni.viewDetails')}
                       <ArrowRight className="h-4 w-4" />
                     </span>
                   </div>
@@ -438,7 +438,7 @@ export default function UniversitiesClient({ initialUniversities }: Universities
           <div className="text-center py-16 border border-dashed border-gray-200 bg-white">
             <FilterIcon className="mx-auto h-10 w-10 text-gray-300" />
             <h3 className="mt-4 text-lg font-semibold text-[#1B2A4A]">
-              {locale === 'en' ? 'No universities match your filters' : '没有符合筛选条件的大学'}
+              {t('uni.noResults')}
             </h3>
             <p className="mt-2 text-sm text-gray-500 max-w-md mx-auto">
               {t('filter.suggestion')}
@@ -456,7 +456,7 @@ export default function UniversitiesClient({ initialUniversities }: Universities
                   onClick={(e) => { e.preventDefault(); clearAll(); }}
                   className="text-sm text-gray-600 hover:text-[#9B1B30] underline underline-offset-2"
                 >
-                  {locale === 'en' ? 'or click here' : '或点击此处'}
+                  {t('uni.orClickHere')}
                 </Link>
               </div>
             )}

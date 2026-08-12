@@ -26,7 +26,8 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default function AssessmentPage() {
+export default async function AssessmentPage() {
+  const t = await getServerT();
   return (
     <div className="min-h-screen bg-[#FAFAF8]">
       {/* Hero */}
@@ -39,12 +40,10 @@ export default function AssessmentPage() {
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
           <div className="flex items-center gap-3 mb-4">
             <FileText className="h-8 w-8 text-white" />
-            <h1 className="text-3xl font-bold text-white sm:text-4xl">Free Academic Assessment</h1>
+            <h1 className="text-3xl font-bold text-white sm:text-4xl">{t('assessment.hero.title')}</h1>
           </div>
           <p className="mt-3 text-lg text-gray-300 max-w-xl">
-            Get your academic transcript evaluated by our expert team. We&apos;ll assess your
-            eligibility for Chinese universidades and provide personalized recommendations via
-            WhatsApp or email.
+            {t('assessment.hero.subtitle')}
           </p>
         </div>
       </section>
@@ -55,12 +54,12 @@ export default function AssessmentPage() {
           {/* Assessment Form - Left */}
           <div className="lg:col-span-3">
             <AssessmentForm
+              t={t}
               successMessages={{
-                title: 'Assessment Submitted!',
-                body1: 'Thank you for submitting your academic transcript.',
-                body2:
-                  'Our team will review your documents and send you a detailed assessment via WhatsApp or email within 48 hours.',
-                sendAnother: 'Submit Another Assessment',
+                title: t('assessment.success.title'),
+                body1: t('assessment.success.body1'),
+                body2: t('assessment.success.body2'),
+                sendAnother: t('assessment.success.sendAnother'),
               }}
             />
           </div>
@@ -68,16 +67,16 @@ export default function AssessmentPage() {
           {/* Assessment Info & QR Codes - Right */}
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white border border-gray-200 p-6">
-              <h2 className="text-xl font-bold text-[#1F2937] mb-4">How It Works</h2>
+              <h2 className="text-xl font-bold text-[#1F2937] mb-4">{t('assessment.howItWorks.title')}</h2>
               <div className="space-y-4">
                 <div className="flex gap-3">
                   <div className="h-8 w-8 bg-[#9B1B30]/10 flex items-center justify-center flex-shrink-0">
                     <span className="text-[#9B1B30] font-bold text-sm">1</span>
                   </div>
                   <div>
-                    <h4 className="font-medium text-[#1F2937] text-sm">Fill the 4-step form</h4>
+                    <h4 className="font-medium text-[#1F2937] text-sm">{t('assessment.howItWorks.step1.title')}</h4>
                     <p className="text-xs text-[#4B5563]">
-                      Personal info → Education → Transcript (optional) → Notes
+                      {t('assessment.howItWorks.step1.desc')}
                     </p>
                   </div>
                 </div>
@@ -86,9 +85,9 @@ export default function AssessmentPage() {
                     <span className="text-[#9B1B30] font-bold text-sm">2</span>
                   </div>
                   <div>
-                    <h4 className="font-medium text-[#1F2937] text-sm">Our Team Reviews</h4>
+                    <h4 className="font-medium text-[#1F2937] text-sm">{t('assessment.howItWorks.step2.title')}</h4>
                     <p className="text-xs text-[#4B5563]">
-                      Our education experts evaluate your academic profile within 48 hours
+                      {t('assessment.howItWorks.step2.desc')}
                     </p>
                   </div>
                 </div>
@@ -97,9 +96,9 @@ export default function AssessmentPage() {
                     <span className="text-[#9B1B30] font-bold text-sm">3</span>
                   </div>
                   <div>
-                    <h4 className="font-medium text-[#1F2937] text-sm">Get Your Assessment</h4>
+                    <h4 className="font-medium text-[#1F2937] text-sm">{t('assessment.howItWorks.step3.title')}</h4>
                     <p className="text-xs text-[#4B5563]">
-                      Receive personalized recommendations via WhatsApp or email
+                      {t('assessment.howItWorks.step3.desc')}
                     </p>
                   </div>
                 </div>
@@ -109,13 +108,13 @@ export default function AssessmentPage() {
             <div className="bg-white border border-gray-200 p-6">
               <h3 className="text-lg font-bold text-[#1F2937] mb-4 flex items-center gap-2">
                 <MapPin className="h-5 w-5 text-[#1B2A4A]" />
-                Contact Us
+                {t('assessment.contact.title')}
               </h3>
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
                   <Mail className="h-5 w-5 text-[#1B2A4A] mt-0.5 flex-shrink-0" />
                   <div>
-                    <div className="text-sm font-medium text-[#1F2937]">Email</div>
+                    <div className="text-sm font-medium text-[#1F2937]">{t('assessment.contact.email')}</div>
                     <a href="mailto:info@studyinchina.academy" className="text-sm text-[#4B5563] hover:text-[#9B1B30] transition-colors">
                       info@studyinchina.academy
                     </a>
@@ -127,14 +126,14 @@ export default function AssessmentPage() {
             <div className="bg-white border border-gray-200 p-6">
               <h3 className="text-lg font-bold text-[#1F2937] mb-4 flex items-center gap-2">
                 <MessageCircle className="h-5 w-5 text-[#1B2A4A]" />
-                Chat With Us
+                {t('assessment.chat.title')}
               </h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-center">
                   <div className="bg-[#F3F4F6] border border-gray-200 p-3 inline-block">
                     <Image
                       src="/wechat-qr.jpeg"
-                      alt="WeChat QR Code"
+                      alt={t('assessment.chat.wechat')}
                       width={180}
                       height={180}
                       unoptimized
@@ -142,15 +141,15 @@ export default function AssessmentPage() {
                     />
                   </div>
                   <div className="mt-2">
-                    <div className="text-sm font-semibold text-[#1F2937]">WeChat</div>
-                    <div className="text-xs text-[#4B5563]">Scan to chat</div>
+                    <div className="text-sm font-semibold text-[#1F2937]">{t('assessment.chat.wechat')}</div>
+                    <div className="text-xs text-[#4B5563]">{t('assessment.chat.scanToChat')}</div>
                   </div>
                 </div>
                 <div className="text-center">
                   <div className="bg-[#F3F4F6] border border-gray-200 p-3 inline-block">
                     <Image
                       src="/whatsapp-qr.jpeg"
-                      alt="WhatsApp QR Code"
+                      alt={t('assessment.chat.whatsapp')}
                       width={180}
                       height={180}
                       unoptimized
@@ -158,8 +157,8 @@ export default function AssessmentPage() {
                     />
                   </div>
                   <div className="mt-2">
-                    <div className="text-sm font-semibold text-[#1F2937]">WhatsApp</div>
-                    <div className="text-xs text-[#4B5563]">Scan to chat</div>
+                    <div className="text-sm font-semibold text-[#1F2937]">{t('assessment.chat.whatsapp')}</div>
+                    <div className="text-xs text-[#4B5563]">{t('assessment.chat.scanToChat')}</div>
                   </div>
                 </div>
               </div>

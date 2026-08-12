@@ -123,71 +123,71 @@ export default async function ComparePage({
 
   const rows: Row[] = [
     {
-      label: 'Ranking in China',
+      label: t(locale, 'compare.rankingInChina'),
       icon: Trophy,
       a: `#${uniA.ranking}`,
       b: `#${uniB.ranking}`,
       winner: lowerRankingWins(uniA.ranking, uniB.ranking),
     },
     {
-      label: 'QS World Ranking',
+      label: t(locale, 'compare.qsWorldRanking'),
       icon: Globe2,
       a: `#${uniA.qsWorldRanking}`,
       b: `#${uniB.qsWorldRanking}`,
       winner: lowerRankingWins(uniA.qsWorldRanking, uniB.qsWorldRanking),
     },
     {
-      label: 'SICA Rating',
+      label: t(locale, 'compare.sicaRating'),
       icon: Star,
       a: `${uniA.rating} / 5`,
       b: `${uniB.rating} / 5`,
       winner: uniA.rating > uniB.rating ? 'a' : uniB.rating > uniA.rating ? 'b' : null,
     },
     {
-      label: 'Location',
+      label: t(locale, 'compare.location'),
       icon: MapPin,
-      a: `${uniA.city}, China`,
-      b: `${uniB.city}, China`,
+      a: `${uniA.city}, ${t(locale, 'common.china')}`,
+      b: `${uniB.city}, ${t(locale, 'common.china')}`,
     },
     {
-      label: 'Type',
+      label: t(locale, 'compare.type'),
       icon: Building2,
       a: uniA.type,
       b: uniB.type,
     },
     {
-      label: 'Established',
+      label: t(locale, 'compare.established'),
       icon: Calendar,
       a: uniA.established,
       b: uniB.established,
       winner: uniA.established < uniB.established ? 'a' : uniA.established > uniB.established ? 'b' : null,
     },
     {
-      label: 'Total students',
+      label: t(locale, 'compare.totalStudents'),
       icon: Users,
       a: uniA.students,
       b: uniB.students,
     },
     {
-      label: 'International students',
+      label: t(locale, 'compare.intlStudents'),
       icon: GraduationCap,
       a: uniA.intlStudents,
       b: uniB.intlStudents,
     },
     {
-      label: 'Undergraduate tuition',
+      label: t(locale, 'compare.undergradTuition'),
       icon: Wallet,
       a: uniA.tuitionUndergrad || '—',
       b: uniB.tuitionUndergrad || '—',
     },
     {
-      label: 'Graduate tuition',
+      label: t(locale, 'compare.graduateTuition'),
       icon: Wallet,
       a: uniA.tuitionGraduate || '—',
       b: uniB.tuitionGraduate || '—',
     },
     {
-      label: 'Application deadline',
+      label: t(locale, 'compare.applicationDeadline'),
       icon: Calendar,
       a: uniA.applicationDeadline
         ? new Date(uniA.applicationDeadline).toLocaleDateString('en-US', {
@@ -195,14 +195,14 @@ export default async function ComparePage({
             month: 'long',
             day: 'numeric',
           })
-        : 'See website',
+        : t(locale, 'compare.seeWebsite'),
       b: uniB.applicationDeadline
         ? new Date(uniB.applicationDeadline).toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'long',
             day: 'numeric',
           })
-        : 'See website',
+        : t(locale, 'compare.seeWebsite'),
     },
   ];
 
@@ -236,17 +236,17 @@ export default async function ComparePage({
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
+      { '@type': 'ListItem', position: 1, name: t(locale, 'nav.home'), item: SITE_URL },
       {
         '@type': 'ListItem',
         position: 2,
-        name: 'Universities',
+        name: t(locale, 'nav.universities'),
         item: `${SITE_URL}/universities`,
       },
       {
         '@type': 'ListItem',
         position: 3,
-        name: 'Compare',
+        name: t(locale, 'compare.breadcrumb'),
         item: `${SITE_URL}/universities/compare`,
       },
       {
@@ -316,11 +316,11 @@ export default async function ComparePage({
         <div className="border-b border-gray-200 bg-white">
           <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
             <nav className="flex items-center gap-1.5 text-sm text-gray-500">
-              <Link href="/" className="hover:text-[#9B1B30] transition-colors">Home</Link>
+              <Link href="/" className="hover:text-[#9B1B30] transition-colors">{t(locale, 'nav.home')}</Link>
               <span className="text-gray-300">/</span>
-              <Link href="/universities" className="hover:text-[#9B1B30] transition-colors">Universities</Link>
+              <Link href="/universities" className="hover:text-[#9B1B30] transition-colors">{t(locale, 'nav.universities')}</Link>
               <span className="text-gray-300">/</span>
-              <Link href="/universities/compare" className="hover:text-[#9B1B30] transition-colors">Compare</Link>
+              <Link href="/universities/compare" className="hover:text-[#9B1B30] transition-colors">{t(locale, 'compare.breadcrumb')}</Link>
               <span className="text-gray-300">/</span>
               <span className="text-[#1B2A4A] font-medium truncate">
                 {uniA.name} vs {uniB.name}
@@ -333,17 +333,16 @@ export default async function ComparePage({
         <section className="bg-[#1B2A4A] text-white">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#D4A853] mb-3">
-              University Comparison
+              {t(locale, 'compare.eyebrow')}
             </p>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight">
               {uniA.name} vs {uniB.name}
             </h1>
             <p className="mt-3 text-lg text-gray-300 max-w-3xl">
-              A side-by-side comparison of two of China's top universities. Use the data below
-              to pick the right fit for your program, location, and budget.
+              {t(locale, 'compare.subtitle')}
             </p>
             <p className="mt-2 text-xs text-gray-400">
-              Last updated: {new Date().toISOString().slice(0, 10)} · SICA Editorial Team
+              {t(locale, 'compare.lastUpdated', { date: new Date().toISOString().slice(0, 10) })}
             </p>
           </div>
         </section>
@@ -368,18 +367,18 @@ export default async function ComparePage({
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-[#9B1B30] mb-1">
-                      Option {idx === 0 ? 'A' : 'B'}
+                      {t(locale, idx === 0 ? 'compare.optionA' : 'compare.optionB')}
                     </p>
                     <h2 className="text-lg font-bold text-[#1B2A4A] group-hover:text-[#9B1B30] transition-colors truncate">
                       {u.name}
                     </h2>
                     <p className="text-sm text-gray-600 mt-0.5 flex items-center gap-1.5">
                       <MapPin className="h-3.5 w-3.5 shrink-0" />
-                      {u.city}, China
+                      {u.city}, {t(locale, 'common.china')}
                     </p>
                     <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                       <span className="inline-flex items-center gap-1 bg-[#9B1B30] text-white px-2 py-0.5 font-semibold">
-                        #{u.ranking} China
+                        {t(locale, 'compare.rankingChinaBadge', { ranking: u.ranking })}
                       </span>
                       <span className="inline-flex items-center gap-1 text-[#1B2A4A] font-semibold">
                         <Trophy className="h-3 w-3 fill-[#D4A853] text-[#D4A853]" />
@@ -400,12 +399,12 @@ export default async function ComparePage({
 
         {/* Comparison Table */}
         <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
-          <h2 className="text-2xl font-bold text-[#1B2A4A] mb-6">Key facts</h2>
+          <h2 className="text-2xl font-bold text-[#1B2A4A] mb-6">{t(locale, 'compare.keyFacts')}</h2>
           <div className="bg-white border-2 border-gray-200">
             {/* Header row */}
             <div className="grid grid-cols-[1fr_2fr_2fr] border-b-2 border-gray-200 bg-[#FAFAF8]">
               <div className="p-4 text-xs font-bold uppercase tracking-wider text-gray-500">
-                Attribute
+                {t(locale, 'compare.attribute')}
               </div>
               <div className="p-4 text-sm font-bold text-[#1B2A4A] border-l-2 border-gray-200">
                 {uniA.name}
@@ -458,7 +457,7 @@ export default async function ComparePage({
 
         {/* Programs at each */}
         <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-12">
-          <h2 className="text-2xl font-bold text-[#1B2A4A] mb-6">Popular programs</h2>
+          <h2 className="text-2xl font-bold text-[#1B2A4A] mb-6">{t(locale, 'compare.popularPrograms')}</h2>
           <div className="grid md:grid-cols-2 gap-4">
             {[
               { uni: uniA, programs: programsA },
@@ -467,7 +466,7 @@ export default async function ComparePage({
               <div key={uni.slug} className="bg-white border-2 border-gray-200 p-5">
                 <h3 className="text-sm font-bold text-[#1B2A4A] mb-3 flex items-center gap-2">
                   <GraduationCap className="h-4 w-4" />
-                  Top 5 at {uni.name}
+                  {t(locale, 'compare.top5At', { name: uni.name })}
                 </h3>
                 {programs.length > 0 ? (
                   <ul className="space-y-2">
@@ -482,13 +481,13 @@ export default async function ComparePage({
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-gray-500">Program list coming soon.</p>
+                  <p className="text-sm text-gray-500">{t(locale, 'compare.programsComingSoon')}</p>
                 )}
                 <Link
                   href={`/universities/${uni.slug}`}
                   className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-[#9B1B30] hover:underline"
                 >
-                  See all programs <ArrowRight className="h-3.5 w-3.5" />
+                  {t(locale, 'compare.seeAllPrograms')} <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
               </div>
             ))}
@@ -497,7 +496,7 @@ export default async function ComparePage({
 
         {/* Disciplines */}
         <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-12">
-          <h2 className="text-2xl font-bold text-[#1B2A4A] mb-6">Disciplines offered</h2>
+          <h2 className="text-2xl font-bold text-[#1B2A4A] mb-6">{t(locale, 'compare.disciplinesOffered')}</h2>
           <div className="grid md:grid-cols-2 gap-4">
             {[
               { uni: uniA, disc: discA },
@@ -505,7 +504,7 @@ export default async function ComparePage({
             ].map(({ uni, disc }) => (
               <div key={uni.slug} className="bg-white border-2 border-gray-200 p-5">
                 <h3 className="text-sm font-bold text-[#1B2A4A] mb-3">
-                  {uni.name} disciplines
+                  {t(locale, 'compare.universityDisciplines', { name: uni.name })}
                 </h3>
                 {disc.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
@@ -528,7 +527,7 @@ export default async function ComparePage({
 
         {/* FAQ */}
         <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-12">
-          <h2 className="text-2xl font-bold text-[#1B2A4A] mb-6">FAQ</h2>
+          <h2 className="text-2xl font-bold text-[#1B2A4A] mb-6">{t(locale, 'compare.faq')}</h2>
           <div className="space-y-3">
             {faqSchema.mainEntity.map((f) => (
               <details
@@ -555,25 +554,24 @@ export default async function ComparePage({
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 lg:py-16 text-center">
             <Award className="h-10 w-10 text-[#D4A853] mx-auto mb-4" />
             <h2 className="text-2xl sm:text-3xl font-bold">
-              Ready to apply to {uniA.name} or {uniB.name}?
+              {t(locale, 'compare.ctaTitle', { a: uniA.name, b: uniB.name })}
             </h2>
             <p className="mt-3 text-gray-300 max-w-2xl mx-auto">
-              SICA's team helps you with everything — application prep, scholarship matching,
-              visa documents, and pre-departure. Get a free assessment within 48 hours.
+              {t(locale, 'compare.ctaSubtitle')}
             </p>
             <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
               <Link
                 href={`/assessment?major=${encodeURIComponent(uniA.name + ' / ' + uniB.name)}`}
                 className="inline-flex items-center gap-2 bg-[#9B1B30] hover:bg-[#7A1526] text-white font-semibold px-6 py-2.5 text-sm transition-colors"
               >
-                Get free assessment
+                {t(locale, 'compare.ctaAssessment')}
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href="/universities/compare"
                 className="inline-flex items-center gap-2 border border-white/30 bg-transparent px-6 py-2.5 text-sm font-semibold text-white hover:bg-white/10 transition-colors"
               >
-                Compare other pairs
+                {t(locale, 'compare.ctaOtherPairs')}
               </Link>
             </div>
           </div>

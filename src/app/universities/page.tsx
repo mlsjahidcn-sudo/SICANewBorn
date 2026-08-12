@@ -1,13 +1,17 @@
 import type { Metadata } from 'next';
 import { buildLanguageAlternates } from '@/lib/alternates';
 import { getUniversities } from '@/lib/university-queries';
+import { getServerT } from '@/lib/server-t';
 import UniversitiesClient from './_components/universities-client';
 
-export const metadata: Metadata = {
-  title: 'Universities in China | SICA',
-  description: 'Explore top universities in China for international students. Filter by city, discipline, ranking, and more.',
-  alternates: buildLanguageAlternates('/universities'),
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getServerT();
+  return {
+    title: t('seo.universitiesTitle'),
+    description: t('seo.universitiesDescription'),
+    alternates: buildLanguageAlternates('/universities'),
+  };
+}
 
 export default async function UniversitiesPage() {
   // Fetch on the server so the first paint already contains the grid

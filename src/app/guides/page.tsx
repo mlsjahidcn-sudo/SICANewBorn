@@ -1,8 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowRight, BookOpen, ChevronLeft, ChevronRight, GraduationCap } from 'lucide-react';
-import { cookies } from 'next/headers';
-import type { Locale } from '@/lib/i18n-translations';
+import { getServerT, getServerLocale } from '@/lib/server-t';
 import { guideCards } from '@/lib/guides/hub-data';
 import { GuideIcons } from '@/components/guides/guide-page';
 import { buildLanguageAlternates } from '@/lib/alternates';
@@ -13,22 +12,14 @@ import { SITE_URL } from '@/lib/site-url';
 const LISTICLES_PER_PAGE = 9;
 
 export async function generateMetadata(): Promise<Metadata> {
-  const cookieStore = await cookies();
-  const locale: Locale = cookieStore.get('sica-locale')?.value === 'zh' ? 'zh' : 'en';
-  const isZh = locale === 'zh';
+  const t = await getServerT();
   return {
-    title: isZh
-      ? '中国留学完整指南：申请、签证、生活全攻略'
-      : 'Guides to Studying in China: applications, visas, and student life',
-    description: isZh
-      ? 'SICA指南库：系统讲解来华留学的申请流程、签证办理、奖学金、校园生活与职业发展。'
-      : 'SICA\'s definitive guides to studying in China: applications, visas, scholarships, student life, and career outcomes.',
+    title: t('seo.guidesTitle'),
+    description: t('seo.guidesDescription'),
     alternates: buildLanguageAlternates('/guides'),
     openGraph: {
-      title: isZh ? '中国留学完整指南' : 'SICA Guides',
-      description: isZh
-        ? '系统讲解来华留学的申请流程、签证办理、奖学金、校园生活与职业发展。'
-        : 'The SICA guide library: applications, visas, scholarships, student life.',
+      title: t('seo.guidesOgTitle'),
+      description: t('seo.guidesDescription'),
       url: `${SITE_URL}/guides`,
       type: 'website',
     },
@@ -40,10 +31,8 @@ export default async function GuidesHubPage({
 }: {
   searchParams?: Promise<{ page?: string }>;
 }) {
-  const cookieStore = await cookies();
-  const locale: Locale = cookieStore.get('sica-locale')?.value === 'zh' ? 'zh' : 'en';
+  const [t, locale] = await Promise.all([getServerT(), getServerLocale()]);
   const cards = guideCards[locale];
-  const isZh = locale === 'zh';
 
   // Listicle pagination: 9 cards per page, ?page=N (1-indexed).
   // Process guides section is not paginated — only 6 cards.
@@ -91,16 +80,14 @@ export default async function GuidesHubPage({
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 border border-white/20 mb-6">
               <BookOpen className="w-4 h-4" />
               <span className="text-xs font-semibold uppercase tracking-wider">
-                {isZh ? '指南库' : 'GUIDE LIBRARY'}
+                {t('guides.hero.eyebrow')}
               </span>
             </div>
             <h1 className="text-4xl sm:text-5xl font-bold leading-tight">
-              {isZh ? '中国留学完整指南' : 'The SICA Guide Library'}
+              {t('guides.hero.title')}
             </h1>
             <p className="mt-4 text-lg text-gray-300">
-              {isZh
-                ? '从录取到入学，从校园到职业——每一步的权威指南。'
-                : 'Authoritative, up-to-date guides for every step of your study-in-China journey: from application to arrival, campus to career.'}
+              {t('guides.hero.subtitle')}
             </p>
           </div>
         </div>
@@ -109,18 +96,16 @@ export default async function GuidesHubPage({
       {/* Cards grid — two sections: process guides + listicles */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
         <h2 className="text-2xl font-bold text-[#1B2A4A] mb-2">
-          {isZh ? '24 篇深度指南' : '24 in-depth guides'}
+          {t('guides.sectionTitle')}
         </h2>
         <p className="text-[#4B5563] mb-10">
-          {isZh
-            ? '每篇都含 2,000+ 字深度内容、8+ 个常见问答、8 步实操流程，以及问答片段（FAQ schema）、步骤片段（HowTo schema）和文章元数据，便于 AI 引擎和搜索引擎抓取。'
-            : 'Each guide ships with 2,000+ words of in-depth content, 8+ FAQs, 8-step process, plus FAQPage and HowTo structured data so search engines and AI assistants can extract the answers directly.'}
+          {t('guides.sectionSubtitle')}
         </p>
 
         {/* Section 1: Process guides (the original /guides/* pages) */}
         <div className="mb-12">
           <h3 className="text-xs font-bold uppercase tracking-wider text-[#9B1B30] mb-4">
-            {isZh ? '流程指南 · 10 篇' : 'Process guides · 10 articles'}
+            {t('guides.processTitle')}
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {cards
@@ -152,7 +137,7 @@ export default async function GuidesHubPage({
                         {card.highlight}
                       </span>
                       <span className="text-sm font-medium text-[#9B1B30] flex items-center gap-1 group-hover:gap-2 transition-all">
-                        {isZh ? '阅读' : 'Read'} <ArrowRight className="w-4 h-4" />
+                        {t('guides.read')} <ArrowRight className="w-4 h-4" />
                       </span>
                     </div>
                   </Link>
@@ -165,14 +150,10 @@ export default async function GuidesHubPage({
         <div>
           <div className="flex items-baseline justify-between mb-4">
             <h3 className="text-xs font-bold uppercase tracking-wider text-[#9B1B30]">
-              {isZh
-                ? `排名与对比 · ${allListicles.length} 篇`
-                : `Evergreen lists & best-of guides · ${allListicles.length} articles`}
+              {t('guides.listiclesTitle', { count: allListicles.length })}
             </h3>
             <span className="text-xs text-[#6B7280] uppercase tracking-wider">
-              {isZh
-                ? `第 ${currentPage} / ${totalPages} 页`
-                : `Page ${currentPage} of ${totalPages}`}
+              {t('guides.page', { current: currentPage, total: totalPages })}
             </span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -203,7 +184,7 @@ export default async function GuidesHubPage({
                       {card.highlight}
                     </span>
                     <span className="text-sm font-medium text-[#9B1B30] flex items-center gap-1 group-hover:gap-2 transition-all">
-                      {isZh ? '阅读' : 'Read'} <ArrowRight className="w-4 h-4" />
+                      {t('guides.read')} <ArrowRight className="w-4 h-4" />
                     </span>
                   </div>
                 </Link>
@@ -217,7 +198,7 @@ export default async function GuidesHubPage({
           {totalPages > 1 && (
             <nav
               className="flex items-center justify-center gap-2 mt-10"
-              aria-label={isZh ? '分页' : 'Pagination'}
+              aria-label={t('guides.pagination')}
             >
               {currentPage > 1 && (
                 <Link
@@ -225,7 +206,7 @@ export default async function GuidesHubPage({
                   className="inline-flex items-center gap-1 px-4 py-2 border-2 border-gray-300 hover:border-[#1B2A4A] text-sm font-medium text-[#1B2A4A] transition-colors"
                 >
                   <ChevronLeft className="w-4 h-4" />
-                  {isZh ? '上一页' : 'Previous'}
+                  {t('guides.previous')}
                 </Link>
               )}
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
@@ -251,7 +232,7 @@ export default async function GuidesHubPage({
                   href={`/guides?page=${currentPage + 1}`}
                   className="inline-flex items-center gap-1 px-4 py-2 border-2 border-gray-300 hover:border-[#1B2A4A] text-sm font-medium text-[#1B2A4A] transition-colors"
                 >
-                  {isZh ? '下一页' : 'Next'}
+                  {t('guides.next')}
                   <ChevronRight className="w-4 h-4" />
                 </Link>
               )}
@@ -264,38 +245,23 @@ export default async function GuidesHubPage({
       <section className="bg-white border-t-2 border-gray-200">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
           <h2 className="text-2xl font-bold text-[#1B2A4A] mb-3">
-            {isZh ? '指南里有什么' : "What's inside every guide"}
+            {t('guides.insideTitle')}
           </h2>
           <p className="text-[#4B5563] mb-6 max-w-3xl">
-            {isZh
-              ? '每篇指南都是为搜索引擎和 AI 引擎（ChatGPT、Perplexity、Gemini、Google AI Overviews）优化过的：'
-              : 'Every guide is engineered for both classic search and AI engines (ChatGPT, Perplexity, Gemini, Google AI Overviews):'}
+            {t('guides.insideSubtitle')}
           </p>
           <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {(isZh
-              ? [
-                  '顶部 100 字 TL;DR 直接答案',
-                  '关键要点侧边栏',
-                  '目录锚点',
-                  '结构化 H2/H3 标题',
-                  '表格与编号列表',
-                  '8+ 步 HowTo 流程',
-                  '6-8 个 FAQ 含 Q&A',
-                  'Article / FAQPage / HowTo schema',
-                  '中英双语版本',
-                ]
-              : [
-                  '100-word TL;DR direct answer at the top',
-                  'Key takeaways sidebar',
-                  'Anchor-linked table of contents',
-                  'H2/H3 heading hierarchy',
-                  'Tables and numbered lists',
-                  '8+ step HowTo process',
-                  '6-8 Q&A FAQ block',
-                  'Article + FAQPage + HowTo JSON-LD',
-                  'Bilingual EN/ZH versions',
-                ]
-            ).map((item, i) => (
+            {[
+              t('guides.inside.tldr'),
+              t('guides.inside.takeaways'),
+              t('guides.inside.toc'),
+              t('guides.inside.headings'),
+              t('guides.inside.tables'),
+              t('guides.inside.howTo'),
+              t('guides.inside.faq'),
+              t('guides.inside.schema'),
+              t('guides.inside.bilingual'),
+            ].map((item, i) => (
               <li
                 key={i}
                 className="flex items-start gap-2 text-sm text-[#374151] leading-relaxed"
@@ -316,25 +282,23 @@ export default async function GuidesHubPage({
           <div className="text-center max-w-2xl mx-auto">
             <GraduationCap className="w-10 h-10 text-[#D4A853] mx-auto mb-3" />
             <h2 className="text-2xl sm:text-3xl font-bold mb-3">
-              {isZh ? '不想自己 DIY？让 SICA 帮你走完流程' : 'Prefer not to DIY? Let SICA handle the workflow.'}
+              {t('guides.cta.title')}
             </h2>
             <p className="text-gray-300 mb-6">
-              {isZh
-                ? 'SICA 顾问会帮你筛选学校、整理材料、申请奖学金、办签证。从匹配项目到入学，我们全程跟进。'
-                : 'SICA counselors help you shortlist universities, compile documents, apply for scholarships, and handle the visa. From matching to enrollment, we are with you every step.'}
+              {t('guides.cta.subtitle')}
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3">
               <Link
                 href="/assessment"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-[#9B1B30] hover:bg-[#7A1526] text-white text-sm font-semibold uppercase tracking-wider transition-colors"
               >
-                {isZh ? '开始免费评估' : 'Start free assessment'} <ArrowRight className="w-4 h-4" />
+                {t('guides.cta.assessment')} <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
                 href="/contact"
                 className="inline-flex items-center gap-2 px-6 py-3 border-2 border-white/30 hover:border-white text-white text-sm font-semibold uppercase tracking-wider transition-colors"
               >
-                {isZh ? '联系顾问' : 'Talk to a counselor'}
+                {t('guides.cta.contact')}
               </Link>
             </div>
           </div>

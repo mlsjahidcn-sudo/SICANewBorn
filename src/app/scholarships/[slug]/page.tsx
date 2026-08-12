@@ -20,9 +20,9 @@ export default function ScholarshipDetailPage() {
     return (
       <main className="min-h-screen bg-[#FAFAF8] flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">Scholarship Not Found</h1>
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">{t('schol.notFoundTitle')}</h1>
           <Link href="/scholarships" className="text-[#9B1B30] hover:underline">
-            Back to Scholarships
+            {t('schol.backToList')}
           </Link>
         </div>
       </main>
@@ -101,7 +101,7 @@ export default function ScholarshipDetailPage() {
       {/* Breadcrumb */}
       <div className="max-w-7xl mx-auto px-6 py-4">
         <nav className="flex items-center gap-2 text-sm text-gray-500">
-          <Link href="/" className="hover:text-[#9B1B30] transition-colors">Home</Link>
+          <Link href="/" className="hover:text-[#9B1B30] transition-colors">{t('nav.home')}</Link>
           <ChevronRight className="w-3.5 h-3.5" />
           <Link href="/scholarships" className="hover:text-[#9B1B30] transition-colors">{t('nav.scholarships')}</Link>
           <ChevronRight className="w-3.5 h-3.5" />
@@ -161,7 +161,7 @@ export default function ScholarshipDetailPage() {
                 <Gift className="w-3.5 h-3.5" />
                 {t('schol.coverage')}
               </div>
-              <p className="text-sm font-medium text-white">{coverageItems.length} {locale === 'zh' ? '项资助' : 'items'}</p>
+              <p className="text-sm font-medium text-white">{t('schol.items', { count: coverageItems.length })}</p>
             </div>
           </div>
         </div>
@@ -355,19 +355,19 @@ export default function ScholarshipDetailPage() {
               <ul className="space-y-2 mb-6">
                 <li className="flex items-center gap-2 text-sm text-gray-200">
                   <FileText className="w-4 h-4 text-[#D4A853]" />
-                  {locale === 'zh' ? '奖学金匹配与选校建议' : 'Scholarship matching & selection'}
+                  {t('schol.matchingAndSelection')}
                 </li>
                 <li className="flex items-center gap-2 text-sm text-gray-200">
                   <FileText className="w-4 h-4 text-[#D4A853]" />
-                  {locale === 'zh' ? '申请材料审核与润色' : 'Application review & polishing'}
+                  {t('schol.applicationReview')}
                 </li>
                 <li className="flex items-center gap-2 text-sm text-gray-200">
                   <FileText className="w-4 h-4 text-[#D4A853]" />
-                  {locale === 'zh' ? '面试辅导与模拟' : 'Interview coaching & prep'}
+                  {t('schol.interviewCoaching')}
                 </li>
                 <li className="flex items-center gap-2 text-sm text-gray-200">
                   <HeartHandshake className="w-4 h-4 text-[#D4A853]" />
-                  {locale === 'zh' ? '全程免费服务' : '100% Free service'}
+                  {t('schol.freeService')}
                 </li>
               </ul>
               <Button className="w-full bg-[#9B1B30] hover:bg-[#7A1526] text-white rounded-none font-bold uppercase tracking-wide text-sm">

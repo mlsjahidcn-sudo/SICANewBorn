@@ -21,6 +21,7 @@ interface Props {
     message: string;
     messagePlaceholder: string;
     submit: string;
+    sending: string;
     subjectGeneral: string;
     subjectApplication: string;
     subjectScholarship: string;
@@ -222,7 +223,7 @@ export function ContactForm({ formTitle, labels, successMessages }: Props) {
             {status === 'submitting' ? (
               <>
                 <Spinner size="sm" />
-                Sending…
+                {labels.sending}
               </>
             ) : (
               labels.submit

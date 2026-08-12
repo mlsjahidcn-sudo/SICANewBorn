@@ -2,13 +2,17 @@ import type { Metadata } from 'next';
 import { buildLanguageAlternates } from '@/lib/alternates';
 import { getPrograms } from '@/lib/program-queries';
 import { getUniversities } from '@/lib/university-queries';
+import { getServerT } from '@/lib/server-t';
 import ProgramsClient from './_components/programs-client';
 
-export const metadata: Metadata = {
-  title: 'Programs in China | SICA',
-  description: 'Explore degree programs at Chinese universities for international students. Filter by degree, language, discipline, and university.',
-  alternates: buildLanguageAlternates('/programs'),
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getServerT();
+  return {
+    title: t('seo.programsTitle'),
+    description: t('seo.programsDescription'),
+    alternates: buildLanguageAlternates('/programs'),
+  };
+}
 
 export default async function ProgramsPage() {
   // Fetch on the server so the first paint already contains the grid

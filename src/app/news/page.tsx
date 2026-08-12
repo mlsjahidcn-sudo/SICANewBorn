@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { ArrowRight, Calendar, Clock, ChevronRight, Newspaper, X, Tag } from 'lucide-react';
 import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
 import { buildLanguageAlternates } from '@/lib/alternates';
+import { getServerT, getServerLocale } from '@/lib/server-t';
 
 import { SITE_URL } from '@/lib/site-url';
 interface NewsRow {
@@ -21,13 +22,13 @@ interface NewsRow {
   read_time_minutes: number | null;
 }
 
-const CATEGORY_LABEL: Record<string, string> = {
-  announcement: 'Announcement',
-  partnership: 'Partnership',
-  scholarship: 'Scholarship',
-  university: 'University news',
-  event: 'Event',
-  guide: 'Study guide',
+const categoryKeys: Record<string, string> = {
+  announcement: 'news.category.announcement',
+  partnership: 'news.category.partnership',
+  scholarship: 'news.category.scholarship',
+  university: 'news.category.university',
+  event: 'news.category.event',
+  guide: 'news.category.guide',
 };
 
 export const dynamic = 'force-dynamic';
@@ -51,14 +52,14 @@ export async function generateMetadata(
   // doesn't get out of sync with the query string.
   props: { searchParams: Promise<{ tag?: string }> },
 ): Promise<Metadata> {
-  const sp = await props.searchParams;
+  const [t, sp] = await Promise.all([getServerT(), props.searchParams]);
   const tag = sp.tag;
   const title = tag
-    ? `SICA News — "${tag}" articles`
-    : 'SICA News — Study in China Updates';
+    ? t('seo.newsTaggedTitle', { tag })
+    : t('seo.newsTitle');
   const description = tag
-    ? `SICA news posts tagged "${tag}". Updates on Chinese universities, scholarships, partnerships, and study-in-China guides.`
-    : 'Latest news on Chinese universities, scholarships, partnerships, and study-in-China guides. Curated by the SICA Editorial Team.';
+    ? t('seo.newsTaggedDescription', { tag })
+    : t('seo.newsDescription');
   const canonical = tag
     ? `${SITE_URL}/news?tag=${encodeURIComponent(tag)}`
     : `${SITE_URL}/news`;
@@ -79,7 +80,11 @@ export default async function NewsIndexPage(
   // is fine.
   props: { searchParams: Promise<{ tag?: string; q?: string }> },
 ) {
-  const sp = await props.searchParams;
+  const [t, locale, sp] = await Promise.all([
+    getServerT(),
+    getServerLocale(),
+    props.searchParams,
+  ]);
   const activeTag = (sp.tag || '').trim();
   const activeQuery = (sp.q || '').trim();
   const allPosts = await fetchPublishedPosts();
@@ -100,7 +105,7 @@ export default async function NewsIndexPage(
     }
     if (activeQuery) {
       const q = activeQuery.toLowerCase();
-      const hay = `${p.title_en} ${p.title_zh || ''} ${p.excerpt_en || ''} ${p.category}`.toLowerCase();
+      const hay = `${p.title_en} ${p.title_zh || ''} ${p.excerpt_en || ''} ${p.excerpt_zh || ''} ${p.category}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
@@ -122,8 +127,8 @@ export default async function NewsIndexPage(
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
-      { '@type': 'ListItem', position: 2, name: 'News' },
+      { '@type': 'ListItem', position: 1, name: t('nav.home'), item: SITE_URL },
+      { '@type': 'ListItem', position: 2, name: t('news.breadcrumb') },
     ],
   };
 
@@ -139,9 +144,9 @@ export default async function NewsIndexPage(
         <div className="border-b border-gray-200 bg-white">
           <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
             <nav className="flex items-center gap-1.5 text-sm text-gray-500">
-              <Link href="/" className="hover:text-[#9B1B30] transition-colors">Home</Link>
+              <Link href="/" className="hover:text-[#9B1B30] transition-colors">{t('nav.home')}</Link>
               <ChevronRight className="h-3.5 w-3.5" />
-              <span className="text-[#1B2A4A] font-medium">News</span>
+              <span className="text-[#1B2A4A] font-medium">{t('news.breadcrumb')}</span>
             </nav>
           </div>
         </div>
@@ -151,23 +156,25 @@ export default async function NewsIndexPage(
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-[#D4A853] mb-3">
               <Newspaper className="h-4 w-4" />
-              Newsroom
+              {t('news.hero.eyebrow')}
             </div>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight">
               {activeTag ? (
-                <>SICA News · <span className="text-[#D4A853]">"{activeTag}"</span></>
+                <>{t('news.hero.titleTagged', { tag: activeTag })}</>
               ) : (
-                'SICA News'
+                t('news.hero.title')
               )}
             </h1>
             <p className="mt-3 text-lg text-gray-300 max-w-3xl">
-              Updates on Chinese universities, scholarships, partnerships, and
-              study-in-China guides — written by the SICA Editorial Team.
+              {t('news.hero.subtitle')}
             </p>
             <p className="mt-3 text-xs text-gray-400">
-              {posts.length} {posts.length === 1 ? 'article' : 'articles'}
-              {activeTag ? ` tagged "${activeTag}"` : ''}
-              {activeQuery ? ` matching "${activeQuery}"` : ''}
+              {t('news.articleCount', {
+                count: posts.length,
+                articleLabel: t(posts.length === 1 ? 'news.articleCountSingular' : 'news.articleCountPlural'),
+              })}
+              {activeTag ? t('news.articleCountTagged', { tag: activeTag }) : ''}
+              {activeQuery ? t('news.articleCountMatching', { query: activeQuery }) : ''}
             </p>
           </div>
         </section>
@@ -179,7 +186,7 @@ export default async function NewsIndexPage(
               <div className="flex items-center gap-3 flex-wrap">
                 <div className="flex items-center gap-1.5 text-xs text-gray-500 shrink-0">
                   <Tag className="h-3.5 w-3.5" />
-                  <span className="font-semibold uppercase tracking-wider">Topics:</span>
+                  <span className="font-semibold uppercase tracking-wider">{t('news.topics')}</span>
                 </div>
                 {topTags.map(([tag, n]) => {
                   const isActive = tag.toLowerCase() === activeTag.toLowerCase();
@@ -206,7 +213,7 @@ export default async function NewsIndexPage(
                     className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-gray-500 hover:text-[#9B1B30] transition-colors"
                   >
                     <X className="h-3.5 w-3.5" />
-                    Clear
+                    {t('news.clear')}
                   </Link>
                 )}
               </div>
@@ -221,15 +228,15 @@ export default async function NewsIndexPage(
               <Newspaper className="h-12 w-12 text-gray-300 mx-auto mb-3" />
               <p className="text-gray-500">
                 {activeTag
-                  ? `No articles tagged "${activeTag}" yet.`
-                  : 'No news posts yet. Check back soon.'}
+                  ? t('news.noArticlesTagged', { tag: activeTag })
+                  : t('news.noArticles')}
               </p>
               {activeTag && (
                 <Link
                   href="/news"
                   className="inline-block mt-3 text-sm font-semibold text-[#9B1B30] hover:underline"
                 >
-                  See all news →
+                  {t('news.seeAll')}
                 </Link>
               )}
             </div>
@@ -243,7 +250,7 @@ export default async function NewsIndexPage(
                   <div className="p-5 flex-1 flex flex-col">
                     <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
                       <span className="font-semibold uppercase tracking-wider text-[#9B1B30]">
-                        {CATEGORY_LABEL[post.category] || post.category}
+                        {t(categoryKeys[post.category] || 'news.category.announcement')}
                       </span>
                       {post.published_at && (
                         <>
@@ -263,20 +270,20 @@ export default async function NewsIndexPage(
                           <span>·</span>
                           <span className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
-                            {post.read_time_minutes} min read
+                            {t('news.minRead', { minutes: post.read_time_minutes })}
                           </span>
                         </>
                       ) : null}
                     </div>
                     <h2 className="font-bold text-[#1B2A4A] group-hover:text-[#9B1B30] transition-colors leading-snug">
                       <Link href={`/news/${post.slug}`} className="hover:text-[#9B1B30]">
-                        {post.title_en}
+                        {locale === 'zh' && post.title_zh ? post.title_zh : post.title_en}
                       </Link>
                     </h2>
-                    {post.excerpt_en && (
+                    {(locale === 'zh' ? post.excerpt_zh : post.excerpt_en) && (
                       <Link href={`/news/${post.slug}`} className="block">
                         <p className="mt-2 text-sm text-gray-600 line-clamp-3 flex-1 hover:text-gray-800">
-                          {post.excerpt_en}
+                          {locale === 'zh' && post.excerpt_zh ? post.excerpt_zh : post.excerpt_en}
                         </p>
                       </Link>
                     )}
@@ -304,7 +311,7 @@ export default async function NewsIndexPage(
                       href={`/news/${post.slug}`}
                       className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-[#9B1B30] hover:underline self-start"
                     >
-                      Read more
+                      {t('news.readMore')}
                       <ArrowRight className="h-3 w-3" />
                     </Link>
                   </div>

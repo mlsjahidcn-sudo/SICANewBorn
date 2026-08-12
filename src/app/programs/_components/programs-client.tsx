@@ -274,7 +274,7 @@ export default function ProgramsClient({ initialPrograms, initialUniversities }:
                 />
                 <Award className="h-4 w-4 text-[#9B1B30]" />
                 <span className="text-[#1B2A4A] font-medium">
-                  {locale === 'zh' ? '仅奖学金' : 'Scholarship'}
+                  {t('prog.scholarshipOnly')}
                 </span>
               </label>
               <select
@@ -282,9 +282,9 @@ export default function ProgramsClient({ initialPrograms, initialUniversities }:
                 onChange={(e) => setSortBy(e.target.value as 'default' | 'tuition' | 'name')}
                 className="rounded-none border border-gray-200 bg-white px-3 py-2.5 text-sm focus:border-[#9B1B30] focus:outline-none"
               >
-                <option value="default">{t('prog.sortBy')}: {locale === 'zh' ? '默认' : 'Default'}</option>
+                <option value="default">{t('prog.sortBy')}: {t('prog.default')}</option>
                 <option value="tuition">{t('prog.sortBy')}: {t('prog.tuition')}</option>
-                <option value="name">{t('prog.sortBy')}: {locale === 'zh' ? '名称' : 'Name'}</option>
+                <option value="name">{t('prog.sortBy')}: {t('prog.name')}</option>
               </select>
             </div>
           </div>
@@ -326,7 +326,7 @@ export default function ProgramsClient({ initialPrograms, initialUniversities }:
           <div className="py-20 text-center border border-dashed border-gray-200 bg-white">
             <Filter className="mx-auto h-10 w-10 text-gray-300" />
             <h3 className="mt-4 text-lg font-semibold text-[#1B2A4A]">
-              {locale === 'en' ? 'No programs match your filters' : '没有符合筛选条件的项目'}
+              {t('prog.noResults')}
             </h3>
             <p className="mt-2 text-sm text-gray-500 max-w-md mx-auto">
               {t('filter.suggestion')}
@@ -345,7 +345,7 @@ export default function ProgramsClient({ initialPrograms, initialUniversities }:
                   onClick={(e) => { e.preventDefault(); clearAll(); }}
                   className="text-sm text-gray-600 hover:text-[#9B1B30] underline underline-offset-2"
                 >
-                  {locale === 'en' ? 'or click here' : '或点击此处'}
+                  {t('prog.orClickHere')}
                 </Link>
               </div>
             )}

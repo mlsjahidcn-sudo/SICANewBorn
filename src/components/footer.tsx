@@ -81,7 +81,7 @@ export function Footer() {
             <div>
               <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.25em] text-[#D4A853] mb-2">
                 <Send className="h-3.5 w-3.5" />
-                Newsletter
+                {t('footer.newsletterLabel')}
               </div>
               <h2 className="text-2xl sm:text-3xl font-bold text-white leading-tight">
                 {t('footer.newsletterTitle')}
@@ -222,7 +222,7 @@ export function Footer() {
               <FooterLink href="/universities">{t('nav.universities')}</FooterLink>
               <FooterLink href="/programs">{t('nav.programs')}</FooterLink>
               <FooterLink href="/scholarships">{t('nav.scholarships')}</FooterLink>
-              <FooterLink href="/news">{locale === 'en' ? 'News' : '新闻'}</FooterLink>
+              <FooterLink href="/news">{t('footer.news')}</FooterLink>
             </ul>
           </div>
 
@@ -237,7 +237,7 @@ export function Footer() {
               <FooterLink href="/guides/scholarships">
                 {t('footer.scholarshipGuide')}
               </FooterLink>
-              <FooterLink href="/assessment">{locale === 'en' ? 'Free Assessment' : '免费评估'}</FooterLink>
+              <FooterLink href="/assessment">{t('footer.freeAssessment')}</FooterLink>
             </ul>
           </div>
 
@@ -249,10 +249,10 @@ export function Footer() {
                 {t('footer.livingGuide')}
               </FooterLink>
               <FooterLink href="/guides/accommodation">
-                {locale === 'en' ? 'Accommodation' : '住宿'}
+                {t('footer.accommodation')}
               </FooterLink>
               <FooterLink href="/guides">
-                {locale === 'en' ? 'All guides' : '全部指南'}
+                {t('footer.allGuides')}
               </FooterLink>
               {/* Phase 2: Whop community link. The link is the actual
                   conversion — opens in a new tab since Whop owns the
@@ -269,7 +269,7 @@ export function Footer() {
                   className="text-sm text-gray-600 hover:text-[#9B1B30] transition-colors inline-flex items-center gap-1.5 group"
                 >
                   <span className="h-0.5 w-0 bg-[#9B1B30] group-hover:w-3 transition-all duration-200" />
-                  {locale === 'en' ? 'Whop community' : 'Whop 社区'}
+                  {t('footer.whopCommunity')}
                 </a>
               </li>
               <FooterLink href="/contact">
@@ -312,7 +312,7 @@ export function Footer() {
               </span>
               <span>
                 <span className="block text-[10px] uppercase tracking-wider text-gray-500 font-semibold">
-                  WhatsApp / {locale === 'en' ? 'Phone' : '电话'}
+                  WhatsApp / {t('footer.phone')}
                 </span>
                 <span className="font-medium">+86 173 2576 4171</span>
               </span>
@@ -323,10 +323,10 @@ export function Footer() {
               </span>
               <span>
                 <span className="block text-[10px] uppercase tracking-wider text-gray-500 font-semibold">
-                  {locale === 'en' ? 'Headquarters' : '总部'}
+                  {t('footer.headquarters')}
                 </span>
                 <span className="font-medium">
-                  {locale === 'en' ? 'Guangzhou, China' : '中国广州'}
+                  {t('footer.guangzhouChina')}
                 </span>
               </span>
             </div>

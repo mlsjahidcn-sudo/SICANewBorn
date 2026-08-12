@@ -59,6 +59,7 @@ export default async function ContactPage() {
                 message: t('contact.message'),
                 messagePlaceholder: t('contact.messagePlaceholder'),
                 submit: t('contact.submit'),
+                sending: t('contact.sending'),
                 subjectGeneral: t('contact.subjectGeneral'),
                 subjectApplication: t('contact.subjectApplication'),
                 subjectScholarship: t('contact.subjectScholarship'),
@@ -66,9 +67,9 @@ export default async function ContactPage() {
                 subjectOther: t('contact.subjectOther'),
               }}
               successMessages={{
-                title: 'Message Sent!',
-                body: 'Thank you for reaching out. Our team will get back to you within 24 hours.',
-                sendAnother: 'Send Another Message',
+                title: t('contact.successTitle'),
+                body: t('contact.successBody'),
+                sendAnother: t('contact.sendAnother'),
               }}
             />
           </div>
@@ -117,7 +118,7 @@ export default async function ContactPage() {
             <div className="bg-white border border-gray-200 p-6">
               <h3 className="text-lg font-bold text-[#1F2937] mb-4 flex items-center gap-2">
                 <MessageCircle className="h-5 w-5 text-[#1B2A4A]" />
-                Chat With Us
+                {t('contact.chatWithUs')}
               </h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-center">

@@ -94,7 +94,7 @@ export default function ScholarshipsClient({ initialScholarships }: Scholarships
     const label = idx >= 0 ? (locale === 'zh' ? scholarshipTypesCn[idx] : typeFilter) : typeFilter;
     activeFilters.push({
       key: 'type',
-      label: `${locale === 'zh' ? '类型' : 'Type'}: ${label}`,
+      label: `${t('schol.type')}: ${label}`,
       clear: () => setTypeFilter('all'),
     });
   }
@@ -103,7 +103,7 @@ export default function ScholarshipsClient({ initialScholarships }: Scholarships
     const label = idx >= 0 ? (locale === 'zh' ? scholarshipDegreeLevelsCn[idx] : levelFilter) : levelFilter;
     activeFilters.push({
       key: 'level',
-      label: `${locale === 'zh' ? '学位' : 'Level'}: ${label}`,
+      label: `${t('schol.degreeLevels')}: ${label}`,
       clear: () => setLevelFilter('all'),
     });
   }
@@ -134,15 +134,15 @@ export default function ScholarshipsClient({ initialScholarships }: Scholarships
           <div className="mt-6 flex flex-wrap gap-8">
             <div>
               <div className="text-3xl font-bold text-white">10+</div>
-              <div className="text-sm text-gray-400">National Scholarships</div>
+              <div className="text-sm text-gray-400">{t('schol.heroStats.national')}</div>
             </div>
             <div>
               <div className="text-3xl font-bold text-white">Full &amp; Partial</div>
-              <div className="text-sm text-gray-400">Coverage Options</div>
+              <div className="text-sm text-gray-400">{t('schol.heroStats.coverage')}</div>
             </div>
             <div>
               <div className="text-3xl font-bold text-white">All Levels</div>
-              <div className="text-sm text-gray-400">Bachelor / Master / PhD</div>
+              <div className="text-sm text-gray-400">{t('schol.heroStats.levels')}</div>
             </div>
           </div>
         </div>
@@ -204,7 +204,7 @@ export default function ScholarshipsClient({ initialScholarships }: Scholarships
         {hasAnyFilter && (
           <div className="max-w-7xl mx-auto mt-3 flex items-center gap-2 flex-wrap">
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              {locale === 'en' ? 'Active filters' : '已选筛选'}:
+              {t('filter.activeFilters')}:
             </span>
             {activeFilters.map((f) => (
               <button
@@ -222,7 +222,7 @@ export default function ScholarshipsClient({ initialScholarships }: Scholarships
               onClick={clearAll}
               className="text-xs font-semibold text-[#1B2A4A] hover:text-[#9B1B30] underline underline-offset-2"
             >
-              {locale === 'en' ? 'Clear all' : '清除全部'}
+              {t('filter.clearAll')}
             </button>
           </div>
         )}
@@ -330,7 +330,7 @@ export default function ScholarshipsClient({ initialScholarships }: Scholarships
         {paginated.length === 0 && (
           <div className="text-center py-16 text-gray-400">
             <Filter className="w-12 h-12 mx-auto mb-3 opacity-50" />
-            <p>No scholarships found matching your criteria.</p>
+            <p>{t('schol.noResults')}</p>
           </div>
         )}
 

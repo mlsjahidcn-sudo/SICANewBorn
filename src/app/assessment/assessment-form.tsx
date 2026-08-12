@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 
 interface Props {
+  t: (key: string, params?: Record<string, string | number>) => string;
   successMessages: {
     title: string;
     body1: string;
@@ -38,16 +39,17 @@ const ALLOWED_EXTENSIONS = '.pdf, .png, .jpg, .jpeg';
 // Step metadata. The wizard always advances forward and lets the
 // user jump back to fix earlier answers; it never loses data
 // because the underlying form is uncontrolled.
-const STEPS = [
-  { key: 'personal', label: 'Personal', icon: User, desc: 'Your contact details' },
-  { key: 'education', label: 'Education', icon: GraduationCap, desc: 'Your study background' },
-  { key: 'documents', label: 'Documents', icon: Upload, desc: 'Upload transcript' },
-  { key: 'notes', label: 'Submit', icon: FileText, desc: 'Add notes & send' },
+const getSteps = (t: Props['t']) => [
+  { key: 'personal', label: t('assessment.step.personal'), icon: User, desc: t('assessment.step.personalDesc') },
+  { key: 'education', label: t('assessment.step.education'), icon: GraduationCap, desc: t('assessment.step.educationDesc') },
+  { key: 'documents', label: t('assessment.step.documents'), icon: Upload, desc: t('assessment.step.documentsDesc') },
+  { key: 'notes', label: t('assessment.step.submit'), icon: FileText, desc: t('assessment.step.submitDesc') },
 ] as const;
 
-export function AssessmentForm({ successMessages }: Props) {
+export function AssessmentForm({ t, successMessages }: Props) {
   const router = useRouter();
   const { locale } = useI18n();
+  const STEPS = getSteps(t);
   // If the user arrived on /assessment from a university
   // detail page's "Apply" CTA (Phase 24 wired ?interest=<slug>
   // into the redirect chain), pass it through to the
@@ -241,12 +243,12 @@ export function AssessmentForm({ successMessages }: Props) {
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      setErrorMsg('File too large. Maximum size is 10MB.');
+      setErrorMsg(t('assessment.error.fileTooLarge'));
       setUploadStatus('failed');
       return;
     }
     if (!ALLOWED_TYPES.includes(file.type)) {
-      setErrorMsg('Invalid file type. Use PDF, PNG, or JPG.');
+      setErrorMsg(t('assessment.error.invalidFileType'));
       setUploadStatus('failed');
       return;
     }
@@ -254,7 +256,7 @@ export function AssessmentForm({ successMessages }: Props) {
     setSelectedFile(file);
     setErrorMsg('');
     setUploadStatus('uploading');
-    setUploadProgress('Preparing upload…');
+    setUploadProgress(t('assessment.transcript.preparing'));
 
     try {
       // Step 1: Get signed upload URL from the server. We do NOT create an
@@ -271,7 +273,7 @@ export function AssessmentForm({ successMessages }: Props) {
       });
       if (!urlRes.ok) {
         const body = await urlRes.json().catch(() => ({}));
-        throw new Error((body as { error?: string }).error || 'Failed to prepare upload');
+        throw new Error((body as { error?: string }).error || t('assessment.error.prepareUpload'));
       }
       const { uploadUrl, storagePath: path } = (await urlRes.json()) as {
         uploadUrl: string;
@@ -279,7 +281,7 @@ export function AssessmentForm({ successMessages }: Props) {
       };
 
       // Step 2: Upload directly to Supabase Storage
-      setUploadProgress('Uploading file…');
+      setUploadProgress(t('assessment.transcript.uploading'));
       const uploadRes = await fetch(uploadUrl, {
         method: 'PUT',
         headers: { 'Content-Type': file.type },
@@ -291,10 +293,10 @@ export function AssessmentForm({ successMessages }: Props) {
 
       setStoragePath(path);
       setUploadStatus('done');
-      setUploadProgress(`✓ ${file.name} uploaded`);
+      setUploadProgress(t('assessment.transcript.uploaded', { fileName: file.name }));
     } catch (err) {
       setUploadStatus('failed');
-      setErrorMsg(err instanceof Error ? err.message : 'Upload failed');
+      setErrorMsg(err instanceof Error ? err.message : t('assessment.error.uploadFailed'));
     }
   };
 
@@ -377,7 +379,7 @@ export function AssessmentForm({ successMessages }: Props) {
         router.push(thankYouUrl);
       }, 250);
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : 'Submission failed');
+      setErrorMsg(err instanceof Error ? err.message : t('assessment.error.submitFailed'));
       setStatus('error');
     }
   };
@@ -410,10 +412,10 @@ export function AssessmentForm({ successMessages }: Props) {
   // ── Wizard ────────────────────────────────────────────────────
   return (
     <div className="bg-white border border-gray-200 p-6 sm:p-8">
-      <h2 className="text-xl font-bold text-[#1F2937] mb-6">Submit Your Assessment</h2>
+      <h2 className="text-xl font-bold text-[#1F2937] mb-6">{t('assessment.form.title')}</h2>
 
       {/* Progress indicator */}
-      <ol className="flex items-center gap-2 mb-6" aria-label="Progress">
+      <ol className="flex items-center gap-2 mb-6" aria-label={t('assessment.progress', { current: currentStep + 1, total: STEPS.length, label: STEPS[currentStep].label })}>
         {STEPS.map((s, i) => {
           const isDone = i < currentStep;
           const isCurrent = i === currentStep;
@@ -482,11 +484,11 @@ export function AssessmentForm({ successMessages }: Props) {
           <div>
             <h3 className="text-base font-semibold text-[#1F2937] mb-4 flex items-center gap-2">
               <User className="h-4 w-4 text-[#1B2A4A]" />
-              Personal Information
+              {t('assessment.personalInfo.title')}
             </h3>
             <div className="grid sm:grid-cols-2 gap-5">
               <div>
-                <label className="block text-sm font-medium text-[#1F2937] mb-1">First Name *</label>
+                <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('assessment.firstName')} *</label>
                 <input
                   ref={firstNameRef}
                   type="text"
@@ -497,7 +499,7 @@ export function AssessmentForm({ successMessages }: Props) {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#1F2937] mb-1">Last Name *</label>
+                <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('assessment.lastName')} *</label>
                 <input
                   ref={lastNameRef}
                   type="text"
@@ -510,7 +512,7 @@ export function AssessmentForm({ successMessages }: Props) {
             </div>
             <div className="grid sm:grid-cols-2 gap-5 mt-5">
               <div>
-                <label className="block text-sm font-medium text-[#1F2937] mb-1">Email *</label>
+                <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('assessment.email')} *</label>
                 <input
                   ref={emailRef}
                   type="email"
@@ -521,7 +523,7 @@ export function AssessmentForm({ successMessages }: Props) {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#1F2937] mb-1">WhatsApp *</label>
+                <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('assessment.whatsapp')} *</label>
                 <input
                   ref={whatsappRef}
                   type="tel"
@@ -534,7 +536,7 @@ export function AssessmentForm({ successMessages }: Props) {
             </div>
             <div className="grid sm:grid-cols-2 gap-5 mt-5">
               <div>
-                <label className="block text-sm font-medium text-[#1F2937] mb-1">Country *</label>
+                <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('assessment.country')} *</label>
                 <input
                   ref={countryRef}
                   type="text"
@@ -545,7 +547,7 @@ export function AssessmentForm({ successMessages }: Props) {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#1F2937] mb-1">Date of Birth *</label>
+                <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('assessment.dateOfBirth')} *</label>
                 <input
                   ref={dateOfBirthRef}
                   type="date"
@@ -563,11 +565,11 @@ export function AssessmentForm({ successMessages }: Props) {
           <div>
             <h3 className="text-base font-semibold text-[#1F2937] mb-4 flex items-center gap-2">
               <GraduationCap className="h-4 w-4 text-[#1B2A4A]" />
-              Education Background
+              {t('assessment.education.title')}
             </h3>
             <div className="grid sm:grid-cols-2 gap-5">
               <div>
-                <label className="block text-sm font-medium text-[#1F2937] mb-1">Current Education *</label>
+                <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('assessment.currentEducation')} *</label>
                 <select
                   ref={currentEducationRef}
                   name="currentEducation"
@@ -575,15 +577,15 @@ export function AssessmentForm({ successMessages }: Props) {
                   defaultValue=""
                   className="w-full border border-gray-300 px-4 py-2.5 text-sm text-[#1F2937] bg-white rounded-none focus:border-[#9B1B30] focus:outline-none focus:ring-1 focus:ring-[#9B1B30]"
                 >
-                  <option value="">Select...</option>
-                  <option value="High School">High School</option>
-                  <option value="Bachelor">Bachelor's Degree</option>
-                  <option value="Master">Master's Degree</option>
-                  <option value="Other">Other</option>
+                  <option value="">{t('assessment.education.select')}</option>
+                  <option value="High School">{t('assessment.education.highSchool')}</option>
+                  <option value="Bachelor">{t('assessment.education.bachelor')}</option>
+                  <option value="Master">{t('assessment.education.master')}</option>
+                  <option value="Other">{t('assessment.education.other')}</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#1F2937] mb-1">Intended Major *</label>
+                <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('assessment.intendedMajor')} *</label>
                 <input
                   ref={intendedMajorRef}
                   type="text"
@@ -596,7 +598,7 @@ export function AssessmentForm({ successMessages }: Props) {
             </div>
             <div className="mt-5">
               <label className="block text-sm font-medium text-[#1F2937] mb-1">
-                Target Universities (Optional)
+                {t('assessment.targetUniversities')}
               </label>
               <input
                 type="text"
@@ -607,7 +609,7 @@ export function AssessmentForm({ successMessages }: Props) {
             </div>
             <p className="mt-4 text-xs text-gray-500 flex items-center gap-1.5">
               <Mail className="h-3.5 w-3.5" />
-              Step 1 of 4 complete. Tell us about your study background.
+              {t('assessment.step1Complete')}
             </p>
           </div>
         )}
@@ -617,19 +619,18 @@ export function AssessmentForm({ successMessages }: Props) {
           <div>
             <h3 className="text-base font-semibold text-[#1F2937] mb-1 flex items-center gap-2">
               <Upload className="h-4 w-4 text-[#1B2A4A]" />
-              Academic Transcript
-              <span className="text-xs font-normal text-gray-500 ml-1">(optional but recommended)</span>
+              {t('assessment.transcript.title')}
+              <span className="text-xs font-normal text-gray-500 ml-1">{t('assessment.transcript.optional')}</span>
             </h3>
             <p className="text-sm text-gray-600 mb-4">
-              Uploading your transcript lets our team give you a more accurate assessment.
-              Skip this if you don't have a copy handy — you can always email it later.
+              {t('assessment.transcript.description')}
             </p>
             <div className="border-2 border-dashed border-gray-300 p-6 text-center">
               {uploadStatus === 'idle' && (
                 <>
                   <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600 mb-2">Select your academic transcript (PDF/PNG/JPG)</p>
-                  <p className="text-xs text-gray-500 mb-3">Maximum file size: 10 MB</p>
+                  <p className="text-sm text-gray-600 mb-2">{t('assessment.transcript.selectFile')}</p>
+                  <p className="text-xs text-gray-500 mb-3">{t('assessment.transcript.maxSize')}</p>
                   <input
                     type="file"
                     accept={ALLOWED_EXTENSIONS}
@@ -660,7 +661,7 @@ export function AssessmentForm({ successMessages }: Props) {
                     }}
                     className="text-xs text-red-600 hover:underline flex items-center gap-1 mx-auto"
                   >
-                    <X className="h-3 w-3" /> Remove
+                    <X className="h-3 w-3" /> {t('assessment.transcript.remove')}
                   </button>
                 </div>
               )}
@@ -676,16 +677,14 @@ export function AssessmentForm({ successMessages }: Props) {
                     }}
                     className="text-sm text-[#9B1B30] underline"
                   >
-                    Try again
+                    {t('assessment.transcript.tryAgain')}
                   </button>
                 </div>
               )}
             </div>
             {uploadStatus === 'failed' && (
               <p className="mt-3 text-xs text-red-600">
-                The transcript upload failed, but you can still submit the form and email
-                your transcript to <a href="mailto:info@studyinchina.academy" className="underline">info@studyinchina.academy</a>{' '}
-                after.
+                {t('assessment.transcript.uploadFailed')}
               </p>
             )}
           </div>
@@ -696,19 +695,18 @@ export function AssessmentForm({ successMessages }: Props) {
           <div>
             <h3 className="text-base font-semibold text-[#1F2937] mb-1 flex items-center gap-2">
               <FileText className="h-4 w-4 text-[#1B2A4A]" />
-              Additional Notes
-              <span className="text-xs font-normal text-gray-500 ml-1">(optional)</span>
+              {t('assessment.notes.title')}
+              <span className="text-xs font-normal text-gray-500 ml-1">{t('assessment.notes.optional')}</span>
             </h3>
             <p className="text-sm text-gray-600 mb-4">
-              Anything else you want our team to know? Scholarship needs, preferred
-              cities, deadlines, language test scores, etc.
+              {t('assessment.notes.description')}
             </p>
             <div>
               <textarea
                 name="notes"
                 rows={6}
                 className="w-full border border-gray-300 px-4 py-2.5 text-sm text-[#1F2937] bg-white rounded-none focus:border-[#9B1B30] focus:outline-none focus:ring-1 focus:ring-[#9B1B30] resize-vertical"
-                placeholder="Any additional information you'd like us to know..."
+                placeholder={t('assessment.notes.placeholder')}
               />
             </div>
 
@@ -718,17 +716,17 @@ export function AssessmentForm({ successMessages }: Props) {
                 during render. */}
             <div className="mt-6 bg-[#FAFAF8] border border-gray-200 p-4">
               <p className="text-xs font-bold uppercase tracking-wider text-[#1B2A4A] mb-3">
-                Review before submitting
+                {t('assessment.review.title')}
               </p>
               <dl className="space-y-1.5 text-sm">
-                <SummaryRow label="Name" value={summary.name} />
-                <SummaryRow label="Email" value={summary.email} />
-                <SummaryRow label="Country" value={summary.country} />
-                <SummaryRow label="Education" value={summary.currentEducation} />
-                <SummaryRow label="Intended major" value={summary.intendedMajor} />
+                <SummaryRow label={t('assessment.summary.name')} value={summary.name} />
+                <SummaryRow label={t('assessment.summary.email')} value={summary.email} />
+                <SummaryRow label={t('assessment.summary.country')} value={summary.country} />
+                <SummaryRow label={t('assessment.summary.education')} value={summary.currentEducation} />
+                <SummaryRow label={t('assessment.summary.intendedMajor')} value={summary.intendedMajor} />
                 {selectedFile && (
                   <div className="flex justify-between gap-2">
-                    <dt className="text-gray-500">Transcript</dt>
+                    <dt className="text-gray-500">{t('assessment.summary.transcript')}</dt>
                     <dd className="font-medium text-[#1B2A4A] text-right">
                       {selectedFile.name}
                     </dd>
@@ -748,7 +746,7 @@ export function AssessmentForm({ successMessages }: Props) {
             className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-medium text-[#1B2A4A] border border-gray-300 hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back
+            {t('assessment.back')}
           </button>
 
           {currentStep < STEPS.length - 1 ? (
@@ -757,7 +755,7 @@ export function AssessmentForm({ successMessages }: Props) {
               onClick={handleNext}
               className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-[#9B1B30] text-white font-semibold text-sm uppercase tracking-wider hover:bg-[#7A1526] transition-colors"
             >
-              {currentStep === 0 ? 'Continue to education' : 'Continue to documents'}
+              {currentStep === 0 ? t('assessment.continueToEducation') : t('assessment.continueToDocuments')}
               <ArrowRight className="h-4 w-4" />
             </button>
           ) : (
@@ -769,17 +767,17 @@ export function AssessmentForm({ successMessages }: Props) {
               {status === 'submitting' ? (
                 <>
                   <Spinner size="sm" />
-                  Submitting…
+                  {t('assessment.submitting')}
                 </>
               ) : (
-                'Submit Assessment'
+                t('assessment.submit')
               )}
             </button>
           )}
         </div>
 
         <p className="text-xs text-gray-400 text-center sm:text-left">
-          Step {currentStep + 1} of {STEPS.length} · {STEPS[currentStep].label}
+          {t('assessment.progress', { current: currentStep + 1, total: STEPS.length, label: STEPS[currentStep].label })}
         </p>
       </form>
     </div>

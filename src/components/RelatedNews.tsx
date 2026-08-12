@@ -27,6 +27,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Newspaper, ArrowRight, Calendar, Clock } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useI18n } from '@/lib/i18n';
 
 interface NewsPost {
   id: string;
@@ -43,13 +44,13 @@ interface NewsPost {
   matchedBy: string | null;
 }
 
-const CATEGORY_LABEL: Record<string, string> = {
-  announcement: 'Announcement',
-  partnership: 'Partnership',
-  scholarship: 'Scholarship',
-  university: 'University news',
-  event: 'Event',
-  guide: 'Study guide',
+const categoryKeys: Record<string, string> = {
+  announcement: 'news.category.announcement',
+  partnership: 'news.category.partnership',
+  scholarship: 'news.category.scholarship',
+  university: 'news.category.university',
+  event: 'news.category.event',
+  guide: 'news.category.guide',
 };
 
 interface Props {
@@ -73,8 +74,8 @@ export function RelatedNews({
   category,
   excludeId,
   limit = 4,
-  locale = 'en',
 }: Props) {
+  const { t, locale } = useI18n();
   const [posts, setPosts] = useState<NewsPost[] | null>(null);
 
   useEffect(() => {
@@ -109,9 +110,7 @@ export function RelatedNews({
       <section className="mt-10 pt-8 border-t border-gray-200">
         <h2 className="flex items-center gap-2 text-lg font-bold text-[#1B2A4A] mb-4">
           <Newspaper className="h-5 w-5" />
-          {locale === 'en'
-            ? `Latest news about ${label}`
-            : `${label}的最新资讯`}
+          {t('relatedNews.title', { label })}
         </h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[0, 1, 2].map((i) => (
@@ -132,15 +131,13 @@ export function RelatedNews({
       <div className="flex items-center justify-between mb-4">
         <h2 className="flex items-center gap-2 text-lg font-bold text-[#1B2A4A]">
           <Newspaper className="h-5 w-5" />
-          {locale === 'en'
-            ? `Latest news about ${label}`
-            : `${label}的最新资讯`}
+          {t('relatedNews.title', { label })}
         </h2>
         <Link
           href={`/news?q=${encodeURIComponent(label)}`}
           className="text-xs font-semibold text-[#9B1B30] hover:underline inline-flex items-center gap-1"
         >
-          {locale === 'en' ? 'All news' : '全部资讯'}
+          {t('relatedNews.allNews')}
           <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </div>
@@ -154,21 +151,21 @@ export function RelatedNews({
               className="group block bg-white border border-gray-200 hover:border-[#9B1B30] transition-colors p-4"
             >
               <p className="text-[10px] font-bold uppercase tracking-wider text-[#9B1B30] mb-1">
-                {CATEGORY_LABEL[p.category] || p.category}
+                {t(categoryKeys[p.category] || 'news.category.announcement')}
               </p>
               <h3 className="font-semibold text-sm text-[#1B2A4A] group-hover:text-[#9B1B30] transition-colors line-clamp-2 leading-snug">
-                {p.title_en}
+                {locale === 'zh' && p.title_zh ? p.title_zh : p.title_en}
               </h3>
-              {p.excerpt_en && (
+              {(locale === 'zh' ? p.excerpt_zh : p.excerpt_en) && (
                 <p className="mt-2 text-xs text-gray-600 line-clamp-2 leading-relaxed">
-                  {p.excerpt_en}
+                  {locale === 'zh' && p.excerpt_zh ? p.excerpt_zh : p.excerpt_en}
                 </p>
               )}
               <div className="mt-3 flex items-center gap-3 text-[10px] text-gray-500">
                 {p.published_at && (
                   <span className="flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
-                    {new Date(p.published_at).toLocaleDateString('en-US', {
+                    {new Date(p.published_at).toLocaleDateString(locale === 'zh' ? 'zh-CN' : 'en-US', {
                       year: 'numeric',
                       month: 'short',
                       day: 'numeric',
@@ -178,7 +175,7 @@ export function RelatedNews({
                 {p.read_time_minutes && (
                   <span className="flex items-center gap-1">
                     <Clock className="h-3 w-3" />
-                    {p.read_time_minutes} min
+                    {t('relatedNews.minRead', { minutes: p.read_time_minutes })}
                   </span>
                 )}
               </div>

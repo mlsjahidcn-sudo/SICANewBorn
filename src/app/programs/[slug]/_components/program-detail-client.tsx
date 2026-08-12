@@ -51,7 +51,7 @@ export default function ProgramDetailClient({ program, university }: ProgramDeta
         <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
           <nav className="flex items-center gap-1.5 text-sm text-gray-500">
             <Link href="/" className="hover:text-[#9B1B30] transition-colors">
-              {locale === 'en' ? 'Home' : '首页'}
+              {t('nav.home')}
             </Link>
             <ChevronRight className="h-3.5 w-3.5" />
             <Link href="/programs" className="hover:text-[#9B1B30] transition-colors">
@@ -255,9 +255,7 @@ export default function ProgramDetailClient({ program, university }: ProgramDeta
                       <h3 className="font-semibold text-[#1B2A4A]">{t('prog.scholarshipInfo')}</h3>
                     </div>
                     <p className="text-sm text-gray-600">
-                      {locale === 'en'
-                        ? 'This program offers scholarship opportunities for qualified international students. Contact SICA for detailed scholarship application guidance.'
-                        : '该项目为符合条件的国际学生提供奖学金机会。联系SICA获取详细的奖学金申请指导。'}
+                      {t('prog.scholarshipInfoText')}
                     </p>
                   </div>
                 )}
@@ -309,9 +307,7 @@ export default function ProgramDetailClient({ program, university }: ProgramDeta
                 <div className="border border-gray-200 bg-[#FAFAF8] p-5">
                   <h3 className="font-semibold text-[#1B2A4A] mb-2">{t('prog.howToApply')}</h3>
                   <p className="text-sm text-gray-600 leading-relaxed">
-                    {locale === 'en'
-                      ? 'SICA can help you with the entire application process. From document preparation to university communication, our team ensures a smooth and successful application.'
-                      : 'SICA可以帮助你完成整个申请流程。从文件准备到与大学沟通，我们的团队确保申请顺利成功。'}
+                    {t('prog.howToApplyText')}
                   </p>
                 </div>
               </div>
@@ -359,10 +355,12 @@ export default function ProgramDetailClient({ program, university }: ProgramDeta
                 {t('prog.sicaHelp')}
               </p>
               <ul className="space-y-2 mb-4">
-                {(locale === 'en'
-                  ? ['Free consultation & program matching', 'Document review & submission', 'Visa application guidance', 'Post-arrival support']
-                  : ['免费咨询与项目匹配', '文件审核与提交', '签证申请指导', '入学后支持']
-                ).map((item, i) => (
+                {[
+                  t('prog.freeConsultation'),
+                  t('prog.documentReview'),
+                  t('prog.visaGuidance'),
+                  t('prog.postArrivalSupport'),
+                ].map((item, i) => (
                   <li key={i} className="flex items-center gap-2 text-sm text-gray-600">
                     <CheckCircle className="h-4 w-4 text-[#9B1B30] shrink-0" />
                     {item}
