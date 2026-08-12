@@ -5,9 +5,26 @@ import Image from 'next/image';
 import { getServerT } from '@/lib/server-t';
 import { ContactForm } from './contact-form';
 
-export const metadata: Metadata = {
-  alternates: { canonical: `${SITE_URL}/contact` },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getServerT();
+  return {
+    title: t('contact.title'),
+    description: t('contact.subtitle'),
+    alternates: { canonical: `${SITE_URL}/contact` },
+    openGraph: {
+      title: t('contact.title'),
+      description: t('contact.subtitle'),
+      url: '/contact',
+      images: ['/og-default.png'],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: t('contact.title'),
+      description: t('contact.subtitle'),
+      images: ['/og-default.png'],
+    },
+  };
+}
 
 export default async function ContactPage() {
   const t = await getServerT();

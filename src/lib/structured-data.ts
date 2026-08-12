@@ -16,6 +16,8 @@ export function getOrganizationSchema() {
     logo: {
       '@type': 'ImageObject',
       url: `${SITE_URL}/logo.png`,
+      width: 512,
+      height: 512,
     },
     contactPoint: {
       '@type': 'ContactPoint',

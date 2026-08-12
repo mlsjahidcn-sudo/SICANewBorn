@@ -4,9 +4,26 @@ import Link from 'next/link';
 import { Users, Eye, Heart, Globe, Building, GraduationCap, Award, Clock } from 'lucide-react';
 import { getServerT } from '@/lib/server-t';
 
-export const metadata: Metadata = {
-  alternates: { canonical: `${SITE_URL}/about` },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getServerT();
+  return {
+    title: t('about.title'),
+    description: t('about.subtitle'),
+    alternates: { canonical: `${SITE_URL}/about` },
+    openGraph: {
+      title: t('about.title'),
+      description: t('about.subtitle'),
+      url: '/about',
+      images: ['/og-default.png'],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: t('about.title'),
+      description: t('about.subtitle'),
+      images: ['/og-default.png'],
+    },
+  };
+}
 
 export default async function AboutPage() {
   const t = await getServerT();

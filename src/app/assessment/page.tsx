@@ -2,11 +2,29 @@ import type { Metadata } from "next";
 import { SITE_URL } from "@/lib/site-url";
 import { FileText, Mail, MessageCircle, MapPin } from 'lucide-react';
 import Image from 'next/image';
+import { getServerT } from '@/lib/server-t';
 import { AssessmentForm } from './assessment-form';
 
-export const metadata: Metadata = {
-  alternates: { canonical: `${SITE_URL}/assessment` },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getServerT();
+  return {
+    title: t('assessment.title'),
+    description: t('assessment.description'),
+    alternates: { canonical: `${SITE_URL}/assessment` },
+    openGraph: {
+      title: t('assessment.title'),
+      description: t('assessment.description'),
+      url: '/assessment',
+      images: ['/og-default.png'],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: t('assessment.title'),
+      description: t('assessment.description'),
+      images: ['/og-default.png'],
+    },
+  };
+}
 
 export default function AssessmentPage() {
   return (

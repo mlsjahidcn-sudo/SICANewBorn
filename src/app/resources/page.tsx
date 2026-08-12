@@ -4,9 +4,26 @@ import Link from 'next/link';
 import { FileText, BookOpen, Mail, Users, CheckCircle2, ArrowRight, Sparkles, Clock } from 'lucide-react';
 import { getServerT } from '@/lib/server-t';
 
-export const metadata: Metadata = {
-  alternates: { canonical: `${SITE_URL}/resources` },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getServerT();
+  return {
+    title: t('resources.hero.title'),
+    description: t('resources.hero.subtitle'),
+    alternates: { canonical: `${SITE_URL}/resources` },
+    openGraph: {
+      title: t('resources.hero.title'),
+      description: t('resources.hero.subtitle'),
+      url: '/resources',
+      images: ['/og-default.png'],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: t('resources.hero.title'),
+      description: t('resources.hero.subtitle'),
+      images: ['/og-default.png'],
+    },
+  };
+}
 
 // Phase 2 funnel: self-serve product landing. Mirrors the structure
 // of /about (hero + product cards + comparison + how-it-works + FAQ

@@ -2713,6 +2713,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'resources.proofStat2Label': 'community members',
     'resources.proofStat3Value': '10+',
     'resources.proofStat3Label': 'degree paths covered',
+    // Phase 6A: assessment page metadata
+    'assessment.title': 'Free Academic Assessment',
+    'assessment.description': 'Get your academic transcript evaluated by SICA. We assess your eligibility for Chinese universities and send personalized recommendations within 48 hours.',
     // Phase 51: Success Stories (public page)
     'successStories.eyebrow': 'Real admission results',
     'successStories.title': 'Success Stories',
@@ -5496,6 +5499,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'resources.proofStat2Label': '社区成员',
     'resources.proofStat3Value': '10+',
     'resources.proofStat3Label': '覆盖的学位方向',
+    // Phase 6A: assessment page metadata
+    'assessment.title': '免费学术评估',
+    'assessment.description': '让 SICA 评估你的学术成绩单，判断你对中国大学的申请资格，并在 48 小时内发送个性化建议。',
     // Phase 51: Success Stories (public page)
     'successStories.eyebrow': '真实录取结果',
     'successStories.title': '录取战绩',

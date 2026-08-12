@@ -55,16 +55,30 @@ export const metadata: Metadata = {
     title: 'SICA | Study in China - Your Gateway to Top Chinese Universities',
     description:
       'Professional study-in-China consultancy. Top universities, scholarships, and end-to-end support for international students.',
+    images: [
+      {
+        url: '/og-default.png',
+        width: 1200,
+        height: 630,
+        alt: 'SICA — Study in China',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'SICA | Study in China',
     description: 'Top Chinese universities, scholarships, and end-to-end support for international students.',
+    images: ['/og-default.png'],
   },
   robots: {
     index: true,
     follow: true,
   },
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/apple-touch-icon.png',
+  },
+  manifest: '/manifest.json',
 };
 
 async function readLocaleCookie(): Promise<Locale> {
