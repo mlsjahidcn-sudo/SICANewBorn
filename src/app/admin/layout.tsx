@@ -26,6 +26,7 @@ import {
   FileCheck,
   Send,
   Trophy,
+  BarChart3,
 } from 'lucide-react';
 import Link from 'next/link';
 import { SicaLogo } from '@/components/sica-logo';
@@ -37,6 +38,7 @@ import { I18nProvider, useI18n } from '@/lib/i18n';
 // in each locale + one entry here.
 const navItems = [
   { href: '/admin/dashboard', key: 'dashboard', icon: LayoutDashboard },
+  { href: '/admin/reports', key: 'reports', icon: BarChart3 },
   { href: '/admin/universities', key: 'universities', icon: GraduationCap },
   { href: '/admin/programs', key: 'programs', icon: BookOpen },
   { href: '/admin/scholarships', key: 'scholarships', icon: Award },
