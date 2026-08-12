@@ -9,6 +9,7 @@ import {
   getAllPrograms,
 } from '@/lib/data-fetcher';
 import { buildLanguageAlternates } from '@/lib/alternates';
+import { getServerLocale } from '@/lib/server-t';
 import { SITE_URL } from '@/lib/site-url';
 
 // Render on demand with ISR — reads the live DB so newly-added
@@ -66,6 +67,9 @@ export default async function UniversityScholarshipsPage({
   const uni = unis.find((u) => u.slug === slug);
   if (!uni) notFound();
 
+  const locale = await getServerLocale();
+  const displayName = locale === 'zh' && uni.nameCn ? uni.nameCn : uni.name;
+
   // Programs at this university with scholarshipAvailable=true
   const programsWithScholarship = allPrograms.filter(
     (p) => p.universitySlug === slug && p.scholarshipAvailable,
@@ -85,7 +89,7 @@ export default async function UniversityScholarshipsPage({
     itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
       { '@type': 'ListItem', position: 2, name: 'Universities', item: `${SITE_URL}/universities` },
-      { '@type': 'ListItem', position: 3, name: uni.name, item: `${SITE_URL}/universities/${slug}` },
+      { '@type': 'ListItem', position: 3, name: displayName, item: `${SITE_URL}/universities/${slug}` },
       { '@type': 'ListItem', position: 4, name: 'Scholarships' },
     ],
   };

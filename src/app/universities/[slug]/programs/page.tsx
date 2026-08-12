@@ -6,6 +6,7 @@ import { ChevronRight, ArrowRight, MapPin, Trophy, GraduationCap, Clock, Banknot
 import { getAllUniversities, getAllPrograms } from '@/lib/data-fetcher';
 
 import { buildLanguageAlternates } from '@/lib/alternates';
+import { getServerLocale } from '@/lib/server-t';
 import { SITE_URL } from '@/lib/site-url';
 // Render on demand with ISR — reads the live DB so newly-added
 // universidades (post-build) show up automatically, and the
@@ -68,6 +69,9 @@ export default async function UniversityProgramsPage({
   const uni = unis.find((u) => u.slug === slug);
   if (!uni) notFound();
 
+  const locale = await getServerLocale();
+  const displayName = locale === 'zh' && uni.nameCn ? uni.nameCn : uni.name;
+
   const programs = allPrograms.filter((p) => p.universitySlug === slug);
 
   // Group by degree level
@@ -83,7 +87,7 @@ export default async function UniversityProgramsPage({
     itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
       { '@type': 'ListItem', position: 2, name: 'Universities', item: `${SITE_URL}/universities` },
-      { '@type': 'ListItem', position: 3, name: uni.name, item: `${SITE_URL}/universities/${slug}` },
+      { '@type': 'ListItem', position: 3, name: displayName, item: `${SITE_URL}/universities/${slug}` },
       { '@type': 'ListItem', position: 4, name: 'Programs' },
     ],
   };
@@ -91,7 +95,7 @@ export default async function UniversityProgramsPage({
   const itemListSchema = {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
-    name: `Programs at ${uni.name}`,
+    name: `Programs at ${displayName}`,
     numberOfItems: programs.length,
     itemListElement: programs.map((p, i) => ({
       '@type': 'ListItem',

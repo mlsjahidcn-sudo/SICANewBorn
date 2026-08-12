@@ -4,6 +4,7 @@ import { getProgramBySlug } from '@/lib/program-queries';
 import { getUniversityBySlug } from '@/lib/university-queries';
 import { getServerLocale, t } from '@/lib/server-t';
 import { buildLanguageAlternates } from '@/lib/alternates';
+import { SITE_URL } from '@/lib/site-url';
 import ProgramDetailClient from './_components/program-detail-client';
 
 export const dynamic = 'force-dynamic';
@@ -86,7 +87,10 @@ function buildFaqSchema(program: NonNullable<Awaited<ReturnType<typeof getProgra
 
 export default async function ProgramDetailPage({ params }: ProgramPageProps) {
   const { slug } = await params;
-  const program = await getProgramBySlug(slug);
+  const [program, locale] = await Promise.all([
+    getProgramBySlug(slug),
+    getServerLocale(),
+  ]);
 
   if (!program) {
     notFound();
@@ -98,8 +102,68 @@ export default async function ProgramDetailPage({ params }: ProgramPageProps) {
   const universityName = university ? university.name : 'the partner university';
   const faqSchema = buildFaqSchema(program, universityName);
 
+  const displayName =
+    locale === 'zh' && program.nameCn ? program.nameCn : program.name;
+  const displayDescription =
+    locale === 'zh' && program.descriptionCn
+      ? program.descriptionCn
+      : program.description;
+
+  const courseSchema: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': ['Course', 'EducationalOccupationalProgram'],
+    '@id': `${SITE_URL}/programs/${slug}#program`,
+    name: displayName,
+    description: displayDescription,
+    provider: {
+      '@id': university
+        ? `${SITE_URL}/universities/${program.universitySlug}#university`
+        : `${SITE_URL}/#organization`,
+    },
+    educationalLevel: program.degree,
+    inLanguage: program.language,
+    timeToComplete: program.duration,
+    about: program.discipline,
+  };
+
+  if (program.tuition) {
+    const parsed = program.tuition.replace(/[^0-9.]/g, '').split('-')[0];
+    const offer: Record<string, unknown> = {
+      '@type': 'Offer',
+      priceCurrency: 'CNY',
+      availability: 'https://schema.org/InStock',
+    };
+    if (parsed) {
+      offer.price = parsed;
+    }
+    courseSchema.offers = offer;
+  }
+
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Programs',
+        item: `${SITE_URL}/programs`,
+      },
+      { '@type': 'ListItem', position: 3, name: displayName },
+    ],
+  };
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(courseSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}

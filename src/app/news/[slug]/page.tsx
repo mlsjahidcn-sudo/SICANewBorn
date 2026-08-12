@@ -165,9 +165,27 @@ export default async function NewsPostPage({
   const { slug } = await params;
   const post = await fetchPostBySlug(slug);
   if (!post) notFound();
-  const related = await fetchRelatedPosts(post.id, post.category);
+  const [related, locale] = await Promise.all([
+    fetchRelatedPosts(post.id, post.category),
+    getServerLocale(),
+  ]);
 
-  const description = post.seo_description || post.excerpt_en || post.content_en.slice(0, 155);
+  const title =
+    locale === 'zh'
+      ? (post.title_zh || post.title_en)
+      : (post.seo_title || post.title_en);
+  let description = '';
+  if (locale === 'zh' && post.excerpt_zh) {
+    description = post.excerpt_zh;
+  } else {
+    description =
+      post.seo_description ||
+      (Array.isArray(post.key_takeaways) && post.key_takeaways.length > 0
+        ? post.key_takeaways.slice(0, 2).join(' ')
+        : post.excerpt_en) ||
+      post.content_en.slice(0, 155);
+  }
+  description = description.slice(0, 160);
 
   // S36: schema.org JSON-LD. We layer three things:
   //   1. Article with `about` + `citation` + `isBasedOn` (GEO signal)
@@ -176,13 +194,13 @@ export default async function NewsPostPage({
   const articleSchema: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'Article',
-    headline: post.title_en,
+    headline: title,
     description,
     author: { '@id': `${SITE_URL}/#editorial-team` },
     publisher: { '@id': `${SITE_URL}/#organization` },
     datePublished: post.published_at,
     dateModified: post.updated_at,
-    inLanguage: 'en',
+    inLanguage: locale === 'zh' ? 'zh' : 'en',
     keywords: post.tags.join(', '),
     articleSection: CATEGORY_LABEL[post.category] || post.category,
     mainEntityOfPage: { '@type': 'WebPage', '@id': `${SITE_URL}/news/${post.slug}` },
@@ -213,7 +231,7 @@ export default async function NewsPostPage({
     itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
       { '@type': 'ListItem', position: 2, name: 'News', item: `${SITE_URL}/news` },
-      { '@type': 'ListItem', position: 3, name: post.title_en },
+      { '@type': 'ListItem', position: 3, name: title },
     ],
   };
   // S36: FAQPage schema. Only emit when there are FAQ pairs —

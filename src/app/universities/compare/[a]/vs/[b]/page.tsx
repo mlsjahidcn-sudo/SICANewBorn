@@ -94,10 +94,16 @@ export default async function ComparePage({
   params: Promise<{ a: string; b: string }>;
 }) {
   const { a, b } = await params;
-  const unis = await getRankedUnis();
+  const [unis, locale] = await Promise.all([
+    getRankedUnis(),
+    getServerLocale(),
+  ]);
   const uniA = unis.find((u) => u.slug === a);
   const uniB = unis.find((u) => u.slug === b);
   if (!uniA || !uniB) notFound();
+
+  const nameA = locale === 'zh' && uniA.nameCn ? uniA.nameCn : uniA.name;
+  const nameB = locale === 'zh' && uniB.nameCn ? uniB.nameCn : uniB.name;
 
   // Build a one-row-per-attribute comparison table. Using arrays of
   // rows makes the data shape uniform and easy to map over.
@@ -214,12 +220,12 @@ export default async function ComparePage({
   const articleSchema = {
     '@context': 'https://schema.org',
     '@type': 'Article',
-    headline: `${uniA.name} vs ${uniB.name}: A side-by-side comparison`,
-    description: `Compare ${uniA.name} and ${uniB.name} on rankings, tuition, scholarships, programs, and location.`,
+    headline: `${nameA} vs ${nameB}: A side-by-side comparison`,
+    description: `Compare ${nameA} and ${nameB} on rankings, tuition, scholarships, programs, and location.`,
     author: { '@id': `${SITE_URL}/#editorial-team` },
     publisher: { '@id': `${SITE_URL}/#organization` },
     dateModified: new Date().toISOString().slice(0, 10),
-    inLanguage: 'en',
+    inLanguage: locale === 'zh' ? 'zh' : 'en',
     mainEntityOfPage: {
       '@type': 'WebPage',
       '@id': `${SITE_URL}/universities/compare/${a}/vs/${b}`,
@@ -246,7 +252,7 @@ export default async function ComparePage({
       {
         '@type': 'ListItem',
         position: 4,
-        name: `${uniA.name} vs ${uniB.name}`,
+        name: `${nameA} vs ${nameB}`,
       },
     ],
   };

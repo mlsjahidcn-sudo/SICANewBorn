@@ -4,6 +4,7 @@ import { getUniversityBySlug, getUniversities } from '@/lib/university-queries';
 import { getProgramsByUniversity } from '@/lib/program-queries';
 import { getServerLocale, t } from '@/lib/server-t';
 import { buildLanguageAlternates } from '@/lib/alternates';
+import { SITE_URL } from '@/lib/site-url';
 import UniversityDetailClient from './_components/university-detail-client';
 
 interface UniversityPageProps {
@@ -122,10 +123,11 @@ function buildFaqSchema(uni: NonNullable<Awaited<ReturnType<typeof getUniversity
 
 export default async function UniversityDetailPage({ params }: UniversityPageProps) {
   const { slug } = await params;
-  const [uni, allUniversities, programs] = await Promise.all([
+  const [uni, allUniversities, programs, locale] = await Promise.all([
     getUniversityBySlug(slug),
     getUniversities({ limit: 100 }),
     getProgramsByUniversity(slug, 50),
+    getServerLocale(),
   ]);
 
   if (!uni) {
@@ -135,8 +137,68 @@ export default async function UniversityDetailPage({ params }: UniversityPagePro
   const related = pickRelated(allUniversities, slug, 6);
   const faqSchema = buildFaqSchema(uni, programs.length);
 
+  const displayName = locale === 'zh' && uni.nameCn ? uni.nameCn : uni.name;
+  const displayDescription =
+    locale === 'zh' && uni.descriptionCn ? uni.descriptionCn : uni.description;
+
+  const universitySchema: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': ['CollegeOrUniversity', 'EducationalOrganization'],
+    '@id': `${SITE_URL}/universities/${slug}#university`,
+    name: displayName,
+    description: displayDescription,
+    url: `${SITE_URL}/universities/${slug}`,
+    logo: {
+      '@type': 'ImageObject',
+      url: uni.logo || `${SITE_URL}/logo.png`,
+    },
+    location: {
+      '@type': 'Place',
+      name: uni.city,
+      address: {
+        '@type': 'PostalAddress',
+        addressLocality: uni.city,
+        addressCountry: 'CN',
+      },
+    },
+  };
+  if (uni.image) {
+    universitySchema.image = uni.image;
+  }
+  if (uni.rating > 0) {
+    universitySchema.aggregateRating = {
+      '@type': 'AggregateRating',
+      ratingValue: uni.rating,
+      bestRating: 5,
+      reviewCount: 1,
+    };
+  }
+
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Universities',
+        item: `${SITE_URL}/universities`,
+      },
+      { '@type': 'ListItem', position: 3, name: displayName },
+    ],
+  };
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(universitySchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}

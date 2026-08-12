@@ -35,6 +35,7 @@ import { getAllUniversities } from '@/lib/data-fetcher';
 import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
 import { VideoTestimonials } from '@/components/VideoTestimonials';
 import { GetStartedCta } from '@/components/GetStartedCta';
+import { getServiceSchema } from '@/lib/structured-data';
 
 export const metadata: Metadata = {
   alternates: buildLanguageAlternates('/'),
@@ -143,8 +144,14 @@ export default async function HomePage() {
     return `${supabaseUrl}/storage/v1/object/public/admission-notices/${imagePath}`;
   }
 
+  const serviceSchema = await getServiceSchema();
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceSchema) }}
+      />
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         <div

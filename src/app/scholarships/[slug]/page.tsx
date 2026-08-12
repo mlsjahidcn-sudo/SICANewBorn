@@ -54,6 +54,7 @@ export default function ScholarshipDetailPage() {
   const faqSchema = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
+    inLanguage: locale === 'zh' ? 'zh' : 'en',
     mainEntity: [
       {
         '@type': 'Question',
