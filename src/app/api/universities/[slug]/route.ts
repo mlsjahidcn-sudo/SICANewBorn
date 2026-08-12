@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { supabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-server';
 import { universities as staticUniversities } from '@/lib/data';
+import { CACHE_TAGS } from '@/lib/cache';
+import { universitySchema } from '@/lib/validators/university';
+import { validationErrorResponse } from '@/lib/validators/shared';
 
 /**
  * For fields the DB doesn't have yet (because the migration hasn't
@@ -52,16 +56,21 @@ export async function PUT(
 
   const { slug } = await params;
   try {
-    const body = await request.json();
+    const raw = await request.json();
+    const parsed = universitySchema.safeParse(raw);
+    if (!parsed.success) return validationErrorResponse(parsed.error);
+
     const { data, error } = await supabaseServer
       .from('universities')
-      .update(mapUniversityToDb(body))
+      .update(mapUniversityToDb(parsed.data))
       .eq('slug', slug)
       .select()
       .single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     if (!data) return NextResponse.json({ error: 'University not found' }, { status: 404 });
+    revalidateTag(CACHE_TAGS.universities, 'default');
+    revalidateTag(CACHE_TAGS.university(slug), 'default');
     return NextResponse.json({ university: mapUniversityFromDb(data) });
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
@@ -83,6 +92,8 @@ export async function DELETE(
     .eq('slug', slug);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  revalidateTag(CACHE_TAGS.universities, 'default');
+  revalidateTag(CACHE_TAGS.university(slug), 'default');
   return NextResponse.json({ success: true });
 }
 

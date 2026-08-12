@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { supabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-server';
+import { CACHE_TAGS } from '@/lib/cache';
 
 /**
  * POST /api/programs/bulk
@@ -127,6 +129,9 @@ export async function POST(request: Request) {
     }
 
     const importedCount = data?.length || 0;
+    if (importedCount > 0) {
+      revalidateTag(CACHE_TAGS.programs, 'default');
+    }
     // skipped = (rows we tried to upsert) - (rows that actually inserted).
     // This is a tight approximation: it counts both in-batch
     // collisions (where we picked a unique suffix so they all

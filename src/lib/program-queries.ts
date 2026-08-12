@@ -1,15 +1,13 @@
+import { unstable_cache } from 'next/cache';
 import { supabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-server';
 import { programs as staticPrograms, type Program } from '@/lib/data';
+import { CACHE_TAGS } from '@/lib/cache';
 
 export interface GetProgramsOptions {
   limit?: number;
 }
 
-/**
- * Server-only helper for fetching a single program by slug.
- * Tries Supabase first, then falls back to the curated static data.
- */
-export async function getProgramBySlug(slug: string): Promise<Program | null> {
+async function fetchProgramBySlug(slug: string): Promise<Program | null> {
   if (isSupabaseServerConfigured() && supabaseServer) {
     const { data, error } = await supabaseServer
       .from('programs')
@@ -26,10 +24,19 @@ export async function getProgramBySlug(slug: string): Promise<Program | null> {
 }
 
 /**
- * Server-only helper for fetching programs linked to a university.
+ * Server-only helper for fetching a single program by slug.
  * Tries Supabase first, then falls back to the curated static data.
+ * Cached per slug so repeated RSC/API calls avoid hitting the DB.
  */
-export async function getProgramsByUniversity(universitySlug: string, limit = 50): Promise<Program[]> {
+export const getProgramBySlug = unstable_cache(
+  fetchProgramBySlug,
+  ['program-by-slug'],
+  {
+    tags: [CACHE_TAGS.programs],
+  },
+);
+
+async function fetchProgramsByUniversity(universitySlug: string, limit = 50): Promise<Program[]> {
   if (isSupabaseServerConfigured() && supabaseServer) {
     const { data, error } = await supabaseServer
       .from('programs')
@@ -49,12 +56,18 @@ export async function getProgramsByUniversity(universitySlug: string, limit = 50
 }
 
 /**
- * Server-only helper for fetching the program list.
+ * Server-only helper for fetching programs linked to a university.
  * Tries Supabase first, then falls back to the curated static data.
- * Used by the listing API and by the /programs server page so the
- * initial HTML already contains the grid (no client-side fetch delay).
  */
-export async function getPrograms(options: GetProgramsOptions = {}): Promise<Program[]> {
+export const getProgramsByUniversity = unstable_cache(
+  fetchProgramsByUniversity,
+  ['programs-by-university'],
+  {
+    tags: [CACHE_TAGS.programs],
+  },
+);
+
+async function fetchPrograms(options: GetProgramsOptions = {}): Promise<Program[]> {
   const { limit = 2000 } = options;
 
   if (isSupabaseServerConfigured() && supabaseServer) {
@@ -71,6 +84,20 @@ export async function getPrograms(options: GetProgramsOptions = {}): Promise<Pro
 
   return staticPrograms.slice(0, limit);
 }
+
+/**
+ * Server-only helper for fetching the program list.
+ * Tries Supabase first, then falls back to the curated static data.
+ * Used by the listing API and by the /programs server page so the
+ * initial HTML already contains the grid (no client-side fetch delay).
+ */
+export const getPrograms = unstable_cache(
+  fetchPrograms,
+  ['programs-list'],
+  {
+    tags: [CACHE_TAGS.programs],
+  },
+);
 
 function cnFallback(slug: string, key: 'disciplineCn' | 'durationCn' | 'intakeCn'): string | undefined {
   const row = staticPrograms.find((p) => p.slug === slug);

@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { supabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-server';
 import { scholarships as staticScholarships } from '@/lib/data';
+import { CACHE_TAGS } from '@/lib/cache';
+import { scholarshipSchema } from '@/lib/validators/scholarship';
+import { validationErrorResponse } from '@/lib/validators/shared';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -68,8 +72,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = await request.json();
-    const dbRecord = mapScholarshipToDb(body);
+    const raw = await request.json();
+    const parsed = scholarshipSchema.safeParse(raw);
+    if (!parsed.success) return validationErrorResponse(parsed.error);
+
+    const dbRecord = mapScholarshipToDb(parsed.data);
     const { data, error } = await supabaseServer
       .from('scholarships')
       .insert(dbRecord)
@@ -77,6 +84,8 @@ export async function POST(request: Request) {
       .single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    revalidateTag(CACHE_TAGS.scholarships, 'default');
+    revalidateTag(CACHE_TAGS.scholarship(String(data.slug)), 'default');
     return NextResponse.json({ scholarship: mapScholarshipFromDb(data) }, { status: 201 });
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });

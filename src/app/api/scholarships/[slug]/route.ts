@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { supabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-server';
 import { scholarships as staticScholarships } from '@/lib/data';
+import { CACHE_TAGS } from '@/lib/cache';
+import { scholarshipSchema } from '@/lib/validators/scholarship';
+import { validationErrorResponse } from '@/lib/validators/shared';
 
 export async function GET(
   _request: Request,
@@ -37,16 +41,21 @@ export async function PUT(
 
   const { slug } = await params;
   try {
-    const body = await request.json();
+    const raw = await request.json();
+    const parsed = scholarshipSchema.safeParse(raw);
+    if (!parsed.success) return validationErrorResponse(parsed.error);
+
     const { data, error } = await supabaseServer
       .from('scholarships')
-      .update(mapScholarshipToDb(body))
+      .update(mapScholarshipToDb(parsed.data))
       .eq('slug', slug)
       .select()
       .single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     if (!data) return NextResponse.json({ error: 'Scholarship not found' }, { status: 404 });
+    revalidateTag(CACHE_TAGS.scholarships, 'default');
+    revalidateTag(CACHE_TAGS.scholarship(slug), 'default');
     return NextResponse.json({ scholarship: mapScholarshipFromDb(data) });
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
@@ -68,6 +77,8 @@ export async function DELETE(
     .eq('slug', slug);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  revalidateTag(CACHE_TAGS.scholarships, 'default');
+  revalidateTag(CACHE_TAGS.scholarship(slug), 'default');
   return NextResponse.json({ success: true });
 }
 

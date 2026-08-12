@@ -1,17 +1,13 @@
+import { unstable_cache } from 'next/cache';
 import { supabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-server';
 import { scholarships as staticScholarships, type Scholarship } from '@/lib/data';
+import { CACHE_TAGS } from '@/lib/cache';
 
 export interface GetScholarshipsOptions {
   limit?: number;
 }
 
-/**
- * Server-only helper for fetching the scholarship list.
- * Tries Supabase first, then falls back to the curated static data.
- * Used by the listing API and by the /scholarships server page so the
- * initial HTML already contains the grid (no client-side fetch delay).
- */
-export async function getScholarships(options: GetScholarshipsOptions = {}): Promise<Scholarship[]> {
+async function fetchScholarships(options: GetScholarshipsOptions = {}): Promise<Scholarship[]> {
   const { limit = 500 } = options;
 
   if (isSupabaseServerConfigured() && supabaseServer) {
@@ -28,6 +24,20 @@ export async function getScholarships(options: GetScholarshipsOptions = {}): Pro
 
   return staticScholarships.slice(0, limit);
 }
+
+/**
+ * Server-only helper for fetching the scholarship list.
+ * Tries Supabase first, then falls back to the curated static data.
+ * Used by the listing API and by the /scholarships server page so the
+ * initial HTML already contains the grid (no client-side fetch delay).
+ */
+export const getScholarships = unstable_cache(
+  fetchScholarships,
+  ['scholarships-list'],
+  {
+    tags: [CACHE_TAGS.scholarships],
+  },
+);
 
 function toStringArray(value: unknown): string[] {
   if (Array.isArray(value)) return value.map(String);

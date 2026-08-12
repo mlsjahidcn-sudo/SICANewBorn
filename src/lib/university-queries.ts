@@ -1,15 +1,13 @@
+import { unstable_cache } from 'next/cache';
 import { supabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-server';
 import { universities as staticUniversities, type University } from '@/lib/data';
+import { CACHE_TAGS } from '@/lib/cache';
 
 export interface GetUniversitiesOptions {
   limit?: number;
 }
 
-/**
- * Server-only helper for fetching a single university by slug.
- * Tries Supabase first, then falls back to the curated static data.
- */
-export async function getUniversityBySlug(slug: string): Promise<University | null> {
+async function fetchUniversityBySlug(slug: string): Promise<University | null> {
   if (isSupabaseServerConfigured() && supabaseServer) {
     const { data, error } = await supabaseServer
       .from('universities')
@@ -26,12 +24,19 @@ export async function getUniversityBySlug(slug: string): Promise<University | nu
 }
 
 /**
- * Server-only helper for fetching the university list.
+ * Server-only helper for fetching a single university by slug.
  * Tries Supabase first, then falls back to the curated static data.
- * Used by the listing API and by the /universities server page so the
- * initial HTML already contains the grid (no client-side fetch delay).
+ * Cached per slug so repeated RSC/API calls avoid hitting the DB.
  */
-export async function getUniversities(options: GetUniversitiesOptions = {}): Promise<University[]> {
+export const getUniversityBySlug = unstable_cache(
+  fetchUniversityBySlug,
+  ['university-by-slug'],
+  {
+    tags: [CACHE_TAGS.universities],
+  },
+);
+
+async function fetchUniversities(options: GetUniversitiesOptions = {}): Promise<University[]> {
   const { limit = 1000 } = options;
 
   if (isSupabaseServerConfigured() && supabaseServer) {
@@ -48,6 +53,20 @@ export async function getUniversities(options: GetUniversitiesOptions = {}): Pro
 
   return staticUniversities.slice(0, limit);
 }
+
+/**
+ * Server-only helper for fetching the university list.
+ * Tries Supabase first, then falls back to the curated static data.
+ * Used by the listing API and by the /universities server page so the
+ * initial HTML already contains the grid (no client-side fetch delay).
+ */
+export const getUniversities = unstable_cache(
+  fetchUniversities,
+  ['universities-list'],
+  {
+    tags: [CACHE_TAGS.universities],
+  },
+);
 
 function withStaticFallback<T>(slug: string, key: keyof University, value: T): T {
   if (value !== undefined && value !== null) return value;
