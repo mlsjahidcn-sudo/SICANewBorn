@@ -18,6 +18,7 @@
  *   paymentNotes        ↔             payment_notes
  *   verifiedAt          ↔             verified_at
  *   verifiedBy          ↔             verified_by
+ *   promotionId         ↔             promotion_id
  *   createdAt           ↔             created_at
  *   updatedAt           ↔             updated_at
  *
@@ -47,6 +48,7 @@ export interface PartnerFee {
   paymentNotes?: string | null;
   verifiedAt?: string | null;
   verifiedBy?: string | null;
+  promotionId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -73,6 +75,7 @@ interface RawPartnerFee {
   payment_notes?: string | null;
   verified_at?: string | null;
   verified_by?: string | null;
+  promotion_id?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
 }
@@ -95,9 +98,23 @@ export function mapPartnerFeeFromDb(row: RawPartnerFee): PartnerFee {
     paymentNotes: row.payment_notes ?? null,
     verifiedAt: row.verified_at ?? null,
     verifiedBy: row.verified_by ?? null,
+    promotionId: row.promotion_id ?? null,
     createdAt: row.created_at ?? '',
     updatedAt: row.updated_at ?? '',
   };
+}
+
+export function currencySymbol(currency: string): string {
+  switch (currency) {
+    case 'CNY':
+      return '¥';
+    case 'USD':
+      return '$';
+    case 'EUR':
+      return '€';
+    default:
+      return currency;
+  }
 }
 
 export function mapPartnerFeeToDb(payload: Record<string, unknown>): Record<string, unknown> {
@@ -116,5 +133,6 @@ export function mapPartnerFeeToDb(payload: Record<string, unknown>): Record<stri
   if (payload.paymentNotes !== undefined) row.payment_notes = payload.paymentNotes || null;
   if (payload.verifiedAt !== undefined) row.verified_at = payload.verifiedAt || null;
   if (payload.verifiedBy !== undefined) row.verified_by = payload.verifiedBy || null;
+  if (payload.promotionId !== undefined) row.promotion_id = payload.promotionId || null;
   return row;
 }

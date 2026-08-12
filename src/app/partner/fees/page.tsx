@@ -17,7 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { apiFetch, apiFetchJson } from '@/lib/api-client';
-import type { PartnerFee, PartnerFeeStatus } from '@/lib/partner-fee-mapper';
+import { currencySymbol, type PartnerFee, type PartnerFeeStatus } from '@/lib/partner-fee-mapper';
 
 interface PartnerFeeWithUrl extends PartnerFee {
   paymentProofDownloadUrl?: string | null;
@@ -233,7 +233,7 @@ export default function PartnerFeesPage() {
                     </TableCell>
                     <TableCell>
                       <div className="font-semibold">
-                        {fee.currency === 'CNY' ? '¥' : '$'}
+                        {currencySymbol(fee.currency)}
                         {fee.amount.toLocaleString()}
                       </div>
                     </TableCell>
@@ -288,7 +288,7 @@ export default function PartnerFeesPage() {
             <div>
               <label className="text-sm font-medium">Fee</label>
               <div className="mt-1 text-sm text-gray-600">
-                {uploadFee?.studentName} — {uploadFee?.currency === 'CNY' ? '¥' : '$'}
+                {uploadFee?.studentName} — {uploadFee ? currencySymbol(uploadFee.currency) : ''}
                 {uploadFee?.amount.toLocaleString()}
               </div>
             </div>

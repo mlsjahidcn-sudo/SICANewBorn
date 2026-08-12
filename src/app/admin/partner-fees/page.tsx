@@ -26,7 +26,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { usePartnerList } from '@/hooks/use-partner-list';
 import { apiFetch, apiFetchJson } from '@/lib/api-client';
-import type { PartnerFee, PartnerFeeStatus } from '@/lib/partner-fee-mapper';
+import { currencySymbol, type PartnerFee, type PartnerFeeStatus } from '@/lib/partner-fee-mapper';
+import type { PartnerPromotionWithDetails } from '@/lib/partner-promotion-mapper';
 
 interface AdminPartnerFee extends PartnerFee {
   partnerName: string;
@@ -57,6 +58,7 @@ export default function AdminPartnerFeesPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState({
     partnerId: '',
+    promotionId: '',
     studentName: '',
     amount: '',
     currency: 'CNY',
@@ -71,6 +73,14 @@ export default function AdminPartnerFeesPage() {
 
   const [deleteFee, setDeleteFee] = useState<AdminPartnerFee | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const [promotions, setPromotions] = useState<PartnerPromotionWithDetails[]>([]);
+
+  useEffect(() => {
+    apiFetchJson<{ promotions: PartnerPromotionWithDetails[] }>('/api/admin/promotions?status=active&limit=100')
+      .then((res) => setPromotions(res.promotions || []))
+      .catch((err) => console.error('Failed to load promotions for fee form:', err));
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -119,6 +129,7 @@ export default function AdminPartnerFeesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           partnerId: createForm.partnerId,
+          promotionId: createForm.promotionId || undefined,
           studentName: createForm.studentName,
           amount: parseFloat(createForm.amount),
           currency: createForm.currency,
@@ -129,6 +140,7 @@ export default function AdminPartnerFeesPage() {
       setIsCreateOpen(false);
       setCreateForm({
         partnerId: '',
+        promotionId: '',
         studentName: '',
         amount: '',
         currency: 'CNY',
@@ -337,6 +349,7 @@ export default function AdminPartnerFeesPage() {
                 <TableHead>Student</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Due Date</TableHead>
+                <TableHead>Promotion</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -344,7 +357,7 @@ export default function AdminPartnerFeesPage() {
             <TableBody>
               {fees.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-gray-500">
+                  <TableCell colSpan={7} className="text-center py-12 text-gray-500">
                     <DollarSign className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                     <p className="text-lg">No partner fees found</p>
                     <p className="text-sm">Create a fee for a partner&apos;s student to get started</p>
@@ -362,11 +375,25 @@ export default function AdminPartnerFeesPage() {
                     </TableCell>
                     <TableCell>
                       <div className="font-semibold">
-                        {fee.currency === 'CNY' ? '¥' : '$'}
+                        {currencySymbol(fee.currency)}
                         {fee.amount.toLocaleString()}
                       </div>
                     </TableCell>
                     <TableCell>{fee.dueDate ? new Date(fee.dueDate).toLocaleDateString() : '—'}</TableCell>
+                    <TableCell>
+                      {(() => {
+                        const promo = promotions.find((pr) => pr.id === fee.promotionId);
+                        if (!promo) return <span className="text-gray-400">—</span>;
+                        return (
+                          <div>
+                            <div className="text-xs font-medium text-[#1B2A4A]">
+                              {promo.program?.name}
+                            </div>
+                            <div className="text-[11px] text-gray-500">{promo.university?.name}</div>
+                          </div>
+                        );
+                      })()}
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         {getStatusIcon(fee.status)}
@@ -467,6 +494,33 @@ export default function AdminPartnerFeesPage() {
               </select>
             </div>
             <div>
+              <label className="text-sm font-medium">Linked Promotion (optional)</label>
+              <select
+                value={createForm.promotionId}
+                onChange={(e) => {
+                  const promotionId = e.target.value;
+                  const promo = promotions.find((pr) => pr.id === promotionId);
+                  setCreateForm((prev) => ({
+                    ...prev,
+                    promotionId,
+                    amount: promo ? promo.serviceFeeAmount.toString() : prev.amount,
+                    currency: promo ? promo.serviceFeeCurrency : prev.currency,
+                    description: promo
+                      ? `${promo.program?.name || 'Program'} at ${promo.university?.name || 'University'}`
+                      : prev.description,
+                  }));
+                }}
+                className="mt-1 h-10 w-full px-3 rounded-md border border-gray-300 bg-white text-sm"
+              >
+                <option value="">None</option>
+                {promotions.map((pr) => (
+                  <option key={pr.id} value={pr.id}>
+                    {pr.program?.name} @ {pr.university?.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
               <label className="text-sm font-medium">Student Name</label>
               <Input
                 required
@@ -495,6 +549,7 @@ export default function AdminPartnerFeesPage() {
                 >
                   <option value="CNY">CNY</option>
                   <option value="USD">USD</option>
+                  <option value="EUR">EUR</option>
                 </select>
               </div>
             </div>

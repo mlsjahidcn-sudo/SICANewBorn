@@ -17,6 +17,7 @@ import {
   Bell,
   FolderOpen,
   DollarSign,
+  Sparkles,
 } from 'lucide-react';
 import Link from 'next/link';
 import { SicaLogo } from '@/components/sica-logo';
@@ -44,6 +45,7 @@ const navItems = [
   // stack of file icons.
   { labelKey: 'partnerNav.documents', href: '/partner/documents', icon: FolderOpen },
   { labelKey: 'partnerNav.fees', href: '/partner/fees', icon: DollarSign },
+  { labelKey: 'partnerNav.promotions', href: '/partner/promotions', icon: Sparkles },
   { labelKey: 'partnerNav.leadSharing', href: '/partner/lead-sharing', icon: Share2 },
   { labelKey: 'partnerNav.team', href: '/partner/team', icon: UserCog, ownerOnly: true },
   { labelKey: 'partnerNav.settings', href: '/partner/settings', icon: Settings },

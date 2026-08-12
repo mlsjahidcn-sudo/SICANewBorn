@@ -5,6 +5,7 @@ export const CACHE_TAGS: {
   program: (slug: string) => string;
   scholarships: string;
   scholarship: (slug: string) => string;
+  promotions: string;
 } = {
   universities: 'universities',
   university: (slug: string) => `university:${slug}`,
@@ -12,4 +13,5 @@ export const CACHE_TAGS: {
   program: (slug: string) => `program:${slug}`,
   scholarships: 'scholarships',
   scholarship: (slug: string) => `scholarship:${slug}`,
+  promotions: 'partner-promotions',
 };

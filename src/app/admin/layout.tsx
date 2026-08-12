@@ -27,6 +27,7 @@ import {
   Send,
   Trophy,
   BarChart3,
+  Sparkles,
 } from 'lucide-react';
 import Link from 'next/link';
 import { SicaLogo } from '@/components/sica-logo';
@@ -58,6 +59,7 @@ const navItems = [
   // status / decision for partner rows).
   { href: '/admin/fees', key: 'fees', icon: DollarSign },
   { href: '/admin/partner-fees', key: 'partnerFees', icon: DollarSign },
+  { href: '/admin/promotions', key: 'promotions', icon: Sparkles },
   { href: '/admin/assessments', key: 'assessments', icon: ClipboardList },
   { href: '/admin/applications', key: 'applications', icon: FileText },
   // Phase 51: Success Stories — public showcase of admission notices.

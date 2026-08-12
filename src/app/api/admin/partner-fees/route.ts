@@ -87,7 +87,8 @@ export async function POST(request: NextRequest) {
     if (!body.studentName || typeof body.studentName !== 'string' || !body.studentName.trim()) {
       return NextResponse.json({ error: 'studentName is required' }, { status: 400 });
     }
-    if (typeof body.amount !== 'number' || body.amount <= 0) {
+    const amount = typeof body.amount === 'string' ? parseFloat(body.amount) : Number(body.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
       return NextResponse.json({ error: 'amount must be a positive number' }, { status: 400 });
     }
 
@@ -97,11 +98,12 @@ export async function POST(request: NextRequest) {
       .insert({
         partner_id: body.partnerId,
         student_name: body.studentName.trim(),
-        amount: body.amount,
+        amount,
         currency: body.currency || 'CNY',
         description: body.description || null,
         due_date: body.dueDate || null,
         status: 'Pending',
+        promotion_id: body.promotionId || null,
       })
       .select('*')
       .single();

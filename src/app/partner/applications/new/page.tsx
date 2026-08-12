@@ -59,6 +59,10 @@ export default function PartnerNewApplicationPage() {
   // it into formData, then clear the storage entry so a
   // page refresh doesn't re-apply stale data.
   const cloneAppliedRef = useRef<boolean>(false);
+  // Promotion prefill: when the partner navigates here from
+  // /partner/promotions, the program slug is passed in the URL and we
+  // auto-fill the university + program fields.
+  const promotionPrefillRef = useRef<string | null>(null);
 
   // Phase S20: load this partner's students, plus the live university
   // and program lists. S26: this list feeds the combined program
@@ -119,6 +123,24 @@ export default function PartnerNewApplicationPage() {
     autoPickedRef.current = studentIdFromUrl;
     handleStudentPick(studentIdFromUrl);
   }, [searchParams, dataLoading, students]);
+
+  // Auto-fill university + program when the partner arrives from
+  // a promoted program detail page (?programSlug=<slug>).
+  useEffect(() => {
+    const programSlugFromUrl = searchParams.get('programSlug');
+    if (!programSlugFromUrl) return;
+    if (dataLoading) return;
+    if (promotionPrefillRef.current === programSlugFromUrl) return;
+    const picked = programs.find((p) => p.slug === programSlugFromUrl);
+    if (!picked) return;
+    const uni = universities.find((u) => u.slug === picked.universitySlug);
+    promotionPrefillRef.current = programSlugFromUrl;
+    setFormData((prev) => ({
+      ...prev,
+      program: picked.name,
+      university: uni?.name ?? picked.universitySlug,
+    }));
+  }, [searchParams, dataLoading, programs, universities]);
 
   // Phase 49.3: read the sessionStorage entry written by the
   // "Clone as new application" button on the application
