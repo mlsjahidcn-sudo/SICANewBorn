@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Bell,
   FolderOpen,
+  DollarSign,
 } from 'lucide-react';
 import Link from 'next/link';
 import { SicaLogo } from '@/components/sica-logo';
@@ -42,6 +43,7 @@ const navItems = [
   // the file-management semantics without the visual weight of a
   // stack of file icons.
   { labelKey: 'partnerNav.documents', href: '/partner/documents', icon: FolderOpen },
+  { labelKey: 'partnerNav.fees', href: '/partner/fees', icon: DollarSign },
   { labelKey: 'partnerNav.leadSharing', href: '/partner/lead-sharing', icon: Share2 },
   { labelKey: 'partnerNav.team', href: '/partner/team', icon: UserCog, ownerOnly: true },
   { labelKey: 'partnerNav.settings', href: '/partner/settings', icon: Settings },

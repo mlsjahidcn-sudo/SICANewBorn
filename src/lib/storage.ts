@@ -288,6 +288,66 @@ export async function deletePartnerDocFile(storagePath: string): Promise<boolean
 }
 
 // ---------------------------------------------------------------------------
+// Partner service-fee payment proof helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Generate a signed upload URL for a partner service-fee payment proof.
+ * Stores the screenshot in the existing `student-documents` bucket under
+ * `partner/{partnerId}/fees/{feeId}-{safeName}.{ext}` so admin reviewers
+ * can fetch it with the same signed-URL plumbing as other partner docs.
+ */
+export async function createPartnerFeeProofUploadUrl(
+  partnerId: string,
+  feeId: string,
+  originalFileName: string,
+): Promise<StudentDocUploadUrl | null> {
+  const supabase = getStorageClient();
+  if (!supabase) return null;
+
+  const ext = (originalFileName.split('.').pop() || 'png').toLowerCase();
+  const safeExt = ext.replace(/[^a-z0-9]/g, '').slice(0, 8) || 'png';
+  const safeName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${safeExt}`;
+  const storagePath = `partner/${partnerId}/fees/${feeId}-${safeName}`;
+
+  const { data, error } = await supabase.storage
+    .from(STUDENT_DOCS_BUCKET)
+    .createSignedUploadUrl(storagePath);
+
+  if (error || !data) {
+    console.error('[createPartnerFeeProofUploadUrl]', error);
+    return null;
+  }
+
+  return {
+    uploadUrl: data.signedUrl,
+    storagePath,
+    token: data.token,
+  };
+}
+
+/**
+ * Generate a signed download URL for a partner fee payment proof.
+ */
+export async function createPartnerFeeProofDownloadUrl(
+  storagePath: string,
+): Promise<string | null> {
+  const supabase = getStorageClient();
+  if (!supabase) return null;
+
+  const { data, error } = await supabase.storage
+    .from(STUDENT_DOCS_BUCKET)
+    .createSignedUrl(storagePath, 3600);
+
+  if (error || !data) {
+    console.error('[createPartnerFeeProofDownloadUrl]', error);
+    return null;
+  }
+
+  return data.signedUrl;
+}
+
+// ---------------------------------------------------------------------------
 // Bucket introspection (existing)
 // ---------------------------------------------------------------------------
 

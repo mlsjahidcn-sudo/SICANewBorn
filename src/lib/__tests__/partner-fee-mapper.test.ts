@@ -8,7 +8,7 @@ import {
 
 describe('partner-fee-mapper', () => {
   describe('parsePartnerFeeStatus', () => {
-    it('accepts all 4 statuses', () => {
+    it('accepts all statuses', () => {
       for (const s of PARTNER_FEE_STATUSES) {
         expect(parsePartnerFeeStatus(s)).toBe(s);
       }
@@ -73,6 +73,26 @@ describe('partner-fee-mapper', () => {
       expect(result.amount).toBe(0);
       expect(result.currency).toBe('CNY');
       expect(result.status).toBe('Pending');
+    });
+
+    it('maps payment proof and verification fields', () => {
+      const result = mapPartnerFeeFromDb({
+        id: 'fee-1',
+        partner_id: 'p-1',
+        student_name: 'X',
+        amount: 1000,
+        currency: 'CNY',
+        status: 'PendingVerification',
+        payment_proof_url: 'partner/p-1/s-1/proof.png',
+        payment_notes: 'Bank transfer done',
+        verified_at: '2026-08-12T10:00:00Z',
+        verified_by: 'admin-user-id',
+      });
+      expect(result.status).toBe('PendingVerification');
+      expect(result.paymentProofUrl).toBe('partner/p-1/s-1/proof.png');
+      expect(result.paymentNotes).toBe('Bank transfer done');
+      expect(result.verifiedAt).toBe('2026-08-12T10:00:00Z');
+      expect(result.verifiedBy).toBe('admin-user-id');
     });
   });
 

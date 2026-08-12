@@ -14,16 +14,21 @@
  *   description         ↔             description
  *   dueDate             ↔             due_date   (DATE → ISO date string)
  *   paidAt              ↔             paid_at    (TIMESTAMP → ISO string)
+ *   paymentProofUrl     ↔             payment_proof_url
+ *   paymentNotes        ↔             payment_notes
+ *   verifiedAt          ↔             verified_at
+ *   verifiedBy          ↔             verified_by
  *   createdAt           ↔             created_at
  *   updatedAt           ↔             updated_at
  *
- * Status: Pending | Paid | Overdue | Refunded
+ * Status: Pending | PendingVerification | Paid | Rejected | Refunded
  */
 
 export const PARTNER_FEE_STATUSES = [
   'Pending',
+  'PendingVerification',
   'Paid',
-  'Overdue',
+  'Rejected',
   'Refunded',
 ] as const;
 export type PartnerFeeStatus = (typeof PARTNER_FEE_STATUSES)[number];
@@ -38,6 +43,10 @@ export interface PartnerFee {
   description?: string | null;
   dueDate?: string | null;
   paidAt?: string | null;
+  paymentProofUrl?: string | null;
+  paymentNotes?: string | null;
+  verifiedAt?: string | null;
+  verifiedBy?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -60,6 +69,10 @@ interface RawPartnerFee {
   description?: string | null;
   due_date?: string | null;
   paid_at?: string | null;
+  payment_proof_url?: string | null;
+  payment_notes?: string | null;
+  verified_at?: string | null;
+  verified_by?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
 }
@@ -78,6 +91,10 @@ export function mapPartnerFeeFromDb(row: RawPartnerFee): PartnerFee {
     description: row.description ?? null,
     dueDate: row.due_date ?? null,
     paidAt: row.paid_at ?? null,
+    paymentProofUrl: row.payment_proof_url ?? null,
+    paymentNotes: row.payment_notes ?? null,
+    verifiedAt: row.verified_at ?? null,
+    verifiedBy: row.verified_by ?? null,
     createdAt: row.created_at ?? '',
     updatedAt: row.updated_at ?? '',
   };
@@ -95,5 +112,9 @@ export function mapPartnerFeeToDb(payload: Record<string, unknown>): Record<stri
   if (payload.description !== undefined) row.description = payload.description || null;
   if (payload.dueDate !== undefined) row.due_date = payload.dueDate || null;
   if (payload.paidAt !== undefined) row.paid_at = payload.paidAt || null;
+  if (payload.paymentProofUrl !== undefined) row.payment_proof_url = payload.paymentProofUrl || null;
+  if (payload.paymentNotes !== undefined) row.payment_notes = payload.paymentNotes || null;
+  if (payload.verifiedAt !== undefined) row.verified_at = payload.verifiedAt || null;
+  if (payload.verifiedBy !== undefined) row.verified_by = payload.verifiedBy || null;
   return row;
 }

@@ -4,11 +4,8 @@ import { mapPartnerFeeFromDb } from '@/lib/partner-fee-mapper';
 import { createPartnerFeeProofDownloadUrl } from '@/lib/storage';
 
 /**
- * GET /api/partner-fees — legacy read-only listing for the signed-in partner.
- *
- * Partners can no longer create or modify fees; admin manages service fees
- * via /api/admin/partner-fees. This route is kept for backwards compatibility
- * with any existing clients that only list fees.
+ * GET /api/partner/service-fees — list the signed-in partner's service fees.
+ * Auth: team member (owner or active member).
  */
 export const dynamic = 'force-dynamic';
 
@@ -35,10 +32,14 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query;
 
     if (error) {
+      console.error('[partner/service-fees GET] supabase error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     const fees = (data || []).map((row) => mapPartnerFeeFromDb(row as unknown as Parameters<typeof mapPartnerFeeFromDb>[0]));
+
+    // Mint short-lived download URLs for any payment proofs so the partner
+    // can view their own screenshots in the portal.
     const feesWithUrls = await Promise.all(
       fees.map(async (fee) => {
         if (!fee.paymentProofUrl) return fee;
@@ -51,27 +52,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(feesWithUrls);
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch partner fees' }, { status: 500 });
+    console.error('[partner/service-fees GET] error:', error);
+    return NextResponse.json({ error: 'Failed to fetch service fees' }, { status: 500 });
   }
-}
-
-export async function POST() {
-  return NextResponse.json(
-    { error: 'Partners cannot create fees. Admin manages service fees.' },
-    { status: 403 },
-  );
-}
-
-export async function PUT() {
-  return NextResponse.json(
-    { error: 'Partners cannot update fees. Use /api/partner/service-fees/[id]/upload-proof.' },
-    { status: 403 },
-  );
-}
-
-export async function DELETE() {
-  return NextResponse.json(
-    { error: 'Partners cannot delete fees. Admin manages service fees.' },
-    { status: 403 },
-  );
 }

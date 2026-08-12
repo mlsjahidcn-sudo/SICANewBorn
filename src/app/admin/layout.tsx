@@ -55,6 +55,7 @@ const navItems = [
   // is unchanged (admin is still the only role that can flip
   // status / decision for partner rows).
   { href: '/admin/fees', key: 'fees', icon: DollarSign },
+  { href: '/admin/partner-fees', key: 'partnerFees', icon: DollarSign },
   { href: '/admin/assessments', key: 'assessments', icon: ClipboardList },
   { href: '/admin/applications', key: 'applications', icon: FileText },
   // Phase 51: Success Stories — public showcase of admission notices.

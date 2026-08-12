@@ -958,6 +958,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerNav.unreadNotifTitle': '{{count}} unread notification',
     'partnerNav.unreadNotifTitlePlural': '{{count}} unread notifications',
     'partnerNav.documents': 'Documents',
+    'partnerNav.fees': 'Service Fees',
     // Partner Portal — Documents (list + upload + edit + delete)
     'partnerDocs.title': 'Documents',
     'partnerDocs.subtitle': 'Upload and manage student documents for SICA to review.',
@@ -1990,6 +1991,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminNav.documents': 'Documents',
     'adminNav.partners': 'Partners',
     'adminNav.fees': 'Fees',
+    'adminNav.partnerFees': 'Partner Fees',
     'adminNav.assessments': 'Assessments',
     'adminNav.applications': 'Applications',
     // Phase 46: Bulk WhatsApp send — admin tool for promotional blasts
@@ -3773,6 +3775,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerNav.unreadNotifTitle': '{{count}} 条未读通知',
     'partnerNav.unreadNotifTitlePlural': '{{count}} 条未读通知',
     'partnerNav.documents': '文档',
+    'partnerNav.fees': '服务费用',
     // Partner Portal — Documents (list + upload + edit + delete)
     'partnerDocs.title': '文档',
     'partnerDocs.subtitle': '上传并管理学生文档，供 SICA 审核。',
@@ -4764,6 +4767,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminNav.documents': '文档审核',
     'adminNav.partners': '合作机构',
     'adminNav.fees': '费用',
+    'adminNav.partnerFees': '合作方费用',
     'adminNav.assessments': '评估',
     'adminNav.applications': '申请',
     // Phase 46: Bulk WhatsApp send
