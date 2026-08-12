@@ -21,10 +21,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/about`, lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${SITE_URL}/contact`, lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${SITE_URL}/assessment`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/resources`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/success-stories`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
     // Phase 57: /get-started is the influencer-traffic sales
     // landing page. Higher priority than /contact (0.5) because
     // it's the conversion page for paid-traffic channels.
     { url: `${SITE_URL}/get-started`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
+  ];
+
+  // Programmatic SEO landing pages (static, high-intent long-tail)
+  const landingPages: MetadataRoute.Sitemap = [
+    { url: `${SITE_URL}/best-universities-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/best-universities-in-beijing`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/best-universities-in-shanghai`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/top-engineering-universities-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/best-mba-programs-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/mbbs-in-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/study-in-china-vs-russia-for-mbbs`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
+    { url: `${SITE_URL}/china-university-application-deadlines`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
+    { url: `${SITE_URL}/chinese-government-scholarship-csc`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
+    { url: `${SITE_URL}/phd-in-china-international-students`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
+    { url: `${SITE_URL}/china-university-admission-requirements`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
+    { url: `${SITE_URL}/cost-of-living-china-by-city`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
+    { url: `${SITE_URL}/best-cities-china-international-students`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
+    { url: `${SITE_URL}/cheapest-universities-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
   ];
 
   // Programmatic SEO hub pages
@@ -32,6 +52,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/study-in-china`, lastModified: now, changeFrequency: 'weekly', priority: 0.9 },
     { url: `${SITE_URL}/scholarships-for`, lastModified: now, changeFrequency: 'weekly', priority: 0.9 },
     { url: `${SITE_URL}/guides`, lastModified: now, changeFrequency: 'weekly', priority: 0.9 },
+    { url: `${SITE_URL}/universities/compare`, lastModified: now, changeFrequency: 'weekly', priority: 0.85 },
+    { url: `${SITE_URL}/majors`, lastModified: now, changeFrequency: 'weekly', priority: 0.85 },
   ];
 
   // Long-form guide pages — high-value pillar content for SEO + GEO + AEO
@@ -101,6 +123,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
+  // Program detail pages — were missing from the sitemap entirely.
+  const programUrls: MetadataRoute.Sitemap = programs.map((entry: SitemapEntry) => ({
+    url: `${SITE_URL}/programs/${entry.slug}`,
+    lastModified: entry.updated_at ? new Date(entry.updated_at) : now,
+    changeFrequency: 'weekly',
+    priority: 0.8,
+  }));
+
   const scholarshipUrls: MetadataRoute.Sitemap = scholarships.map((entry: SitemapEntry) => ({
     url: `${SITE_URL}/scholarships/${entry.slug}`,
     lastModified: entry.updated_at ? new Date(entry.updated_at) : now,
@@ -146,11 +176,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ]);
 
-  // /majors index + per-discipline pages — 8 unique disciplines.
-  const majorsIndexUrl: MetadataRoute.Sitemap = [
-    { url: `${SITE_URL}/majors`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
-  ];
-  // Derive the same discipline slugs the /majors/[discipline] route uses
+  // /majors per-discipline pages — the /majors index lives in seoHubPages.
   // (lowercased, hyphens). Build from the programs list to stay in
   // sync with the page's own slugifyDiscipline.
   const DISCIPLINE_SLUGS = Array.from(
@@ -213,15 +239,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   return [
     ...staticPages,
+    ...landingPages,
     ...seoHubPages,
     ...guidePages,
     ...cityUrls,
     ...countryUrls,
     ...universityUrls,
+    ...programUrls,
     ...scholarshipUrls,
     ...compareUrls,
     ...rankedUniSubUrls,
-    ...majorsIndexUrl,
     ...majorUrls,
     ...scholarshipEligibilityUrls,
     ...programScholarshipUrls,
