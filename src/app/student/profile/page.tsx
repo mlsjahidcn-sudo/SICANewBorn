@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { apiFetchJson } from '@/lib/api-client';
 
 interface StudentProfile {
@@ -95,7 +97,7 @@ export default function StudentProfilePage() {
     void load();
   }, []);
 
-  const handleChange = (key: keyof StudentProfile, value: string) => {
+  const handleChange = (key: keyof StudentProfile, value: string | string[]) => {
     setProfile((prev) => ({ ...prev, [key]: value }));
     if (savedAt) setSavedAt(null);
   };
@@ -111,7 +113,7 @@ export default function StudentProfilePage() {
       for (const [k, v] of Object.entries(profile)) {
         if (k === 'id') continue;
         if (typeof v === 'string') {
-          payload[k] = v.trim() === '' ? null : v.trim();
+          payload[k] = v.trim() === '' || v === '_unset_' ? null : v.trim();
         } else if (Array.isArray(v)) {
           payload[k] = v.length === 0 ? null : v;
         } else {
@@ -137,6 +139,25 @@ export default function StudentProfilePage() {
     setIsEditing(false);
     void load(); // re-fetch the canonical state
   };
+
+  // Phase 4D: profile completeness meter. We count the fields that
+  // meaningfully help SICA advise + process applications.
+  const COMPLETENESS_FIELDS: Array<keyof StudentProfile> = [
+    'first_name',
+    'last_name',
+    'phone',
+    'nationality',
+    'date_of_birth',
+    'highest_education',
+    'target_degree',
+    'target_field',
+    'target_intake',
+  ];
+  const completedFields = COMPLETENESS_FIELDS.filter((k) => {
+    const v = profile[k];
+    return v !== null && v !== undefined && String(v).trim() !== '';
+  }).length;
+  const completeness = Math.round((completedFields / COMPLETENESS_FIELDS.length) * 100);
 
   if (isLoading) {
     return (
@@ -197,6 +218,27 @@ export default function StudentProfilePage() {
           )}
         </div>
       </div>
+
+      {/* Phase 4D: profile completeness card. */}
+      <Card className="rounded-none border-[#1B2A4A]/10 bg-[#1B2A4A]/5">
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-[#1B2A4A]">
+                {t('studentProfile.completenessTitle', { percent: completeness })}
+              </p>
+              <p className="text-xs text-[#4B5563] mt-0.5">
+                {completeness < 100
+                  ? t('studentProfile.completenessHint')
+                  : t('studentProfile.completenessComplete')}
+              </p>
+            </div>
+            <div className="sm:w-1/3">
+              <Progress value={completeness} className="h-2" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {error && (
         <Card className="rounded-none border-red-200 bg-red-50">
@@ -321,16 +363,21 @@ export default function StudentProfilePage() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="highest_education">{t('studentProfile.highestEducation')}</Label>
-              <select
-                id="highest_education"
+              <Select
                 value={profile.highest_education ?? ''}
-                onChange={(e) => handleChange('highest_education', e.target.value)}
+                onValueChange={(value) => handleChange('highest_education', value)}
                 disabled={!isEditing}
-                className="w-full h-10 rounded-none border border-gray-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2A4A]/20 disabled:bg-gray-50 disabled:text-gray-500"
               >
-                <option value="">{t('studentProfile.notSet')}</option>
-                {HIGHEST_EDUCATION.map((d) => <option key={d} value={d}>{d}</option>)}
-              </select>
+                <SelectTrigger id="highest_education" className="rounded-none">
+                  <SelectValue placeholder={t('studentProfile.notSet')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_unset_">{t('studentProfile.notSet')}</SelectItem>
+                  {HIGHEST_EDUCATION.map((d) => (
+                    <SelectItem key={d} value={d}>{d}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="school_name">{t('studentProfile.schoolName')}</Label>
@@ -369,16 +416,21 @@ export default function StudentProfilePage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="english_proficiency">{t('studentProfile.englishTest')}</Label>
-                <select
-                  id="english_proficiency"
+                <Select
                   value={profile.english_proficiency ?? ''}
-                  onChange={(e) => handleChange('english_proficiency', e.target.value)}
+                  onValueChange={(value) => handleChange('english_proficiency', value)}
                   disabled={!isEditing}
-                  className="w-full h-10 rounded-none border border-gray-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2A4A]/20 disabled:bg-gray-50 disabled:text-gray-500"
                 >
-                  <option value="">{t('studentProfile.notSet')}</option>
-                  {ENGLISH_PROFICIENCY.map((d) => <option key={d} value={d}>{d}</option>)}
-                </select>
+                  <SelectTrigger id="english_proficiency" className="rounded-none">
+                    <SelectValue placeholder={t('studentProfile.notSet')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_unset_">{t('studentProfile.notSet')}</SelectItem>
+                    {ENGLISH_PROFICIENCY.map((d) => (
+                      <SelectItem key={d} value={d}>{d}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="english_score">{t('studentProfile.testScore')}</Label>
@@ -395,16 +447,21 @@ export default function StudentProfilePage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="target_degree">{t('studentProfile.targetDegree')}</Label>
-                <select
-                  id="target_degree"
+                <Select
                   value={profile.target_degree ?? ''}
-                  onChange={(e) => handleChange('target_degree', e.target.value)}
+                  onValueChange={(value) => handleChange('target_degree', value)}
                   disabled={!isEditing}
-                  className="w-full h-10 rounded-none border border-gray-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B2A4A]/20 disabled:bg-gray-50 disabled:text-gray-500"
                 >
-                  <option value="">{t('studentProfile.notSet')}</option>
-                  {TARGET_DEGREES.map((d) => <option key={d} value={d}>{d}</option>)}
-                </select>
+                  <SelectTrigger id="target_degree" className="rounded-none">
+                    <SelectValue placeholder={t('studentProfile.notSet')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_unset_">{t('studentProfile.notSet')}</SelectItem>
+                    {TARGET_DEGREES.map((d) => (
+                      <SelectItem key={d} value={d}>{d}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="target_intake">{t('studentProfile.targetIntake')}</Label>
@@ -428,6 +485,26 @@ export default function StudentProfilePage() {
                 className="rounded-none"
                 placeholder="e.g., Computer Science"
               />
+            </div>
+            {/* Phase 4D: preferred universities — comma-separated for now. */}
+            <div className="space-y-2">
+              <Label htmlFor="preferred_universities">{t('studentProfile.preferredUniversities')}</Label>
+              <Input
+                id="preferred_universities"
+                value={(profile.preferred_universities ?? []).join(', ')}
+                onChange={(e) =>
+                  handleChange(
+                    'preferred_universities',
+                    e.target.value.split(',').map((s) => s.trim()).filter(Boolean),
+                  )
+                }
+                disabled={!isEditing}
+                className="rounded-none"
+                placeholder="e.g., Tsinghua University, Peking University"
+              />
+              <p className="text-xs text-gray-500">
+                {t('studentProfile.preferredUniversitiesHint')}
+              </p>
             </div>
           </CardContent>
         </Card>

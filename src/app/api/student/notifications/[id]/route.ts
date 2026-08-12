@@ -54,3 +54,50 @@ export async function PATCH(
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+/**
+ * DELETE /api/student/notifications/[id]
+ *
+ * Remove a single notification from the student's inbox.
+ * RLS DELETE policy on student_notifications restricts to
+ * student_id = auth.uid(). We add a defensive .eq() here too.
+ */
+export async function DELETE(
+  _request: NextRequest,
+  context: { params: Promise<{ id: string }> },
+) {
+  if (!getServerEnv().serviceKey) {
+    return NextResponse.json({ error: 'Supabase is not configured' }, { status: 503 });
+  }
+  const auth = await getRequestAuth(_request);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+  const { supabase, user } = auth;
+  const { id } = await context.params;
+  if (!id) {
+    return NextResponse.json({ error: 'Missing id' }, { status: 400 });
+  }
+  try {
+    const { error, count } = await supabase
+      .from('student_notifications')
+      .delete({ count: 'exact' })
+      .eq('id', id)
+      .eq('student_id', user.id);
+    if (error) {
+      console.error('[student/notifications/:id DELETE] supabase error:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    if (!count) {
+      return NextResponse.json(
+        { error: 'Notification not found or not yours' },
+        { status: 404 },
+      );
+    }
+    return NextResponse.json({ deleted: true });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[student/notifications/:id DELETE] unhandled:', err);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}

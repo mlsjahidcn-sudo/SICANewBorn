@@ -9,6 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 import type { StudentApplication } from '@/lib/application-mapper';
@@ -86,41 +87,61 @@ export default function StudentApplicationsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeStatus, setActiveStatus] = useState('all');
+  const [search, setSearch] = useState('');
   // Phase 1.1: pagination
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
 
+  const buildQuery = (p: number) => {
+    const params = new URLSearchParams({ page: String(p), limit: '20' });
+    if (activeStatus && activeStatus !== 'all') params.set('status', activeStatus);
+    if (search.trim()) params.set('q', search.trim());
+    return `/api/student/applications?${params.toString()}`;
+  };
+
   const fetchList = useCallback(async (opts?: { append?: boolean; page?: number }) => {
     setIsLoading(true);
     setError(null);
     try {
       const p = opts?.page ?? 1;
-      const data = await apiFetchJson<ListResponse>(
-        `/api/student/applications?page=${p}&limit=20`,
-      );
+      const data = await apiFetchJson<ListResponse>(buildQuery(p));
       const list = data.applications || [];
+      const newTotal = data.total || 0;
       if (opts?.append) {
-        setApplications((prev) => [...prev, ...list]);
+        setApplications((prev) => {
+          const combined = [...prev, ...list];
+          setHasMore(combined.length < newTotal);
+          return combined;
+        });
       } else {
         setApplications(list);
+        setHasMore(list.length < newTotal);
       }
-      setTotal(data.total || 0);
-      setHasMore(applications.length + list.length < (data.total || 0));
+      setTotal(newTotal);
       setPage(p);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load aplicaciones');
+      setError(err instanceof Error ? err.message : 'Failed to load applications');
       setApplications([]);
+      setHasMore(false);
     } finally {
       setIsLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [activeStatus, search]);
 
   useEffect(() => {
     fetchList();
   }, [fetchList]);
+
+  // Phase 4A: when the student changes a filter or search term,
+  // reset to page 1 so they don't land on an empty page 3.
+  useEffect(() => {
+    setPage(1);
+    fetchList();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeStatus, search]);
 
   const loadMore = async () => {
     if (loadingMore || !hasMore) return;
@@ -131,10 +152,6 @@ export default function StudentApplicationsPage() {
       setLoadingMore(false);
     }
   };
-
-  const filteredApplications = activeStatus === 'all'
-    ? applications
-    : applications.filter((a) => a.status === activeStatus);
 
   // Status icon per app
   const StatusIcon = ({ status }: { status: string }) => {
@@ -186,6 +203,29 @@ export default function StudentApplicationsPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Phase 4A: search + status filter. Both are now server-side so
+          pagination and counts stay accurate across large lists. */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1 max-w-md">
+          <Input
+            placeholder={t('studentApps.searchPlaceholder')}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="rounded-none pr-9"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-gray-600"
+              aria-label={t('common.clear')}
+            >
+              ×
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* Status Filter */}
       <div className="flex flex-wrap gap-2">
@@ -275,7 +315,7 @@ export default function StudentApplicationsPage() {
             </Card>
           ))}
         </div>
-      ) : filteredApplications.length === 0 ? (
+      ) : applications.length === 0 ? (
         <Card className="rounded-none">
           <CardContent className="p-12 text-center">
             <GraduationCap className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -297,7 +337,7 @@ export default function StudentApplicationsPage() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {filteredApplications.map((app) => {
+          {applications.map((app) => {
             const display = statusDisplay[app.status] || {
               labelKey: 'studentAppDetail.status',
               badge: 'bg-gray-100 text-gray-800',
@@ -348,7 +388,7 @@ export default function StudentApplicationsPage() {
 
       {/* Phase 1.1: pagination. Renders a "Load more" button
           when we have more rows than the current page. */}
-      {!isLoading && hasMore && filteredApplications.length > 0 && (
+      {!isLoading && hasMore && applications.length > 0 && (
         <div className="flex flex-col items-center gap-1 py-4">
           <Button
             variant="outline"

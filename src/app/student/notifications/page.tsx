@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { Bell, Check, CheckCheck, Inbox, Filter, RefreshCw } from 'lucide-react';
+import { Bell, Check, CheckCheck, Inbox, Filter, RefreshCw, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -91,7 +91,13 @@ export default function StudentNotificationsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const limit = 25;
   const [markingAll, setMarkingAll] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [retryNonce, setRetryNonce] = useState(0);
   const pendingNavRef = useRef<string | null>(null);
 
@@ -102,20 +108,27 @@ export default function StudentNotificationsPage() {
     setIsLoading(true);
     setError(null);
 
-    const params = new URLSearchParams({ limit: '50' });
+    const params = new URLSearchParams({ limit: String(limit), page: String(page) });
     if (filter === 'unread') params.set('unread', 'true');
+    if (typeFilter !== 'all') params.set('type', typeFilter);
 
     (async () => {
       try {
         const data = await apiFetchJson<{
           notifications: StudentNotification[];
           unreadCount: number;
+          total: number;
+          totalPages: number;
+          page: number;
         }>(`/api/student/notifications?${params.toString()}`, {
           signal: controller.signal,
         });
         if (!cancelled) {
           setNotifications(data.notifications);
           setUnreadCount(data.unreadCount);
+          setTotal(data.total || 0);
+          setTotalPages(data.totalPages || 1);
+          setPage(data.page || 1);
         }
       } catch (err) {
         if (!cancelled) {
@@ -130,7 +143,7 @@ export default function StudentNotificationsPage() {
       cancelled = true;
       controller.abort();
     };
-  }, [filter, retryNonce]);
+  }, [filter, typeFilter, page, retryNonce, limit]);
 
   // 30s polling + window-focus refetch
   useEffect(() => {
@@ -180,6 +193,24 @@ export default function StudentNotificationsPage() {
       setMarkingAll(false);
     }
   }, [unreadCount]);
+
+  // Phase 4C: delete a notification from the inbox.
+  const deleteNotif = useCallback(async (id: string) => {
+    setDeletingId(id);
+    try {
+      await apiFetch(`/api/student/notifications/${id}`, { method: 'DELETE' });
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+      setTotal((t) => Math.max(0, t - 1));
+      setUnreadCount((c) => {
+        const removed = notifications.find((n) => n.id === id);
+        return removed && !removed.is_read ? Math.max(0, c - 1) : c;
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('studentNotif.errorDelete'));
+    } finally {
+      setDeletingId(null);
+    }
+  }, [notifications]);
 
   const onRowClick = useCallback(
     (n: StudentNotification) => {
@@ -234,11 +265,11 @@ export default function StudentNotificationsPage() {
       </div>
 
       {/* Filter chips */}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Filter size={14} className="text-gray-400" />
         <button
           type="button"
-          onClick={() => setFilter('all')}
+          onClick={() => { setFilter('all'); setPage(1); }}
           className={`px-3 py-1.5 text-sm font-medium border ${
             filter === 'all'
               ? 'bg-[#1B2A4A] text-white border-[#1B2A4A]'
@@ -249,7 +280,7 @@ export default function StudentNotificationsPage() {
         </button>
         <button
           type="button"
-          onClick={() => setFilter('unread')}
+          onClick={() => { setFilter('unread'); setPage(1); }}
           className={`px-3 py-1.5 text-sm font-medium border flex items-center gap-1.5 ${
             filter === 'unread'
               ? 'bg-[#1B2A4A] text-white border-[#1B2A4A]'
@@ -267,6 +298,22 @@ export default function StudentNotificationsPage() {
             </span>
           )}
         </button>
+        {/* Phase 4C: type filter chips. */}
+        <span className="w-px h-4 bg-gray-300 mx-1" />
+        {['all', 'status_change', 'documents_requested', 'team', 'info'].map((type) => (
+          <button
+            key={type}
+            type="button"
+            onClick={() => { setTypeFilter(type); setPage(1); }}
+            className={`px-3 py-1.5 text-xs font-medium border ${
+              typeFilter === type
+                ? 'bg-[#9B1B30] text-white border-[#9B1B30]'
+                : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            {type === 'all' ? t('studentNotif.typeAll') : t(TYPE_LABEL_KEY[type] || 'studentNotif.typeInfo')}
+          </button>
+        ))}
       </div>
 
       {/* Error banner */}
@@ -327,6 +374,7 @@ export default function StudentNotificationsPage() {
                     onClick={() => onRowClick(n)}
                     role="button"
                     tabIndex={0}
+                    aria-label={n.is_read ? n.title : `${t('studentNotif.unread')}: ${n.title}`}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
@@ -382,6 +430,19 @@ export default function StudentNotificationsPage() {
                         <Check size={16} />
                       </button>
                     )}
+                    {/* Phase 4C: delete notification. */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void deleteNotif(n.id);
+                      }}
+                      disabled={deletingId === n.id}
+                      className="flex-shrink-0 text-gray-400 hover:text-red-600 p-1 opacity-0 group-hover:opacity-100 hover:opacity-100 focus:opacity-100 disabled:opacity-50"
+                      title={t('studentNotif.deleteTooltip')}
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </li>
                 );
               }}
@@ -390,11 +451,38 @@ export default function StudentNotificationsPage() {
         </Card>
       )}
 
-      {/* Footer hint */}
+      {/* Footer hint + pagination */}
       {notifications.length > 0 && (
-        <p className="text-xs text-gray-400 text-center">
-          {t('studentNotif.footer', { n: notifications.length })}
-        </p>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-500">
+          <p>
+            {t('studentNotif.footer', { n: notifications.length })} · {t('studentNotif.pageInfo', { page, totalPages })}
+          </p>
+          {totalPages > 1 && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-none h-8"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1 || isLoading}
+              >
+                <ChevronLeft size={14} />
+              </Button>
+              <span className="font-medium text-[#1B2A4A]">
+                {page} / {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-none h-8"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages || isLoading}
+              >
+                <ChevronRight size={14} />
+              </Button>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

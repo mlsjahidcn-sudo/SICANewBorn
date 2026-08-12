@@ -27,13 +27,24 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const page = Math.max(1, parseInt(url.searchParams.get('page') || '1', 10));
     const limit = Math.min(50, Math.max(1, parseInt(url.searchParams.get('limit') || '20', 10)));
+    const status = url.searchParams.get('status');
+    const q = url.searchParams.get('q')?.trim();
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
-    const { data: rows, error, count } = await supabase
+    let query = supabase
       .from('student_applications')
       .select('*', { count: 'exact' })
-      .eq('student_id', user.id)
+      .eq('student_id', user.id);
+
+    if (status && status !== 'all') {
+      query = query.eq('status', status);
+    }
+    if (q) {
+      query = query.or(`university_name.ilike.%${q}%,program_name.ilike.%${q}%`);
+    }
+
+    const { data: rows, error, count } = await query
       .order('created_at', { ascending: false })
       .range(from, to);
 
@@ -113,6 +124,30 @@ export async function POST(request: Request) {
     // (Status validation done above. The other statuses — Under Review,
     // Documents Requested, Decision Made, Accepted, Rejected, Withdrawn
     // — are admin-set, not student-driven.)
+
+    // Phase 4B: guard against duplicate active applications for the
+    // same university + program + intake. Students may re-apply after
+    // Rejection or Withdrawal, so we only block non-terminal duplicates.
+    if (!isDraft) {
+      const { data: duplicates, error: dupError } = await supabase
+        .from('student_applications')
+        .select('id, status')
+        .eq('student_id', user.id)
+        .ilike('university_name', trimmedUniversity)
+        .ilike('program_name', trimmedProgram)
+        .ilike('intake', trimmedIntake)
+        .not('status', 'in', '(Rejected,Withdrawn)');
+      if (dupError) {
+        console.error('[Student Applications POST] duplicate check failed:', dupError);
+        return NextResponse.json({ error: 'Failed to verify duplicate applications' }, { status: 500 });
+      }
+      if (duplicates && duplicates.length > 0) {
+        return NextResponse.json(
+          { error: 'You already have an active application for this university, program, and intake.' },
+          { status: 409 },
+        );
+      }
+    }
 
     // Generate application_number atomically (S5 fix)
     const { data: rpcData, error: rpcError } = await supabase.rpc('generate_application_number');

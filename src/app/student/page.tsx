@@ -8,6 +8,7 @@ import { apiFetchJson, ApiError } from '@/lib/api-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import {
   BookOpen,
   FileText,
@@ -64,6 +65,15 @@ export default function StudentDashboardPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [applications, setApplications] = useState<StudentApplication[]>([]);
   const [documents, setDocuments] = useState<StudentDocument[]>([]);
+  // Phase 4A: profile-aware greeting and progress context.
+  interface StudentProfileSummary {
+    first_name?: string | null;
+    last_name?: string | null;
+    target_degree?: string | null;
+    target_field?: string | null;
+    target_intake?: string | null;
+  }
+  const [profile, setProfile] = useState<StudentProfileSummary | null>(null);
   // Phase 1.3: latest 3 notifications for the dashboard card.
   // Keeps the bell badge + the card in sync without a separate
   // fetch on the dashboard.
@@ -87,17 +97,21 @@ export default function StudentDashboardPage() {
     let cancelled = false;
     (async () => {
       try {
-        const [appsRes, docsRes, notifsRes] = await Promise.all([
+        const [appsRes, docsRes, notifsRes, profileRes] = await Promise.all([
           apiFetchJson<{ data: StudentApplication[] }>('/api/student/applications'),
           apiFetchJson<{ data: StudentDocument[] }>('/api/student/documents'),
           apiFetchJson<{ notifications: StudentNotifSummary[] }>(
             '/api/student/notifications?limit=3',
+          ),
+          apiFetchJson<{ data: StudentProfileSummary }>('/api/student/profile').catch(
+            () => ({ data: null }),
           ),
         ]);
         if (cancelled) return;
         setApplications(appsRes.data || []);
         setDocuments(docsRes.data || []);
         setLatestNotifs(notifsRes.notifications || []);
+        setProfile(profileRes.data || null);
       } catch (err) {
         if (cancelled) return;
         const msg = err instanceof ApiError ? err.message : 'Failed to load dashboard';
@@ -124,6 +138,87 @@ export default function StudentDashboardPage() {
 
   const getStatusColor = (status: string) =>
     STATUS_COLOR[status] || 'bg-yellow-100 text-yellow-800';
+
+  // Phase 4A: application progress visualization.
+  // Draft → Submitted → Under Review → Decision Made → Accepted/Rejected.
+  const getProgressForStatus = (status: string): number => {
+    switch (status) {
+      case 'Draft':
+        return 10;
+      case 'Submitted':
+        return 35;
+      case 'Documents Requested':
+        return 50;
+      case 'Under Review':
+        return 65;
+      case 'Decision Made':
+        return 85;
+      case 'Accepted':
+      case 'Rejected':
+        return 100;
+      case 'Withdrawn':
+        return 0;
+      default:
+        return 25;
+    }
+  };
+
+  const getProgressLabel = (status: string): string => {
+    switch (status) {
+      case 'Draft':
+        return t('student.progressDraft');
+      case 'Submitted':
+        return t('student.progressSubmitted');
+      case 'Documents Requested':
+        return t('student.progressDocumentsRequested');
+      case 'Under Review':
+        return t('student.progressUnderReview');
+      case 'Decision Made':
+        return t('student.progressDecisionMade');
+      case 'Accepted':
+        return t('student.progressAccepted');
+      case 'Rejected':
+        return t('student.progressRejected');
+      case 'Withdrawn':
+        return t('student.progressWithdrawn');
+      default:
+        return status;
+    }
+  };
+
+  // Phase 4A: pick the single most urgent next action for the student.
+  const nextAction = (() => {
+    const docsRequested = applications.filter((a) => a.status === 'Documents Requested');
+    if (docsRequested.length > 0) {
+      return {
+        type: 'documents' as const,
+        count: docsRequested.length,
+        href: '/student/applications',
+        label: t('student.nextActionDocuments'),
+      };
+    }
+    const drafts = applications.filter((a) => a.status === 'Draft');
+    if (drafts.length > 0) {
+      return {
+        type: 'draft' as const,
+        count: drafts.length,
+        href: '/student/applications',
+        label: t('student.nextActionDraft'),
+      };
+    }
+    const pending = applications.filter((a) =>
+      ['Submitted', 'Under Review'].includes(a.status),
+    );
+    if (pending.length > 0) {
+      return {
+        type: 'pending' as const,
+        count: pending.length,
+        href: '/student/applications',
+        label: t('student.nextActionPending'),
+      };
+    }
+    return null;
+  })();
 
   const quickActions = [
     {
@@ -173,7 +268,10 @@ export default function StudentDashboardPage() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-[#1B2A4A]">
-          {t('student.welcomeBack')}{user?.email ? `, ${user.email}` : ''} 👋
+          {t('student.welcomeBack')}{
+            profile?.first_name ? `, ${profile.first_name}` : user?.email ? `, ${user.email}` : ''
+          }{' '}
+          👋
         </h1>
         <p className="text-[#4B5563] mt-2">{t('student.manageApplications')}</p>
       </div>
@@ -221,6 +319,35 @@ export default function StudentDashboardPage() {
               className="border-[#1B2A4A] text-[#1B2A4A] hover:bg-[#1B2A4A] hover:text-white rounded-none"
             >
               Resume
+              <ArrowRight className="h-4 w-4 ml-1" />
+            </Button>
+          </Link>
+        </div>
+      )}
+
+      {/* Phase 4A: next-action card surfaces the one thing the student
+          should do next, so the dashboard isn't just read-only stats. */}
+      {nextAction && (
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 border-l-4 border-[#1B2A4A] bg-[#F3F4F6] rounded-none">
+          <Clock className="h-5 w-5 text-[#1B2A4A] flex-shrink-0" />
+          <div className="flex-1">
+            <p className="font-semibold text-[#1B2A4A]">{nextAction.label}</p>
+            <p className="text-sm text-gray-700 mt-0.5">
+              {nextAction.count}{' '}
+              {nextAction.type === 'documents'
+                ? t('student.nextActionDocsSuffix')
+                : nextAction.type === 'draft'
+                ? t('student.nextActionDraftSuffix')
+                : t('student.nextActionPendingSuffix')}
+            </p>
+          </div>
+          <Link href={nextAction.href} className="sm:ml-auto">
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-[#1B2A4A] text-[#1B2A4A] hover:bg-[#1B2A4A] hover:text-white rounded-none"
+            >
+              {t('student.viewAll')}
               <ArrowRight className="h-4 w-4 ml-1" />
             </Button>
           </Link>
@@ -345,6 +472,20 @@ export default function StudentDashboardPage() {
                     <div className="flex items-center gap-2 mt-2">
                       <Calendar className="h-3 w-3 text-[#4B5563]" />
                       <span className="text-xs text-[#4B5563]">{app.intake}</span>
+                    </div>
+                    {/* Phase 4A: mini progress bar for each recent app. */}
+                    <div className="mt-3 space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-[#4B5563]">{getProgressLabel(app.status)}</span>
+                        <span className="font-medium text-[#1B2A4A]">
+                          {getProgressForStatus(app.status)}%
+                        </span>
+                      </div>
+                      <Progress
+                        value={getProgressForStatus(app.status)}
+                        className="h-1.5"
+                        aria-label={`${app.university_name} ${getProgressLabel(app.status)}`}
+                      />
                     </div>
                   </div>
                   <Badge className={getStatusColor(app.status)}>{app.status}</Badge>

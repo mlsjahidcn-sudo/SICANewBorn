@@ -305,6 +305,11 @@ CREATE POLICY "Students can update their own notifications"
   FOR UPDATE
   USING (student_id = auth.uid());
 
+CREATE POLICY "Students can delete their own notifications"
+  ON student_notifications
+  FOR DELETE
+  USING (student_id = auth.uid());
+
 CREATE POLICY "Admins can create notifications for students"
   ON student_notifications
   FOR INSERT

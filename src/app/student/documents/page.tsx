@@ -2,13 +2,20 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
-import { FileText, FileUp, Upload, CheckCircle2, Clock, XCircle, Trash2, Link2, ExternalLink, FileCheck, X } from 'lucide-react';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import { FileText, FileUp, Upload, CheckCircle2, Clock, XCircle, Trash2, Link2, ExternalLink, FileCheck, X, Eye, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 import { documentTypes, DocumentCategory } from '@/lib/student-data';
@@ -51,6 +58,8 @@ const CATEGORIES: Array<'All' | DocumentCategory> = [
 
 export default function StudentDocumentsPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const { t } = useI18n();
   // ?applicationId=<id> comes in from the application detail
   // "Upload Document" button. We pre-filter the docs list to that
@@ -61,13 +70,20 @@ export default function StudentDocumentsPage() {
   const filterApplicationId = searchParams.get('applicationId');
 
   const [isLoading, setIsLoading] = useState(true);
-  const [activeCategory, setActiveCategory] = useState<'All' | DocumentCategory>('All');
-  // Phase 1.10: status filter + sort. Defaults are
-  // "All" statuses and newest-first (the current default
-  // since /api/student/documents orders by uploaded_at desc).
-  const [activeStatus, setActiveStatus] = useState<'all' | 'Pending' | 'Uploaded' | 'Verified' | 'Rejected'>('all');
-  const [sortKey, setSortKey] = useState<'uploaded_at' | 'name' | 'status'>('uploaded_at');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  // Phase 4C: read filter/sort state from URL so the student can
+  // bookmark or refresh without losing their view.
+  const [activeCategory, setActiveCategory] = useState<'All' | DocumentCategory>(
+    (searchParams.get('category') as DocumentCategory) || 'All',
+  );
+  const [activeStatus, setActiveStatus] = useState<'all' | 'Pending' | 'Uploaded' | 'Verified' | 'Rejected'>(
+    (searchParams.get('status') as 'all' | 'Pending' | 'Uploaded' | 'Verified' | 'Rejected') || 'all',
+  );
+  const [sortKey, setSortKey] = useState<'uploaded_at' | 'name' | 'status'>(
+    (searchParams.get('sort') as 'uploaded_at' | 'name' | 'status') || 'uploaded_at',
+  );
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(
+    (searchParams.get('order') as 'asc' | 'desc') || 'desc',
+  );
   const [documents, setDocuments] = useState<DbStudentDocument[]>([]);
   // Phase S20: fetch the student's applications so each doc row
   // can show its "Linked to" app + offer a re-link dropdown.
@@ -76,6 +92,11 @@ export default function StudentDocumentsPage() {
   // Per-doc re-link state. We track which doc is currently being
   // re-linked so the dropdown can show a "saving…" affordance.
   const [linkingId, setLinkingId] = useState<string | null>(null);
+  // Phase 4C: styled delete confirmation + preview + re-upload.
+  const [docToDelete, setDocToDelete] = useState<DbStudentDocument | null>(null);
+  const [previewDoc, setPreviewDoc] = useState<DbStudentDocument | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [reuploadId, setReuploadId] = useState<string | null>(null);
 
   // Upload panel state
   const [showUploadPanel, setShowUploadPanel] = useState(false);
@@ -114,6 +135,23 @@ export default function StudentDocumentsPage() {
   useEffect(() => {
     void loadDocuments();
   }, []);
+
+  // Phase 4C: keep URL query params in sync with filters/sort.
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (activeCategory === 'All') params.delete('category');
+    else params.set('category', activeCategory);
+    if (activeStatus === 'all') params.delete('status');
+    else params.set('status', activeStatus);
+    if (sortKey === 'uploaded_at') params.delete('sort');
+    else params.set('sort', sortKey);
+    if (sortOrder === 'desc') params.delete('order');
+    else params.set('order', sortOrder);
+    const newQuery = params.toString();
+    const newUrl = newQuery ? `${pathname}?${newQuery}` : pathname;
+    router.replace(newUrl, { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCategory, activeStatus, sortKey, sortOrder]);
 
   /**
    * Phase S20: link (or unlink) a doc to an application. We do a
@@ -165,8 +203,10 @@ export default function StudentDocumentsPage() {
     ]);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm(t('studentDocs.deleteConfirm'))) return;
+  const handleDelete = async () => {
+    if (!docToDelete) return;
+    const id = docToDelete.id;
+    setDocToDelete(null);
     try {
       const res = await fetch(`/api/student/documents/${id}`, { method: 'DELETE' });
       if (!res.ok) {
@@ -188,6 +228,35 @@ export default function StudentDocumentsPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : t('studentDocs.errorDownload'));
     }
+  };
+
+  // Phase 4C: inline preview modal. Resolves a signed URL for the
+  // document and shows it in a Dialog (image/PDF) or a download
+  // fallback for other file types.
+  const openPreview = async (doc: DbStudentDocument) => {
+    if (!doc.file_url) return;
+    setPreviewDoc(doc);
+    setPreviewUrl(null);
+    try {
+      const { downloadUrl } = await createStudentDocDownloadUrl(doc.file_url);
+      setPreviewUrl(downloadUrl);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('studentDocs.errorPreview'));
+      setPreviewDoc(null);
+    }
+  };
+
+  // Phase 4C: re-upload shortcut for rejected docs. Shows the
+  // DocumentUploader inline; when the new file lands, we delete the
+  // old rejected row so the student sees one clean entry.
+  const handleReuploaded = async (doc: DbStudentDocument, uploaded: UploadedDocument) => {
+    setReuploadId(null);
+    try {
+      await fetch(`/api/student/documents/${doc.id}`, { method: 'DELETE' });
+    } catch (err) {
+      console.error('[student/documents] failed to delete old rejected doc:', err);
+    }
+    handleUploaded(uploaded);
   };
 
   const getStatusBadge = (status: string) => {
@@ -510,18 +579,44 @@ export default function StudentDocumentsPage() {
                       <Button
                         variant="ghost"
                         size="sm"
+                        onClick={() => openPreview(doc)}
+                        className="rounded-none"
+                        aria-label={t('studentDocs.preview')}
+                        title={t('studentDocs.preview')}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {doc.file_url && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => handleDownload(doc)}
                         className="rounded-none"
+                        aria-label={t('studentDocs.download')}
                         title={t('studentDocs.download')}
                       >
-                        {t('studentDocs.download')}
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {doc.status === 'Rejected' && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setReuploadId(reuploadId === doc.id ? null : doc.id)}
+                        className="rounded-none text-amber-700 hover:text-amber-900"
+                        aria-label={t('studentDocs.reupload')}
+                        title={t('studentDocs.reupload')}
+                      >
+                        <RotateCcw className="h-4 w-4" />
                       </Button>
                     )}
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleDelete(doc.id)}
+                      onClick={() => setDocToDelete(doc)}
                       className="rounded-none text-red-600 hover:text-red-800"
+                      aria-label={t('studentDocs.delete')}
                       title={t('studentDocs.delete')}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -550,6 +645,105 @@ export default function StudentDocumentsPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Phase 4C: inline re-upload panel for rejected docs. */}
+      {reuploadId && (() => {
+        const doc = documents.find((d) => d.id === reuploadId);
+        if (!doc || !doc.document_type_id) return null;
+        const docType = documentTypes.find((dt) => dt.id === doc.document_type_id);
+        return (
+          <Card className="rounded-none border-amber-300 bg-amber-50">
+            <CardHeader>
+              <CardTitle className="text-base text-[#1B2A4A]">
+                {t('studentDocs.reuploadTitle', { name: doc.name })}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <DocumentUploader
+                documentTypeId={doc.document_type_id}
+                documentName={docType?.name || doc.name}
+                category={(doc.category as DocCat) || 'Other'}
+                onUploaded={(uploaded) => handleReuploaded(doc, uploaded)}
+                compact
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setReuploadId(null)}
+                className="mt-3 rounded-none"
+              >
+                {t('common.cancel')}
+              </Button>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
+      {/* Phase 4C: preview dialog. */}
+      <Dialog open={!!previewDoc} onOpenChange={(open) => !open && setPreviewDoc(null)}>
+        <DialogContent className="max-w-3xl rounded-none">
+          <DialogHeader>
+            <DialogTitle className="text-[#1B2A4A]">
+              {previewDoc?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="mt-2">
+            {!previewUrl && (
+              <div className="h-64 flex items-center justify-center text-gray-500">
+                {t('studentDocs.previewLoading')}
+              </div>
+            )}
+            {previewUrl && previewDoc?.file_type?.startsWith('image/') && (
+              <img
+                src={previewUrl}
+                alt={previewDoc.name}
+                className="max-h-[70vh] w-auto mx-auto border"
+              />
+            )}
+            {previewUrl && previewDoc?.file_type === 'application/pdf' && (
+              <iframe
+                src={previewUrl}
+                title={previewDoc.name}
+                className="w-full h-[70vh] border"
+              />
+            )}
+            {previewUrl && previewDoc?.file_type &&
+              !previewDoc.file_type.startsWith('image/') &&
+              previewDoc.file_type !== 'application/pdf' && (
+              <div className="text-center py-12">
+                <p className="text-gray-600 mb-4">{t('studentDocs.previewUnsupported')}</p>
+                <Button onClick={() => previewDoc && handleDownload(previewDoc)}>
+                  {t('studentDocs.download')}
+                </Button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Phase 4C: styled delete confirmation. */}
+      <AlertDialog open={!!docToDelete} onOpenChange={(open) => !open && setDocToDelete(null)}>
+        <AlertDialogContent className="rounded-none">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[#1B2A4A]">{t('studentDocs.deleteConfirmTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('studentDocs.deleteConfirmBody')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-none">{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                void handleDelete();
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white rounded-none"
+            >
+              {t('common.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

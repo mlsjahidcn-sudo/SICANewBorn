@@ -115,6 +115,8 @@ export default function StudentApplicationDetailPage() {
   const [resubmitOpen, setResubmitOpen] = useState(false);
   const [actionPending, setActionPending] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  // Phase 4B: replace alert() with an inline success banner.
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
 
   /**
    * Phase 1: Withdraw — student-driven transition to terminal
@@ -161,11 +163,10 @@ export default function StudentApplicationDetailPage() {
         // non-fatal; user will see the new event on next refresh
       }
       setActionError(null);
-      // Surface a brief inline notice — using alert is fine here since
-      // it's a destructive / state-changing action the user just
-      // confirmed.
-      // eslint-disable-next-line no-alert
-      alert(successMessage);
+      // Phase 4B: show a styled inline success banner instead of
+      // alert() so the experience stays inside the portal chrome.
+      setActionSuccess(successMessage);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       const e = err as { message?: string };
       setActionError(e.message || t('studentAppDetail.errorFailedToUpdate'));
@@ -369,6 +370,20 @@ export default function StudentApplicationDetailPage() {
         <div className="flex items-start gap-3 p-3 border border-red-200 bg-red-50 text-red-800 text-sm rounded-none">
           <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
           <p><strong>{t('studentAppDetail.errorError')}</strong> {actionError}</p>
+        </div>
+      )}
+      {actionSuccess && (
+        <div className="flex items-start gap-3 p-3 border border-green-200 bg-green-50 text-green-800 text-sm rounded-none">
+          <CheckCircle2 className="h-4 w-4 flex-shrink-0 mt-0.5" />
+          <p className="flex-1">{actionSuccess}</p>
+          <button
+            type="button"
+            onClick={() => setActionSuccess(null)}
+            className="text-green-700 hover:text-green-900 font-semibold text-xs"
+            aria-label={t('common.close')}
+          >
+            {t('common.close')}
+          </button>
         </div>
       )}
 

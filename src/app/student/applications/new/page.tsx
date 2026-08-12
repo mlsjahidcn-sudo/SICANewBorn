@@ -710,6 +710,24 @@ export default function StudentNewApplicationPage() {
     return { total, selected, available };
   }, [syncableDocuments]);
 
+  // Phase 4B: block final submit if any selected document is missing
+  // an actual upload. This prevents the "submit then get asked for
+  // docs" loop for docs the student already marked as required.
+  const selectedDocsReady = useMemo(() => {
+    const selected = syncableDocuments.filter(d => d.selected);
+    if (selected.length === 0) return true;
+    return selected.every(
+      (d) => d.studentDoc && ['Uploaded', 'Verified'].includes(d.studentDoc.status),
+    );
+  }, [syncableDocuments]);
+  const selectedMissingUploads = useMemo(
+    () =>
+      syncableDocuments.filter(
+        (d) => d.selected && (!d.studentDoc || !['Uploaded', 'Verified'].includes(d.studentDoc.status)),
+      ),
+    [syncableDocuments],
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -1156,6 +1174,18 @@ export default function StudentNewApplicationPage() {
                           </Badge>
                         ))}
                     </div>
+                    {/* Phase 4B: warn when selected docs are not uploaded. */}
+                    {selectedMissingUploads.length > 0 && (
+                      <div className="mt-4 p-3 border border-red-200 bg-red-50 text-red-800 text-sm rounded-none">
+                        <p className="font-semibold">{t('studentWizard.missingUploadsTitle')}</p>
+                        <ul className="list-disc list-inside mt-1">
+                          {selectedMissingUploads.map((d) => (
+                            <li key={d.documentType.id}>{d.documentType.name}</li>
+                          ))}
+                        </ul>
+                        <p className="mt-2">{t('studentWizard.missingUploadsHint')}</p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -1217,7 +1247,7 @@ export default function StudentNewApplicationPage() {
               ) : (
               <Button
                 onClick={handleSubmit}
-                disabled={loading || !!createdAppId || savingDraft}
+                disabled={loading || !!createdAppId || savingDraft || !selectedDocsReady}
                 className="bg-[#9B1B30] hover:bg-[#7A1525] text-white rounded-none"
               >
                 {loading ? (
