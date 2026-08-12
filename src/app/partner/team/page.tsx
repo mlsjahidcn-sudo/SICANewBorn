@@ -82,6 +82,11 @@ export default function PartnerTeamPage() {
   // is the convention used by admin/portals. Fails soft: null = use
   // the bare "Team" label.
   const [companyName, setCompanyName] = useState<string | null>(null);
+  const [now, setNow] = useState<number>(Date.now);
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -221,7 +226,7 @@ export default function PartnerTeamPage() {
   const formatRelativeTime = (iso: string): string => {
     const then = new Date(iso).getTime();
     if (Number.isNaN(then)) return iso;
-    const diffSec = Math.floor((Date.now() - then) / 1000);
+    const diffSec = Math.floor((now - then) / 1000);
     if (diffSec < 60) return t('partnerTeam.relativeJustNow');
     if (diffSec < 3600) return t('partnerTeam.relativeMinutesAgo', { count: Math.floor(diffSec / 60) });
     if (diffSec < 86_400) return t('partnerTeam.relativeHoursAgo', { count: Math.floor(diffSec / 3600) });
@@ -479,7 +484,7 @@ export default function PartnerTeamPage() {
     setLoadError(null);
     try {
       await apiFetchJson(`/api/partner/team/${id}/resend`, { method: 'POST' });
-      setResendSuccess({ id, at: Date.now() });
+      setResendSuccess({ id, at: new Date().getTime() });
     } catch (err) {
       setLoadError(err instanceof ApiError ? err.message : t('partnerTeam.errorResend'));
     } finally {

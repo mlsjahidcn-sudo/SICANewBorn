@@ -75,7 +75,7 @@ function EditPostInner() {
     } else {
       addToast('Failed to load post', 'error');
     }
-  }, [params?.id, router, addToast]);
+  }, [params, router, addToast]);
 
   useEffect(() => {
     if (user && params?.id) fetchPost();

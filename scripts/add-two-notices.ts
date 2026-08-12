@@ -7,6 +7,7 @@
  */
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { readFileSync } from 'fs';
+import * as path from 'path';
 import { randomUUID } from 'crypto';
 import sharp from 'sharp';
 
@@ -17,15 +18,13 @@ const JPEG_QUALITY = 85;
 
 function loadSicaLogoInner(): string {
   try {
-    const fs = require('fs') as typeof import('fs');
-    const path = require('path') as typeof import('path');
     const candidates = [
       path.join(process.cwd(), 'public/sica-logo.svg'),
       path.join(process.cwd(), '..', 'public/sica-logo.svg'),
     ];
     let raw = '';
     for (const c of candidates) {
-      try { raw = fs.readFileSync(c, 'utf-8'); break; } catch { /* try next */ }
+      try { raw = readFileSync(c, 'utf-8'); break; } catch { /* try next */ }
     }
     if (!raw) throw new Error('sica-logo.svg not found');
     const m = raw.match(/<svg[^>]*>([\s\S]*)<\/svg>\s*$/);

@@ -168,6 +168,11 @@ export function ExitIntentPopup() {
     };
   }, [pathname]);
 
+  const close = () => {
+    setOpen(false);
+    setError('');
+  };
+
   // ESC closes
   useEffect(() => {
     if (!open) return;
@@ -188,11 +193,6 @@ export function ExitIntentPopup() {
       document.body.style.overflow = prev;
     };
   }, [open]);
-
-  const close = () => {
-    setOpen(false);
-    setError('');
-  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();

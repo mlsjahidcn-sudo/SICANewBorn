@@ -218,6 +218,7 @@ export default function StudentNewApplicationPage() {
     additionalNotes: '',
     selectedDocuments: []
   });
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   /**
    * Phase 1: when `?resume=<id>` is set, load the existing draft and
@@ -495,7 +496,6 @@ export default function StudentNewApplicationPage() {
     }
   };
 
-  const [submitError, setSubmitError] = useState<string | null>(null);
   const [createdAppId, setCreatedAppId] = useState<string | null>(null);
   const [savingDraft, setSavingDraft] = useState(false);
   const [draftSaved, setDraftSaved] = useState(false);

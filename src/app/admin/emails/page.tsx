@@ -238,10 +238,9 @@ export default function EmailTemplatesPage() {
     }
   };
 
-  const createTemplate = async (category: Template['category']) => {
+  const createTemplate = async (category: Template['category'], slug: string) => {
     setSaveError(null);
     try {
-      const slug = `${category}.${Date.now().toString(36)}`;
       const res = await apiFetchJson<{ template: Template }>('/api/admin/emails/templates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -380,7 +379,7 @@ export default function EmailTemplatesPage() {
                 key={c.value}
                 variant="outline"
                 size="sm"
-                onClick={() => createTemplate(c.value)}
+                onClick={() => createTemplate(c.value, `${c.value}.${Date.now().toString(36)}`)}
                 className="w-full justify-start"
               >
                 <Plus size={14} className="mr-1" />

@@ -104,9 +104,6 @@ export function AssessmentForm({ successMessages }: Props) {
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'done' | 'failed'>('idle');
   const [uploadProgress, setUploadProgress] = useState('');
   const [storagePath, setStoragePath] = useState<string | null>(null);
-  // Set when the transcript upload creates the assessment record
-  // (so we don't double-post on submit). Used in handleSubmit.
-  const [, setAssessmentId] = useState<string | null>(null);
 
   // Pre-submit summary values. Read from form on input events
   // (post-render) and displayed in step 4. Avoids the React
@@ -240,7 +237,6 @@ export function AssessmentForm({ successMessages }: Props) {
       setSelectedFile(null);
       setUploadStatus('idle');
       setStoragePath(null);
-      setAssessmentId(null);
       return;
     }
 
@@ -258,48 +254,16 @@ export function AssessmentForm({ successMessages }: Props) {
     setSelectedFile(file);
     setErrorMsg('');
     setUploadStatus('uploading');
-    setUploadProgress('Starting upload…');
+    setUploadProgress('Preparing upload…');
 
     try {
-      // Step 1: Create assessment record to get an ID
-      const form = formRef.current;
-      if (!form) return;
-      const data = new FormData(form);
-      const submitPayload = {
-        firstName: data.get('firstName'),
-        lastName: data.get('lastName'),
-        email: data.get('email'),
-        whatsapp: data.get('whatsapp'),
-        country: data.get('country'),
-        dateOfBirth: data.get('dateOfBirth') || '',
-        currentEducation: data.get('currentEducation') || '',
-        intendedMajor: data.get('intendedMajor') || '',
-        targetUniversities: data.get('targetUniversities') || '',
-        notes: data.get('notes') || '',
-        transcript: { name: file.name, size: file.size, type: file.type },
-        sourcePage: window.location.pathname,
-      };
-
-      setUploadProgress('Creating record…');
-      const res = await fetch('/api/assessments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(submitPayload),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error((body as { error?: string }).error || `Failed (${res.status})`);
-      }
-      const result = (await res.json()) as { success: boolean; id: string };
-      setAssessmentId(result.id);
-
-      // Step 2: Get signed upload URL
-      setUploadProgress('Preparing upload…');
+      // Step 1: Get signed upload URL from the server. We do NOT create an
+      // assessment record here — that only happens once on final submit.
+      // The server generates a one-time folder id for the storage path.
       const urlRes = await fetch('/api/upload/transcript', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          assessmentId: result.id,
           fileName: file.name,
           fileType: file.type,
           size: file.size,
@@ -314,7 +278,7 @@ export function AssessmentForm({ successMessages }: Props) {
         storagePath: string;
       };
 
-      // Step 3: Upload directly to Supabase Storage
+      // Step 2: Upload directly to Supabase Storage
       setUploadProgress('Uploading file…');
       const uploadRes = await fetch(uploadUrl, {
         method: 'PUT',
@@ -382,7 +346,6 @@ export function AssessmentForm({ successMessages }: Props) {
       setSelectedFile(null);
       setUploadStatus('idle');
       setStoragePath(null);
-      setAssessmentId(null);
       // Phase 29: assessment_submit on successful submission.
       // We fire it before the form.reset() so the event captures
       // the full state. `has_transcript` reflects whether the
@@ -694,7 +657,6 @@ export function AssessmentForm({ successMessages }: Props) {
                       setSelectedFile(null);
                       setUploadStatus('idle');
                       setStoragePath(null);
-                      setAssessmentId(null);
                     }}
                     className="text-xs text-red-600 hover:underline flex items-center gap-1 mx-auto"
                   >

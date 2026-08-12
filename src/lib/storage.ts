@@ -29,7 +29,7 @@ const STUDENT_DOCS_BUCKET = 'student-documents';
 // ---------------------------------------------------------------------------
 
 export async function createTranscriptUploadUrl(
-  assessmentId: string,
+  folderId: string,
   fileName: string,
 ): Promise<{ uploadUrl: string; storagePath: string } | null> {
   const supabase = getStorageClient();
@@ -37,7 +37,7 @@ export async function createTranscriptUploadUrl(
 
   const ext = fileName.split('.').pop() || 'pdf';
   const safeName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-  const storagePath = `${TRANSCRIPT_BUCKET}/${assessmentId}/${safeName}`;
+  const storagePath = `assessments/${folderId}/${safeName}`;
 
   const { data, error } = await supabase.storage
     .from(TRANSCRIPT_BUCKET)
