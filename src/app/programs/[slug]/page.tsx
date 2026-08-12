@@ -4,6 +4,8 @@ import { getProgramBySlug } from '@/lib/program-queries';
 import { getUniversityBySlug } from '@/lib/university-queries';
 import ProgramDetailClient from './_components/program-detail-client';
 
+export const dynamic = 'force-dynamic';
+
 interface ProgramPageProps {
   params: Promise<{ slug: string }>;
 }

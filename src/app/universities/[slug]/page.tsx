@@ -8,6 +8,12 @@ interface UniversityPageProps {
   params: Promise<{ slug: string }>;
 }
 
+// Render on-demand rather than statically generating every university
+// detail page at build time. The page still ships with server-fetched
+// data in the initial HTML, but we avoid thousands of Supabase queries
+// during static generation.
+export const dynamic = 'force-dynamic';
+
 export async function generateMetadata({ params }: UniversityPageProps): Promise<Metadata> {
   const { slug } = await params;
   const uni = await getUniversityBySlug(slug);
