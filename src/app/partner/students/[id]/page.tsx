@@ -260,33 +260,28 @@ export default function PartnerStudentDetailPage() {
 
   return (
     <div className="space-y-6">
-      {showDelete && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 max-w-md w-full mx-4 border border-gray-200">
-            <h3 className="text-lg font-semibold text-[#1B2A4A] mb-4">{t('partnerStudentDetail.deleteTitle')}</h3>
-            <p className="text-[#4B5563] mb-6">
+      <AlertDialog open={showDelete} onOpenChange={setShowDelete}>
+        <AlertDialogContent className="rounded-none">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('partnerStudentDetail.deleteTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
               {t('partnerStudentDetail.deleteBodyFor', { name: student.studentName })}
-            </p>
-            <div className="flex gap-3 justify-end">
-              <Button
-                variant="outline"
-                onClick={() => setShowDelete(false)}
-                disabled={isDeleting}
-                className="rounded-none"
-              >
-                {t('partnerStudentDetail.cancel')}
-              </Button>
-              <Button
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="rounded-none bg-[#9B1B30] hover:bg-[#7a1626]"
-              >
-                {isDeleting ? t('partnerStudentDetail.deleting') : t('partnerStudentDetail.delete')}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting} className="rounded-none">
+              {t('partnerStudentDetail.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="rounded-none bg-[#9B1B30] hover:bg-[#7a1626]"
+            >
+              {isDeleting ? t('partnerStudentDetail.deleting') : t('partnerStudentDetail.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="flex items-center gap-4">
         <Link href="/partner/students" className="p-2 hover:bg-gray-100 inline-flex">
@@ -304,6 +299,12 @@ export default function PartnerStudentDetailPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button asChild variant="outline" className="rounded-none" size="sm">
+            <Link href={`/partner/applications/new?studentId=${student.id}`}>
+              <Plus className="mr-2 h-4 w-4" />
+              {t('partnerStudentDetail.newApplication')}
+            </Link>
+          </Button>
           <Button asChild variant="outline" className="rounded-none">
             <Link href={`/partner/students/${student.id}/edit`}>
               <Edit className="mr-2 h-4 w-4" />

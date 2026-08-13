@@ -6,6 +6,7 @@ import Link from 'next/link';
 import {
   ArrowLeft, Edit, Trash2, Calendar, Building, BookOpen, AlertTriangle,
   Mail, Phone, Globe, Hash, Flag, Info, Copy, ClipboardCopy, RotateCcw, CheckCircle,
+  User, Plus,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -491,6 +492,41 @@ export default function PartnerApplicationDetailPage() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Phase C: linked student card. Surfaces the partner_students
+            link and gives one-click actions to the student profile or
+            creating another application for the same student. */}
+        <Card className="rounded-none">
+          <CardHeader>
+            <CardTitle className="text-[#1B2A4A] flex items-center gap-2">
+              <User className="w-4 h-4" /> {t('partnerAppDetail.sectionLinkedStudent')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            {app.studentId ? (
+              <>
+                <Field label={t('partnerAppDetail.linkedStudentName')} value={app.studentName} />
+                <Field label={t('partnerAppDetail.linkedStudentEmail')} value={app.studentEmail} />
+                <Field label={t('partnerAppDetail.linkedStudentPhone')} value={app.studentPhone} />
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <Button asChild variant="outline" size="sm" className="rounded-none">
+                    <Link href={`/partner/students/${app.studentId}`}>
+                      {t('partnerAppDetail.viewStudentProfile')}
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" size="sm" className="rounded-none">
+                    <Link href={`/partner/applications/new?studentId=${encodeURIComponent(app.studentId)}`}>
+                      <Plus className="mr-1 h-3 w-3" />
+                      {t('partnerAppDetail.newAppForStudent')}
+                    </Link>
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <p className="text-[#4B5563]">{t('partnerAppDetail.noLinkedStudent')}</p>
+            )}
+          </CardContent>
+        </Card>
+
         <Card className="rounded-none">
           <CardHeader>
             <CardTitle className="text-[#1B2A4A] flex items-center gap-2">

@@ -634,7 +634,17 @@ export default function PartnerApplicationsPage() {
                     </td>
                     <td className="px-6 py-4 text-[#1B2A4A]">{app.university}</td>
                     <td className="px-6 py-4 text-[#4B5563]">{app.program}</td>
-                    <td className="px-6 py-4">{getStatusBadge(app.status)}</td>
+                    <td className="px-6 py-4">
+                      {getStatusBadge(app.status)}
+                      {/* Phase C: archived marker so partners can tell
+                          soft-deleted rows apart when archived rows are
+                          included in the list. */}
+                      {app.archivedAt && (
+                        <span className="ml-2 inline-flex items-center text-xs text-gray-500 italic">
+                          ({t('partnerApps.archived')})
+                        </span>
+                      )}
+                    </td>
                     <td className="px-6 py-4">
                       {app.priority && app.priority !== 'Normal' ? (
                         <span
