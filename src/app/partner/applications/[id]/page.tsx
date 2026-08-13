@@ -6,7 +6,7 @@ import Link from 'next/link';
 import {
   ArrowLeft, Edit, Trash2, Calendar, Building, BookOpen, AlertTriangle,
   Mail, Phone, Globe, Hash, Flag, Info, Copy, ClipboardCopy, RotateCcw, CheckCircle,
-  User, Plus, History,
+  User, Plus, History, FileText, Download, ExternalLink,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -39,6 +39,7 @@ import type {
   PartnerApplicationDecision,
   PartnerApplicationPriority,
 } from '@/lib/partner-application-mapper';
+import type { PartnerDocument, PartnerDocStatus } from '@/lib/partner-doc-mapper';
 
 interface TimelineEvent {
   id: string;
@@ -63,6 +64,12 @@ const PRIORITY_VARIANTS: Record<PartnerApplicationPriority, string> = {
   Normal: 'bg-blue-50 text-blue-700',
   High: 'bg-orange-100 text-orange-800',
   Urgent: 'bg-[#9B1B30] text-white',
+};
+
+const DOC_STATUS_STYLES: Record<PartnerDocStatus, string> = {
+  Pending: 'bg-amber-100 text-amber-800',
+  Verified: 'bg-emerald-100 text-emerald-800',
+  Rejected: 'bg-red-100 text-red-800',
 };
 
 export default function PartnerApplicationDetailPage() {
@@ -133,6 +140,9 @@ export default function PartnerApplicationDetailPage() {
   // Phase F: activity timeline for this application.
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [timelineLoading, setTimelineLoading] = useState(true);
+  // Phase G: documents linked to this application.
+  const [linkedDocs, setLinkedDocs] = useState<PartnerDocument[]>([]);
+  const [linkedDocsLoading, setLinkedDocsLoading] = useState(true);
 
   const load = useCallback(async () => {
     if (!applicationId) return;
@@ -171,6 +181,30 @@ export default function PartnerApplicationDetailPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Phase G: load documents linked to this application. Separate
+  // from load() so a doc mutation can refresh just this list.
+  useEffect(() => {
+    if (!applicationId) return;
+    let cancelled = false;
+    setLinkedDocsLoading(true);
+    (async () => {
+      try {
+        const res = await apiFetchJson<{
+          documents: PartnerDocument[];
+          total: number;
+        }>(`/api/partner/documents?partnerApplicationId=${encodeURIComponent(applicationId)}&limit=100`);
+        if (!cancelled) setLinkedDocs(res.documents || []);
+      } catch (err) {
+        console.error('[partner/applications/:id] linked docs fetch failed:', err);
+      } finally {
+        if (!cancelled) setLinkedDocsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [applicationId]);
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -303,6 +337,20 @@ export default function PartnerApplicationDetailPage() {
       setWithdrawalErr(err instanceof Error ? err.message : t('partnerAppDetail.errorWithdrawal'));
     } finally {
       setWithdrawalBusy(false);
+    }
+  };
+
+  // Phase G: download a linked document via a signed URL.
+  const handleDownloadDoc = async (doc: PartnerDocument) => {
+    try {
+      const { url } = await apiFetchJson<{ url: string; expiresAt: string }>(
+        `/api/partner/documents/${doc.id}/download-url`,
+        { method: 'POST' },
+      );
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      console.error('[partner/applications/:id] doc download failed:', err);
+      setError(err instanceof Error ? err.message : t('partnerAppDetail.errorDownloadDoc'));
     }
   };
 
@@ -947,8 +995,106 @@ export default function PartnerApplicationDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Phase G: documents linked to this application. Partners
+          often want to see which passports/transcripts/etc. are
+          already attached without leaving the application view. */}
+      <Card className="rounded-none">
+        <CardHeader>
+          <div className="flex items-center justify-between gap-4">
+            <CardTitle className="text-[#1B2A4A] flex items-center gap-2">
+              <FileText className="w-4 h-4" /> {t('partnerAppDetail.sectionDocuments')}
+            </CardTitle>
+            <Button asChild variant="outline" size="sm" className="rounded-none">
+              <Link
+                href={`/partner/documents?partnerApplicationId=${encodeURIComponent(applicationId)}`}
+                className="inline-flex items-center"
+              >
+                <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                {t('partnerAppDetail.viewAllDocuments')}
+              </Link>
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {linkedDocsLoading ? (
+            <div className="space-y-3">
+              <div className="h-4 bg-gray-200 animate-pulse w-3/4" />
+              <div className="h-4 bg-gray-200 animate-pulse w-1/2" />
+            </div>
+          ) : linkedDocs.length === 0 ? (
+            <div className="text-sm text-[#4B5563]">
+              <p>{t('partnerAppDetail.noLinkedDocuments')}</p>
+              <Button asChild variant="outline" size="sm" className="rounded-none mt-3">
+                <Link
+                  href={`/partner/documents?partnerApplicationId=${encodeURIComponent(applicationId)}`}
+                >
+                  <Plus className="mr-1.5 h-3.5 w-3.5" />
+                  {t('partnerAppDetail.uploadDocument')}
+                </Link>
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {linkedDocs.map((doc) => (
+                <div
+                  key={doc.id}
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 border border-gray-100"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-[#1B2A4A] flex-shrink-0" />
+                      <span className="font-medium text-[#1B2A4A] text-sm truncate">{doc.name}</span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-[#4B5563]">
+                      <Badge className={`rounded-none ${DOC_STATUS_STYLES[doc.status]}`}>
+                        {t(`partnerDocs.statusBadge.${doc.status.toLowerCase()}`)}
+                      </Badge>
+                      <span>
+                        {t(`partnerDocs.categoryBadge.${doc.category.toLowerCase()}`)}
+                      </span>
+                      {doc.fileSize && (
+                        <span>{formatBytes(doc.fileSize)}</span>
+                      )}
+                      <span>· {fmtDate(doc.uploadedAt)}</span>
+                      {doc.rejectionReason && (
+                        <span className="text-red-700">· {doc.rejectionReason}</span>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="rounded-none h-8 w-8 p-0"
+                    onClick={() => handleDownloadDoc(doc)}
+                    title={t('partnerAppDetail.downloadDocument')}
+                    aria-label={t('partnerAppDetail.downloadDocument')}
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              <Button asChild variant="outline" size="sm" className="rounded-none mt-2">
+                <Link
+                  href={`/partner/documents?partnerApplicationId=${encodeURIComponent(applicationId)}`}
+                >
+                  <Plus className="mr-1.5 h-3.5 w-3.5" />
+                  {t('partnerAppDetail.uploadDocument')}
+                </Link>
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
+}
+
+function formatBytes(n: number | null | undefined): string {
+  if (!n) return '';
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function Field({
