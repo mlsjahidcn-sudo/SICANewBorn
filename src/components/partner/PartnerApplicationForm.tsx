@@ -105,6 +105,11 @@ export interface PartnerApplicationFormData {
   degree: Emptyable<PartnerApplicationDegree>;
   hasStudiedInChina: boolean;
   hasAppliedChinaUni: boolean;
+  // Phase 54: UI-only flag. When true, the partner chose to describe
+  // the desired school/program in notes instead of picking from the
+  // catalog. It is not sent to the API; the pages derive the payload
+  // from university/program/notes as usual.
+  notInCatalog: boolean;
 
   // Section 7 — Workflow
   // S27: status and decision are admin-only — the partner can never
@@ -165,6 +170,7 @@ export const INITIAL_FORM_DATA: PartnerApplicationFormData = {
   degree: '',
   hasStudiedInChina: false,
   hasAppliedChinaUni: false,
+  notInCatalog: false,
 
   priority: 'Normal',
   notes: '',
@@ -796,60 +802,116 @@ export function PartnerApplicationForm({
         icon={Building2}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Phase 54: opt-in when the desired school/program isn't in
+              the catalog yet. The checkbox sits above the picker so the
+              partner sees the option before hunting through 500 programs. */}
           <div className="md:col-span-2">
-            <Label htmlFor="program" className="text-[#1B2A4A] mb-2 block">
-              {t('partnerAppForm.fieldProgram')} <span className="text-red-600">{t('partnerCommon.requiredAsterisk')}</span>
-            </Label>
-            <SearchableSelect
-              value={formData.programSlug}
-              onChange={(value) => {
-                const picked = programs.find((p) => p.slug === value);
-                if (!picked) return;
-                const uni = universidades.find(
-                  (u) => u.slug === picked.universitySlug,
-                );
-                setFormData((prev) => ({
-                  ...prev,
-                  programSlug: picked.slug,
-                  program: picked.name,
-                  university: uni?.name ?? picked.universitySlug,
-                }));
-              }}
-              options={programOptions}
-              placeholder={
-                dataLoading
-                  ? t('partnerAppForm.programLoadingPlaceholder')
-                  : t('partnerAppForm.programSearchPrompt')
-              }
-              emptyText={t('partnerAppForm.programEmptyText')}
-              searchPlaceholder={t('partnerAppForm.programSearchPlaceholder')}
-              disabled={dataLoading}
-              loading={dataLoading}
-            />
-            {fieldErrors.program && (
-              <p className="text-xs text-red-700 mt-1">{fieldErrors.program}</p>
-            )}
+            <label className="flex items-start gap-2 cursor-pointer text-sm border border-amber-200 bg-amber-50 p-3">
+              <Checkbox
+                checked={formData.notInCatalog}
+                onCheckedChange={(v) => {
+                  const checked = v === true;
+                  setFormData((prev) => ({
+                    ...prev,
+                    notInCatalog: checked,
+                    // Clear catalog selection when switching to manual mode;
+                    // restore empty defaults when switching back.
+                    programSlug: checked ? '' : prev.programSlug,
+                    program: checked ? '' : prev.program,
+                    university: checked ? '' : prev.university,
+                  }));
+                }}
+                className="rounded-none mt-0.5"
+              />
+              <span className="text-[#1B2A4A]">
+                {t('partnerAppForm.notInCatalogLabel')}
+                <span className="block text-xs text-gray-600 mt-0.5">
+                  {t('partnerAppForm.notInCatalogHint')}
+                </span>
+              </span>
+            </label>
           </div>
-          <div>
-            <Label htmlFor="university" className="text-[#1B2A4A] mb-2 block">
-              {t('partnerAppForm.fieldUniversity')} <span className="text-red-600">{t('partnerCommon.requiredAsterisk')}</span>
-            </Label>
-            <Input
-              id="university"
-              name="university"
-              value={formData.university}
-              onChange={(e) => set('university', e.target.value)}
-              className={`rounded-none bg-gray-50 ${fieldErrors.university ? 'border-red-500' : ''}`}
-              placeholder={t('partnerAppForm.fieldUniversityPlaceholder')}
-              required
-            />
-            {fieldErrors.university && (
-              <p className="text-xs text-red-700 mt-1">{fieldErrors.university}</p>
-            )}
-            <p className="text-xs text-gray-500 mt-1">
-              {t('partnerAppForm.fieldUniversityHint')}
-            </p>
-          </div>
+
+          {!formData.notInCatalog ? (
+            <>
+              <div className="md:col-span-2">
+                <Label htmlFor="program" className="text-[#1B2A4A] mb-2 block">
+                  {t('partnerAppForm.fieldProgram')} <span className="text-red-600">{t('partnerCommon.requiredAsterisk')}</span>
+                </Label>
+                <SearchableSelect
+                  value={formData.programSlug}
+                  onChange={(value) => {
+                    const picked = programs.find((p) => p.slug === value);
+                    if (!picked) return;
+                    const uni = universidades.find(
+                      (u) => u.slug === picked.universitySlug,
+                    );
+                    setFormData((prev) => ({
+                      ...prev,
+                      programSlug: picked.slug,
+                      program: picked.name,
+                      university: uni?.name ?? picked.universitySlug,
+                    }));
+                  }}
+                  options={programOptions}
+                  placeholder={
+                    dataLoading
+                      ? t('partnerAppForm.programLoadingPlaceholder')
+                      : t('partnerAppForm.programSearchPrompt')
+                  }
+                  emptyText={t('partnerAppForm.programEmptyText')}
+                  searchPlaceholder={t('partnerAppForm.programSearchPlaceholder')}
+                  disabled={dataLoading}
+                  loading={dataLoading}
+                />
+                {fieldErrors.program && (
+                  <p className="text-xs text-red-700 mt-1">{fieldErrors.program}</p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="university" className="text-[#1B2A4A] mb-2 block">
+                  {t('partnerAppForm.fieldUniversity')} <span className="text-red-600">{t('partnerCommon.requiredAsterisk')}</span>
+                </Label>
+                <Input
+                  id="university"
+                  name="university"
+                  value={formData.university}
+                  onChange={(e) => set('university', e.target.value)}
+                  className={`rounded-none bg-gray-50 ${fieldErrors.university ? 'border-red-500' : ''}`}
+                  placeholder={t('partnerAppForm.fieldUniversityPlaceholder')}
+                  required
+                />
+                {fieldErrors.university && (
+                  <p className="text-xs text-red-700 mt-1">{fieldErrors.university}</p>
+                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  {t('partnerAppForm.fieldUniversityHint')}
+                </p>
+              </div>
+            </>
+          ) : (
+            <div className="md:col-span-2">
+              <Label htmlFor="notes" className="text-[#1B2A4A] mb-2 block">
+                {t('partnerAppForm.desiredSchoolNotesLabel')}{' '}
+                <span className="text-red-600">{t('partnerCommon.requiredAsterisk')}</span>
+              </Label>
+              <Textarea
+                id="notes"
+                name="notes"
+                value={formData.notes}
+                onChange={(e) => set('notes', e.target.value)}
+                rows={4}
+                className={`rounded-none ${fieldErrors.notes ? 'border-red-500' : ''}`}
+                placeholder={t('partnerAppForm.desiredSchoolNotesPlaceholder')}
+              />
+              {fieldErrors.notes && (
+                <p className="text-xs text-red-700 mt-1">{fieldErrors.notes}</p>
+              )}
+              <p className="text-xs text-gray-500 mt-1">
+                {t('partnerAppForm.desiredSchoolNotesHint')}
+              </p>
+            </div>
+          )}
           <div>
             <Label htmlFor="degree" className="text-[#1B2A4A] mb-2 block">
               {t('partnerAppForm.fieldDegreeLevel')}
@@ -983,19 +1045,24 @@ export function PartnerApplicationForm({
             </p>
           </div>
         </div>
-        <div className="mt-4">
-          <Label htmlFor="notes" className="text-[#1B2A4A] mb-2 block">
-            {t('partnerAppForm.fieldNotes')}
-          </Label>
-          <Textarea
-            id="notes"
-            value={formData.notes}
-            onChange={(e) => set('notes', e.target.value)}
-            rows={4}
-            className="rounded-none"
-            placeholder={t('partnerAppForm.fieldNotesPlaceholder')}
-          />
-        </div>
+        {/* Phase 54: notes move to Section 6 when the partner is
+            describing a school/program not yet in the catalog, so we
+            don't show two textareas editing the same field. */}
+        {!formData.notInCatalog && (
+          <div className="mt-4">
+            <Label htmlFor="notes" className="text-[#1B2A4A] mb-2 block">
+              {t('partnerAppForm.fieldNotes')}
+            </Label>
+            <Textarea
+              id="notes"
+              value={formData.notes}
+              onChange={(e) => set('notes', e.target.value)}
+              rows={4}
+              className="rounded-none"
+              placeholder={t('partnerAppForm.fieldNotesPlaceholder')}
+            />
+          </div>
+        )}
       </FormSection>
     </div>
   );

@@ -182,15 +182,28 @@ export default function PartnerNewApplicationPage() {
     // errors up front so the user sees the full set at once
     // (not "fix one, submit, see the next"). We then scroll
     // to the first error and focus that field.
+    //
+    // Phase 54: university/program are only required when the partner
+    // is using the catalog. In "not in catalog" mode, notes must
+    // describe the desired school/program.
     const errs: Record<string, string> = {};
     if (!formData.studentName.trim()) {
       errs.studentName = t('partnerAppNew.errorStudentNameRequired');
     }
-    if (!formData.university.trim()) {
-      errs.university = t('partnerAppNew.errorUniversityRequired');
-    }
-    if (!formData.program.trim()) {
-      errs.program = t('partnerAppNew.errorProgramRequired');
+    if (!formData.notInCatalog) {
+      if (!formData.university.trim()) {
+        errs.university = t('partnerAppNew.errorUniversityRequired');
+      }
+      if (!formData.program.trim()) {
+        errs.program = t('partnerAppNew.errorProgramRequired');
+      }
+    } else {
+      const notes = formData.notes.trim();
+      if (!notes) {
+        errs.notes = t('partnerAppNew.errorNotesRequiredWhenUnassigned');
+      } else if (notes.length < 10) {
+        errs.notes = t('partnerAppNew.errorNotesTooShortWhenUnassigned');
+      }
     }
     if (formData.passportExpiryDate &&
         formData.passportIssueDate &&

@@ -273,6 +273,7 @@ export default function PartnerApplicationDetailPage() {
         // blank — the partner will pick a new program.
         university: '',
         program: '',
+        notInCatalog: false,
         intake: '',
         degree: '',
         hasStudiedInChina: app.hasStudiedInChina ?? false,
@@ -396,7 +397,7 @@ export default function PartnerApplicationDetailPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>{t('partnerAppDetail.deleteTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t('partnerAppDetail.deleteBodyFor', { student: app.studentName, university: app.university })}
+              {t('partnerAppDetail.deleteBodyFor', { student: app.studentName, university: app.university || t('partnerAppDetail.universityNotSet') })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -423,7 +424,7 @@ export default function PartnerApplicationDetailPage() {
           <DialogHeader>
             <DialogTitle>{t('partnerAppDetail.withdrawalTitle')}</DialogTitle>
             <DialogDescription>
-              {t('partnerAppDetail.withdrawalBody', { student: app.studentName, university: app.university })}
+              {t('partnerAppDetail.withdrawalBody', { student: app.studentName, university: app.university || t('partnerAppDetail.universityNotSet') })}
             </DialogDescription>
           </DialogHeader>
           {!withdrawalSent ? (
@@ -501,7 +502,9 @@ export default function PartnerApplicationDetailPage() {
             )}
           </div>
           <p className="text-[#4B5563] mt-1 text-sm">
-            {app.university} · {app.program}
+            {app.university && app.program
+              ? `${app.university} · ${app.program}`
+              : app.university || app.program || t('partnerAppDetail.pendingAssignmentHeader')}
             {app.applicationNumber && (
               <span className="ml-2 font-mono text-xs text-gray-400">
                 {app.applicationNumber}
@@ -621,8 +624,26 @@ export default function PartnerApplicationDetailPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <Field label={t('partnerAppDetail.fieldUniversity')} value={app.university} />
-            <Field label={t('partnerAppDetail.fieldProgram')} value={app.program} />
+            <div className="flex items-center gap-2">
+              <span className="text-[#4B5563] min-w-24">{t('partnerAppDetail.fieldUniversity')}:</span>
+              {app.university ? (
+                <span className="font-medium text-[#1F2937]">{app.university}</span>
+              ) : (
+                <span className="text-amber-700 bg-amber-50 px-2 py-0.5 text-xs border border-amber-200">
+                  {t('partnerAppDetail.pendingAssignment')}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[#4B5563] min-w-24">{t('partnerAppDetail.fieldProgram')}:</span>
+              {app.program ? (
+                <span className="font-medium text-[#1F2937]">{app.program}</span>
+              ) : (
+                <span className="text-amber-700 bg-amber-50 px-2 py-0.5 text-xs border border-amber-200">
+                  {t('partnerAppDetail.pendingAssignment')}
+                </span>
+              )}
+            </div>
             <Field label={t('partnerAppDetail.fieldIntake')} value={app.intake} />
             <Field label={t('partnerAppDetail.fieldDegree')} value={app.degree} />
             <Field label={t('partnerAppDetail.fieldApplicationNumber')} value={app.applicationNumber} mono />

@@ -289,6 +289,28 @@ export async function PATCH(
       }
     }
 
+    // Phase 54: timeline event when the admin assigns (or re-assigns)
+    // the university and/or program. This helps partners see that a
+    // previously unassigned application now has a target school.
+    const universityChanged =
+      typeof updates.university === 'string' &&
+      updates.university !== (before.university ?? '');
+    const programChanged =
+      typeof updates.program === 'string' &&
+      updates.program !== (before.program ?? '');
+    if (universityChanged || programChanged) {
+      const oldUni = (before.university || 'unassigned').trim();
+      const newUni = (data as { university?: string | null }).university || 'unassigned';
+      const oldProg = (before.program || 'unassigned').trim();
+      const newProg = (data as { program?: string | null }).program || 'unassigned';
+      await insertTimelineEvent(service, {
+        partner_application_id: id,
+        status: 'Assignment Updated',
+        notes: `Admin assigned university/program. University: ${oldUni} → ${newUni}. Program: ${oldProg} → ${newProg}.`,
+        created_by: auth.user.id,
+      });
+    }
+
     return NextResponse.json({ application: mapPartnerApplicationFromDb(data) });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';

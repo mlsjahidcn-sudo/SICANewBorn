@@ -960,8 +960,19 @@ export default function AdminApplicationsPage() {
                               </td>
                               <td className="px-6 py-4">
                                 <div>
-                                  <div className="text-[#1F2937]">{application.university}</div>
-                                  <div className="text-xs text-[#4B5563]">{application.program} • {application.degree}</div>
+                                  <div className="text-[#1F2937]">
+                                    {application.university || (
+                                      <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium border border-amber-300 text-amber-700 bg-amber-50">
+                                        Unassigned university
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-xs text-[#4B5563]">
+                                    {application.program || (
+                                      <span className="text-amber-700">Unassigned program</span>
+                                    )}
+                                    {application.degree ? ` • ${application.degree}` : ''}
+                                  </div>
                                   <div className="text-xs text-[#6B7280] mt-1">{application.intake}</div>
                                 </div>
                               </td>
@@ -994,8 +1005,19 @@ export default function AdminApplicationsPage() {
                           ) : (
                             <td className="px-6 py-4">
                               <div>
-                                <div className="text-[#1F2937]">{application.university}</div>
-                                <div className="text-xs text-[#4B5563]">{application.program} • {application.degree}</div>
+                                <div className="text-[#1F2937]">
+                                  {application.university || (
+                                    <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium border border-amber-300 text-amber-700 bg-amber-50">
+                                      Unassigned university
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-xs text-[#4B5563]">
+                                  {application.program || (
+                                    <span className="text-amber-700">Unassigned program</span>
+                                  )}
+                                  {application.degree ? ` • ${application.degree}` : ''}
+                                </div>
                                 <div className="text-xs text-[#6B7280] mt-1">{application.intake}</div>
                               </div>
                             </td>

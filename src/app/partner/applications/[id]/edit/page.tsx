@@ -116,6 +116,10 @@ export default function PartnerEditApplicationPage() {
         degree: (a.degree as PartnerApplicationDegree | null) || '',
         hasStudiedInChina: a.hasStudiedInChina ?? false,
         hasAppliedChinaUni: a.hasAppliedChinaUni ?? false,
+        // Phase 54: derive the manual-entry mode from the loaded row.
+        // If either catalog field is empty, the partner previously
+        // (or currently) described the desired option in notes.
+        notInCatalog: !a.university.trim() || !a.program.trim(),
 
         // S27: status + decision are admin-only. The edit page
         // doesn't expose them; the load() just reads the current
@@ -166,9 +170,22 @@ export default function PartnerEditApplicationPage() {
       setError(t('partnerAppEdit.errorStudentNameRequired'));
       return;
     }
-    if (!formData.university.trim() || !formData.program.trim()) {
+    // Phase 54: allow saving when the partner is describing a
+    // school/program not in the catalog, but require notes.
+    if (!formData.notInCatalog && (!formData.university.trim() || !formData.program.trim())) {
       setError(t('partnerAppEdit.errorUniversityProgramRequired'));
       return;
+    }
+    if (formData.notInCatalog) {
+      const notes = formData.notes.trim();
+      if (!notes) {
+        setError(t('partnerAppEdit.errorNotesRequiredWhenUnassigned'));
+        return;
+      }
+      if (notes.length < 10) {
+        setError(t('partnerAppEdit.errorNotesTooShortWhenUnassigned'));
+        return;
+      }
     }
 
     setIsSaving(true);

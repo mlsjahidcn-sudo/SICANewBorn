@@ -663,8 +663,20 @@ export default function PartnerApplicationsPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-[#1B2A4A]">{app.university}</td>
-                    <td className="px-6 py-4 text-[#4B5563]">{app.program}</td>
+                    <td className="px-6 py-4 text-[#1B2A4A]">
+                      {app.university || (
+                        <span className="text-amber-700 bg-amber-50 px-2 py-0.5 text-xs border border-amber-200">
+                          {t('partnerApps.unassignedUniversity')}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-[#4B5563]">
+                      {app.program || (
+                        <span className="text-amber-700 bg-amber-50 px-2 py-0.5 text-xs border border-amber-200">
+                          {t('partnerApps.unassignedProgram')}
+                        </span>
+                      )}
+                    </td>
                     <td className="px-6 py-4">
                       {getStatusBadge(app.status)}
                       {/* Phase C: archived marker so partners can tell

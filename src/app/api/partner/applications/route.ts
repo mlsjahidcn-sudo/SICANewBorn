@@ -182,12 +182,9 @@ export async function POST(request: NextRequest) {
     if (!body.studentName || !String(body.studentName).trim()) {
       return NextResponse.json({ error: 'studentName is required' }, { status: 400 });
     }
-    if (!body.university || !String(body.university).trim()) {
-      return NextResponse.json({ error: 'university is required' }, { status: 400 });
-    }
-    if (!body.program || !String(body.program).trim()) {
-      return NextResponse.json({ error: 'program is required' }, { status: 400 });
-    }
+    // Phase 54: university and program are no longer hard-required.
+    // The validation below enforces that notes describe the desired
+    // school/program when either is missing.
 
     // S27: status / decision / submitted_at are admin-only. The
     // partner's job is intake; SICA's admin team drives the

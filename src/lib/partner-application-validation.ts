@@ -63,6 +63,10 @@ export const PARTNER_APPLICATION_FIELD_LIMITS = {
   applicationNumber: 32,
 } as const;
 
+// Minimum notes length when a partner leaves university/program out
+// of the catalog. This keeps the admin from receiving a blank request.
+export const MIN_NOTES_WHEN_UNASSIGNED = 10;
+
 export type PartnerApplicationFieldKey = keyof typeof PARTNER_APPLICATION_FIELD_LIMITS;
 
 export interface PartnerApplicationValidationError {
@@ -112,22 +116,55 @@ export function validatePartnerApplicationPayload(
   const errors: PartnerApplicationValidationError[] = [];
 
   // Required core fields
-  for (const { key, label, max } of [
-    { key: 'studentName', label: 'studentName', max: PARTNER_APPLICATION_FIELD_LIMITS.studentName },
-    { key: 'university', label: 'university', max: PARTNER_APPLICATION_FIELD_LIMITS.university },
-    { key: 'program', label: 'program', max: PARTNER_APPLICATION_FIELD_LIMITS.program },
-  ] as const) {
-    const value = body[key];
-    if (mode === 'create' || value !== undefined) {
-      const str = toTrimmedString(value);
-      if (!str) {
-        errors.push({ field: key as PartnerApplicationFieldKey, message: `${label} is required` });
-      } else if (str.length > max) {
-        errors.push({
-          field: key as PartnerApplicationFieldKey,
-          message: `${label} must be at most ${max} characters`,
-        });
-      }
+  // Phase 54: university and program are no longer hard-required for
+  // partner-created applications. A partner can leave them empty when
+  // the target school/program is not in the catalog yet, but must
+  // describe the desired option in notes so the admin can assign it
+  // later. We still validate length when they are provided.
+  const studentName = toTrimmedString(body.studentName);
+  if (!studentName) {
+    errors.push({ field: 'studentName', message: 'studentName is required' });
+  } else if (studentName.length > PARTNER_APPLICATION_FIELD_LIMITS.studentName) {
+    errors.push({
+      field: 'studentName',
+      message: `studentName must be at most ${PARTNER_APPLICATION_FIELD_LIMITS.studentName} characters`,
+    });
+  }
+
+  const university = toTrimmedString(body.university);
+  const program = toTrimmedString(body.program);
+
+  if (mode === 'create' || body.university !== undefined) {
+    if (university.length > PARTNER_APPLICATION_FIELD_LIMITS.university) {
+      errors.push({
+        field: 'university',
+        message: `university must be at most ${PARTNER_APPLICATION_FIELD_LIMITS.university} characters`,
+      });
+    }
+  }
+  if (mode === 'create' || body.program !== undefined) {
+    if (program.length > PARTNER_APPLICATION_FIELD_LIMITS.program) {
+      errors.push({
+        field: 'program',
+        message: `program must be at most ${PARTNER_APPLICATION_FIELD_LIMITS.program} characters`,
+      });
+    }
+  }
+
+  // Phase 54: when either catalog field is empty, notes must describe
+  // the desired school/program so the admin has something to assign.
+  if (mode === 'create' && (!university || !program)) {
+    const notes = toTrimmedString(body.notes);
+    if (!notes) {
+      errors.push({
+        field: 'notes',
+        message: 'notes is required when university or program is not selected from the catalog',
+      });
+    } else if (notes.length < MIN_NOTES_WHEN_UNASSIGNED) {
+      errors.push({
+        field: 'notes',
+        message: `notes must be at least ${MIN_NOTES_WHEN_UNASSIGNED} characters when university or program is not selected`,
+      });
     }
   }
 

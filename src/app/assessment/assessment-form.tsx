@@ -22,13 +22,9 @@ import {
 } from 'lucide-react';
 
 interface Props {
-  t: (key: string, params?: Record<string, string | number>) => string;
-  successMessages: {
-    title: string;
-    body1: string;
-    body2: string;
-    sendAnother: string;
-  };
+  // Intentionally empty: the form is self-contained and uses the
+  // client-side i18n hook. Previously it received the server-side
+  // `t` function, which Next.js forbids passing to Client Components.
 }
 
 /** Maximum file size: 10 MB */
@@ -39,17 +35,23 @@ const ALLOWED_EXTENSIONS = '.pdf, .png, .jpg, .jpeg';
 // Step metadata. The wizard always advances forward and lets the
 // user jump back to fix earlier answers; it never loses data
 // because the underlying form is uncontrolled.
-const getSteps = (t: Props['t']) => [
+const getSteps = (t: (key: string, params?: Record<string, string | number>) => string) => [
   { key: 'personal', label: t('assessment.step.personal'), icon: User, desc: t('assessment.step.personalDesc') },
   { key: 'education', label: t('assessment.step.education'), icon: GraduationCap, desc: t('assessment.step.educationDesc') },
   { key: 'documents', label: t('assessment.step.documents'), icon: Upload, desc: t('assessment.step.documentsDesc') },
   { key: 'notes', label: t('assessment.step.submit'), icon: FileText, desc: t('assessment.step.submitDesc') },
 ] as const;
 
-export function AssessmentForm({ t, successMessages }: Props) {
+export function AssessmentForm(_props?: Props) {
   const router = useRouter();
-  const { locale } = useI18n();
+  const { t, locale } = useI18n();
   const STEPS = getSteps(t);
+  const successMessages = {
+    title: t('assessment.success.title'),
+    body1: t('assessment.success.body1'),
+    body2: t('assessment.success.body2'),
+    sendAnother: t('assessment.success.sendAnother'),
+  };
   // If the user arrived on /assessment from a university
   // detail page's "Apply" CTA (Phase 24 wired ?interest=<slug>
   // into the redirect chain), pass it through to the

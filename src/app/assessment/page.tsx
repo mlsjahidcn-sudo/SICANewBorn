@@ -53,15 +53,7 @@ export default async function AssessmentPage() {
         <div className="grid lg:grid-cols-5 gap-10">
           {/* Assessment Form - Left */}
           <div className="lg:col-span-3">
-            <AssessmentForm
-              t={t}
-              successMessages={{
-                title: t('assessment.success.title'),
-                body1: t('assessment.success.body1'),
-                body2: t('assessment.success.body2'),
-                sendAnother: t('assessment.success.sendAnother'),
-              }}
-            />
+            <AssessmentForm />
           </div>
 
           {/* Assessment Info & QR Codes - Right */}

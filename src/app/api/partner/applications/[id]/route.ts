@@ -4,7 +4,10 @@ import {
   mapPartnerApplicationFromDb,
   mapPartnerApplicationToDb,
 } from '@/lib/partner-application-mapper';
-import { validatePartnerApplicationPayload } from '@/lib/partner-application-validation';
+import {
+  validatePartnerApplicationPayload,
+  MIN_NOTES_WHEN_UNASSIGNED,
+} from '@/lib/partner-application-validation';
 
 export async function GET(
   request: NextRequest,
@@ -125,6 +128,53 @@ export async function PATCH(
     }
     delete (updates as Record<string, unknown>).partner_id;
     delete (updates as Record<string, unknown>).id;
+
+    // Phase 54: if the partner is clearing university/program, notes
+    // must still describe the desired school/program. We read the
+    // existing row so we can fall back to existing notes when the
+    // request only touches one of the two fields.
+    const clearingUniversity = updates.university === '';
+    const clearingProgram = updates.program === '';
+    if (clearingUniversity || clearingProgram) {
+      let existingQ = auth.supabase
+        .from('partner_applications')
+        .select('university, program, notes')
+        .eq('id', id);
+      if (auth.role === 'member') {
+        existingQ = existingQ.eq('created_by_user_id', auth.user.id);
+      }
+      const { data: existing, error: existingErr } = await existingQ.maybeSingle();
+      if (existingErr) {
+        console.error('[partner/applications/:id PATCH] pre-read error:', existingErr);
+        return NextResponse.json({ error: existingErr.message }, { status: 500 });
+      }
+      if (!existing) {
+        return NextResponse.json({ error: 'Application not found' }, { status: 404 });
+      }
+      const effectiveUniversity = clearingUniversity
+        ? ''
+        : String(existing.university ?? '').trim();
+      const effectiveProgram = clearingProgram
+        ? ''
+        : String(existing.program ?? '').trim();
+      const effectiveNotes = String(
+        updates.notes !== undefined ? updates.notes : (existing.notes ?? ''),
+      ).trim();
+      if (!effectiveUniversity || !effectiveProgram) {
+        if (!effectiveNotes) {
+          return NextResponse.json(
+            { error: 'notes is required when university or program is not selected from the catalog' },
+            { status: 400 },
+          );
+        }
+        if (effectiveNotes.length < MIN_NOTES_WHEN_UNASSIGNED) {
+          return NextResponse.json(
+            { error: `notes must be at least ${MIN_NOTES_WHEN_UNASSIGNED} characters when university or program is not selected` },
+            { status: 400 },
+          );
+        }
+      }
+    }
 
     // Phase C: partners can archive/restore their own rows. The
     // DELETE handler already performs soft-delete; this lets the
