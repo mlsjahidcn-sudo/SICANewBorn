@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Edit, Trash2, MessageSquare, Calendar, FileText, AlertTriangle, Pin, X, Plus } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, MessageSquare, Calendar, FileText, AlertTriangle, Pin, X, Plus, Download } from 'lucide-react';
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,8 @@ import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 import type { PartnerStudent, PartnerStudentStatus } from '@/lib/partner-student-mapper';
 import type { PartnerApplication, PartnerApplicationStatus } from '@/lib/partner-application-mapper';
+import type { PartnerDocument, PartnerDocStatus } from '@/lib/partner-doc-mapper';
+import { DocumentUploadDialog } from '@/components/partner/DocumentUploadDialog';
 
 const STATUS_VARIANTS: Record<PartnerStudentStatus, 'secondary' | 'outline' | 'default' | 'destructive'> = {
   'New': 'secondary',
@@ -43,6 +45,12 @@ const APP_STATUS_VARIANTS: Record<PartnerApplicationStatus, 'default' | 'seconda
   'Withdrawn': 'outline',
 };
 
+const DOC_STATUS_STYLES: Record<PartnerDocStatus, string> = {
+  Pending: 'bg-amber-100 text-amber-800',
+  Verified: 'bg-emerald-100 text-emerald-800',
+  Rejected: 'bg-red-100 text-red-800',
+};
+
 export default function PartnerStudentDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -58,7 +66,7 @@ export default function PartnerStudentDetailPage() {
   // (e.g. clicking the application count badge on the students list).
   const [activeTab, setActiveTab] = useState(() => {
     const tab = searchParams.get('tab');
-    return tab === 'applications' || tab === 'notes' ? tab : 'overview';
+    return tab === 'applications' || tab === 'notes' || tab === 'documents' ? tab : 'overview';
   });
   const [showDelete, setShowDelete] = useState(false);
   // Phase 50c: per-event notes state. Fetched on tab open
@@ -85,6 +93,11 @@ export default function PartnerStudentDetailPage() {
   const [noteBusyId, setNoteBusyId] = useState<string | null>(null);
   const [noteDeleteId, setNoteDeleteId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  // Phase H: documents linked to this student.
+  const [documents, setDocuments] = useState<PartnerDocument[]>([]);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
+  const [documentsError, setDocumentsError] = useState<string | null>(null);
+  const [uploadOpen, setUploadOpen] = useState(false);
 
   const fetchStudent = useCallback(async () => {
     if (!studentId) return;
@@ -161,6 +174,40 @@ export default function PartnerStudentDetailPage() {
       setNotesLoading(false);
     }
   }, [studentId, t]);
+
+  // Phase H: lazy-load documents when the Documents tab opens.
+  const fetchDocuments = useCallback(async () => {
+    setDocumentsLoading(true);
+    setDocumentsError(null);
+    try {
+      const res = await apiFetchJson<{ documents: PartnerDocument[]; total: number }>(
+        `/api/partner/documents?partnerStudentId=${encodeURIComponent(studentId)}&limit=100`,
+      );
+      setDocuments(res.documents || []);
+    } catch (err) {
+      setDocumentsError(
+        err instanceof Error ? err.message : t('partnerStudentDetail.documentsLoadError'),
+      );
+      setDocuments([]);
+    } finally {
+      setDocumentsLoading(false);
+    }
+  }, [studentId, t]);
+
+  const handleDownloadDoc = async (doc: PartnerDocument) => {
+    try {
+      const { url } = await apiFetchJson<{ url: string; expiresAt: string }>(
+        `/api/partner/documents/${doc.id}/download-url`,
+        { method: 'POST' },
+      );
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      console.error('[partner/students/:id] doc download failed:', err);
+      setDocumentsError(
+        err instanceof Error ? err.message : t('partnerStudentDetail.documentsDownloadError'),
+      );
+    }
+  };
 
   // Phase 50c: handler for the composer. Optimistic add so
   // the new note appears immediately, then re-fetch to get
@@ -351,6 +398,10 @@ export default function PartnerStudentDetailPage() {
         if (v === 'notes' && !notesLoading) {
           void fetchNotes();
         }
+        // Phase H: lazy-load documents on tab open.
+        if (v === 'documents' && !documentsLoading) {
+          void fetchDocuments();
+        }
       }} className="space-y-4">
         <TabsList className="rounded-none">
           <TabsTrigger value="overview">{t('partnerStudentDetail.tabOverview')}</TabsTrigger>
@@ -358,6 +409,9 @@ export default function PartnerStudentDetailPage() {
             {t('partnerStudentDetail.tabApplications', { count: applications.length })}
           </TabsTrigger>
           <TabsTrigger value="notes">{t('partnerStudentDetail.tabNotes')}</TabsTrigger>
+          <TabsTrigger value="documents">
+            {t('partnerStudentDetail.tabDocuments', { count: documents.length })}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">
@@ -616,9 +670,111 @@ export default function PartnerStudentDetailPage() {
             </AlertDialogContent>
           </AlertDialog>
         </TabsContent>
+
+        {/* Phase H: documents tab. Lazy-loads the student's docs and
+            lets the partner upload a new doc without leaving the
+            student profile. */}
+        <TabsContent value="documents">
+          <Card className="rounded-none">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-[#1B2A4A] flex items-center gap-2">
+                <FileText className="w-4 h-4" /> {t('partnerStudentDetail.documentsTitle')}
+              </CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-none"
+                onClick={() => setUploadOpen(true)}
+              >
+                <Plus className="mr-1.5 h-3.5 w-3.5" />
+                {t('partnerStudentDetail.uploadDocument')}
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {documentsError && (
+                <p className="text-sm text-red-700 mb-3">{documentsError}</p>
+              )}
+              {documentsLoading ? (
+                <p className="text-sm text-[#4B5563] py-4 text-center">…</p>
+              ) : documents.length === 0 ? (
+                <p className="text-sm text-[#4B5563] italic py-4 text-center">
+                  {t('partnerStudentDetail.documentsEmpty')}
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {documents.map((doc) => (
+                    <div
+                      key={doc.id}
+                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 border border-gray-100"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-[#1B2A4A] flex-shrink-0" />
+                          <span className="font-medium text-[#1B2A4A] text-sm truncate">
+                            {doc.name}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-[#4B5563]">
+                          <Badge className={`rounded-none ${DOC_STATUS_STYLES[doc.status]}`}>
+                            {t(`partnerDocs.statusBadge.${doc.status.toLowerCase()}`)}
+                          </Badge>
+                          <span>{t(`partnerDocs.categoryBadge.${doc.category.toLowerCase()}`)}</span>
+                          {doc.partnerApplication && (
+                            <span>
+                              ·
+                              <Link
+                                href={`/partner/applications/${doc.partnerApplication.id}`}
+                                className="ml-1 hover:text-[#9B1B30] hover:underline"
+                              >
+                                {doc.partnerApplication.university}
+                              </Link>
+                            </span>
+                          )}
+                          {doc.fileSize && <span>· {formatBytes(doc.fileSize)}</span>}
+                          <span>· {new Date(doc.uploadedAt).toLocaleDateString()}</span>
+                          {doc.rejectionReason && (
+                            <span className="text-red-700">· {doc.rejectionReason}</span>
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="rounded-none h-8 w-8 p-0"
+                        onClick={() => handleDownloadDoc(doc)}
+                        title={t('partnerStudentDetail.downloadDocument')}
+                        aria-label={t('partnerStudentDetail.downloadDocument')}
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <DocumentUploadDialog
+            open={uploadOpen}
+            onOpenChange={setUploadOpen}
+            students={student ? [student] : []}
+            applications={applications}
+            defaultStudentId={student?.id}
+            onUploaded={() => {
+              void fetchDocuments();
+            }}
+          />
+        </TabsContent>
       </Tabs>
     </div>
   );
+}
+
+function formatBytes(n: number | null | undefined): string {
+  if (!n) return '';
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function Field({ label, value, t }: { label: string; value: string | null | undefined; t: (key: string) => string }) {

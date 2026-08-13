@@ -1730,6 +1730,13 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerStudentDetail.tabOverview': 'Overview',
     'partnerStudentDetail.tabApplications': 'Applications ({{count}})',
     'partnerStudentDetail.tabNotes': 'Notes',
+    'partnerStudentDetail.tabDocuments': 'Documents ({{count}})',
+    'partnerStudentDetail.documentsTitle': 'Documents',
+    'partnerStudentDetail.documentsEmpty': 'No documents uploaded for this student yet.',
+    'partnerStudentDetail.uploadDocument': 'Upload document',
+    'partnerStudentDetail.downloadDocument': 'Download document',
+    'partnerStudentDetail.documentsLoadError': 'Could not load documents.',
+    'partnerStudentDetail.documentsDownloadError': 'Could not download the document.',
     // Phase 50c: per-event notes UI. The student detail page
     // Notes tab now shows a composer + a list of past events
     // (each with author + timestamp), instead of a single
@@ -4950,6 +4957,13 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerStudentDetail.tabOverview': '概览',
     'partnerStudentDetail.tabApplications': '申请（{{count}}）',
     'partnerStudentDetail.tabNotes': '备注',
+    'partnerStudentDetail.tabDocuments': '文件（{{count}}）',
+    'partnerStudentDetail.documentsTitle': '文件',
+    'partnerStudentDetail.documentsEmpty': '此学生暂无任何上传文件。',
+    'partnerStudentDetail.uploadDocument': '上传文件',
+    'partnerStudentDetail.downloadDocument': '下载文件',
+    'partnerStudentDetail.documentsLoadError': '无法加载文件。',
+    'partnerStudentDetail.documentsDownloadError': '无法下载该文件。',
     // Phase 50c: see the en counterpart.
     'partnerStudentDetail.notesTitle': '活动与备注',
     'partnerStudentDetail.notesHint': '记录通话、缴费、状态更新——任何关于此学生的重要内容。最新的在前面。',
