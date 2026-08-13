@@ -31,7 +31,7 @@ import {
   Sparkles,
   Trophy,
 } from 'lucide-react';
-import { getAllUniversities } from '@/lib/data-fetcher';
+import { getFeaturedUniversities } from '@/lib/data-fetcher';
 import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
 import { VideoTestimonials } from '@/components/VideoTestimonials';
 import { GetStartedCta } from '@/components/GetStartedCta';
@@ -49,34 +49,24 @@ export const metadata: Metadata = {
 export const revalidate = 60;
 
 export default async function HomePage() {
-  const t = await getServerT();
+  // Perf fix: run all independent data fetches in parallel so the
+  // homepage RSC doesn't block on each sequential DB round-trip.
+  // The translation function and structured data both need the
+  // locale, so we fetch it once and build the helpers inline.
+  const [t, liveUnis, latestNews, latestAdmissions, serviceSchema] = await Promise.all([
+    getServerT(),
+    // The home page only needs the top 8 ranked universities (3 for
+    // the hero cards + 8 for the logo strip). The old code fetched
+    // every column and every row via getAllUniversities(), which was
+    // the main cause of the homepage loading bar.
+    getFeaturedUniversities(8),
+    fetchLatestNews(),
+    fetchLatestAdmissions(),
+    getServiceSchema(),
+  ]);
 
-  // Pick 3 featured universidades for the hero. Strategy: top 3 by
-  // China ranking. If the list is empty, fall back to whatever's
-  // there. The list is server-rendered, so the cards are baked
-  // into the initial HTML (no client fetch on first paint).
-  const liveUnis = await getAllUniversities();
-  const featured = [...liveUnis]
-    .sort((a, b) => a.ranking - b.ranking)
-    .slice(0, 3);
+  const featured = liveUnis.slice(0, 3);
 
-  // S38: latest news for the home page widget. Server-rendered so
-  // the cards are in the initial HTML (good for SEO + LLMs that
-  // don't run JS). Only the 3 most recent published posts. Same
-  // RLS-aware fetch pattern as the sitemap — admin/service-role
-  // path is fine, the published-only filter is enforced at the DB
-  // level too.
-  interface NewsTeaser {
-    slug: string;
-    title_en: string;
-    title_zh: string | null;
-    excerpt_en: string | null;
-    cover_image: string | null;
-    category: string;
-    tags: string[];
-    published_at: string | null;
-    read_time_minutes: number | null;
-  }
   // Map the raw DB category → human label. Mirrors the same
   // dictionary the /news index uses so the badges look identical
   // across pages.
@@ -88,54 +78,7 @@ export default async function HomePage() {
     event: t('news.category.event'),
     guide: t('news.category.guide'),
   };
-  let latestNews: NewsTeaser[] = [];
-  if (isSupabaseServerConfigured()) {
-    const supabase = getSupabaseServer();
-    if (supabase) {
-      const { data } = await supabase
-        .from('news_posts')
-        .select(
-          'slug, title_en, title_zh, excerpt_en, cover_image, category, tags, published_at, read_time_minutes',
-        )
-        .eq('status', 'published')
-        .order('published_at', { ascending: false })
-        .limit(3);
-      if (data) latestNews = data as NewsTeaser[];
-    }
-  }
 
-  // Phase 51: latest 3 published admission notices for the home
-  // page Success Stories block. RLS on admission_notices already
-  // scopes to is_published=TRUE so we don't need to add the filter
-  // here — but we add it explicitly so the page is robust if RLS
-  // is ever weakened in a future migration. The headline "10,000+
-  // students admitted" number is a hardcoded marketing stat
-  // (see i18n.successStories.countLabel) — not derived from the
-  // showcase count.
-  interface AdmissionTeaser {
-    id: string;
-    student_name: string;
-    university_name: string;
-    program: string | null;
-    degree: string | null;
-    intake: string | null;
-    country: string | null;
-    image_path: string;
-  }
-  let latestAdmissions: AdmissionTeaser[] = [];
-  if (isSupabaseServerConfigured()) {
-    const supabase = getSupabaseServer();
-    if (supabase) {
-      const { data } = await supabase
-        .from('admission_notices')
-        .select('id, student_name, university_name, program, degree, intake, country, image_path')
-        .eq('is_published', true)
-        .order('display_order', { ascending: false })
-        .order('created_at', { ascending: false })
-        .limit(3);
-      if (data) latestAdmissions = data as AdmissionTeaser[];
-    }
-  }
   // Build the public URL for each image. The admission-notices
   // bucket is public-read so getPublicUrl() is sufficient.
   function admissionImageUrl(imagePath: string): string {
@@ -143,8 +86,6 @@ export default async function HomePage() {
       process.env.COZE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
     return `${supabaseUrl}/storage/v1/object/public/admission-notices/${imagePath}`;
   }
-
-  const serviceSchema = await getServiceSchema();
 
   return (
     <>
@@ -756,4 +697,59 @@ export default async function HomePage() {
       </section>
     </>
   );
+}
+
+// ----- Home-page data helpers (extracted so Promise.all can run
+// them in parallel and keep the component body readable). ----------
+
+interface NewsTeaser {
+  slug: string;
+  title_en: string;
+  title_zh: string | null;
+  excerpt_en: string | null;
+  cover_image: string | null;
+  category: string;
+  tags: string[];
+  published_at: string | null;
+  read_time_minutes: number | null;
+}
+
+async function fetchLatestNews(): Promise<NewsTeaser[]> {
+  if (!isSupabaseServerConfigured()) return [];
+  const supabase = getSupabaseServer();
+  if (!supabase) return [];
+  const { data } = await supabase
+    .from('news_posts')
+    .select(
+      'slug, title_en, title_zh, excerpt_en, cover_image, category, tags, published_at, read_time_minutes',
+    )
+    .eq('status', 'published')
+    .order('published_at', { ascending: false })
+    .limit(3);
+  return (data as NewsTeaser[]) || [];
+}
+
+interface AdmissionTeaser {
+  id: string;
+  student_name: string;
+  university_name: string;
+  program: string | null;
+  degree: string | null;
+  intake: string | null;
+  country: string | null;
+  image_path: string;
+}
+
+async function fetchLatestAdmissions(): Promise<AdmissionTeaser[]> {
+  if (!isSupabaseServerConfigured()) return [];
+  const supabase = getSupabaseServer();
+  if (!supabase) return [];
+  const { data } = await supabase
+    .from('admission_notices')
+    .select('id, student_name, university_name, program, degree, intake, country, image_path')
+    .eq('is_published', true)
+    .order('display_order', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(3);
+  return (data as AdmissionTeaser[]) || [];
 }

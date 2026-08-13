@@ -215,6 +215,71 @@ export const getAllUniversities = cache(
   },
 );
 
+/**
+ * Lightweight featured-university fetcher for the home page.
+ *
+ * The home page only renders the top-N ranked universities (hero
+ * cards + logo strip). Selecting every column and every row via
+ * getAllUniversities() was a major source of the homepage loading
+ * bar: heavy JSON columns (gallery, highlights, etc.) and large
+ * row counts slow the RSC render before the first byte.
+ *
+ * This helper selects only the columns the home page needs and
+ * hard-limits the result set so the query stays fast regardless
+ * of table growth.
+ */
+export const getFeaturedUniversities = cache(
+  async (limit = 8): Promise<University[]> => {
+    if (isSupabaseServerConfigured() && supabaseServer) {
+      const { data, error } = await supabaseServer
+        .from('universities')
+        .select(
+          'slug, name, name_cn, city, city_cn, ranking, qs_world_ranking, logo',
+        )
+        .order('ranking', { ascending: true })
+        .limit(limit);
+      if (!error && data && data.length > 0) {
+        return data.map((row) =>
+          mapUniversity({
+            ...row,
+            // mapUniversity expects these optional fields; provide
+            // defaults so the returned University shape is complete
+            // without bloating the SELECT.
+            rating: 0,
+            type: '',
+            type_cn: '',
+            established: 0,
+            students: '',
+            intl_students: '',
+            description: '',
+            description_cn: '',
+            popular_programs: [],
+            popular_programs_cn: [],
+            tuition_undergrad: '',
+            tuition_graduate: '',
+            intake: '',
+            intake_cn: '',
+            disciplines: [],
+            image: '',
+            qs_ranking: '',
+            tags: [],
+            tags_cn: [],
+            accommodation: '',
+            accommodation_cn: '',
+            accommodation_cost: '',
+            accommodation_cost_cn: '',
+            accommodation_types: [],
+            accommodation_types_cn: [],
+            gallery: [],
+            highlights: { en: [], zh: [] },
+          } as Record<string, unknown>),
+        );
+      }
+    }
+    return staticUniversities.slice(0, limit);
+  },
+);
+
 /** All programs, DB first, static fallback. Memoized per-request —
  *  most pages read this at most once, but the program-scholarships
  *  and study-in-china/[city] routes use it in both generateMetadata
