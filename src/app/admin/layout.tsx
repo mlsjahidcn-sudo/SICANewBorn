@@ -47,6 +47,7 @@ const navItems = [
   { href: '/admin/emails', key: 'emails', icon: Mail },
   { href: '/admin/leads', key: 'leads', icon: Users },
   { href: '/admin/students', key: 'students', icon: UserCheck },
+  { href: '/admin/partner-students', key: 'partnerStudents', icon: Users },
   { href: '/admin/documents', key: 'documents', icon: FileCheck },
   { href: '/admin/partners', key: 'partners', icon: Building2 },
   // Phase 33: the standalone Partner Pipeline list page is

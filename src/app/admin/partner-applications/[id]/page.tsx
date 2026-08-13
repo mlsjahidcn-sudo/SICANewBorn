@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft, Calendar, Building, Mail, Phone, Globe, Hash, Flag,
-  CheckCircle2, XCircle, Loader2,
+  CheckCircle2, XCircle, Loader2, Link2,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -395,6 +395,44 @@ export default function AdminPartnerApplicationDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Phase A: links to the partner student record and the real
+          student profile (when linked). */}
+      <Card className="rounded-none">
+        <CardHeader>
+          <CardTitle className="text-[#1B2A4A] flex items-center gap-2">
+            <Link2 className="w-4 h-4" /> Related Records
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <div className="flex items-center gap-2">
+            <span className="text-[#4B5563] min-w-32">Partner student:</span>
+            {app.studentId ? (
+              <Link
+                href={`/admin/partner-students/${app.studentId}`}
+                className="text-[#1B2A4A] hover:underline font-medium"
+              >
+                View partner student record →
+              </Link>
+            ) : (
+              <span className="text-gray-400">Not linked to a partner student</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[#4B5563] min-w-32">Student profile:</span>
+            {app.linkedStudentProfileId ? (
+              <Link
+                href={`/admin/students/${app.linkedStudentProfileId}`}
+                className="text-[#1B2A4A] hover:underline font-medium"
+              >
+                View student profile →
+              </Link>
+            ) : (
+              <span className="text-gray-400">Not linked to a student profile</span>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Extended S26 fields (academic, language, funding, personal statement)
           shown read-only — admin can read but partner is the one who

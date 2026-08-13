@@ -126,10 +126,11 @@ function defaultTypeIdForCategory(c: PartnerDocCategory): string {
   return `partner-${c.toLowerCase()}`;
 }
 
-function formatBytes(bytes: number): string {
+function formatBytes(bytes: number | null | undefined): string {
+  if (bytes == null) return '';
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 / 1024) / 1024).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export function DocumentUploadDialog({
@@ -182,14 +183,14 @@ export function DocumentUploadDialog({
   }, [open, defaultStudentId]);
 
   // Filter the applications list to those of the picked student
-  // (so the application picker stays relevant). Falls back to all
-  // apps if we can't match — defensive, matches the partner
-  // application form pattern.
+  // (so the application picker stays relevant). Apps without a
+  // studentId are still shown so the partner isn't blocked by old
+  // rows that pre-date the FK migration.
   const filteredApplications = useMemo(() => {
     if (!studentId) return applications;
-    // Some apps don't carry a studentId at the top level; in that
-    // case we still show the full list so the partner isn't blocked.
-    return applications;
+    return applications.filter(
+      (a) => a.studentId === studentId || !a.studentId,
+    );
   }, [applications, studentId]);
 
   const handleFilePicked = (file: File) => {

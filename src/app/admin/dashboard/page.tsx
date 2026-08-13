@@ -57,6 +57,7 @@ interface AdminApplication {
   status: string;
   applicationNumber: string | null;
   createdAt: string;
+  surface?: 'student' | 'partner';
 }
 
 interface ActivityEvent {
@@ -264,10 +265,20 @@ export default function AdminDashboardPage() {
                       return (
                         <tr key={app.id} className="hover:bg-[#FAFAF8] transition-colors">
                           <td className="px-5 py-3 text-sm font-medium text-[#1F2937]">
-                            <Link href={`/admin/applications/${app.id}`} className="hover:underline">
+                            <Link
+                              href={
+                                app.surface === 'partner'
+                                  ? `/admin/partner-applications/${app.id}`
+                                  : `/admin/applications/${app.id}`
+                              }
+                              className="hover:underline"
+                            >
                               {app.studentName}
                             </Link>
-                            {!app.isLinked && (
+                            {app.surface === 'partner' && (
+                              <span className="ml-2 text-xs text-purple-700 font-normal">{t('adminDashboard.partnerAppHint')}</span>
+                            )}
+                            {!app.isLinked && app.surface !== 'partner' && (
                               <span className="ml-2 text-xs text-[#9B1B30] font-normal">{t('adminDashboard.noAccountHint')}</span>
                             )}
                           </td>

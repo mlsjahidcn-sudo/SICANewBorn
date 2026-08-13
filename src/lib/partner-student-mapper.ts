@@ -58,6 +58,13 @@ export interface PartnerStudent {
   // Phase E: count of non-archived applications linked to this
   // student. Populated by the list API; null when not fetched.
   applicationCount?: number | null;
+  // Phase A: link to the canonical student_profiles row. When set,
+  // the partner student is visible as a real student profile in admin.
+  linkedStudentProfileId?: string | null;
+  // Phase A: joined partner organization name (admin list/detail).
+  partnerName?: string | null;
+  // Phase A: count of documents linked to this student.
+  documentCount?: number | null;
 }
 
 export function parsePartnerStudentStatus(input: unknown): PartnerStudentStatus | null {
@@ -92,6 +99,10 @@ interface RawPartnerStudent {
   archived_by_user_id?: string | null;
   // Phase E: denormalized application count from the list API.
   application_count?: number | null;
+  // Phase A
+  linked_student_profile_id?: string | null;
+  partner_name?: string | null;
+  document_count?: number | null;
 }
 
 export function mapPartnerStudentFromDb(row: RawPartnerStudent): PartnerStudent {
@@ -113,6 +124,9 @@ export function mapPartnerStudentFromDb(row: RawPartnerStudent): PartnerStudent 
     archivedAt: row.archived_at ?? null,
     archivedByUserId: row.archived_by_user_id ?? null,
     applicationCount: typeof row.application_count === 'number' ? row.application_count : null,
+    linkedStudentProfileId: row.linked_student_profile_id ?? null,
+    partnerName: row.partner_name ?? null,
+    documentCount: typeof row.document_count === 'number' ? row.document_count : null,
   };
 }
 
@@ -132,5 +146,8 @@ export function mapPartnerStudentToDb(payload: Record<string, unknown>): Record<
   if (payload.targetProgram !== undefined) row.target_program = payload.targetProgram || null;
   if (payload.status !== undefined) row.status = payload.status;
   if (payload.notes !== undefined) row.notes = payload.notes || null;
+  if (payload.linkedStudentProfileId !== undefined) {
+    row.linked_student_profile_id = payload.linkedStudentProfileId || null;
+  }
   return row;
 }

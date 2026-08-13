@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Edit, Trash2, MessageSquare, Calendar, FileText, AlertTriangle, Pin, X, Plus, Download } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, MessageSquare, Calendar, FileText, AlertTriangle, Pin, X, Plus, Download, Save } from 'lucide-react';
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
@@ -35,6 +35,17 @@ const STATUS_VARIANTS: Record<PartnerStudentStatus, 'secondary' | 'outline' | 'd
   'Accepted': 'default',
   'Rejected': 'destructive',
 };
+
+function statusLabel(t: (key: string) => string, status: PartnerStudentStatus): string {
+  const keys: Record<PartnerStudentStatus, string> = {
+    'New': 'partnerStudents.statusNew',
+    'In Progress': 'partnerStudents.statusInProgress',
+    'Applied': 'partnerStudents.statusApplied',
+    'Accepted': 'partnerStudents.statusAccepted',
+    'Rejected': 'partnerStudents.statusRejected',
+  };
+  return t(keys[status] || status);
+}
 
 const APP_STATUS_VARIANTS: Record<PartnerApplicationStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   'Draft': 'secondary',
@@ -98,6 +109,36 @@ export default function PartnerStudentDetailPage() {
   const [documentsLoading, setDocumentsLoading] = useState(false);
   const [documentsError, setDocumentsError] = useState<string | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
+
+  // Phase B: inline editing for the legacy notes field on the student row.
+  const [studentNotes, setStudentNotes] = useState('');
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
+
+  useEffect(() => {
+    if (student) setStudentNotes(student.notes || '');
+  }, [student?.notes]);
+
+  const saveStudentNotes = async () => {
+    setIsSavingNotes(true);
+    setNotesError(null);
+    try {
+      const res = await fetch(`/api/partner/students/${studentId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: studentNotes }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || t('partnerStudentDetail.notesSaveError'));
+      }
+      const { student: updated } = await res.json();
+      setStudent(updated);
+    } catch (err) {
+      setNotesError(err instanceof Error ? err.message : t('partnerStudentDetail.notesSaveError'));
+    } finally {
+      setIsSavingNotes(false);
+    }
+  };
 
   const fetchStudent = useCallback(async () => {
     if (!studentId) return;
@@ -353,7 +394,7 @@ export default function PartnerStudentDetailPage() {
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold text-[#1B2A4A]">{student.studentName}</h1>
             <Badge variant={STATUS_VARIANTS[student.status]} className="rounded-none">
-              {student.status}
+              {statusLabel(t, student.status)}
             </Badge>
           </div>
           <p className="text-[#4B5563] mt-1 text-sm">
@@ -437,12 +478,56 @@ export default function PartnerStudentDetailPage() {
                 <div className="flex items-center gap-2 pt-1">
                   <span className="text-[#4B5563]">{t('partnerStudentDetail.statusLabel')}</span>
                   <Badge variant={STATUS_VARIANTS[student.status]} className="rounded-none">
-                    {student.status}
+                    {statusLabel(t, student.status)}
                   </Badge>
                 </div>
               </CardContent>
             </Card>
           </div>
+
+          {/* Phase B: inline editor for the legacy notes column.
+              Quick notes live here; the full activity log is on the Notes tab. */}
+          <Card className="rounded-none mt-6">
+            <CardHeader>
+              <CardTitle className="text-[#1B2A4A]">{t('partnerStudentDetail.notesInlineTitle')}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {notesError && (
+                <p className="text-sm text-red-700">{notesError}</p>
+              )}
+              <Textarea
+                value={studentNotes}
+                onChange={(e) => {
+                  setStudentNotes(e.target.value);
+                  if (notesError) setNotesError(null);
+                }}
+                rows={5}
+                maxLength={4000}
+                className="rounded-none"
+                placeholder={t('partnerStudentDetail.notesInlinePlaceholder')}
+              />
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-500">
+                  {t('partnerStudentDetail.notesComposerCount', { count: studentNotes.length })}
+                </span>
+                <Button
+                  size="sm"
+                  className="rounded-none bg-[#9B1B30] hover:bg-[#7a1626]"
+                  disabled={isSavingNotes || studentNotes === (student.notes || '')}
+                  onClick={saveStudentNotes}
+                >
+                  {isSavingNotes ? (
+                    <>{t('partnerStudentDetail.notesSaving')}</>
+                  ) : (
+                    <>
+                      <Save className="mr-1.5 h-3.5 w-3.5" />
+                      {t('partnerStudentDetail.notesSave')}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="applications">

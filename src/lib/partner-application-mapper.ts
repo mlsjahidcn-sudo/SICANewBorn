@@ -252,6 +252,8 @@ export interface PartnerApplication {
   // PATCHes archived_at = NOW() instead of hard delete.
   archivedAt?: string | null;
   archivedByUserId?: string | null;
+  // Phase A: link to the canonical student_profiles row.
+  linkedStudentProfileId?: string | null;
 }
 
 // Type guard for the new closed-set fields. Returns the narrowed type
@@ -341,6 +343,8 @@ interface RawPartnerApplication {
   // Phase 50b: soft-delete markers
   archived_at?: string | null;
   archived_by_user_id?: string | null;
+  // Phase A
+  linked_student_profile_id?: string | null;
   // S26 extended
   date_of_birth?: string | null;
   gender?: string | null;
@@ -439,6 +443,7 @@ export function mapPartnerApplicationFromDb(row: RawPartnerApplication): Partner
     createdByEmail: row.created_by_email ?? null,
     archivedAt: row.archived_at ?? null,
     archivedByUserId: row.archived_by_user_id ?? null,
+    linkedStudentProfileId: row.linked_student_profile_id ?? null,
   };
 }
 
@@ -507,6 +512,9 @@ export function mapPartnerApplicationToDb(
   if (payload.submittedAt !== undefined) row.submitted_at = payload.submittedAt || null;
   if (payload.decision !== undefined) row.decision = payload.decision;
   if (payload.notes !== undefined) row.notes = payload.notes || null;
+  if (payload.linkedStudentProfileId !== undefined) {
+    row.linked_student_profile_id = payload.linkedStudentProfileId || null;
+  }
 
   // S26 — identity & contact
   if (payload.dateOfBirth !== undefined) row.date_of_birth = toDateString(payload.dateOfBirth);

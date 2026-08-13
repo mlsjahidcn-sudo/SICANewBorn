@@ -55,6 +55,7 @@ interface AdminDocument {
   application_id: string | null;
   partner_student_id: string | null;
   partner_application_id: string | null;
+  linked_student_profile_id: string | null;
   document_type_id: string;
   name: string;
   name_cn: string | null;
@@ -393,7 +394,7 @@ function AdminDocumentDetailInner() {
                 {t('adminDocs.detailApplication')}
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3">
               {doc.application_id ? (
                 <div className="flex items-center gap-2 text-sm">
                   <GraduationCap className="w-4 h-4 text-[#4B5563]" />
@@ -405,10 +406,45 @@ function AdminDocumentDetailInner() {
                     {doc.application_id.slice(0, 8)}…
                   </Link>
                 </div>
+              ) : doc.partner_application_id ? (
+                <div className="flex items-center gap-2 text-sm">
+                  <GraduationCap className="w-4 h-4 text-[#4B5563]" />
+                  <span className="text-[#1F2937]">Linked to partner application</span>
+                  <Link
+                    href={`/admin/partner-applications/${doc.partner_application_id}`}
+                    className="text-[#1B2A4A] hover:underline font-mono text-xs"
+                  >
+                    {doc.partner_application_id.slice(0, 8)}…
+                  </Link>
+                </div>
               ) : (
                 <div className="flex items-center gap-2 text-sm text-[#4B5563]">
                   <FileText className="w-4 h-4" />
                   {t('adminDocs.detailUnlinked')}
+                </div>
+              )}
+              {doc.partner_student_id && (
+                <div className="flex items-center gap-2 text-sm">
+                  <User className="w-4 h-4 text-[#4B5563]" />
+                  <span className="text-[#1F2937]">Partner student:</span>
+                  <Link
+                    href={`/admin/partner-students/${doc.partner_student_id}`}
+                    className="text-[#1B2A4A] hover:underline font-medium"
+                  >
+                    View record →
+                  </Link>
+                </div>
+              )}
+              {doc.linked_student_profile_id && (
+                <div className="flex items-center gap-2 text-sm">
+                  <User className="w-4 h-4 text-[#4B5563]" />
+                  <span className="text-[#1F2937]">Student profile:</span>
+                  <Link
+                    href={`/admin/students/${doc.linked_student_profile_id}`}
+                    className="text-[#1B2A4A] hover:underline font-medium"
+                  >
+                    View profile →
+                  </Link>
                 </div>
               )}
             </CardContent>

@@ -39,9 +39,12 @@ export async function GET(request: NextRequest) {
       uniRes, progRes, scholRes,
       studentsTotalRes, studentsRecentRes,
       appsTotalRes, appsRecentRes, appsLeadsRes, appsActiveRes,
+      partnerAppsTotalRes, partnerAppsRecentRes, partnerAppsActiveRes,
       recentAppsRes,
+      recentPartnerAppsRes,
       recentTimelineRes,
       recentStudentsRes,
+      recentPartnerStudentsRes,
       // Lead workflow metrics
       leadContactTotalRes, leadContactRecentRes,
       leadChatTotalRes, leadChatRecentRes,
@@ -76,6 +79,17 @@ export async function GET(request: NextRequest) {
         .select('id', { count: 'exact', head: true })
         .in('status', ['Submitted', 'Under Review', 'Documents Requested']),
 
+      // Partner applications counts
+      service.from('partner_applications').select('id', { count: 'exact', head: true }),
+      service
+        .from('partner_applications')
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', sevenDaysAgo),
+      service
+        .from('partner_applications')
+        .select('id', { count: 'exact', head: true })
+        .in('status', ['Submitted', 'In Review']),
+
       // Last 6 applications (newest first)
       service
         .from('student_applications')
@@ -83,6 +97,13 @@ export async function GET(request: NextRequest) {
           `*,
            student:student_profiles!student_id (id, first_name, last_name, email, source, status)`,
         )
+        .order('created_at', { ascending: false })
+        .limit(6),
+
+      // Last 6 partner applications (newest first)
+      service
+        .from('partner_applications')
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(6),
 
@@ -97,6 +118,13 @@ export async function GET(request: NextRequest) {
       service
         .from('student_profiles')
         .select('id, first_name, last_name, email, source, created_at')
+        .order('created_at', { ascending: false })
+        .limit(6),
+
+      // Last 6 partner-created students (newest first)
+      service
+        .from('partner_students')
+        .select('id, student_name, student_email, partner:partners!partner_id (company_name), created_at')
         .order('created_at', { ascending: false })
         .limit(6),
 
@@ -173,9 +201,48 @@ export async function GET(request: NextRequest) {
     ]);
 
     // Normalize the recent applications to the AdminApplication shape
-    const recentApplications = ((recentAppsRes.data || []) as RawApp[]).map(
+    const recentStudentApplications = ((recentAppsRes.data || []) as RawApp[]).map(
       mapApplicationFromDb,
     );
+
+    // Normalize partner applications and merge with student applications.
+    // We tag partner rows with surface: 'partner' and isLinked based on the
+    // new linked_student_profile_id bridge.
+    type PartnerAppRow = {
+      id: string;
+      student_id?: string | null;
+      student_name?: string | null;
+      student_email?: string | null;
+      university?: string | null;
+      program?: string | null;
+      degree?: string | null;
+      intake?: string | null;
+      status?: string | null;
+      application_number?: string | null;
+      linked_student_profile_id?: string | null;
+      created_at?: string | null;
+    };
+    const recentPartnerApplications = ((recentPartnerAppsRes.data || []) as PartnerAppRow[]).map(
+      (row) => ({
+        id: row.id,
+        studentId: row.linked_student_profile_id || null,
+        studentName: row.student_name || '—',
+        studentEmail: row.student_email || '',
+        isLinked: !!row.linked_student_profile_id,
+        university: row.university || '—',
+        program: row.program || '—',
+        degree: row.degree || '—',
+        intake: row.intake || '—',
+        status: row.status || 'Draft',
+        applicationNumber: row.application_number || null,
+        createdAt: row.created_at || new Date().toISOString(),
+        surface: 'partner' as const,
+      }),
+    );
+
+    const recentApplications = [...recentStudentApplications, ...recentPartnerApplications]
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, 6);
 
     type TimelineRow = {
       id: string;
@@ -221,6 +288,25 @@ export async function GET(request: NextRequest) {
         meta: { student_id: s.id, source: s.source },
       });
     }
+    type PartnerStudentRow = {
+      id: string;
+      student_name: string | null;
+      student_email: string | null;
+      partner: { company_name?: string } | { company_name?: string }[] | null;
+      created_at: string;
+    };
+    for (const s of (recentPartnerStudentsRes.data || []) as PartnerStudentRow[]) {
+      const partnerObj = Array.isArray(s.partner) ? s.partner[0] : s.partner;
+      const partnerName = partnerObj?.company_name || 'a partner';
+      const name = s.student_name || s.student_email || 'New partner student';
+      events.push({
+        id: s.id,
+        type: 'student',
+        message: `New partner CRM student from ${partnerName}: ${name}`,
+        timestamp: s.created_at,
+        meta: { partner_student_id: s.id, source: 'Partner CRM' },
+      });
+    }
     type LeadHistoryRow = {
       id: string;
       lead_type: string;
@@ -263,10 +349,10 @@ export async function GET(request: NextRequest) {
         scholarships: scholRes.count ?? 0,
         students: studentsTotalRes.count ?? 0,
         studentsLast7d: studentsRecentRes.count ?? 0,
-        applications: appsTotalRes.count ?? 0,
-        applicationsLast7d: appsRecentRes.count ?? 0,
-        leads: appsLeadsRes.count ?? 0, // unlinked apps (no student account)
-        activeApplications: appsActiveRes.count ?? 0,
+        applications: (appsTotalRes.count ?? 0) + (partnerAppsTotalRes.count ?? 0),
+        applicationsLast7d: (appsRecentRes.count ?? 0) + (partnerAppsRecentRes.count ?? 0),
+        leads: appsLeadsRes.count ?? 0, // unlinked student apps (no student account)
+        activeApplications: (appsActiveRes.count ?? 0) + (partnerAppsActiveRes.count ?? 0),
         // Lead workflow (Phase 2.1)
         leadsContact: leadContactTotalRes.count ?? 0,
         leadsContactLast7d: leadContactRecentRes.count ?? 0,

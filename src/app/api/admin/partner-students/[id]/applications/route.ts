@@ -1,28 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, buildServiceClient, getServerEnv } from '@/lib/supabase-auth';
+import { mapPartnerApplicationFromDb } from '@/lib/partner-application-mapper';
 
 /**
- * GET /api/admin/students/[id]/documents
+ * GET /api/admin/partner-students/[id]/applications
  *
- * Returns the documents belonging to a single student. Used by the
- * Documents tab in /admin/students/[id].
- *
- * Auth: any admin (requireAdmin). Service-role client (RLS would
- * otherwise hide the student's documents from a non-owner admin).
+ * Returns all partner applications for a single partner student.
+ * Auth: any admin. Service-role client.
  */
-export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> },
+) {
   if (!getServerEnv().serviceKey) {
     return NextResponse.json(
       { error: 'Supabase is not configured. Set COZE_SUPABASE_SERVICE_ROLE_KEY.' },
       { status: 503 },
     );
   }
-
   const auth = await requireAdmin(request);
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
-
   const { id } = await context.params;
   if (!id) {
     return NextResponse.json({ error: 'Missing student id' }, { status: 400 });
@@ -31,20 +30,23 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
   try {
     const service = buildServiceClient();
     const { data, error } = await service
-      .from('student_documents')
+      .from('partner_applications')
       .select('*')
-      .or(`student_id.eq.${id},linked_student_profile_id.eq.${id}`)
-      .order('uploaded_at', { ascending: false });
+      .eq('student_id', id)
+      .is('archived_at', null)
+      .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('[admin/students/:id/documents GET] supabase error:', error);
+      console.error('[admin/partner-students/:id/applications GET] supabase error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ documents: data || [] });
+    return NextResponse.json({
+      applications: (data || []).map((row) => mapPartnerApplicationFromDb(row as unknown as Parameters<typeof mapPartnerApplicationFromDb>[0])),
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
-    console.error('[admin/students/:id/documents GET] unhandled:', err);
+    console.error('[admin/partner-students/:id/applications GET] unhandled:', err);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

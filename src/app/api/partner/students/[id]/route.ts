@@ -102,6 +102,17 @@ export async function PATCH(
     // Strip id — clients cannot change the primary key.
     delete (updates as Record<string, unknown>).id;
 
+    // Phase B: partners can archive/restore their own rows. The
+    // DELETE handler already performs soft-delete; this lets the
+    // UI offer a Restore action via PATCH { archived: false }.
+    if (body.archived === true) {
+      updates.archived_at = new Date().toISOString();
+      updates.archived_by_user_id = auth.user.id;
+    } else if (body.archived === false) {
+      updates.archived_at = null;
+      updates.archived_by_user_id = null;
+    }
+
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
     }

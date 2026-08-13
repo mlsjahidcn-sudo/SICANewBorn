@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Search, Eye, Edit, MoreHorizontal, Trash2, Download, Flag, Mail, RefreshCw, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { Plus, Search, Eye, Edit, MoreHorizontal, Trash2, Download, Flag, Mail, RefreshCw, ChevronUp, ChevronDown, ChevronsUpDown, ArchiveRestore } from 'lucide-react';
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
@@ -52,6 +52,9 @@ export default function PartnerApplicationsPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [appToDelete, setAppToDelete] = useState<string | null>(null);
+  const [showRestoreModal, setShowRestoreModal] = useState(false);
+  const [appToRestore, setAppToRestore] = useState<string | null>(null);
+  const [isRestoring, setIsRestoring] = useState(false);
 
   const [applications, setApplications] = useState<PartnerApplication[]>([]);
   // Phase B: keep a synchronous ref of the current list so the
@@ -203,40 +206,31 @@ export default function PartnerApplicationsPage() {
     }
   };
 
-  // Phase 48.4: stats are derived from a single unfiltered fetch
-  // capped at 100 rows. The headline "Total Applications" card
-  // uses the real DB total from the main paginated response (so
-  // 200 applications shows 200, not 50). The breakdown cards (In
-  // Review / Urgent / Accepted) are still lower-bound estimates
-  // from the 100-row slice — when the org has more than 100
-  // applications we show a small amber hint so the partner knows
-  // the number is a snapshot, not the full count. (Phase 13 fix
-  // on the partner dashboard followed the same pattern.)
-  const STATS_FETCH_CAP = 100;
-  const [stats, setStats] = useState<{
-    inReview: number;
-    accepted: number;
-    submitted: number;
-    urgent: number;
-    capped: boolean;
-  }>({ inReview: 0, accepted: 0, submitted: 0, urgent: 0, capped: false });
+  // Phase C: exact server-side stats (no row cap). The headline
+  // "Total Applications" card uses the unfiltered DB total so it
+  // stays accurate even when the partner has filters active.
+  const [stats, setStats] = useState({
+    total: 0,
+    inReview: 0,
+    submitted: 0,
+    accepted: 0,
+    urgent: 0,
+    archived: 0,
+  });
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         const res = await apiFetchJson<{
-          applications: PartnerApplication[];
           total: number;
-        }>(`/api/partner/applications?limit=${STATS_FETCH_CAP}`);
+          inReview: number;
+          submitted: number;
+          accepted: number;
+          urgent: number;
+          archived: number;
+        }>('/api/partner/applications/stats');
         if (cancelled) return;
-        const apps = res.applications || [];
-        setStats({
-          inReview: apps.filter((a) => a.status === 'In Review' || a.status === 'Submitted').length,
-          accepted: apps.filter((a) => a.status === 'Accepted').length,
-          submitted: apps.filter((a) => a.status === 'Submitted').length,
-          urgent: apps.filter((a) => a.priority === 'High' || a.priority === 'Urgent').length,
-          capped: (res.total || 0) > STATS_FETCH_CAP,
-        });
+        setStats(res);
       } catch {
         // ignore — non-fatal
       }
@@ -343,6 +337,41 @@ export default function PartnerApplicationsPage() {
     }
   };
 
+  const handleRestoreApp = (id: string) => {
+    setAppToRestore(id);
+    setShowRestoreModal(true);
+  };
+
+  const confirmRestore = async () => {
+    if (!appToRestore) return;
+    setIsRestoring(true);
+    try {
+      const res = await fetch(`/api/partner/applications/${appToRestore}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ archived: false }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || t('partnerApps.errorRestore'));
+      }
+      setApplications((prev) =>
+        prev.map((a) => (a.id === appToRestore ? { ...a, archivedAt: null } : a)),
+      );
+      setStats((prev) => ({
+        ...prev,
+        archived: Math.max(0, prev.archived - 1),
+      }));
+      setShowRestoreModal(false);
+      setAppToRestore(null);
+    } catch (err) {
+      console.error('[partner/applications] restore failed:', err);
+      setError(err instanceof Error ? err.message : t('partnerApps.errorRestore'));
+    } finally {
+      setIsRestoring(false);
+    }
+  };
+
   const getStatusBadge = (status: PartnerApplicationStatus) => (
     <Badge variant={STATUS_VARIANTS[status]} className="rounded-none">{status}</Badge>
   );
@@ -366,6 +395,30 @@ export default function PartnerApplicationsPage() {
               className="rounded-none bg-[#9B1B30] hover:bg-[#7a1626]"
             >
               {isDeleting ? t('partnerApps.deleting') : t('partnerApps.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Phase C: restore archived application. Mirrors the partner
+          students restore flow: PATCH { archived: false } and update
+          the local row so the list refreshes without a full reload. */}
+      <AlertDialog open={showRestoreModal} onOpenChange={setShowRestoreModal}>
+        <AlertDialogContent className="rounded-none">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('partnerApps.restoreTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('partnerApps.restoreBody')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isRestoring} className="rounded-none">
+              {t('partnerApps.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmRestore}
+              disabled={isRestoring}
+              className="rounded-none bg-[#1B2A4A] hover:bg-[#26345A]"
+            >
+              {isRestoring ? t('partnerApps.restoring') : t('partnerApps.restore')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -408,7 +461,7 @@ export default function PartnerApplicationsPage() {
             <CardTitle className="text-sm font-medium text-[#4B5563]">{t('partnerApps.totalApplications')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-[#1B2A4A]">{total}</div>
+            <div className="text-2xl font-bold text-[#1B2A4A]">{stats.total}</div>
             <p className="text-sm text-[#4B5563] mt-1">{t('partnerApps.totalApplicationsHint')}</p>
           </CardContent>
         </Card>
@@ -419,11 +472,7 @@ export default function PartnerApplicationsPage() {
           <CardContent>
             <div className="text-2xl font-bold text-[#1B2A4A]">{stats.inReview}</div>
             <p className="text-sm text-[#4B5563] mt-1">{t('partnerApps.inReviewHint')}</p>
-            {stats.capped && (
-              <p className="text-xs text-amber-700 mt-1">
-                {t('partnerDashboard.statusBreakdownCapped', { shown: STATS_FETCH_CAP, total: total })}
-              </p>
-            )}
+
           </CardContent>
         </Card>
         <Card className="rounded-none">
@@ -435,11 +484,7 @@ export default function PartnerApplicationsPage() {
           <CardContent>
             <div className="text-2xl font-bold text-[#9B1B30]">{stats.urgent}</div>
             <p className="text-sm text-[#4B5563] mt-1">{t('partnerApps.urgentHighHint')}</p>
-            {stats.capped && (
-              <p className="text-xs text-amber-700 mt-1">
-                {t('partnerDashboard.statusBreakdownCapped', { shown: STATS_FETCH_CAP, total: total })}
-              </p>
-            )}
+
           </CardContent>
         </Card>
         <Card className="rounded-none">
@@ -449,11 +494,7 @@ export default function PartnerApplicationsPage() {
           <CardContent>
             <div className="text-2xl font-bold text-[#1B2A4A]">{stats.accepted}</div>
             <p className="text-sm text-[#4B5563] mt-1">{t('partnerApps.acceptedHint')}</p>
-            {stats.capped && (
-              <p className="text-xs text-amber-700 mt-1">
-                {t('partnerDashboard.statusBreakdownCapped', { shown: STATS_FETCH_CAP, total: total })}
-              </p>
-            )}
+
           </CardContent>
         </Card>
       </div>
@@ -667,13 +708,23 @@ export default function PartnerApplicationsPage() {
                               {t('partnerApps.edit')}
                             </Link>
                           </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleDeleteApp(app.id)}
-                            className="text-red-600 cursor-pointer"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            {t('partnerApps.delete')}
-                          </DropdownMenuItem>
+                          {app.archivedAt ? (
+                            <DropdownMenuItem
+                              onClick={() => handleRestoreApp(app.id)}
+                              className="cursor-pointer"
+                            >
+                              <ArchiveRestore className="mr-2 h-4 w-4" />
+                              {t('partnerApps.restore')}
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem
+                              onClick={() => handleDeleteApp(app.id)}
+                              className="text-red-600 cursor-pointer"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              {t('partnerApps.delete')}
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>

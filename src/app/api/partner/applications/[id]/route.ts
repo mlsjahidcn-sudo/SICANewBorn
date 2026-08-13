@@ -126,6 +126,17 @@ export async function PATCH(
     delete (updates as Record<string, unknown>).partner_id;
     delete (updates as Record<string, unknown>).id;
 
+    // Phase C: partners can archive/restore their own rows. The
+    // DELETE handler already performs soft-delete; this lets the
+    // UI offer a Restore action via PATCH { archived: false }.
+    if (body.archived === true) {
+      updates.archived_at = new Date().toISOString();
+      updates.archived_by_user_id = auth.user.id;
+    } else if (body.archived === false) {
+      updates.archived_at = null;
+      updates.archived_by_user_id = null;
+    }
+
     // Belt-and-suspenders: even if a future code path added one of
     // the snake_case admin-only keys to the mapper output, drop it
     // here. The earlier 403 check is the user-facing error; this is

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Search, Eye, Edit, MoreHorizontal, Trash2, Download, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { Plus, Search, Eye, Edit, MoreHorizontal, Trash2, Download, ArchiveRestore, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -37,16 +37,20 @@ export default function PartnerStudentsPage() {
   // rows in addition to active (archived=true). The list row
   // shows a small "Archived" badge so the partner can tell
   // soft-deleted from active at a glance.
-  const [showArchived, setShowArchived] = useState(false);
+  const [archivedFilter, setArchivedFilter] = useState<'active' | 'archived' | 'all'>('active');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<string | null>(null);
+  const [showRestoreModal, setShowRestoreModal] = useState(false);
+  const [studentToRestore, setStudentToRestore] = useState<string | null>(null);
+  const [isRestoring, setIsRestoring] = useState(false);
 
   const [students, setStudents] = useState<PartnerStudent[]>([]);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   // Phase B: pagination state. Keep a synchronous ref of the current
   // list so the "Load more" handler can compute hasMore from the
   // actual rendered list, not a stale closure value.
@@ -75,9 +79,9 @@ export default function PartnerStudentsPage() {
       const params = new URLSearchParams();
       if (debouncedSearch) params.set('search', debouncedSearch);
       if (statusFilter !== 'all') params.set('status', statusFilter);
-      // Phase 50b: when showArchived is ON, ask the API for
-      // both active + archived rows. Default (off) only active.
-      if (showArchived) params.set('archived', 'true');
+      // Phase B: archived filter. active (default) | archived | all.
+      if (archivedFilter === 'archived') params.set('archived', 'only');
+      else if (archivedFilter === 'all') params.set('archived', 'true');
       params.set('sort', sort);
       params.set('order', order);
       params.set('limit', '50');
@@ -110,11 +114,46 @@ export default function PartnerStudentsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [debouncedSearch, statusFilter, showArchived, sort, order, t]);
+  }, [debouncedSearch, statusFilter, archivedFilter, sort, order, t]);
 
   useEffect(() => {
     void fetchStudents();
   }, [fetchStudents]);
+
+  // Phase B: stats are fetched from a dedicated server-side
+  // aggregation endpoint so large partners see exact counts.
+  const [stats, setStats] = useState({
+    total: 0,
+    new: 0,
+    inProgress: 0,
+    applied: 0,
+    accepted: 0,
+    rejected: 0,
+    archived: 0,
+  });
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiFetchJson<{
+          total: number;
+          new: number;
+          inProgress: number;
+          applied: number;
+          accepted: number;
+          rejected: number;
+          archived: number;
+        }>('/api/partner/students/stats');
+        if (cancelled) return;
+        setStats(res);
+      } catch {
+        // Non-fatal: stats just stay at 0
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Phase B: "Load more" appends page N+1 to the existing list.
   const loadMore = async () => {
@@ -147,6 +186,104 @@ export default function PartnerStudentsPage() {
   const handleDeleteStudent = (id: string) => {
     setStudentToDelete(id);
     setShowDeleteModal(true);
+  };
+
+  const handleRestoreStudent = (id: string) => {
+    setStudentToRestore(id);
+    setShowRestoreModal(true);
+  };
+
+  const confirmRestore = async () => {
+    if (!studentToRestore) return;
+    setIsRestoring(true);
+    try {
+      const res = await fetch(`/api/partner/students/${studentToRestore}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ archived: false }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || t('partnerStudents.errorRestore'));
+      }
+      setStudents((prev) =>
+        prev.map((s) =>
+          s.id === studentToRestore ? { ...s, archivedAt: null } : s,
+        ),
+      );
+      setStats((prev) => ({
+        ...prev,
+        archived: Math.max(0, prev.archived - 1),
+        total: prev.total,
+      }));
+      setShowRestoreModal(false);
+      setStudentToRestore(null);
+    } catch (err) {
+      console.error('[partner/students] restore failed:', err);
+      setError(err instanceof Error ? err.message : t('partnerStudents.errorRestore'));
+    } finally {
+      setIsRestoring(false);
+    }
+  };
+
+  // Phase B: export the full student list (across all pages) as CSV.
+  const handleExportCsv = async () => {
+    setIsExporting(true);
+    try {
+      const params = new URLSearchParams();
+      if (debouncedSearch) params.set('search', debouncedSearch);
+      if (statusFilter !== 'all') params.set('status', statusFilter);
+      if (archivedFilter === 'archived') params.set('archived', 'only');
+      else if (archivedFilter === 'all') params.set('archived', 'true');
+      params.set('sort', sort);
+      params.set('order', order);
+      params.set('limit', '1000');
+      params.set('page', '1');
+      const qs = params.toString();
+      const res = await apiFetchJson<{
+        students: PartnerStudent[];
+        total: number;
+      }>(`/api/partner/students${qs ? `?${qs}` : ''}`);
+
+      const rows = res.students || [];
+      const headers = ['Name', 'Email', 'Phone', 'Nationality', 'Target University', 'Target Program', 'Status', 'Archived', 'Applications', 'Created At'];
+      const escape = (v: string | null | undefined) => {
+        const s = String(v ?? '').replace(/"/g, '""');
+        return `"${s}"`;
+      };
+      const csv = [
+        headers.join(','),
+        ...rows.map((s) =>
+          [
+            escape(s.studentName),
+            escape(s.studentEmail),
+            escape(s.studentPhone),
+            escape(s.nationality),
+            escape(s.targetUniversity),
+            escape(s.targetProgram),
+            escape(s.status),
+            escape(s.archivedAt ? 'Yes' : 'No'),
+            escape(String(s.applicationCount ?? 0)),
+            escape(s.createdAt ? new Date(s.createdAt).toLocaleString() : ''),
+          ].join(','),
+        ),
+      ].join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `partner-students-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('[partner/students] export failed:', err);
+      setError(err instanceof Error ? err.message : t('partnerStudents.errorExport'));
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const confirmDelete = async () => {
@@ -204,34 +341,7 @@ export default function PartnerStudentsPage() {
   // show a small amber hint so the partner knows the number is
   // a snapshot, not the full count. (Phase 13 fix on the
   // partner dashboard followed the same pattern.)
-  const STATS_FETCH_CAP = 100;
-  const [stats, setStats] = useState({ new: 0, inProgress: 0, accepted: 0, capped: false });
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await apiFetchJson<{ students: PartnerStudent[]; total: number }>(
-          `/api/partner/students?limit=${STATS_FETCH_CAP}`,
-        );
-        if (cancelled) return;
-        const s = res.students || [];
-        setStats({
-          new: s.filter((x) => x.status === 'New').length,
-          inProgress: s.filter((x) => x.status === 'In Progress').length,
-          accepted: s.filter((x) => x.status === 'Accepted').length,
-          // Mark capped if the DB total exceeds what we fetched.
-          // (The fetch caps the response at 100; if the total is
-          // larger, the breakdown is a snapshot not a full count.)
-          capped: (res.total || 0) > STATS_FETCH_CAP,
-        });
-      } catch {
-        // Non-fatal: stats just stay at 0
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+
 
   return (
     <>
@@ -256,6 +366,27 @@ export default function PartnerStudentsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      <AlertDialog open={showRestoreModal} onOpenChange={setShowRestoreModal}>
+        <AlertDialogContent className="rounded-none">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('partnerStudents.restoreTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('partnerStudents.restoreBody')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isRestoring} className="rounded-none">
+              {t('partnerStudents.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmRestore}
+              disabled={isRestoring}
+              className="rounded-none bg-[#1B2A4A] hover:bg-[#26345A]"
+            >
+              {isRestoring ? t('partnerStudents.restoring') : t('partnerStudents.restore')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {isLoading ? (
         <ListPageSkeleton />
       ) : (
@@ -267,9 +398,14 @@ export default function PartnerStudentsPage() {
                 <p className="text-[#4B5563] mt-1">{t('partnerStudents.subtitle')}</p>
               </div>
               <div className="flex gap-3">
-                <Button variant="outline" className="rounded-none" disabled>
+                <Button
+                  variant="outline"
+                  className="rounded-none"
+                  onClick={handleExportCsv}
+                  disabled={isExporting}
+                >
                   <Download className="mr-2 h-4 w-4" />
-                  {t('partnerStudents.export')}
+                  {isExporting ? t('partnerStudents.exporting') : t('partnerStudents.export')}
                 </Button>
                 <Button
                   asChild
@@ -290,7 +426,7 @@ export default function PartnerStudentsPage() {
                 <CardTitle className="text-sm font-medium text-[#4B5563]">{t('partnerStudents.totalStudents')}</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-[#1B2A4A]">{total}</div>
+                <div className="text-2xl font-bold text-[#1B2A4A]">{stats.total}</div>
                 <p className="text-sm text-[#4B5563] mt-1">{t('partnerStudents.totalStudentsHint')}</p>
               </CardContent>
             </Card>
@@ -301,11 +437,6 @@ export default function PartnerStudentsPage() {
               <CardContent>
                 <div className="text-2xl font-bold text-[#1B2A4A]">{stats.new}</div>
                 <p className="text-sm text-[#4B5563] mt-1">{t('partnerStudents.newHint')}</p>
-                {stats.capped && (
-                  <p className="text-xs text-amber-700 mt-1">
-                    {t('partnerDashboard.statusBreakdownCapped', { shown: STATS_FETCH_CAP, total: total })}
-                  </p>
-                )}
               </CardContent>
             </Card>
             <Card className="rounded-none">
@@ -315,11 +446,6 @@ export default function PartnerStudentsPage() {
               <CardContent>
                 <div className="text-2xl font-bold text-[#1B2A4A]">{stats.inProgress}</div>
                 <p className="text-sm text-[#4B5563] mt-1">{t('partnerStudents.inProgressHint')}</p>
-                {stats.capped && (
-                  <p className="text-xs text-amber-700 mt-1">
-                    {t('partnerDashboard.statusBreakdownCapped', { shown: STATS_FETCH_CAP, total: total })}
-                  </p>
-                )}
               </CardContent>
             </Card>
             <Card className="rounded-none">
@@ -329,11 +455,6 @@ export default function PartnerStudentsPage() {
               <CardContent>
                 <div className="text-2xl font-bold text-[#1B2A4A]">{stats.accepted}</div>
                 <p className="text-sm text-[#4B5563] mt-1">{t('partnerStudents.acceptedHint')}</p>
-                {stats.capped && (
-                  <p className="text-xs text-amber-700 mt-1">
-                    {t('partnerDashboard.statusBreakdownCapped', { shown: STATS_FETCH_CAP, total: total })}
-                  </p>
-                )}
               </CardContent>
             </Card>
           </div>
@@ -372,21 +493,19 @@ export default function PartnerStudentsPage() {
                 </SelectContent>
               </Select>
             </div>
-            {/* Phase 50b: "Show archived" toggle. Off by default;
-                flips showArchived in state and refetches with
-                ?archived=true. The list row's status column
-                gets a small "Archived" badge when archivedAt
-                is non-null so the partner can tell soft-deleted
-                from active at a glance. */}
-            <label className="flex items-center gap-2 text-sm text-[#1B2A4A] cursor-pointer">
-              <input
-                type="checkbox"
-                checked={showArchived}
-                onChange={(e) => setShowArchived(e.target.checked)}
-                className="rounded-none"
-              />
-              {t('partnerStudents.showArchived')}
-            </label>
+            {/* Phase B: archived filter. Active (default) shows only
+                non-archived rows; Archived shows only archived rows;
+                All shows both. */}
+            <Select value={archivedFilter} onValueChange={(v) => setArchivedFilter(v as 'active' | 'archived' | 'all')}>
+              <SelectTrigger className="w-40 rounded-none">
+                <SelectValue placeholder={t('partnerStudents.archivedFilterPlaceholder')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">{t('partnerStudents.archivedFilterActive')}</SelectItem>
+                <SelectItem value="archived">{t('partnerStudents.archivedFilterArchived')}</SelectItem>
+                <SelectItem value="all">{t('partnerStudents.archivedFilterAll')}</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <Card className="rounded-none">
@@ -505,13 +624,23 @@ export default function PartnerStudentsPage() {
                                   {t('partnerStudents.edit')}
                                 </Link>
                               </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleDeleteStudent(student.id)}
-                                className="text-red-600 cursor-pointer"
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                {t('partnerStudents.delete')}
-                              </DropdownMenuItem>
+                              {student.archivedAt ? (
+                                <DropdownMenuItem
+                                  onClick={() => handleRestoreStudent(student.id)}
+                                  className="cursor-pointer"
+                                >
+                                  <ArchiveRestore className="mr-2 h-4 w-4" />
+                                  {t('partnerStudents.restore')}
+                                </DropdownMenuItem>
+                              ) : (
+                                <DropdownMenuItem
+                                  onClick={() => handleDeleteStudent(student.id)}
+                                  className="text-red-600 cursor-pointer"
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  {t('partnerStudents.delete')}
+                                </DropdownMenuItem>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </td>

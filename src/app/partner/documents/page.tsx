@@ -298,6 +298,12 @@ export default function PartnerDocumentsPage() {
 
   // Data
   const [documents, setDocuments] = useState<PartnerDocument[]>([]);
+  // Phase D: keep a synchronous ref so the "Load more" handler can
+  // compute hasMore from the actual rendered list, not a stale closure.
+  const documentsRef = useRef<PartnerDocument[]>([]);
+  useEffect(() => {
+    documentsRef.current = documents;
+  }, [documents]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
@@ -408,9 +414,11 @@ export default function PartnerDocumentsPage() {
           setDocuments(list);
         }
         setTotal(res.total || 0);
-        // hasMore = we have less than the total loaded so far
+        // hasMore = we have less than the total loaded so far.
+        // Use documentsRef so a rapid "Load more" click doesn't read
+        // a stale closure value.
         const loaded = opts?.append
-          ? (documents.length + list.length)
+          ? (documentsRef.current.length + list.length)
           : list.length;
         setHasMore(loaded < (res.total || 0));
         setPage(usePage);
@@ -432,25 +440,19 @@ export default function PartnerDocumentsPage() {
     void fetchDocs();
   }, [fetchDocs]);
 
-  // Refresh the status chip counts on first mount + after any
-  // mutation. Single unfiltered sweep (the API doesn't paginate
-  // by status, so we walk the full set).
+  // Phase D: exact server-side status counts (no row cap). The chip
+  // badges stay accurate even when the document library is large.
   const refreshStatusCounts = useCallback(async () => {
     try {
-      const res = await apiFetchJson<DocsResponse>(
-        '/api/partner/documents?limit=100',
+      const res = await apiFetchJson<Record<PartnerDocStatus | 'all', number>>(
+        '/api/partner/documents/stats',
       );
-      const docs = res.documents || [];
-      const next: Record<PartnerDocStatus | 'all', number> = {
-        all: res.total || docs.length,
-        Pending: 0,
-        Verified: 0,
-        Rejected: 0,
-      };
-      for (const d of docs) {
-        next[d.status] = (next[d.status] || 0) + 1;
-      }
-      setStatusCounts(next);
+      setStatusCounts({
+        all: res.all || 0,
+        Pending: res.Pending || 0,
+        Verified: res.Verified || 0,
+        Rejected: res.Rejected || 0,
+      });
     } catch {
       // non-fatal
     }
