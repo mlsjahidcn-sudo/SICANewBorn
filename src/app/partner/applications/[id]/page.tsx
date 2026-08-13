@@ -6,7 +6,7 @@ import Link from 'next/link';
 import {
   ArrowLeft, Edit, Trash2, Calendar, Building, BookOpen, AlertTriangle,
   Mail, Phone, Globe, Hash, Flag, Info, Copy, ClipboardCopy, RotateCcw, CheckCircle,
-  User, Plus,
+  User, Plus, History,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -39,6 +39,15 @@ import type {
   PartnerApplicationDecision,
   PartnerApplicationPriority,
 } from '@/lib/partner-application-mapper';
+
+interface TimelineEvent {
+  id: string;
+  status: string;
+  notes: string | null;
+  createdAt: string;
+  createdBy: string | null;
+  actorEmail: string | null;
+}
 
 const STATUS_VARIANTS: Record<PartnerApplicationStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   'Draft': 'secondary',
@@ -121,13 +130,17 @@ export default function PartnerApplicationDetailPage() {
   // Surfaces "your case is being reviewed by <admin email>" so
   // the partner has a real person to follow up with.
   const [reviewer, setReviewer] = useState<{ email: string | null; at: string } | null>(null);
+  // Phase F: activity timeline for this application.
+  const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
+  const [timelineLoading, setTimelineLoading] = useState(true);
 
   const load = useCallback(async () => {
     if (!applicationId) return;
     setIsLoading(true);
+    setTimelineLoading(true);
     setError(null);
     try {
-      const [appRes, reviewerRes] = await Promise.all([
+      const [appRes, reviewerRes, timelineRes] = await Promise.all([
         apiFetchJson<{ application: PartnerApplication }>(
           `/api/partner/applications/${applicationId}`,
         ),
@@ -138,13 +151,20 @@ export default function PartnerApplicationDetailPage() {
         apiFetchJson<{ reviewer: { email: string | null; at: string } | null }>(
           `/api/partner/applications/${applicationId}/reviewer`,
         ).catch(() => ({ reviewer: null })),
+        // Fail-soft: the timeline is a secondary surface. If it
+        // errors we still render the rest of the detail page.
+        apiFetchJson<{ timeline: TimelineEvent[] }>(
+          `/api/partner/applications/${applicationId}/timeline`,
+        ).catch(() => ({ timeline: [] })),
       ]);
       setApp(appRes.application);
       setReviewer(reviewerRes.reviewer);
+      setTimeline(timelineRes.timeline || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('partnerAppDetail.errorLoad'));
     } finally {
       setIsLoading(false);
+      setTimelineLoading(false);
     }
   }, [applicationId, t]);
 
@@ -269,6 +289,9 @@ export default function PartnerApplicationDetailPage() {
         throw new Error(body.error || t('partnerAppDetail.errorWithdrawal'));
       }
       setWithdrawalSent(true);
+      // Refresh the activity feed so the new withdrawal request
+      // appears immediately.
+      void load();
       // Auto-close after a short read window.
       setTimeout(() => {
         setShowWithdrawal(false);
@@ -861,6 +884,67 @@ export default function PartnerApplicationDetailPage() {
               <>{t('partnerAppDetail.updatedOn', { date: fmtDateTime(app.updatedAt) })}</>
             )}
           </p>
+        </CardContent>
+      </Card>
+
+      {/* Phase F: activity timeline. Shows status changes, admin
+          notes, and partner withdrawal requests in chronological
+          order. The feed is fail-soft: if the timeline endpoint
+          errors we still render the rest of the detail page. */}
+      <Card className="rounded-none">
+        <CardHeader>
+          <CardTitle className="text-[#1B2A4A] flex items-center gap-2">
+            <History className="w-4 h-4" /> {t('partnerAppDetail.sectionActivity')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {timelineLoading ? (
+            <div className="space-y-3">
+              <div className="h-4 bg-gray-200 animate-pulse w-3/4" />
+              <div className="h-4 bg-gray-200 animate-pulse w-1/2" />
+            </div>
+          ) : timeline.length === 0 ? (
+            <div className="text-sm text-[#4B5563] italic">
+              {t('partnerAppDetail.timelineEmpty')}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {timeline.map((event) => {
+                const dotColor =
+                  event.status === 'Accepted'
+                    ? 'bg-green-500'
+                    : event.status === 'Rejected' || event.status === 'Withdrawn'
+                    ? 'bg-red-500'
+                    : event.status === 'Submitted'
+                    ? 'bg-blue-500'
+                    : event.status === 'Withdrawal Requested'
+                    ? 'bg-amber-500'
+                    : 'bg-[#1B2A4A]';
+                const actor = event.actorEmail || t('partnerAppDetail.admissionsTeam');
+                return (
+                  <div key={event.id} className="flex items-start gap-4">
+                    <div className={`mt-1.5 w-2.5 h-2.5 rounded-full ${dotColor} flex-shrink-0`} />
+                    <div className="flex-1 pb-4 border-l-2 border-gray-200 pl-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                        <p className="font-semibold text-[#1B2A4A] text-sm">{event.status}</p>
+                        <span className="text-xs text-[#4B5563]">
+                          {fmtDateTime(event.createdAt)}
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#4B5563] mt-0.5">
+                        {t('partnerAppDetail.timelineActor', { actor })}
+                      </p>
+                      {event.notes && (
+                        <p className="text-sm text-[#1F2937] mt-2 whitespace-pre-wrap">
+                          {event.notes}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
