@@ -13,6 +13,24 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 import type {
@@ -297,52 +315,45 @@ export default function PartnerApplicationDetailPage() {
 
   return (
     <div className="space-y-6">
-      {showDelete && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 max-w-md w-full mx-4 border border-gray-200">
-            <h3 className="text-lg font-semibold text-[#1B2A4A] mb-4">{t('partnerAppDetail.deleteTitle')}</h3>
-            <p className="text-[#4B5563] mb-6">
+      <AlertDialog open={showDelete} onOpenChange={setShowDelete}>
+        <AlertDialogContent className="rounded-none">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('partnerAppDetail.deleteTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
               {t('partnerAppDetail.deleteBodyFor', { student: app.studentName, university: app.university })}
-            </p>
-            <div className="flex gap-3 justify-end">
-              <Button
-                variant="outline"
-                onClick={() => setShowDelete(false)}
-                disabled={isDeleting}
-                className="rounded-none"
-              >
-                {t('partnerAppDetail.cancel')}
-              </Button>
-              <Button
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="rounded-none bg-[#9B1B30] hover:bg-[#7a1626]"
-              >
-                {isDeleting ? t('partnerAppDetail.deleting') : t('partnerAppDetail.delete')}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting} className="rounded-none">
+              {t('partnerAppDetail.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="rounded-none bg-[#9B1B30] hover:bg-[#7a1626]"
+            >
+              {isDeleting ? t('partnerAppDetail.deleting') : t('partnerAppDetail.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-      {/* Phase 49.4: "Request withdrawal" modal. Optional reason
-          (capped at 1000 chars server-side). On success we
-          show a confirmation banner inside the modal for 2.5s
-          before auto-closing. The endpoint inserts a
-          'Withdrawal Requested' timeline event the admin sees
-          on the partner-application detail. */}
-      {showWithdrawal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 max-w-md w-full mx-4 border border-gray-200">
-            <h3 className="text-lg font-semibold text-[#1B2A4A] mb-4">
-              {t('partnerAppDetail.withdrawalTitle')}
-            </h3>
-            {!withdrawalSent ? (
-              <>
-                <p className="text-[#4B5563] mb-4 text-sm">
-                  {t('partnerAppDetail.withdrawalBody', { student: app.studentName, university: app.university })}
-                </p>
-                <label className="block text-sm font-medium text-[#1B2A4A] mb-1">
+      {/* Phase D: "Request withdrawal" dialog. Replaced the custom
+          inline modal with the project's <Dialog> component for
+          consistent focus trapping, scroll locking, and keyboard
+          handling across the partner portal. */}
+      <Dialog open={showWithdrawal} onOpenChange={setShowWithdrawal}>
+        <DialogContent className="rounded-none max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('partnerAppDetail.withdrawalTitle')}</DialogTitle>
+            <DialogDescription>
+              {t('partnerAppDetail.withdrawalBody', { student: app.studentName, university: app.university })}
+            </DialogDescription>
+          </DialogHeader>
+          {!withdrawalSent ? (
+            <>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[#1B2A4A]">
                   {t('partnerAppDetail.withdrawalReasonLabel')}
                 </label>
                 <Textarea
@@ -350,46 +361,46 @@ export default function PartnerApplicationDetailPage() {
                   onChange={(e) => setWithdrawalReason(e.target.value)}
                   maxLength={1000}
                   rows={4}
-                  className="rounded-none mb-1"
+                  className="rounded-none"
                   placeholder={t('partnerAppDetail.withdrawalReasonPlaceholder')}
                 />
-                <p className="text-xs text-gray-500 mb-4">
+                <p className="text-xs text-gray-500">
                   {t('partnerAppDetail.withdrawalReasonHint', { count: withdrawalReason.length })}
                 </p>
                 {withdrawalErr && (
-                  <p className="text-sm text-red-700 mb-3">{withdrawalErr}</p>
+                  <p className="text-sm text-red-700">{withdrawalErr}</p>
                 )}
-                <div className="flex gap-3 justify-end">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setShowWithdrawal(false);
-                      setWithdrawalReason('');
-                      setWithdrawalErr(null);
-                    }}
-                    disabled={withdrawalBusy}
-                    className="rounded-none"
-                  >
-                    {t('partnerAppDetail.cancel')}
-                  </Button>
-                  <Button
-                    onClick={handleWithdrawalSubmit}
-                    disabled={withdrawalBusy}
-                    className="rounded-none bg-[#9B1B30] hover:bg-[#7a1626]"
-                  >
-                    {withdrawalBusy ? t('partnerAppDetail.withdrawalSending') : t('partnerAppDetail.withdrawalSubmit')}
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <div className="text-sm text-green-800 flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-green-700 flex-shrink-0" />
-                <p>{t('partnerAppDetail.withdrawalSent')}</p>
               </div>
-            )}
-          </div>
-        </div>
-      )}
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowWithdrawal(false);
+                    setWithdrawalReason('');
+                    setWithdrawalErr(null);
+                  }}
+                  disabled={withdrawalBusy}
+                  className="rounded-none"
+                >
+                  {t('partnerAppDetail.cancel')}
+                </Button>
+                <Button
+                  onClick={handleWithdrawalSubmit}
+                  disabled={withdrawalBusy}
+                  className="rounded-none bg-[#9B1B30] hover:bg-[#7a1626]"
+                >
+                  {withdrawalBusy ? t('partnerAppDetail.withdrawalSending') : t('partnerAppDetail.withdrawalSubmit')}
+                </Button>
+              </DialogFooter>
+            </>
+          ) : (
+            <div className="text-sm text-green-800 flex items-center gap-2 py-2">
+              <CheckCircle className="h-5 w-5 text-green-700 flex-shrink-0" />
+              <p>{t('partnerAppDetail.withdrawalSent')}</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <div className="flex items-center gap-4">
         <Link href="/partner/applications" className="p-2 hover:bg-gray-100 inline-flex">

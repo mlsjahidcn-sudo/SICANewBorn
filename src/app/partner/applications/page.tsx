@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Search, Eye, Edit, MoreHorizontal, Trash2, X, Download, Flag, Mail, RefreshCw, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { Plus, Search, Eye, Edit, MoreHorizontal, Trash2, Download, Flag, Mail, RefreshCw, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
@@ -350,42 +350,26 @@ export default function PartnerApplicationsPage() {
   return (
     <>
     <div className="space-y-6">
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 max-w-md w-full mx-4 border border-gray-200">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-[#1B2A4A]">{t('partnerApps.deleteTitle')}</h3>
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                disabled={isDeleting}
-                className="text-[#4B5563] hover:text-[#1B2A4A] disabled:opacity-50"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <p className="text-[#4B5563] mb-6">
-              {t('partnerApps.deleteBody')}
-            </p>
-            <div className="flex gap-3 justify-end">
-              <Button
-                variant="outline"
-                onClick={() => setShowDeleteModal(false)}
-                disabled={isDeleting}
-                className="rounded-none"
-              >
-                {t('partnerApps.cancel')}
-              </Button>
-              <Button
-                onClick={confirmDelete}
-                disabled={isDeleting}
-                className="rounded-none bg-[#9B1B30] hover:bg-[#7a1626]"
-              >
-                {isDeleting ? t('partnerApps.deleting') : t('partnerApps.delete')}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <AlertDialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+        <AlertDialogContent className="rounded-none">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('partnerApps.deleteTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('partnerApps.deleteBody')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting} className="rounded-none">
+              {t('partnerApps.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={isDeleting}
+              className="rounded-none bg-[#9B1B30] hover:bg-[#7a1626]"
+            >
+              {isDeleting ? t('partnerApps.deleting') : t('partnerApps.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

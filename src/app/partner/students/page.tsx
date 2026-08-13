@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Search, Eye, Edit, MoreHorizontal, Trash2, Download } from 'lucide-react';
+import { Plus, Search, Eye, Edit, MoreHorizontal, Trash2, Download, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -57,6 +57,10 @@ export default function PartnerStudentsPage() {
   useEffect(() => {
     studentsRef.current = students;
   }, [students]);
+  // Phase D: server-side sort (the API supports created_at,
+  // updated_at, and student_name). Default is newest-first.
+  const [sort, setSort] = useState<'created_at' | 'updated_at' | 'student_name'>('created_at');
+  const [order, setOrder] = useState<'asc' | 'desc'>('desc');
 
   // Debounce search input by 250ms so we don't fire one request per keystroke.
   useEffect(() => {
@@ -74,6 +78,8 @@ export default function PartnerStudentsPage() {
       // Phase 50b: when showArchived is ON, ask the API for
       // both active + archived rows. Default (off) only active.
       if (showArchived) params.set('archived', 'true');
+      params.set('sort', sort);
+      params.set('order', order);
       params.set('limit', '50');
       params.set('page', String(opts?.page ?? 1));
       const qs = params.toString();
@@ -104,7 +110,7 @@ export default function PartnerStudentsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [debouncedSearch, statusFilter, showArchived, t]);
+  }, [debouncedSearch, statusFilter, showArchived, sort, order, t]);
 
   useEffect(() => {
     void fetchStudents();
@@ -118,6 +124,23 @@ export default function PartnerStudentsPage() {
       await fetchStudents({ append: true, page: page + 1 });
     } finally {
       setLoadingMore(false);
+    }
+  };
+
+  /**
+   * Phase D: cycle the sort. Clicking an unsorted column sorts desc;
+   * clicking again flips to asc; clicking a third time clears back to
+   * the default (created_at desc).
+   */
+  const handleSort = (column: 'created_at' | 'updated_at' | 'student_name') => {
+    if (sort !== column) {
+      setSort(column);
+      setOrder('desc');
+    } else if (order === 'desc') {
+      setOrder('asc');
+    } else {
+      setSort('created_at');
+      setOrder('desc');
     }
   };
 
@@ -372,13 +395,25 @@ export default function PartnerStudentsPage() {
                 <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerStudents.colStudent')}</th>
+                      <SortHeader
+                        label={t('partnerStudents.colStudent')}
+                        column="student_name"
+                        sort={sort}
+                        order={order}
+                        onSort={handleSort}
+                      />
                       <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerStudents.colContact')}</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerStudents.colNationality')}</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerStudents.colTarget')}</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerStudents.colStatus')}</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerStudents.colAddedBy')}</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerStudents.colAdded')}</th>
+                      <SortHeader
+                        label={t('partnerStudents.colAdded')}
+                        column="created_at"
+                        sort={sort}
+                        order={order}
+                        onSort={handleSort}
+                      />
                       <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerStudents.colActions')}</th>
                     </tr>
                   </thead>
@@ -506,5 +541,41 @@ export default function PartnerStudentsPage() {
         </div>
       )}
     </>
+  );
+}
+
+/**
+ * Phase D: clickable sort header. Matches the applications list
+ * pattern: unsorted shows a double-arrow, active shows up/down.
+ */
+function SortHeader<T extends string>({
+  label,
+  column,
+  sort,
+  order,
+  onSort,
+}: {
+  label: string;
+  column: T;
+  sort: T;
+  order: 'asc' | 'desc';
+  onSort: (column: T) => void;
+}) {
+  const isActive = sort === column;
+  const Icon = !isActive ? ChevronsUpDown : order === 'desc' ? ChevronDown : ChevronUp;
+  return (
+    <th
+      className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]"
+      aria-sort={isActive ? (order === 'asc' ? 'ascending' : 'descending') : 'none'}
+    >
+      <button
+        type="button"
+        onClick={() => onSort(column)}
+        className="inline-flex items-center gap-1 hover:text-[#9B1B30] transition-colors focus:outline-none focus:ring-2 focus:ring-[#9B1B30] focus:ring-offset-1"
+      >
+        {label}
+        <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-[#9B1B30]' : 'text-gray-400'}`} />
+      </button>
+    </th>
   );
 }
