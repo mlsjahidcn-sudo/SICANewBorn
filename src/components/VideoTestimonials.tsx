@@ -61,7 +61,7 @@ export interface VideoTestimonialsProps {
 }
 
 interface VideoCard {
-  id: 'review-1' | 'review-2' | 'review-3';
+  id: 'review-1' | 'review-2' | 'review-3' | 'review-4';
   titleKey: string;
   descriptionKey: string;
   poster: string;
@@ -99,6 +99,15 @@ const VIDEOS: VideoCard[] = [
     src: '/videos/review-3.mp4',
     durationSec: 80,
     aspect: 'landscape',
+  },
+  {
+    id: 'review-4',
+    titleKey: 'videoTestimonials.review4.title',
+    descriptionKey: 'videoTestimonials.review4.description',
+    poster: '/videos/review-4-poster.jpg',
+    src: '/videos/review-4.mp4',
+    durationSec: 66,
+    aspect: 'portrait',
   },
 ];
 
@@ -223,8 +232,8 @@ export function VideoTestimonials({
           <div
             className={
               isCompact
-                ? 'mt-0 grid sm:grid-cols-2 lg:grid-cols-3 gap-4'
-                : 'mt-10 grid md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 items-stretch'
+                ? 'mt-0 grid sm:grid-cols-2 lg:grid-cols-4 gap-4'
+                : 'mt-10 grid md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 items-stretch'
             }
           >
             {VIDEOS.map((video) => (

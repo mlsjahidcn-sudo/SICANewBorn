@@ -209,8 +209,8 @@ export interface AnalyticsEventMap {
   // -----------------------------------------------------------------
   /** User clicked a video testimonial's poster to open the modal. */
   video_play: {
-    /** Static video identifier (review-1, review-2, review-3). */
-    videoId: 'review-1' | 'review-2' | 'review-3';
+    /** Static video identifier (review-1, review-2, review-3, review-4). */
+    videoId: 'review-1' | 'review-2' | 'review-3' | 'review-4';
     /** Where the section is mounted. */
     location: 'home' | 'university';
     /** Page locale. */
