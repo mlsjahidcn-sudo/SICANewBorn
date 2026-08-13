@@ -47,7 +47,7 @@ describe('partner-student-mapper', () => {
       // well-formed PartnerStudent (the call site never has to
       // null-check). Phase 50b added archivedAt /
       // archivedByUserId alongside the existing createdByUserId
-      // / createdByEmail pair.
+      // / createdByEmail pair. Phase E added applicationCount.
       expect(result).toEqual<PartnerStudent>({
         id: 'p-1',
         partnerId: 'partner-1',
@@ -65,6 +65,7 @@ describe('partner-student-mapper', () => {
         createdByEmail: null,
         archivedAt: null,
         archivedByUserId: null,
+        applicationCount: null,
       });
     });
 

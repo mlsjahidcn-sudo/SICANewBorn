@@ -406,6 +406,7 @@ export default function PartnerStudentsPage() {
                       <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerStudents.colNationality')}</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerStudents.colTarget')}</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerStudents.colStatus')}</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerStudents.colApplications')}</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerStudents.colAddedBy')}</th>
                       <SortHeader
                         label={t('partnerStudents.colAdded')}
@@ -454,6 +455,20 @@ export default function PartnerStudentsPage() {
                             <span className="ml-2 inline-flex items-center text-xs text-gray-500 italic">
                               ({t('partnerStudents.archived')})
                             </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          {/* Phase E: application count badge. Clicking
+                              it jumps to the student's applications tab. */}
+                          {student.applicationCount ? (
+                            <Link
+                              href={`/partner/students/${student.id}?tab=applications`}
+                              className="inline-flex items-center justify-center min-w-[1.75rem] px-2 py-0.5 text-xs font-semibold bg-[#1B2A4A] text-white rounded-none hover:bg-[#2c3e6e]"
+                            >
+                              {student.applicationCount}
+                            </Link>
+                          ) : (
+                            <span className="text-sm text-[#4B5563]">—</span>
                           )}
                         </td>
                         <td className="px-6 py-4 text-[#4B5563] text-sm">

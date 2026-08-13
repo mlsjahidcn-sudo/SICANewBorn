@@ -116,11 +116,36 @@ export async function GET(request: NextRequest) {
         for (const [id, h] of hydrated) emailMap.set(id, h.email);
       }
     }
+    // Phase E: count non-archived applications linked to each
+    // returned student. The auth-bound client is already scoped to
+    // this partner by RLS; we just filter by the student ids in the
+    // current page and aggregate in JS.
+    const studentIds = (data || []).map((r) => (r as { id?: string | null }).id).filter((id): id is string => Boolean(id));
+    const countMap = new Map<string, number>();
+    if (studentIds.length) {
+      const { data: appRows, error: countError } = await auth.supabase
+        .from('partner_applications')
+        .select('student_id')
+        .in('student_id', studentIds)
+        .is('archived_at', null);
+      if (countError) {
+        console.error('[partner/students GET] application count error:', countError);
+      } else {
+        for (const row of appRows || []) {
+          const sid = (row as { student_id?: string | null }).student_id;
+          if (!sid) continue;
+          countMap.set(sid, (countMap.get(sid) || 0) + 1);
+        }
+      }
+    }
+
     const students = (data || []).map((r) => {
       const id = (r as { created_by_user_id?: string | null }).created_by_user_id;
+      const sid = (r as { id?: string | null }).id;
       return mapPartnerStudentFromDb({
         ...(r as Record<string, unknown>),
         created_by_email: id ? emailMap.get(id) ?? null : null,
+        application_count: sid ? countMap.get(sid) ?? 0 : 0,
       } as Parameters<typeof mapPartnerStudentFromDb>[0]);
     });
     const total = count || 0;

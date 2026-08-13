@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Edit, Trash2, MessageSquare, Calendar, FileText, AlertTriangle, Pin, X, Plus } from 'lucide-react';
 import Link from 'next/link';
 
@@ -24,7 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 import type { PartnerStudent, PartnerStudentStatus } from '@/lib/partner-student-mapper';
-import type { PartnerApplication } from '@/lib/partner-application-mapper';
+import type { PartnerApplication, PartnerApplicationStatus } from '@/lib/partner-application-mapper';
 
 const STATUS_VARIANTS: Record<PartnerStudentStatus, 'secondary' | 'outline' | 'default' | 'destructive'> = {
   'New': 'secondary',
@@ -34,9 +34,19 @@ const STATUS_VARIANTS: Record<PartnerStudentStatus, 'secondary' | 'outline' | 'd
   'Rejected': 'destructive',
 };
 
+const APP_STATUS_VARIANTS: Record<PartnerApplicationStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+  'Draft': 'secondary',
+  'Submitted': 'outline',
+  'In Review': 'outline',
+  'Accepted': 'default',
+  'Rejected': 'destructive',
+  'Withdrawn': 'outline',
+};
+
 export default function PartnerStudentDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useI18n();
   const studentId = params.id as string;
 
@@ -44,7 +54,12 @@ export default function PartnerStudentDetailPage() {
   const [applications, setApplications] = useState<PartnerApplication[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('overview');
+  // Phase E: open the Applications tab when the URL has ?tab=applications
+  // (e.g. clicking the application count badge on the students list).
+  const [activeTab, setActiveTab] = useState(() => {
+    const tab = searchParams.get('tab');
+    return tab === 'applications' || tab === 'notes' ? tab : 'overview';
+  });
   const [showDelete, setShowDelete] = useState(false);
   // Phase 50c: per-event notes state. Fetched on tab open
   // (not on mount) so the page load is fast for the common
@@ -407,7 +422,9 @@ export default function PartnerStudentDetailPage() {
                         <th className="px-4 py-3 text-left text-[#1B2A4A]">{t('partnerStudentDetail.colProgram')}</th>
                         <th className="px-4 py-3 text-left text-[#1B2A4A]">{t('partnerStudentDetail.colStatus')}</th>
                         <th className="px-4 py-3 text-left text-[#1B2A4A]">{t('partnerStudentDetail.colDecision')}</th>
+                        <th className="px-4 py-3 text-left text-[#1B2A4A]">{t('partnerStudentDetail.colPriority')}</th>
                         <th className="px-4 py-3 text-left text-[#1B2A4A]">{t('partnerStudentDetail.colSubmitted')}</th>
+                        <th className="px-4 py-3 text-left text-[#1B2A4A]">{t('partnerStudentDetail.colActions')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
@@ -423,11 +440,19 @@ export default function PartnerStudentDetailPage() {
                           </td>
                           <td className="px-4 py-3 text-[#4B5563]">{a.program}</td>
                           <td className="px-4 py-3">
-                            <Badge variant="outline" className="rounded-none">{a.status}</Badge>
+                            <Badge variant={APP_STATUS_VARIANTS[a.status]} className="rounded-none">{a.status}</Badge>
                           </td>
                           <td className="px-4 py-3 text-[#4B5563]">{a.decision}</td>
+                          <td className="px-4 py-3 text-[#4B5563]">{a.priority}</td>
                           <td className="px-4 py-3 text-[#4B5563]">
                             {a.submittedAt ? new Date(a.submittedAt).toLocaleDateString() : t('partnerCommon.placeholderDash')}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Button asChild variant="ghost" size="sm" className="rounded-none h-8 w-8 p-0">
+                              <Link href={`/partner/applications/${a.id}/edit`}>
+                                <Edit className="h-4 w-4" />
+                              </Link>
+                            </Button>
                           </td>
                         </tr>
                       ))}

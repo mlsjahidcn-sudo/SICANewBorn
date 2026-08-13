@@ -55,6 +55,9 @@ export interface PartnerStudent {
   // PATCHes archived_at = NOW() instead of hard delete.
   archivedAt?: string | null;
   archivedByUserId?: string | null;
+  // Phase E: count of non-archived applications linked to this
+  // student. Populated by the list API; null when not fetched.
+  applicationCount?: number | null;
 }
 
 export function parsePartnerStudentStatus(input: unknown): PartnerStudentStatus | null {
@@ -87,6 +90,8 @@ interface RawPartnerStudent {
   // Phase 50b: soft-delete markers
   archived_at?: string | null;
   archived_by_user_id?: string | null;
+  // Phase E: denormalized application count from the list API.
+  application_count?: number | null;
 }
 
 export function mapPartnerStudentFromDb(row: RawPartnerStudent): PartnerStudent {
@@ -107,6 +112,7 @@ export function mapPartnerStudentFromDb(row: RawPartnerStudent): PartnerStudent 
     createdByEmail: row.created_by_email ?? null,
     archivedAt: row.archived_at ?? null,
     archivedByUserId: row.archived_by_user_id ?? null,
+    applicationCount: typeof row.application_count === 'number' ? row.application_count : null,
   };
 }
 
