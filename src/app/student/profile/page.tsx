@@ -33,6 +33,9 @@ interface StudentProfile {
   target_field: string | null;
   target_intake: string | null;
   preferred_universities: string[] | null;
+  // Admin-managed fields — read-only in the student portal.
+  status?: string | null;
+  source?: string | null;
 }
 
 const EMPTY_PROFILE: StudentProfile = {
@@ -237,6 +240,31 @@ export default function StudentProfilePage() {
               <Progress value={completeness} className="h-2" />
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Admin-managed account status — read-only so students see how their
+          record is classified in the admin portal. */}
+      <Card className="rounded-none border-gray-200 bg-white">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-semibold text-[#1B2A4A]">
+            {t('studentProfile.accountStatusTitle')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-4 pt-0">
+          <div className="flex flex-wrap items-center gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="text-[#4B5563]">{t('studentProfile.accountStatusLabel')}:</span>
+              <span className="font-medium text-[#1F2937]">{profile.status || '—'}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[#4B5563]">{t('studentProfile.accountSourceLabel')}:</span>
+              <span className="font-medium text-[#1F2937]">{profile.source || '—'}</span>
+            </div>
+          </div>
+          <p className="text-xs text-[#4B5563] mt-2">
+            {t('studentProfile.accountManagedByAdmin')}
+          </p>
         </CardContent>
       </Card>
 

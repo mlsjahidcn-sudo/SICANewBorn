@@ -36,8 +36,37 @@ export async function PUT(request: Request) {
 
     const body = await request.json();
 
-    // Remove fields that shouldn't be updated directly
-    const { id, created_at, updated_at, ...updates } = body;
+    // Only allow students to update their own profile fields. Guardrails:
+    //   - id/email/status/source/user_id are admin/auth-managed.
+    //   - created_at/updated_at are DB-managed.
+    const allowedKeys = new Set([
+      'first_name',
+      'last_name',
+      'phone',
+      'nationality',
+      'date_of_birth',
+      'passport_number',
+      'passport_expiry',
+      'current_address',
+      'permanent_address',
+      'highest_education',
+      'school_name',
+      'graduation_year',
+      'gpa',
+      'english_proficiency',
+      'english_score',
+      'target_degree',
+      'target_field',
+      'target_intake',
+      'preferred_universities',
+    ]);
+
+    const updates: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(body)) {
+      if (allowedKeys.has(key)) {
+        updates[key] = value;
+      }
+    }
 
     const { data: profile, error } = await supabase
       .from('student_profiles')
