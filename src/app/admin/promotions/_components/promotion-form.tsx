@@ -34,7 +34,7 @@ interface OptionProgram {
 
 interface FormState {
   universityId: string;
-  programId: string;
+  programIds: string[];
   serviceFeeAmount: string;
   serviceFeeCurrency: string;
   visibility: 'partner_only' | 'public_and_partner';
@@ -48,7 +48,7 @@ interface FormState {
 
 const defaultForm: FormState = {
   universityId: '',
-  programId: '',
+  programIds: [],
   serviceFeeAmount: '',
   serviceFeeCurrency: 'CNY',
   visibility: 'partner_only',
@@ -63,7 +63,7 @@ const defaultForm: FormState = {
 function promotionToForm(p: PartnerPromotionWithDetails): FormState {
   return {
     universityId: p.universityId,
-    programId: p.programId,
+    programIds: [p.programId],
     serviceFeeAmount: p.serviceFeeAmount.toString(),
     serviceFeeCurrency: p.serviceFeeCurrency,
     visibility: p.visibility,
@@ -175,6 +175,7 @@ export function PromotionForm({ promotionId }: { promotionId?: string }) {
   const [universities, setUniversities] = useState<OptionUniversity[]>([]);
   const [programs, setPrograms] = useState<OptionProgram[]>([]);
   const [form, setForm] = useState<FormState>(defaultForm);
+  const isEdit = !!promotionId;
 
   useEffect(() => {
     setOptionsLoading(true);
@@ -227,16 +228,6 @@ export function PromotionForm({ promotionId }: { promotionId?: string }) {
     [universities],
   );
 
-  const programSelectOptions = useMemo(
-    () =>
-      programOptions.map((p) => ({
-        value: p.id,
-        label: p.name,
-        sublabel: [p.degree, p.language, p.discipline].filter(Boolean).join(' · ') || undefined,
-      })),
-    [programOptions],
-  );
-
   const handleChange = (field: keyof FormState, value: unknown) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
@@ -245,13 +236,13 @@ export function PromotionForm({ promotionId }: { promotionId?: string }) {
     setForm((prev) => ({
       ...prev,
       universityId,
-      programId: '',
+      programIds: [],
     }));
   };
 
   const validate = (): string | null => {
     if (!form.universityId) return 'Please select a university';
-    if (!form.programId) return 'Please select a program';
+    if (form.programIds.length === 0) return 'Please select at least one program';
     const amount = parseFloat(form.serviceFeeAmount);
     if (!Number.isFinite(amount) || amount <= 0) return 'Service fee must be a positive number';
     return null;
@@ -267,9 +258,8 @@ export function PromotionForm({ promotionId }: { promotionId?: string }) {
 
     setIsSaving(true);
     try {
-      const payload = {
+      const basePayload = {
         universityId: form.universityId,
-        programId: form.programId,
         serviceFeeAmount: parseFloat(form.serviceFeeAmount),
         serviceFeeCurrency: form.serviceFeeCurrency,
         visibility: form.visibility,
@@ -285,16 +275,20 @@ export function PromotionForm({ promotionId }: { promotionId?: string }) {
         await apiFetchJson(`/api/admin/promotions/${promotionId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({ ...basePayload, programId: form.programIds[0] }),
         });
         addToast('Promotion updated successfully', 'success');
       } else {
-        await apiFetchJson('/api/admin/promotions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        addToast('Promotion created successfully', 'success');
+        await Promise.all(
+          form.programIds.map((programId) =>
+            apiFetchJson('/api/admin/promotions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ...basePayload, programId }),
+            }),
+          ),
+        );
+        addToast(`${form.programIds.length} promotion(s) created successfully`, 'success');
       }
       router.push('/admin/promotions');
     } catch (err) {
@@ -356,17 +350,66 @@ export function PromotionForm({ promotionId }: { promotionId?: string }) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[#1F2937] mb-1">Program *</label>
-            <SearchableSelect
-              value={form.programId}
-              onChange={(value) => handleChange('programId', value)}
-              options={programSelectOptions}
-              placeholder={selectedUniversity ? 'Select a program' : 'Select a university first'}
-              emptyText="No programs found for this university"
-              searchPlaceholder="Search programs..."
-              disabled={!selectedUniversity}
-              loading={optionsLoading}
-            />
+            <label className="block text-sm font-medium text-[#1F2937] mb-1">
+              {isEdit ? 'Program *' : 'Programs *'}
+            </label>
+            {isEdit ? (
+              <div className="px-3 py-2 border border-gray-300 bg-gray-50 text-sm text-[#1F2937]">
+                {programOptions.find((p) => p.id === form.programIds[0])?.name || '—'}
+              </div>
+            ) : (
+              <div className="border border-gray-300 bg-white">
+                {!selectedUniversity ? (
+                  <div className="p-3 text-sm text-gray-500">
+                    Select a university first to see its programs
+                  </div>
+                ) : programOptions.length === 0 ? (
+                  <div className="p-3 text-sm text-gray-500">
+                    No programs found for this university
+                  </div>
+                ) : (
+                  <div className="h-60 overflow-y-auto p-2 space-y-1">
+                    {programOptions.map((program) => {
+                      const checked = form.programIds.includes(program.id);
+                      return (
+                        <button
+                          key={program.id}
+                          type="button"
+                          onClick={() => {
+                            setForm((prev) => ({
+                              ...prev,
+                              programIds: checked
+                                ? prev.programIds.filter((id) => id !== program.id)
+                                : [...prev.programIds, program.id],
+                            }));
+                          }}
+                          className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm text-left transition-colors ${
+                            checked ? 'bg-[#9B1B30]/10 text-[#9B1B30]' : 'hover:bg-gray-50'
+                          }`}
+                        >
+                          <span
+                            className={`w-4 h-4 border flex items-center justify-center ${
+                              checked ? 'bg-[#9B1B30] border-[#9B1B30]' : 'border-gray-300'
+                            }`}
+                          >
+                            {checked && <Check className="h-3 w-3 text-white" />}
+                          </span>
+                          <span className="flex-1">{program.name}</span>
+                          <span className="text-xs text-gray-400">
+                            {[program.degree, program.language].filter(Boolean).join(' · ')}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                {form.programIds.length > 0 && (
+                  <div className="border-t border-gray-200 px-3 py-2 text-xs text-gray-600">
+                    {form.programIds.length} program{form.programIds.length === 1 ? '' : 's'} selected
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
