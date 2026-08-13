@@ -1,18 +1,17 @@
 -- ============================================================================
--- D1: Fix handle_new_student_user trigger — make it role-aware
+-- Enhance student self-registration so names + core profile fields survive
+-- from the public signup form into student_profiles.
+--
+-- Problem: /student/register only collected fullName and the trigger only
+-- copied id/email/status/source into student_profiles, so admin students
+-- listing showed "—" for every self-registered student.
+--
+-- Fix:
+--   1. Update handle_new_student_user to read first_name, last_name, country,
+--      whatsapp, degree, and interested_program from raw_user_meta_data.
+--   2. Backfill existing student_profiles rows that are missing names from
+--      auth.users.user_metadata.full_name.
 -- ============================================================================
---
--- BEFORE: this trigger fired on EVERY new auth.users insert and created a
--- student_profiles row, regardless of whether the user was actually a student.
--- Result: every admin and partner user had a phantom student_profiles row,
--- which broke role-based routing (login pages would sometimes land the
--- user in the wrong portal because the student login page's useEffect was
--- still listening and any user with a student_profiles row got sent to /student).
---
--- AFTER: only create student_profiles if the new user is signing up as
--- a student. Admins and partners get NO student_profiles row at all,
--- and they're created by their respective sign-up scripts (or admin
--- provisioning flows) in their own tables.
 
 CREATE OR REPLACE FUNCTION public.handle_new_student_user()
 RETURNS TRIGGER
@@ -82,25 +81,26 @@ BEGIN
 END;
 $$;
 
--- Trigger is already wired (DROP TRIGGER IF EXISTS + CREATE TRIGGER).
--- Just re-assert it so re-running this migration is safe.
+-- Re-assert trigger so re-running this migration is safe.
 DROP TRIGGER IF EXISTS on_auth_user_created_for_student ON auth.users;
 CREATE TRIGGER on_auth_user_created_for_student
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_student_user();
 
 -- ============================================================================
--- D2: Cleanup — delete phantom student_profiles rows for non-student users
+-- Backfill names for existing self-registered students
 -- ============================================================================
 --
--- For all auth.users whose user_metadata.role is NOT 'student', drop their
--- student_profiles row. We do this in SQL (not in the API) because:
---   - We have service-role access here
---   - It's a one-shot cleanup, not a user-triggered action
---   - RLS would otherwise block the DELETE
+-- Any student_profiles row with empty first_name/last_name gets its name
+-- from the corresponding auth.users.user_metadata.full_name value.
+-- We only touch rows where the names are missing to avoid overwriting
+-- data that admins may have already cleaned up.
 
-DELETE FROM public.student_profiles
-WHERE id IN (
-  SELECT id FROM auth.users
-  WHERE COALESCE(raw_user_meta_data ->> 'role', 'student') <> 'student'
-);
+UPDATE public.student_profiles sp
+SET
+  first_name = COALESCE(NULLIF(trim(sp.first_name), ''), split_part(u.raw_user_meta_data ->> 'full_name', ' ', 1)),
+  last_name = COALESCE(NULLIF(trim(sp.last_name), ''), NULLIF(trim(substring(u.raw_user_meta_data ->> 'full_name' from length(split_part(u.raw_user_meta_data ->> 'full_name', ' ', 1)) + 1)), ''))
+FROM auth.users u
+WHERE sp.id = u.id
+  AND (NULLIF(trim(sp.first_name), '') IS NULL OR NULLIF(trim(sp.last_name), '') IS NULL)
+  AND NULLIF(trim(u.raw_user_meta_data ->> 'full_name'), '') IS NOT NULL;

@@ -13,8 +13,13 @@ export default function StudentRegisterPage() {
   const { signUp, user, isConfigured } = useAuth();
   const { t } = useI18n();
   const router = useRouter();
-  const [fullName, setFullName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [country, setCountry] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
+  const [degree, setDegree] = useState('');
+  const [interestedProgram, setInterestedProgram] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -39,14 +44,27 @@ export default function StudentRegisterPage() {
       return;
     }
 
-    if (password.length < 6) {
+    if (password.length < 8) {
       setError(t('studentRegister.passwordTooShort'));
+      return;
+    }
+
+    if (!firstName.trim() || !lastName.trim()) {
+      setError(t('studentRegister.nameRequired'));
       return;
     }
 
     setLoading(true);
 
-    const { error } = await signUp(email, password, fullName, 'student');
+    const fullName = `${firstName.trim()} ${lastName.trim()}`;
+    const { error } = await signUp(email, password, fullName, 'student', {
+      first_name: firstName.trim(),
+      last_name: lastName.trim(),
+      country: country.trim() || undefined,
+      whatsapp: whatsapp.trim() || undefined,
+      degree: degree.trim() || undefined,
+      interested_program: interestedProgram.trim() || undefined,
+    });
     if (error) {
       setError(error);
       setLoading(false);
@@ -81,18 +99,33 @@ export default function StudentRegisterPage() {
               </div>
             )}
 
-            <div>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1.5">
-                {t('studentRegister.firstName') + ' ' + t('studentRegister.lastName')}
-              </label>
-              <input
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                required
-                placeholder="John Smith"
-                className="w-full px-4 py-2.5 border border-gray-300 text-[#1F2937] placeholder:text-gray-400 focus:outline-none focus:border-[#9B1B30] focus:ring-1 focus:ring-[#9B1B30] text-sm"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-[#1F2937] mb-1.5">
+                  {t('studentRegister.firstName')}
+                </label>
+                <input
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  required
+                  placeholder="John"
+                  className="w-full px-4 py-2.5 border border-gray-300 text-[#1F2937] placeholder:text-gray-400 focus:outline-none focus:border-[#9B1B30] focus:ring-1 focus:ring-[#9B1B30] text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#1F2937] mb-1.5">
+                  {t('studentRegister.lastName')}
+                </label>
+                <input
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  required
+                  placeholder="Smith"
+                  className="w-full px-4 py-2.5 border border-gray-300 text-[#1F2937] placeholder:text-gray-400 focus:outline-none focus:border-[#9B1B30] focus:ring-1 focus:ring-[#9B1B30] text-sm"
+                />
+              </div>
             </div>
 
             <div>
@@ -107,6 +140,64 @@ export default function StudentRegisterPage() {
                 placeholder={t('studentLogin.emailPlaceholder')}
                 className="w-full px-4 py-2.5 border border-gray-300 text-[#1F2937] placeholder:text-gray-400 focus:outline-none focus:border-[#9B1B30] focus:ring-1 focus:ring-[#9B1B30] text-sm"
               />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-[#1F2937] mb-1.5">
+                  {t('studentRegister.country')}
+                </label>
+                <input
+                  type="text"
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value)}
+                  required
+                  placeholder="Nigeria"
+                  className="w-full px-4 py-2.5 border border-gray-300 text-[#1F2937] placeholder:text-gray-400 focus:outline-none focus:border-[#9B1B30] focus:ring-1 focus:ring-[#9B1B30] text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#1F2937] mb-1.5">
+                  {t('studentRegister.whatsapp')}
+                </label>
+                <input
+                  type="tel"
+                  value={whatsapp}
+                  onChange={(e) => setWhatsapp(e.target.value)}
+                  required
+                  placeholder="+1 234 567 890"
+                  className="w-full px-4 py-2.5 border border-gray-300 text-[#1F2937] placeholder:text-gray-400 focus:outline-none focus:border-[#9B1B30] focus:ring-1 focus:ring-[#9B1B30] text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-[#1F2937] mb-1.5">
+                  {t('studentRegister.degree')}
+                </label>
+                <input
+                  type="text"
+                  value={degree}
+                  onChange={(e) => setDegree(e.target.value)}
+                  required
+                  placeholder="Bachelor"
+                  className="w-full px-4 py-2.5 border border-gray-300 text-[#1F2937] placeholder:text-gray-400 focus:outline-none focus:border-[#9B1B30] focus:ring-1 focus:ring-[#9B1B30] text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#1F2937] mb-1.5">
+                  {t('studentRegister.interestedProgram')}
+                </label>
+                <input
+                  type="text"
+                  value={interestedProgram}
+                  onChange={(e) => setInterestedProgram(e.target.value)}
+                  required
+                  placeholder="Computer Science"
+                  className="w-full px-4 py-2.5 border border-gray-300 text-[#1F2937] placeholder:text-gray-400 focus:outline-none focus:border-[#9B1B30] focus:ring-1 focus:ring-[#9B1B30] text-sm"
+                />
+              </div>
             </div>
 
             <div>

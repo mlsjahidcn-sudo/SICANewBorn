@@ -16,6 +16,7 @@ interface AuthContextType {
     password: string,
     fullName: string,
     role?: SignUpRole,
+    profile?: Record<string, string | undefined>,
   ) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   isConfigured: boolean;
@@ -80,14 +81,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signUp = useCallback(
-    async (email: string, password: string, fullName: string, role: SignUpRole = 'student') => {
+    async (
+      email: string,
+      password: string,
+      fullName: string,
+      role: SignUpRole = 'student',
+      profile?: Record<string, string | undefined>,
+    ) => {
       if (!supabase) return { error: 'Supabase is not configured' };
+
+      const userMetadata: Record<string, unknown> = {
+        full_name: fullName,
+        role,
+      };
+      if (profile) {
+        for (const [key, value] of Object.entries(profile)) {
+          if (value !== undefined && value !== '') {
+            userMetadata[key] = value;
+          }
+        }
+      }
 
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { full_name: fullName, role },
+          data: userMetadata,
         },
       });
 
