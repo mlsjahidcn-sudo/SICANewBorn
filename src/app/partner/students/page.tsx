@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, Eye, Edit, MoreHorizontal, Trash2, X, Download } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Plus, Search, Eye, Edit, MoreHorizontal, Trash2, Download } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -11,6 +11,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { ListPageSkeleton } from '@/components/partner/skeletons';
 import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
@@ -37,6 +47,16 @@ export default function PartnerStudentsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  // Phase B: pagination state. Keep a synchronous ref of the current
+  // list so the "Load more" handler can compute hasMore from the
+  // actual rendered list, not a stale closure value.
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const studentsRef = useRef<PartnerStudent[]>([]);
+  useEffect(() => {
+    studentsRef.current = students;
+  }, [students]);
 
   // Debounce search input by 250ms so we don't fire one request per keystroke.
   useEffect(() => {
@@ -44,8 +64,8 @@ export default function PartnerStudentsPage() {
     return () => clearTimeout(tm);
   }, [searchTerm]);
 
-  const fetchStudents = useCallback(async () => {
-    setIsLoading(true);
+  const fetchStudents = useCallback(async (opts?: { append?: boolean; page?: number }) => {
+    setIsLoading(!opts?.append);
     setError(null);
     try {
       const params = new URLSearchParams();
@@ -55,6 +75,7 @@ export default function PartnerStudentsPage() {
       // both active + archived rows. Default (off) only active.
       if (showArchived) params.set('archived', 'true');
       params.set('limit', '50');
+      params.set('page', String(opts?.page ?? 1));
       const qs = params.toString();
       const res = await apiFetchJson<{
         students: PartnerStudent[];
@@ -63,13 +84,23 @@ export default function PartnerStudentsPage() {
         limit: number;
         totalPages: number;
       }>(`/api/partner/students${qs ? `?${qs}` : ''}`);
-      setStudents(res.students || []);
+      const list = res.students || [];
+      const nextList = opts?.append
+        ? [...studentsRef.current, ...list]
+        : list;
+      setStudents(nextList);
       setTotal(res.total || 0);
+      // Phase B: hasMore is based on the actual next list length.
+      setHasMore(nextList.length < (res.total || 0));
+      setPage(opts?.page ?? 1);
     } catch (err) {
       console.error('[partner/students] fetch failed:', err);
       setError(err instanceof Error ? err.message : t('partnerStudents.errorLoad'));
-      setStudents([]);
-      setTotal(0);
+      if (!opts?.append) {
+        setStudents([]);
+        setTotal(0);
+        setHasMore(false);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -78,6 +109,17 @@ export default function PartnerStudentsPage() {
   useEffect(() => {
     void fetchStudents();
   }, [fetchStudents]);
+
+  // Phase B: "Load more" appends page N+1 to the existing list.
+  const loadMore = async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      await fetchStudents({ append: true, page: page + 1 });
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const handleDeleteStudent = (id: string) => {
     setStudentToDelete(id);
@@ -170,42 +212,26 @@ export default function PartnerStudentsPage() {
 
   return (
     <>
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 max-w-md w-full mx-4 border border-gray-200">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-[#1B2A4A]">{t('partnerStudents.deleteTitle')}</h3>
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                disabled={isDeleting}
-                className="text-[#4B5563] hover:text-[#1B2A4A] disabled:opacity-50"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <p className="text-[#4B5563] mb-6">
-              {t('partnerStudents.deleteBody')}
-            </p>
-            <div className="flex gap-3 justify-end">
-              <Button
-                variant="outline"
-                onClick={() => setShowDeleteModal(false)}
-                disabled={isDeleting}
-                className="rounded-none"
-              >
-                {t('partnerStudents.cancel')}
-              </Button>
-              <Button
-                onClick={confirmDelete}
-                disabled={isDeleting}
-                className="rounded-none bg-[#9B1B30] hover:bg-[#7a1626]"
-              >
-                {isDeleting ? t('partnerStudents.deleting') : t('partnerStudents.delete')}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <AlertDialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+        <AlertDialogContent className="rounded-none">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('partnerStudents.deleteTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('partnerStudents.deleteBody')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting} className="rounded-none">
+              {t('partnerStudents.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={isDeleting}
+              className="rounded-none bg-[#9B1B30] hover:bg-[#7a1626]"
+            >
+              {isDeleting ? t('partnerStudents.deleting') : t('partnerStudents.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {isLoading ? (
         <ListPageSkeleton />
@@ -455,6 +481,24 @@ export default function PartnerStudentsPage() {
                         : t('partnerStudents.emptyFresh')}
                     </p>
                   </div>
+                </div>
+              )}
+
+              {/* Phase B: load-more footer. Matches the applications
+                  list pattern. */}
+              {hasMore && (
+                <div className="p-4 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <p className="text-sm text-[#4B5563]">
+                    {t('partnerStudents.loadMoreCount', { shown: students.length, total })}
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={loadMore}
+                    disabled={loadingMore}
+                    className="rounded-none"
+                  >
+                    {loadingMore ? t('partnerStudents.loadingMore') : t('partnerStudents.loadMore')}
+                  </Button>
                 </div>
               )}
             </CardContent>

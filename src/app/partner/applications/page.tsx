@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Plus, Search, Eye, Edit, MoreHorizontal, Trash2, X, Download, Flag, Mail, RefreshCw, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import Link from 'next/link';
 
@@ -54,12 +54,23 @@ export default function PartnerApplicationsPage() {
   const [appToDelete, setAppToDelete] = useState<string | null>(null);
 
   const [applications, setApplications] = useState<PartnerApplication[]>([]);
+  // Phase B: keep a synchronous ref of the current list so the
+  // "Load more" handler can compute hasMore from the actual
+  // rendered list, not a stale closure value.
+  const applicationsRef = useRef<PartnerApplication[]>([]);
+  useEffect(() => {
+    applicationsRef.current = applications;
+  }, [applications]);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
+  // Phase B: archived visibility. 'active' hides archived rows
+  // (default), 'with_archived' shows active + archived, 'only_archived'
+  // shows archived rows only. Matches the API's archived param.
+  const [archivedFilter, setArchivedFilter] = useState<'active' | 'with_archived' | 'only_archived'>('active');
   // Sort state — server-side sort (the API only supports 3 sortable
   // columns: student_name, created_at, updated_at). Default is
   // newest-first by created_at.
@@ -96,13 +107,13 @@ export default function PartnerApplicationsPage() {
 
   const clearSelection = () => setSelectedIds(new Set());
 
-  // Clear the selection on filter / sort change so the user
-  // doesn't end up bulk-deleting rows that just scrolled out
+  // Clear the selection on filter / sort / archived change so the
+  // user doesn't end up bulk-deleting rows that just scrolled out
   // of view.
   useEffect(() => {
     clearSelection();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch, statusFilter, priorityFilter, sort, order]);
+  }, [debouncedSearch, statusFilter, priorityFilter, archivedFilter, sort, order]);
 
   /**
    * Cycle the sort: clicking an unsorted column sorts desc; clicking
@@ -128,13 +139,18 @@ export default function PartnerApplicationsPage() {
   }, [searchTerm]);
 
   const fetchApps = useCallback(async (opts?: { append?: boolean; page?: number }) => {
-    setIsLoading(true);
+    setIsLoading(!opts?.append);
     setError(null);
     try {
       const params = new URLSearchParams();
       if (debouncedSearch) params.set('search', debouncedSearch);
       if (statusFilter !== 'all') params.set('status', statusFilter);
       if (priorityFilter !== 'all') params.set('priority', priorityFilter);
+      // Phase B: archived filter mapping. 'active' omits the param
+      // (API defaults to hiding archived), 'with_archived' sends
+      // archived=true, 'only_archived' sends archived=only.
+      if (archivedFilter === 'with_archived') params.set('archived', 'true');
+      if (archivedFilter === 'only_archived') params.set('archived', 'only');
       params.set('sort', sort);
       params.set('order', order);
       // Phase 1.1: paginated. Default page=1 with limit=50. The
@@ -148,25 +164,27 @@ export default function PartnerApplicationsPage() {
         totalPages: number;
       }>(`/api/partner/applications${params.toString() ? `?${params}` : ''}`);
       const list = res.applications || [];
-      if (opts?.append) {
-        setApplications((prev) => [...prev, ...list]);
-      } else {
-        setApplications(list);
-      }
+      const nextList = opts?.append
+        ? [...applicationsRef.current, ...list]
+        : list;
+      setApplications(nextList);
       setTotal(res.total || 0);
-      // hasMore = we have less than the total loaded so far
-      setHasMore(applications.length + list.length < (res.total || 0));
+      // Phase B: hasMore is based on the actual next list length,
+      // not a stale closure value.
+      setHasMore(nextList.length < (res.total || 0));
       setPage(opts?.page ?? 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('partnerApps.errorLoad'));
-      setApplications([]);
-      setTotal(0);
-      setHasMore(false);
+      if (!opts?.append) {
+        setApplications([]);
+        setTotal(0);
+        setHasMore(false);
+      }
     } finally {
       setIsLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch, statusFilter, priorityFilter, sort, order, t]);
+  }, [debouncedSearch, statusFilter, priorityFilter, archivedFilter, sort, order, t]);
 
   useEffect(() => {
     void fetchApps();
@@ -500,6 +518,16 @@ export default function PartnerApplicationsPage() {
               <SelectItem value="High">High</SelectItem>
               <SelectItem value="Normal">Normal</SelectItem>
               <SelectItem value="Low">Low</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={archivedFilter} onValueChange={(v) => setArchivedFilter(v as typeof archivedFilter)}>
+            <SelectTrigger className="w-44 rounded-none">
+              <SelectValue placeholder={t('partnerApps.archivedFilter')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">{t('partnerApps.archivedActive')}</SelectItem>
+              <SelectItem value="with_archived">{t('partnerApps.archivedWith')}</SelectItem>
+              <SelectItem value="only_archived">{t('partnerApps.archivedOnly')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
