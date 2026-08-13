@@ -4,6 +4,7 @@ import {
   mapPartnerApplicationFromDb,
   mapPartnerApplicationToDb,
 } from '@/lib/partner-application-mapper';
+import { validatePartnerApplicationPayload } from '@/lib/partner-application-validation';
 
 export async function GET(
   request: NextRequest,
@@ -100,6 +101,17 @@ export async function PATCH(
           { status: 403 },
         );
       }
+    }
+
+    // Phase A: server-side field validation before mapping. PATCH can
+    // be a single-field update, so only fields present in the body are
+    // validated.
+    const validationErrors = validatePartnerApplicationPayload(body, 'update');
+    if (validationErrors.length > 0) {
+      return NextResponse.json(
+        { error: validationErrors[0].message, errors: validationErrors },
+        { status: 400 },
+      );
     }
 
     let updates: Record<string, unknown>;

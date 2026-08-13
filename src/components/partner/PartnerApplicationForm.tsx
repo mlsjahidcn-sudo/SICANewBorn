@@ -99,6 +99,7 @@ export interface PartnerApplicationFormData {
   // Section 6 — Program & Application
   university: string;
   program: string;
+  programSlug: string;
   intake: string;
   degree: Emptyable<PartnerApplicationDegree>;
   hasStudiedInChina: boolean;
@@ -115,6 +116,11 @@ export interface PartnerApplicationFormData {
   // Edit-page-only bookkeeping
   applicationNumber: string;
   submittedAt: string | null;
+
+  // Phase A: link to partner_students row when the partner picks a
+  // saved student. Stored on the form so the create payload can send
+  // it, but it is server-derived on PATCH (can't re-link after create).
+  studentId: string;
 }
 
 export const INITIAL_FORM_DATA: PartnerApplicationFormData = {
@@ -153,6 +159,7 @@ export const INITIAL_FORM_DATA: PartnerApplicationFormData = {
 
   university: '',
   program: '',
+  programSlug: '',
   intake: '',
   degree: '',
   hasStudiedInChina: false,
@@ -163,6 +170,7 @@ export const INITIAL_FORM_DATA: PartnerApplicationFormData = {
 
   applicationNumber: '',
   submittedAt: null,
+  studentId: '',
 };
 
 /**
@@ -773,7 +781,7 @@ export function PartnerApplicationForm({
               {t('partnerAppForm.fieldProgram')} <span className="text-red-600">{t('partnerCommon.requiredAsterisk')}</span>
             </Label>
             <SearchableSelect
-              value={formData.program}
+              value={formData.programSlug}
               onChange={(value) => {
                 const picked = programs.find((p) => p.slug === value);
                 if (!picked) return;
@@ -782,6 +790,7 @@ export function PartnerApplicationForm({
                 );
                 setFormData((prev) => ({
                   ...prev,
+                  programSlug: picked.slug,
                   program: picked.name,
                   university: uni?.name ?? picked.universitySlug,
                 }));

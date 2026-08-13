@@ -101,13 +101,17 @@ export async function POST(request: NextRequest) {
             updated++;
           }
         } else if (action === 'delete') {
-          // Delete: members can only delete rows they created
-          // (RLS would also enforce this for owner, but we double-
-          // check via a manual filter on created_by_user_id for
-          // member-role to be safe). The auth-bound client
-          // already filters by partner_id via RLS; the additional
-          // .eq() is a belt-and-suspenders against RLS changes.
-          let query = auth.supabase.from('partner_applications').delete().eq('id', id);
+          // Phase A: soft-archive instead of hard delete. Mirrors the
+          // single-row DELETE in [id]/route.ts: set archived_at +
+          // archived_by_user_id. Members can only archive rows they
+          // created; owners can archive any row in the partner org.
+          let query = auth.supabase
+            .from('partner_applications')
+            .update({
+              archived_at: new Date().toISOString(),
+              archived_by_user_id: auth.user.id,
+            })
+            .eq('id', id);
           if (auth.role === 'member') {
             query = query.eq('created_by_user_id', auth.user.id);
           }

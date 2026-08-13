@@ -68,7 +68,13 @@ export default function PartnerEditApplicationPage() {
       const a = res.application;
       setUniversities(u.universities || []);
       setPrograms(p.programs || []);
+      // Phase A: derive programSlug from the stored program name so the
+      // SearchableSelect can display the selected program. If the name
+      // has changed or isn't in the live catalog, the picker stays empty
+      // and the partner can re-select.
+      const matchedProgram = (p.programs || []).find((prog) => prog.name === a.program);
       const loaded: PartnerApplicationFormData = {
+        studentId: a.studentId ?? '',
         studentName: a.studentName,
         studentEmail: a.studentEmail ?? '',
         studentPhone: a.studentPhone ?? '',
@@ -105,6 +111,7 @@ export default function PartnerEditApplicationPage() {
 
         university: a.university,
         program: a.program,
+        programSlug: matchedProgram?.slug ?? '',
         intake: a.intake ?? '',
         degree: (a.degree as PartnerApplicationDegree | null) || '',
         hasStudiedInChina: a.hasStudiedInChina ?? false,

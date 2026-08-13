@@ -102,6 +102,7 @@ export default function PartnerNewApplicationPage() {
     if (!s) return;
     setFormData((prev) => ({
       ...prev,
+      studentId: s.id,
       studentName: s.studentName || prev.studentName,
       studentEmail: prev.studentEmail || s.studentEmail || '',
       studentPhone: prev.studentPhone || s.studentPhone || '',
@@ -137,6 +138,7 @@ export default function PartnerNewApplicationPage() {
     promotionPrefillRef.current = programSlugFromUrl;
     setFormData((prev) => ({
       ...prev,
+      programSlug: picked.slug,
       program: picked.name,
       university: uni?.name ?? picked.universitySlug,
     }));
@@ -228,6 +230,7 @@ export default function PartnerNewApplicationPage() {
     try {
       const payload: Record<string, unknown> = {
         // Section 1
+        studentId: formData.studentId || undefined,
         studentName: formData.studentName.trim(),
         studentEmail: formData.studentEmail.trim() || undefined,
         studentPhone: formData.studentPhone.trim() || undefined,

@@ -6,6 +6,7 @@ import {
   mapPartnerApplicationToDb,
   parsePartnerApplicationStatus,
 } from '@/lib/partner-application-mapper';
+import { validatePartnerApplicationPayload } from '@/lib/partner-application-validation';
 
 /**
  * GET /api/partner/applications
@@ -206,6 +207,17 @@ export async function POST(request: NextRequest) {
           { status: 403 },
         );
       }
+    }
+
+    // Phase A: server-side field validation before mapping. Catches
+    // length overflows, malformed emails, invalid dates, and enum
+    // typos before they hit the DB.
+    const validationErrors = validatePartnerApplicationPayload(body, 'create');
+    if (validationErrors.length > 0) {
+      return NextResponse.json(
+        { error: validationErrors[0].message, errors: validationErrors },
+        { status: 400 },
+      );
     }
 
     let dbRow: Record<string, unknown>;
