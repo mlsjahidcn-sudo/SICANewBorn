@@ -321,43 +321,48 @@ export default function AdminStudentsPage() {
                 : t('adminStudents.emptyNone')}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
+            <div className="overflow-x-auto -mx-2 px-2">
+              <Table>
+                <TableHeader>
                 <TableRow>
-                  <TableHead>{t('adminStudents.colStudent')}</TableHead>
-                  <TableHead>{t('adminStudents.colEmail')}</TableHead>
-                  <TableHead>{t('adminStudents.colNationality')}</TableHead>
-                  <TableHead>{t('adminStudents.colTargetDegree')}</TableHead>
-                  <TableHead>{t('adminStudents.colSource')}</TableHead>
-                  <TableHead>{t('adminStudents.colStatus')}</TableHead>
-                  <TableHead>{t('adminStudents.colCreated')}</TableHead>
-                  <TableHead className="text-right">{t('adminStudents.colActions')}</TableHead>
+                  <TableHead className="whitespace-nowrap">{t('adminStudents.colStudent')}</TableHead>
+                  <TableHead className="whitespace-nowrap">{t('adminStudents.colEmail')}</TableHead>
+                  <TableHead className="whitespace-nowrap">{t('adminStudents.colNationality')}</TableHead>
+                  <TableHead className="whitespace-nowrap">{t('adminStudents.colPhone')}</TableHead>
+                  <TableHead className="whitespace-nowrap">{t('adminStudents.colTargetDegree')}</TableHead>
+                  <TableHead className="whitespace-nowrap">{t('adminStudents.colTargetField')}</TableHead>
+                  <TableHead className="whitespace-nowrap">{t('adminStudents.colSource')}</TableHead>
+                  <TableHead className="whitespace-nowrap">{t('adminStudents.colStatus')}</TableHead>
+                  <TableHead className="whitespace-nowrap">{t('adminStudents.colCreated')}</TableHead>
+                  <TableHead className="text-right whitespace-nowrap">{t('adminStudents.colActions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {students.map((student) => (
                   <TableRow key={student.id}>
                     <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-[#1B2A4A] rounded-full flex items-center justify-center text-white font-medium">
-                          {(student.firstName?.[0] || '?').toUpperCase()}
+                      <div className="flex items-center gap-3 min-w-[160px]">
+                        <div className="w-10 h-10 bg-[#1B2A4A] rounded-full flex items-center justify-center text-white font-medium shrink-0">
+                          {(student.firstName?.[0] || student.email?.[0] || '?').toUpperCase()}
                           {(student.lastName?.[0] || '').toUpperCase()}
                         </div>
                         <div>
                           <div className="font-medium text-[#1F2937]">
                             {student.firstName || student.lastName
                               ? `${student.firstName} ${student.lastName}`.trim()
-                              : '—'}
+                              : student.email || '—'}
                           </div>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="text-[#4B5563]">{student.email}</TableCell>
-                    <TableCell className="text-[#4B5563]">{student.nationality || '—'}</TableCell>
-                    <TableCell className="text-[#4B5563]">{student.targetDegree || '—'}</TableCell>
+                    <TableCell className="text-[#4B5563] whitespace-nowrap">{student.email}</TableCell>
+                    <TableCell className="text-[#4B5563] whitespace-nowrap">{student.nationality || '—'}</TableCell>
+                    <TableCell className="text-[#4B5563] whitespace-nowrap">{student.phone || '—'}</TableCell>
+                    <TableCell className="text-[#4B5563] whitespace-nowrap">{student.targetDegree || '—'}</TableCell>
+                    <TableCell className="text-[#4B5563] whitespace-nowrap">{student.targetField || '—'}</TableCell>
                     <TableCell>{getSourceBadge(student)}</TableCell>
                     <TableCell>{getStatusBadge(student.status)}</TableCell>
-                    <TableCell className="text-[#4B5563]">
+                    <TableCell className="text-[#4B5563] whitespace-nowrap">
                       {new Date(student.createdAt).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="text-right">
@@ -395,8 +400,9 @@ export default function AdminStudentsPage() {
                     </TableCell>
                   </TableRow>
                 ))}
-              </TableBody>
-            </Table>
+                </TableBody>
+              </Table>
+            </div>
           )}
 
           {/* Pagination */}

@@ -32,6 +32,7 @@ export interface AdminStudent {
   dateOfBirth: string;
   gender?: string;
   targetDegree: string;
+  targetField: string;
   targetIntake: string;
   isOffline: boolean;
   source: 'Admin' | 'Partner' | 'Online';
@@ -64,6 +65,7 @@ export function mapStudentFromDb(row: Record<string, unknown>): AdminStudent {
     dateOfBirth: (row.date_of_birth as string) || '',
     gender: (extra.gender as string) || undefined,
     targetDegree: (row.target_degree as string) || '',
+    targetField: (row.target_field as string) || '',
     targetIntake: (row.target_intake as string) || '',
     source: ((row.source as string) || 'Online') as AdminStudentSource,
     // isOffline is derived — admin-added students are offline, others online.
@@ -100,6 +102,7 @@ export function mapStudentToDb(input: Partial<AdminStudent>): {
   if (input.nationality !== undefined) dbRow.nationality = input.nationality;
   if (input.dateOfBirth !== undefined) dbRow.date_of_birth = input.dateOfBirth;
   if (input.targetDegree !== undefined) dbRow.target_degree = input.targetDegree;
+  if (input.targetField !== undefined) dbRow.target_field = input.targetField;
   if (input.targetIntake !== undefined) dbRow.target_intake = input.targetIntake;
   if (input.source !== undefined) dbRow.source = input.source;
   if (input.status !== undefined) dbRow.status = input.status;

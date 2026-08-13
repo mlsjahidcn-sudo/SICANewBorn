@@ -7,7 +7,8 @@ import { sendStudentWelcome } from '@/lib/email';
  * GET /api/admin/students
  *
  * List all students (any status, any source) with optional filters:
- *   - search   : free-text on first_name, last_name, email (case-insensitive)
+ *   - search   : free-text on first_name, last_name, email, phone,
+ *                nationality, target_degree, target_field (case-insensitive)
  *   - status   : exact match (Active | Inactive | Pending | Suspended)
  *   - source   : exact match (Admin | Partner | Online)
  *   - isOffline: derived filter — 'true' returns source='Admin', 'false' returns source != 'Admin'
@@ -96,14 +97,15 @@ export async function GET(request: NextRequest) {
     if (isOfflineRaw === 'true') query = query.eq('source', 'Admin');
     if (isOfflineRaw === 'false') query = query.neq('source', 'Admin');
 
-    // Search: case-insensitive partial match across name + email
+    // Search: case-insensitive partial match across name, email, and
+    // the core registration fields (country/phone/degree/program).
     if (search) {
       // Escape SQL LIKE wildcards in user input
       const safe = search.replace(/[%_]/g, '\\$&');
-      // Use OR across first_name, last_name, email. The pattern syntax
-      // for OR in supabase-js is `.or('col.ilike.%x%,col2.ilike.%y%')`.
+      // Use OR across searchable columns. The pattern syntax for OR in
+      // supabase-js is `.or('col.ilike.%x%,col2.ilike.%y%')`.
       query = query.or(
-        `first_name.ilike.%${safe}%,last_name.ilike.%${safe}%,email.ilike.%${safe}%`,
+        `first_name.ilike.%${safe}%,last_name.ilike.%${safe}%,email.ilike.%${safe}%,phone.ilike.%${safe}%,nationality.ilike.%${safe}%,target_degree.ilike.%${safe}%,target_field.ilike.%${safe}%`,
       );
     }
 
