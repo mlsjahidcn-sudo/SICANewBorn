@@ -75,59 +75,71 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let updated = 0;
-    const failed: Array<{ id: string; error: string }> = [];
+    const validIds = (ids as unknown[]).filter((id): id is string => typeof id === 'string' && !!id);
+    const invalidIds = (ids as unknown[]).filter((id) => typeof id !== 'string' || !id);
+    const failed: Array<{ id: string; error: string }> = invalidIds.map((id) => ({
+      id: String(id),
+      error: 'invalid id',
+    }));
 
-    for (const id of ids) {
-      if (typeof id !== 'string' || !id) {
-        failed.push({ id: String(id), error: 'invalid id' });
-        continue;
-      }
-      try {
-        if (action === 'priority') {
-          // Use the auth-bound client so RLS enforces ownership.
-          // We need to first read the existing row to merge with
-          // mapPartnerApplicationToDb (preserves the row's other
-          // fields), then write back. Simpler: just update the
-          // priority column directly via a targeted PATCH.
-          const { error } = await auth.supabase
-            .from('partner_applications')
-            .update({ priority: value, updated_at: new Date().toISOString() })
-            .eq('id', id)
-            .eq('partner_id', auth.partnerId);
-          if (error) {
-            failed.push({ id, error: error.message });
-          } else {
-            updated++;
-          }
-        } else if (action === 'delete') {
-          // Phase A: soft-archive instead of hard delete. Mirrors the
-          // single-row DELETE in [id]/route.ts: set archived_at +
-          // archived_by_user_id. Members can only archive rows they
-          // created; owners can archive any row in the partner org.
-          let query = auth.supabase
-            .from('partner_applications')
-            .update({
-              archived_at: new Date().toISOString(),
-              archived_by_user_id: auth.user.id,
-            })
-            .eq('id', id);
-          if (auth.role === 'member') {
-            query = query.eq('created_by_user_id', auth.user.id);
-          }
-          const { error } = await query;
-          if (error) {
-            failed.push({ id, error: error.message });
-          } else {
-            updated++;
-          }
-        }
-      } catch (err) {
-        failed.push({ id, error: err instanceof Error ? err.message : 'unknown' });
-      }
+    if (validIds.length === 0) {
+      return NextResponse.json({ updated: 0, failed });
     }
 
-    return NextResponse.json({ updated, failed });
+    try {
+      if (action === 'priority') {
+        // Batch update + return the affected IDs so we can tell the
+        // caller exactly which rows were updated. Supabase update()
+        // without .select() returns no error when 0 rows match.
+        let query = auth.supabase
+          .from('partner_applications')
+          .update({ priority: value, updated_at: new Date().toISOString() })
+          .in('id', validIds)
+          .eq('partner_id', auth.partnerId)
+          .select('id');
+        if (auth.role === 'member') {
+          query = query.eq('created_by_user_id', auth.user.id);
+        }
+        const { data, error } = await query;
+        if (error) {
+          return NextResponse.json({ error: error.message }, { status: 500 });
+        }
+        const affectedIds = new Set((data || []).map((r) => (r as { id: string }).id));
+        for (const id of validIds) {
+          if (!affectedIds.has(id)) {
+            failed.push({ id, error: 'Application not found or not accessible' });
+          }
+        }
+        return NextResponse.json({ updated: affectedIds.size, failed });
+      }
+
+      // action === 'delete' (soft-archive)
+      let query = auth.supabase
+        .from('partner_applications')
+        .update({
+          archived_at: new Date().toISOString(),
+          archived_by_user_id: auth.user.id,
+        })
+        .in('id', validIds);
+      if (auth.role === 'member') {
+        query = query.eq('created_by_user_id', auth.user.id);
+      }
+      const { data, error } = await query.select('id');
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      const affectedIds = new Set((data || []).map((r) => (r as { id: string }).id));
+      for (const id of validIds) {
+        if (!affectedIds.has(id)) {
+          failed.push({ id, error: 'Application not found or not accessible' });
+        }
+      }
+      return NextResponse.json({ updated: affectedIds.size, failed });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      console.error('[partner/applications/bulk] unhandled:', err);
+      return NextResponse.json({ error: message }, { status: 500 });
+    }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[partner/applications/bulk] unhandled:', err);

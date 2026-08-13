@@ -188,7 +188,9 @@ export async function PATCH(
     }
 
     // Cross-tenant guard for partnerApplicationId changes — same
-    // pattern as the POST route.
+    // pattern as the POST route, plus verify the application belongs
+    // to the document's student.
+    let docStudentId: string | null = null;
     if (body.partnerApplicationId !== undefined && body.partnerApplicationId !== null) {
       if (typeof body.partnerApplicationId !== 'string' || !body.partnerApplicationId.trim()) {
         return NextResponse.json(
@@ -197,11 +199,25 @@ export async function PATCH(
         );
       }
       const service = buildServiceClient();
-      const { data: appRow, error: appErr } = await service
-        .from('partner_applications')
-        .select('id, partner_id')
-        .eq('id', body.partnerApplicationId as string)
-        .maybeSingle();
+      const [{ data: docRow, error: docErr }, { data: appRow, error: appErr }] = await Promise.all([
+        service
+          .from('student_documents')
+          .select('id, partner_student_id')
+          .eq('id', id)
+          .maybeSingle(),
+        service
+          .from('partner_applications')
+          .select('id, partner_id, student_id')
+          .eq('id', body.partnerApplicationId as string)
+          .maybeSingle(),
+      ]);
+      if (docErr) {
+        return NextResponse.json({ error: docErr.message }, { status: 500 });
+      }
+      if (!docRow) {
+        return NextResponse.json({ error: 'Document not found' }, { status: 404 });
+      }
+      docStudentId = (docRow as { partner_student_id?: string | null }).partner_student_id ?? null;
       if (appErr) {
         return NextResponse.json({ error: appErr.message }, { status: 500 });
       }
@@ -215,6 +231,12 @@ export async function PATCH(
         return NextResponse.json(
           { error: 'partnerApplicationId belongs to a different partner org' },
           { status: 403 },
+        );
+      }
+      if ((appRow as { student_id?: string | null }).student_id !== docStudentId) {
+        return NextResponse.json(
+          { error: 'partnerApplicationId does not belong to the student this document is linked to' },
+          { status: 400 },
         );
       }
     }
@@ -284,13 +306,13 @@ export async function PATCH(
  * doc, partners have admin-facing audit trail + the row was
  * intentional, so cleanup is the safer default).
  *
- * Two-step: delete the Storage object first (so a partner can't
- * crash on the DB write and leave the file behind), then delete
- * the row. If the storage delete fails (file already gone, RLS
- * on bucket), we still attempt the row delete so the partner
- * isn't stuck with a row they can't remove. Errors are logged
- * but don't fail the request — the partner's intent is to
- * remove the row.
+ * Two-step: delete the DB row first, then delete the Storage
+ * object. If the storage delete fails (file already gone, RLS
+ * on bucket), the row is already removed so the partner isn't
+ * stuck, and we log the orphan for later cleanup. Reversing the
+ * order prevents the case where the storage object is removed
+ * but the DB insert/transaction fails, leaving an orphan with
+ * no reference.
  *
  * Response: 204 No Content.
  *
@@ -331,10 +353,23 @@ export async function DELETE(
     }
 
     const fileUrl = (doc as { file_url: string }).file_url;
-    // Belt-and-suspenders: only delete storage if the path is under
-    // this partner's namespace. A foreign path means something went
-    // wrong (RLS should have hidden the row), so don't issue a
-    // destructive Storage call based on it.
+
+    // Step 1: delete the DB row first. This is the partner-visible
+    // action; the storage cleanup is secondary.
+    const { error: delErr } = await auth.supabase
+      .from('student_documents')
+      .delete()
+      .eq('id', id);
+    if (delErr) {
+      console.error('[partner/documents/:id DELETE] supabase error:', delErr);
+      return NextResponse.json({ error: delErr.message }, { status: 500 });
+    }
+
+    // Step 2: delete the Storage object. Belt-and-suspenders: only
+    // delete storage if the path is under this partner's namespace.
+    // A foreign path means something went wrong (RLS should have
+    // hidden the row), so don't issue a destructive Storage call.
+    // If this fails, the row is already gone; log the orphan.
     const expectedPrefix = `partner/${auth.partnerId}/`;
     if (fileUrl.startsWith(expectedPrefix)) {
       const removed = await deletePartnerDocFile(fileUrl);
@@ -347,15 +382,6 @@ export async function DELETE(
       console.warn(
         `[partner/documents/:id DELETE] file_url outside partner prefix; skipping storage delete for ${id}`,
       );
-    }
-
-    const { error: delErr } = await auth.supabase
-      .from('student_documents')
-      .delete()
-      .eq('id', id);
-    if (delErr) {
-      console.error('[partner/documents/:id DELETE] supabase error:', delErr);
-      return NextResponse.json({ error: delErr.message }, { status: 500 });
     }
 
     return new NextResponse(null, { status: 204 });

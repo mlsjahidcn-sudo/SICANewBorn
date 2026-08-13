@@ -12,8 +12,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { apiFetchJson } from '@/lib/api-client';
+import { apiFetch, apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
+import { getPartnerLeadStatusLabel } from '@/lib/partner-enum-labels';
 import type { PartnerLead, PartnerLeadStatus } from '@/lib/partner-lead-mapper';
 import { PARTNER_LEAD_STATUSES } from '@/lib/partner-lead-mapper';
 
@@ -116,7 +117,7 @@ export default function PartnerLeadDetailPage() {
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      const res = await fetch(`/api/partner/leads/${leadId}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/partner/leads/${leadId}`, { method: 'DELETE' });
       if (!res.ok && res.status !== 204) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || t('partnerLeadDetail.errorSave'));
@@ -251,7 +252,7 @@ export default function PartnerLeadDetailPage() {
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold text-[#1B2A4A]">{lead.leadName}</h1>
             <Badge variant={STATUS_VARIANTS[lead.status]} className="rounded-none">
-              {lead.status}
+              {getPartnerLeadStatusLabel(lead.status, t)}
             </Badge>
           </div>
           {lead.interestedProgram && (
@@ -360,7 +361,7 @@ export default function PartnerLeadDetailPage() {
                     <SelectTrigger className="rounded-none"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {PARTNER_LEAD_STATUSES.map((s) => (
-                        <SelectItem key={s} value={s}>{s}</SelectItem>
+                        <SelectItem key={s} value={s}>{getPartnerLeadStatusLabel(s, t)}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -372,7 +373,7 @@ export default function PartnerLeadDetailPage() {
                 <div className="flex items-center gap-2">
                   <span className="text-[#4B5563] min-w-24">{t('partnerLeadDetail.fieldStatus')}</span>
                   <Badge variant={STATUS_VARIANTS[lead.status]} className="rounded-none">
-                    {lead.status}
+                    {getPartnerLeadStatusLabel(lead.status, t)}
                   </Badge>
                 </div>
               </>

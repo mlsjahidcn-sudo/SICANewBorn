@@ -112,95 +112,90 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    let updated = 0;
     const failed: Array<{ id: string; error: string }> = [];
+    const validIds = ids.filter((id): id is string => typeof id === 'string' && !!id);
+    for (const id of ids) {
+      if (typeof id !== 'string' || !id) {
+        failed.push({ id: String(id), error: 'invalid id' });
+      }
+    }
 
-    // For delete we need the storage path per row to also remove
-    // the Storage object. Fetch the rows in one batch first to
-    // avoid N+1 (and to detect foreign ids up front — a row not in
-    // the partner's scope returns 0 rows from the .in() call).
-    let docsById: Map<string, { id: string; file_url: string }> | null = null;
     if (action === 'delete') {
+      // Fetch the rows in one batch first to avoid N+1 and to detect
+      // foreign ids up front — a row not in the partner's scope returns
+      // 0 rows from the .in() call.
       const { data: docs, error: docsErr } = await auth.supabase
         .from('student_documents')
         .select('id, file_url, partner_student_id')
-        .in('id', ids as string[])
+        .in('id', validIds)
         .not('partner_student_id', 'is', null);
       if (docsErr) {
         return NextResponse.json({ error: docsErr.message }, { status: 500 });
       }
-      docsById = new Map(
-        (docs || []).map((d) => {
-          const r = d as { id: string; file_url: string };
-          return [r.id, { id: r.id, file_url: r.file_url }];
-        }),
-      );
-    }
 
-    for (const id of ids) {
-      if (typeof id !== 'string' || !id) {
-        failed.push({ id: String(id), error: 'invalid id' });
-        continue;
-      }
-      try {
-        if (action === 'delete') {
-          const doc = docsById?.get(id);
-          if (!doc) {
-            failed.push({ id, error: 'Document not found' });
-            continue;
-          }
-          // Same prefix guard as the single-doc DELETE route —
-          // don't issue a destructive Storage call on a path
-          // outside this partner's namespace.
-          const expectedPrefix = `partner/${auth.partnerId}/`;
-          if (doc.file_url.startsWith(expectedPrefix)) {
-            const removed = await deletePartnerDocFile(doc.file_url);
-            if (!removed) {
-              console.warn(
-                `[partner/documents/bulk] storage delete returned false for ${id}`,
-              );
-            }
+      const foundIds = new Set<string>();
+      const expectedPrefix = `partner/${auth.partnerId}/`;
+      await Promise.all(
+        (docs || []).map(async (d) => {
+          const r = d as { id: string; file_url: string };
+          foundIds.add(r.id);
+          if (r.file_url.startsWith(expectedPrefix)) {
+            await deletePartnerDocFile(r.file_url).catch((err) => {
+              console.warn(`[partner/documents/bulk] storage delete failed for ${r.id}:`, err);
+            });
           } else {
             console.warn(
-              `[partner/documents/bulk] file_url outside partner prefix; skipping storage delete for ${id}`,
+              `[partner/documents/bulk] file_url outside partner prefix; skipping storage delete for ${r.id}`,
             );
           }
-          const { error } = await auth.supabase
-            .from('student_documents')
-            .delete()
-            .eq('id', id);
-          if (error) {
-            failed.push({ id, error: error.message });
-          } else {
-            updated++;
-          }
-        } else if (action === 'move-to-application') {
-          const { error } = await auth.supabase
-            .from('student_documents')
-            .update({ partner_application_id: applicationId })
-            .eq('id', id);
-          if (error) {
-            failed.push({ id, error: error.message });
-          } else {
-            updated++;
-          }
-        } else if (action === 'unlink-from-application') {
-          const { error } = await auth.supabase
-            .from('student_documents')
-            .update({ partner_application_id: null })
-            .eq('id', id);
-          if (error) {
-            failed.push({ id, error: error.message });
-          } else {
-            updated++;
-          }
+        }),
+      );
+
+      // Single batched DB delete for all found rows.
+      let deletedCount = 0;
+      if (foundIds.size > 0) {
+        const idsToDelete = Array.from(foundIds);
+        const { error: delErr, count } = await auth.supabase
+          .from('student_documents')
+          .delete({ count: 'exact' })
+          .in('id', idsToDelete);
+        if (delErr) {
+          return NextResponse.json({ error: delErr.message }, { status: 500 });
         }
-      } catch (err) {
-        failed.push({ id, error: err instanceof Error ? err.message : 'unknown' });
+        deletedCount = count || 0;
+      }
+
+      for (const id of validIds) {
+        if (!foundIds.has(id)) {
+          failed.push({ id, error: 'Document not found' });
+        }
+      }
+      return NextResponse.json({ updated: deletedCount, failed });
+    }
+
+    // move-to-application / unlink-from-application: single batched update.
+    const updatePayload =
+      action === 'move-to-application'
+        ? { partner_application_id: applicationId }
+        : { partner_application_id: null };
+    const { data: updatedRows, error: updateErr } = await auth.supabase
+      .from('student_documents')
+      .update(updatePayload)
+      .in('id', validIds)
+      .select('id');
+
+    if (updateErr) {
+      return NextResponse.json({ error: updateErr.message }, { status: 500 });
+    }
+
+    const updatedIds = new Set((updatedRows || []).map((r) => (r as { id: string }).id));
+    for (const id of validIds) {
+      if (!updatedIds.has(id)) {
+        failed.push({ id, error: 'Document not found' });
       }
     }
 
-    return NextResponse.json({ updated, failed });
+    return NextResponse.json({ updated: updatedIds.size, failed });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[partner/documents/bulk] unhandled:', err);

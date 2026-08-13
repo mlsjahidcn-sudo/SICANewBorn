@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Plus, Search, Eye, MoreHorizontal, Trash2, Download, Users, ArrowUpRight, CheckCircle2, XCircle, Clock, Flag } from 'lucide-react';
+import { Plus, Search, Eye, MoreHorizontal, Trash2, Users, ArrowUpRight, CheckCircle2, XCircle, Clock, Flag } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,8 +20,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { apiFetchJson } from '@/lib/api-client';
+import { apiFetch, apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
+import { getPartnerLeadStatusLabel } from '@/lib/partner-enum-labels';
 import { PARTNER_LEAD_STATUSES, type PartnerLead, type PartnerLeadStatus } from '@/lib/partner-lead-mapper';
 
 const STATUS_VARIANTS: Record<PartnerLeadStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -48,6 +49,8 @@ export default function PartnerLeadSharingPage() {
 
   const [leads, setLeads] = useState<PartnerLead[]>([]);
   const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [limit] = useState(20);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -75,12 +78,15 @@ export default function PartnerLeadSharingPage() {
     return () => clearTimeout(tm);
   }, [searchTerm]);
 
-  // Clear selection when filters change so the user doesn't act on
-  // rows that just scrolled out of view.
+  // Clear selection and reset page when filters change so the user
+  // doesn't act on rows that just scrolled out of view.
   useEffect(() => {
+    setPage(1);
     setSelectedIds(new Set());
     setBulkResult(null);
   }, [debouncedSearch, statusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(total / limit));
 
   const fetchLeads = useCallback(async () => {
     setIsLoading(true);
@@ -89,8 +95,9 @@ export default function PartnerLeadSharingPage() {
       const params = new URLSearchParams();
       if (debouncedSearch) params.set('search', debouncedSearch);
       if (statusFilter !== 'all') params.set('status', statusFilter);
-      params.set('limit', '50');
-      const res = await apiFetchJson<{ leads: PartnerLead[]; total: number }>(
+      params.set('limit', String(limit));
+      params.set('page', String(page));
+      const res = await apiFetchJson<{ leads: PartnerLead[]; total: number; page: number; totalPages: number }>(
         `/api/partner/leads${params.toString() ? `?${params}` : ''}`,
       );
       setLeads(res.leads || []);
@@ -102,7 +109,7 @@ export default function PartnerLeadSharingPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [debouncedSearch, statusFilter, t]);
+  }, [debouncedSearch, statusFilter, page, limit, t]);
 
   useEffect(() => {
     void fetchLeads();
@@ -185,7 +192,7 @@ export default function PartnerLeadSharingPage() {
     if (!leadToDelete) return;
     setIsDeleting(true);
     try {
-      const res = await fetch(`/api/partner/leads/${leadToDelete}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/partner/leads/${leadToDelete}`, { method: 'DELETE' });
       if (!res.ok && res.status !== 204) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || t('partnerLeads.errorDelete'));
@@ -266,10 +273,8 @@ export default function PartnerLeadSharingPage() {
               <p className="text-[#4B5563] mt-1">{t('partnerLeads.subtitle')}</p>
             </div>
             <div className="flex gap-3">
-              <Button variant="outline" className="rounded-none" disabled>
-                <Download className="mr-2 h-4 w-4" />
-                {t('partnerLeads.export')}
-              </Button>
+              {/* Phase 2: export is not implemented yet; hide the
+                  disabled button instead of showing a dead CTA. */}
               <Button asChild className="rounded-none bg-[#9B1B30] hover:bg-[#7a1626]">
                 <Link href="/partner/lead-sharing/new" className="flex items-center">
                   <Plus className="mr-2 h-4 w-4" />
@@ -330,8 +335,8 @@ export default function PartnerLeadSharingPage() {
           {(['all', ...PARTNER_LEAD_STATUSES] as const).map((s) => {
             const active = statusFilter === s;
             const count = statusCounts[s] || 0;
-            const labelKey =
-              s === 'all' ? 'partnerLeads.filterAll' : `partnerLeads.statusBadge.${s.toLowerCase()}`;
+            const label =
+              s === 'all' ? t('partnerLeads.filterAll') : getPartnerLeadStatusLabel(s, t);
             return (
               <button
                 key={s}
@@ -343,7 +348,7 @@ export default function PartnerLeadSharingPage() {
                     : 'border-transparent text-gray-500 hover:text-[#1B2A4A] hover:border-gray-200'
                 }`}
               >
-                {t(labelKey)}
+                {label}
                 <span className={`text-xs ${active ? 'text-[#1B2A4A]' : 'text-gray-400'}`}>
                   ({count})
                 </span>
@@ -379,7 +384,7 @@ export default function PartnerLeadSharingPage() {
                 onClick={() => setStatusFilter('all')}
                 className="inline-flex items-center gap-1 bg-gray-100 hover:bg-gray-200 px-2 py-0.5 text-xs font-medium rounded-none"
               >
-                {t(`partnerLeads.statusBadge.${statusFilter.toLowerCase()}`)}
+                {getPartnerLeadStatusLabel(statusFilter, t)}
                 <XCircle className="h-3 w-3" />
               </button>
             )}
@@ -470,7 +475,7 @@ export default function PartnerLeadSharingPage() {
                           <div className="flex items-center gap-2">
                             <Icon className="h-4 w-4 text-[#4B5563]" />
                             <Badge variant={STATUS_VARIANTS[lead.status]} className="rounded-none">
-                              {lead.status}
+                              {getPartnerLeadStatusLabel(lead.status, t)}
                             </Badge>
                           </div>
                         </td>
@@ -537,6 +542,42 @@ export default function PartnerLeadSharingPage() {
 
             {isLoading && leads.length === 0 && (
               <div className="p-12 text-center text-[#4B5563]">{t('partnerApps.loading')}</div>
+            )}
+
+            {/* Phase 2: pagination controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
+                <p className="text-sm text-[#4B5563]">
+                  {t('partnerLeads.paginationShowing', {
+                    from: total === 0 ? 0 : (page - 1) * limit + 1,
+                    to: Math.min(page * limit, total),
+                    total,
+                  })}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-none"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page <= 1 || isLoading}
+                  >
+                    {t('partnerLeads.paginationPrev')}
+                  </Button>
+                  <span className="text-sm text-[#4B5563]">
+                    {t('partnerLeads.paginationPageOf', { page, total: totalPages })}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-none"
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page >= totalPages || isLoading}
+                  >
+                    {t('partnerLeads.paginationNext')}
+                  </Button>
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>

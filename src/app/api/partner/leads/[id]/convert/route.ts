@@ -49,7 +49,8 @@ export async function POST(
     let leadQ = auth.supabase
       .from('partner_leads')
       .select('*')
-      .eq('id', id);
+      .eq('id', id)
+      .eq('partner_id', auth.partnerId);
     if (auth.role === 'member') {
       leadQ = leadQ.eq('created_by_user_id', auth.user.id);
     }
@@ -68,11 +69,15 @@ export async function POST(
     // them NULL rather than guess. The partner can fill them in
     // when starting an application.
     const leadNotes = (leadRow as { notes?: string | null }).notes;
+    const interestedProgram = (leadRow as { interested_program?: string | null }).interested_program;
     const newStudent: Record<string, unknown> = {
       partner_id: auth.partnerId,
       student_name: (leadRow as { lead_name: string }).lead_name,
       student_email: (leadRow as { lead_email?: string | null }).lead_email ?? null,
       student_phone: (leadRow as { lead_phone?: string | null }).lead_phone ?? null,
+      // Carry the lead's program interest forward so the partner
+      // doesn't have to re-enter it on the student page.
+      target_program: interestedProgram ?? null,
       // Carry the lead's notes forward so the partner doesn't
       // lose context. Prefix with a marker so the partner can
       // see "this came from the lead, not a manual entry".

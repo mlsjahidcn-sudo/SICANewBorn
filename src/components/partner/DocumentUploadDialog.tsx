@@ -280,7 +280,10 @@ export function DocumentUploadDialog({
       setUpload((s) => ({ ...s, phase: 'uploading' }));
       const putRes = await fetch(meta.uploadUrl, {
         method: 'PUT',
-        headers: { 'Content-Type': file.type },
+        headers: {
+          'Content-Type': file.type,
+          'x-upsert-token': meta.token,
+        },
         body: file,
       });
       if (!putRes.ok) {

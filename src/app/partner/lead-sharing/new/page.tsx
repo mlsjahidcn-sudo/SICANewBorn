@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
+import { getPartnerLeadStatusLabel } from '@/lib/partner-enum-labels';
 import type { PartnerLeadStatus } from '@/lib/partner-lead-mapper';
 import { PARTNER_LEAD_STATUSES } from '@/lib/partner-lead-mapper';
 
@@ -132,7 +133,7 @@ export default function PartnerNewLeadPage() {
                     <SelectTrigger className="rounded-none"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {PARTNER_LEAD_STATUSES.map((s) => (
-                        <SelectItem key={s} value={s}>{s}</SelectItem>
+                        <SelectItem key={s} value={s}>{getPartnerLeadStatusLabel(s, t)}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

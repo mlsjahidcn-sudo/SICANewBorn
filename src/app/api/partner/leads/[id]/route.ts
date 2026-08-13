@@ -24,7 +24,8 @@ export async function GET(
     let q = auth.supabase
       .from('partner_leads')
       .select('*')
-      .eq('id', id);
+      .eq('id', id)
+      .eq('partner_id', auth.partnerId);
     if (auth.role === 'member') {
       q = q.eq('created_by_user_id', auth.user.id);
     }
@@ -73,6 +74,7 @@ export async function PATCH(
     const updates = mapPartnerLeadToDb(body);
     delete (updates as Record<string, unknown>).partner_id;
     delete (updates as Record<string, unknown>).id;
+    updates.updated_at = new Date().toISOString();
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
@@ -81,7 +83,8 @@ export async function PATCH(
     let q = auth.supabase
       .from('partner_leads')
       .update(updates)
-      .eq('id', id);
+      .eq('id', id)
+      .eq('partner_id', auth.partnerId);
     if (auth.role === 'member') {
       q = q.eq('created_by_user_id', auth.user.id);
     }
@@ -122,7 +125,8 @@ export async function DELETE(
     let delQ = auth.supabase
       .from('partner_leads')
       .delete({ count: 'exact' })
-      .eq('id', id);
+      .eq('id', id)
+      .eq('partner_id', auth.partnerId);
     if (auth.role === 'member') {
       delQ = delQ.eq('created_by_user_id', auth.user.id);
     }

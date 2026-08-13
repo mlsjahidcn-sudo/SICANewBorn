@@ -272,11 +272,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Cross-tenant guard (2/2): if partnerApplicationId is set, it
-    // must also be in the same partner_id.
+    // must also be in the same partner_id AND belong to the selected
+    // student. Prevents linking a document to an unrelated application.
     if (partnerApplicationIdRaw) {
       const { data: appRow, error: appErr } = await service
         .from('partner_applications')
-        .select('id, partner_id')
+        .select('id, partner_id, student_id')
         .eq('id', partnerApplicationIdRaw)
         .maybeSingle();
       if (appErr) {
@@ -292,6 +293,12 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           { error: 'partnerApplicationId belongs to a different partner org' },
           { status: 403 },
+        );
+      }
+      if ((appRow as { student_id?: string | null }).student_id !== partnerStudentId) {
+        return NextResponse.json(
+          { error: 'partnerApplicationId does not belong to the selected student' },
+          { status: 400 },
         );
       }
     }
@@ -331,6 +338,17 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('[partner/documents POST] supabase error:', error);
+      // Best-effort cleanup: the file was already PUT to Storage, but
+      // the row insert failed. Delete the orphan so the partner isn't
+      // billed for/haunted by a file with no DB reference.
+      try {
+        const { deletePartnerDocFile } = await import('@/lib/storage');
+        if (fileUrl.startsWith(expectedPrefix)) {
+          await deletePartnerDocFile(fileUrl);
+        }
+      } catch (cleanupErr) {
+        console.error('[partner/documents POST] cleanup failed:', cleanupErr);
+      }
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   ArrowLeft,
   Save,
@@ -47,6 +47,7 @@ import {
 import { type University, type Program } from '@/lib/data';
 import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
+import { getPartnerApplicationPriorityLabel } from '@/lib/partner-enum-labels';
 
 // ----- form state ---------------------------------------------------------
 
@@ -299,6 +300,25 @@ export function PartnerApplicationForm({
       });
     return () => controller.abort();
   }, []);
+
+  // Phase 3: memoize + cap the program catalog options. The parent
+  // may fetch up to 500 programs; rendering a SearchableSelect over
+  // a rebuilt array on every keystroke was sluggish for large catalogs.
+  const programOptions = useMemo(
+    () =>
+      programs.slice(0, 500).map((program) => {
+        const uni = universidades.find((u) => u.slug === program.universitySlug);
+        return {
+          value: program.slug,
+          label: program.name,
+          sublabel: uni
+            ? `${t('partnerAppForm.programSublabelAt', { name: uni.name })} · ${program.degree} · ${program.language}`
+            : `${program.degree} · ${program.language}`,
+          logo: uni?.logo || undefined,
+        };
+      }),
+    [programs, universidades, t],
+  );
 
   const formContent = (
     <div className="space-y-4">
@@ -795,19 +815,7 @@ export function PartnerApplicationForm({
                   university: uni?.name ?? picked.universitySlug,
                 }));
               }}
-              options={programs.map((program) => {
-                const uni = universidades.find(
-                  (u) => u.slug === program.universitySlug,
-                );
-                return {
-                  value: program.slug,
-                  label: program.name,
-                  sublabel: uni
-                    ? `${t('partnerAppForm.programSublabelAt', { name: uni.name })} · ${program.degree} · ${program.language}`
-                    : `${program.degree} · ${program.language}`,
-                  logo: uni?.logo || undefined,
-                };
-              })}
+              options={programOptions}
               placeholder={
                 dataLoading
                   ? t('partnerAppForm.programLoadingPlaceholder')
@@ -939,7 +947,7 @@ export function PartnerApplicationForm({
               <SelectContent>
                 {PARTNER_APPLICATION_PRIORITIES.map((p) => (
                   <SelectItem key={p} value={p}>
-                    {p}
+                    {getPartnerApplicationPriorityLabel(p, t)}
                   </SelectItem>
                 ))}
               </SelectContent>

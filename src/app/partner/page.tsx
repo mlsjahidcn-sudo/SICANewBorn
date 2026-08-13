@@ -24,6 +24,10 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar } from '@/components/ui/avatar';
 import { apiFetchJson, ApiError } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
+import {
+  getPartnerApplicationStatusLabel,
+  getPartnerApplicationPriorityLabel,
+} from '@/lib/partner-enum-labels';
 import type { PartnerDocument, PartnerDocStatus } from '@/lib/partner-doc-mapper';
 
 interface PartnerStudent {
@@ -226,8 +230,9 @@ export default function PartnerDashboard() {
       Accepted: { variant: 'default', label: t('partnerStudents.statusAccepted') },
       'Under Review': { variant: 'outline', label: 'Under Review' },
       'Documents Requested': { variant: 'outline', label: 'Documents Requested' },
-      Submitted: { variant: 'outline', label: 'Submitted' },
-      Draft: { variant: 'outline', label: 'Draft' },
+      Submitted: { variant: 'outline', label: getPartnerApplicationStatusLabel('Submitted', t) },
+      Draft: { variant: 'outline', label: getPartnerApplicationStatusLabel('Draft', t) },
+      'In Review': { variant: 'outline', label: getPartnerApplicationStatusLabel('In Review', t) },
       Rejected: { variant: 'destructive', label: t('partnerStudents.statusRejected') },
     };
     const config = variants[status] || { variant: 'outline' as const, label: status };
@@ -656,7 +661,7 @@ export default function PartnerDashboard() {
                             <p className="text-xs text-[#4B5563]">
                               {app.program}
                               {' · '}
-                              <span className="font-medium text-[#9B1B30]">{app.priority}</span>
+                              <span className="font-medium text-[#9B1B30]">{getPartnerApplicationPriorityLabel(app.priority, t)}</span>
                             </p>
                           </li>
                         ))}

@@ -538,7 +538,16 @@ export default function PartnerDocumentsPage() {
         `/api/partner/documents/${doc.id}/download-url`,
         { method: 'POST' },
       );
-      window.open(url, '_blank', 'noopener,noreferrer');
+      // Use a transient <a download> instead of window.open so
+      // pop-up blockers don't silently prevent the download.
+      const a = document.createElement('a');
+      a.href = url;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.download = doc.fileName || doc.name || 'download';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     } catch (err) {
       console.error('[partner/documents] download failed:', err);
       // Phase 52: dedicated download-error key (was reusing

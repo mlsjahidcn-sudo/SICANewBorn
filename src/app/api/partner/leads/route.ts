@@ -43,6 +43,7 @@ export async function GET(request: NextRequest) {
     let query = auth.supabase
       .from('partner_leads')
       .select('*', { count: 'exact' })
+      .eq('partner_id', auth.partnerId)
       .order(sort, { ascending });
 
     // Phase 3: role='member' sees ONLY rows they created.

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save } from 'lucide-react';
 import Link from 'next/link';
@@ -14,6 +14,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
+import { getPartnerStudentStatusLabel } from '@/lib/partner-enum-labels';
 import {
   PARTNER_STUDENT_STATUSES,
   PartnerStudentStatus,
@@ -79,10 +80,10 @@ export default function PartnerAddStudentPage() {
     const controller = new AbortController();
     setCatalogLoading(true);
     Promise.all([
-      apiFetchJson<{ universities: University[] }>('/api/universities?limit=500', {
+      apiFetchJson<{ universities: University[] }>('/api/universities?limit=200', {
         signal: controller.signal,
       }).catch(() => ({ universities: [] })),
-      apiFetchJson<{ programs: Program[] }>('/api/programs?limit=1000', {
+      apiFetchJson<{ programs: Program[] }>('/api/programs?limit=500', {
         signal: controller.signal,
       }).catch(() => ({ programs: [] })),
     ])
@@ -96,6 +97,27 @@ export default function PartnerAddStudentPage() {
       });
     return () => controller.abort();
   }, []);
+
+  // Phase 3: cap + memoize catalog options so the SearchableSelect
+  // doesn't rebuild a huge option array on every render.
+  const universityOptions = useMemo(
+    () =>
+      universities.slice(0, 200).map((u) => ({
+        value: u.name,
+        label: u.name,
+        sublabel: u.nameCn || undefined,
+      })),
+    [universities],
+  );
+  const programOptions = useMemo(
+    () =>
+      programs.slice(0, 500).map((p) => ({
+        value: p.name,
+        label: p.name,
+        sublabel: p.nameCn || undefined,
+      })),
+    [programs],
+  );
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
@@ -348,11 +370,7 @@ export default function PartnerAddStudentPage() {
                   <SearchableSelect
                     value={formData.targetUniversity}
                     onChange={(v) => setFormData((prev) => ({ ...prev, targetUniversity: v }))}
-                    options={universities.map((u) => ({
-                      value: u.name,
-                      label: u.name,
-                      sublabel: u.nameCn || undefined,
-                    }))}
+                    options={universityOptions}
                     placeholder={t('partnerStudentNew.fieldTargetUniversityPlaceholder')}
                     clearValue=""
                     clearLabel={t('partnerCommon.placeholderDash')}
@@ -364,11 +382,7 @@ export default function PartnerAddStudentPage() {
                   <SearchableSelect
                     value={formData.targetProgram}
                     onChange={(v) => setFormData((prev) => ({ ...prev, targetProgram: v }))}
-                    options={programs.map((p) => ({
-                      value: p.name,
-                      label: p.name,
-                      sublabel: p.nameCn || undefined,
-                    }))}
+                    options={programOptions}
                     placeholder={t('partnerStudentNew.fieldTargetProgramPlaceholder')}
                     clearValue=""
                     clearLabel={t('partnerCommon.placeholderDash')}
@@ -386,7 +400,7 @@ export default function PartnerAddStudentPage() {
                     </SelectTrigger>
                     <SelectContent>
                       {PARTNER_STUDENT_STATUSES.map((s) => (
-                        <SelectItem key={s} value={s}>{s}</SelectItem>
+                        <SelectItem key={s} value={s}>{getPartnerStudentStatusLabel(s, t)}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

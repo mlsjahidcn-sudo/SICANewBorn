@@ -22,7 +22,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { ListPageSkeleton } from '@/components/partner/skeletons';
-import { apiFetchJson } from '@/lib/api-client';
+import { apiFetch, apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 import type { PartnerStudent, PartnerStudentStatus } from '@/lib/partner-student-mapper';
 
@@ -197,7 +197,7 @@ export default function PartnerStudentsPage() {
     if (!studentToRestore) return;
     setIsRestoring(true);
     try {
-      const res = await fetch(`/api/partner/students/${studentToRestore}`, {
+      const res = await apiFetch(`/api/partner/students/${studentToRestore}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ archived: false }),
@@ -290,7 +290,7 @@ export default function PartnerStudentsPage() {
     if (!studentToDelete) return;
     setIsDeleting(true);
     try {
-      const res = await fetch(`/api/partner/students/${studentToDelete}`, {
+      const res = await apiFetch(`/api/partner/students/${studentToDelete}`, {
         method: 'DELETE',
       });
       if (!res.ok && res.status !== 204) {
@@ -485,11 +485,11 @@ export default function PartnerStudentsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t('partnerStudents.allStatus')}</SelectItem>
-                  <SelectItem value="New">New</SelectItem>
-                  <SelectItem value="In Progress">In Progress</SelectItem>
-                  <SelectItem value="Applied">Applied</SelectItem>
-                  <SelectItem value="Accepted">Accepted</SelectItem>
-                  <SelectItem value="Rejected">Rejected</SelectItem>
+                  <SelectItem value="New">{STATUS_LABEL.New}</SelectItem>
+                  <SelectItem value="In Progress">{STATUS_LABEL['In Progress']}</SelectItem>
+                  <SelectItem value="Applied">{STATUS_LABEL.Applied}</SelectItem>
+                  <SelectItem value="Accepted">{STATUS_LABEL.Accepted}</SelectItem>
+                  <SelectItem value="Rejected">{STATUS_LABEL.Rejected}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

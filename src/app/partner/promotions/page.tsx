@@ -63,7 +63,7 @@ export default function PartnerPromotionsPage() {
         if (!cancelled) setPromotions(res.promotions || []);
       })
       .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load promotions');
+        if (!cancelled) setError(err instanceof Error ? err.message : t('partnerPromotions.errorLoad'));
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);
@@ -129,11 +129,11 @@ export default function PartnerPromotionsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>University</TableHead>
-                  <TableHead>Programs</TableHead>
-                  <TableHead>Fee Range</TableHead>
-                  <TableHead>Eligibility</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
+                  <TableHead>{t('partnerPromotions.university')}</TableHead>
+                  <TableHead>{t('partnerPromotions.programs')}</TableHead>
+                  <TableHead>{t('partnerPromotions.feeRange')}</TableHead>
+                  <TableHead>{t('partnerPromotions.eligibility')}</TableHead>
+                  <TableHead className="text-right">{t('partnerPromotions.action')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -158,7 +158,7 @@ export default function PartnerPromotionsPage() {
                             />
                           )}
                           <div>
-                            <div className="font-medium text-[#1B2A4A]">{u?.name || 'Unknown'}</div>
+                            <div className="font-medium text-[#1B2A4A]">{u?.name || t('partnerPromotions.unknownUniversity')}</div>
                             {u?.city && (
                               <div className="text-xs text-gray-500 flex items-center gap-1">
                                 <MapPin className="h-3 w-3" /> {u.city}
@@ -168,8 +168,10 @@ export default function PartnerPromotionsPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {group.promotions.length} program
-                        {group.promotions.length === 1 ? '' : 's'}
+                        {group.promotions.length} {' '}
+                        {group.promotions.length === 1
+                          ? t('partnerPromotions.programSingular')
+                          : t('partnerPromotions.programPlural')}
                       </TableCell>
                       <TableCell>
                         <div className="font-semibold text-[#1B2A4A]">{feeRange(group.promotions)}</div>
@@ -181,7 +183,7 @@ export default function PartnerPromotionsPage() {
                           </Badge>
                         ) : anyEligible ? (
                           <Badge variant="outline" className="gap-1 text-green-700 bg-green-50">
-                            Available for your region
+                            {t('partnerPromotions.availableForRegion')}
                           </Badge>
                         ) : null}
                       </TableCell>
@@ -221,7 +223,7 @@ export default function PartnerPromotionsPage() {
                 )}
                 <div>
                   <DialogTitle className="text-xl">
-                    {selectedGroup?.university?.name || 'University'}
+                    {selectedGroup?.university?.name || t('partnerPromotions.university')}
                   </DialogTitle>
                   {selectedGroup?.university?.city && (
                     <div className="text-sm text-gray-500 flex items-center gap-1 mt-1">

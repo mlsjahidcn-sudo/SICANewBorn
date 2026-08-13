@@ -17,6 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { apiFetch, apiFetchJson } from '@/lib/api-client';
+import { useI18n } from '@/lib/i18n';
 import { currencySymbol, type PartnerFee, type PartnerFeeStatus } from '@/lib/partner-fee-mapper';
 
 interface PartnerFeeWithUrl extends PartnerFee {
@@ -24,6 +25,7 @@ interface PartnerFeeWithUrl extends PartnerFee {
 }
 
 export default function PartnerFeesPage() {
+  const { t } = useI18n();
   const [isLoading, setIsLoading] = useState(true);
   const [fees, setFees] = useState<PartnerFeeWithUrl[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -54,10 +56,25 @@ export default function PartnerFeesPage() {
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!uploadFee || !selectedFile) return;
+
+    // Client-side validation so the partner gets fast feedback and
+    // doesn't waste a signed URL on an invalid file.
+    const MAX_BYTES = 10 * 1024 * 1024;
+    const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'application/pdf'];
+    if (!ALLOWED_TYPES.includes(selectedFile.type)) {
+      setError('File type not allowed. Use PNG, JPG, WEBP, or PDF.');
+      return;
+    }
+    if (selectedFile.size > MAX_BYTES) {
+      setError('File too large. Maximum size is 10MB.');
+      return;
+    }
+
     setIsUploading(true);
+    setError(null);
     try {
       // 1. Get signed upload URL
-      const { uploadUrl, storagePath } = await apiFetchJson<{
+      const { uploadUrl, storagePath, token } = await apiFetchJson<{
         uploadUrl: string;
         storagePath: string;
         token: string;
@@ -74,7 +91,10 @@ export default function PartnerFeesPage() {
       // 2. Upload file directly to Supabase Storage
       const uploadRes = await fetch(uploadUrl, {
         method: 'PUT',
-        headers: { 'Content-Type': selectedFile.type },
+        headers: {
+          'Content-Type': selectedFile.type,
+          'x-upsert-token': token,
+        },
         body: selectedFile,
       });
       if (!uploadRes.ok) {
@@ -88,13 +108,11 @@ export default function PartnerFeesPage() {
         body: JSON.stringify({ paymentProofUrl: storagePath, paymentNotes }),
       });
 
-      setFees((prev) =>
-        prev.map((f) =>
-          f.id === uploadFee.id
-            ? { ...f, status: 'PendingVerification' as PartnerFeeStatus, paymentProofUrl: storagePath, paymentNotes }
-            : f,
-        ),
-      );
+      // 4. Refresh from server so the UI reflects any server-side
+      // changes (status, verified timestamps, etc.) instead of
+      // optimistically guessing.
+      const refreshed = await apiFetchJson<PartnerFeeWithUrl[]>('/api/partner/service-fees');
+      setFees(refreshed);
       setUploadFee(null);
       setSelectedFile(null);
       setPaymentNotes('');
@@ -157,18 +175,30 @@ export default function PartnerFeesPage() {
     );
   }
 
+  const handleDownloadProof = (fee: PartnerFeeWithUrl) => {
+    if (!fee.paymentProofDownloadUrl) return;
+    const a = document.createElement('a');
+    a.href = fee.paymentProofDownloadUrl;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.download = `payment-proof-${fee.studentName || 'fee'}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-[#1B2A4A]">Service Fees</h1>
-        <p className="text-gray-600">View and pay service fees for your students</p>
+        <h1 className="text-2xl font-bold text-[#1B2A4A]">{t('partnerFees.title')}</h1>
+        <p className="text-gray-600">{t('partnerFees.subtitle')}</p>
       </div>
 
       {error && (
         <div className="rounded-md bg-red-50 p-4 text-sm text-red-700">
           {error}
           <button className="ml-2 underline" onClick={() => setError(null)}>
-            Dismiss
+            {t('common.dismiss')}
           </button>
         </div>
       )}
@@ -176,30 +206,30 @@ export default function PartnerFeesPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Pending</CardDescription>
+            <CardDescription>{t('partnerFees.statPending')}</CardDescription>
             <CardTitle className="text-2xl text-amber-600">
               {fees.filter((f) => f.status === 'Pending').length}
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-gray-600">Awaiting payment</CardContent>
+          <CardContent className="text-sm text-gray-600">{t('partnerFees.statPendingHint')}</CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Pending Verification</CardDescription>
+            <CardDescription>{t('partnerFees.statPendingVerification')}</CardDescription>
             <CardTitle className="text-2xl text-blue-600">
               {fees.filter((f) => f.status === 'PendingVerification').length}
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-gray-600">Proof uploaded, awaiting SICA confirmation</CardContent>
+          <CardContent className="text-sm text-gray-600">{t('partnerFees.statPendingVerificationHint')}</CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Paid</CardDescription>
+            <CardDescription>{t('partnerFees.statPaid')}</CardDescription>
             <CardTitle className="text-2xl text-green-600">
               {fees.filter((f) => f.status === 'Paid').length}
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-gray-600">Verified payments</CardContent>
+          <CardContent className="text-sm text-gray-600">{t('partnerFees.statPaidHint')}</CardContent>
         </Card>
       </div>
 
@@ -208,11 +238,11 @@ export default function PartnerFeesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Student</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Due Date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t('partnerFees.colStudent')}</TableHead>
+                <TableHead>{t('partnerFees.colAmount')}</TableHead>
+                <TableHead>{t('partnerFees.colDueDate')}</TableHead>
+                <TableHead>{t('partnerFees.colStatus')}</TableHead>
+                <TableHead className="text-right">{t('partnerFees.colActions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -220,8 +250,8 @@ export default function PartnerFeesPage() {
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-12 text-gray-500">
                     <DollarSign className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                    <p className="text-lg">No service fees yet</p>
-                    <p className="text-sm">SICA will add fees here for your students</p>
+                    <p className="text-lg">{t('partnerFees.emptyTitle')}</p>
+                    <p className="text-sm">{t('partnerFees.emptyBody')}</p>
                   </TableCell>
                 </TableRow>
               ) : (
@@ -251,20 +281,34 @@ export default function PartnerFeesPage() {
                       {['Pending', 'Rejected'].includes(fee.status) && (
                         <Button size="sm" className="bg-[#9B1B30] hover:bg-[#7A1625] text-white" onClick={() => setUploadFee(fee)}>
                           <Upload className="h-4 w-4 mr-2" />
-                          Upload Proof
+                          {t('partnerFees.uploadProof')}
                         </Button>
                       )}
                       {fee.status === 'PendingVerification' && (
-                        <span className="text-sm text-amber-600 flex items-center justify-end gap-1">
-                          <AlertCircle className="h-4 w-4" />
-                          Awaiting verification
-                        </span>
+                        <div className="flex items-center justify-end gap-2">
+                          <span className="text-sm text-amber-600 flex items-center gap-1">
+                            <AlertCircle className="h-4 w-4" />
+                            {t('partnerFees.awaitingVerification')}
+                          </span>
+                          {fee.paymentProofDownloadUrl && (
+                            <Button variant="ghost" size="sm" onClick={() => handleDownloadProof(fee)}>
+                              {t('partnerFees.downloadProof')}
+                            </Button>
+                          )}
+                        </div>
                       )}
                       {fee.status === 'Paid' && (
-                        <span className="text-sm text-green-600 flex items-center justify-end gap-1">
-                          <CheckCircle className="h-4 w-4" />
-                          Verified
-                        </span>
+                        <div className="flex items-center justify-end gap-2">
+                          <span className="text-sm text-green-600 flex items-center gap-1">
+                            <CheckCircle className="h-4 w-4" />
+                            {t('partnerFees.verified')}
+                          </span>
+                          {fee.paymentProofDownloadUrl && (
+                            <Button variant="ghost" size="sm" onClick={() => handleDownloadProof(fee)}>
+                              {t('partnerFees.downloadProof')}
+                            </Button>
+                          )}
+                        </div>
                       )}
                     </TableCell>
                   </TableRow>
@@ -279,46 +323,46 @@ export default function PartnerFeesPage() {
       <Dialog open={!!uploadFee} onOpenChange={(open) => !open && setUploadFee(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Upload Payment Proof</DialogTitle>
+            <DialogTitle>{t('partnerFees.dialogTitle')}</DialogTitle>
             <DialogDescription>
-              Upload a screenshot or PDF of the offline payment for {uploadFee?.studentName}.
+              {t('partnerFees.dialogBody', { studentName: uploadFee?.studentName || '' })}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleUpload} className="space-y-4">
             <div>
-              <label className="text-sm font-medium">Fee</label>
+              <label className="text-sm font-medium">{t('partnerFees.dialogFee')}</label>
               <div className="mt-1 text-sm text-gray-600">
                 {uploadFee?.studentName} — {uploadFee ? currencySymbol(uploadFee.currency) : ''}
                 {uploadFee?.amount.toLocaleString()}
               </div>
             </div>
             <div>
-              <label className="text-sm font-medium">Payment Screenshot / PDF</label>
+              <label className="text-sm font-medium">{t('partnerFees.dialogFileLabel')}</label>
               <Input
                 type="file"
                 accept="image/png,image/jpeg,image/jpg,image/webp,application/pdf"
                 onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
               />
-              <p className="text-xs text-gray-500 mt-1">Max 10MB. PNG, JPG, WEBP, or PDF.</p>
+              <p className="text-xs text-gray-500 mt-1">{t('partnerFees.dialogFileHint')}</p>
             </div>
             <div>
-              <label className="text-sm font-medium">Notes (optional)</label>
+              <label className="text-sm font-medium">{t('partnerFees.dialogNotesLabel')}</label>
               <Input
                 value={paymentNotes}
                 onChange={(e) => setPaymentNotes(e.target.value)}
-                placeholder="e.g., Bank transfer reference #12345"
+                placeholder={t('partnerFees.dialogNotesPlaceholder')}
               />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setUploadFee(null)}>
-                Cancel
+                {t('partnerFees.dialogCancel')}
               </Button>
               <Button
                 type="submit"
                 className="bg-[#9B1B30] hover:bg-[#7A1625] text-white"
                 disabled={isUploading || !selectedFile}
               >
-                {isUploading ? 'Uploading...' : 'Submit Proof'}
+                {isUploading ? t('partnerFees.dialogSubmitting') : t('partnerFees.dialogSubmit')}
               </Button>
             </DialogFooter>
           </form>

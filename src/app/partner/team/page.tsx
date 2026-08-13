@@ -23,6 +23,8 @@ import {
   RotateCcw,
   Clock,
   KeyRound,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
@@ -125,6 +127,8 @@ export default function PartnerTeamPage() {
   // member. Cleared when they close the modal.
   const [createdCreds, setCreatedCreds] = useState<{ email: string; password: string } | null>(null);
   const [copiedField, setCopiedField] = useState<'email' | 'password' | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
   const [actionBusyId, setActionBusyId] = useState<string | null>(null);
   // Phase 1.7: per-row resend feedback. We track the last successful
   // resend so the row can show "Invite resent" briefly after a
@@ -390,6 +394,7 @@ export default function PartnerTeamPage() {
     setPasswordFullName('');
     setCreatedCreds(null);
     setCopiedField(null);
+    setShowPassword(false);
   };
 
   // Phase 8: reset a team member's password. The owner types
@@ -428,6 +433,7 @@ export default function PartnerTeamPage() {
     setResetTargetId(null);
     setResetPassword('');
     setResetResult(null);
+    setShowResetPassword(false);
   };
 
   // Tiny client-side password generator. Not cryptographically
@@ -923,13 +929,24 @@ export default function PartnerTeamPage() {
                     <label className="text-sm font-medium text-gray-700 block mb-1">
                       {t('partnerTeam.fieldPassword')}
                     </label>
-                    <Input
-                      type="text"
-                      value={passwordValue}
-                      onChange={(e) => setPasswordValue(e.target.value)}
-                      placeholder={t('partnerTeam.passwordPlaceholder')}
-                      autoComplete="new-password"
-                    />
+                    <div className="relative">
+                      <Input
+                        type={showPassword ? 'text' : 'password'}
+                        value={passwordValue}
+                        onChange={(e) => setPasswordValue(e.target.value)}
+                        placeholder={t('partnerTeam.passwordPlaceholder')}
+                        autoComplete="new-password"
+                        className="pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((s) => !s)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#1B2A4A]"
+                        aria-label={showPassword ? t('partnerTeam.hidePassword') : t('partnerTeam.showPassword')}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                     <p className="text-xs text-gray-500 mt-1">
                       {t('partnerTeam.passwordHint')}
                     </p>
@@ -1101,14 +1118,24 @@ export default function PartnerTeamPage() {
                       {t('partnerTeam.fieldNewPassword')}
                     </label>
                     <div className="flex gap-2">
-                      <Input
-                        type="text"
-                        value={resetPassword}
-                        onChange={(e) => setResetPassword(e.target.value)}
-                        placeholder={t('partnerTeam.passwordPlaceholder')}
-                        autoComplete="new-password"
-                        className="flex-1 font-mono"
-                      />
+                      <div className="relative flex-1">
+                        <Input
+                          type={showResetPassword ? 'text' : 'password'}
+                          value={resetPassword}
+                          onChange={(e) => setResetPassword(e.target.value)}
+                          placeholder={t('partnerTeam.passwordPlaceholder')}
+                          autoComplete="new-password"
+                          className="w-full pr-10 font-mono"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowResetPassword((s) => !s)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#1B2A4A]"
+                          aria-label={showResetPassword ? t('partnerTeam.hidePassword') : t('partnerTeam.showPassword')}
+                        >
+                          {showResetPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
                       <Button
                         type="button"
                         variant="outline"

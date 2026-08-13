@@ -26,16 +26,24 @@ export async function GET(request: NextRequest) {
 
   try {
     // Fetch active rows' status + priority, plus an exact archived count.
-    const [activeRes, archivedCountRes] = await Promise.all([
-      auth.supabase
-        .from('partner_applications')
-        .select('status,priority')
-        .is('archived_at', null),
-      auth.supabase
-        .from('partner_applications')
-        .select('id', { count: 'exact', head: true })
-        .not('archived_at', 'is', null),
-    ]);
+    // Phase 1: scope to the calling partner (and member if applicable).
+    let activeQ = auth.supabase
+      .from('partner_applications')
+      .select('status,priority')
+      .is('archived_at', null)
+      .eq('partner_id', auth.partnerId);
+    let archivedQ = auth.supabase
+      .from('partner_applications')
+      .select('id', { count: 'exact', head: true })
+      .not('archived_at', 'is', null)
+      .eq('partner_id', auth.partnerId);
+
+    if (auth.role === 'member') {
+      activeQ = activeQ.eq('created_by_user_id', auth.user.id);
+      archivedQ = archivedQ.eq('created_by_user_id', auth.user.id);
+    }
+
+    const [activeRes, archivedCountRes] = await Promise.all([activeQ, archivedQ]);
 
     if (activeRes.error) {
       console.error('[partner/applications/stats GET] active rows error:', activeRes.error);

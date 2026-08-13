@@ -21,8 +21,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { apiFetchJson } from '@/lib/api-client';
+import { apiFetch, apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
+import {
+  getPartnerApplicationStatusLabel,
+  getPartnerApplicationPriorityLabel,
+} from '@/lib/partner-enum-labels';
 import type {
   PartnerApplication,
   PartnerApplicationStatus,
@@ -289,7 +293,7 @@ export default function PartnerApplicationsPage() {
       if (debouncedSearch) params.set('search', debouncedSearch);
       if (statusFilter !== 'all') params.set('status', statusFilter);
       if (priorityFilter !== 'all') params.set('priority', priorityFilter);
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/partner/applications/export${params.toString() ? `?${params}` : ''}`,
         { headers: { Accept: 'text/csv' } },
       );
@@ -321,7 +325,7 @@ export default function PartnerApplicationsPage() {
     if (!appToDelete) return;
     setIsDeleting(true);
     try {
-      const res = await fetch(`/api/partner/applications/${appToDelete}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/partner/applications/${appToDelete}`, { method: 'DELETE' });
       if (!res.ok && res.status !== 204) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || t('partnerApps.errorDeleteHttp', { status: res.status }));
@@ -346,7 +350,7 @@ export default function PartnerApplicationsPage() {
     if (!appToRestore) return;
     setIsRestoring(true);
     try {
-      const res = await fetch(`/api/partner/applications/${appToRestore}`, {
+      const res = await apiFetch(`/api/partner/applications/${appToRestore}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ archived: false }),
@@ -373,7 +377,9 @@ export default function PartnerApplicationsPage() {
   };
 
   const getStatusBadge = (status: PartnerApplicationStatus) => (
-    <Badge variant={STATUS_VARIANTS[status]} className="rounded-none">{status}</Badge>
+    <Badge variant={STATUS_VARIANTS[status]} className="rounded-none">
+      {getPartnerApplicationStatusLabel(status, t)}
+    </Badge>
   );
 
   return (
@@ -525,12 +531,12 @@ export default function PartnerApplicationsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t('partnerApps.allStatus')}</SelectItem>
-              <SelectItem value="Draft">Draft</SelectItem>
-              <SelectItem value="Submitted">Submitted</SelectItem>
-              <SelectItem value="In Review">In Review</SelectItem>
-              <SelectItem value="Accepted">Accepted</SelectItem>
-              <SelectItem value="Rejected">Rejected</SelectItem>
-              <SelectItem value="Withdrawn">Withdrawn</SelectItem>
+              <SelectItem value="Draft">{getPartnerApplicationStatusLabel('Draft', t)}</SelectItem>
+              <SelectItem value="Submitted">{getPartnerApplicationStatusLabel('Submitted', t)}</SelectItem>
+              <SelectItem value="In Review">{getPartnerApplicationStatusLabel('In Review', t)}</SelectItem>
+              <SelectItem value="Accepted">{getPartnerApplicationStatusLabel('Accepted', t)}</SelectItem>
+              <SelectItem value="Rejected">{getPartnerApplicationStatusLabel('Rejected', t)}</SelectItem>
+              <SelectItem value="Withdrawn">{getPartnerApplicationStatusLabel('Withdrawn', t)}</SelectItem>
             </SelectContent>
           </Select>
           <Select value={priorityFilter} onValueChange={setPriorityFilter}>
@@ -539,10 +545,10 @@ export default function PartnerApplicationsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t('partnerApps.allPriority')}</SelectItem>
-              <SelectItem value="Urgent">Urgent</SelectItem>
-              <SelectItem value="High">High</SelectItem>
-              <SelectItem value="Normal">Normal</SelectItem>
-              <SelectItem value="Low">Low</SelectItem>
+              <SelectItem value="Urgent">{getPartnerApplicationPriorityLabel('Urgent', t)}</SelectItem>
+              <SelectItem value="High">{getPartnerApplicationPriorityLabel('High', t)}</SelectItem>
+              <SelectItem value="Normal">{getPartnerApplicationPriorityLabel('Normal', t)}</SelectItem>
+              <SelectItem value="Low">{getPartnerApplicationPriorityLabel('Low', t)}</SelectItem>
             </SelectContent>
           </Select>
           <Select value={archivedFilter} onValueChange={(v) => setArchivedFilter(v as typeof archivedFilter)}>
@@ -675,10 +681,10 @@ export default function PartnerApplicationsPage() {
                         <span
                           className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-none ${PRIORITY_VARIANTS[app.priority]}`}
                         >
-                          <Flag className="w-3 h-3" /> {app.priority}
+                          <Flag className="w-3 h-3" /> {getPartnerApplicationPriorityLabel(app.priority, t)}
                         </span>
                       ) : (
-                        <span className="text-xs text-gray-400">Normal</span>
+                        <span className="text-xs text-gray-400">{getPartnerApplicationPriorityLabel('Normal', t)}</span>
                       )}
                     </td>
                     <td className="px-6 py-4 text-[#4B5563]">{app.decision}</td>

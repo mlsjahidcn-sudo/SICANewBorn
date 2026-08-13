@@ -31,8 +31,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { apiFetchJson } from '@/lib/api-client';
+import { apiFetch, apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
+import {
+  getPartnerApplicationStatusLabel,
+  getPartnerApplicationPriorityLabel,
+  getPartnerApplicationDecisionLabel,
+} from '@/lib/partner-enum-labels';
 import type {
   PartnerApplication,
   PartnerApplicationStatus,
@@ -209,7 +214,7 @@ export default function PartnerApplicationDetailPage() {
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      const res = await fetch(`/api/partner/applications/${applicationId}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/partner/applications/${applicationId}`, { method: 'DELETE' });
       if (!res.ok && res.status !== 204) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || t('partnerAppDetail.errorDelete'));
@@ -310,7 +315,7 @@ export default function PartnerApplicationDetailPage() {
     setWithdrawalBusy(true);
     setWithdrawalErr(null);
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/partner/applications/${applicationId}/request-withdrawal`,
         {
           method: 'POST',
@@ -481,17 +486,17 @@ export default function PartnerApplicationDetailPage() {
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-bold text-[#1B2A4A]">{app.studentName}</h1>
             <Badge variant={STATUS_VARIANTS[app.status]} className="rounded-none">
-              {app.status}
+              {getPartnerApplicationStatusLabel(app.status, t)}
             </Badge>
             <Badge variant="outline" className="rounded-none">
-              {app.decision}
+              {getPartnerApplicationDecisionLabel(app.decision, t)}
             </Badge>
             {app.priority && app.priority !== 'Normal' && (
               <span
                 className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-none ${PRIORITY_VARIANTS[app.priority]}`}
                 title={t('partnerAppDetail.priorityTitle')}
               >
-                <Flag className="w-3 h-3" /> {app.priority}
+                <Flag className="w-3 h-3" /> {getPartnerApplicationPriorityLabel(app.priority, t)}
               </span>
             )}
           </div>
@@ -634,19 +639,19 @@ export default function PartnerApplicationDetailPage() {
             <div className="flex items-center gap-2">
               <span className="text-[#4B5563] min-w-24">{t('partnerAppDetail.fieldStatus')}</span>
               <Badge variant={STATUS_VARIANTS[app.status]} className="rounded-none">
-                {app.status}
+                {getPartnerApplicationStatusLabel(app.status, t)}
               </Badge>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-[#4B5563] min-w-24">{t('partnerAppDetail.fieldDecision')}</span>
-              <Badge variant="outline" className="rounded-none">{app.decision}</Badge>
+              <Badge variant="outline" className="rounded-none">{getPartnerApplicationDecisionLabel(app.decision, t)}</Badge>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-[#4B5563] min-w-24">{t('partnerAppDetail.fieldPriority')}</span>
               <span
                 className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-none ${PRIORITY_VARIANTS[app.priority]}`}
               >
-                <Flag className="w-3 h-3" /> {app.priority}
+                <Flag className="w-3 h-3" /> {getPartnerApplicationPriorityLabel(app.priority, t)}
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -974,7 +979,7 @@ export default function PartnerApplicationDetailPage() {
                     <div className={`mt-1.5 w-2.5 h-2.5 rounded-full ${dotColor} flex-shrink-0`} />
                     <div className="flex-1 pb-4 border-l-2 border-gray-200 pl-4">
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
-                        <p className="font-semibold text-[#1B2A4A] text-sm">{event.status}</p>
+                        <p className="font-semibold text-[#1B2A4A] text-sm">{getPartnerApplicationStatusLabel(event.status, t)}</p>
                         <span className="text-xs text-[#4B5563]">
                           {fmtDateTime(event.createdAt)}
                         </span>

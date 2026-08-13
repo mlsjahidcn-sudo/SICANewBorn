@@ -21,8 +21,9 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { apiFetchJson } from '@/lib/api-client';
+import { apiFetch, apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
+import { getPartnerApplicationStatusLabel } from '@/lib/partner-enum-labels';
 import type { PartnerStudent, PartnerStudentStatus } from '@/lib/partner-student-mapper';
 import type { PartnerApplication, PartnerApplicationStatus } from '@/lib/partner-application-mapper';
 import type { PartnerDocument, PartnerDocStatus } from '@/lib/partner-doc-mapper';
@@ -122,7 +123,7 @@ export default function PartnerStudentDetailPage() {
     setIsSavingNotes(true);
     setNotesError(null);
     try {
-      const res = await fetch(`/api/partner/students/${studentId}`, {
+      const res = await apiFetch(`/api/partner/students/${studentId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes: studentNotes }),
@@ -182,7 +183,7 @@ export default function PartnerStudentDetailPage() {
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      const res = await fetch(`/api/partner/students/${studentId}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/partner/students/${studentId}`, { method: 'DELETE' });
       if (!res.ok && res.status !== 204) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || t('partnerStudentDetail.deleting'));
@@ -304,7 +305,7 @@ export default function PartnerStudentDetailPage() {
     const id = noteDeleteId;
     setNoteBusyId(id);
     try {
-      const res = await fetch(`/api/partner/student-notes/${id}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/partner/student-notes/${id}`, { method: 'DELETE' });
       if (!res.ok && res.status !== 204) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || t('partnerStudentDetail.notesLoadError'));
@@ -579,7 +580,7 @@ export default function PartnerStudentDetailPage() {
                           </td>
                           <td className="px-4 py-3 text-[#4B5563]">{a.program}</td>
                           <td className="px-4 py-3">
-                            <Badge variant={APP_STATUS_VARIANTS[a.status]} className="rounded-none">{a.status}</Badge>
+                            <Badge variant={APP_STATUS_VARIANTS[a.status]} className="rounded-none">{getPartnerApplicationStatusLabel(a.status, t)}</Badge>
                           </td>
                           <td className="px-4 py-3 text-[#4B5563]">{a.decision}</td>
                           <td className="px-4 py-3 text-[#4B5563]">{a.priority}</td>

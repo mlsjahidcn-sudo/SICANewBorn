@@ -44,7 +44,7 @@ export default function PartnerPromotionDetailPage() {
         if (!cancelled) setPromotion(res.promotion);
       })
       .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load promotion');
+        if (!cancelled) setError(err instanceof Error ? err.message : t('partnerPromotions.errorDetailLoad'));
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);
@@ -69,10 +69,10 @@ export default function PartnerPromotionDetailPage() {
           onClick={() => router.push('/partner/promotions')}
           className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#1B2A4A]"
         >
-          <ArrowLeft className="h-4 w-4" /> Back to promotions
+          <ArrowLeft className="h-4 w-4" /> {t('partnerPromotions.back')}
         </button>
         <div className="rounded-md bg-red-50 p-4 text-sm text-red-700">
-          {error || 'Promotion not found'}
+          {error || t('partnerPromotions.notFound')}
         </div>
       </div>
     );
