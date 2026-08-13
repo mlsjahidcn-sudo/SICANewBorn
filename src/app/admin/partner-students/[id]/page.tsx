@@ -394,10 +394,12 @@ export default function AdminPartnerStudentDetailPage() {
                   </SelectContent>
                 </Select>
                 {student.linkedStudentProfileId ? (
-                  <Badge className="bg-green-100 text-green-800">
-                    <CheckCircle2 className="w-3 h-3 mr-1" />
-                    {t('adminPartnerStudentDetail.linkedProfile')}
-                  </Badge>
+                  <Link href={`/admin/students/${student.linkedStudentProfileId}`}>
+                    <Badge className="bg-green-100 text-green-800 hover:bg-green-200 cursor-pointer">
+                      <CheckCircle2 className="w-3 h-3 mr-1" />
+                      {t('adminPartnerStudentDetail.linkedProfile')}
+                    </Badge>
+                  </Link>
                 ) : (
                   <Badge variant="outline">{t('adminPartnerStudentDetail.notLinked')}</Badge>
                 )}

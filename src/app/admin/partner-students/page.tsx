@@ -66,6 +66,7 @@ export default function AdminPartnerStudentsPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [archivedFilter, setArchivedFilter] = useState<'active' | 'archived' | 'all'>('active');
   const [partnerFilter, setPartnerFilter] = useState<string>('all');
+  const [linkedFilter, setLinkedFilter] = useState<'all' | 'linked' | 'unlinked'>('all');
   const [partners, setPartners] = useState<PartnerOrg[]>([]);
 
   const [students, setStudents] = useState<PartnerStudent[]>([]);
@@ -93,7 +94,7 @@ export default function AdminPartnerStudentsPage() {
   // Reset page when filters change
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, statusFilter, archivedFilter, partnerFilter, sort, order]);
+  }, [debouncedSearch, statusFilter, archivedFilter, partnerFilter, linkedFilter, sort, order]);
 
   // Load partner orgs for the filter dropdown
   useEffect(() => {
@@ -121,6 +122,8 @@ export default function AdminPartnerStudentsPage() {
       if (archivedFilter === 'archived') params.set('archived', 'only');
       else if (archivedFilter === 'all') params.set('archived', 'true');
       if (partnerFilter !== 'all') params.set('partnerId', partnerFilter);
+      if (linkedFilter === 'linked') params.set('linked', 'true');
+      else if (linkedFilter === 'unlinked') params.set('linked', 'false');
       params.set('sort', sort);
       params.set('order', order);
       params.set('page', String(page));
@@ -142,7 +145,7 @@ export default function AdminPartnerStudentsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [debouncedSearch, statusFilter, archivedFilter, partnerFilter, sort, order, page, t]);
+  }, [debouncedSearch, statusFilter, archivedFilter, partnerFilter, linkedFilter, sort, order, page, t]);
 
   useEffect(() => {
     void fetchStudents();
@@ -345,6 +348,16 @@ export default function AdminPartnerStudentsPage() {
             ))}
           </SelectContent>
         </Select>
+        <Select value={linkedFilter} onValueChange={(v) => setLinkedFilter(v as typeof linkedFilter)}>
+          <SelectTrigger className="w-40 rounded-md">
+            <SelectValue placeholder={t('adminPartnerStudents.filterLinkedPlaceholder')} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t('adminPartnerStudents.filterLinkedAll')}</SelectItem>
+            <SelectItem value="linked">{t('adminPartnerStudents.filterLinkedOnly')}</SelectItem>
+            <SelectItem value="unlinked">{t('adminPartnerStudents.filterUnlinkedOnly')}</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <Card>
@@ -401,7 +414,7 @@ export default function AdminPartnerStudentsPage() {
                   <tr>
                     <td colSpan={9} className="px-4 py-12 text-center text-[#4B5563]">
                       <p className="text-lg font-medium">
-                        {debouncedSearch || statusFilter !== 'all' || archivedFilter !== 'active' || partnerFilter !== 'all'
+                        {debouncedSearch || statusFilter !== 'all' || archivedFilter !== 'active' || partnerFilter !== 'all' || linkedFilter !== 'all'
                           ? t('adminPartnerStudents.emptyFiltered')
                           : t('adminPartnerStudents.emptyNone')}
                       </p>

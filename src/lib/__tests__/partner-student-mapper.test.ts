@@ -66,6 +66,9 @@ describe('partner-student-mapper', () => {
         archivedAt: null,
         archivedByUserId: null,
         applicationCount: null,
+        linkedStudentProfileId: null,
+        partnerName: null,
+        documentCount: null,
       });
     });
 

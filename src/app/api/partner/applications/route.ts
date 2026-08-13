@@ -240,6 +240,21 @@ export async function POST(request: NextRequest) {
     dbRow.status = 'Draft';
     dbRow.decision = 'Pending';
 
+    // Phase D: inherit the linked student profile from the parent
+    // partner_students row so new applications show up in the admin
+    // student detail immediately (not only after a re-link backfill).
+    if (dbRow.student_id) {
+      const service = buildServiceClient();
+      const { data: psLink } = await service
+        .from('partner_students')
+        .select('linked_student_profile_id')
+        .eq('id', dbRow.student_id as string)
+        .maybeSingle();
+      if (psLink?.linked_student_profile_id) {
+        dbRow.linked_student_profile_id = psLink.linked_student_profile_id;
+      }
+    }
+
     // Auto-mint application_number (PA-YYYY-NNNN, per-partner counter)
     // if the partner didn't supply one. Done via RPC because the
     // counter is held in a side table and we want it atomic under

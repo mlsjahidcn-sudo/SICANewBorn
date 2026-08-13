@@ -10,6 +10,7 @@ import { mapPartnerStudentFromDb, parsePartnerStudentStatus } from '@/lib/partne
  *   - status   : exact match (New | In Progress | Applied | Accepted | Rejected)
  *   - archived : 'false' (default, active only) | 'true' (include archived) | 'only' (archived only)
  *   - partnerId: filter by partner organization
+ *   - linked   : 'true' (linked to a student profile) | 'false' (not linked) | 'all' (default)
  *   - sort     : created_at | updated_at | student_name  (default created_at)
  *   - order    : asc | desc                             (default desc)
  *   - page     : 1-indexed                              (default 1)
@@ -38,6 +39,8 @@ export async function GET(request: NextRequest) {
     const status = parsePartnerStudentStatus(searchParams.get('status'));
     const partnerId = searchParams.get('partnerId')?.trim() || '';
     const archivedParam = searchParams.get('archived') || 'false';
+    const linkedRaw = searchParams.get('linked')?.trim() || 'all';
+    const linked = linkedRaw === 'true' ? true : linkedRaw === 'false' ? false : null;
     const sortRaw = searchParams.get('sort') || 'created_at';
     const orderRaw = searchParams.get('order') || 'desc';
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
@@ -69,6 +72,8 @@ export async function GET(request: NextRequest) {
 
     if (status) query = query.eq('status', status);
     if (partnerId) query = query.eq('partner_id', partnerId);
+    if (linked === true) query = query.not('linked_student_profile_id', 'is', null);
+    if (linked === false) query = query.is('linked_student_profile_id', null);
 
     if (search) {
       const safe = search.replace(/[%_]/g, '\\$&');

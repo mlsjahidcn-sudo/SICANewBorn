@@ -154,6 +154,14 @@ export async function POST(
       }
 
       // Upsert the student_profiles row. The trigger may have created an empty one.
+      const extra: Record<string, unknown> = {};
+      if (partnerStudent.notes) {
+        extra.notes = partnerStudent.notes;
+      }
+      const preferredUniversities = partnerStudent.target_university
+        ? [String(partnerStudent.target_university).trim()]
+        : [];
+
       const { error: profileUpsertErr } = await service.from('student_profiles').upsert(
         {
           id: userId,
@@ -164,9 +172,12 @@ export async function POST(
           phone: partnerStudent.student_phone || null,
           nationality: partnerStudent.nationality || null,
           target_degree: '',
+          target_field: partnerStudent.target_program || null,
           target_intake: '',
+          preferred_universities: preferredUniversities.length > 0 ? preferredUniversities : null,
           source: 'Partner',
           status: 'Active',
+          extra: Object.keys(extra).length > 0 ? extra : {},
         },
         { onConflict: 'id' },
       );

@@ -45,6 +45,7 @@ describe('mapStudentFromDb', () => {
       dateOfBirth: '1995-04-12',
       gender: 'Male',
       targetDegree: 'Master',
+      targetField: '',
       targetIntake: 'September 2026',
       isOffline: false, // source !== 'Admin'
       source: 'Online',

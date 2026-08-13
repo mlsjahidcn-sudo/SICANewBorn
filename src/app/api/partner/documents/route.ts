@@ -255,7 +255,7 @@ export async function POST(request: NextRequest) {
     // partner_students row owned by the caller.
     const { data: psRow, error: psErr } = await service
       .from('partner_students')
-      .select('id, partner_id')
+      .select('id, partner_id, linked_student_profile_id')
       .eq('id', partnerStudentId)
       .maybeSingle();
     if (psErr) {
@@ -322,6 +322,9 @@ export async function POST(request: NextRequest) {
       notes,
       status: 'Pending',
       student_id: null,
+      // Phase D: propagate the parent partner_students link so new
+      // documents appear on the admin student detail immediately.
+      linked_student_profile_id: (psRow as { linked_student_profile_id?: string | null }).linked_student_profile_id || null,
     };
 
     const { data, error } = await auth.supabase
