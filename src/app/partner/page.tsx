@@ -12,6 +12,9 @@ import {
   MessageSquare,
   AlertCircle,
   UserCog,
+  Clock,
+  AlertTriangle,
+  Flag,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -21,6 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar } from '@/components/ui/avatar';
 import { apiFetchJson, ApiError } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
+import type { PartnerDocument, PartnerDocStatus } from '@/lib/partner-doc-mapper';
 
 interface PartnerStudent {
   id: string;
@@ -40,6 +44,7 @@ interface PartnerApplication {
   university: string | null;
   program: string | null;
   status: string | null;
+  priority?: string | null;
   submittedAt?: string | null;
   createdAt: string;
 }
@@ -80,6 +85,12 @@ const ACTIVE_APPLICATION_STATUSES = new Set([
   'In Progress',
 ]);
 
+const DOC_STATUS_STYLES: Record<PartnerDocStatus, string> = {
+  Pending: 'bg-amber-100 text-amber-800',
+  Verified: 'bg-emerald-100 text-emerald-800',
+  Rejected: 'bg-red-100 text-red-800',
+};
+
 export default function PartnerDashboard() {
   const { t } = useI18n();
   const [isLoading, setIsLoading] = useState(true);
@@ -99,6 +110,10 @@ export default function PartnerDashboard() {
   // the dashboard — members simply don't see the team card.
   const [team, setTeam] = useState<TeamMember[] | null>(null);
   const [teamLoaded, setTeamLoaded] = useState(false);
+  // Phase I: attention items surfaced on the dashboard.
+  const [pendingDocs, setPendingDocs] = useState<PartnerDocument[]>([]);
+  const [rejectedDocs, setRejectedDocs] = useState<PartnerDocument[]>([]);
+  const [attentionLoading, setAttentionLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -125,7 +140,14 @@ export default function PartnerDashboard() {
           (res) => ({ ok: true as const, res }),
           (err) => ({ ok: false as const, err }),
         );
-        const [dataRes, teamRes] = await Promise.all([dataPromise, teamPromise]);
+        const attentionPromise = Promise.allSettled([
+          apiFetchJson<{ documents: PartnerDocument[] }>('/api/partner/documents?status=Pending&limit=5'),
+          apiFetchJson<{ documents: PartnerDocument[] }>('/api/partner/documents?status=Rejected&limit=3'),
+        ]);
+        const [[dataRes, teamRes], attentionRes] = await Promise.all([
+          Promise.all([dataPromise, teamPromise]),
+          attentionPromise,
+        ]);
         if (cancelled) return;
         const [studentsRes, appsRes] = dataRes;
         const studentsList = Array.isArray(studentsRes?.students) ? studentsRes.students : [];
@@ -142,6 +164,14 @@ export default function PartnerDashboard() {
         if (teamRes.ok) {
           setTeam(Array.isArray(teamRes.res?.team) ? teamRes.res.team : []);
         }
+        // Phase I: attention docs are best-effort; don't fail the
+        // dashboard if the documents endpoint errors.
+        const pending =
+          attentionRes[0].status === 'fulfilled' ? attentionRes[0].value.documents || [] : [];
+        const rejected =
+          attentionRes[1].status === 'fulfilled' ? attentionRes[1].value.documents || [] : [];
+        setPendingDocs(pending);
+        setRejectedDocs(rejected);
         // teamRes.ok === false → 403 for non-owners, network error, etc.
         // Either way, we just leave team=null and hide the card. Don't
         // fail the whole dashboard over it.
@@ -153,6 +183,7 @@ export default function PartnerDashboard() {
       } finally {
         if (!cancelled) {
           setTeamLoaded(true);
+          setAttentionLoading(false);
           setIsLoading(false);
         }
       }
@@ -170,6 +201,12 @@ export default function PartnerDashboard() {
     ACTIVE_APPLICATION_STATUSES.has(a.status || ''),
   ).length;
   const acceptedApplications = applications.filter((a) => a.status === 'Accepted').length;
+  // Phase I: urgent/high-priority applications surfaced in the
+  // attention panel. The source list is the same 100-row slice the
+  // dashboard already loads — good enough for a directional signal.
+  const urgentApplications = applications
+    .filter((a) => a.priority === 'Urgent' || a.priority === 'High')
+    .slice(0, 5);
   // Team counts: the team GET is owner-only. `team === null` means the
   // caller's not an owner (or the fetch failed) — hide the card in that
   // case. `team` is the full array (not paginated by the team endpoint
@@ -512,6 +549,122 @@ export default function PartnerDashboard() {
                   {t('partnerDashboard.shareLead')}
                 </Link>
               </Button>
+            </CardContent>
+          </Card>
+
+          {/* Phase I: needs-attention panel. Surfaces pending/rejected
+              documents and urgent/high-priority applications so the
+              partner sees what needs action without digging through
+              lists. */}
+          <Card className="rounded-none">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-[#9B1B30]" />
+                {t('partnerDashboard.attentionTitle')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              {attentionLoading ? (
+                <div className="space-y-2">
+                  <div className="h-4 bg-gray-200 animate-pulse w-3/4" />
+                  <div className="h-4 bg-gray-200 animate-pulse w-1/2" />
+                </div>
+              ) : (
+                <>
+                  {/* Pending documents */}
+                  <div>
+                    <h4 className="text-sm font-semibold text-[#1B2A4A] flex items-center gap-1 mb-2">
+                      <Clock className="h-3.5 w-3.5 text-amber-600" />
+                      {t('partnerDashboard.pendingDocsTitle', { count: pendingDocs.length })}
+                    </h4>
+                    {pendingDocs.length === 0 ? (
+                      <p className="text-xs text-[#4B5563]">{t('partnerDashboard.pendingDocsEmpty')}</p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {pendingDocs.map((doc) => (
+                          <li key={doc.id}>
+                            <Link
+                              href={`/partner/documents?partnerApplicationId=${encodeURIComponent(
+                                doc.partnerApplication?.id || '',
+                              )}`}
+                              className="text-sm text-[#1B2A4A] hover:text-[#9B1B30] hover:underline line-clamp-1"
+                            >
+                              {doc.name}
+                            </Link>
+                            <p className="text-xs text-[#4B5563]">
+                              {doc.partnerStudent?.name || t('partnerCommon.placeholderDash')}
+                              {' · '}
+                              <span className={`px-1 py-0.5 text-[10px] ${DOC_STATUS_STYLES[doc.status]}`}>
+                                {t(`partnerDocs.statusBadge.${doc.status.toLowerCase()}`)}
+                              </span>
+                            </p>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+
+                  {/* Rejected documents */}
+                  {(rejectedDocs.length > 0 || !attentionLoading) && (
+                    <div>
+                      <h4 className="text-sm font-semibold text-[#1B2A4A] flex items-center gap-1 mb-2">
+                        <AlertCircle className="h-3.5 w-3.5 text-red-600" />
+                        {t('partnerDashboard.rejectedDocsTitle', { count: rejectedDocs.length })}
+                      </h4>
+                      {rejectedDocs.length === 0 ? (
+                        <p className="text-xs text-[#4B5563]">{t('partnerDashboard.rejectedDocsEmpty')}</p>
+                      ) : (
+                        <ul className="space-y-2">
+                          {rejectedDocs.map((doc) => (
+                            <li key={doc.id}>
+                              <Link
+                                href={`/partner/documents?partnerApplicationId=${encodeURIComponent(
+                                  doc.partnerApplication?.id || '',
+                                )}`}
+                                className="text-sm text-[#1B2A4A] hover:text-[#9B1B30] hover:underline line-clamp-1"
+                              >
+                                {doc.name}
+                              </Link>
+                              {doc.rejectionReason && (
+                                <p className="text-xs text-red-700 line-clamp-1">{doc.rejectionReason}</p>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Urgent / high-priority applications */}
+                  <div>
+                    <h4 className="text-sm font-semibold text-[#1B2A4A] flex items-center gap-1 mb-2">
+                      <Flag className="h-3.5 w-3.5 text-[#9B1B30]" />
+                      {t('partnerDashboard.urgentAppsTitle', { count: urgentApplications.length })}
+                    </h4>
+                    {urgentApplications.length === 0 ? (
+                      <p className="text-xs text-[#4B5563]">{t('partnerDashboard.urgentAppsEmpty')}</p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {urgentApplications.map((app) => (
+                          <li key={app.id}>
+                            <Link
+                              href={`/partner/applications/${app.id}`}
+                              className="text-sm text-[#1B2A4A] hover:text-[#9B1B30] hover:underline line-clamp-1"
+                            >
+                              {app.studentName || t('partnerDashboard.unnamed')} — {app.university}
+                            </Link>
+                            <p className="text-xs text-[#4B5563]">
+                              {app.program}
+                              {' · '}
+                              <span className="font-medium text-[#9B1B30]">{app.priority}</span>
+                            </p>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>

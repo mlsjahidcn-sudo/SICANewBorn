@@ -1207,6 +1207,14 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerDashboard.shareLead': 'Share Lead',
     'partnerDashboard.unnamed': 'Unnamed',
     'partnerDashboard.failedToLoad': 'Failed to load dashboard',
+    // Phase I: dashboard attention panel.
+    'partnerDashboard.attentionTitle': 'Needs Attention',
+    'partnerDashboard.pendingDocsTitle': 'Pending Documents ({{count}})',
+    'partnerDashboard.pendingDocsEmpty': 'No pending documents.',
+    'partnerDashboard.rejectedDocsTitle': 'Rejected Documents ({{count}})',
+    'partnerDashboard.rejectedDocsEmpty': 'No rejected documents.',
+    'partnerDashboard.urgentAppsTitle': 'Urgent Applications ({{count}})',
+    'partnerDashboard.urgentAppsEmpty': 'No urgent or high-priority applications.',
     // Partner Portal — login
     'partnerLogin.title': 'SICA Partner Portal',
     'partnerLogin.subtitle': 'Sign in to your partner account',
@@ -4465,6 +4473,14 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerDashboard.shareLead': '分享线索',
     'partnerDashboard.unnamed': '未命名',
     'partnerDashboard.failedToLoad': '加载仪表盘失败',
+    // Phase I: dashboard attention panel.
+    'partnerDashboard.attentionTitle': '需要关注',
+    'partnerDashboard.pendingDocsTitle': '待审核文件（{{count}}）',
+    'partnerDashboard.pendingDocsEmpty': '没有待审核文件。',
+    'partnerDashboard.rejectedDocsTitle': '已驳回文件（{{count}}）',
+    'partnerDashboard.rejectedDocsEmpty': '没有已驳回文件。',
+    'partnerDashboard.urgentAppsTitle': '紧急申请（{{count}}）',
+    'partnerDashboard.urgentAppsEmpty': '没有紧急或高优先级申请。',
     // Partner Portal — login
     'partnerLogin.title': 'SICA 合作方门户',
     'partnerLogin.subtitle': '登录您的合作方账户',
