@@ -89,6 +89,18 @@ export default async function HomePage() {
 
   return (
     <>
+      {/* Phase 66: preload the hero background image so the LCP
+          element (dark hero with title + CTAs) paints without
+          competing with other assets for bandwidth. AVIF (~285KB)
+          lives at /hero-bg.avif and is referenced as a CSS
+          background-image at line ~111. fetchpriority="high"
+          tells the browser to deprioritize anything else. */}
+      <link
+        rel="preload"
+        as="image"
+        href="/hero-bg.avif"
+        fetchPriority="high"
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceSchema) }}

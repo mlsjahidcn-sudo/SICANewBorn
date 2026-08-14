@@ -1,6 +1,5 @@
-import type { MetadataRoute } from 'next';
-import { cookies } from 'next/headers';
-import { translations, type Locale } from './i18n-translations';
+import { translations } from './i18n-translations';
+import { getServerLocale } from './server-t';
 
 import { SITE_URL } from '@/lib/site-url';
 export function getOrganizationSchema() {
@@ -110,9 +109,18 @@ export function getWebsiteSchema() {
   };
 }
 
+/**
+ * Phase 66: use the cached `getServerLocale()` helper (request-scoped
+ * via React's `cache()`) instead of a fresh cookie read. The locale
+ * lookup is now shared with the rest of the homepage render path
+ * (layout's generateMetadata + page's getServerT) — 3x cookie reads
+ * collapse to 1x per request.
+ *
+ * Kept async because getServerLocale() returns a Promise<Locale>;
+ * callers `await` it inside a Promise.all.
+ */
 export async function getServiceSchema() {
-  const cookieStore = await cookies();
-  const locale: Locale = cookieStore.get('sica-locale')?.value === 'zh' ? 'zh' : 'en';
+  const locale = await getServerLocale();
   const t = (k: string) => translations[locale]?.[k] ?? k;
   return {
     '@context': 'https://schema.org',

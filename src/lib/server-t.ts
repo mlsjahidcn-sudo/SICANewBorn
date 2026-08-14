@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers';
+import { cache } from 'react';
 import { t, DEFAULT_LOCALE, type Locale } from './i18n-translations';
 
 /**
@@ -16,7 +17,7 @@ import { t, DEFAULT_LOCALE, type Locale } from './i18n-translations';
  * }
  * ```
  *
- * Reads the `sica-locale` cookie set by the client-side `I18nProvider`.
+ * Reads the `sica-locale` cookie set from the client-side `I18nProvider`.
  * Falls back to English ('en') when the cookie is missing or invalid.
  */
 export async function getServerT(): Promise<(
@@ -30,10 +31,16 @@ export async function getServerT(): Promise<(
 /**
  * Read the active locale from the `sica-locale` cookie. Falls back to
  * the default locale (`en`) when the cookie is missing or invalid.
+ *
+ * Phase 66: wrapped in React's `cache()` so the homepage render path
+ * (layout's generateMetadata + page's getServerT + structured-data's
+ * getServiceSchema) reads the cookie ONCE per request instead of 3x.
+ * cache() is request-scoped (auto-invalidates per request), so there's
+ * no risk of cross-request leakage.
  */
-export async function getServerLocale(): Promise<Locale> {
+export const getServerLocale = cache(async (): Promise<Locale> => {
   const cookieStore = await cookies();
   return cookieStore.get('sica-locale')?.value === 'zh' ? 'zh' : 'en';
-}
+});
 
 export { t, DEFAULT_LOCALE, type Locale };

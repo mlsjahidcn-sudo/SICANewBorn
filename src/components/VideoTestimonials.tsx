@@ -329,7 +329,10 @@ function VideoCardButton({
           sizes={compact ? '(max-width: 640px) 100vw, 50vw' : '(max-width: 768px) 100vw, 50vw'}
           className={`${objectPosition} object-cover group-hover:scale-[1.03] transition-transform duration-500`}
           unoptimized
-          priority={!compact}
+          // Posters live in the testimonials section, well below the fold.
+          // Don't preload — let the browser lazy-load them as the user
+          // scrolls. Saves ~360KB of eager preload (51+265+14+31 KB) on
+          // initial paint for users who never reach the section.
         />
 
         {/* Bottom gradient — keeps duration badge + verified
