@@ -208,15 +208,21 @@ export default async function HomePage() {
                   href={`/universities/${u.slug}`}
                   className="group flex items-center gap-3 bg-white/95 hover:bg-white p-3 border-2 border-transparent hover:border-[#D4A853] transition-all duration-200"
                 >
-                  {/* Plain <img> instead of UniversityLogo because
-                      the existing component only supports 'card' (big
-                      64x64) and 'detail' (88x88 round) variants. The
-                      hero card needs an inline 40x40 square logo. */}
-                  {u.logo && u.logo.startsWith('http') ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                  {/* next/image for the 3 above-the-fold hero logos. Priority
+                      hint tells Next to preload them with the document
+                      so LCP isn't blocked by a later-discovered image
+                      request. Logos are self-hosted at /university-logos
+                      (AVIF, ~3-47 KB each, total 220 KB for all 8) so
+                      they load from the same edge as the rest of the
+                      static assets instead of an external CDN. */}
+                  {u.logo ? (
+                    <Image
                       src={u.logo}
                       alt={u.name}
+                      width={48}
+                      height={48}
+                      priority
+                      sizes="48px"
                       className="w-10 h-10 object-contain bg-white border border-gray-200 shrink-0"
                     />
                   ) : (
@@ -373,13 +379,15 @@ export default async function HomePage() {
                 className="group flex flex-col items-center gap-2"
                 title={u.name}
               >
-                {u.logo && u.logo.startsWith('http') ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                {u.logo ? (
+                  <Image
                     src={u.logo}
                     alt={u.name}
-                    className="h-10 sm:h-12 w-auto object-contain grayscale group-hover:grayscale-0 transition-all duration-200"
+                    width={48}
+                    height={48}
                     loading="lazy"
+                    sizes="48px"
+                    className="h-10 sm:h-12 w-auto object-contain grayscale group-hover:grayscale-0 transition-all duration-200"
                   />
                 ) : (
                   <div className="h-10 sm:h-12 w-10 sm:w-12 bg-white border border-gray-200 flex items-center justify-center">
@@ -601,12 +609,13 @@ export default async function HomePage() {
                   className="group block bg-white border-2 border-gray-200 hover:border-[#9B1B30] transition-colors overflow-hidden"
                 >
                   <div className="relative aspect-[3/4] bg-gray-100">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <Image
                       src={admissionImageUrl(a.image_path)}
                       alt={`${a.student_name} — ${a.university_name}`}
-                      className="w-full h-full object-cover"
+                      fill
                       loading="lazy"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      className="object-cover"
                     />
                   </div>
                   <div className="p-4">
