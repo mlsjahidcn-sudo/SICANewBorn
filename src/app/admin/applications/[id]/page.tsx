@@ -82,12 +82,27 @@ export default function AdminApplicationDetailPage() {
       setApp(application);
     } catch (err) {
       const e = err as { status?: number; message?: string };
-      if (e.status === 404) setNotFound(true);
-      else setError(e.message || 'Failed to load application');
+      if (e.status === 404) {
+        // Phase 62 (Bug 7): the route only queries student_applications.
+        // If the id belongs to a partner_applications row (the unified
+        // list correctly routes those to /admin/partner-applications/[id],
+        // but direct-URL navigation lands here), redirect instead of
+        // showing a misleading 404.
+        try {
+          const probe = await apiFetch(`/api/admin/partner-applications/${id}`);
+          if (probe.ok) {
+            router.replace(`/admin/partner-applications/${id}`);
+            return;
+          }
+        } catch {
+          // fall through to setNotFound
+        }
+        setNotFound(true);
+      } else setError(e.message || 'Failed to load application');
     } finally {
       setIsLoading(false);
     }
-  }, [id]);
+  }, [id, router]);
 
   useEffect(() => {
     load();

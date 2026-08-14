@@ -11,17 +11,24 @@ function generateTempPassword() {
  * POST /api/admin/partner-students/[id]/link-profile
  *
  * Links a partner-created student to a real `student_profiles` row.
- * Two modes:
- *   1. Create mode (no existingStudentProfileId):
+ * Three modes:
+ *   1. Create mode (no existingStudentProfileId, no unlink):
  *      - Creates an auth.users row with a random password
  *      - Creates/upserts a student_profiles row
  *      - Sets partner_students.linked_student_profile_id
  *   2. Link mode (existingStudentProfileId provided):
  *      - Verifies the student_profiles row exists
  *      - Sets partner_students.linked_student_profile_id
+ *   3. Unlink mode (Phase 62 / Bug 3: body.unlink === true):
+ *      - Sets partner_students.linked_student_profile_id = null
+ *      - The propagate_partner_student_link trigger fans the null
+ *        out to child rows that were previously linked to this
+ *        student (rows that were linked to a DIFFERENT student are
+ *        preserved — see Phase 62 migration).
  *
- * In both modes, the handler also backfills linked_student_profile_id
- * on the student's partner_applications and student_documents rows.
+ * In all modes, the handler also backfills linked_student_profile_id
+ * on the student's partner_applications and student_documents rows
+ * where the value is still null.
  *
  * Auth: any admin or super_admin. Uses service-role client.
  */
@@ -93,6 +100,24 @@ export async function POST(
     }
     if (!partnerStudent) {
       return NextResponse.json({ error: 'Partner student not found' }, { status: 404 });
+    }
+
+    // Phase 62 (Bug 3): unlink mode. Trumps any other field.
+    // The propagate trigger (with the Phase 62 guard) will fan the
+    // null out to child rows that were linked to this same student.
+    // (Rows linked to a *different* student are preserved — that's
+    // intentional, see the migration comment.)
+    if (body.unlink === true) {
+      const { error: unlinkErr } = await service
+        .from('partner_students')
+        .update({ linked_student_profile_id: null })
+        .eq('id', id);
+      if (unlinkErr) {
+        console.error('[admin/partner-students/:id/link-profile] unlink error:', unlinkErr);
+        return NextResponse.json({ error: unlinkErr.message }, { status: 500 });
+      }
+      const student = await getStudentDetail(service, id);
+      return NextResponse.json({ student, unlinked: true });
     }
 
     let profileId: string;

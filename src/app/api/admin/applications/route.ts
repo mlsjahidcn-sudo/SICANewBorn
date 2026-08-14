@@ -141,6 +141,9 @@ export async function GET(request: NextRequest) {
           // doesn't exist on partner_applications) — over-fetch
           // so we can JS-side filter to source='Partner' later.
           fetchLimit: partnerFetchLimit,
+          // Phase 62 (Bug 5): hide archived (soft-deleted) by
+          // default; opt-in via ?archived=true.
+          includeArchived: searchParams.get('archived') === 'true',
         })
       : Promise.resolve<{ rows: UnifiedPartnerRow[]; error?: undefined }>({ rows: [] });
 
@@ -302,6 +305,8 @@ async function fetchPartnerApplications(
     statuses: string[];
     search: string | null;
     fetchLimit: number;
+    // Phase 62 (Bug 5): default hides archived (soft-deleted) rows.
+    includeArchived?: boolean;
   },
 ): Promise<{ rows: UnifiedPartnerRow[]; error?: { message: string } }> {
   // Phase 33: also pull the partner org's company_name so the
@@ -326,6 +331,16 @@ async function fetchPartnerApplications(
     query = query.eq('status', opts.statuses[0]);
   } else if (opts.statuses.length > 1) {
     query = query.in('status', opts.statuses);
+  }
+
+  // Phase 62 (Bug 5): by default hide archived (soft-deleted)
+  // partner applications so the unified admin list matches the
+  // behavior of /admin/partner-students/[id]/applications.
+  // Pass ?archived=true to surface them.
+  if (opts.includeArchived) {
+    // no extra filter
+  } else {
+    query = query.is('archived_at', null);
   }
 
   if (opts.search) {

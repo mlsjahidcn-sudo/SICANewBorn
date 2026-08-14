@@ -18,6 +18,7 @@ import {
   AlertCircle,
   Trash2,
   ArchiveRestore,
+  Unlink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -54,6 +55,7 @@ import {
 import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 import type { PartnerStudent } from '@/lib/partner-student-mapper';
+import type { PartnerStudentNote } from '@/lib/partner-student-note-mapper';
 import type { PartnerApplication } from '@/lib/partner-application-mapper';
 
 type PartnerDocument = {
@@ -83,8 +85,16 @@ export default function AdminPartnerStudentDetailPage() {
   const [applications, setApplications] = useState<PartnerApplication[]>([]);
   const [documents, setDocuments] = useState<PartnerDocument[]>([]);
   const [tabLoading, setTabLoading] = useState<{ [k: string]: boolean }>({});
+  // Phase 62 (UX gap 2): partner_student_notes activity feed surfaced
+  // as read-only on the admin detail page. Loaded lazily on Notes tab open.
+  const [partnerNotes, setPartnerNotes] = useState<PartnerStudentNote[]>([]);
+  const [partnerNotesLoaded, setPartnerNotesLoaded] = useState(false);
 
   const [linkDialogOpen, setLinkDialogOpen] = useState(searchParams.get('link') === 'true');
+  // Phase 62 (Bug 3): unlink confirmation dialog state.
+  const [unlinkDialogOpen, setUnlinkDialogOpen] = useState(false);
+  const [isUnlinking, setIsUnlinking] = useState(false);
+  const [unlinkError, setUnlinkError] = useState<string | null>(null);
   const [existingProfileId, setExistingProfileId] = useState('');
   const [isLinking, setIsLinking] = useState(false);
   const [linkError, setLinkError] = useState<string | null>(null);
@@ -199,6 +209,28 @@ export default function AdminPartnerStudentDetailPage() {
       setStatusError(err instanceof Error ? err.message : t('adminPartnerStudentDetail.errorFailedUpdate'));
     } finally {
       setIsUpdatingStatus(false);
+    }
+  };
+
+  // Phase 62 (Bug 3): unlink handler. Calls the same link-profile
+  // endpoint with { unlink: true }; the route sets linked_student_profile_id
+  // to null and the propagation trigger fans the null out to child rows
+  // that were linked to this same student.
+  const handleUnlink = async () => {
+    if (!student?.linkedStudentProfileId) return;
+    setIsUnlinking(true);
+    setUnlinkError(null);
+    try {
+      const { student: updated } = await apiFetchJson<{ student: PartnerStudent }>(
+        `/api/admin/partner-students/${studentId}/link-profile`,
+        { method: 'POST', body: JSON.stringify({ unlink: true }) },
+      );
+      setStudent(updated);
+      setUnlinkDialogOpen(false);
+    } catch (err) {
+      setUnlinkError(err instanceof Error ? err.message : 'Failed to unlink');
+    } finally {
+      setIsUnlinking(false);
     }
   };
 
@@ -359,6 +391,16 @@ export default function AdminPartnerStudentDetailPage() {
               {t('adminPartnerStudentDetail.linkProfile')}
             </Button>
           )}
+          {student.linkedStudentProfileId && (
+            <Button
+              variant="outline"
+              className="text-red-600 hover:text-red-700 border-red-200"
+              onClick={() => setUnlinkDialogOpen(true)}
+            >
+              <Unlink className="h-4 w-4 mr-2" />
+              {t('adminPartnerStudentDetail.unlinkProfile')}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -434,6 +476,19 @@ export default function AdminPartnerStudentDetailPage() {
         setActiveTab(v);
         if (v === 'applications') loadTab('applications');
         if (v === 'documents') loadTab('documents');
+        // Phase 62 (UX gap 2): lazy-load the partner notes feed on first
+        // open. Subsequent switches reuse the cached array.
+        if (v === 'notes' && !partnerNotesLoaded) {
+          setPartnerNotesLoaded(true);
+          apiFetchJson<{ notes: PartnerStudentNote[] }>(
+            `/api/admin/partner-students/${studentId}/notes`,
+          )
+            .then((res) => setPartnerNotes(res.notes || []))
+            .catch((err) => {
+              console.error('[admin/partner-student detail] failed to load partner notes:', err);
+              setPartnerNotesLoaded(false); // retry on next switch
+            });
+        }
       }}>
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview">{t('adminPartnerStudentDetail.tabOverview')}</TabsTrigger>
@@ -574,6 +629,51 @@ export default function AdminPartnerStudentDetailPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Phase 62 (UX gap 2): read-only partner_student_notes feed.
+          // These are the activity-style notes partner staff write via
+          // /partner/students/[id]. The admin can read but not write —
+          // write paths stay on the partner portal (gated on team
+          // membership). */}
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('adminPartnerStudentDetail.partnerNotesTitle')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {!partnerNotesLoaded ? (
+                <div className="space-y-2">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="h-16 bg-gray-100 rounded animate-pulse" />
+                  ))}
+                </div>
+              ) : partnerNotes.length === 0 ? (
+                <p className="text-sm text-gray-500 py-4 text-center">
+                  {t('adminPartnerStudentDetail.partnerNotesEmpty')}
+                </p>
+              ) : (
+                <div className="divide-y">
+                  {partnerNotes.map((n) => (
+                    <div key={n.id} className="py-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-sm font-medium text-[#1B2A4A]">
+                          {n.authorEmail || (n.authorUserId ? t('adminPartnerStudentDetail.partnerNotesUnknownAuthor') : t('adminPartnerStudentDetail.partnerNotesOrphanAuthor'))}
+                        </span>
+                        {n.pinned && (
+                          <span className="text-[10px] uppercase tracking-wide bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded">
+                            {t('adminPartnerStudentDetail.partnerNotesPinned')}
+                          </span>
+                        )}
+                        <span className="text-xs text-gray-400">
+                          {new Date(n.createdAt).toLocaleString()}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-700 whitespace-pre-wrap">{n.body}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
@@ -622,6 +722,43 @@ export default function AdminPartnerStudentDetailPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Phase 62 (Bug 3): unlink confirmation dialog. Warns that
+          child applications/docs that were linked to this same
+          student will be detached (rows linked to a different
+          student are preserved — see the migration comment). */}
+      <AlertDialog open={unlinkDialogOpen} onOpenChange={setUnlinkDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('adminPartnerStudentDetail.unlinkTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('adminPartnerStudentDetail.unlinkBody')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {unlinkError && (
+            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-3">
+              {unlinkError}
+            </p>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isUnlinking}>
+              {t('common.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleUnlink();
+              }}
+              disabled={isUnlinking}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isUnlinking
+                ? t('adminPartnerStudentDetail.unlinking')
+                : t('adminPartnerStudentDetail.unlinkConfirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

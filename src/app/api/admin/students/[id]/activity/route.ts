@@ -39,9 +39,13 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
   try {
     const service = buildServiceClient();
 
-    // Fetch all three sources. The timeline needs application_ids, so we
+// Fetch all three sources. The timeline needs application_ids, so we
     // fetch applications first, then the timeline in a 2nd round.
-    const [profileRes, appsRes, notifRes] = await Promise.all([
+    // Phase 62 (Bug 2): also pull partner_applications linked via
+    // the bridge column so partner-side status changes (which write
+    // application_timeline rows with partner_application_id set)
+    // appear in the activity feed.
+    const [profileRes, appsRes, partnerAppsRes, notifRes] = await Promise.all([
       service
         .from('student_profiles')
         .select('id, created_at, updated_at, status, source, first_name, last_name, email')
@@ -52,6 +56,10 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
         .select('id')
         .eq('student_id', id),
       service
+        .from('partner_applications')
+        .select('id')
+        .eq('linked_student_profile_id', id),
+      service
         .from('student_notifications')
         .select('id, title, body, type, created_at, read')
         .eq('student_id', id)
@@ -60,27 +68,52 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     ]);
 
     // Now fetch the timeline for those applications (only if there are any)
+    // Phase 62 (Bug 2): fetch timeline rows for BOTH the student-app
+    // and partner-app sets in parallel, then merge. The
+    // application_timeline table has a CHECK constraint that exactly
+    // one of (application_id, partner_application_id) is set (see
+    // database/2026-06-06_partner_app_timeline_and_notifications.sql).
     const applicationIds = (appsRes.data || []).map((a) => a.id);
-    const timelineRes =
+    const partnerApplicationIds = (partnerAppsRes.data || []).map((a) => a.id);
+
+    const [studentTimelineRes, partnerTimelineRes] = await Promise.all([
       applicationIds.length > 0
-        ? await service
+        ? service
             .from('application_timeline')
-            // Schema is (id, application_id, status, notes, created_by, created_at)
-            // — see database/migration-supabase-cloud.sql
-            .select('id, application_id, status, notes, created_at')
+            .select('id, application_id, partner_application_id, status, notes, created_at')
             .in('application_id', applicationIds)
             .order('created_at', { ascending: false })
             .limit(50)
-        : { data: [], error: null };
+        : Promise.resolve({ data: [], error: null }),
+      partnerApplicationIds.length > 0
+        ? service
+            .from('application_timeline')
+            .select('id, application_id, partner_application_id, status, notes, created_at')
+            .in('partner_application_id', partnerApplicationIds)
+            .order('created_at', { ascending: false })
+            .limit(50)
+        : Promise.resolve({ data: [], error: null }),
+    ]);
 
     const profile = profileRes.data;
-    const timeline = (timelineRes.data || []) as Array<{
-      id: string;
-      application_id: string;
-      status: string;
-      notes: string | null;
-      created_at: string;
-    }>;
+    const timeline = [
+      ...((studentTimelineRes.data || []) as Array<{
+        id: string;
+        application_id: string | null;
+        partner_application_id: string | null;
+        status: string;
+        notes: string | null;
+        created_at: string;
+      }>),
+      ...((partnerTimelineRes.data || []) as Array<{
+        id: string;
+        application_id: string | null;
+        partner_application_id: string | null;
+        status: string;
+        notes: string | null;
+        created_at: string;
+      }>),
+    ];
     const notifications = (notifRes.data || []) as Array<{
       id: string;
       title: string;
@@ -125,7 +158,15 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
         type: 'application',
         message: t.notes || t.status || 'Application event',
         timestamp: t.created_at,
-        meta: { application_id: t.application_id, status: t.status },
+        meta: {
+          // Phase 62 (Bug 2): one of these is null per the
+          // application_timeline CHECK constraint. Surface both so
+          // the UI can tell which surface the event came from.
+          application_id: t.application_id,
+          partner_application_id: t.partner_application_id,
+          surface: t.partner_application_id ? 'partner' : 'student',
+          status: t.status,
+        },
       });
     }
 

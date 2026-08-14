@@ -11,6 +11,7 @@
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   ArrowLeft, Edit, AlertCircle, FileText, FileCheck, FileX, Clock,
   Plus, Mail, RefreshCw, Trash2,
@@ -55,6 +56,10 @@ interface StudentApplication {
   target_intake?: string;
   created_at: string;
   application_number?: string;
+  // Phase 62 (Bug 1): distinguishes partner-sourced rows in the merged
+  // feed. 'partner' = from partner_applications via the bridge column,
+  // undefined = direct student_applications row.
+  surface?: 'student' | 'partner';
 }
 
 interface ActivityEvent {
@@ -348,7 +353,11 @@ export default function AdminStudentDetailPage() {
               ) : (
                 <div className="divide-y">
                   {documents.map((doc) => (
-                    <div key={doc.id} className="flex items-center gap-4 py-3">
+                    <Link
+                      key={doc.id}
+                      href={`/admin/documents/${doc.id}`}
+                      className="flex items-center gap-4 py-3 hover:bg-gray-50 -mx-3 px-3 rounded transition-colors"
+                    >
                       {doc.status === 'Verified' ? (
                         <FileCheck className="h-5 w-5 text-green-600" />
                       ) : doc.status === 'Rejected' ? (
@@ -373,7 +382,7 @@ export default function AdminStudentDetailPage() {
                       <Badge className={docStatusColor[doc.status] || 'bg-gray-100'}>
                         {doc.status}
                       </Badge>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               )}
@@ -398,10 +407,23 @@ export default function AdminStudentDetailPage() {
               ) : (
                 <div className="divide-y">
                   {applications.map((app) => (
-                    <div key={app.id} className="flex items-center gap-4 py-3">
+                    <Link
+                      key={app.id}
+                      href={
+                        app.surface === 'partner'
+                          ? `/admin/partner-applications/${app.id}`
+                          : `/admin/applications/${app.id}`
+                      }
+                      className="flex items-center gap-4 py-3 hover:bg-gray-50 -mx-3 px-3 rounded transition-colors"
+                    >
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm">
+                        <p className="font-medium text-sm flex items-center gap-2">
                           {app.application_number || app.id.slice(0, 8)}
+                          {app.surface === 'partner' && (
+                            <span className="text-[10px] uppercase tracking-wide bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded">
+                              {t('adminStudentDetail.appSurfacePartner')}
+                            </span>
+                          )}
                         </p>
                         <p className="text-xs text-gray-500">
                           {app.target_degree || '—'} • {app.target_intake || '—'} • {app.university_slug || '—'}
@@ -415,7 +437,7 @@ export default function AdminStudentDetailPage() {
                       <Badge className={appStatusColor[app.status as ApplicationStatus] || 'bg-gray-100'}>
                         {app.status}
                       </Badge>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               )}

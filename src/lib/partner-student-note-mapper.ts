@@ -39,7 +39,7 @@ export interface PartnerStudentNote {
   updatedAt: string;
 }
 
-interface RawPartnerStudentNote {
+export interface RawPartnerStudentNote {
   id: string;
   partner_student_id: string;
   partner_id: string;

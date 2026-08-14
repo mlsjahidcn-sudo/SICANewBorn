@@ -45,7 +45,21 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
         .order('created_at', { ascending: false }),
     ]);
 
-    const data = [...(studentAppsRes.data || []), ...(partnerAppsRes.data || [])].sort(
+    // Phase 62 (Bug 1): partner_applications uses different field names
+    // (university/program/degree/intake) than student_applications
+    // (university_slug/program_id/target_degree/target_intake) which the
+    // admin UI reads. Map partner rows to the same shape so the UI sees a
+    // unified field set without caring about the source.
+    const normalizedPartnerApps = (partnerAppsRes.data || []).map((row: Record<string, unknown>) => ({
+      ...row,
+      surface: 'partner' as const,
+      university_slug: (row.university as string | undefined) ?? null,
+      program_id: (row.program as string | undefined) ?? null,
+      target_degree: (row.degree as string | undefined) ?? null,
+      target_intake: (row.intake as string | undefined) ?? null,
+    }));
+
+    const data = [...(studentAppsRes.data || []), ...normalizedPartnerApps].sort(
       (a, b) =>
         new Date((b as { created_at?: string }).created_at || 0).getTime() -
         new Date((a as { created_at?: string }).created_at || 0).getTime(),

@@ -43,6 +43,26 @@ function notifyMessageFor(
   return `Your "${docName}" document was rejected.${reason} Please re-upload a corrected version.`;
 }
 
+// Phase 62 (Bug 4): partner-side notifications — same wording as
+// the single-doc PATCH (mirrors src/app/api/admin/documents/[id]/route.ts
+// helpers notifyPartnerTitleFor / notifyPartnerMessageFor).
+function notifyPartnerTitleFor(status: BulkStatus, docName: string): string {
+  if (status === 'Verified') return `Document verified: ${docName}`;
+  return `Document rejected: ${docName}`;
+}
+
+function notifyPartnerMessageFor(
+  status: BulkStatus,
+  docName: string,
+  rejectionReason: string | null,
+): string {
+  if (status === 'Verified') {
+    return `An admin verified ${docName}. No action needed.`;
+  }
+  const reason = rejectionReason ? ` for: ${rejectionReason}` : '';
+  return `An admin rejected ${docName}${reason}. Please upload a corrected version.`;
+}
+
 export async function POST(request: NextRequest) {
   if (!getServerEnv().serviceKey) {
     return NextResponse.json({ error: 'Supabase not configured' }, { status: 503 });
@@ -86,9 +106,12 @@ export async function POST(request: NextRequest) {
     // notifications for. Filtering on student_id IS NOT NULL
     // because the bulk update itself doesn't need the student
     // name — but the notification step does.
+    // Phase 62 (Bug 4): also pull partner_student_id +
+    // partner_application_id so partner-uploaded docs fire a
+    // partner_notification (matching the single PATCH behavior).
     const { data: docs, error: fetchErr } = await service
       .from('student_documents')
-      .select('id, name, student_id, application_id')
+      .select('id, name, student_id, application_id, partner_student_id, partner_application_id')
       .in('id', ids);
     if (fetchErr) {
       return NextResponse.json({ error: fetchErr.message }, { status: 500 });
@@ -113,7 +136,7 @@ export async function POST(request: NextRequest) {
       .from('student_documents')
       .update(updates)
       .in('id', Array.from(foundIds))
-      .select('id, name, student_id, application_id');
+      .select('id, name, student_id, application_id, partner_student_id, partner_application_id');
 
     if (updErr) {
       return NextResponse.json({ error: updErr.message }, { status: 500 });
@@ -126,27 +149,93 @@ export async function POST(request: NextRequest) {
       error: 'Document not found',
     }));
 
+    // Phase 62 (Bug 4): partner-notification resolution is
+    // O(distinct partner_students per row), not O(rows). Pre-resolve
+    // the partner org owner user_ids in one pass before the loop so
+    // bulk operations stay cheap.
+    const partnerStudentIds = Array.from(
+      new Set(
+        (updatedRows || [])
+          .map((r) => (r as { partner_student_id?: string | null }).partner_student_id)
+          .filter((x): x is string => typeof x === 'string'),
+      ),
+    );
+    const partnerOwnerByStudentId = new Map<string, string>();
+    if (partnerStudentIds.length > 0) {
+      const { data: psRows, error: psErr } = await service
+        .from('partner_students')
+        .select('id, partner_id, partner:partners!partner_id (user_id)')
+        .in('id', partnerStudentIds);
+      if (psErr) {
+        console.error('[admin/documents/bulk] partner_students lookup failed (non-fatal):', psErr);
+      } else {
+        for (const row of psRows || []) {
+          const r = row as { id: string; partner: unknown };
+          const partnerRel = r.partner;
+          const partnerObj = Array.isArray(partnerRel) ? partnerRel[0] : partnerRel;
+          const userId =
+            (partnerObj as { user_id?: string | null } | null)?.user_id || null;
+          if (userId) partnerOwnerByStudentId.set(r.id, userId);
+        }
+      }
+    }
+
     for (const row of updatedRows || []) {
       const r = row as {
         id: string;
         name: string;
         student_id: string | null;
         application_id: string | null;
+        partner_student_id?: string | null;
+        partner_application_id?: string | null;
       };
-      if (!r.student_id) continue;
-      const { error: notifErr } = await service
-        .from('student_notifications')
-        .insert({
-          student_id: r.student_id,
-          title: notifyTitleFor(newStatus, r.name),
-          message: notifyMessageFor(newStatus, r.name, newStatus === 'Rejected' ? rejectionReason : null),
-          type: 'document_review',
-          link_url: r.application_id
-            ? `/student/documents?applicationId=${r.application_id}`
-            : null,
-        });
-      if (notifErr) {
-        failed.push({ id: r.id, error: notifErr.message });
+      // Student-side notification (unchanged from Phase 2).
+      if (r.student_id) {
+        const { error: notifErr } = await service
+          .from('student_notifications')
+          .insert({
+            student_id: r.student_id,
+            title: notifyTitleFor(newStatus, r.name),
+            message: notifyMessageFor(newStatus, r.name, newStatus === 'Rejected' ? rejectionReason : null),
+            type: 'document_review',
+            link_url: r.application_id
+              ? `/student/documents?applicationId=${r.application_id}`
+              : null,
+          });
+        if (notifErr) {
+          failed.push({ id: r.id, error: notifErr.message });
+        }
+      }
+      // Phase 62 (Bug 4): partner-side notification (mirrors
+      // single PATCH at src/app/api/admin/documents/[id]/route.ts:312).
+      // Only fires for partner-uploaded rows (partner_student_id set)
+      // and only on a status-bearing move into Verified/Rejected.
+      // Back-to-Pending is admin-internal workflow and intentionally
+      // excluded — same as the single PATCH.
+      const partnerOwnerUserId = r.partner_student_id
+        ? partnerOwnerByStudentId.get(r.partner_student_id)
+        : undefined;
+      if (partnerOwnerUserId) {
+        const { error: pNotifErr } = await service
+          .from('partner_notifications')
+          .insert({
+            user_id: partnerOwnerUserId,
+            link_url: r.partner_application_id
+              ? `/partner/documents?applicationId=${r.partner_application_id}`
+              : '/partner/documents',
+            title: notifyPartnerTitleFor(newStatus, r.name),
+            message: notifyPartnerMessageFor(
+              newStatus,
+              r.name,
+              newStatus === 'Rejected' ? rejectionReason : null,
+            ),
+            type: 'document_review',
+          });
+        if (pNotifErr) {
+          // Don't fail the whole row — the student side already
+          // succeeded. Append to `failed` so the UI surfaces the gap.
+          failed.push({ id: r.id, error: `partner_notification: ${pNotifErr.message}` });
+        }
       }
     }
 
