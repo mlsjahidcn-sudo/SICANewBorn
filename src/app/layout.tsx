@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Script from 'next/script';
 import { GoogleAnalytics } from '@next/third-parties/google';
 import { cookies } from 'next/headers';
-import { Inspector } from 'react-dev-inspector';
+import { DevInspector } from '@/components/dev-inspector';
 import './globals.css';
 import { ClientLayout } from '@/components/client-layout';
 import { inter } from '@/app/fonts';
@@ -111,7 +111,7 @@ export default async function RootLayout({
   return (
     <html lang={initialLocale} className={inter.variable}>
       <body className={`${inter.className} antialiased`} suppressHydrationWarning>
-        {isDev && <Inspector />}
+        {isDev && <DevInspector />}
         {/* Global JSON-LD structured data for SEO */}
         <Script
           id="ld-organization"

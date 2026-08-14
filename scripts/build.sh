@@ -13,8 +13,17 @@ echo "Installing dependencies..."
 # if package-lock.json doesn't match package.json (catch drift).
 npm ci --no-audit --no-fund
 
-echo "Building the Next.js project..."
-npx next build
+# Phase 67: bundle analysis opt-in. Set ANALYZE=true to generate
+# interactive treemaps + sunbursts of every chunk in the bundle —
+# useful for finding tree-shaking misses. Off by default because
+# the analyzer adds ~30s to the build and emits ~50MB of HTML.
+if [ "${ANALYZE:-false}" = "true" ]; then
+  echo "Building with bundle analyzer..."
+  ANALYZE=true npx next build
+else
+  echo "Building the Next.js project..."
+  npx next build
+fi
 
 echo "Bundling server with tsup..."
 npx tsup src/server.ts --format cjs --platform node --target node20 --outDir dist --no-splitting --no-minify

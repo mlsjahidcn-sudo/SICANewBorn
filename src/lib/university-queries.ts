@@ -27,12 +27,18 @@ async function fetchUniversityBySlug(slug: string): Promise<University | null> {
  * Server-only helper for fetching a single university by slug.
  * Tries Supabase first, then falls back to the curated static data.
  * Cached per slug so repeated RSC/API calls avoid hitting the DB.
+ *
+ * Phase 67: added `revalidate: 3600` so the cache expires after 1
+ * hour instead of staying stale forever. Admin actions that need
+ * fresh data should still call `revalidateTag(CACHE_TAGS.universities)`
+ * explicitly — this is the safety net.
  */
 export const getUniversityBySlug = unstable_cache(
   fetchUniversityBySlug,
   ['university-by-slug'],
   {
     tags: [CACHE_TAGS.universities],
+    revalidate: 3600,
   },
 );
 
@@ -59,12 +65,18 @@ async function fetchUniversities(options: GetUniversitiesOptions = {}): Promise<
  * Tries Supabase first, then falls back to the curated static data.
  * Used by the listing API and by the /universities server page so the
  * initial HTML already contains the grid (no client-side fetch delay).
+ *
+ * Phase 67: added `revalidate: 3600` so the cache expires after 1
+ * hour instead of staying stale forever. Admin actions that need
+ * fresh data should still call `revalidateTag(CACHE_TAGS.universities)`
+ * explicitly — this is the safety net.
  */
 export const getUniversities = unstable_cache(
   fetchUniversities,
   ['universities-list'],
   {
     tags: [CACHE_TAGS.universities],
+    revalidate: 3600,
   },
 );
 

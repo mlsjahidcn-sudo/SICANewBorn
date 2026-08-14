@@ -32,9 +32,18 @@ import {
 
 import UniversityLogo from '@/components/university-logo';
 import { DeadlineCountdown } from '@/components/deadline-countdown';
-import { StickyApplyBar } from '@/components/StickyApplyBar';
+import dynamic from 'next/dynamic';
 import { VideoTestimonials } from '@/components/VideoTestimonials';
 import { GetStartedCta } from '@/components/GetStartedCta';
+
+// Phase 67: dynamic-import StickyApplyBar. It's a fixed-bottom
+// CTA that only appears AFTER the user scrolls past the hero
+// (the component listens for scroll). Lazy-mounting keeps the
+// bar's JS out of the initial bundle until first scroll.
+const StickyApplyBar = dynamic(
+  () => import('@/components/StickyApplyBar').then((m) => m.StickyApplyBar),
+  { ssr: false },
+);
 import { track } from '@/lib/analytics';
 
 interface UniversityDetailClientProps {
@@ -577,6 +586,8 @@ function RelatedUniversitiesSidebar({
                 <img
                   src={r.logo}
                   alt={r.name}
+                  loading="lazy"
+                  decoding="async"
                   className="w-10 h-10 object-contain bg-[#FAFAF8] border border-gray-200 shrink-0"
                 />
               ) : (

@@ -34,8 +34,18 @@ import {
 import { getFeaturedUniversities } from '@/lib/data-fetcher';
 import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
 import { VideoTestimonials } from '@/components/VideoTestimonials';
-import { GetStartedCta } from '@/components/GetStartedCta';
+import dynamic from 'next/dynamic';
 import { getServiceSchema } from '@/lib/structured-data';
+
+// Phase 67: dynamic-import GetStartedCta to keep its JS out of the
+// initial bundle. Lives in the hero (visible above the fold) but
+// the CTA only renders once per page so deferred hydration is
+// fine. No `ssr: false` here because page.tsx is a Server Component
+// — the dynamic import still creates a separate JS chunk that
+// loads after hydration, which is the perf win we want.
+const GetStartedCta = dynamic(
+  () => import('@/components/GetStartedCta').then((m) => m.GetStartedCta),
+);
 
 export const metadata: Metadata = {
   alternates: buildLanguageAlternates('/'),

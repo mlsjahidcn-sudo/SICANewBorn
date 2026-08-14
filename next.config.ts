@@ -76,13 +76,26 @@ const baseConfig: NextConfig = {
   },
 };
 
+// Phase 67: wrap with @next/bundle-analyzer when ANALYZE=true.
+// Off by default — adds ~30s to the build and emits ~50MB of HTML
+// (treemap + sunburst visualizations). Run with `ANALYZE=true npx
+// next build` or `ANALYZE=true bash scripts/build.sh` to investigate
+// where the 1.3MB of homepage JS is coming from. Using eval-require
+// here because next.config.ts is loaded by Node directly (not bundled),
+// and @next/bundle-analyzer is a devDependency that's only installed
+// for local analysis — the lazy require prevents a production deploy
+// from breaking if the package is missing.
+const withBundleAnalyzer = process.env.ANALYZE === 'true'
+  ? eval('require')('@next/bundle-analyzer')({ enabled: true })
+  : (nextConfig: unknown) => nextConfig;
+
 // Wrap with @sentry/nextjs build-time tooling only when a real DSN
 // is configured. Skipping the wrapper when SENTRY_DSN is unset
 // keeps build logs clean for local dev and preview deploys that
 // don't ship errors to Sentry. The runtime SDK is also env-gated
 // (see src/instrumentation.ts) so this just removes build hooks.
 const sentryDsn = process.env.SENTRY_DSN;
-export default sentryDsn
+const sentryWrapped = sentryDsn
   ? withSentryConfig(baseConfig, {
       // Org + project slugs. Optional — only required if you want
       // source-map upload + release tracking via `sentry-cli`. SICA
@@ -106,3 +119,7 @@ export default sentryDsn
       },
     })
   : baseConfig;
+
+// Phase 67: apply bundle analyzer wrapper last so it observes the
+// Sentry-wrapped config (or plain baseConfig if Sentry is off).
+export default withBundleAnalyzer(sentryWrapped);
