@@ -101,6 +101,9 @@ export async function PATCH(
     delete (updates as Record<string, unknown>).partner_id;
     // Strip id — clients cannot change the primary key.
     delete (updates as Record<string, unknown>).id;
+    // Strip the admin-only profile link — the mapper no longer maps it,
+    // this catches clients that send the raw DB key directly.
+    delete (updates as Record<string, unknown>).linked_student_profile_id;
 
     // Phase B: partners can archive/restore their own rows. The
     // DELETE handler already performs soft-delete; this lets the

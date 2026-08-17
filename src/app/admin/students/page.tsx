@@ -30,7 +30,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { apiFetch, apiFetchJson } from '@/lib/api-client';
+import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 import type { AdminStudent } from '@/lib/student-mapper';
 
@@ -49,6 +49,10 @@ export default function AdminStudentsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<AdminStudent | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  // Incremented by the refresh button — included in the fetch effect's
+  // deps so refresh actually re-fetches (the old setPage((p) => p) was
+  // always a React no-op).
+  const [refreshToken, setRefreshToken] = useState(0);
 
   // Fetch on mount + whenever filters or page change.
   // (Use a single effect so search/status/source/page trigger one fetch
@@ -86,7 +90,7 @@ export default function AdminStudentsPage() {
       });
 
     return () => controller.abort();
-  }, [page, searchQuery, statusFilter, sourceFilter, t]);
+  }, [page, searchQuery, statusFilter, sourceFilter, refreshToken, t]);
 
   // Debounce search input so we don't fire a request on every keystroke.
   // The `useEffect` above re-runs on `searchQuery` change, but we wrap
@@ -114,13 +118,17 @@ export default function AdminStudentsPage() {
     if (!studentToDelete) return;
     setIsDeleting(true);
     try {
-      await apiFetch(`/api/admin/students/${studentToDelete.id}`, { method: 'DELETE' });
-      // Remove from local state immediately, then re-fetch to refresh
-      // stats. (Cheaper than re-fetching the whole page for a delete.)
+      // apiFetchJson throws on non-2xx — the old apiFetch call never
+      // checked res.ok, so a failed suspend still removed the row
+      // from the UI while the DB stayed untouched.
+      await apiFetchJson(`/api/admin/students/${studentToDelete.id}`, { method: 'DELETE' });
+      // Remove from local state immediately; the effect refetches via
+      // refreshToken so counts/stats stay accurate.
       setStudents((prev) => prev.filter((s) => s.id !== studentToDelete.id));
       setTotal((prev) => Math.max(0, prev - 1));
       setDeleteDialogOpen(false);
       setStudentToDelete(null);
+      setRefreshToken((n) => n + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('adminStudents.errorFailedDelete'));
     } finally {
@@ -129,8 +137,7 @@ export default function AdminStudentsPage() {
   };
 
   const refresh = () => {
-    // Force a re-fetch by toggling page back to itself (no-op if same)
-    setPage((p) => p);
+    setRefreshToken((n) => n + 1);
   };
 
   // Status badges keep their DB enum values (Active / Inactive /

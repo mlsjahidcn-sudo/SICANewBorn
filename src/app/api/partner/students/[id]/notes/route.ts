@@ -58,14 +58,20 @@ export async function GET(
     // empty list.
     const { data: student, error: studentErr } = await auth.supabase
       .from('partner_students')
-      .select('id, partner_id')
+      .select('id, partner_id, created_by_user_id')
       .eq('id', id)
       .maybeSingle();
     if (studentErr) {
       console.error('[partner/students/:id/notes GET] student lookup:', studentErr);
       return NextResponse.json({ error: studentErr.message }, { status: 500 });
     }
-    if (!student || student.partner_id !== auth.partnerId) {
+    // Phase 71: team members are scoped to students they created
+    // (same rule as the students list API).
+    if (
+      !student ||
+      student.partner_id !== auth.partnerId ||
+      (auth.role === 'member' && student.created_by_user_id !== auth.user.id)
+    ) {
       return NextResponse.json({ error: 'Student not found' }, { status: 404 });
     }
 
@@ -150,14 +156,20 @@ export async function POST(
     // Verify the student belongs to this partner org.
     const { data: student, error: studentErr } = await auth.supabase
       .from('partner_students')
-      .select('id, partner_id')
+      .select('id, partner_id, created_by_user_id')
       .eq('id', id)
       .maybeSingle();
     if (studentErr) {
       console.error('[partner/students/:id/notes POST] student lookup:', studentErr);
       return NextResponse.json({ error: studentErr.message }, { status: 500 });
     }
-    if (!student || student.partner_id !== auth.partnerId) {
+    // Phase 71: team members are scoped to students they created
+    // (same rule as the students list API).
+    if (
+      !student ||
+      student.partner_id !== auth.partnerId ||
+      (auth.role === 'member' && student.created_by_user_id !== auth.user.id)
+    ) {
       return NextResponse.json({ error: 'Student not found' }, { status: 404 });
     }
 

@@ -59,6 +59,24 @@ export async function getRequestAuth(request: Request): Promise<AuthResult> {
   if (error || !data.user) {
     return { ok: false, status: 401, error: 'Invalid or expired session' };
   }
+  // Suspension enforcement (Phase 71): admins can set
+  // student_profiles.status='Suspended', but before this check nothing
+  // student-side honored it — suspended students kept full portal
+  // access. Enforced here (the chokepoint every student API uses)
+  // rather than per-route. Only applies to student-role users, so
+  // admin/partner requests pay no extra query; the lookup is a
+  // primary-key read (sub-ms).
+  const role = (data.user.user_metadata?.role as string | undefined) ?? 'student';
+  if (role === 'student') {
+    const { data: profile } = await supabase
+      .from('student_profiles')
+      .select('status')
+      .eq('id', data.user.id)
+      .maybeSingle();
+    if (profile?.status === 'Suspended') {
+      return { ok: false, status: 403, error: 'Account suspended' };
+    }
+  }
   return { ok: true, supabase, user: data.user };
 }
 

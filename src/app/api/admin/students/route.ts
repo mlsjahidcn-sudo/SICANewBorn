@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, buildServiceClient, getServerEnv } from '@/lib/supabase-auth';
 import { mapStudentFromDb, mapStudentToDb, parseSource, parseStatus } from '@/lib/student-mapper';
 import { sendStudentWelcome } from '@/lib/email';
+import { sanitizeOrTerm, parseIntParam } from '@/lib/postgrest';
 
 /**
  * GET /api/admin/students
@@ -77,8 +78,8 @@ export async function GET(request: NextRequest) {
     const isOfflineRaw = searchParams.get('isOffline');
     const sortRaw = searchParams.get('sort') || 'created_at';
     const orderRaw = searchParams.get('order') || 'desc';
-    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20', 10)));
+    const page = parseIntParam(searchParams.get('page'), 1);
+    const limit = parseIntParam(searchParams.get('limit'), 20, { max: 100 });
 
     // Validate sort
     const allowedSort = ['created_at', 'updated_at', 'first_name', 'last_name'];
@@ -100,8 +101,10 @@ export async function GET(request: NextRequest) {
     // Search: case-insensitive partial match across name, email, and
     // the core registration fields (country/phone/degree/program).
     if (search) {
-      // Escape SQL LIKE wildcards in user input
-      const safe = search.replace(/[%_]/g, '\\$&');
+      // Escape ILIKE wildcards + strip PostgREST .or() syntax chars
+      // (a comma in the search used to split the filter string and
+      // 500 the request — or worse, inject extra filters).
+      const safe = sanitizeOrTerm(search);
       // Use OR across searchable columns. The pattern syntax for OR in
       // supabase-js is `.or('col.ilike.%x%,col2.ilike.%y%')`.
       query = query.or(

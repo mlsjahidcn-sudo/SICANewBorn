@@ -39,13 +39,14 @@ export async function GET(
 
   // Sanity check: the partner can only see the reviewer for
   // applications they have access to. We use auth.supabase so
-  // RLS on partner_applications applies.
+  // RLS on partner_applications applies. Phase 71: team members
+  // are scoped to rows they created (same rule as the list API).
   const { data: app } = await auth.supabase
     .from('partner_applications')
-    .select('id')
+    .select('id, created_by_user_id')
     .eq('id', id)
     .maybeSingle();
-  if (!app) {
+  if (!app || (auth.role === 'member' && app.created_by_user_id !== auth.user.id)) {
     return NextResponse.json({ error: 'Application not found' }, { status: 404 });
   }
 

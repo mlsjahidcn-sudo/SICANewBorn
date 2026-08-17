@@ -147,7 +147,10 @@ export function mapPartnerStudentToDb(payload: Record<string, unknown>): Record<
   if (payload.status !== undefined) row.status = payload.status;
   if (payload.notes !== undefined) row.notes = payload.notes || null;
   if (payload.linkedStudentProfileId !== undefined) {
-    row.linked_student_profile_id = payload.linkedStudentProfileId || null;
+    // Intentionally NOT mapped: the link to a student_profiles row is
+    // admin-only data (set by the admin link-profile endpoint). Partners
+    // must not write it — a guessed UUID would attach their student to
+    // another person's profile in admin views.
   }
   return row;
 }

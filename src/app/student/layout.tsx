@@ -21,7 +21,7 @@ import {
 import Link from 'next/link';
 import { SicaLogo } from '@/components/sica-logo';
 import { Chatbot } from '@/components/ai/Chatbot';
-import { apiFetchJson } from '@/lib/api-client';
+import { apiFetch, apiFetchJson } from '@/lib/api-client';
 import type { StudentApplication } from '@/lib/application-mapper';
 
 // S32: Notifications nav item carries the unread badge. The
@@ -106,10 +106,28 @@ function StudentLayoutInner({ children }: { children: React.ReactNode }) {
   // Polled every 30s + on focus + on route change. Same pattern
   // as the partner layout (S30).
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+  // Phase 71: suspension gate state — see the render block below.
+  const [suspended, setSuspended] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Phase 71: probe the profile endpoint once the user is known.
+  // The server returns 403 for suspended accounts (enforced in
+  // getRequestAuth); on 403 we replace the portal with a notice.
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    apiFetch('/api/student/profile')
+      .then((res) => {
+        if (!cancelled && res.status === 403) setSuspended(true);
+      })
+      .catch(() => {
+        // Non-fatal — a network blip must not lock a student out.
+      });
+    return () => { cancelled = true; };
+  }, [user]);
 
   useEffect(() => {
     if (mounted && !loading && !user) {
@@ -165,6 +183,32 @@ function StudentLayoutInner({ children }: { children: React.ReactNode }) {
 
   if (!user) {
     return null;
+  }
+
+  // Phase 71: suspension gate. The server now returns 403 on every
+  // student API for suspended accounts; the probe effect above sets
+  // this flag and we replace the whole portal with a notice.
+  if (suspended) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F3F4F6] px-4">
+        <div className="max-w-md w-full bg-white border border-gray-200 p-8 text-center">
+          <h1 className="text-xl font-bold text-[#1B2A4A]">Account suspended</h1>
+          <p className="mt-3 text-sm text-gray-600 leading-relaxed">
+            Your student account has been suspended. Please contact SICA support at{' '}
+            <a href="mailto:info@studyinchina.academy" className="text-[#9B1B30] font-semibold">
+              info@studyinchina.academy
+            </a>{' '}
+            if you believe this is a mistake.
+          </p>
+          <button
+            onClick={async () => { await signOut(); router.push('/student/login'); }}
+            className="mt-6 px-6 py-2 bg-[#9B1B30] hover:bg-[#7A1526] text-white text-sm font-semibold"
+          >
+            Sign out
+          </button>
+        </div>
+      </div>
+    );
   }
 
   const handleSignOut = async () => {

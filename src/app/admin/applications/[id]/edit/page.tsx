@@ -108,9 +108,7 @@ export default function AdminApplicationEditPage() {
         method: 'PATCH',
         body: JSON.stringify({
           status: formData.status,
-          university: formData.university,
           university_name: formData.university,
-          program: formData.program,
           program_name: formData.program,
           degree: formData.degree,
           intake: formData.intake,

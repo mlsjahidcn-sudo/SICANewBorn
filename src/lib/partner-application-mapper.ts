@@ -513,7 +513,8 @@ export function mapPartnerApplicationToDb(
   if (payload.decision !== undefined) row.decision = payload.decision;
   if (payload.notes !== undefined) row.notes = payload.notes || null;
   if (payload.linkedStudentProfileId !== undefined) {
-    row.linked_student_profile_id = payload.linkedStudentProfileId || null;
+    // Intentionally NOT mapped: admin-only link, derived server-side
+    // from the parent partner_students row. See partner-student-mapper.
   }
 
   // S26 — identity & contact

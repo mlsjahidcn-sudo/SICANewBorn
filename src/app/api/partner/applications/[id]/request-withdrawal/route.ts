@@ -11,9 +11,11 @@
  * the existing PATCH /api/admin/partner-applications/[id].
  *
  * Auth: requireTeamMember. RLS already scopes the partner to
- * their own org. The timeline write is best-effort — if it
- * fails we still return 200 because the side effect is the
- * in-app signal, not a hard state change.
+ * their own org. The timeline write is the request's ONLY side
+ * effect, so a failed insert returns 500 (a fake 201 would
+ * silently lose the request — the admin would never see it).
+ * Repeat clicks while a request is still unactioned return
+ * 200 with `duplicate: true` instead of spamming the timeline.
  *
  * Response: { ok: true, requestedAt: ISO8601 string }
  */
@@ -60,17 +62,18 @@ export async function POST(
 
     // Confirm the application belongs to this partner before
     // inserting a timeline event. RLS would also catch this, but
-    // a fast-fail here is cleaner.
+    // a fast-fail here is cleaner. Phase 71: team members are
+    // scoped to rows they created (same rule as the list API).
     const { data: app, error: appErr } = await auth.supabase
       .from('partner_applications')
-      .select('id, student_name, university, status, decision')
+      .select('id, student_name, university, status, decision, created_by_user_id')
       .eq('id', id)
       .maybeSingle();
     if (appErr) {
       console.error('[partner/applications/:id/request-withdrawal] select failed:', appErr);
       return NextResponse.json({ error: appErr.message }, { status: 500 });
     }
-    if (!app) {
+    if (!app || (auth.role === 'member' && app.created_by_user_id !== auth.user.id)) {
       return NextResponse.json({ error: 'Application not found' }, { status: 404 });
     }
 
@@ -80,6 +83,25 @@ export async function POST(
       return NextResponse.json(
         { error: 'This application is already withdrawn.' },
         { status: 400 },
+      );
+    }
+
+    // Duplicate guard: if there's already a 'Withdrawal Requested'
+    // event the admin hasn't actioned yet (i.e. status hasn't moved
+    // to Withdrawn since), repeated clicks would spam the admin
+    // timeline. Return the existing request timestamp instead.
+    const { data: existingReq } = await auth.supabase
+      .from('application_timeline')
+      .select('created_at')
+      .eq('partner_application_id', id)
+      .eq('status', 'Withdrawal Requested')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (existingReq) {
+      return NextResponse.json(
+        { ok: true, requestedAt: existingReq.created_at, duplicate: true },
+        { status: 200 },
       );
     }
 
@@ -95,12 +117,22 @@ export async function POST(
     if (reason) noteLines.push(`Reason: ${reason}`);
     noteLines.push(`Application: ${app.student_name} · ${app.university} (current status: ${app.status}, decision: ${app.decision})`);
 
-    await insertTimelineEvent(auth.supabase, {
+    const result = await insertTimelineEvent(auth.supabase, {
       partner_application_id: id,
       status: 'Withdrawal Requested',
       notes: noteLines.join('\n'),
       created_by: auth.user.id,
     });
+
+    // The timeline row IS the request — if it failed, the admin never
+    // sees anything and the partner wrongly believes the request went
+    // through. Fail loudly instead of returning a fake 201.
+    if (!result.ok) {
+      return NextResponse.json(
+        { error: 'Failed to submit the withdrawal request. Please try again.' },
+        { status: 500 },
+      );
+    }
 
     return NextResponse.json({ ok: true, requestedAt }, { status: 201 });
   } catch (err) {

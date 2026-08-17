@@ -94,6 +94,15 @@ export async function PATCH(
       { key: 'submitted_at', snakeKey: 'submitted_at' },
       { key: 'studentId', snakeKey: 'student_id' },
       { key: 'student_id', snakeKey: 'student_id' },
+      // The comment above has always claimed application_number is
+      // admin-only, but it was missing from this list — partners
+      // could overwrite/erase the auto-minted PA-YYYY-NNNN.
+      { key: 'applicationNumber', snakeKey: 'application_number' },
+      { key: 'application_number', snakeKey: 'application_number' },
+      // Admin-only profile link — derived server-side from the parent
+      // partner_students row (see route.ts POST).
+      { key: 'linkedStudentProfileId', snakeKey: 'linked_student_profile_id' },
+      { key: 'linked_student_profile_id', snakeKey: 'linked_student_profile_id' },
     ];
     for (const { key } of partnerForbiddenFields) {
       if (body[key] !== undefined) {

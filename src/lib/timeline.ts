@@ -54,11 +54,17 @@ export interface TimelineEventInput {
  * Insert a timeline event. Uses service-role (bypasses RLS) so the
  * student API, partner API, and admin API can all call it without
  * tripping the row-level security policy.
+ *
+ * Returns `{ ok: false }` when the insert failed. Timeline writes are
+ * still best-effort for callers that treat them as a side effect, but
+ * callers whose PRIMARY effect is the timeline row (e.g. the
+ * withdrawal-request endpoint) must check the result and fail the
+ * request instead of reporting success on a lost write.
  */
 export async function insertTimelineEvent(
   _ignoredClient: SupabaseClient, // kept in the signature for API compatibility, but unused
   event: TimelineEventInput,
-): Promise<void> {
+): Promise<{ ok: boolean }> {
   // Validate exactly one of the two FK fields is set. The DB CHECK
   // constraint would catch it, but we want a clearer error before
   // the network round-trip.
@@ -70,7 +76,7 @@ export async function insertTimelineEvent(
       '[insertTimelineEvent] need exactly one of application_id / partner_application_id',
       { event },
     );
-    return;
+    return { ok: false };
   }
   try {
     const service = buildServiceClient();
@@ -84,11 +90,15 @@ export async function insertTimelineEvent(
     if (error) {
       // Don't throw — timeline writes are best-effort. The main
       // operation (the application update) has already succeeded.
-      // We log so the operator can debug.
+      // We log so the operator can debug, and report ok:false so
+      // primary-effect callers can fail loudly.
       console.error('[insertTimelineEvent] failed:', error);
+      return { ok: false };
     }
+    return { ok: true };
   } catch (err) {
     console.error('[insertTimelineEvent] unhandled:', err);
+    return { ok: false };
   }
 }
 

@@ -174,3 +174,7 @@ Desktop.ini
 # Misc
 .coze-logs
 .preview
+
+# Cloudflare OpenNext/Wrangler build output
+.open-next/
+.wrangler/

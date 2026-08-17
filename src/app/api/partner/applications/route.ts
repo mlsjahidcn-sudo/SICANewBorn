@@ -7,6 +7,7 @@ import {
   parsePartnerApplicationStatus,
 } from '@/lib/partner-application-mapper';
 import { validatePartnerApplicationPayload } from '@/lib/partner-application-validation';
+import { sanitizeOrTerm, parseIntParam } from '@/lib/postgrest';
 
 /**
  * GET /api/partner/applications
@@ -50,8 +51,8 @@ export async function GET(request: NextRequest) {
     const validPriorities = ['Low', 'Normal', 'High', 'Urgent'];
     const sortRaw = searchParams.get('sort') || 'created_at';
     const orderRaw = searchParams.get('order') || 'desc';
-    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20', 10)));
+    const page = parseIntParam(searchParams.get('page'), 1);
+    const limit = parseIntParam(searchParams.get('limit'), 20, { max: 100 });
     // Phase 50b: same soft-delete filter pattern as
     // /api/partner/students. ?archived=true includes archived
     // rows, ?archived=only returns ONLY archived, default
@@ -91,7 +92,7 @@ export async function GET(request: NextRequest) {
       query = query.eq('student_id', studentId);
     }
     if (search) {
-      const safe = search.replace(/[%_]/g, '\\$&');
+      const safe = sanitizeOrTerm(search);
       query = query.or(
         `student_name.ilike.%${safe}%,university.ilike.%${safe}%,program.ilike.%${safe}%`,
       );
@@ -229,7 +230,7 @@ export async function POST(request: NextRequest) {
     // Belt-and-suspenders: drop any of the admin-only fields that
     // might have leaked through the mapper. The earlier 403 check
     // is the user-facing error path; this is the safety net.
-    for (const key of ['status', 'decision', 'submitted_at']) {
+    for (const key of ['status', 'decision', 'submitted_at', 'linked_student_profile_id']) {
       delete (dbRow as Record<string, unknown>)[key];
     }
     dbRow.partner_id = auth.partnerId;
@@ -243,14 +244,24 @@ export async function POST(request: NextRequest) {
     // Phase D: inherit the linked student profile from the parent
     // partner_students row so new applications show up in the admin
     // student detail immediately (not only after a re-link backfill).
+    // Ownership check: the lookup is scoped to this partner's org — a
+    // guessed foreign-student UUID must not leak another org's
+    // profile link into this application.
     if (dbRow.student_id) {
       const service = buildServiceClient();
       const { data: psLink } = await service
         .from('partner_students')
         .select('linked_student_profile_id')
         .eq('id', dbRow.student_id as string)
+        .eq('partner_id', auth.partnerId)
         .maybeSingle();
-      if (psLink?.linked_student_profile_id) {
+      if (!psLink) {
+        return NextResponse.json(
+          { error: 'Student not found in your organization.' },
+          { status: 404 },
+        );
+      }
+      if (psLink.linked_student_profile_id) {
         dbRow.linked_student_profile_id = psLink.linked_student_profile_id;
       }
     }

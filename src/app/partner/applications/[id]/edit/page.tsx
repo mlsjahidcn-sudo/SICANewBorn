@@ -238,7 +238,9 @@ export default function PartnerEditApplicationPage() {
         // anyway.
         priority: formData.priority,
         notes: formData.notes.trim() || null,
-        applicationNumber: formData.applicationNumber.trim() || null,
+        // Phase 71: applicationNumber is admin-issued — the PATCH
+        // API 403s it for partners. We still load it for the
+        // subtitle display, but never send it back.
       };
       await apiFetchJson(`/api/partner/applications/${applicationId}`, {
         method: 'PATCH',

@@ -105,17 +105,30 @@ export async function PATCH(
 
   try {
     const body = await request.json();
-    // Block immutable fields
+    // Whitelist real student_applications columns. The old blocklist
+    // (only 4 keys excluded) passed anything through — including the
+    // edit page's bogus `university`/`program` keys, which made every
+    // save fail with a PostgREST "column not found" 400.
+    const UPDATABLE = new Set([
+      'slug',
+      'university_id', 'university_name', 'university_name_cn',
+      'program_id', 'program_name', 'program_name_cn',
+      'degree', 'degree_level', 'intake',
+      'status', 'priority',
+      'submitted_at', 'reviewed_at', 'decision_date', 'decision',
+      'decision_letter_url', 'student_notes', 'personal_statement',
+      'additional_notes', 'admin_notes',
+      'applicant_name', 'applicant_email', 'applicant_phone',
+      'applicant_nationality',
+    ]);
     const updates: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(body)) {
-      if (['id', 'student_id', 'application_number', 'created_at'].includes(k)) continue;
-      updates[k] = v;
+      if (UPDATABLE.has(k)) updates[k] = v;
     }
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: 'No updatable fields' }, { status: 400 });
     }
     // Validate status if provided (S12.2)
-    let statusChanged = false;
     let newStatus: string | null = null;
     if (typeof updates.status === 'string') {
       if (!(ALLOWED_STATUSES as readonly string[]).includes(updates.status)) {
@@ -124,12 +137,31 @@ export async function PATCH(
           { status: 400 },
         );
       }
-      statusChanged = true;
       newStatus = updates.status;
-      updates.reviewed_at = new Date().toISOString();
     }
 
     const service = buildServiceClient();
+
+    // Pre-read the current row: gives a real 404 for bad ids (the old
+    // .single() on update returned a 400 for missing rows) and lets us
+    // compare status before/after so a re-save that merely *contains*
+    // the same status doesn't fire timeline events + emails again.
+    const { data: before, error: beforeErr } = await service
+      .from('student_applications')
+      .select('id, status')
+      .eq('id', id)
+      .maybeSingle();
+    if (beforeErr) {
+      return NextResponse.json({ error: beforeErr.message }, { status: 500 });
+    }
+    if (!before) {
+      return NextResponse.json({ error: 'Application not found' }, { status: 404 });
+    }
+    const statusChanged = newStatus !== null && newStatus !== before.status;
+    if (statusChanged) {
+      updates.reviewed_at = new Date().toISOString();
+    }
+
     const { data, error } = await service
       .from('student_applications')
       .update(updates)
@@ -215,7 +247,7 @@ export async function PATCH(
               title: studentNotificationTitle(newStatus),
               message: studentNotificationMessage(
                 newStatus,
-                (data as { universidad_name?: string | null }).universidad_name || 'the universidad',
+                (data as { university_name?: string | null }).university_name || 'the university',
                 (data as { program_name?: string | null }).program_name || null,
               ),
               type: 'status_change',

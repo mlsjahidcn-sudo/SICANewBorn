@@ -56,10 +56,11 @@ export async function GET(
   }
 
   // Ownership check: RLS on partner_applications scopes this to the
-  // caller's org automatically.
+  // caller's org automatically. Phase 71: team members are further
+  // scoped to rows they created (same rule as the students API).
   const { data: app, error: appErr } = await auth.supabase
     .from('partner_applications')
-    .select('id')
+    .select('id, created_by_user_id')
     .eq('id', id)
     .maybeSingle();
 
@@ -67,7 +68,7 @@ export async function GET(
     console.error('[partner/applications/:id/timeline] ownership check failed:', appErr);
     return NextResponse.json({ error: appErr.message }, { status: 500 });
   }
-  if (!app) {
+  if (!app || (auth.role === 'member' && app.created_by_user_id !== auth.user.id)) {
     return NextResponse.json({ error: 'Application not found' }, { status: 404 });
   }
 

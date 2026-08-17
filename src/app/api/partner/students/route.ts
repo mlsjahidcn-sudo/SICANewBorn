@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireTeamMember, getServerEnv } from '@/lib/supabase-auth';
 import { mapPartnerStudentFromDb, mapPartnerStudentToDb, parsePartnerStudentStatus } from '@/lib/partner-student-mapper';
 import { validatePartnerStudentPayload } from '@/lib/partner-validation';
+import { sanitizeOrTerm, parseIntParam } from '@/lib/postgrest';
 
 /**
  * GET /api/partner/students
@@ -42,8 +43,8 @@ export async function GET(request: NextRequest) {
     const status = parsePartnerStudentStatus(searchParams.get('status'));
     const sortRaw = searchParams.get('sort') || 'created_at';
     const orderRaw = searchParams.get('order') || 'desc';
-    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20', 10)));
+    const page = parseIntParam(searchParams.get('page'), 1);
+    const limit = parseIntParam(searchParams.get('limit'), 20, { max: 100 });
     // Phase 50b: ?archived=true includes soft-deleted rows in
     // the result. Default (no param) hides them — the partner's
     // "active" view. ?archived=only returns ONLY archived rows
@@ -77,7 +78,7 @@ export async function GET(request: NextRequest) {
     if (status) query = query.eq('status', status);
 
     if (search) {
-      const safe = search.replace(/[%_]/g, '\\$&');
+      const safe = sanitizeOrTerm(search);
       query = query.or(
         `student_name.ilike.%${safe}%,student_email.ilike.%${safe}%,student_phone.ilike.%${safe}%`,
       );
@@ -215,6 +216,10 @@ export async function POST(request: NextRequest) {
     dbRow.partner_id = auth.partnerId;
     // Phase 3: server-derived created_by_user_id — never trust client
     dbRow.created_by_user_id = auth.user.id;
+    // Admin-only link — never accept it from the client, even if a
+    // caller sends the raw DB key (the mapper already drops the
+    // camelCase form).
+    delete (dbRow as Record<string, unknown>).linked_student_profile_id;
     // Default status to 'New' for new entries
     if (!dbRow.status) dbRow.status = 'New';
 

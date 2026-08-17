@@ -58,6 +58,22 @@ export async function POST(request: NextRequest) {
 
     const service = buildServiceClient();
 
+    // Privilege check: only a super_admin may create another
+    // super_admin. Previously any admin could mint one.
+    if (role === 'super_admin') {
+      const { data: callerProfile } = await service
+        .from('admin_profiles')
+        .select('role')
+        .eq('user_id', auth.user.id)
+        .maybeSingle();
+      if (callerProfile?.role !== 'super_admin') {
+        return NextResponse.json(
+          { error: 'Only super admins can create super admin users.' },
+          { status: 403 },
+        );
+      }
+    }
+
     // 1. Create the auth user (service-role admin API)
     const { data: authData, error: authError } = await service.auth.admin.createUser({
       email,
@@ -72,7 +88,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create user.' }, { status: 500 });
     }
 
-    // 2. Insert the role-specific profile row
+    // 2. Insert the role-specific profile row. On failure, delete the
+    // just-created auth user so it isn't orphaned (an auth user with
+    // no profile row can never log in usefully and blocks re-trying
+    // with the same email).
     if (role === 'partner') {
       const { error: profileError } = await service.from('partners').insert({
         user_id: userId,
@@ -82,6 +101,7 @@ export async function POST(request: NextRequest) {
         status: 'Active',
       });
       if (profileError) {
+        await service.auth.admin.deleteUser(userId).catch(() => {});
         return NextResponse.json({ error: profileError.message }, { status: 400 });
       }
     } else {
@@ -92,6 +112,7 @@ export async function POST(request: NextRequest) {
         role,
       });
       if (profileError) {
+        await service.auth.admin.deleteUser(userId).catch(() => {});
         return NextResponse.json({ error: profileError.message }, { status: 400 });
       }
     }
