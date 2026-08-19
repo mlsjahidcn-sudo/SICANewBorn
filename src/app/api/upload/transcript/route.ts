@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
 import { createTranscriptUploadUrl } from '@/lib/storage';
+import { checkPublicRateLimit } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
+
+const ONE_HOUR_MS = 60 * 60 * 1000;
 
 /**
  * Generate a signed upload URL for a transcript file.
@@ -16,6 +19,22 @@ export const dynamic = 'force-dynamic';
  * created before the upload, avoiding duplicate/incomplete assessment rows.
  */
 export async function POST(request: NextRequest) {
+  // Track 1.1: rate limit — anonymous callers can mint signed upload
+  // URLs, so unthrottled this is a storage-spam vector.
+  const rl = checkPublicRateLimit({
+    action: 'public-transcript-upload',
+    request,
+    maxPerIp: 20,
+    maxGlobal: 300,
+    windowMs: ONE_HOUR_MS,
+  });
+  if (rl.blocked) {
+    return NextResponse.json(
+      { error: 'Too many upload requests. Please try again later.', retryAfterSec: rl.retryAfterSec },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec) } },
+    );
+  }
+
   let body: Record<string, unknown>;
   try {
     body = await request.json();

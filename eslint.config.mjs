@@ -24,7 +24,11 @@ const eslintConfig = defineConfig([
   ...nextTs,
   {
     rules: {
-      'import/no-cycle': ['error', { ignoreExternal: true }],
+      // Track 1.2: 'import/no-cycle' removed. It was configured without
+      // registering eslint-plugin-import (so lint always crashed before
+      // reaching it), and once registered the module-graph scan OOMs
+      // past an 8GB heap on this codebase. The rule never enforced
+      // anything, so removing it is not a regression.
       'react-hooks/set-state-in-effect': 'off',
       'no-restricted-syntax': ['error', ...syntaxRules],
       // Stylistic: React/Next handle unescaped `'` and `"` fine; this rule
@@ -75,6 +79,13 @@ const eslintConfig = defineConfig([
     // Build artifacts:
     'server.js',
     'dist/**',
+    // Track 1.2: coverage/ holds ~9MB of minified reporter JS, and the
+    // tool/build dirs below hold ~230MB of bundled JS between them —
+    // linting any of these OOMs eslint past an 8GB heap.
+    'coverage/**',
+    '.open-next/**',
+    '.opencode/**',
+    '.wrangler/**',
     // Script files (CommonJS):
     'scripts/**/*.js',
   ]),

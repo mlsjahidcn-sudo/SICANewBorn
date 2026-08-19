@@ -70,6 +70,8 @@ export function ContactForm({ formTitle, labels, successMessages }: Props) {
       phone: data.get('phone') || '',
       subject: data.get('subject'),
       message: data.get('message'),
+      // Track 1.1: honeypot — hidden `website` input only bots fill.
+      website: data.get('website') || '',
       sourcePage: typeof window !== 'undefined' ? window.location.pathname : '/contact',
       ...utm,
     };
@@ -140,6 +142,19 @@ export function ContactForm({ formTitle, labels, successMessages }: Props) {
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Track 1.1: honeypot — visually hidden, off the tab order,
+              excluded from autofill. Humans never fill it; bots that
+              auto-complete every input give themselves away. */}
+          <div aria-hidden="true" className="absolute -left-[9999px] top-0 h-0 w-0 overflow-hidden">
+            <label htmlFor="contact-website">Website</label>
+            <input
+              id="contact-website"
+              type="text"
+              name="website"
+              tabIndex={-1}
+              autoComplete="off"
+            />
+          </div>
           {status === 'error' && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm flex items-start gap-2">
               <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />

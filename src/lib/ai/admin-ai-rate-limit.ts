@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { checkRateLimit } from '@/lib/rate-limit';
+import { checkRateLimit, extractClientIp } from '@/lib/rate-limit';
 
 /**
  * Per-admin AI rate limiter (Phase 36).
@@ -112,7 +112,7 @@ export type ChatbotRateLimitResult =
 export function checkChatbotRateLimit(
   request: Request,
 ): ChatbotRateLimitResult {
-  const ip = extractIp(request);
+  const ip = extractClientIp(request);
   const rl = checkRateLimit({
     action: 'public-chatbot',
     key: ip,
@@ -139,18 +139,6 @@ export function checkChatbotRateLimit(
 }
 
 /**
- * Extract the originating client IP from common proxy headers.
- * First wins — `x-forwarded-for` is appended-to by every hop, so
- * the first comma-separated entry is the original client per the
- * RFC 7239 / standard convention.
+ * IP extraction moved to `extractClientIp` in @/lib/rate-limit
+ * (Track 1.1) — shared with the public write-endpoint guards.
  */
-function extractIp(request: Request): string {
-  const xff = request.headers.get('x-forwarded-for');
-  if (xff) {
-    const first = xff.split(',')[0]?.trim();
-    if (first) return first;
-  }
-  const realIp = request.headers.get('x-real-ip');
-  if (realIp) return realIp.trim();
-  return 'unknown';
-}

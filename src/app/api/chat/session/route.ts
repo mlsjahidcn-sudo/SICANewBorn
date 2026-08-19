@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
+import { checkPublicRateLimit } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
+
+const ONE_HOUR_MS = 60 * 60 * 1000;
 
 /**
  * POST /api/chat/session
@@ -22,6 +25,21 @@ export const dynamic = 'force-dynamic';
  * returned (and updated with last_seen_at + attribution).
  */
 export async function POST(request: NextRequest) {
+  // Track 1.1: rate limit — anonymous session upserts.
+  const rl = checkPublicRateLimit({
+    action: 'public-chat-session',
+    request,
+    maxPerIp: 30,
+    maxGlobal: 600,
+    windowMs: ONE_HOUR_MS,
+  });
+  if (rl.blocked) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please try again later.', retryAfterSec: rl.retryAfterSec },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec) } },
+    );
+  }
+
   if (!isSupabaseServerConfigured()) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
   }
@@ -90,6 +108,22 @@ export async function POST(request: NextRequest) {
  * client retries after a network blip.
  */
 export async function PATCH(request: NextRequest) {
+  // Track 1.1: rate limit — generous, the client appends transcript
+  // messages after every send, but not unbounded.
+  const rl = checkPublicRateLimit({
+    action: 'public-chat-session-append',
+    request,
+    maxPerIp: 240,
+    maxGlobal: 2000,
+    windowMs: ONE_HOUR_MS,
+  });
+  if (rl.blocked) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please try again later.', retryAfterSec: rl.retryAfterSec },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec) } },
+    );
+  }
+
   if (!isSupabaseServerConfigured()) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
   }

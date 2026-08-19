@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
 import { sendChatLeadNotification } from '@/lib/email';
 import { fireAndForget } from '@/lib/wabpo-fire';
+import { checkPublicRateLimit, isHoneypotFilled } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
+
+const ONE_HOUR_MS = 60 * 60 * 1000;
 
 /**
  * POST /api/leads/chat
@@ -26,6 +29,22 @@ export const dynamic = 'force-dynamic';
  *     session_token?, conversation_context?: Message[] }
  */
 export async function POST(request: NextRequest) {
+  // Track 1.1: rate limit before any work — this endpoint sends an
+  // admin email + welcome WhatsApp per accepted lead.
+  const rl = checkPublicRateLimit({
+    action: 'public-chat-leads',
+    request,
+    maxPerIp: 5,
+    maxGlobal: 200,
+    windowMs: ONE_HOUR_MS,
+  });
+  if (rl.blocked) {
+    return NextResponse.json(
+      { error: 'Too many submissions. Please try again later.', retryAfterSec: rl.retryAfterSec },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec) } },
+    );
+  }
+
   if (!isSupabaseServerConfigured()) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
   }
@@ -35,6 +54,11 @@ export async function POST(request: NextRequest) {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+
+  // Honeypot: hidden `website` field only bots fill. Fake success.
+  if (isHoneypotFilled(body)) {
+    return NextResponse.json({ success: true });
   }
 
   const name = ((body.name as string) ?? '').trim();

@@ -1,0 +1,43 @@
+# Track 1.2: continuous integration.
+#
+# Runs on every push to main and every PR. The build step needs no
+# Supabase secrets — src/lib/data-fetcher.ts falls back to the static
+# seed catalog when Supabase is unconfigured, so SSG still succeeds
+# (this also makes the workflow safe on forks, where secrets are
+# withheld). If we ever gate pages on live data at build time, add
+# NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY as repo
+# secrets and pass them through `env:` on the build step.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Lint
+        run: npm run lint:build
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build
+        run: npx next build

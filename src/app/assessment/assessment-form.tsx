@@ -21,12 +21,6 @@ import {
   Check,
 } from 'lucide-react';
 
-interface Props {
-  // Intentionally empty: the form is self-contained and uses the
-  // client-side i18n hook. Previously it received the server-side
-  // `t` function, which Next.js forbids passing to Client Components.
-}
-
 /** Maximum file size: 10 MB */
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ALLOWED_TYPES = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
@@ -42,7 +36,7 @@ const getSteps = (t: (key: string, params?: Record<string, string | number>) => 
   { key: 'notes', label: t('assessment.step.submit'), icon: FileText, desc: t('assessment.step.submitDesc') },
 ] as const;
 
-export function AssessmentForm(_props?: Props) {
+export function AssessmentForm() {
   const router = useRouter();
   const { t, locale } = useI18n();
   const STEPS = getSteps(t);
@@ -326,6 +320,8 @@ export function AssessmentForm(_props?: Props) {
       intendedMajor: data.get('intendedMajor') || '',
       targetUniversities: data.get('targetUniversities') || '',
       notes: data.get('notes') || '',
+      // Track 1.1: honeypot — hidden `website` input only bots fill.
+      website: data.get('website') || '',
       sourcePage: window.location.pathname,
       ...utm,
     };
@@ -474,6 +470,20 @@ export function AssessmentForm(_props?: Props) {
         noValidate
         className="space-y-5"
       >
+        {/* Track 1.1: honeypot — visually hidden, off the tab order.
+            Humans never fill it; bots that auto-complete every input
+            give themselves away. Server fakes success and skips the
+            DB row + email + drip + WhatsApp. */}
+        <div aria-hidden="true" className="absolute -left-[9999px] top-0 h-0 w-0 overflow-hidden">
+          <label htmlFor="assessment-website">Website</label>
+          <input
+            id="assessment-website"
+            type="text"
+            name="website"
+            tabIndex={-1}
+            autoComplete="off"
+          />
+        </div>
         {status === 'error' && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm flex items-start gap-2">
             <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />

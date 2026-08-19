@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
 import { sendContactNotification } from '@/lib/email';
 import { fireAndForget } from '@/lib/wabpo-fire';
+import { checkPublicRateLimit, isHoneypotFilled } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
+
+const ONE_HOUR_MS = 60 * 60 * 1000;
 
 /**
  * Public lead capture. Accepts submissions from any of the web forms
@@ -16,6 +19,23 @@ export const dynamic = 'force-dynamic';
  * Returns the inserted row (without PII beyond what the client sent).
  */
 export async function POST(request: NextRequest) {
+  // Track 1.1: per-IP + global rate limit BEFORE any work — even
+  // malformed bodies count, so a bot looping on 400s still trips the
+  // limit. This endpoint spends Resend + WhatsApp quota per call.
+  const rl = checkPublicRateLimit({
+    action: 'public-leads',
+    request,
+    maxPerIp: 5,
+    maxGlobal: 200,
+    windowMs: ONE_HOUR_MS,
+  });
+  if (rl.blocked) {
+    return NextResponse.json(
+      { error: 'Too many submissions. Please try again later.', retryAfterSec: rl.retryAfterSec },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec) } },
+    );
+  }
+
   if (!isSupabaseServerConfigured()) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
   }
@@ -25,6 +45,13 @@ export async function POST(request: NextRequest) {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+
+  // Honeypot: real users never see or fill the hidden `website`
+  // field. Fake a success so the bot doesn't learn which field
+  // betrayed it — no DB row, no email, no WhatsApp.
+  if (isHoneypotFilled(body)) {
+    return NextResponse.json({ success: true });
   }
 
   const supabase = getSupabaseServer();

@@ -3,8 +3,11 @@ import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-se
 import { sendAssessmentNotification } from '@/lib/email';
 import { scheduleDripSequence } from '@/lib/email/drip/scheduler';
 import { fireAndForget } from '@/lib/wabpo-fire';
+import { checkPublicRateLimit, isHoneypotFilled } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
+
+const ONE_HOUR_MS = 60 * 60 * 1000;
 
 /**
  * Public student-assessment intake (from /assessment form). Persists to
@@ -14,6 +17,23 @@ export const dynamic = 'force-dynamic';
  * after the client uploads directly to Supabase Storage.
  */
 export async function POST(request: NextRequest) {
+  // Track 1.1: per-IP + global rate limit BEFORE any work — each
+  // accepted submission spends Resend (notification + 4-step drip)
+  // and WhatsApp quota.
+  const rl = checkPublicRateLimit({
+    action: 'public-assessments',
+    request,
+    maxPerIp: 5,
+    maxGlobal: 200,
+    windowMs: ONE_HOUR_MS,
+  });
+  if (rl.blocked) {
+    return NextResponse.json(
+      { error: 'Too many submissions. Please try again later.', retryAfterSec: rl.retryAfterSec },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec) } },
+    );
+  }
+
   if (!isSupabaseServerConfigured()) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
   }
@@ -23,6 +43,12 @@ export async function POST(request: NextRequest) {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+
+  // Honeypot: hidden `website` field only bots fill. Fake success —
+  // no DB row, no email, no drip, no WhatsApp.
+  if (isHoneypotFilled(body)) {
+    return NextResponse.json({ success: true });
   }
 
   const supabase = getSupabaseServer();
