@@ -5,6 +5,8 @@ import { universities as staticUniversities } from '@/lib/data';
 import { CACHE_TAGS } from '@/lib/cache';
 import { universitySchema } from '@/lib/validators/university';
 import { validationErrorResponse } from '@/lib/validators/shared';
+import { requireAdmin } from '@/lib/supabase-auth';
+import { sanitizeOrTerm, parseIntParam } from '@/lib/postgrest';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -12,8 +14,10 @@ export async function GET(request: Request) {
   const discipline = searchParams.get('discipline');
   const search = searchParams.get('search');
   const sort = searchParams.get('sort') || 'ranking';
-  const page = parseInt(searchParams.get('page') || '1');
-  const limit = parseInt(searchParams.get('limit') || '8');
+  // Phase 71: NaN-safe, clamped pagination — ?page=abc used to flow
+  // into .range(NaN, NaN) and silently trigger the static fallback.
+  const page = parseIntParam(searchParams.get('page'), 1, { min: 1 });
+  const limit = parseIntParam(searchParams.get('limit'), 8, { min: 1, max: 500 });
 
   // Try Supabase first, fall back to static data
   if (isSupabaseServerConfigured() && supabaseServer) {
@@ -23,7 +27,10 @@ export async function GET(request: Request) {
 
     if (city) query = query.eq('city', city);
     if (discipline) query = query.contains('disciplines', [discipline]);
-    if (search) query = query.or(`name.ilike.%${search}%,name_cn.ilike.%${search}%,city.ilike.%${search}%`);
+    // Phase 71: sanitize before interpolating into .or() — raw input
+    // containing , ( ) " % _ could rewrite the filter or 400 the query.
+    const term = search ? sanitizeOrTerm(search) : '';
+    if (term) query = query.or(`name.ilike.%${term}%,name_cn.ilike.%${term}%,city.ilike.%${term}%`);
     
     if (sort === 'ranking') query = query.order('ranking', { ascending: true });
     else if (sort === 'name') query = query.order('name', { ascending: true });
@@ -75,6 +82,13 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  // Phase 71: catalog mutations are admin-only (service-role client,
+  // RLS bypass — see /api/universities/[slug]).
+  const auth = await requireAdmin(request);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
   if (!isSupabaseServerConfigured() || !supabaseServer) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
   }
@@ -91,7 +105,10 @@ export async function POST(request: Request) {
       .select()
       .single();
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error) {
+      console.error('[universities POST] supabase error:', error);
+      return NextResponse.json({ error: 'Failed to create university' }, { status: 400 });
+    }
     revalidateTag(CACHE_TAGS.universities, 'default');
     revalidateTag(CACHE_TAGS.university(String(data.slug)), 'default');
     return NextResponse.json({ university: mapUniversityFromDb(data) }, { status: 201 });

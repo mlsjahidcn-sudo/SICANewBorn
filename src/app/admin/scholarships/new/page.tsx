@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save } from 'lucide-react';
 import { scholarships as staticScholarships, type Scholarship } from '@/lib/data';
 import { ToastProvider, useToast } from '@/components/admin/toast';
+import { apiFetch } from '@/lib/api-client';
 
 interface ScholarshipFormData {
   slug: string;
@@ -112,7 +113,7 @@ function ScholarshipFormInner({ slug }: { slug?: string }) {
       };
 
       if (isEdit) {
-        const res = await fetch(`/api/scholarships/${slug}`, {
+        const res = await apiFetch(`/api/scholarships/${slug}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -120,7 +121,7 @@ function ScholarshipFormInner({ slug }: { slug?: string }) {
         if (!res.ok) throw new Error();
         addToast('Scholarship updated successfully', 'success');
       } else {
-        const res = await fetch('/api/scholarships', {
+        const res = await apiFetch('/api/scholarships', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),

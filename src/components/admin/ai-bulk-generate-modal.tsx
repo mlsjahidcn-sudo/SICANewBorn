@@ -200,35 +200,51 @@ export function AIBulkGenerateModal({ isOpen, onClose, onSaved }: AIBulkGenerate
         const decoder = new TextDecoder();
         let serverParsed: Record<string, unknown> | null = null;
         let lastError: string | null = null;
+        // Phase 71: buffer partial SSE lines across network chunks —
+        // the final `parsed` event is a multi-KB single line that is
+        // routinely split across reads; without buffering it failed
+        // JSON.parse on both halves and was silently dropped, so the
+        // item errored with "AI did not produce a parsed object".
+        let sseBuffer = '';
+
+        const handleSseLine = (line: string) => {
+          if (!line.startsWith('data: ')) return;
+          const payload = line.slice(6).trim();
+          if (payload === '[DONE]') return;
+          try {
+            const parsed = JSON.parse(payload) as { parsed?: unknown; error?: string };
+            if (parsed.error) lastError = parsed.error;
+            if (parsed.parsed && typeof parsed.parsed === 'object') {
+              serverParsed = parsed.parsed as Record<string, unknown>;
+            }
+          } catch {
+            // ignore unparseable SSE lines
+          }
+        };
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          const chunk = decoder.decode(value, { stream: true });
-          for (const line of chunk.split('\n')) {
-            if (!line.startsWith('data: ')) continue;
-            const payload = line.slice(6).trim();
-            if (payload === '[DONE]') continue;
-            try {
-              const parsed = JSON.parse(payload) as { parsed?: unknown; error?: string };
-              if (parsed.error) lastError = parsed.error;
-              if (parsed.parsed && typeof parsed.parsed === 'object') {
-                serverParsed = parsed.parsed as Record<string, unknown>;
-              }
-            } catch {
-              // ignore unparseable SSE lines
-            }
-          }
+          sseBuffer += decoder.decode(value, { stream: true });
+          const lines = sseBuffer.split('\n');
+          // Last element is a partial line (or '' when the chunk ended
+          // on a newline) — carry it into the next chunk.
+          sseBuffer = lines.pop() ?? '';
+          for (const line of lines) handleSseLine(line);
         }
+        if (sseBuffer.trim()) handleSseLine(sseBuffer);
 
         if (!serverParsed) {
           throw new Error(lastError || 'AI did not produce a parsed object');
         }
+        // serverParsed is assigned inside the handleSseLine closure,
+        // so TS drops the throw-guard narrowing — pin it to a const.
+        const parsedData: Record<string, unknown> = serverParsed;
 
         // Backend may have returned a different slug than the suggestion.
         // Override with the suggestion's slug so the row matches what the
         // admin saw in step 2.
-        const finalData = { ...serverParsed, slug: item.slug, name: item.name, nameCn: item.nameCn };
+        const finalData = { ...parsedData, slug: item.slug, name: item.name, nameCn: item.nameCn };
         setItems((prev) =>
           prev.map((it) => (it.id === item.id ? { ...it, status: 'ready', data: finalData } : it)),
         );
@@ -256,7 +272,9 @@ export function AIBulkGenerateModal({ isOpen, onClose, onSaved }: AIBulkGenerate
 
     const tasks = toSave.map(async (item) => {
       try {
-        const res = await fetch('/api/universities', {
+        // Phase 71: apiFetch attaches the admin Bearer token — the
+        // route is requireAdmin-gated now, so a raw fetch would 401.
+        const res = await apiFetch('/api/universities', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(item.data),

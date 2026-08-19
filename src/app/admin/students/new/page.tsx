@@ -254,32 +254,39 @@ export default function AdminAddStudentPage() {
           </div>
         </div>
 
-        {/* Step Indicator */}
+        {/* Step Indicator — inline circle+label (same pattern as the edit
+            wizard). The old version used fixed w-24 connectors plus a
+            detached justify-between label row, which forced the page
+            ~600px wide on mobile and let labels drift from their circles. */}
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
-              {[1, 2, 3, 4].map((s) => (
-                <div key={s} className="flex items-center">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${
-                    s < step 
-                      ? 'bg-green-500 text-white' 
-                      : s === step 
-                        ? 'bg-[#9B1B30] text-white' 
+              {[
+                { n: 1, label: 'Personal Info', Icon: User },
+                { n: 2, label: 'Education', Icon: GraduationCap },
+                { n: 3, label: 'Language', Icon: BookOpen },
+                { n: 4, label: 'Review', Icon: CheckCircle2 },
+              ].map(({ n, label, Icon }) => (
+                <div key={n} className="flex items-center min-w-0">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold shrink-0 ${
+                    n < step
+                      ? 'bg-green-500 text-white'
+                      : n === step
+                        ? 'bg-[#9B1B30] text-white'
                         : 'bg-gray-200 text-[#4B5563]'
                   }`}>
-                    {s < step ? <CheckCircle2 className="w-5 h-5" /> : s}
+                    {n < step ? <CheckCircle2 className="w-5 h-5" /> : n}
                   </div>
-                  {s < totalSteps && (
-                    <div className={`w-24 h-1 mx-2 ${s < step ? 'bg-green-500' : 'bg-gray-200'}`} />
+                  <span className={`ml-2 hidden md:flex items-center gap-1 text-sm whitespace-nowrap ${
+                    n === step ? 'font-medium text-[#1B2A4A]' : 'text-[#4B5563]'
+                  }`}>
+                    <Icon className="w-4 h-4" /> {label}
+                  </span>
+                  {n < totalSteps && (
+                    <div className={`w-8 sm:w-16 lg:w-24 h-1 mx-2 shrink-0 ${n < step ? 'bg-green-500' : 'bg-gray-200'}`} />
                   )}
                 </div>
               ))}
-            </div>
-            <div className="flex justify-between mt-4 text-sm text-[#4B5563]">
-              <span className="flex items-center gap-2"><User className="w-4 h-4" /> Personal Info</span>
-              <span className="flex items-center gap-2"><GraduationCap className="w-4 h-4" /> Education</span>
-              <span className="flex items-center gap-2"><BookOpen className="w-4 h-4" /> Language</span>
-              <span className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> Review</span>
             </div>
           </CardContent>
         </Card>

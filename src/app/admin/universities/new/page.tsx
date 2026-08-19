@@ -6,6 +6,7 @@ import { ArrowLeft, Save } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { universities as staticUniversities, type University } from '@/lib/data';
 import { ToastProvider, useToast } from '@/components/admin/toast';
+import { apiFetch } from '@/lib/api-client';
 
 interface UniversityFormData {
   slug: string;
@@ -183,7 +184,7 @@ function UniversityFormInner({ slug }: { slug?: string }) {
       };
 
       if (isEdit) {
-        const res = await fetch(`/api/universities/${slug}`, {
+        const res = await apiFetch(`/api/universities/${slug}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -191,7 +192,7 @@ function UniversityFormInner({ slug }: { slug?: string }) {
         if (!res.ok) throw new Error();
         addToast('University updated successfully', 'success');
       } else {
-        const res = await fetch('/api/universities', {
+        const res = await apiFetch('/api/universities', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),

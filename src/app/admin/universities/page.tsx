@@ -11,6 +11,7 @@ import { ConfirmDialog } from '@/components/admin/confirm-dialog';
 import { AIGenerateModal } from '@/components/admin/ai-generate-modal';
 import { AIBulkGenerateModal } from '@/components/admin/ai-bulk-generate-modal';
 import { useI18n } from '@/lib/i18n';
+import { apiFetch } from '@/lib/api-client';
 
 // Phase 55: page size for the admin table. 25 keeps the table
 // scannable on a 1080p screen without scrolling for the first
@@ -119,7 +120,7 @@ function UniversitiesPageInner() {
 
   const handleDelete = useCallback(async (uni: University) => {
     try {
-      const res = await fetch(`/api/universities/${uni.slug}`, { method: 'DELETE' });
+      const res = await apiFetch(`/api/universities/${uni.slug}`, { method: 'DELETE' });
       if (res.ok) {
         // Remove the row locally instead of re-fetching the full
         // page (the API is paginated; the deleted row is the last
@@ -348,7 +349,7 @@ function UniversitiesPageInner() {
                 : '/api/universities';
             const method = mode === 'regenerate' ? 'PUT' : 'POST';
 
-            const res = await fetch(endpoint, {
+            const res = await apiFetch(endpoint, {
               method,
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(data),

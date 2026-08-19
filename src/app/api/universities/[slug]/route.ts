@@ -5,6 +5,7 @@ import { universities as staticUniversities } from '@/lib/data';
 import { CACHE_TAGS } from '@/lib/cache';
 import { universitySchema } from '@/lib/validators/university';
 import { validationErrorResponse } from '@/lib/validators/shared';
+import { requireAdmin } from '@/lib/supabase-auth';
 
 /**
  * For fields the DB doesn't have yet (because the migration hasn't
@@ -50,6 +51,14 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
+  // Phase 71: catalog mutations are admin-only. This route uses the
+  // service-role client (RLS bypass), so without this gate anyone
+  // could rewrite the catalog.
+  const auth = await requireAdmin(request);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
   if (!isSupabaseServerConfigured() || !supabaseServer) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
   }
@@ -67,7 +76,10 @@ export async function PUT(
       .select()
       .single();
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error) {
+      console.error('[universities/:slug PUT] supabase error:', error);
+      return NextResponse.json({ error: 'Failed to update university' }, { status: 400 });
+    }
     if (!data) return NextResponse.json({ error: 'University not found' }, { status: 404 });
     revalidateTag(CACHE_TAGS.universities, 'default');
     revalidateTag(CACHE_TAGS.university(slug), 'default');
@@ -78,9 +90,15 @@ export async function PUT(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
+  // Phase 71: admin-only (see PUT above).
+  const auth = await requireAdmin(request);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
   if (!isSupabaseServerConfigured() || !supabaseServer) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
   }
@@ -91,7 +109,10 @@ export async function DELETE(
     .delete()
     .eq('slug', slug);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  if (error) {
+    console.error('[universities/:slug DELETE] supabase error:', error);
+    return NextResponse.json({ error: 'Failed to delete university' }, { status: 400 });
+  }
   revalidateTag(CACHE_TAGS.universities, 'default');
   revalidateTag(CACHE_TAGS.university(slug), 'default');
   return NextResponse.json({ success: true });

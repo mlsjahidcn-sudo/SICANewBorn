@@ -91,42 +91,58 @@ export function AIGenerateModal({
       const decoder = new TextDecoder();
       let fullContent = '';
       let serverParsedData: Record<string, unknown> | null = null;
+      // Phase 71: buffer partial SSE lines across network chunks.
+      // Previously each read() was split on '\n' independently — a
+      // `data: {...}` line split across two chunks (common for the
+      // final multi-KB `parsed` event) failed JSON.parse on both
+      // halves and was silently skipped, so the server-validated
+      // payload was lost and the client fell back to reparsing the
+      // raw text (often itself truncated by a split content chunk).
+      let sseBuffer = '';
+
+      const handleSseLine = (line: string) => {
+        if (!line.startsWith('data: ')) return;
+        const data = line.slice(6).trim();
+        if (data === '[DONE]') return;
+
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.error) {
+            throw new Error(parsed.error);
+          }
+          if (parsed.parsed) {
+            // Server-side validated JSON - use directly
+            serverParsedData = parsed.parsed as Record<string, unknown>;
+          }
+          if (parsed.content) {
+            fullContent += parsed.content;
+            setState(prev => ({
+              ...prev,
+              progress: t('adminUniversities.aiModal.generating', { n: fullContent.length }),
+              rawContent: fullContent,
+            }));
+          }
+        } catch (err) {
+          // Provider/stream errors are real failures — rethrow so the
+          // outer catch shows them. Only genuinely unparseable lines
+          // (shouldn't happen with buffering) are skipped.
+          if (err instanceof Error && !(err instanceof SyntaxError)) throw err;
+        }
+      };
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6).trim();
-            if (data === '[DONE]') continue;
-
-            try {
-              const parsed = JSON.parse(data);
-              if (parsed.error) {
-                throw new Error(parsed.error);
-              }
-              if (parsed.parsed) {
-                // Server-side validated JSON - use directly
-                serverParsedData = parsed.parsed as Record<string, unknown>;
-              }
-              if (parsed.content) {
-                fullContent += parsed.content;
-                setState(prev => ({
-                  ...prev,
-                  progress: t('adminUniversities.aiModal.generating', { n: fullContent.length }),
-                  rawContent: fullContent,
-                }));
-              }
-            } catch {
-              // skip unparseable lines
-            }
-          }
-        }
+        sseBuffer += decoder.decode(value, { stream: true });
+        const lines = sseBuffer.split('\n');
+        // Last element is a partial line (or '' if the chunk ended
+        // on a newline) — keep it for the next chunk.
+        sseBuffer = lines.pop() ?? '';
+        for (const line of lines) handleSseLine(line);
       }
+      // Flush any trailing line that arrived without a final newline.
+      if (sseBuffer.trim()) handleSseLine(sseBuffer);
 
       // Use server-parsed data first, then fall back to client parsing
       let generatedData: Record<string, unknown>;

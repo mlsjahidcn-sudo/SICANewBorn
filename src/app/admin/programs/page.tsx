@@ -7,6 +7,7 @@ import { programs as staticPrograms, universities as staticUniversities, type Pr
 import { ToastProvider, useToast } from '@/components/admin/toast';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
 import { useI18n } from '@/lib/i18n';
+import { apiFetch } from '@/lib/api-client';
 
 // Phase 56: page size for the admin programs table. 25 keeps
 // the table scannable, matches the universities page (admin is
@@ -133,7 +134,7 @@ function ProgramsPageInner() {
   const handleDelete = useCallback(
     async (prog: Program) => {
       try {
-        const res = await fetch(`/api/programs/${prog.slug}`, { method: 'DELETE' });
+        const res = await apiFetch(`/api/programs/${prog.slug}`, { method: 'DELETE' });
         if (res.ok) {
           // Local remove: the DB still serves the merged list as
           // the source of truth, but we patch the in-memory copy

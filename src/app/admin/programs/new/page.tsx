@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save } from 'lucide-react';
 import { programs as staticPrograms, universities as staticUniversities, type Program } from '@/lib/data';
 import { ToastProvider, useToast } from '@/components/admin/toast';
+import { apiFetch } from '@/lib/api-client';
 
 interface ProgramFormData {
   slug: string;
@@ -111,7 +112,7 @@ function ProgramFormInner({ slug }: { slug?: string }) {
       };
 
       if (isEdit) {
-        const res = await fetch(`/api/programs/${slug}`, {
+        const res = await apiFetch(`/api/programs/${slug}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -119,7 +120,7 @@ function ProgramFormInner({ slug }: { slug?: string }) {
         if (!res.ok) throw new Error();
         addToast('Program updated successfully', 'success');
       } else {
-        const res = await fetch('/api/programs', {
+        const res = await apiFetch('/api/programs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),

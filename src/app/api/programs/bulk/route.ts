@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { supabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-server';
 import { CACHE_TAGS } from '@/lib/cache';
+import { requireAdmin } from '@/lib/supabase-auth';
 
 /**
  * POST /api/programs/bulk
@@ -33,6 +34,14 @@ import { CACHE_TAGS } from '@/lib/cache';
  *   - errors:   rows that failed validation (no name, etc.)
  */
 export async function POST(request: Request) {
+  // Phase 71: admin-only — bulk import writes via the service-role
+  // client (RLS bypass), so an unauthenticated caller could otherwise
+  // flood the catalog.
+  const auth = await requireAdmin(request);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
   if (!isSupabaseServerConfigured() || !supabaseServer) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
   }
@@ -125,7 +134,7 @@ export async function POST(request: Request) {
 
     if (error) {
       console.error('[programs/bulk POST] supabase error:', error);
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ error: 'Bulk import failed' }, { status: 400 });
     }
 
     const importedCount = data?.length || 0;

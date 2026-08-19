@@ -104,12 +104,12 @@ class DoubaoProvider implements AIProvider {
     yield* parseOpenAIStream(res.body);
   }
 
-  private fetchCompletion(
+  private async fetchCompletion(
     messages: ChatMessage[],
     options: ChatOptions,
     stream: boolean,
   ): Promise<Response> {
-    return fetch(`${this.baseUrl}/chat/completions`, {
+    const res = await fetch(`${this.baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -123,6 +123,17 @@ class DoubaoProvider implements AIProvider {
         ...(options.maxTokens ? { max_tokens: options.maxTokens } : {}),
       }),
     });
+    // Phase 71: surface provider errors instead of swallowing them.
+    // A non-2xx (401 bad key, 402 insufficient balance, 404 unknown
+    // model) previously fell through: chat() returned empty content
+    // and stream() tried to parse the error JSON as SSE, yielding
+    // nothing — the route then sent `{raw: ''}` and the admin UI
+    // showed a cryptic JSON parse failure. Throw with the provider's
+    // own message so the modal shows the real cause.
+    if (!res.ok) {
+      throw new Error(`Doubao ${await readProviderError(res)}`);
+    }
+    return res;
   }
 }
 
@@ -170,12 +181,12 @@ class DeepSeekProvider implements AIProvider {
     yield* parseOpenAIStream(res.body);
   }
 
-  private fetchCompletion(
+  private async fetchCompletion(
     messages: ChatMessage[],
     options: ChatOptions,
     stream: boolean,
   ): Promise<Response> {
-    return fetch(`${this.baseUrl}/chat/completions`, {
+    const res = await fetch(`${this.baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -189,7 +200,36 @@ class DeepSeekProvider implements AIProvider {
         ...(options.maxTokens ? { max_tokens: options.maxTokens } : {}),
       }),
     });
+    // Phase 71: see the Doubao fetchCompletion note — surface
+    // provider errors (401/402/404/5xx) with the provider's own
+    // message instead of letting them masquerade as empty output.
+    if (!res.ok) {
+      throw new Error(`DeepSeek ${await readProviderError(res)}`);
+    }
+    return res;
   }
+}
+
+/**
+ * Read a failed provider response into a short, human-readable error
+ * string: `API error (HTTP 402): Insufficient Balance`. Both Doubao
+ * and DeepSeek return OpenAI-style `{ error: { message } }` bodies;
+ * fall back to the raw text (capped) when the shape differs.
+ */
+async function readProviderError(res: Response): Promise<string> {
+  let detail = '';
+  try {
+    const text = await res.text();
+    try {
+      const parsed = JSON.parse(text) as { error?: { message?: string } };
+      detail = parsed.error?.message ?? text;
+    } catch {
+      detail = text;
+    }
+  } catch {
+    detail = res.statusText;
+  }
+  return `API error (HTTP ${res.status}): ${detail.slice(0, 300)}`;
 }
 
 // ---------------------------------------------------------------------------

@@ -5,6 +5,8 @@ import { programs as staticPrograms } from '@/lib/data';
 import { CACHE_TAGS } from '@/lib/cache';
 import { programSchema } from '@/lib/validators/program';
 import { validationErrorResponse } from '@/lib/validators/shared';
+import { requireAdmin } from '@/lib/supabase-auth';
+import { sanitizeOrTerm, parseIntParam } from '@/lib/postgrest';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -14,8 +16,9 @@ export async function GET(request: Request) {
   const universitySlug = searchParams.get('university');
   const search = searchParams.get('search');
   const sort = searchParams.get('sort') || 'name';
-  const page = parseInt(searchParams.get('page') || '1');
-  const limit = parseInt(searchParams.get('limit') || '8');
+  // Phase 71: NaN-safe, clamped pagination (see /api/universities).
+  const page = parseIntParam(searchParams.get('page'), 1, { min: 1 });
+  const limit = parseIntParam(searchParams.get('limit'), 8, { min: 1, max: 500 });
 
   if (isSupabaseServerConfigured() && supabaseServer) {
     let query = supabaseServer
@@ -26,7 +29,9 @@ export async function GET(request: Request) {
     if (language) query = query.eq('language', language);
     if (discipline) query = query.eq('discipline', discipline);
     if (universitySlug) query = query.eq('university_slug', universitySlug);
-    if (search) query = query.or(`name.ilike.%${search}%,name_cn.ilike.%${search}%`);
+    // Phase 71: sanitize before interpolating into .or().
+    const term = search ? sanitizeOrTerm(search) : '';
+    if (term) query = query.or(`name.ilike.%${term}%,name_cn.ilike.%${term}%`);
 
     if (sort === 'name') query = query.order('name', { ascending: true });
     else if (sort === 'tuition') query = query.order('tuition', { ascending: true });
@@ -73,6 +78,13 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  // Phase 71: catalog mutations are admin-only (service-role client,
+  // RLS bypass — see /api/universities/[slug]).
+  const auth = await requireAdmin(request);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
   if (!isSupabaseServerConfigured() || !supabaseServer) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
   }
@@ -89,7 +101,10 @@ export async function POST(request: Request) {
       .select()
       .single();
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error) {
+      console.error('[programs POST] supabase error:', error);
+      return NextResponse.json({ error: 'Failed to create program' }, { status: 400 });
+    }
     revalidateTag(CACHE_TAGS.programs, 'default');
     revalidateTag(CACHE_TAGS.program(String(data.slug)), 'default');
     return NextResponse.json({ program: mapProgramFromDb(data) }, { status: 201 });

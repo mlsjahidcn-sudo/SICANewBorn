@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAIProvider } from '@/lib/ai/provider';
 import { captureAIError } from '@/lib/ai/with-capture';
 import { checkAdminAIRateLimit } from '@/lib/ai/admin-ai-rate-limit';
-import { getRequestAuth } from '@/lib/supabase-auth';
+import { requireAdmin } from '@/lib/supabase-auth';
 
 const SYSTEM_PROMPT = `You are a university data generator for a Study in China platform. Given a Chinese university name, generate comprehensive information about it.
 
@@ -78,13 +78,12 @@ Rules:
 - For gallery, use realistic Unsplash photo IDs (e.g. https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=800) related to Chinese universities or campus scenes`;
 
 export async function POST(request: NextRequest) {
-  // Phase 36: gate on admin auth. The admin modal already runs from
-  // the admin layout, so this just enforces that the Bearer token is
-  // present + valid — closes a Phase-1-era security gap where this
-  // route was callable without any auth (anyone could burn the
-  // provider quota). Returns 401 + 503 the same shape as the existing
-  // getRequestAuth contract so the client error path is unchanged.
-  const auth = await getRequestAuth(request);
+  // Phase 36 gated this on any valid Bearer token; Phase 71 tightens
+  // it to requireAdmin — the old check let any logged-in student burn
+  // provider quota (only the per-user rate limit stood in the way).
+  // Returns 401/403/503 in the same shape as getRequestAuth, so the
+  // client error path is unchanged.
+  const auth = await requireAdmin(request);
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }

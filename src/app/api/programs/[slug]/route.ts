@@ -5,6 +5,7 @@ import { programs as staticPrograms } from '@/lib/data';
 import { CACHE_TAGS } from '@/lib/cache';
 import { programSchema } from '@/lib/validators/program';
 import { validationErrorResponse } from '@/lib/validators/shared';
+import { requireAdmin } from '@/lib/supabase-auth';
 
 export async function GET(
   _request: Request,
@@ -35,6 +36,13 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
+  // Phase 71: catalog mutations are admin-only (service-role client,
+  // RLS bypass — see /api/universities/[slug]).
+  const auth = await requireAdmin(request);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
   if (!isSupabaseServerConfigured() || !supabaseServer) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
   }
@@ -52,7 +60,10 @@ export async function PUT(
       .select()
       .single();
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error) {
+      console.error('[programs/:slug PUT] supabase error:', error);
+      return NextResponse.json({ error: 'Failed to update program' }, { status: 400 });
+    }
     if (!data) return NextResponse.json({ error: 'Program not found' }, { status: 404 });
     revalidateTag(CACHE_TAGS.programs, 'default');
     revalidateTag(CACHE_TAGS.program(slug), 'default');
@@ -63,9 +74,15 @@ export async function PUT(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
+  // Phase 71: admin-only (see PUT above).
+  const auth = await requireAdmin(request);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
   if (!isSupabaseServerConfigured() || !supabaseServer) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
   }
@@ -76,7 +93,10 @@ export async function DELETE(
     .delete()
     .eq('slug', slug);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  if (error) {
+    console.error('[programs/:slug DELETE] supabase error:', error);
+    return NextResponse.json({ error: 'Failed to delete program' }, { status: 400 });
+  }
   revalidateTag(CACHE_TAGS.programs, 'default');
   revalidateTag(CACHE_TAGS.program(slug), 'default');
   return NextResponse.json({ success: true });

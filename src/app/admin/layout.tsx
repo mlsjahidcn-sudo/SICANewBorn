@@ -121,7 +121,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
         <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
           <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-200">
             <SicaLogo className="h-8 w-auto" />
-            <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">{t('adminNav.brand')}</span>
+            <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold whitespace-nowrap shrink-0">{t('adminNav.brand')}</span>
           </div>
           <div className="flex-1 px-3 py-4 space-y-1">
             {navItems.map((item) => {
@@ -138,7 +138,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
             })}
           </div>
         </aside>
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-w-0">
           <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-4">
             <div className="flex-1" />
             <div className="text-sm text-[#4B5563] flex items-center gap-2">
@@ -190,7 +190,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
             {/* Logo */}
             <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-200">
               <SicaLogo className="h-8 w-auto" />
-              <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">{t('adminNav.brand')}</span>
+              <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold whitespace-nowrap shrink-0">{t('adminNav.brand')}</span>
               <button
                 className="ml-auto lg:hidden text-gray-500 hover:text-[#1B2A4A]"
                 onClick={() => setSidebarOpen(false)}
@@ -246,8 +246,11 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
           </div>
       </aside>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col min-h-screen">
+      {/* Main content — min-w-0 is load-bearing: without it this flex
+          child refuses to shrink below the content's intrinsic width,
+          so wide tables (students list) blow out the whole page instead
+          of scrolling inside their own overflow-x-auto container. */}
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen">
         {/* Top bar */}
         <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-4">
           <button

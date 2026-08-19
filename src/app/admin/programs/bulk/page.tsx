@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Upload, FileText, AlertCircle, CheckCircle2, X, Plus, Trash2 } from 'lucide-react';
 import { universities as staticUniversities } from '@/lib/data';
 import { ToastProvider, useToast } from '@/components/admin/toast';
+import { apiFetch } from '@/lib/api-client';
 
 interface ParsedProgram {
   name: string;
@@ -191,7 +192,7 @@ function BulkImportContent() {
         curriculumCn: [],
       }));
 
-      const res = await fetch('/api/programs/bulk', {
+      const res = await apiFetch('/api/programs/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ programs }),
