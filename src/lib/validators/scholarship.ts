@@ -2,7 +2,8 @@ import { z } from 'zod';
 import { stringArraySchema } from './shared';
 
 export const scholarshipSchema = z.object({
-  slug: z.string().min(1, 'Slug is required'),
+  // Track 1.3 U2: enforce lowercase kebab-case (see university validator).
+  slug: z.string().min(1, 'Slug is required').regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug must be lowercase letters, numbers and hyphens'),
   name: z.string().min(1, 'Name is required'),
   nameCn: z.string().default(''),
   type: z.enum(['Full', 'Partial']).default('Partial'),

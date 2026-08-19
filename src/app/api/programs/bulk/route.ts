@@ -3,6 +3,10 @@ import { revalidateTag } from 'next/cache';
 import { supabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-server';
 import { CACHE_TAGS } from '@/lib/cache';
 import { requireAdmin } from '@/lib/supabase-auth';
+// Track 1.3 U2: mappers + slugify consolidated into src/lib/catalog-mappers.ts.
+// The local mapProgramFromDb copy also read row.universidad_slug — the real
+// DB column is university_slug; the canonical mapper fixes that.
+import { mapProgramFromDb, slugify } from '@/lib/catalog-mappers';
 
 /**
  * POST /api/programs/bulk
@@ -165,35 +169,3 @@ export async function POST(request: Request) {
   }
 }
 
-/** Slugify a string the way the rest of the app does. */
-function slugify(input: string): string {
-  return input
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
-
-function mapProgramFromDb(row: Record<string, unknown>) {
-  return {
-    slug: row.slug,
-    name: row.name,
-    nameCn: row.name_cn,
-    universitySlug: row.universidad_slug,
-    degree: row.degree,
-    discipline: row.discipline,
-    disciplineCn: row.discipline_cn,
-    language: row.language,
-    duration: row.duration,
-    durationCn: row.duration_cn,
-    tuition: row.tuition,
-    description: row.description,
-    descriptionCn: row.description_cn,
-    requirements: row.requirements,
-    requirementsCn: row.requirements_cn,
-    curriculum: row.curriculum,
-    curriculumCn: row.curriculum_cn,
-    scholarshipAvailable: row.scholarship_available,
-    intake: row.intake,
-    intakeCn: row.intake_cn,
-  };
-}

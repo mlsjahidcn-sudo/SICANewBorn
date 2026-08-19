@@ -36,3 +36,23 @@ export const highlightsSchema = z.object({
   en: z.array(z.string()).default([]),
   zh: z.array(z.string()).default([]),
 });
+
+/**
+ * Track 1.3 U2: keep only the keys the client actually sent from a
+ * partial-schema parse result. In zod v4, `.partial()` makes every
+ * field optional but still applies per-field defaults to omitted
+ * keys — merging that over an existing row would blank the omitted
+ * fields with '' / [] / 0. Filtering by the raw body's keys restores
+ * true partial-update semantics for the [slug] PUT handlers.
+ */
+export function pickSentFields<T extends Record<string, unknown>>(
+  parsed: T,
+  raw: unknown,
+): Partial<T> {
+  const sent = new Set(
+    Object.keys(raw && typeof raw === 'object' ? raw : {}),
+  );
+  return Object.fromEntries(
+    Object.entries(parsed).filter(([key]) => sent.has(key)),
+  ) as Partial<T>;
+}

@@ -6,15 +6,15 @@
  * existing AI-generated universities don't break.
  *
  * We import the mapper by re-creating the same helper inline — it's
- * small, lives in two route files, and the test is a regression
- * net: if someone changes the logic in one place, this catches
- * inconsistency.
+ * small and lives in src/lib/catalog-mappers.ts (Track 1.3 U2), and
+ * the test is a regression net: if someone changes the logic there,
+ * this catches inconsistency.
  */
 import { describe, it, expect } from 'vitest';
 
 /**
- * Mirror of extractHighlightArray from src/app/api/universities/route.ts
- * (and the [slug] sibling). Keep in sync.
+ * Mirror of extractHighlightArray from src/lib/catalog-mappers.ts.
+ * Keep in sync.
  */
 function extractHighlightArray(
   value: unknown,

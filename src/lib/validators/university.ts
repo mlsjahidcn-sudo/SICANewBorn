@@ -2,7 +2,9 @@ import { z } from 'zod';
 import { stringArraySchema, highlightsSchema } from './shared';
 
 export const universitySchema = z.object({
-  slug: z.string().min(1, 'Slug is required'),
+  // Track 1.3 U2: enforce lowercase kebab-case so catalog URLs stay
+  // consistent with what slugify() produces on import.
+  slug: z.string().min(1, 'Slug is required').regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug must be lowercase letters, numbers and hyphens'),
   name: z.string().min(1, 'Name is required'),
   nameCn: z.string().default(''),
   city: z.string().min(1, 'City is required'),

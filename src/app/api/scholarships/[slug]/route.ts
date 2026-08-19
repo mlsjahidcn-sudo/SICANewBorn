@@ -4,8 +4,10 @@ import { supabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-serve
 import { scholarships as staticScholarships } from '@/lib/data';
 import { CACHE_TAGS } from '@/lib/cache';
 import { scholarshipSchema } from '@/lib/validators/scholarship';
-import { validationErrorResponse } from '@/lib/validators/shared';
+import { validationErrorResponse, pickSentFields } from '@/lib/validators/shared';
 import { requireAdmin } from '@/lib/supabase-auth';
+// Track 1.3 U2: DB mappers consolidated into src/lib/catalog-mappers.ts.
+import { mapScholarshipFromDb, mapScholarshipToDb } from '@/lib/catalog-mappers';
 
 export async function GET(
   _request: Request,
@@ -49,13 +51,29 @@ export async function PUT(
 
   const { slug } = await params;
   try {
+    // Track 1.3 U2: partial PUT — fetch the existing row first, then
+    // overlay only the fields the client sent (see universities/[slug]).
+    const { data: existing, error: fetchError } = await supabaseServer
+      .from('scholarships')
+      .select('*')
+      .eq('slug', slug)
+      .single();
+
+    if (fetchError || !existing) {
+      return NextResponse.json({ error: 'Scholarship not found' }, { status: 404 });
+    }
+
     const raw = await request.json();
-    const parsed = scholarshipSchema.safeParse(raw);
+    const parsed = scholarshipSchema.partial().safeParse(raw);
     if (!parsed.success) return validationErrorResponse(parsed.error);
+
+    // Slug is excluded from the update payload (immutable in PUT; U4).
+    const merged = { ...mapScholarshipFromDb(existing), ...pickSentFields(parsed.data, raw) };
+    const { slug: _ignored, ...updateRecord } = mapScholarshipToDb(merged);
 
     const { data, error } = await supabaseServer
       .from('scholarships')
-      .update(mapScholarshipToDb(parsed.data))
+      .update(updateRecord)
       .eq('slug', slug)
       .select()
       .single();
@@ -102,48 +120,3 @@ export async function DELETE(
   return NextResponse.json({ success: true });
 }
 
-function mapScholarshipFromDb(row: Record<string, unknown>) {
-  return {
-    slug: row.slug,
-    name: row.name,
-    nameCn: row.name_cn,
-    type: row.type,
-    degreeLevels: row.degree_levels,
-    eligibleRegions: row.eligible_regions,
-    duration: row.duration,
-    description: row.description,
-    descriptionCn: row.description_cn,
-    coverage: row.coverage,
-    coverageCn: row.coverage_cn,
-    requirements: row.requirements,
-    requirementsCn: row.requirements_cn,
-    applicationProcess: row.application_process,
-    applicationProcessCn: row.application_process_cn,
-    deadline: row.deadline,
-    applicationMethod: row.application_method,
-    applicationMethodCn: row.application_method_cn,
-  };
-}
-
-function mapScholarshipToDb(s: Record<string, unknown>) {
-  return {
-    slug: s.slug,
-    name: s.name,
-    name_cn: s.nameCn,
-    type: s.type,
-    degree_levels: s.degreeLevels,
-    eligible_regions: s.eligibleRegions,
-    duration: s.duration,
-    description: s.description,
-    description_cn: s.descriptionCn,
-    coverage: s.coverage,
-    coverage_cn: s.coverageCn,
-    requirements: s.requirements,
-    requirements_cn: s.requirementsCn,
-    application_process: s.applicationProcess,
-    application_process_cn: s.applicationProcessCn,
-    deadline: s.deadline,
-    application_method: s.applicationMethod,
-    application_method_cn: s.applicationMethodCn,
-  };
-}

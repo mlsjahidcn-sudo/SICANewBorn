@@ -7,6 +7,8 @@ import { scholarshipSchema } from '@/lib/validators/scholarship';
 import { validationErrorResponse } from '@/lib/validators/shared';
 import { requireAdmin } from '@/lib/supabase-auth';
 import { sanitizeOrTerm, parseIntParam } from '@/lib/postgrest';
+// Track 1.3 U2: DB mappers consolidated into src/lib/catalog-mappers.ts.
+import { mapScholarshipFromDb, mapScholarshipToDb } from '@/lib/catalog-mappers';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -107,48 +109,3 @@ export async function POST(request: Request) {
   }
 }
 
-function mapScholarshipFromDb(row: Record<string, unknown>) {
-  return {
-    slug: row.slug,
-    name: row.name,
-    nameCn: row.name_cn,
-    type: row.type,
-    degreeLevels: row.degree_levels,
-    eligibleRegions: row.eligible_regions,
-    duration: row.duration,
-    description: row.description,
-    descriptionCn: row.description_cn,
-    coverage: row.coverage,
-    coverageCn: row.coverage_cn,
-    requirements: row.requirements,
-    requirementsCn: row.requirements_cn,
-    applicationProcess: row.application_process,
-    applicationProcessCn: row.application_process_cn,
-    deadline: row.deadline,
-    applicationMethod: row.application_method,
-    applicationMethodCn: row.application_method_cn,
-  };
-}
-
-function mapScholarshipToDb(s: Record<string, unknown>) {
-  return {
-    slug: s.slug,
-    name: s.name,
-    name_cn: s.nameCn,
-    type: s.type,
-    degree_levels: s.degreeLevels,
-    eligible_regions: s.eligibleRegions,
-    duration: s.duration,
-    description: s.description,
-    description_cn: s.descriptionCn,
-    coverage: s.coverage,
-    coverage_cn: s.coverageCn,
-    requirements: s.requirements,
-    requirements_cn: s.requirementsCn,
-    application_process: s.applicationProcess,
-    application_process_cn: s.applicationProcessCn,
-    deadline: s.deadline,
-    application_method: s.applicationMethod,
-    application_method_cn: s.applicationMethodCn,
-  };
-}

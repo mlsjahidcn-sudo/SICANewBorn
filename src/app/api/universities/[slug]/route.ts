@@ -4,21 +4,10 @@ import { supabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-serve
 import { universities as staticUniversities } from '@/lib/data';
 import { CACHE_TAGS } from '@/lib/cache';
 import { universitySchema } from '@/lib/validators/university';
-import { validationErrorResponse } from '@/lib/validators/shared';
+import { validationErrorResponse, pickSentFields } from '@/lib/validators/shared';
 import { requireAdmin } from '@/lib/supabase-auth';
-
-/**
- * For fields the DB doesn't have yet (because the migration hasn't
- * been applied), fall back to the static-data row with the same slug
- * if it exists. Lets the page render useful values for legacy DB
- * rows while the migration is in flight. Once the migration is
- * applied and rows are backfilled, this fallback becomes a no-op.
- */
-function withStaticFallback<T>(slug: string, key: keyof (typeof staticUniversities)[number], value: T): T {
-  if (value !== undefined && value !== null) return value;
-  const staticRow = staticUniversities.find((u) => u.slug === slug);
-  return (staticRow?.[key] as T) ?? value;
-}
+// Track 1.3 U2: DB mappers consolidated into src/lib/catalog-mappers.ts.
+import { mapUniversityFromDb, mapUniversityToDb } from '@/lib/catalog-mappers';
 
 export async function GET(
   _request: Request,
@@ -65,13 +54,31 @@ export async function PUT(
 
   const { slug } = await params;
   try {
+    // Track 1.3 U2: partial PUT — fetch the existing row first, then
+    // overlay only the fields the client sent. Previously the full
+    // schema's zod defaults ('' / [] / 0) blanked any omitted field.
+    const { data: existing, error: fetchError } = await supabaseServer
+      .from('universities')
+      .select('*')
+      .eq('slug', slug)
+      .single();
+
+    if (fetchError || !existing) {
+      return NextResponse.json({ error: 'University not found' }, { status: 404 });
+    }
+
     const raw = await request.json();
-    const parsed = universitySchema.safeParse(raw);
+    const parsed = universitySchema.partial().safeParse(raw);
     if (!parsed.success) return validationErrorResponse(parsed.error);
+
+    // Slug is excluded from the update payload: the path slug is the
+    // identifier and renaming slugs is out of scope for PUT (U4).
+    const merged = { ...mapUniversityFromDb(existing), ...pickSentFields(parsed.data, raw) };
+    const { slug: _ignored, ...updateRecord } = mapUniversityToDb(merged);
 
     const { data, error } = await supabaseServer
       .from('universities')
-      .update(mapUniversityToDb(parsed.data))
+      .update(updateRecord)
       .eq('slug', slug)
       .select()
       .single();
@@ -118,124 +125,3 @@ export async function DELETE(
   return NextResponse.json({ success: true });
 }
 
-function mapUniversityFromDb(row: Record<string, unknown>) {
-  return {
-    slug: row.slug,
-    name: row.name,
-    nameCn: row.name_cn,
-    city: row.city,
-    cityCn: row.city_cn,
-    ranking: row.ranking,
-    rating: row.rating !== null && row.rating !== undefined ? Number(row.rating) : undefined,
-    type: row.type,
-    typeCn: row.type_cn,
-    established: row.established,
-    students: row.students,
-    intlStudents: row.intl_students,
-    description: row.description,
-    descriptionCn: row.description_cn,
-    popularPrograms: row.popular_programs ?? [],
-    popularProgramsCn: row.popular_programs_cn ?? [],
-    tuitionUndergrad: row.tuition_undergrad,
-    tuitionGraduate: row.tuition_graduate,
-    intake: row.intake,
-    intakeCn: row.intake_cn,
-    disciplines: row.disciplines ?? [],
-    image: row.image,
-    logo: row.logo,
-    qsRanking: row.qs_ranking,
-    qsWorldRanking: row.qs_world_ranking,
-    tags: row.tags ?? [],
-    tagsCn: row.tags_cn ?? [],
-    accommodation: row.accommodation,
-    accommodationCn: row.accommodation_cn,
-    accommodationCost: row.accommodation_cost,
-    accommodationCostCn: row.accommodation_cost_cn,
-    accommodationTypes: row.accommodation_types ?? [],
-    accommodationTypesCn: row.accommodation_types_cn ?? [],
-    gallery: row.gallery ?? [],
-    highlights: {
-      en: row.highlights_en ?? [],
-      zh: row.highlights_zh ?? [],
-    },
-    scholarshipInfo: row.scholarship_info ?? row.scholarshipInfo,
-    scholarshipInfoCn: row.scholarship_info_cn ?? row.scholarshipInfoCn,
-    applicationDeadline: withStaticFallback(
-      row.slug as string,
-      'applicationDeadline',
-      (row.application_deadline ?? row.applicationDeadline) as string | undefined,
-    ),
-  };
-}
-
-function mapUniversityToDb(u: Record<string, unknown>) {
-  return {
-    slug: u.slug,
-    name: u.name,
-    name_cn: u.nameCn,
-    city: u.city,
-    city_cn: u.cityCn,
-    ranking: u.ranking,
-    rating: u.rating,
-    type: u.type,
-    type_cn: u.typeCn,
-    established: u.established,
-    students: u.students,
-    intl_students: u.intlStudents,
-    description: u.description,
-    description_cn: u.descriptionCn,
-    popular_programs: u.popularPrograms,
-    popular_programs_cn: u.popularProgramsCn,
-    tuition_undergrad: u.tuitionUndergrad,
-    tuition_graduate: u.tuitionGraduate,
-    intake: u.intake,
-    intake_cn: u.intakeCn,
-    disciplines: u.disciplines,
-    image: u.image,
-    logo: u.logo,
-    qs_ranking: u.qsRanking,
-    qs_world_ranking: u.qsWorldRanking,
-    tags: u.tags,
-    tags_cn: u.tagsCn,
-    accommodation: u.accommodation,
-    accommodation_cn: u.accommodationCn,
-    accommodation_cost: u.accommodationCost,
-    accommodation_cost_cn: u.accommodationCostCn,
-    accommodation_types: u.accommodationTypes,
-    accommodation_types_cn: u.accommodationTypesCn,
-    gallery: u.gallery,
-    // Highlights: accept the new {en, zh} shape, legacy flat array,
-    // or bullet-separated string. See extractHighlightArray in
-    // src/app/api/universities/route.ts for the full implementation.
-    highlights_en: extractHighlightArray(u.highlights, 'en'),
-    highlights_zh: extractHighlightArray(u.highlights, 'zh'),
-    scholarship_info: u.scholarshipInfo ?? u.scholarship_info,
-    scholarship_info_cn: u.scholarshipInfoCn ?? u.scholarship_info_cn,
-    application_deadline: u.applicationDeadline ?? u.application_deadline,
-  };
-}
-
-/**
- * Same shape tolerance as the [route.ts] sibling — duplicated here so
- * the [slug] route is self-contained and the [route.ts] file can
- * stay focused on list/create logic.
- */
-function extractHighlightArray(
-  value: unknown,
-  lang: 'en' | 'zh',
-): string[] {
-  if (Array.isArray(value)) {
-    return value.map((v) => String(v));
-  }
-  if (value && typeof value === 'object' && lang in (value as Record<string, unknown>)) {
-    const arr = (value as Record<string, unknown>)[lang];
-    if (Array.isArray(arr)) return arr.map((v) => String(v));
-  }
-  if (typeof value === 'string') {
-    return value
-      .split(/[\n•·]+/)
-      .map((s) => s.trim())
-      .filter(Boolean);
-  }
-  return [];
-}
