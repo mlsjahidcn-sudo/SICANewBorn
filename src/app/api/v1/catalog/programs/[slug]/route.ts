@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { buildServiceClient, getServerEnv } from '@/lib/supabase-auth';
-import { requireApiKey, hasScope } from '@/lib/api-auth';
+import { buildServiceClient } from '@/lib/supabase-auth';
 import {
   CatalogLanguage,
   CatalogSingleResponse,
@@ -8,6 +7,7 @@ import {
   publicProgramFromRow,
 } from '@/lib/v1-catalog';
 import { cacheGet, cacheKey, cacheSet } from '@/lib/v1-catalog-cache';
+import { rateLimitHeaders, setupV1Request } from '@/lib/v1-route-helpers';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,35 +23,32 @@ export async function GET(
   request: NextRequest,
   context: { params: Promise<{ slug: string }> },
 ) {
-  const auth = await requireApiKey(request);
-  if (!auth.ok) {
-    return NextResponse.json({ error: auth.error }, { status: auth.status });
-  }
-  if (!hasScope(auth.key, 'read:catalog')) {
-    return NextResponse.json(
-      { error: 'API key missing required scope: read:catalog' },
-      { status: 403 },
-    );
-  }
-  if (!getServerEnv().serviceKey) {
-    return NextResponse.json({ error: 'Service not configured' }, { status: 503 });
-  }
+  const setup = await setupV1Request(request);
+  if (!setup.ok) return setup.response;
+  const { key, rate } = setup;
 
   const { slug } = await context.params;
   if (!slug || typeof slug !== 'string') {
-    return NextResponse.json({ error: 'Missing slug' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'Missing slug' },
+      { status: 400, headers: rateLimitHeaders(rate) },
+    );
   }
 
   const { searchParams } = new URL(request.url);
   const language = (searchParams.get('pageLanguage') ?? 'both') as CatalogLanguage;
   const bypassCache = searchParams.get('nocache') === '1';
 
-  const ck = cacheKey(auth.key.id, `program:${slug}:${searchParams.toString()}`);
+  const ck = cacheKey(key.id, `program:${slug}:${searchParams.toString()}`);
   if (!bypassCache) {
     const hit = cacheGet<CatalogSingleResponse<PublicProgram>>(ck);
     if (hit) {
       return NextResponse.json(hit, {
-        headers: { 'X-Cache': 'HIT', 'Cache-Control': 'public, max-age=60' },
+        headers: {
+          'X-Cache': 'HIT',
+          'Cache-Control': 'public, max-age=60',
+          ...rateLimitHeaders(rate),
+        },
       });
     }
   }
@@ -65,10 +62,16 @@ export async function GET(
 
   if (error) {
     console.error('[v1/catalog/programs/:slug] query error:', error);
-    return NextResponse.json({ error: 'Query failed' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Query failed' },
+      { status: 500, headers: rateLimitHeaders(rate) },
+    );
   }
   if (!data) {
-    return NextResponse.json({ error: 'Program not found' }, { status: 404 });
+    return NextResponse.json(
+      { error: 'Program not found' },
+      { status: 404, headers: rateLimitHeaders(rate) },
+    );
   }
 
   const response: CatalogSingleResponse<PublicProgram> = {
@@ -78,6 +81,10 @@ export async function GET(
 
   cacheSet(ck, response, CACHE_TTL_SECONDS);
   return NextResponse.json(response, {
-    headers: { 'X-Cache': bypassCache ? 'BYPASS' : 'MISS', 'Cache-Control': 'public, max-age=60' },
+    headers: {
+      'X-Cache': bypassCache ? 'BYPASS' : 'MISS',
+      'Cache-Control': 'public, max-age=60',
+      ...rateLimitHeaders(rate),
+    },
   });
 }

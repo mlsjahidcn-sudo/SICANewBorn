@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { buildServiceClient, getServerEnv } from '@/lib/supabase-auth';
-import { requireApiKey, hasScope } from '@/lib/api-auth';
+import { buildServiceClient } from '@/lib/supabase-auth';
 import {
   CatalogLanguage,
   CatalogResponse,
@@ -9,6 +8,7 @@ import {
   publicUniversityFromRow,
 } from '@/lib/v1-catalog';
 import { cacheGet, cacheKey, cacheSet } from '@/lib/v1-catalog-cache';
+import { rateLimitHeaders, setupV1Request } from '@/lib/v1-route-helpers';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,20 +52,10 @@ const QuerySchema = z.object({
  * edits appear within 10 min. Use ?nocache=1 to bypass.
  */
 export async function GET(request: NextRequest) {
-  // 1. Auth
-  const auth = await requireApiKey(request);
-  if (!auth.ok) {
-    return NextResponse.json({ error: auth.error }, { status: auth.status });
-  }
-  if (!hasScope(auth.key, 'read:catalog')) {
-    return NextResponse.json(
-      { error: 'API key missing required scope: read:catalog' },
-      { status: 403 },
-    );
-  }
-  if (!getServerEnv().serviceKey) {
-    return NextResponse.json({ error: 'Service not configured' }, { status: 503 });
-  }
+  // 1. Auth + scope + rate limit (shared across all /v1/* routes)
+  const setup = await setupV1Request(request);
+  if (!setup.ok) return setup.response;
+  const { key, rate } = setup;
 
   // 2. Parse + validate query
   const { searchParams } = new URL(request.url);
@@ -73,7 +63,7 @@ export async function GET(request: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json(
       { error: 'Invalid query parameters', issues: parsed.error.flatten() },
-      { status: 400 },
+      { status: 400, headers: rateLimitHeaders(rate) },
     );
   }
   const q = parsed.data;
@@ -81,12 +71,12 @@ export async function GET(request: NextRequest) {
   const bypassCache = searchParams.get('nocache') === '1';
 
   // 3. Cache lookup (per-key, per-query)
-  const ck = cacheKey(auth.key.id, searchParams.toString());
+  const ck = cacheKey(key.id, searchParams.toString());
   if (!bypassCache) {
     const hit = cacheGet<CatalogResponse<PublicUniversity>>(ck);
     if (hit) {
       return NextResponse.json(hit, {
-        headers: { 'X-Cache': 'HIT', 'Cache-Control': 'public, max-age=60' },
+        headers: { 'X-Cache': 'HIT', 'Cache-Control': 'public, max-age=60', ...rateLimitHeaders(rate) },
       });
     }
   }
@@ -127,7 +117,10 @@ export async function GET(request: NextRequest) {
   const { data, count, error } = await query;
   if (error) {
     console.error('[v1/catalog/universities] query error:', error);
-    return NextResponse.json({ error: 'Query failed' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Query failed' },
+      { status: 500, headers: rateLimitHeaders(rate) },
+    );
   }
 
   const rows = (data ?? []) as Record<string, unknown>[];
@@ -149,6 +142,10 @@ export async function GET(request: NextRequest) {
   // 6. Cache + return
   cacheSet(ck, response, CACHE_TTL_SECONDS);
   return NextResponse.json(response, {
-    headers: { 'X-Cache': bypassCache ? 'BYPASS' : 'MISS', 'Cache-Control': 'public, max-age=60' },
+    headers: {
+      'X-Cache': bypassCache ? 'BYPASS' : 'MISS',
+      'Cache-Control': 'public, max-age=60',
+      ...rateLimitHeaders(rate),
+    },
   });
 }
