@@ -343,6 +343,9 @@ export function Footer() {
             <Link href="#" className="hover:text-[#9B1B30] transition-colors">
               {t('footer.terms')}
             </Link>
+            <Link href="/api-docs" className="hover:text-[#9B1B30] transition-colors">
+              {t('footer.apiDocs')}
+            </Link>
             <span className="text-gray-300">·</span>
             <span>{t('footer.trustCountries')} 30+</span>
           </div>

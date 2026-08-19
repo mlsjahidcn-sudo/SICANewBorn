@@ -1,0 +1,732 @@
+openapi: 3.0.3
+info:
+  title: SICA B2B Catalog API
+  version: '1.0.0'
+  description: |
+    Public catalog API for external integrators (affiliate sites, sister
+    platforms, recruitment partners). Read-only access to SICA's
+    university and program data.
+
+    ## Authentication
+    Every request needs an `Authorization: Bearer sk_live_…` header.
+    Issue a key from `/admin/api-keys` (admin-only). The plaintext is
+    shown exactly once on creation; we only keep the SHA-256 hash.
+
+    ## Rate limits
+    Per-key token bucket, capacity = the limit set on the key
+    (default 100 req/min, configurable per key at issue time). On
+    overflow: HTTP 429 with `Retry-After`. Every response includes
+    `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`.
+
+    ## Caching
+    Responses are cached in-memory for 10 min, per (api_key_id,
+    query_string). Cache status: `X-Cache: HIT | MISS | BYPASS`. Pass
+    `?nocache=1` to bypass.
+
+    ## Versioning
+    The `/v1/` prefix is forever-stable. Breaking changes bump to
+    `/v2/`. v1 will keep working for at least 12 months after v2
+    ships.
+
+    ## Quickstart
+    ```bash
+    curl -H "Authorization: Bearer sk_live_..." \
+         "https://studyinchina.academy/v1/catalog/universities?city=Beijing&language=en&limit=5"
+    ```
+  contact:
+    name: SICA API Support
+    email: support@sica.com.cn
+  license:
+    name: Proprietary
+    url: https://studyinchina.academy/legal/api-terms
+
+servers:
+  - url: https://studyinchina.academy
+    description: Production
+  - url: https://staging.studyinchina.academy
+    description: Staging (sandbox data)
+
+tags:
+  - name: catalog
+    description: Public university + program catalog
+
+security:
+  - BearerAuth: []
+
+paths:
+  /v1/catalog/universities:
+    get:
+      tags: [catalog]
+      operationId: listUniversities
+      summary: List universities
+      description: |
+        Paginated list of universities with optional filters. All
+        filter params are AND-combined. Returns a stable public
+        schema — no admin fields.
+
+        **Language shaping**: `?language=en` returns only English
+        fields (`*_cn` are nulled/emptied). `?language=zh` swaps
+        the primary `name`/`city`/`description` to Chinese, falling
+        back to English if the Chinese version is missing. Default
+        `both` returns both.
+      parameters:
+        - $ref: '#/components/parameters/Q'
+        - $ref: '#/components/parameters/City'
+        - $ref: '#/components/parameters/Tag'
+        - $ref: '#/components/parameters/UniversityType'
+        - $ref: '#/components/parameters/MinRating'
+        - $ref: '#/components/parameters/Language'
+        - $ref: '#/components/parameters/UniversitySort'
+        - $ref: '#/components/parameters/Order'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - name: nocache
+          in: query
+          required: false
+          description: Set to `1` to bypass the 10-min in-memory cache.
+          schema:
+            type: string
+            enum: ['1']
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Cache:
+              $ref: '#/components/headers/XCache'
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/XRateLimitLimit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/XRateLimitRemaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/XRateLimitReset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UniversitiesResponse'
+              examples:
+                default:
+                  $ref: '#/components/examples/UniversitiesListExample'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /v1/catalog/universities/{slug}:
+    get:
+      tags: [catalog]
+      operationId: getUniversity
+      summary: Get a single university by slug
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          description: The university's URL slug (e.g. `tsinghua-university`).
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Language'
+        - name: nocache
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: ['1']
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Cache: { $ref: '#/components/headers/XCache' }
+            X-RateLimit-Limit: { $ref: '#/components/headers/XRateLimitLimit' }
+            X-RateLimit-Remaining: { $ref: '#/components/headers/XRateLimitRemaining' }
+            X-RateLimit-Reset: { $ref: '#/components/headers/XRateLimitReset' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UniversityResponse'
+              examples:
+                default:
+                  $ref: '#/components/examples/UniversitySingleExample'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /v1/catalog/programs:
+    get:
+      tags: [catalog]
+      operationId: listPrograms
+      summary: List programs
+      description: |
+        Paginated list of programs. `?university` filters by parent
+        university slug. `?language` filters by instruction
+        language (English | Chinese | Bilingual). `?scholarship=true`
+        returns only programs with scholarships available.
+      parameters:
+        - $ref: '#/components/parameters/Q'
+        - name: university
+          in: query
+          required: false
+          description: Filter by parent university slug.
+          schema:
+            type: string
+        - name: degree
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [Bachelor, Master, PhD]
+        - name: discipline
+          in: query
+          required: false
+          description: Discipline filter (e.g. `Engineering`, `Business`).
+          schema:
+            type: string
+        - name: language
+          in: query
+          required: false
+          description: Filter by **instruction** language (not response language).
+          schema:
+            type: string
+            enum: [English, Chinese, Bilingual]
+        - name: scholarship
+          in: query
+          required: false
+          description: '`true` returns only programs with scholarships available.'
+          schema:
+            type: boolean
+        - $ref: '#/components/parameters/PageLanguage'
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [name, tuition, created_at]
+            default: name
+        - $ref: '#/components/parameters/Order'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - name: nocache
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: ['1']
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Cache: { $ref: '#/components/headers/XCache' }
+            X-RateLimit-Limit: { $ref: '#/components/headers/XRateLimitLimit' }
+            X-RateLimit-Remaining: { $ref: '#/components/headers/XRateLimitRemaining' }
+            X-RateLimit-Reset: { $ref: '#/components/headers/XRateLimitReset' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgramsResponse'
+              examples:
+                default:
+                  $ref: '#/components/examples/ProgramsListExample'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /v1/catalog/programs/{slug}:
+    get:
+      tags: [catalog]
+      operationId: getProgram
+      summary: Get a single program by slug
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          description: The program's URL slug.
+          schema:
+            type: string
+        - $ref: '#/components/parameters/PageLanguage'
+        - name: nocache
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: ['1']
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Cache: { $ref: '#/components/headers/XCache' }
+            X-RateLimit-Limit: { $ref: '#/components/headers/XRateLimitLimit' }
+            X-RateLimit-Remaining: { $ref: '#/components/headers/XRateLimitRemaining' }
+            X-RateLimit-Reset: { $ref: '#/components/headers/XRateLimitReset' }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgramResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: sk_live_<base64>
+      description: |
+        API key in `Authorization: Bearer sk_live_…` format. Issue a
+        key from `/admin/api-keys`. Required scope: `read:catalog`.
+
+  parameters:
+    Q:
+      name: q
+      in: query
+      required: false
+      description: Free-text search across name + city + Chinese equivalents.
+      schema:
+        type: string
+        maxLength: 120
+    City:
+      name: city
+      in: query
+      required: false
+      description: Filter by city (e.g. `Beijing`).
+      schema:
+        type: string
+        maxLength: 80
+    Tag:
+      name: tag
+      in: query
+      required: false
+      description: Filter by tag (e.g. `985`, `211`, `DFC`).
+      schema:
+        type: string
+        maxLength: 40
+    UniversityType:
+      name: type
+      in: query
+      required: false
+      description: Public or Private.
+      schema:
+        type: string
+        enum: [Public, Private]
+    MinRating:
+      name: minRating
+      in: query
+      required: false
+      description: Minimum rating on the 0-5 scale (inclusive).
+      schema:
+        type: number
+        format: float
+        minimum: 0
+        maximum: 5
+    Language:
+      name: language
+      in: query
+      required: false
+      description: |
+        Response field shaping for the universities endpoint.
+        `both` (default) returns both en + zh; `en` returns only
+        English (zh fields nulled); `zh` swaps primary fields to
+        Chinese.
+      schema:
+        type: string
+        enum: [en, zh, both]
+        default: both
+    PageLanguage:
+      name: pageLanguage
+      in: query
+      required: false
+      description: |
+        Response field shaping for the programs endpoint (named
+        `pageLanguage` here to avoid collision with the program's
+        own `language` field which refers to instruction language).
+      schema:
+        type: string
+        enum: [en, zh, both]
+        default: both
+    UniversitySort:
+      name: sort
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [ranking, rating, name, created_at]
+        default: ranking
+    Order:
+      name: order
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [asc, desc]
+        default: asc
+    Page:
+      name: page
+      in: query
+      required: false
+      description: 1-based page number.
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    Limit:
+      name: limit
+      in: query
+      required: false
+      description: Items per page. Max 100.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+  headers:
+    XCache:
+      description: Cache status. `HIT` = served from in-memory cache, `MISS` = fresh fetch, `BYPASS` = `?nocache=1` used.
+      schema:
+        type: string
+        enum: [HIT, MISS, BYPASS]
+    XRateLimitLimit:
+      description: Per-key request limit (per minute).
+      schema:
+        type: integer
+    XRateLimitRemaining:
+      description: Tokens remaining in the current bucket.
+      schema:
+        type: integer
+    XRateLimitReset:
+      description: Unix timestamp (seconds) when the bucket will be full.
+      schema:
+        type: integer
+
+  responses:
+    BadRequest:
+      description: Invalid query parameters.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Missing, malformed, revoked, or expired API key.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: API key missing the required scope (`read:catalog`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Resource not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    RateLimited:
+      description: Rate limit exceeded. Retry after the `Retry-After` seconds.
+      headers:
+        Retry-After:
+          description: Seconds until the next token.
+          schema:
+            type: integer
+        X-RateLimit-Limit: { $ref: '#/components/headers/XRateLimitLimit' }
+        X-RateLimit-Remaining: { $ref: '#/components/headers/XRateLimitRemaining' }
+        X-RateLimit-Reset: { $ref: '#/components/headers/XRateLimitReset' }
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ServerError:
+      description: Internal server error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    PublicUniversity:
+      type: object
+      description: |
+        The public schema for a university. Admin-only fields like
+        `internal_notes` are stripped. Both English and Chinese
+        fields are present in the default `language=both` response;
+        `language=en` nulls the `*_cn` fields, `language=zh` swaps
+        the primary name/city/description to Chinese.
+      required: [slug, name, city, ranking, rating]
+      properties:
+        slug: { type: string, example: tsinghua-university }
+        name: { type: string, example: Tsinghua University }
+        name_cn: { type: string, nullable: true, example: 清华大学 }
+        city: { type: string, example: Beijing }
+        city_cn: { type: string, nullable: true, example: 北京 }
+        ranking: { type: integer, example: 1, description: 'Rank in China (1 = top).' }
+        rating: { type: number, format: float, minimum: 0, maximum: 5, example: 4.9 }
+        type: { type: string, example: Public }
+        type_cn: { type: string, nullable: true, example: 公立 }
+        established: { type: integer, example: 1911 }
+        students: { type: string, example: '50,000+' }
+        intl_students: { type: string, example: '8,000+' }
+        description: { type: string }
+        description_cn: { type: string }
+        popular_programs:
+          type: array
+          items: { type: string }
+          example: ['Computer Science', 'Electrical Engineering']
+        popular_programs_cn:
+          type: array
+          items: { type: string }
+        tuition_undergrad: { type: string, example: '¥30,000/year' }
+        tuition_graduate: { type: string, example: '¥40,000/year' }
+        intake: { type: string, example: 'September' }
+        intake_cn: { type: string }
+        disciplines:
+          type: array
+          items: { type: string }
+          example: ['Engineering', 'Business', 'Sciences']
+        logo: { type: string, format: uri, example: 'https://cdn.example.com/tsinghua.png' }
+        image: { type: string, format: uri }
+        qs_world_ranking: { type: integer, example: 25 }
+        tags:
+          type: array
+          items: { type: string }
+          example: ['985', '211', 'DFC']
+        tags_cn:
+          type: array
+          items: { type: string }
+        accommodation: { type: string }
+        accommodation_cn: { type: string }
+        accommodation_cost: { type: string }
+        accommodation_cost_cn: { type: string }
+        application_deadline:
+          type: string
+          nullable: true
+          example: '2026-06-30'
+
+    PublicProgram:
+      type: object
+      description: |
+        The public schema for a program. Same language semantics as
+        PublicUniversity.
+      required: [slug, name, university_slug, degree, language]
+      properties:
+        slug: { type: string, example: tsinghua-cs-bsc }
+        name: { type: string, example: 'BSc in Computer Science' }
+        name_cn: { type: string, example: '计算机科学学士' }
+        university_slug: { type: string, example: tsinghua-university }
+        degree:
+          type: string
+          enum: [Bachelor, Master, PhD]
+        discipline: { type: string, example: Computer Science }
+        discipline_cn: { type: string, example: 计算机科学 }
+        language:
+          type: string
+          description: Instruction language.
+          enum: [English, Chinese, Bilingual]
+        duration: { type: string, example: '4 years' }
+        duration_cn: { type: string, example: '4年' }
+        tuition: { type: string, example: '¥30,000/year' }
+        description: { type: string }
+        description_cn: { type: string }
+        requirements:
+          type: array
+          items: { type: string }
+          example: ['High school diploma', 'Math proficiency']
+        requirements_cn:
+          type: array
+          items: { type: string }
+        curriculum:
+          type: array
+          items: { type: string }
+        curriculum_cn:
+          type: array
+          items: { type: string }
+        scholarship_available: { type: boolean, example: true }
+        intake: { type: string, example: 'September' }
+        intake_cn: { type: string }
+
+    Pagination:
+      type: object
+      required: [page, limit, total, totalPages]
+      properties:
+        page: { type: integer, example: 1 }
+        limit: { type: integer, example: 20 }
+        total: { type: integer, example: 105 }
+        totalPages: { type: integer, example: 6 }
+
+    UniversitiesResponse:
+      type: object
+      required: [data, pagination, meta]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/PublicUniversity' }
+        pagination: { $ref: '#/components/schemas/Pagination' }
+        meta:
+          type: object
+          required: [language]
+          properties:
+            language:
+              type: string
+              enum: [en, zh, both]
+
+    UniversityResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data: { $ref: '#/components/schemas/PublicUniversity' }
+        meta:
+          type: object
+          required: [language]
+          properties:
+            language:
+              type: string
+              enum: [en, zh, both]
+
+    ProgramsResponse:
+      type: object
+      required: [data, pagination, meta]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/PublicProgram' }
+        pagination: { $ref: '#/components/schemas/Pagination' }
+        meta:
+          type: object
+          required: [language]
+          properties:
+            language:
+              type: string
+              enum: [en, zh, both]
+
+    ProgramResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data: { $ref: '#/components/schemas/PublicProgram' }
+        meta:
+          type: object
+          required: [language]
+          properties:
+            language:
+              type: string
+              enum: [en, zh, both]
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string, example: 'Missing or malformed Authorization header.' }
+
+  examples:
+    UniversitiesListExample:
+      summary: Two universities with both English and Chinese fields
+      value:
+        data:
+          - slug: tsinghua-university
+            name: Tsinghua University
+            name_cn: 清华大学
+            city: Beijing
+            city_cn: 北京
+            ranking: 1
+            rating: 4.9
+            type: Public
+            type_cn: 公立
+            established: 1911
+            students: '50,000+'
+            intl_students: '8,000+'
+            description: One of China's top research universities...
+            description_cn: 中国顶尖的研究型大学之一...
+            popular_programs: [Computer Science, Electrical Engineering]
+            popular_programs_cn: [计算机科学, 电气工程]
+            tuition_undergrad: '¥30,000/year'
+            tuition_graduate: '¥40,000/year'
+            intake: September
+            intake_cn: 九月
+            disciplines: [Engineering, Business, Sciences]
+            logo: https://cdn.example.com/tsinghua.png
+            image: https://cdn.example.com/tsinghua-campus.avif
+            qs_world_ranking: 25
+            tags: ['985', '211', 'DFC']
+            tags_cn: ['985', '211', '双一流']
+            accommodation: On-campus dormitories available
+            accommodation_cn: 可提供校内宿舍
+            accommodation_cost: '¥1,200/month'
+            accommodation_cost_cn: '¥1,200/月'
+            application_deadline: '2026-06-30'
+        pagination: { page: 1, limit: 20, total: 105, totalPages: 6 }
+        meta: { language: both }
+
+    UniversitySingleExample:
+      summary: One university with both languages
+      value:
+        data:
+          slug: peking-university
+          name: Peking University
+          name_cn: 北京大学
+          city: Beijing
+          city_cn: 北京
+          ranking: 2
+          rating: 4.8
+          type: Public
+          type_cn: 公立
+          established: 1898
+          students: '40,000+'
+          intl_students: '7,000+'
+          description: China's oldest national university...
+          description_cn: 中国历史最悠久的国立大学...
+          popular_programs: [Liberal Arts, Sciences, Medicine]
+          popular_programs_cn: [文学, 理学, 医学]
+          tuition_undergrad: '¥30,000/year'
+          tuition_graduate: '¥40,000/year'
+          intake: September
+          intake_cn: 九月
+          disciplines: [Humanities, Sciences, Medicine]
+          logo: https://cdn.example.com/pku.png
+          image: https://cdn.example.com/pku-campus.avif
+          qs_world_ranking: 14
+          tags: ['985', '211', 'DFC']
+          tags_cn: ['985', '211', '双一流']
+          accommodation: On-campus dormitories available
+          accommodation_cn: 可提供校内宿舍
+          accommodation_cost: '¥1,200/month'
+          accommodation_cost_cn: '¥1,200/月'
+          application_deadline: '2026-06-30'
+        meta: { language: both }
+
+    ProgramsListExample:
+      summary: Two programs at one university
+      value:
+        data:
+          - slug: tsinghua-cs-bsc
+            name: 'BSc in Computer Science'
+            name_cn: 计算机科学学士
+            university_slug: tsinghua-university
+            degree: Bachelor
+            discipline: Computer Science
+            discipline_cn: 计算机科学
+            language: English
+            duration: '4 years'
+            duration_cn: '4年'
+            tuition: '¥30,000/year'
+            description: A four-year program covering...
+            description_cn: 为期四年的课程涵盖...
+            requirements: ['High school diploma', 'Math proficiency']
+            requirements_cn: ['高中毕业证书', '数学能力']
+            curriculum: ['Algorithms', 'Data Structures', 'Operating Systems']
+            curriculum_cn: ['算法', '数据结构', '操作系统']
+            scholarship_available: true
+            intake: September
+            intake_cn: 九月
+        pagination: { page: 1, limit: 20, total: 151, totalPages: 8 }
+        meta: { language: both }

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SICA B2B API Reference</title>
+    <meta name="description" content="SICA B2B catalog API — public university and program data for external integrators." />
+    <link rel="icon" href="/favicon.ico" />
+    <style>
+      :root {
+        --sica-navy: #1B2A4A;
+        --sica-crimson: #9B1B30;
+      }
+      body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; }
+      .sica-header {
+        background: var(--sica-navy);
+        color: white;
+        padding: 14px 24px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+      .sica-header a {
+        color: white;
+        text-decoration: none;
+        font-weight: 700;
+        font-size: 18px;
+      }
+      .sica-header .badge {
+        background: var(--sica-crimson);
+        color: white;
+        padding: 2px 8px;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .sica-header .spacer { flex: 1; }
+      .sica-header a.secondary {
+        font-size: 14px;
+        font-weight: 400;
+        opacity: 0.85;
+        margin-left: 18px;
+      }
+      .sica-header a.secondary:hover { opacity: 1; }
+    </style>
+  </head>
+  <body>
+    <div class="sica-header">
+      <a href="/">SICA</a>
+      <span class="badge">B2B API</span>
+      <span class="spacer"></span>
+      <a class="secondary" href="/openapi/v1.yaml" download>Download spec (YAML)</a>
+      <a class="secondary" href="https://github.com/mlsjahidcn-sudo/SICANewBorn" target="_blank" rel="noopener">GitHub</a>
+      <a class="secondary" href="mailto:support@sica.com.cn">Support</a>
+    </div>
+    <redoc spec-url="/openapi/v1.yaml" hide-download-button="false" path-in-middle-panel="true" native-scrollbars="false" expand-responses="200,201" required-props-first="true"></redoc>
+    <script src="https://cdn.redocly.com/redoc/latest/bundles/redoc.standalone.js"></script>
+  </body>
+</html>

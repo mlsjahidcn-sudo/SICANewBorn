@@ -1,3 +1,4 @@
+// Phase 71: when changing this route, update openapi/v1.yaml so the B2B docs stay in sync.
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { buildServiceClient } from '@/lib/supabase-auth';
