@@ -18,19 +18,15 @@
  *
  * Memoization (S59): every export is wrapped in React's `cache()`,
  * so the 3× per-page calls in compare routes (generateStaticParams +
- * generateMetadata + page body) collapse to a single DB query. The
- * cache is request-scoped — it dedups within a single page render,
- * not across pages. Each static-generated page still does ≥1 query,
- * but the per-page DB pressure drops dramatically (3× → 1× on the
- * compare route, which is the worst offender at 5,460 pairs).
- *
- * Trade-off: each static-generated page does at least one DB query.
- * For SICA's traffic profile (a few hundred RPS at peak) this is fine
- * — Supabase connection pooling + Postgres reads of 8-26 rows are
- * sub-10ms. If volume ever justifies it, add `export const revalidate
- * = 60` to the consuming page to cache the result. (Beware:
- * `unstable_cache` returns stale data after direct DB writes — see
- * the cross-project hard rules in the user-memory tail for details.)
+ * generateMetadata + page body) collapse to a single DB query per
+ * page render. On top of that, the raw table loads sit behind a
+ * process-level TTL cache (`cachedProcess` below) — React's cache is
+ * request-scoped, so without it each of the ~6,074 statically
+ * generated pages still fired its own full-table query, and 4 build
+ * workers hammering Supabase at once pushed individual pages past
+ * staticPageGenerationTimeout (Cloudflare Pages build failures).
+ * The 60s TTL matches the ISR `revalidate` the consuming pages
+ * already declare, so runtime staleness is unchanged.
  */
 import { cache } from 'react';
 import { supabaseServer, isSupabaseServerConfigured } from './supabase-server';
@@ -47,6 +43,31 @@ import {
 // same module that provides the fetchers, instead of reaching into
 // @/lib/data separately.
 export type { University, Program, Scholarship };
+
+/**
+ * Process-level TTL cache for the raw table loads. One entry per
+ * cache key, shared by every page render in the same worker process
+ * (build) or server isolate (runtime). The promise itself is cached
+ * so concurrent callers share one in-flight query; failures evict
+ * immediately so a transient error during one page's build doesn't
+ * poison the other pages.
+ */
+const PROCESS_CACHE_TTL_MS = 60_000;
+const processCache = new Map<string, { expires: number; promise: Promise<unknown> }>();
+
+function cachedProcess<T>(key: string, loader: () => Promise<T>): Promise<T> {
+  const hit = processCache.get(key);
+  if (hit && hit.expires > Date.now()) {
+    return hit.promise as Promise<T>;
+  }
+  const promise = loader();
+  const entry = { expires: Date.now() + PROCESS_CACHE_TTL_MS, promise };
+  processCache.set(key, entry);
+  promise.catch(() => {
+    if (processCache.get(key) === entry) processCache.delete(key);
+  });
+  return promise;
+}
 
 function mapUniversity(row: Record<string, unknown>): University {
   // Highlights is a JSON column of shape { en: string[], zh: string[] }.
@@ -202,16 +223,18 @@ function mapScholarship(row: Record<string, unknown>): Scholarship {
  *  load by ~3x. */
 export const getAllUniversities = cache(
   async (): Promise<University[]> => {
-    if (isSupabaseServerConfigured() && supabaseServer) {
-      const { data, error } = await supabaseServer
-        .from('universities')
-        .select('*')
-        .order('ranking', { ascending: true });
-      if (!error && data && data.length > 0) {
-        return data.map(mapUniversity);
+    return cachedProcess('universities:all', async () => {
+      if (isSupabaseServerConfigured() && supabaseServer) {
+        const { data, error } = await supabaseServer
+          .from('universities')
+          .select('*')
+          .order('ranking', { ascending: true });
+        if (!error && data && data.length > 0) {
+          return data.map(mapUniversity);
+        }
       }
-    }
-    return staticUniversities;
+      return staticUniversities;
+    });
   },
 );
 
@@ -230,7 +253,8 @@ export const getAllUniversities = cache(
  */
 export const getFeaturedUniversities = cache(
   async (limit = 8): Promise<University[]> => {
-    if (isSupabaseServerConfigured() && supabaseServer) {
+    return cachedProcess(`universities:featured:${limit}`, async () => {
+      if (isSupabaseServerConfigured() && supabaseServer) {
       const { data, error } = await supabaseServer
         .from('universities')
         .select(
@@ -275,8 +299,9 @@ export const getFeaturedUniversities = cache(
           } as Record<string, unknown>),
         );
       }
-    }
-    return staticUniversities.slice(0, limit);
+      }
+      return staticUniversities.slice(0, limit);
+    });
   },
 );
 
@@ -286,34 +311,38 @@ export const getFeaturedUniversities = cache(
  *  and the page body. */
 export const getAllPrograms = cache(
   async (): Promise<Program[]> => {
-    if (isSupabaseServerConfigured() && supabaseServer) {
-      const { data, error } = await supabaseServer
-        .from('programs')
-        .select('*')
-        .order('name', { ascending: true });
-      if (!error && data && data.length > 0) {
-        return data.map((row) =>
-          mapProgram(row, row.slug as string),
-        );
+    return cachedProcess('programs:all', async () => {
+      if (isSupabaseServerConfigured() && supabaseServer) {
+        const { data, error } = await supabaseServer
+          .from('programs')
+          .select('*')
+          .order('name', { ascending: true });
+        if (!error && data && data.length > 0) {
+          return data.map((row) =>
+            mapProgram(row, row.slug as string),
+          );
+        }
       }
-    }
-    return staticPrograms;
+      return staticPrograms;
+    });
   },
 );
 
 /** All scholarships, DB first, static fallback. Memoized per-request. */
 export const getAllScholarships = cache(
   async (): Promise<Scholarship[]> => {
-    if (isSupabaseServerConfigured() && supabaseServer) {
-      const { data, error } = await supabaseServer
-        .from('scholarships')
-        .select('*')
-        .order('name', { ascending: true });
-      if (!error && data && data.length > 0) {
-        return data.map(mapScholarship);
+    return cachedProcess('scholarships:all', async () => {
+      if (isSupabaseServerConfigured() && supabaseServer) {
+        const { data, error } = await supabaseServer
+          .from('scholarships')
+          .select('*')
+          .order('name', { ascending: true });
+        if (!error && data && data.length > 0) {
+          return data.map(mapScholarship);
+        }
       }
-    }
-    return staticScholarships;
+      return staticScholarships;
+    });
   },
 );
 
@@ -326,56 +355,63 @@ export const getAllScholarships = cache(
  *  same no-op query fires 3× per page. */
 export const getScholarshipsForUniversity = cache(
   async (_universitySlug: string): Promise<Scholarship[]> => {
-    if (!isSupabaseServerConfigured() || !supabaseServer) return [];
-    // Scholarships are not directly linked to a university in the
-    // schema. The closest relation is via the scholarship's
-    // eligible_regions. For now return the full list — pages that
-    // need filtering can do it client-side.
-    const { data, error } = await supabaseServer
-      .from('scholarships')
-      .select('*')
-      .order('name', { ascending: true });
-    if (error || !data) return [];
-    return data.map(mapScholarship);
+    // Keyed WITHOUT the slug: the schema has no direct link, so the
+    // query is the same full-table read for every university. During
+    // SSG this turns ~105 identical queries into 1 per worker.
+    return cachedProcess('scholarships:db-only', async () => {
+      if (!isSupabaseServerConfigured() || !supabaseServer) return [];
+      const { data, error } = await supabaseServer
+        .from('scholarships')
+        .select('*')
+        .order('name', { ascending: true });
+      if (error || !data) return [];
+      return data.map(mapScholarship);
+    });
   },
 );
 
 export const getProgramsForUniversity = cache(
   async (universitySlug: string): Promise<Program[]> => {
-    if (!isSupabaseServerConfigured() || !supabaseServer) return [];
-    const { data, error } = await supabaseServer
-      .from('programs')
-      .select('*')
-      .eq('university_slug', universitySlug)
-      .order('name', { ascending: true });
-    if (error || !data) return [];
-    return data.map((row) => mapProgram(row, row.slug as string));
+    return cachedProcess(`programs:uni:${universitySlug}`, async () => {
+      if (!isSupabaseServerConfigured() || !supabaseServer) return [];
+      const { data, error } = await supabaseServer
+        .from('programs')
+        .select('*')
+        .eq('university_slug', universitySlug)
+        .order('name', { ascending: true });
+      if (error || !data) return [];
+      return data.map((row) => mapProgram(row, row.slug as string));
+    });
   },
 );
 
 export const getProgramsForDiscipline = cache(
   async (discipline: string): Promise<Program[]> => {
-    if (!isSupabaseServerConfigured() || !supabaseServer) return [];
-    const { data, error } = await supabaseServer
-      .from('programs')
-      .select('*')
-      .eq('discipline', discipline)
-      .order('name', { ascending: true });
-    if (error || !data) return [];
-    return data.map((row) => mapProgram(row, row.slug as string));
+    return cachedProcess(`programs:disc:${discipline}`, async () => {
+      if (!isSupabaseServerConfigured() || !supabaseServer) return [];
+      const { data, error } = await supabaseServer
+        .from('programs')
+        .select('*')
+        .eq('discipline', discipline)
+        .order('name', { ascending: true });
+      if (error || !data) return [];
+      return data.map((row) => mapProgram(row, row.slug as string));
+    });
   },
 );
 
 export const getScholarshipsForProgram = cache(
   async (programSlug: string): Promise<Scholarship[]> => {
-    if (!isSupabaseServerConfigured() || !supabaseServer) return [];
-    // Programs don't have a direct link to scholarships. Return the
-    // full list for now — the page can filter client-side if needed.
-    const { data, error } = await supabaseServer
-      .from('scholarships')
-      .select('*')
-      .order('name', { ascending: true });
-    if (error || !data) return [];
-    return data.map(mapScholarship);
+    void programSlug; // ignored — no direct link in the schema (see below)
+    // Same full-table read for every program — share one cache entry.
+    return cachedProcess('scholarships:db-only', async () => {
+      if (!isSupabaseServerConfigured() || !supabaseServer) return [];
+      const { data, error } = await supabaseServer
+        .from('scholarships')
+        .select('*')
+        .order('name', { ascending: true });
+      if (error || !data) return [];
+      return data.map(mapScholarship);
+    });
   },
 );
