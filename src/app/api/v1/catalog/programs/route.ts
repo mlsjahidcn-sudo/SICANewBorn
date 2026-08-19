@@ -9,7 +9,7 @@ import {
   publicProgramFromRow,
 } from '@/lib/v1-catalog';
 import { cacheGet, cacheKey, cacheSet } from '@/lib/v1-catalog-cache';
-import { rateLimitHeaders, setupV1Request } from '@/lib/v1-route-helpers';
+import { setupV1Request, v1ResponseHeaders } from '@/lib/v1-route-helpers';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,14 +51,14 @@ const QuerySchema = z.object({
 export async function GET(request: NextRequest) {
   const setup = await setupV1Request(request);
   if (!setup.ok) return setup.response;
-  const { key, rate } = setup;
+  const { key, rate, cors } = setup;
 
   const { searchParams } = new URL(request.url);
   const parsed = QuerySchema.safeParse(Object.fromEntries(searchParams));
   if (!parsed.success) {
     return NextResponse.json(
       { error: 'Invalid query parameters', issues: parsed.error.flatten() },
-      { status: 400, headers: rateLimitHeaders(rate) },
+      { status: 400, headers: v1ResponseHeaders(rate, cors) },
     );
   }
   const q = parsed.data;
@@ -70,11 +70,10 @@ export async function GET(request: NextRequest) {
     const hit = cacheGet<CatalogResponse<PublicProgram>>(ck);
     if (hit) {
       return NextResponse.json(hit, {
-        headers: {
+        headers: v1ResponseHeaders(rate, cors, {
           'X-Cache': 'HIT',
           'Cache-Control': 'public, max-age=60',
-          ...rateLimitHeaders(rate),
-        },
+        }),
       });
     }
   }
@@ -111,7 +110,7 @@ export async function GET(request: NextRequest) {
     console.error('[v1/catalog/programs] query error:', error);
     return NextResponse.json(
       { error: 'Query failed' },
-      { status: 500, headers: rateLimitHeaders(rate) },
+      { status: 500, headers: v1ResponseHeaders(rate, cors) },
     );
   }
 
@@ -128,10 +127,9 @@ export async function GET(request: NextRequest) {
 
   cacheSet(ck, response, CACHE_TTL_SECONDS);
   return NextResponse.json(response, {
-    headers: {
+    headers: v1ResponseHeaders(rate, cors, {
       'X-Cache': bypassCache ? 'BYPASS' : 'MISS',
       'Cache-Control': 'public, max-age=60',
-      ...rateLimitHeaders(rate),
-    },
+    }),
   });
 }

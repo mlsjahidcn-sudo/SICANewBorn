@@ -36,6 +36,11 @@ export interface ApiKeyRow {
   last_used_at: string | null;
   expires_at: string | null;
   revoked_at: string | null;
+  // Phase 73 (C-6): per-key CORS allowlist. Empty array = no CORS
+  // (curl + server consumers still work; browser consumers get the
+  // standard "blocked by CORS policy" error). Populated by the admin
+  // via /admin/api-keys create/edit modal.
+  cors_origins: string[];
 }
 
 export type ApiAuthResult =

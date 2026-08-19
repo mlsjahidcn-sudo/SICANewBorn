@@ -31,6 +31,18 @@ info:
     `timingSafeEqual` / `hmac.compare_digest`. At-least-once delivery
     — dedupe on `X-SICA-Delivery-Id`.
 
+    ## CORS (browser callers)
+    Browser-side consumers (a partner's public site calling SICA via
+    `fetch()` from JS) need CORS headers. Set the allowlist per key
+    at create time (`cors_origins: ['https://acme-recruitment.com']`)
+    or PATCH an existing key. The response then includes
+    `Access-Control-Allow-Origin: <origin>` plus the standard
+    methods/headers. The preflight (OPTIONS) does not require auth —
+    any origin that looks valid (https or localhost) gets a 204 with
+    the preflight headers. The actual request then enforces the
+    per-key allowlist. CORS is browser-enforced defense-in-depth, NOT
+    the primary auth gate — keep your API key secret.
+
     ## Versioning
     The `/v1/` prefix is forever-stable. Breaking changes bump to
     `/v2/`. v1 will keep working for at least 12 months after v2
@@ -570,9 +582,21 @@ components:
       schema:
         type: integer
     XRateLimitReset:
-      description: Unix timestamp (seconds) when the bucket will be full.
+      in: header
+      name: X-RateLimit-Reset
+      description: 'Seconds until the token bucket refills enough to allow another request.'
+      schema: { type: integer }
+    AccessControlAllowOrigin:
+      in: header
+      name: Access-Control-Allow-Origin
+      description: |
+        Echo of the request's `Origin` header, set only when the
+        calling key's `cors_origins` includes the request's origin
+        (or the key is wildcard). Otherwise the header is omitted
+        and the browser will block the response client-side.
       schema:
-        type: integer
+        type: string
+        example: 'https://acme-recruitment.com'
 
   responses:
     BadRequest:

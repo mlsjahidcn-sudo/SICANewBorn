@@ -8,7 +8,7 @@ import {
   publicProgramFromRow,
 } from '@/lib/v1-catalog';
 import { cacheGet, cacheKey, cacheSet } from '@/lib/v1-catalog-cache';
-import { rateLimitHeaders, setupV1Request } from '@/lib/v1-route-helpers';
+import { rateLimitHeaders, setupV1Request, v1ResponseHeaders } from '@/lib/v1-route-helpers';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,13 +26,13 @@ export async function GET(
 ) {
   const setup = await setupV1Request(request);
   if (!setup.ok) return setup.response;
-  const { key, rate } = setup;
+  const { key, rate, cors } = setup;
 
   const { slug } = await context.params;
   if (!slug || typeof slug !== 'string') {
     return NextResponse.json(
       { error: 'Missing slug' },
-      { status: 400, headers: rateLimitHeaders(rate) },
+      { status: 400, headers: v1ResponseHeaders(rate, cors) },
     );
   }
 
@@ -45,11 +45,10 @@ export async function GET(
     const hit = cacheGet<CatalogSingleResponse<PublicProgram>>(ck);
     if (hit) {
       return NextResponse.json(hit, {
-        headers: {
+        headers: v1ResponseHeaders(rate, cors, {
           'X-Cache': 'HIT',
           'Cache-Control': 'public, max-age=60',
-          ...rateLimitHeaders(rate),
-        },
+        }),
       });
     }
   }
@@ -65,13 +64,13 @@ export async function GET(
     console.error('[v1/catalog/programs/:slug] query error:', error);
     return NextResponse.json(
       { error: 'Query failed' },
-      { status: 500, headers: rateLimitHeaders(rate) },
+      { status: 500, headers: v1ResponseHeaders(rate, cors) },
     );
   }
   if (!data) {
     return NextResponse.json(
       { error: 'Program not found' },
-      { status: 404, headers: rateLimitHeaders(rate) },
+      { status: 404, headers: v1ResponseHeaders(rate, cors) },
     );
   }
 
@@ -82,10 +81,9 @@ export async function GET(
 
   cacheSet(ck, response, CACHE_TTL_SECONDS);
   return NextResponse.json(response, {
-    headers: {
+    headers: v1ResponseHeaders(rate, cors, {
       'X-Cache': bypassCache ? 'BYPASS' : 'MISS',
       'Cache-Control': 'public, max-age=60',
-      ...rateLimitHeaders(rate),
-    },
+    }),
   });
 }

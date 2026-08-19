@@ -49,6 +49,8 @@ interface ApiKey {
   expires_at: string | null;
   revoked_at: string | null;
   revoke_reason: string | null;
+  // Phase 73 (C-6): per-key CORS allowlist. Empty array = no CORS.
+  cors_origins: string[];
 }
 
 type Status = 'active' | 'revoked' | 'expired';
@@ -83,6 +85,8 @@ export default function AdminApiKeysPage() {
   const [formOrg, setFormOrg] = useState('');
   const [formScope, setFormScope] = useState<string>('read:catalog');
   const [formRate, setFormRate] = useState<string>('100');
+  // Phase 73 (C-6): textarea — one origin per line. Empty = no CORS.
+  const [formCorsOrigins, setFormCorsOrigins] = useState('');
 
   // Created plaintext reveal modal
   const [reveal, setReveal] = useState<{ key: ApiKey; plaintext: string } | null>(null);
@@ -119,6 +123,12 @@ export default function AdminApiKeysPage() {
     setCreating(true);
     setCreateError(null);
     try {
+      // Parse the CORS origins textarea (one per line, trim, drop blanks).
+      const corsOrigins = formCorsOrigins
+        .split('\n')
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+
       const res = await fetch('/api/admin/api-keys', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -128,6 +138,7 @@ export default function AdminApiKeysPage() {
           org_name: formOrg || undefined,
           scope: [formScope],
           rate_limit_per_minute: Number(formRate) || 100,
+          cors_origins: corsOrigins,
         }),
       });
       if (!res.ok) {
@@ -143,6 +154,7 @@ export default function AdminApiKeysPage() {
       setFormOrg('');
       setFormScope('read:catalog');
       setFormRate('100');
+      setFormCorsOrigins('');
       await load();
     } catch (e) {
       setCreateError(e instanceof Error ? e.message : 'Create failed');
@@ -259,6 +271,7 @@ export default function AdminApiKeysPage() {
                     <th className="text-left p-3 font-semibold text-[#1B2A4A]">{t('adminApiKeys.tableOrg')}</th>
                     <th className="text-left p-3 font-semibold text-[#1B2A4A]">{t('adminApiKeys.tableScope')}</th>
                     <th className="text-right p-3 font-semibold text-[#1B2A4A]">{t('adminApiKeys.tableRateLimit')}</th>
+                    <th className="text-left p-3 font-semibold text-[#1B2A4A]">{t('adminApiKeys.tableCorsOrigins')}</th>
                     <th className="text-left p-3 font-semibold text-[#1B2A4A]">{t('adminApiKeys.tableLastUsed')}</th>
                     <th className="text-left p-3 font-semibold text-[#1B2A4A]">{t('adminApiKeys.tableStatus')}</th>
                     <th className="p-3" />
@@ -285,6 +298,28 @@ export default function AdminApiKeysPage() {
                           ))}
                         </td>
                         <td className="p-3 text-right text-gray-700">{k.rate_limit_per_minute}</td>
+                        <td className="p-3 text-gray-700 text-xs">
+                          {k.cors_origins.length === 0 ? (
+                            <span className="text-gray-400">—</span>
+                          ) : k.cors_origins.length <= 2 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {k.cors_origins.map((o) => (
+                                <Badge key={o} variant="secondary" className="font-mono text-xs">
+                                  {o}
+                                </Badge>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="flex flex-wrap gap-1">
+                              {k.cors_origins.slice(0, 2).map((o) => (
+                                <Badge key={o} variant="secondary" className="font-mono text-xs">
+                                  {o}
+                                </Badge>
+                              ))}
+                              <Badge variant="secondary" className="text-xs">+{k.cors_origins.length - 2}</Badge>
+                            </div>
+                          )}
+                        </td>
                         <td className="p-3 text-gray-700 text-xs">
                           {k.last_used_at ? formatDate(k.last_used_at) : t('adminApiKeys.never')}
                         </td>
@@ -385,6 +420,17 @@ export default function AdminApiKeysPage() {
                   onChange={(e) => setFormRate(e.target.value)}
                 />
               </div>
+            </div>
+            <div>
+              <Label htmlFor="cors">{t('adminApiKeys.fieldCorsOrigins')}</Label>
+              <Textarea
+                id="cors"
+                value={formCorsOrigins}
+                onChange={(e) => setFormCorsOrigins(e.target.value)}
+                rows={3}
+                placeholder={'https://acme-recruitment.com\nhttps://staging.acme-recruitment.com'}
+              />
+              <p className="text-xs text-gray-500 mt-1">{t('adminApiKeys.fieldCorsOriginsHelp')}</p>
             </div>
             {createError && (
               <div className="text-sm text-red-600 bg-red-50 p-2 rounded">{createError}</div>

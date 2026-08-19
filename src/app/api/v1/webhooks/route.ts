@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { buildServiceClient } from '@/lib/supabase-auth';
 import { setupV1Request } from '@/lib/v1-route-helpers';
 import { ALL_WEBHOOK_EVENTS, generateWebhookSecret } from '@/lib/webhook-delivery';
-import { rateLimitHeaders } from '@/lib/v1-rate-limit';
+import { v1ResponseHeaders } from '@/lib/v1-route-helpers';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,7 +26,7 @@ const CreatePayload = z.object({
 export async function GET(request: NextRequest) {
   const setup = await setupV1Request(request);
   if (!setup.ok) return setup.response;
-  const { key, rate } = setup;
+  const { key, rate, cors } = setup;
 
   const service = buildServiceClient();
   const { data, error } = await service
@@ -39,13 +39,13 @@ export async function GET(request: NextRequest) {
     console.error('[v1/webhooks] list error:', error);
     return NextResponse.json(
       { error: 'Failed to list subscriptions' },
-      { status: 500, headers: rateLimitHeaders(rate) },
+      { status: 500, headers: v1ResponseHeaders(rate, cors) },
     );
   }
 
   return NextResponse.json(
     { subscriptions: data ?? [] },
-    { headers: rateLimitHeaders(rate) },
+    { headers: v1ResponseHeaders(rate, cors) },
   );
 }
 
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const setup = await setupV1Request(request);
   if (!setup.ok) return setup.response;
-  const { key, rate } = setup;
+  const { key, rate, cors } = setup;
 
   let body: unknown;
   try {
@@ -67,14 +67,14 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json(
       { error: 'Invalid JSON body' },
-      { status: 400, headers: rateLimitHeaders(rate) },
+      { status: 400, headers: v1ResponseHeaders(rate, cors) },
     );
   }
   const parsed = CreatePayload.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { error: 'Invalid payload', issues: parsed.error.flatten() },
-      { status: 400, headers: rateLimitHeaders(rate) },
+      { status: 400, headers: v1ResponseHeaders(rate, cors) },
     );
   }
 
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
   if (u.protocol === 'http:' && u.hostname !== 'localhost' && u.hostname !== '127.0.0.1') {
     return NextResponse.json(
       { error: 'Webhook URL must be https:// (http is only allowed for localhost during dev).' },
-      { status: 400, headers: rateLimitHeaders(rate) },
+      { status: 400, headers: v1ResponseHeaders(rate, cors) },
     );
   }
 
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
     console.error('[v1/webhooks] create error:', error);
     return NextResponse.json(
       { error: 'Failed to create subscription' },
-      { status: 500, headers: rateLimitHeaders(rate) },
+      { status: 500, headers: v1ResponseHeaders(rate, cors) },
     );
   }
 
@@ -117,6 +117,6 @@ export async function POST(request: NextRequest) {
       secret,
       secret_note: 'This is the only time the secret will be shown. Store it securely — we only keep a hash for verification.',
     },
-    { status: 201, headers: rateLimitHeaders(rate) },
+    { status: 201, headers: v1ResponseHeaders(rate, cors) },
   );
 }

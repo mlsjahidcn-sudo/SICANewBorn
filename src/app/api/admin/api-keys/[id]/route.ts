@@ -9,6 +9,8 @@ const PatchPayload = z.object({
   rate_limit_per_minute: z.number().int().min(1).max(100_000).optional(),
   scope: z.array(z.string()).optional(),
   expires_at: z.string().datetime().nullable().optional(),
+  // Phase 73 (C-6): per-key CORS allowlist (editable).
+  cors_origins: z.array(z.string().min(1).max(500)).max(50).optional(),
 });
 
 const RevokePayload = z.object({
@@ -56,7 +58,7 @@ export async function PATCH(
     .from('api_keys')
     .update(parsed.data)
     .eq('id', id)
-    .select('id, name, org_name, contact_email, key_prefix, scope, rate_limit_per_minute, created_at, last_used_at, expires_at, revoked_at')
+    .select('id, name, org_name, contact_email, key_prefix, scope, rate_limit_per_minute, created_at, last_used_at, expires_at, revoked_at, cors_origins')
     .single();
   if (error) {
     console.error('[admin/api-keys/:id] patch error:', error);

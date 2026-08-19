@@ -12,6 +12,9 @@ const CreatePayload = z.object({
   scope: z.array(z.string()).optional(),
   rate_limit_per_minute: z.number().int().min(1).max(100_000).optional(),
   expires_at: z.string().datetime().optional().nullable(),
+  // Phase 73 (C-6): per-key CORS allowlist. Each entry is a full origin
+  // (https://acme.com) or '*' for wildcard. Cap 50, same as the DB.
+  cors_origins: z.array(z.string().min(1).max(500)).max(50).optional(),
 });
 
 /**
@@ -33,7 +36,7 @@ export async function GET(request: NextRequest) {
   const service = buildServiceClient();
   const { data, error } = await service
     .from('api_keys')
-    .select('id, name, org_name, contact_email, key_prefix, scope, rate_limit_per_minute, created_at, last_used_at, expires_at, revoked_at, revoke_reason')
+    .select('id, name, org_name, contact_email, key_prefix, scope, rate_limit_per_minute, created_at, last_used_at, expires_at, revoked_at, revoke_reason, cors_origins')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -88,9 +91,10 @@ export async function POST(request: NextRequest) {
       scope: parsed.data.scope ?? ['read:catalog'],
       rate_limit_per_minute: parsed.data.rate_limit_per_minute ?? 100,
       expires_at: parsed.data.expires_at ?? null,
+      cors_origins: parsed.data.cors_origins ?? [],
       created_by: auth.user.id,
     })
-    .select('id, name, org_name, contact_email, key_prefix, scope, rate_limit_per_minute, created_at, last_used_at, expires_at, revoked_at')
+    .select('id, name, org_name, contact_email, key_prefix, scope, rate_limit_per_minute, created_at, last_used_at, expires_at, revoked_at, cors_origins')
     .single();
 
   if (error) {

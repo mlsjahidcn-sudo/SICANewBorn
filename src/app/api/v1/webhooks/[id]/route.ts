@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { buildServiceClient } from '@/lib/supabase-auth';
-import { setupV1Request } from '@/lib/v1-route-helpers';
-import { rateLimitHeaders } from '@/lib/v1-rate-limit';
+import { setupV1Request, v1ResponseHeaders } from '@/lib/v1-route-helpers';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,13 +42,13 @@ export async function PATCH(
 ) {
   const setup = await setupV1Request(request);
   if (!setup.ok) return setup.response;
-  const { key, rate } = setup;
+  const { key, rate, cors } = setup;
 
   const { id } = await context.params;
   if (!id) {
     return NextResponse.json(
       { error: 'Missing id' },
-      { status: 400, headers: rateLimitHeaders(rate) },
+      { status: 400, headers: v1ResponseHeaders(rate, cors) },
     );
   }
 
@@ -59,14 +58,14 @@ export async function PATCH(
   } catch {
     return NextResponse.json(
       { error: 'Invalid JSON body' },
-      { status: 400, headers: rateLimitHeaders(rate) },
+      { status: 400, headers: v1ResponseHeaders(rate, cors) },
     );
   }
   const parsed = PatchPayload.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { error: 'Invalid payload', issues: parsed.error.flatten() },
-      { status: 400, headers: rateLimitHeaders(rate) },
+      { status: 400, headers: v1ResponseHeaders(rate, cors) },
     );
   }
 
@@ -76,7 +75,7 @@ export async function PATCH(
     if (u.protocol === 'http:' && u.hostname !== 'localhost' && u.hostname !== '127.0.0.1') {
       return NextResponse.json(
         { error: 'Webhook URL must be https://' },
-        { status: 400, headers: rateLimitHeaders(rate) },
+        { status: 400, headers: v1ResponseHeaders(rate, cors) },
       );
     }
   }
@@ -96,16 +95,16 @@ export async function PATCH(
     if (error.code === 'PGRST116') {
       return NextResponse.json(
         { error: 'Subscription not found' },
-        { status: 404, headers: rateLimitHeaders(rate) },
+        { status: 404, headers: v1ResponseHeaders(rate, cors) },
       );
     }
     console.error('[v1/webhooks/:id] patch error:', error);
     return NextResponse.json(
       { error: 'Failed to update subscription' },
-      { status: 500, headers: rateLimitHeaders(rate) },
+      { status: 500, headers: v1ResponseHeaders(rate, cors) },
     );
   }
-  return NextResponse.json({ subscription: data }, { headers: rateLimitHeaders(rate) });
+  return NextResponse.json({ subscription: data }, { headers: v1ResponseHeaders(rate, cors) });
 }
 
 /**
@@ -119,13 +118,13 @@ export async function DELETE(
 ) {
   const setup = await setupV1Request(request);
   if (!setup.ok) return setup.response;
-  const { key, rate } = setup;
+  const { key, rate, cors } = setup;
 
   const { id } = await context.params;
   if (!id) {
     return NextResponse.json(
       { error: 'Missing id' },
-      { status: 400, headers: rateLimitHeaders(rate) },
+      { status: 400, headers: v1ResponseHeaders(rate, cors) },
     );
   }
 
@@ -142,14 +141,14 @@ export async function DELETE(
     if (error.code === 'PGRST116') {
       return NextResponse.json(
         { error: 'Subscription not found' },
-        { status: 404, headers: rateLimitHeaders(rate) },
+        { status: 404, headers: v1ResponseHeaders(rate, cors) },
       );
     }
     console.error('[v1/webhooks/:id] delete error:', error);
     return NextResponse.json(
       { error: 'Failed to revoke subscription' },
-      { status: 500, headers: rateLimitHeaders(rate) },
+      { status: 500, headers: v1ResponseHeaders(rate, cors) },
     );
   }
-  return NextResponse.json({ subscription: data }, { headers: rateLimitHeaders(rate) });
+  return NextResponse.json({ subscription: data }, { headers: v1ResponseHeaders(rate, cors) });
 }

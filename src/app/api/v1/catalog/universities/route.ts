@@ -9,7 +9,7 @@ import {
   publicUniversityFromRow,
 } from '@/lib/v1-catalog';
 import { cacheGet, cacheKey, cacheSet } from '@/lib/v1-catalog-cache';
-import { rateLimitHeaders, setupV1Request } from '@/lib/v1-route-helpers';
+import { setupV1Request, v1ResponseHeaders } from '@/lib/v1-route-helpers';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,10 +53,10 @@ const QuerySchema = z.object({
  * edits appear within 10 min. Use ?nocache=1 to bypass.
  */
 export async function GET(request: NextRequest) {
-  // 1. Auth + scope + rate limit (shared across all /v1/* routes)
+  // 1. Auth + scope + rate limit + CORS (shared across all /v1/* routes)
   const setup = await setupV1Request(request);
   if (!setup.ok) return setup.response;
-  const { key, rate } = setup;
+  const { key, rate, cors } = setup;
 
   // 2. Parse + validate query
   const { searchParams } = new URL(request.url);
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json(
       { error: 'Invalid query parameters', issues: parsed.error.flatten() },
-      { status: 400, headers: rateLimitHeaders(rate) },
+      { status: 400, headers: v1ResponseHeaders(rate, cors) },
     );
   }
   const q = parsed.data;
@@ -77,7 +77,10 @@ export async function GET(request: NextRequest) {
     const hit = cacheGet<CatalogResponse<PublicUniversity>>(ck);
     if (hit) {
       return NextResponse.json(hit, {
-        headers: { 'X-Cache': 'HIT', 'Cache-Control': 'public, max-age=60', ...rateLimitHeaders(rate) },
+        headers: v1ResponseHeaders(rate, cors, {
+          'X-Cache': 'HIT',
+          'Cache-Control': 'public, max-age=60',
+        }),
       });
     }
   }
@@ -120,7 +123,7 @@ export async function GET(request: NextRequest) {
     console.error('[v1/catalog/universities] query error:', error);
     return NextResponse.json(
       { error: 'Query failed' },
-      { status: 500, headers: rateLimitHeaders(rate) },
+      { status: 500, headers: v1ResponseHeaders(rate, cors) },
     );
   }
 
@@ -143,10 +146,9 @@ export async function GET(request: NextRequest) {
   // 6. Cache + return
   cacheSet(ck, response, CACHE_TTL_SECONDS);
   return NextResponse.json(response, {
-    headers: {
+    headers: v1ResponseHeaders(rate, cors, {
       'X-Cache': bypassCache ? 'BYPASS' : 'MISS',
       'Cache-Control': 'public, max-age=60',
-      ...rateLimitHeaders(rate),
-    },
+    }),
   });
 }
