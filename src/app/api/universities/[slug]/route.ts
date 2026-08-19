@@ -8,6 +8,8 @@ import { validationErrorResponse, pickSentFields } from '@/lib/validators/shared
 import { requireAdmin } from '@/lib/supabase-auth';
 // Track 1.3 U2: DB mappers consolidated into src/lib/catalog-mappers.ts.
 import { mapUniversityFromDb, mapUniversityToDb } from '@/lib/catalog-mappers';
+// Phase 72: emit B2B webhook events on university mutations.
+import { dispatchEvent } from '@/lib/webhook-emitter';
 
 export async function GET(
   _request: Request,
@@ -90,6 +92,8 @@ export async function PUT(
     if (!data) return NextResponse.json({ error: 'University not found' }, { status: 404 });
     revalidateTag(CACHE_TAGS.universities, 'default');
     revalidateTag(CACHE_TAGS.university(slug), 'default');
+    // Phase 72: fire university.updated webhook
+    void dispatchEvent('university.updated', mapUniversityFromDb(data));
     return NextResponse.json({ university: mapUniversityFromDb(data) });
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
@@ -122,6 +126,8 @@ export async function DELETE(
   }
   revalidateTag(CACHE_TAGS.universities, 'default');
   revalidateTag(CACHE_TAGS.university(slug), 'default');
+  // Phase 72: fire university.deleted webhook
+  void dispatchEvent('university.deleted', { slug });
   return NextResponse.json({ success: true });
 }
 

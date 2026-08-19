@@ -9,6 +9,8 @@ import { requireAdmin } from '@/lib/supabase-auth';
 import { sanitizeOrTerm, parseIntParam } from '@/lib/postgrest';
 // Track 1.3 U2: DB mappers consolidated into src/lib/catalog-mappers.ts.
 import { mapUniversityFromDb, mapUniversityToDb } from '@/lib/catalog-mappers';
+// Phase 72: emit B2B webhook events on university mutations.
+import { dispatchEvent } from '@/lib/webhook-emitter';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -113,6 +115,9 @@ export async function POST(request: Request) {
     }
     revalidateTag(CACHE_TAGS.universities, 'default');
     revalidateTag(CACHE_TAGS.university(String(data.slug)), 'default');
+    // Phase 72: fire university.created webhook (fire-and-forget;
+    // the event emitter handles queueing + delivery)
+    void dispatchEvent('university.created', mapUniversityFromDb(data));
     return NextResponse.json({ university: mapUniversityFromDb(data) }, { status: 201 });
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });

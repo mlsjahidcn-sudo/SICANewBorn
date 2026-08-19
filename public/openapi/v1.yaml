@@ -5,7 +5,8 @@ info:
   description: |
     Public catalog API for external integrators (affiliate sites, sister
     platforms, recruitment partners). Read-only access to SICA's
-    university and program data.
+    university and program data, plus outbound webhooks for change
+    notifications.
 
     ## Authentication
     Every request needs an `Authorization: Bearer sk_live_…` header.
@@ -22,6 +23,13 @@ info:
     Responses are cached in-memory for 10 min, per (api_key_id,
     query_string). Cache status: `X-Cache: HIT | MISS | BYPASS`. Pass
     `?nocache=1` to bypass.
+
+    ## Webhooks
+    Subscribe to `university.*` and `program.*` events with
+    `/v1/webhooks`. Every delivery is HMAC-SHA256 signed with your
+    per-subscription secret (`X-SICA-Signature`). Verify with
+    `timingSafeEqual` / `hmac.compare_digest`. At-least-once delivery
+    — dedupe on `X-SICA-Delivery-Id`.
 
     ## Versioning
     The `/v1/` prefix is forever-stable. Breaking changes bump to
@@ -49,6 +57,13 @@ servers:
 tags:
   - name: catalog
     description: Public university + program catalog
+  - name: webhooks
+    description: |
+      Subscribe to catalog change events. SICA POSTs to your URL when
+      a university or program is created, updated, or deleted. Every
+      delivery is HMAC-SHA256 signed with the per-subscription secret
+      shown once on create. At-least-once delivery; consumers MUST
+      dedupe on the `X-SICA-Delivery-Id` header.
 
 security:
   - BearerAuth: []
@@ -271,6 +286,157 @@ paths:
                 $ref: '#/components/schemas/ProgramResponse'
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /v1/webhooks:
+    get:
+      tags: [webhooks]
+      summary: List webhook subscriptions
+      description: |
+        Returns all subscriptions owned by the authenticated API key,
+        newest first. The `secret` is never returned here — it is
+        only shown once at create time.
+      operationId: listWebhookSubscriptions
+      responses:
+        '200':
+          description: Subscriptions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  subscriptions:
+                    type: array
+                    items: { $ref: '#/components/schemas/WebhookSubscription' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+    post:
+      tags: [webhooks]
+      summary: Create a webhook subscription
+      description: |
+        Register a URL to receive event POSTs. The `secret` is
+        generated server-side and returned in the response — this is
+        the only time the secret will be shown. Store it server-side
+        and use it to verify the `X-SICA-Signature` header on every
+        incoming delivery.
+      operationId: createWebhookSubscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url, events]
+              properties:
+                url:
+                  type: string
+                  format: uri
+                  description: 'https:// URL (http://localhost allowed for dev)'
+                events:
+                  type: array
+                  minItems: 1
+                  maxItems: 10
+                  items: { $ref: '#/components/schemas/WebhookEvent' }
+                description:
+                  type: string
+                  maxLength: 200
+      responses:
+        '201':
+          description: Subscription created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [subscription, secret, secret_note]
+                properties:
+                  subscription: { $ref: '#/components/schemas/WebhookSubscription' }
+                  secret:
+                    type: string
+                    description: 'HMAC-SHA256 secret. Shown exactly once.'
+                  secret_note:
+                    type: string
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /v1/webhooks/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+
+    patch:
+      tags: [webhooks]
+      summary: Update a subscription
+      description: |
+        Update the URL, subscribed events, description, or active state.
+        The `secret` is NOT updatable — to rotate the signing secret,
+        create a new subscription and delete the old one. Updates are
+        scoped to the authenticated key (a key cannot edit another
+        key's subscriptions).
+      operationId: updateWebhookSubscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                url: { type: string, format: uri }
+                events:
+                  type: array
+                  minItems: 1
+                  maxItems: 10
+                  items: { $ref: '#/components/schemas/WebhookEvent' }
+                description:
+                  type: string
+                  maxLength: 200
+                  nullable: true
+                active: { type: boolean }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  subscription: { $ref: '#/components/schemas/WebhookSubscription' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+    delete:
+      tags: [webhooks]
+      summary: Disable a subscription (soft-revoke)
+      description: |
+        Sets `active = false` on the subscription. The row stays for
+        audit; deliveries stop immediately. Re-enable by PATCHing
+        `active: true`. Scoped to the authenticated key.
+      operationId: deleteWebhookSubscription
+      responses:
+        '200':
+          description: Disabled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  subscription:
+                    type: object
+                    properties:
+                      id: { type: string, format: uuid }
+                      active: { type: boolean }
+        '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
         '429': { $ref: '#/components/responses/RateLimited' }
         '500': { $ref: '#/components/responses/ServerError' }
@@ -621,6 +787,103 @@ components:
             language:
               type: string
               enum: [en, zh, both]
+
+    WebhookEvent:
+      type: string
+      enum:
+        - university.created
+        - university.updated
+        - university.deleted
+        - program.created
+        - program.updated
+        - program.deleted
+      description: |
+        Event identifier. Emitted as the value of the `X-SICA-Event`
+        header on every delivery and inside the JSON payload's
+        `event` field.
+
+    WebhookSubscription:
+      type: object
+      required: [id, url, events, active, created_at, success_count, failure_count]
+      properties:
+        id: { type: string, format: uuid }
+        url: { type: string, format: uri }
+        events:
+          type: array
+          items: { $ref: '#/components/schemas/WebhookEvent' }
+        description:
+          type: string
+          nullable: true
+        active: { type: boolean }
+        created_at: { type: string, format: date-time }
+        last_triggered_at:
+          type: string
+          format: date-time
+          nullable: true
+        success_count: { type: integer, minimum: 0 }
+        failure_count: { type: integer, minimum: 0 }
+
+    WebhookDelivery:
+      type: object
+      description: |
+        Read-only audit record of a single delivery attempt. The full
+        body that was POSTed is available in the admin UI at
+        `/admin/webhooks` (admin only).
+      required: [id, event, status, attempt_count, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        event: { $ref: '#/components/schemas/WebhookEvent' }
+        status:
+          type: string
+          enum: [pending, success, failed, dead]
+          description: |
+            * `pending` — queued, not yet attempted.
+            * `success` — subscriber returned 2xx.
+            * `failed` — non-2xx or network error, will retry per
+              `next_retry_at`.
+            * `dead` — 5 attempts exhausted, no more retries.
+        http_status:
+          type: integer
+          nullable: true
+        attempt_count: { type: integer, minimum: 0 }
+        created_at: { type: string, format: date-time }
+        last_attempt_at:
+          type: string
+          format: date-time
+          nullable: true
+        next_retry_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: 'When the worker will re-attempt this delivery. Null if dead or succeeded.'
+
+    WebhookDeliveryPayload:
+      type: object
+      description: |
+        The exact JSON body POSTed to the subscriber URL. The
+        `X-SICA-Signature` header is `sha256=<hex>` of this body
+        using the subscription's `secret`. The `X-SICA-Delivery-Id`
+        header is the same as `delivery_id` here — use it for
+        idempotency.
+      required: [event, delivery_id, data]
+      properties:
+        event: { $ref: '#/components/schemas/WebhookEvent' }
+        delivery_id:
+          type: string
+          format: uuid
+          description: 'Idempotency key. Consumers MUST dedupe on this.'
+        data:
+          description: |
+            The mutated resource. For `*.deleted` events, just
+            `{ slug: string }` (the slug is the only field left after
+            delete). For `*.created` / `*.updated`, the full
+            `PublicUniversity` or `PublicProgram` shape (en + zh).
+          oneOf:
+            - $ref: '#/components/schemas/PublicUniversity'
+            - $ref: '#/components/schemas/PublicProgram'
+            - type: object
+              properties:
+                slug: { type: string }
 
     ErrorResponse:
       type: object

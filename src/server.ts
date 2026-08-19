@@ -93,8 +93,15 @@ app.prepare().then(() => {
       import('./lib/email/drip/scheduler').then((m) => m.startDripScheduler()).catch((err) =>
         console.error('[server] failed to start drip scheduler', err),
       );
+      // Phase 72 (C-5): webhook delivery worker (1-minute tick).
+      // Picks up pending + due-for-retry webhook deliveries and
+      // POSTs them. Same in-process scheduler pattern as the drip
+      // worker. Auto-skips if Supabase isn't configured.
+      import('./lib/webhook-scheduler').then((m) => m.startWebhookScheduler()).catch((err) =>
+        console.error('[server] failed to start webhook scheduler', err),
+      );
     } else {
-      console.log('[server] dev mode — drip scheduler disabled (set NODE_ENV=production to enable)');
+      console.log('[server] dev mode — drip + webhook schedulers disabled (set NODE_ENV=production to enable)');
     }
   });
 });

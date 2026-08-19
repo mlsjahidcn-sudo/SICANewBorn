@@ -29,6 +29,7 @@ import {
   BarChart3,
   Sparkles,
   Key,
+  Webhook,
 } from 'lucide-react';
 import Link from 'next/link';
 import { SicaLogo } from '@/components/sica-logo';
@@ -78,6 +79,10 @@ const navItems = [
   // Sits under Cohorts because it's a power-user / config surface
   // rather than a day-to-day ops tab.
   { href: '/admin/api-keys', key: 'apiKeys', icon: Key },
+  // Phase 72 (C-5): B2B webhooks — admin view of /v1/webhooks
+  // subscriptions + per-subscription delivery log. Sits under
+  // API Keys because they share the B2B-integration surface.
+  { href: '/admin/webhooks', key: 'webhooks', icon: Webhook },
   { href: '/admin/settings', key: 'settings', icon: Settings },
 ];
 
