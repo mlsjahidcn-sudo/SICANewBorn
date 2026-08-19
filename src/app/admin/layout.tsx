@@ -28,6 +28,7 @@ import {
   Trophy,
   BarChart3,
   Sparkles,
+  Key,
 } from 'lucide-react';
 import Link from 'next/link';
 import { SicaLogo } from '@/components/sica-logo';
@@ -72,6 +73,11 @@ const navItems = [
   // intake. Sits right below Applications because it's the
   // "where am I in the pipeline" companion view.
   { href: '/admin/cohorts', key: 'cohorts', icon: LayoutGrid },
+  // Phase 62: B2B API Keys — admin UI to issue + revoke scoped
+  // API keys for external integrators calling /v1/catalog/*.
+  // Sits under Cohorts because it's a power-user / config surface
+  // rather than a day-to-day ops tab.
+  { href: '/admin/api-keys', key: 'apiKeys', icon: Key },
   { href: '/admin/settings', key: 'settings', icon: Settings },
 ];
 
