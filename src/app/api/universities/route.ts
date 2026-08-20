@@ -35,7 +35,7 @@ export async function GET(request: Request) {
     // containing , ( ) " % _ could rewrite the filter or 400 the query.
     const term = search ? sanitizeOrTerm(search) : '';
     if (term) query = query.or(`name.ilike.%${term}%,name_cn.ilike.%${term}%,city.ilike.%${term}%`);
-    
+
     if (sort === 'ranking') query = query.order('ranking', { ascending: true });
     else if (sort === 'name') query = query.order('name', { ascending: true });
     else if (sort === 'rating') query = query.order('rating', { ascending: false });
@@ -46,15 +46,21 @@ export async function GET(request: Request) {
 
     const { data, count, error } = await query;
 
-    if (!error && data && data.length > 0) {
-      const mapped = data.map(mapUniversityFromDb);
-      return NextResponse.json({
-        universities: mapped,
-        total: count || 0,
-        page,
-        limit,
-        totalPages: Math.ceil((count || 0) / limit),
-      });
+    if (!error && data) {
+      // U3 #1: only fall back to static when the request has no filters
+      // AND the DB is genuinely empty. A filter that legitimately matches
+      // nothing must return [] (not "show me the unfiltered static data").
+      const hasFilters = !!city || !!discipline || !!term;
+      if (data.length > 0 || hasFilters) {
+        return NextResponse.json({
+          universities: data.map(mapUniversityFromDb),
+          total: count || 0,
+          page,
+          limit,
+          totalPages: Math.ceil((count || 0) / limit),
+        });
+      }
+      // data.length === 0 && !hasFilters → fall through to static
     }
   }
 

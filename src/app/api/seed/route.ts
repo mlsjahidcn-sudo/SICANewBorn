@@ -1,8 +1,28 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-server';
+import { requireAdmin } from '@/lib/supabase-auth';
 import { universities, programs, scholarships } from '@/lib/data';
 
-export async function POST() {
+/**
+ * POST /api/seed
+ *
+ * Upserts the static seed data (src/lib/data.ts) into the DB. Useful
+ * for one-time bootstrapping a fresh Supabase project — NOT something
+ * to expose unauthenticated. Any unauthenticated POST to this route
+ * would let an attacker overwrite the catalog with whatever the
+ * static seed currently contains (which is fine for greenfield, but
+ * still requires an admin to be the one running it).
+ *
+ * U3 #3: this handler was previously unauthenticated. Added
+ * requireAdmin (consistent with every other mutation route). Admin
+ * must be signed in (Bearer session via cookies) to invoke.
+ */
+export async function POST(request: NextRequest) {
+  const auth = await requireAdmin(request);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
   if (!isSupabaseServerConfigured() || !supabaseServer) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
   }

@@ -102,14 +102,18 @@ function ScholarshipFormInner({ slug }: { slug?: string }) {
     try {
       const payload = {
         ...form,
+        // U3 #4: the form was previously splitting applicationMethod by
+        // '\n' and submitting an array, but the validator (z.string())
+        // + DB column (text) are both scalar. Single-line <input> fields
+        // — just pass through.
         degreeLevels: form.degreeLevels.split(',').map(s => s.trim()).filter(Boolean),
         degreeLevelsCn: form.degreeLevelsCn.split(',').map(s => s.trim()).filter(Boolean),
         coverage: form.coverage.split('\n').filter(Boolean),
         coverageCn: form.coverageCn.split('\n').filter(Boolean),
         requirements: form.requirements.split('\n').filter(Boolean),
         requirementsCn: form.requirementsCn.split('\n').filter(Boolean),
-        applicationMethod: form.applicationMethod.split('\n').filter(Boolean),
-        applicationMethodCn: form.applicationMethodCn.split('\n').filter(Boolean),
+        applicationMethod: form.applicationMethod,
+        applicationMethodCn: form.applicationMethodCn,
       };
 
       if (isEdit) {

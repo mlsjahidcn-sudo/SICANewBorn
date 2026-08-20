@@ -40,14 +40,21 @@ export async function GET(request: Request) {
 
     const { data, count, error } = await query;
 
-    if (!error && data && data.length > 0) {
-      return NextResponse.json({
-        scholarships: data.map(mapScholarshipFromDb),
-        total: count || 0,
-        page,
-        limit,
-        totalPages: Math.ceil((count || 0) / limit),
-      });
+    if (!error && data) {
+      // U3 #1: only fall back to static when the request has no filters
+      // AND the DB is genuinely empty. A filter that legitimately matches
+      // nothing must return [] (not "show me the unfiltered static data").
+      const hasFilters = !!type || !!degreeLevel || !!term;
+      if (data.length > 0 || hasFilters) {
+        return NextResponse.json({
+          scholarships: data.map(mapScholarshipFromDb),
+          total: count || 0,
+          page,
+          limit,
+          totalPages: Math.ceil((count || 0) / limit),
+        });
+      }
+      // data.length === 0 && !hasFilters → fall through to static
     }
   }
 
