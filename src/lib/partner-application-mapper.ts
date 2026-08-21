@@ -200,6 +200,11 @@ export interface PartnerApplication {
   submittedAt?: string | null;
   decision: PartnerApplicationDecision;
   notes?: string | null;
+  // Phase 75 / 76: public-form metadata. `source` is the ingestion
+  // surface; `documentsRequested` is the admin "request docs" log
+  // (empty array when nothing pending).
+  source?: 'partner_portal' | 'public_form' | 'admin_manual' | null;
+  documentsRequested?: DocumentsRequestEvent[];
 
   // S26 — extended application data
   dateOfBirth?: string | null;
@@ -380,6 +385,23 @@ interface RawPartnerApplication {
   updated_at?: string | null;
   created_by_user_id?: string | null;
   created_by_email?: string | null;
+  // Phase 75 / 76: public-form submission provenance + admin
+  // document-request log. `source` is the ingestion surface
+  // (partner_portal | public_form | admin_manual); `documents_requested`
+  // is the list of pending/fulfilled admin "send me more docs"
+  // events (Phase 76).
+  source?: string | null;
+  documents_requested?: unknown;
+}
+
+export interface DocumentsRequestEvent {
+  id: string;
+  categories: Array<'passport' | 'transcript' | 'english_test' | 'photo' | 'other'>;
+  message: string | null;
+  requested_at: string;
+  requested_by: string;
+  fulfilled_at: string | null;
+  fulfilled_by: string | null;
 }
 
 export function mapPartnerApplicationFromDb(row: RawPartnerApplication): PartnerApplication {
@@ -401,6 +423,8 @@ export function mapPartnerApplicationFromDb(row: RawPartnerApplication): Partner
     submittedAt: row.submitted_at ?? null,
     decision: parsePartnerApplicationDecision(row.decision) ?? 'Pending',
     notes: row.notes ?? null,
+    source: (row.source as 'partner_portal' | 'public_form' | 'admin_manual' | null) ?? 'partner_portal',
+    documentsRequested: parseDocumentsRequested(row.documents_requested),
 
     // S26
     dateOfBirth: row.date_of_birth ?? null,
@@ -478,6 +502,41 @@ function toBool(input: unknown): boolean | null {
     if (v === 'false' || v === '0' || v === 'no' || v === 'off') return false;
   }
   return null;
+}
+
+/**
+ * Phase 76: parse the documents_requested JSONB array into a typed
+ * list. The DB column is `JSONB NOT NULL DEFAULT '[]'::jsonb`, so a
+ * missing value here means an old row (defensive) — we coerce to [].
+ * Each entry is best-effort validated; an entry that fails shape
+ * checks is dropped (we'd rather show fewer requests than crash the
+ * detail page on a malformed legacy entry).
+ */
+export function parseDocumentsRequested(input: unknown): DocumentsRequestEvent[] {
+  if (!Array.isArray(input)) return [];
+  const out: DocumentsRequestEvent[] = [];
+  for (const raw of input) {
+    if (!raw || typeof raw !== 'object') continue;
+    const e = raw as Record<string, unknown>;
+    if (typeof e.id !== 'string' || !Array.isArray(e.categories) || typeof e.requested_at !== 'string') {
+      continue;
+    }
+    const validCats = e.categories.filter(
+      (c): c is DocumentsRequestEvent['categories'][number] =>
+        c === 'passport' || c === 'transcript' || c === 'english_test' || c === 'photo' || c === 'other',
+    );
+    if (validCats.length === 0) continue;
+    out.push({
+      id: e.id,
+      categories: validCats,
+      message: typeof e.message === 'string' ? e.message : null,
+      requested_at: e.requested_at,
+      requested_by: typeof e.requested_by === 'string' ? e.requested_by : '',
+      fulfilled_at: typeof e.fulfilled_at === 'string' ? e.fulfilled_at : null,
+      fulfilled_by: typeof e.fulfilled_by === 'string' ? e.fulfilled_by : null,
+    });
+  }
+  return out;
 }
 
 export function mapPartnerApplicationToDb(

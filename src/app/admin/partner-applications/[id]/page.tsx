@@ -29,6 +29,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { apiFetchJson } from '@/lib/api-client';
+import { useI18n } from '@/lib/i18n';
 import type { University, Program } from '@/lib/data';
 import {
   PARTNER_APPLICATION_STATUSES,
@@ -72,6 +73,7 @@ export default function AdminPartnerApplicationDetailPage() {
   const params = useParams();
   const router = useRouter();
   const applicationId = params.id as string;
+  const { t } = useI18n();
 
   const [app, setApp] = useState<PartnerApplication | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -87,6 +89,15 @@ export default function AdminPartnerApplicationDetailPage() {
   const [assignCatalogLoading, setAssignCatalogLoading] = useState(false);
   const [selectedUniversitySlug, setSelectedUniversitySlug] = useState('');
   const [selectedProgramSlug, setSelectedProgramSlug] = useState('');
+
+  // Phase 76: document-request modal state
+  const [showDocRequestModal, setShowDocRequestModal] = useState(false);
+  const [docRequestCategories, setDocRequestCategories] = useState<
+    Array<'passport' | 'transcript' | 'english_test' | 'photo' | 'other'>
+  >([]);
+  const [docRequestMessage, setDocRequestMessage] = useState('');
+  const [isRequestingDocs, setIsRequestingDocs] = useState(false);
+  const [docRequestError, setDocRequestError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!applicationId) return;
@@ -171,6 +182,39 @@ export default function AdminPartnerApplicationDetailPage() {
       setIsSavingNotes(false);
     }
   }, [app, applicationId, adminNotes]);
+
+  // Phase 76: submit a new "request documents" event. Appends to
+  // the documents_requested JSONB array on the server, which is
+  // hydrated back into app.documentsRequested on the next load().
+  const submitDocRequest = useCallback(async () => {
+    if (!app) return;
+    if (docRequestCategories.length === 0) return;
+    setIsRequestingDocs(true);
+    setDocRequestError(null);
+    try {
+      await apiFetchJson(
+        `/api/admin/partner-applications/${applicationId}/request-documents`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            categories: docRequestCategories,
+            message: docRequestMessage || undefined,
+          }),
+        },
+      );
+      // Re-fetch the app to get the updated documents_requested array
+      await load();
+      setShowDocRequestModal(false);
+      setDocRequestCategories([]);
+      setDocRequestMessage('');
+    } catch (err) {
+      setDocRequestError(
+        err instanceof Error ? err.message : t('adminPartnerApp.errorRequestFailed'),
+      );
+    } finally {
+      setIsRequestingDocs(false);
+    }
+  }, [app, applicationId, docRequestCategories, docRequestMessage, load, t]);
 
   // Phase 54: open the assignment modal and load the live catalog.
   const openAssignModal = useCallback(async () => {
@@ -768,6 +812,178 @@ export default function AdminPartnerApplicationDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Phase 76: Documents — files uploaded by the student +
+          open admin "request documents" events. Shows for all
+          sources; the source badge tells admin whether this row
+          came from the public form (where docs are most likely to
+          be missing) or the partner portal. */}
+      <Card className="rounded-none border-gray-200 mt-6">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                Documents
+                {app.source === 'public_form' ? (
+                  <Badge className="bg-orange-100 text-orange-800 rounded-none">
+                    {t('adminPartnerApp.sourceBadge')}
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="rounded-none">
+                    {t('adminPartnerApp.sourceBadgePartner')}
+                  </Badge>
+                )}
+              </CardTitle>
+              <p className="text-xs text-gray-500 mt-1">
+                {t('adminPartnerApp.documentsSubtitle')}
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowDocRequestModal(true)}
+              className="rounded-none"
+            >
+              {t('adminPartnerApp.requestButton')}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm">
+          {/* Open requests */}
+          {(() => {
+            const openRequests = (app.documentsRequested ?? []).filter((r) => !r.fulfilled_at);
+            if (openRequests.length === 0) {
+              return (
+                <p className="text-xs text-gray-500">
+                  {t('adminPartnerApp.openRequestsNone')}
+                </p>
+              );
+            }
+            return (
+              <div className="space-y-2">
+                <div className="text-xs font-semibold text-[#1B2A4A] uppercase tracking-wider">
+                  {t('adminPartnerApp.openRequests')} ({openRequests.length})
+                </div>
+                {openRequests.map((r) => (
+                  <div
+                    key={r.id}
+                    className="p-3 bg-amber-50 border border-amber-200"
+                  >
+                    <div className="flex flex-wrap gap-1 mb-1">
+                      {r.categories.map((c) => (
+                        <Badge
+                          key={c}
+                          variant="secondary"
+                          className="rounded-none text-xs"
+                        >
+                          {t(`adminPartnerApp.requestCategory${c.charAt(0).toUpperCase()}${c.slice(1).replace(/_([a-z])/g, (_, x) => x.toUpperCase())}` as 'adminPartnerApp.requestCategoryPassport' | 'adminPartnerApp.requestCategoryTranscript' | 'adminPartnerApp.requestCategoryEnglishTest' | 'adminPartnerApp.requestCategoryPhoto' | 'adminPartnerApp.requestCategoryOther')}
+                        </Badge>
+                      ))}
+                    </div>
+                    {r.message && (
+                      <p className="text-sm text-gray-700 mt-1">{r.message}</p>
+                    )}
+                    <p className="text-xs text-gray-500 mt-1">
+                      {t('adminPartnerApp.requestedBy')}{' '}
+                      {r.requested_by.slice(0, 8)} ·{' '}
+                      {new Date(r.requested_at).toLocaleString()}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+
+          {/* Fulfilled history (collapsed — small list) */}
+          {(() => {
+            const fulfilled = (app.documentsRequested ?? []).filter((r) => r.fulfilled_at);
+            if (fulfilled.length === 0) return null;
+            return (
+              <div className="text-xs text-gray-500">
+                {t('adminPartnerApp.fulfilledRequests')}: {fulfilled.length}
+              </div>
+            );
+          })()}
+        </CardContent>
+      </Card>
+
+      {/* Phase 76: Document-request modal */}
+      <Dialog open={showDocRequestModal} onOpenChange={setShowDocRequestModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('adminPartnerApp.requestTitle')}</DialogTitle>
+            <DialogDescription>
+              {t('adminPartnerApp.requestBody')}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {(['passport', 'transcript', 'english_test', 'photo', 'other'] as const).map(
+              (cat) => (
+                <label
+                  key={cat}
+                  className="flex items-center gap-2 text-sm cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4"
+                    checked={docRequestCategories.includes(cat)}
+                    onChange={(e) => {
+                      setDocRequestCategories((prev) =>
+                        e.target.checked
+                          ? [...prev, cat]
+                          : prev.filter((c) => c !== cat),
+                      );
+                    }}
+                  />
+                  {t(
+                    `adminPartnerApp.requestCategory${cat.charAt(0).toUpperCase()}${cat.slice(1).replace(/_([a-z])/g, (_, x) => x.toUpperCase())}` as 'adminPartnerApp.requestCategoryPassport' | 'adminPartnerApp.requestCategoryTranscript' | 'adminPartnerApp.requestCategoryEnglishTest' | 'adminPartnerApp.requestCategoryPhoto' | 'adminPartnerApp.requestCategoryOther',
+                  )}
+                </label>
+              ),
+            )}
+            <div className="pt-2">
+              <Label>{t('adminPartnerApp.requestMessage')}</Label>
+              <Textarea
+                value={docRequestMessage}
+                onChange={(e) => setDocRequestMessage(e.target.value)}
+                rows={3}
+                maxLength={1000}
+                placeholder={t('adminPartnerApp.requestMessagePh')}
+              />
+            </div>
+            {docRequestError && (
+              <p className="text-sm text-red-600 bg-red-50 p-2 rounded">
+                {docRequestError}
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowDocRequestModal(false)}
+              disabled={isRequestingDocs}
+            >
+              {t('adminApiKeys.cancel')}
+            </Button>
+            <Button
+              onClick={submitDocRequest}
+              disabled={
+                isRequestingDocs || docRequestCategories.length === 0
+              }
+              className="bg-[#9B1B30] hover:bg-[#7A1526] text-white"
+            >
+              {isRequestingDocs ? (
+                <>
+                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                  {t('adminPartnerApp.requestSending')}
+                </>
+              ) : (
+                t('adminPartnerApp.requestSubmit')
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

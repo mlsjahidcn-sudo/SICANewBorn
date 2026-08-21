@@ -56,6 +56,9 @@ const EMPTY: FormState = {
   website: '',
 };
 
+type FileCategory = 'passport' | 'transcript' | 'english_test' | 'other';
+type FilesMap = Partial<Record<FileCategory, File>>;
+
 interface SuccessPayload {
   application_id: string;
   application_number: string;
@@ -78,6 +81,7 @@ export function ApplyForm() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<SuccessPayload | null>(null);
+  const [files, setFiles] = useState<FilesMap>({});
   const formTopRef = useRef<HTMLDivElement>(null);
 
   // Hydrate from localStorage on mount. Do not block render — fall
@@ -174,11 +178,28 @@ export function ApplyForm() {
 
     setSubmitting(true);
     try {
-      const res = await fetch('/api/public/submissions', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(form),
-      });
+      // If the user attached any files, use multipart/form-data
+      // so the server can upload + create the student_documents
+      // rows in one round trip. Otherwise plain JSON.
+      const hasFiles = Object.values(files).some((f) => f && f.size > 0);
+      let res: Response;
+      if (hasFiles) {
+        const fd = new FormData();
+        for (const [k, v] of Object.entries(form)) {
+          if (typeof v === 'string') fd.set(k, v);
+        }
+        for (const cat of ['passport', 'transcript', 'english_test', 'other'] as const) {
+          const f = files[cat];
+          if (f && f.size > 0) fd.set(`file_${cat}`, f, f.name);
+        }
+        res = await fetch('/api/public/submissions', { method: 'POST', body: fd });
+      } else {
+        res = await fetch('/api/public/submissions', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(form),
+        });
+      }
       if (!res.ok) {
         const j = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(j.error || `HTTP ${res.status}`);
@@ -477,8 +498,36 @@ export function ApplyForm() {
                       )}
 
                       {id === 'documents' && (
-                        <div className="p-4 bg-[#FAFAF8] border border-gray-200 text-sm text-gray-600">
-                          {t('apply.documentsHelp')}
+                        <div className="space-y-3">
+                          <p className="text-xs text-gray-500">{t('apply.documentsHelp')}</p>
+                          {(
+                            [
+                              { cat: 'passport', label: t('apply.docPassport') },
+                              { cat: 'transcript', label: t('apply.docTranscript') },
+                              { cat: 'english_test', label: t('apply.docEnglishTest') },
+                              { cat: 'other', label: t('apply.docOther') },
+                            ] as const
+                          ).map(({ cat, label }) => (
+                            <div key={cat}>
+                              <Label htmlFor={`file_${cat}`}>{label}</Label>
+                              <input
+                                id={`file_${cat}`}
+                                name={`file_${cat}`}
+                                type="file"
+                                accept="application/pdf,image/jpeg,image/png"
+                                onChange={(e) => {
+                                  const f = e.target.files?.[0] ?? null;
+                                  setFiles((prev) => ({ ...prev, [cat]: f }));
+                                }}
+                                className="block w-full text-sm text-gray-700 file:mr-3 file:px-3 file:py-1.5 file:rounded-none file:border-0 file:text-sm file:font-semibold file:bg-[#1B2A4A] file:text-white hover:file:bg-[#26345A]"
+                              />
+                              {files[cat] && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                  ✓ {files[cat]!.name} ({Math.round(files[cat]!.size / 1024)} KB)
+                                </p>
+                              )}
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>
