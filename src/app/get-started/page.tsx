@@ -28,7 +28,7 @@ export const dynamic = 'force-dynamic';
 
 const PAGE_TITLE = 'Get into a top Chinese university — SICA admission services';
 const PAGE_DESCRIPTION =
-  "Real students. Real offer letters. 90% success rate with our partner universities, or 30% of your fee back. DIY guidance from $50, full-service from $500. Chat with SICA on WhatsApp.";
+  "Real students. Real offer letters. 90% success rate with our partner universities, or 30% of your fee back. DIY guidance from $50, full-service from $700. Chat with SICA on WhatsApp.";
 
 export const metadata: Metadata = {
   title: PAGE_TITLE,
