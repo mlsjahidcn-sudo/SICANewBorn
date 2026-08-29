@@ -631,7 +631,7 @@ export default function PartnerApplicationsPage() {
                       <Checkbox
                         checked={selectedIds.has(app.id)}
                         onCheckedChange={(c) => toggleSelected(app.id, !!c)}
-                        aria-label={t('partnerApps.selectRow', { name: app.studentName })}
+                        aria-label={t('partnerApps.selectRow', { name: app.studentName ?? '' })}
                       />
                     </td>
                     <td className="px-6 py-4">
@@ -640,7 +640,7 @@ export default function PartnerApplicationsPage() {
                           href={`/partner/applications/${app.id}`}
                           className="font-medium text-[#1B2A4A] hover:underline"
                         >
-                          {app.studentName}
+                          {app.studentName ?? '—'}
                         </Link>
                         <div className="flex flex-col gap-0.5 mt-1 text-xs text-[#4B5563]">
                           {app.studentEmail && (

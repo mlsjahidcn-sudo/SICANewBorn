@@ -18,7 +18,15 @@
  *     can't set a Student source to 'Online' and have isOffline=true.
  *   - `createdAt` / `updatedAt` come from DB timestamps.
  *   - IDs are always the student's auth.users.id (= student_profiles.id).
+ *
+ * Phase 77: `firstName` is guaranteed non-empty post-migration
+ * (`database/2026-08-29_student_profile_name_not_null.sql` makes
+ * student_profiles.first_name NOT NULL with DEFAULT ''). `lastName`
+ * stays nullable in the DB (single-name cases) — we expose '' for
+ * empty. `mapStudentName()` re-exports the shared display helper.
  */
+
+export { deriveStudentFullName as mapStudentName } from './application-mapper';
 
 // Re-export the AdminStudent shape from data.ts so we have a single type
 // that both server and client agree on.

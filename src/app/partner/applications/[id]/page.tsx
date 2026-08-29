@@ -397,7 +397,7 @@ export default function PartnerApplicationDetailPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>{t('partnerAppDetail.deleteTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t('partnerAppDetail.deleteBodyFor', { student: app.studentName, university: app.university || t('partnerAppDetail.universityNotSet') })}
+              {t('partnerAppDetail.deleteBodyFor', { student: app.studentName ?? '', university: app.university || t('partnerAppDetail.universityNotSet') })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -424,7 +424,7 @@ export default function PartnerApplicationDetailPage() {
           <DialogHeader>
             <DialogTitle>{t('partnerAppDetail.withdrawalTitle')}</DialogTitle>
             <DialogDescription>
-              {t('partnerAppDetail.withdrawalBody', { student: app.studentName, university: app.university || t('partnerAppDetail.universityNotSet') })}
+              {t('partnerAppDetail.withdrawalBody', { student: app.studentName ?? '', university: app.university || t('partnerAppDetail.universityNotSet') })}
             </DialogDescription>
           </DialogHeader>
           {!withdrawalSent ? (

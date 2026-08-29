@@ -186,7 +186,11 @@ export interface PartnerApplication {
   // studentName join. The name is still kept on the row for
   // display, but the canonical link is via studentId.
   studentId?: string | null;
-  studentName: string;
+  // Phase 77: DB column is VARCHAR(255) NULL. Type tightens to
+  // string | null so consumers MUST handle null (use deriveDisplayName
+  // or ?? '—'). Pre-migration this was typed `string` which let
+  // null leak into UI rendering.
+  studentName: string | null;
   studentEmail?: string | null;
   studentPhone?: string | null;
   university: string;
@@ -331,7 +335,7 @@ interface RawPartnerApplication {
   id: string;
   partner_id: string;
   student_id?: string | null;
-  student_name: string;
+  student_name?: string | null;
   student_email?: string | null;
   student_phone?: string | null;
   university: string;
@@ -409,7 +413,7 @@ export function mapPartnerApplicationFromDb(row: RawPartnerApplication): Partner
     id: row.id,
     partnerId: row.partner_id,
     studentId: row.student_id ?? null,
-    studentName: row.student_name,
+    studentName: row.student_name?.trim() || null,
     studentEmail: row.student_email ?? null,
     studentPhone: row.student_phone ?? null,
     university: row.university ?? '',

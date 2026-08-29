@@ -2746,6 +2746,10 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminPrograms.fallbackError':
       'Could not reach /api/programs — showing local fallback. If you recently imported programs, refresh to retry.',
 
+    // /admin/applications — Phase 77 name-display fallback hint
+    'adminApps.nameMissing': 'No name on file',
+    'adminApps.nameMissingHint': 'This application has no student name associated. Ask the student to update their profile.',
+
     // /admin/scholarships — list page
     'adminScholarships.title': 'Scholarships',
     'adminScholarships.subtitle': 'Manage national and provincial scholarship programs',
@@ -6392,6 +6396,10 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminPrograms.deleteDialogConfirm': '删除',
     'adminPrograms.fallbackError':
       '无法连接到 /api/projects —— 当前显示的是本地缓存。如近期导入了项目，请刷新重试。',
+
+    // /admin/applications — Phase 77 name-display fallback hint
+    'adminApps.nameMissing': '暂无姓名',
+    'adminApps.nameMissingHint': '该申请暂未关联学生姓名。请提醒学生更新个人资料。',
 
     // /admin/scholarships — list page
     'adminScholarships.title': '奖学金',

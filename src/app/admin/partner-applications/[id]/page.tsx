@@ -125,9 +125,10 @@ export default function AdminPartnerApplicationDetailPage() {
   const patchField = useCallback(
     async (field: 'status' | 'decision' | 'priority', value: string) => {
       if (!app) return;
-      const setter =
-        field === 'status' ? setIsSavingStatus : setIsSavingStatus;
-      setter(true);
+      // All three fields share one save flag — the previous ternary
+      // (`field === 'status' ? setIsSavingStatus : setIsSavingStatus`)
+      // had identical branches (dead code).
+      setIsSavingStatus(true);
       setError(null);
       try {
         const payload: Record<string, unknown> = { [field]: value };
@@ -157,7 +158,7 @@ export default function AdminPartnerApplicationDetailPage() {
             : `Failed to update ${field} to ${value}.`,
         );
       } finally {
-        setter(false);
+        setIsSavingStatus(false);
       }
     },
     [app, applicationId],
@@ -336,7 +337,7 @@ export default function AdminPartnerApplicationDetailPage() {
         </Link>
         <div>
           <h1 className="text-2xl font-bold text-[#1B2A4A]">
-            {app.studentName}
+            {app.studentName ?? '—'}
           </h1>
           <p className="text-[#4B5563] mt-1 text-sm">
             {app.university && app.program

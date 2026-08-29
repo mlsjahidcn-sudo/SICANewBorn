@@ -12,6 +12,50 @@
  * The list page and detail page use the SAME shape so the UI can
  * consume the data uniformly.
  */
+
+/**
+ * Phase 77: single source of truth for "what name should we show for
+ * this student?". Falls through 3 tiers:
+ *   1. first_name + last_name (trimmed) → "John Smith" / "John"
+ *   2. applicant_name (admin-created, unlinked rows)
+ *   3. email local-part ("jane.doe" from jane.doe@gmail.com)
+ *   4. "—" (only when everything is empty)
+ *
+ * Exported so admin list / detail / partner pages share the same logic
+ * instead of each writing its own trim+coalesce chain.
+ */
+export function deriveDisplayName(input: {
+  studentFirstName?: string | null;
+  studentLastName?: string | null;
+  studentEmail?: string | null;
+  applicantName?: string | null;
+}): string {
+  const first = (input.studentFirstName ?? '').trim();
+  const last = (input.studentLastName ?? '').trim();
+  if (first || last) return `${first} ${last}`.trim();
+  const applicant = input.applicantName?.trim();
+  if (applicant) return applicant;
+  if (input.studentEmail) return input.studentEmail.split('@')[0];
+  return '—';
+}
+
+/**
+ * Convenience wrapper around `deriveDisplayName` for a `student_profiles`
+ * row (no applicant_name). Used by /admin/applications/[id], the student
+ * detail fullName header, and the student-tab Applications API.
+ */
+export function deriveStudentFullName(student: {
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+}): string {
+  return deriveDisplayName({
+    studentFirstName: student.first_name,
+    studentLastName: student.last_name,
+    studentEmail: student.email,
+  });
+}
+
 export interface AdminApplication {
   id: string;
   studentId: string | null;
@@ -87,9 +131,12 @@ export function mapApplicationFromDb(row: RawApp): AdminApplication {
   return {
     id: row.id,
     studentId: row.student_id,
-    studentName: isLinked
-      ? `${row.student!.first_name || ''} ${row.student!.last_name || ''}`.trim() || '—'
-      : row.applicant_name || '—',
+    studentName: deriveDisplayName({
+      studentFirstName: row.student?.first_name,
+      studentLastName: row.student?.last_name,
+      studentEmail: row.student?.email ?? row.applicant_email,
+      applicantName: row.applicant_name,
+    }),
     studentEmail: isLinked
       ? row.student!.email || ''
       : row.applicant_email || '',

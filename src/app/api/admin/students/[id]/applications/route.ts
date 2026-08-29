@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, buildServiceClient, getServerEnv } from '@/lib/supabase-auth';
+import { deriveStudentFullName } from '@/lib/application-mapper';
 
 /**
  * GET /api/admin/students/[id]/applications
@@ -30,6 +31,19 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
   try {
     const service = buildServiceClient();
 
+    // Phase 77: pull the parent student once so we can attach a
+    // human-readable studentName to each row. The route returns one
+    // student's apps, so the parent context is always available.
+    const studentRes = await service
+      .from('student_profiles')
+      .select('id, first_name, last_name, email')
+      .eq('id', id)
+      .maybeSingle();
+
+    const studentName = deriveStudentFullName(
+      (studentRes.data as { first_name?: string | null; last_name?: string | null; email?: string | null } | null) ?? {},
+    );
+
     // Fetch both student applications and partner applications that are linked
     // to this student profile via the Phase A bridge column.
     const [studentAppsRes, partnerAppsRes] = await Promise.all([
@@ -57,14 +71,20 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       program_id: (row.program as string | undefined) ?? null,
       target_degree: (row.degree as string | undefined) ?? null,
       target_intake: (row.intake as string | undefined) ?? null,
+      studentName,
     }));
 
-    const data = [...(studentAppsRes.data || []), ...normalizedPartnerApps].sort(
+    const studentAppsWithName = (studentAppsRes.data || []).map((row: Record<string, unknown>) => ({
+      ...row,
+      studentName,
+    }));
+
+    const data = [...studentAppsWithName, ...normalizedPartnerApps].sort(
       (a, b) =>
         new Date((b as { created_at?: string }).created_at || 0).getTime() -
         new Date((a as { created_at?: string }).created_at || 0).getTime(),
     );
-    const error = studentAppsRes.error || partnerAppsRes.error;
+    const error = studentAppsRes.error || partnerAppsRes.error || studentRes.error;
 
 
     if (error) {

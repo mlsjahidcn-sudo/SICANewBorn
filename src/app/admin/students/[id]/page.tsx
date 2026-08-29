@@ -26,6 +26,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 import type { AdminStudent } from '@/lib/student-mapper';
+import { mapStudentName } from '@/lib/student-mapper';
 
 type DocumentStatus = 'Pending' | 'Uploaded' | 'Verified' | 'Rejected';
 type ApplicationStatus =
@@ -56,6 +57,12 @@ interface StudentApplication {
   target_intake?: string;
   created_at: string;
   application_number?: string;
+  // Phase 77: human-readable student name derived from the parent
+  // student_profiles row (falls back to email local-part, then "—").
+  // The page already knows which student this is, so this is mostly
+  // defensive — if the bridge ever links multiple students, the
+  // admin can still tell which row belongs to whom.
+  studentName?: string;
   // Phase 62 (Bug 1): distinguishes partner-sourced rows in the merged
   // feed. 'partner' = from partner_applications via the bridge column,
   // undefined = direct student_applications row.
@@ -215,7 +222,11 @@ export default function AdminStudentDetailPage() {
     );
   }
 
-  const fullName = `${student.firstName} ${student.lastName}`.trim() || '—';
+  const fullName = mapStudentName({
+    first_name: student.firstName,
+    last_name: student.lastName,
+    email: student.email,
+  });
   const sourceLabel = student.isOffline
     ? t('adminStudents.badgeOffline')
     : student.source === 'Partner'

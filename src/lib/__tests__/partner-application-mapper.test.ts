@@ -74,6 +74,34 @@ describe('partner-application-mapper', () => {
       expect(result.status).toBe('Draft');
       expect(result.decision).toBe('Pending');
     });
+
+    // Phase 77: studentName tightened to string | null. Old DB rows
+    // can have NULL; consumers must handle null (use ?? '—').
+    it('maps student_name to null when column is null (Phase 77 type tightening)', () => {
+      const result = mapPartnerApplicationFromDb({
+        id: 'app-3',
+        partner_id: 'p-1',
+        student_name: null,
+        university: 'PKU',
+        program: 'IB',
+        status: 'Draft',
+        decision: 'Pending',
+      });
+      expect(result.studentName).toBeNull();
+    });
+
+    it('trims whitespace from student_name and returns null when only whitespace', () => {
+      const result = mapPartnerApplicationFromDb({
+        id: 'app-4',
+        partner_id: 'p-1',
+        student_name: '   ',
+        university: 'PKU',
+        program: 'IB',
+        status: 'Draft',
+        decision: 'Pending',
+      });
+      expect(result.studentName).toBeNull();
+    });
   });
 
   describe('mapPartnerApplicationToDb', () => {

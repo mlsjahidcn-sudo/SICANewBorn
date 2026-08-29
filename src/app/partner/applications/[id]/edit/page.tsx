@@ -75,7 +75,7 @@ export default function PartnerEditApplicationPage() {
       const matchedProgram = (p.programs || []).find((prog) => prog.name === a.program);
       const loaded: PartnerApplicationFormData = {
         studentId: a.studentId ?? '',
-        studentName: a.studentName,
+        studentName: a.studentName ?? '',
         studentEmail: a.studentEmail ?? '',
         studentPhone: a.studentPhone ?? '',
         nationality: a.nationality ?? '',
