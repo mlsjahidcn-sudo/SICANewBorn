@@ -275,3 +275,76 @@ export async function PATCH(
 
   return NextResponse.json({ lead: fresh, history: history || [] });
 }
+
+/**
+ * DELETE: permanently delete a lead + its lead_history rows.
+ *
+ * Phase 79: admin-side delete was never implemented. The partner
+ * portal has a delete flow at /api/partner/leads/[id] but it was
+ * never mirrored to /admin/leads. This handler:
+ *   - requires admin (requireAdmin)
+ *   - requires ?type= contact|chat|assessment (selects the right table)
+ *   - deletes lead_history rows first (no cascade on the polymorphic
+ *     lead_id FK), then the parent lead row
+ *   - returns 200 on success, 404 if the row doesn't exist
+ *
+ * Uses the service-role client (RLS bypass) so no schema-level DELETE
+ * policy is needed. audit-trail > GDPR here — we keep audit logs in
+ * place; only the user-submitted PII is deleted.
+ */
+export async function DELETE(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> },
+) {
+  const { id } = await context.params;
+  const auth = await requireAdmin(request);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
+  const supabase = getSupabaseServer();
+  if (!supabase) {
+    return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
+  }
+
+  const typeParam = (new URL(request.url).searchParams.get('type') || '').toLowerCase();
+  if (!isLeadType(typeParam)) {
+    return NextResponse.json(
+      { error: 'type query param required: contact | chat | assessment' },
+      { status: 400 },
+    );
+  }
+  const type: LeadType = typeParam;
+  const table = tableFor(type);
+
+  // Verify the row exists first so we can return a clean 404.
+  const { data: existing, error: fetchErr } = await supabase
+    .from(table)
+    .select('id')
+    .eq('id', id)
+    .maybeSingle();
+  if (fetchErr) {
+    return NextResponse.json({ error: fetchErr.message }, { status: 500 });
+  }
+  if (!existing) {
+    return NextResponse.json({ error: 'Lead not found' }, { status: 404 });
+  }
+
+  // Delete lead_history first. lead_id is polymorphic (no FK cascade),
+  // so orphan history rows would linger without this explicit cleanup.
+  const { error: histErr } = await supabase
+    .from('lead_history')
+    .delete()
+    .eq('lead_id', id)
+    .eq('lead_type', type);
+  if (histErr) {
+    return NextResponse.json({ error: histErr.message }, { status: 500 });
+  }
+
+  const { error: delErr } = await supabase.from(table).delete().eq('id', id);
+  if (delErr) {
+    return NextResponse.json({ error: delErr.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true, deleted: 1 });
+}

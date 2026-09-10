@@ -43,10 +43,22 @@ import {
   X,
   Users,
   PhoneCall,
+  Trash2,
 } from 'lucide-react';
-import { apiFetchJson, ApiError } from '@/lib/api-client';
+import { apiFetch, apiFetchJson, ApiError } from '@/lib/api-client';
+import { downloadCsvViaApi } from '@/lib/download-csv';
 import { Badge } from '@/components/ui/badge';
 import { useI18n } from '@/lib/i18n';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 type LeadType = 'contact' | 'chat' | 'assessment';
 
@@ -138,6 +150,31 @@ export default function LeadsPage() {
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkError, setBulkError] = useState<string | null>(null);
 
+  // Phase 79 — delete confirmations
+  const [pendingDelete, setPendingDelete] = useState<UnifiedLead | null>(null);
+  const [pendingBulkDelete, setPendingBulkDelete] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+
+  const deleteSingle = async (lead: UnifiedLead) => {
+    setDeleteBusy(true);
+    setBulkError(null);
+    try {
+      const res = await apiFetch(`/api/admin/leads/${lead.lead_id}?type=${lead.lead_type}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { error?: string })?.error || `HTTP ${res.status}`);
+      }
+      setPendingDelete(null);
+      load();
+    } catch (err) {
+      setBulkError(err instanceof Error ? err.message : t('adminLeads.errorDelete'));
+    } finally {
+      setDeleteBusy(false);
+    }
+  };
+
   // Reset status when type changes (status enums differ)
   useEffect(() => {
     setStatusFilter('all');
@@ -191,7 +228,7 @@ export default function LeadsPage() {
 
   // Bulk action — group selected by lead_type (bulk endpoint takes
   // one type at a time), then POST N requests in parallel.
-  const bulkAction = async (action: 'assign' | 'unassign' | 'set_status' | 'mark_contacted', value?: string) => {
+  const bulkAction = async (action: 'assign' | 'unassign' | 'set_status' | 'mark_contacted' | 'delete', value?: string) => {
     if (selected.size === 0) return;
     setBulkBusy(true);
     setBulkError(null);
@@ -205,7 +242,7 @@ export default function LeadsPage() {
       const tasks = (Object.keys(byType) as LeadType[])
         .filter((t) => byType[t].length > 0)
         .map((t) =>
-          apiFetchJson<{ ok: boolean; updated: number }>('/api/admin/leads/bulk', {
+          apiFetchJson<{ ok: boolean; updated: number; deleted?: number }>('/api/admin/leads/bulk', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -235,10 +272,10 @@ export default function LeadsPage() {
     if (assigneeFilter !== 'all') params.set('assignee', assigneeFilter);
     if (fromDate) params.set('from', fromDate);
     if (toDate) params.set('to', toDate);
-    // Use the same auth mechanism as apiFetchJson by going through
-    // the API. For CSV we open a temporary link that includes the
-    // bearer token via Authorization header — browsers can't set
-    // headers on <a download>, so we route through a fetch + Blob.
+    // Route through downloadCsvViaApi → apiFetch (which attaches the
+    // admin's Supabase bearer token as Authorization). For CSV we
+    // can't use a plain <a download> because browsers can't set
+    // headers on anchor navigation, so we fetch + Blob + ObjectURL.
     void exportCsvViaFetch(params.toString());
   };
 
@@ -246,41 +283,17 @@ export default function LeadsPage() {
     setBulkBusy(true);
     setBulkError(null);
     try {
-      // Build Authorization header from the same auth client the
-      // apiFetchJson helper uses. The session token lives in
-      // localStorage under the supabase auth key.
-      const sessionRaw =
-        typeof window !== 'undefined' ? localStorage.getItem('sica-auth-v1') : null;
-      if (!sessionRaw) {
-        setBulkError(t('adminLeads.errorNoSession'));
-        return;
-      }
-      const session = JSON.parse(sessionRaw);
-      const token =
-        session?.session?.access_token ||
-        session?.access_token ||
-        session?.accessToken;
-      if (!token) {
-        setBulkError(t('adminLeads.errorNoToken'));
-        return;
-      }
-      const res = await fetch(`/api/admin/leads/export${qs ? `?${qs}` : ''}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || `HTTP ${res.status}`);
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `sica-leads-${new Date().toISOString().slice(0, 10)}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      // Phase 79: route through apiFetch which attaches the Supabase
+      // Bearer token from the live session (no localStorage lookup).
+      // If the session has expired the server returns 401 — the error
+      // message bubbles up and we show it instead of an i18n placeholder.
+      await downloadCsvViaApi(
+        `/api/admin/leads/export${qs ? `?${qs}` : ''}`,
+        `sica-leads-${new Date().toISOString().slice(0, 10)}.csv`,
+      );
     } catch (err) {
+      // Prefer the server's actual error message (e.g. "Not authenticated"
+      // for a 401). Fall back to the generic i18n export-failed string.
       setBulkError(err instanceof Error ? err.message : t('adminLeads.errorExportFailed'));
     } finally {
       setBulkBusy(false);
@@ -479,15 +492,25 @@ export default function LeadsPage() {
             {bulkBusy ? <Spinner size="xs" /> : <PhoneCall className="h-3.5 w-3.5 mr-1" />}
             {t('adminLeads.markContacted')}
           </Button>
-          <Button
+<Button
             size="sm"
             variant="outline"
             disabled={bulkBusy}
-            onClick={() => bulkAction('assign', 'me')}
+            onClick={() => bulkAction('unassign')}
             className="bg-white text-[#1B2A4A] border-white hover:bg-gray-100"
           >
             <Users className="h-3.5 w-3.5 mr-1" />
-            {t('adminLeads.assignToMe')}
+            {t('adminLeads.unassign')}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={bulkBusy || deleteBusy}
+            onClick={() => setPendingBulkDelete(true)}
+            className="bg-white text-[#9B1B30] border-[#9B1B30] hover:bg-red-50"
+          >
+            <Trash2 className="h-3.5 w-3.5 mr-1" />
+            {t('adminLeads.bulkDelete')}
           </Button>
           <Button
             size="sm"
@@ -592,9 +615,20 @@ export default function LeadsPage() {
                       <Square className="h-4 w-4 text-gray-400" />
                     )}
                   </button>
-                  <button
+                  {/* Row clickable area — div + role="button" so the per-row
+                      delete <button> can sit inside without nesting two
+                      buttons (invalid HTML, breaks hydration). */}
+                  <div
+                    role="button"
+                    tabIndex={0}
                     onClick={() => openDetail(lead)}
-                    className="flex-1 min-w-0 text-left"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        openDetail(lead);
+                      }
+                    }}
+                    className="flex-1 min-w-0 text-left cursor-pointer"
                   >
                     <div className="flex items-start gap-3">
                       <div className="flex flex-col items-start gap-1 flex-shrink-0">
@@ -670,14 +704,82 @@ export default function LeadsPage() {
                         <p className="text-xs text-gray-400 mt-2">{formatDate(lead.created_at)}</p>
                       </div>
                       <ArrowRight className="h-4 w-4 text-gray-400 flex-shrink-0 mt-1" />
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        aria-label={t('adminLeads.deleteRow')}
+                        disabled={deleteBusy}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPendingDelete(lead);
+                        }}
+                        className="text-gray-400 hover:text-[#9B1B30] hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                  </button>
+                  </div>
                 </div>
               );
             })}
           </div>
         )}
       </div>
+
+      {/* Phase 79 — single-row delete confirmation */}
+      <AlertDialog open={!!pendingDelete} onOpenChange={(open) => !open && setPendingDelete(null)}>
+        <AlertDialogContent className="rounded-none">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('adminLeads.deleteTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('adminLeads.deleteBodyFor', {
+                name: pendingDelete?.name || pendingDelete?.email || pendingDelete?.lead_id.slice(0, 8) || '',
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteBusy} className="rounded-none">
+              {t('adminLeads.deleteCancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleteBusy}
+              onClick={() => pendingDelete && deleteSingle(pendingDelete)}
+              className="bg-[#9B1B30] hover:bg-[#7A1526] rounded-none"
+            >
+              {deleteBusy ? <Spinner size="xs" /> : t('adminLeads.deleteConfirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Phase 79 — bulk delete confirmation */}
+      <AlertDialog open={pendingBulkDelete} onOpenChange={(open) => !open && setPendingBulkDelete(false)}>
+        <AlertDialogContent className="rounded-none">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t('adminLeads.deleteBulkTitle', { count: selected.size })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('adminLeads.deleteBulkBody', { count: selected.size })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkBusy} className="rounded-none">
+              {t('adminLeads.deleteCancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={bulkBusy}
+              onClick={async () => {
+                await bulkAction('delete');
+                setPendingBulkDelete(false);
+              }}
+              className="bg-[#9B1B30] hover:bg-[#7A1526] rounded-none"
+            >
+              {bulkBusy ? <Spinner size="xs" /> : t('adminLeads.deleteConfirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -5,14 +5,15 @@
  * Body: {
  *   type: 'contact' | 'chat' | 'assessment',
  *   ids: string[],
- *   action: 'assign' | 'unassign' | 'set_status' | 'mark_contacted',
+ *   action: 'assign' | 'unassign' | 'set_status' | 'mark_contacted' | 'delete',
  *   value?: string  // for 'assign' → user_id; for 'set_status' → status
  * }
  *
  * Each action writes a lead_history row per lead (so the timeline
  * shows the bulk change). assign / unassign + set_status update the
  * parent row; mark_contacted triggers bump_contact_attempts via the
- * existing trigger.
+ * existing trigger. 'delete' (Phase 79) permanently removes the leads
+ * + their lead_history rows.
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServer } from '@/lib/supabase-server';
@@ -78,9 +79,9 @@ export async function POST(request: NextRequest) {
   if (body.ids.length > 500) {
     return NextResponse.json({ error: 'max 500 ids per request' }, { status: 400 });
   }
-  if (!['assign', 'unassign', 'set_status', 'mark_contacted'].includes(body.action)) {
+  if (!['assign', 'unassign', 'set_status', 'mark_contacted', 'delete'].includes(body.action)) {
     return NextResponse.json(
-      { error: 'action must be assign | unassign | set_status | mark_contacted' },
+      { error: 'action must be assign | unassign | set_status | mark_contacted | delete' },
       { status: 400 },
     );
   }
@@ -132,34 +133,65 @@ export async function POST(request: NextRequest) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+  } else if (action === 'delete') {
+    // Phase 79: bulk delete. lead_history rows cleaned up first so we
+    // don't leave orphan history. service-role bypasses RLS so no
+    // DELETE policy needed on either table.
+    const { error: histErr } = await supabase
+      .from('lead_history')
+      .delete()
+      .eq('lead_type', type)
+      .in('lead_id', body.ids);
+    if (histErr) {
+      return NextResponse.json(
+        { error: `Failed to clear history before delete: ${histErr.message}` },
+        { status: 500 },
+      );
+    }
+    const { error } = await supabase.from(table).delete().in('id', body.ids);
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
   }
   // mark_contacted: nothing to update on the parent row (trigger handles
   // contact_attempts + last_contacted_at from the lead_history insert below)
 
-  // Insert lead_history rows
-  const historyRows = body.ids.map((id) => {
-    const base = {
-      lead_type: type,
-      lead_id: id,
-      admin_id: auth.user.id,
-    };
-    if (action === 'assign') {
-      return { ...base, action: 'assigned', from_value: null, to_value: body.value || null, note: 'bulk' };
-    }
-    if (action === 'unassign') {
-      return { ...base, action: 'unassigned', from_value: null, to_value: null, note: 'bulk' };
-    }
-    if (action === 'set_status') {
-      return { ...base, action: 'status_changed', from_value: null, to_value: body.value || null, note: 'bulk' };
-    }
-    return {
-      ...base,
-      action: 'contacted',
-      from_value: null,
-      to_value: null,
-      note: body.note || 'bulk',
-    };
-  });
+  // Insert lead_history rows (skip for delete — the lead row is gone,
+  // so a history row pointing at it would be a phantom reference).
+  let historyRows: Array<{
+    lead_type: string;
+    lead_id: string;
+    admin_id: string;
+    action: string;
+    from_value: string | null;
+    to_value: string | null;
+    note: string | null;
+  }> = [];
+  if (action !== 'delete') {
+    historyRows = body.ids.map((id) => {
+      const base = {
+        lead_type: type,
+        lead_id: id,
+        admin_id: auth.user.id,
+      };
+      if (action === 'assign') {
+        return { ...base, action: 'assigned', from_value: null, to_value: body.value || null, note: 'bulk' };
+      }
+      if (action === 'unassign') {
+        return { ...base, action: 'unassigned', from_value: null, to_value: null, note: 'bulk' };
+      }
+      if (action === 'set_status') {
+        return { ...base, action: 'status_changed', from_value: null, to_value: body.value || null, note: 'bulk' };
+      }
+      return {
+        ...base,
+        action: 'contacted',
+        from_value: null,
+        to_value: null,
+        note: body.note || 'bulk',
+      };
+    });
+  }
 
   const { error: histErr } = await supabase.from('lead_history').insert(historyRows);
   if (histErr) {
@@ -173,5 +205,6 @@ export async function POST(request: NextRequest) {
     ok: true,
     updated: body.ids.length,
     action,
+    ...(action === 'delete' ? { deleted: body.ids.length } : {}),
   });
 }

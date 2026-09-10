@@ -2659,11 +2659,22 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminLeads.errorFailedLoad': 'Failed to load leads',
     'adminLeads.errorBulkFailed': 'Bulk action failed',
     'adminLeads.errorExportFailed': 'Export failed',
-    'adminLeads.errorNoSession': 'No session — please re-login',
-    'adminLeads.errorNoToken': 'No access token in session',
     'adminLeads.ariaSelect': 'Select',
     'adminLeads.ariaDeselect': 'Deselect',
     'adminLeads.scoreNoSignal': 'No signal yet',
+
+    // Phase 79 — admin-side lead delete
+    'adminLeads.bulkDelete': 'Delete selected',
+    'adminLeads.deleteRow': 'Delete',
+    'adminLeads.deleteTitle': 'Delete lead?',
+    'adminLeads.deleteBodyFor': 'Permanently delete {{name}}\'s lead? This removes the row and its history. Cannot be undone.',
+    'adminLeads.deleteBulkTitle': 'Delete {{count}} leads?',
+    'adminLeads.deleteBulkBody': 'Permanently delete {{count}} leads and their history? Cannot be undone.',
+    'adminLeads.deleteConfirm': 'Delete',
+    'adminLeads.deleteCancel': 'Cancel',
+    'adminLeads.deleteSuccess_one': 'Lead deleted',
+    'adminLeads.deleteSuccess_other': '{{count}} leads deleted',
+    'adminLeads.errorDelete': 'Delete failed',
 
     // /admin/leads/bulk-send — Phase 46 promotional WhatsApp blasts
     'adminBulkSend.title': 'Bulk WhatsApp Send',
@@ -6316,11 +6327,22 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminLeads.errorFailedLoad': '加载线索失败',
     'adminLeads.errorBulkFailed': '批量操作失败',
     'adminLeads.errorExportFailed': '导出失败',
-    'adminLeads.errorNoSession': '登录状态已失效,请重新登录',
-    'adminLeads.errorNoToken': '会话中未找到访问令牌',
     'adminLeads.ariaSelect': '选中',
     'adminLeads.ariaDeselect': '取消选中',
     'adminLeads.scoreNoSignal': '暂未评估',
+
+    // Phase 79 — admin-side lead delete
+    'adminLeads.bulkDelete': '删除所选',
+    'adminLeads.deleteRow': '删除',
+    'adminLeads.deleteTitle': '确认删除？',
+    'adminLeads.deleteBodyFor': '永久删除 {{name}} 的线索？同时删除该线索的全部历史记录。无法撤销。',
+    'adminLeads.deleteBulkTitle': '删除 {{count}} 条线索？',
+    'adminLeads.deleteBulkBody': '永久删除 {{count}} 条线索及其历史记录？无法撤销。',
+    'adminLeads.deleteConfirm': '删除',
+    'adminLeads.deleteCancel': '取消',
+    'adminLeads.deleteSuccess_one': '线索已删除',
+    'adminLeads.deleteSuccess_other': '已删除 {{count}} 条线索',
+    'adminLeads.errorDelete': '删除失败',
 
     // /admin/leads/bulk-send — Phase 46 promotional WhatsApp blasts
     'adminBulkSend.title': '批量发送 WhatsApp',
