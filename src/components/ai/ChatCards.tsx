@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { ArrowRight, GraduationCap, MapPin, Trophy, Banknote, BookOpen, Loader2 } from 'lucide-react';
 
 export type ChatCardKind = 'university' | 'program';
@@ -141,7 +143,7 @@ function UniversityCard({ data }: { data: Record<string, unknown> }) {
   return (
     <Link
       href={`/universities/${slug}`}
-      className="group my-2 block w-full bg-[#1B2A4A] hover:bg-[#243456] text-white border-l-4 border-[#D4A853] transition-colors"
+      className="group my-2 block w-full bg-[#1B2A4A] hover:bg-[#243456] text-white border border-l-4 border-l-[#D4A853] transition-colors"
     >
       <div className="flex items-stretch gap-3 p-3">
         {/* Logo */}
@@ -212,7 +214,7 @@ function ProgramCard({ data }: { data: Record<string, unknown> }) {
   return (
     <Link
       href={`/programs/${slug}`}
-      className="group my-2 block w-full bg-white hover:bg-[#FAFAF8] border border-gray-200 hover:border-[#9B1B30] border-l-4 border-l-[#9B1B30] transition-colors"
+      className="group my-2 block w-full bg-white hover:bg-[#FAFAF8] border border-gray-200 hover:border-[#9B1B30] transition-colors"
     >
       <div className="flex items-stretch gap-3 p-3">
         {/* Icon */}
@@ -274,9 +276,14 @@ function ProgramCard({ data }: { data: Record<string, unknown> }) {
 
 /**
  * Render a full assistant message as an interleaved sequence of
- * text segments and card slots. Text is rendered as plain
- * paragraphs (whitespace-preserved); cards are async-loaded
- * inline slots.
+ * text segments and card slots.
+ *
+ * Phase 81: text segments are now rendered via `react-markdown` +
+ * `remark-gfm` so `**bold**`, `# heading`, lists, links, and tables
+ * parse properly instead of being shown literally as asterisks/hash.
+ * The [[CARD:kind:slug]] tag parser still extracts inline card
+ * placeholders (Markdown would otherwise try to render the brackets
+ * as a link).
  */
 export function AssistantContent({ text }: { text: string }) {
   const segments = parseAssistantText(text);
@@ -286,8 +293,8 @@ export function AssistantContent({ text }: { text: string }) {
       {segments.map((seg, i) =>
         seg.type === 'text' ? (
           seg.content.trim() ? (
-            <div key={i} className="text-sm leading-relaxed whitespace-pre-wrap">
-              {seg.content}
+            <div key={i} className="text-sm leading-relaxed [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_strong]:font-semibold [&_a]:text-[#9B1B30] [&_a]:underline [&_code]:bg-gray-100 [&_code]:px-1 [&_code]:text-xs">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{seg.content}</ReactMarkdown>
             </div>
           ) : null
         ) : (

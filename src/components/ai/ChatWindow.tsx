@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import {
   X,
   Send,
+  Square,
   MessageSquare,
   Minimize2,
   ChevronDown,
@@ -11,17 +12,25 @@ import {
   UserPlus,
   CheckCircle2,
   Trash2,
+  RotateCcw,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Message } from './Message';
 import { track } from '@/lib/analytics';
+import { useI18n } from '@/lib/i18n';
+import { pickSuggestedPrompts, type SuggestedPrompt } from '@/lib/ai/suggested-prompts';
+import { useSmartScroll } from '@/lib/ai/use-smart-scroll';
+import { registerAbort, abortStream, clearAbort } from '@/lib/ai/chat-abort';
+import { persistMessages } from '@/lib/ai/chat-history';
 
 interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   isLoading?: boolean;
+  /** True if the assistant bubble is showing an error string (enables Retry). */
+  isError?: boolean;
+  /** Phase 81: trailing "(stopped)" suffix added when user clicked Stop mid-stream. */
+  stopped?: boolean;
 }
 
 interface LeadForm {
@@ -51,17 +60,6 @@ interface ChatWindowProps {
   onMinimize: () => void;
 }
 
-const WELCOME_MESSAGE = `Hi there! 👋 I'm SICA AI Assistant, your personal guide to studying in China!
-
-I can help you with:
-• Finding the right university and program
-• Understanding the application process
-• Scholarship information
-• Visa preparation
-• Student life in China
-
-How can I assist you today? Feel free to ask any questions about studying in China! 🎓🇨🇳`;
-
 const STORAGE_PREFIX = 'sica_chat_v1';
 
 const todayKey = () => {
@@ -70,9 +68,6 @@ const todayKey = () => {
 };
 
 const newSessionToken = () => {
-  // Use crypto.randomUUID() if available; fall back to a manual
-  // 32-char hex string. Strip dashes to keep within the 64-char
-  // VARCHAR limit and to make the token URL-safe.
   const raw =
     typeof crypto !== 'undefined' && 'randomUUID' in crypto
       ? crypto.randomUUID()
@@ -80,16 +75,8 @@ const newSessionToken = () => {
   return raw.replace(/-/g, '').slice(0, 64);
 };
 
-const COUNTRY_OPTIONS = [
-  'India', 'Pakistan', 'Bangladesh', 'Indonesia', 'Nigeria', 'Vietnam',
-  'Thailand', 'Philippines', 'Egypt', 'Kenya', 'Ghana', 'Nepal',
-  'Sri Lanka', 'United States', 'United Kingdom', 'Canada', 'Australia',
-  'Germany', 'France', 'Russia', 'Brazil', 'Mexico', 'Other',
-];
-
 /**
  * Best-effort name extraction from the visitor's chat messages.
- *
  * Matches common self-introduction patterns ("my name is X", "I'm X",
  * "this is X", "call me X", "name: X") in user-typed messages, latest
  * first. Returns the most recent match. Returns null if no match.
@@ -108,15 +95,12 @@ export function extractNameFromMessages(messages: ReadonlyArray<Pick<ChatMessage
     .map((m) => m.content)
     .reverse(); // latest first
 
-  // Order matters: more specific patterns first so "my name is John"
-  // wins over the generic "this is John".
   const patterns: RegExp[] = [
     /(?:my name(?:'s|\s+is))\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})/,
     /(?:calls?\s+me|just\s+calls?\s+me|they\s+call\s+me)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})/i,
     /(?:this is|i'?m|i am)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})/i,
   ];
 
-  // First-word stop list — common verbs that look like names but aren't
   const STOP_FIRST_WORDS = new Set([
     'looking', 'interested', 'a', 'the', 'from', 'in', 'at', 'currently',
     'student', 'graduate', 'planning', 'hoping', 'trying', 'wondering',
@@ -152,16 +136,23 @@ export function extractEmailFromMessages(messages: ReadonlyArray<Pick<ChatMessag
 }
 
 export function ChatWindow({ isOpen, onClose, onMinimize }: ChatWindowProps) {
+  const { t, locale } = useI18n();
+
   // ====== Conversation state ======
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { id: 'welcome', role: 'assistant', content: WELCOME_MESSAGE },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [restoredFromLocal, setRestoredFromLocal] = useState(false);
+  const [restoredFromBackend, setRestoredFromBackend] = useState(false);
   const [chatReady, setChatReady] = useState(false);
   const [sessionToken, setSessionToken] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Phase 81: smart-scroll — only follows tail when user is near bottom
+  const { ref: scrollContainerRef, followTail, scrollToBottom } = useSmartScroll();
+
+  // Phase 81: suggested prompts (i18n'd)
+  const suggestedPrompts = useMemo(() => pickSuggestedPrompts(locale), [locale]);
 
   // ====== Lead capture state ======
   const [lead, setLead] = useState<LeadFormState>({
@@ -179,12 +170,19 @@ export function ChatWindow({ isOpen, onClose, onMinimize }: ChatWindowProps) {
     error: '',
   });
 
+  // Phase 81: hold the last user message so the Retry button can
+  // re-send it without the visitor having to retype.
+  const lastUserMessageRef = useRef<string>('');
+  // How many times the user has retried the same message. Increments
+  // each time Retry is clicked; reset when a new message is sent.
+  const retryCountRef = useRef(0);
+  // Phase 81: New Chat confirmation dialog
+  const [confirmNewChat, setConfirmNewChat] = useState(false);
+
   // ====== On mount: restore today's conversation + session token ======
   useEffect(() => {
     const today = todayKey();
 
-    // Session token — persist across visits (one per browser, not
-    // reset at midnight; reset on "Start new conversation").
     const TOKEN_KEY = `${STORAGE_PREFIX}_session_token`;
     let token = '';
     try {
@@ -198,7 +196,7 @@ export function ChatWindow({ isOpen, onClose, onMinimize }: ChatWindowProps) {
     }
     setSessionToken(token);
 
-    // Today's conversation history
+    // Today's conversation history (localStorage, same-day only).
     const MESSAGES_KEY = `${STORAGE_PREFIX}_messages_${today}`;
     let restoredMessages: ChatMessage[] | null = null;
     try {
@@ -216,6 +214,11 @@ export function ChatWindow({ isOpen, onClose, onMinimize }: ChatWindowProps) {
     if (restoredMessages && restoredMessages.length > 0) {
       setMessages(restoredMessages);
       setRestoredFromLocal(true);
+    } else {
+      // No local copy today — show the welcome message. If a 7-day
+      // backend history exists, it'll prepend on top of this in the
+      // effect below.
+      setMessages([{ id: 'welcome', role: 'assistant', content: t('chat.welcomeMessage') }]);
     }
 
     // Lead form partial data — preserve in-progress fills across
@@ -238,7 +241,71 @@ export function ChatWindow({ isOpen, onClose, onMinimize }: ChatWindowProps) {
     }
 
     setChatReady(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Phase 81: when the locale changes AFTER mount, refresh the welcome
+  // message in place (so a zh visitor who flips to en gets the en greeting).
+  useEffect(() => {
+    setMessages((prev) => {
+      if (prev.length !== 1 || prev[0].id !== 'welcome') return prev;
+      return [{ ...prev[0], content: t('chat.welcomeMessage') }];
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locale]);
+
+  // Phase 82: backend history hydration. Fires once after the token
+  // is known. Skips when the localStorage copy already has today's
+  // conversation (local wins for same-day; backend fills the gap
+  // for days 1-6).
+  useEffect(() => {
+    if (!chatReady || !sessionToken) return;
+    if (restoredFromLocal) return; // today's copy already wins
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/chat/session/messages?session_token=${encodeURIComponent(sessionToken)}`,
+          { headers: { Accept: 'application/json' } },
+        );
+        if (!res.ok || cancelled) return;
+        const data = (await res.json()) as { messages: Array<{ role: string; content: string; created_at: string }> };
+        if (!data.messages || data.messages.length === 0 || cancelled) return;
+        // Prepend the backend history + a divider on top of the welcome
+        const restored: ChatMessage[] = data.messages
+          .filter((m) => m.role === 'user' || m.role === 'assistant')
+          .map((m, i) => ({
+            id: `hist-${i}-${m.created_at}`,
+            role: m.role as 'user' | 'assistant',
+            content: m.content,
+          }));
+        const oldest = data.messages[0]?.created_at;
+        const daysAgo = oldest ? Math.max(0, Math.floor((Date.now() - new Date(oldest).getTime()) / 86400000)) : 0;
+        const divider: ChatMessage = {
+          id: 'hist-divider',
+          role: 'assistant',
+          content:
+            daysAgo > 0
+              ? t('chat.restoredFromDaysAgo', { count: daysAgo })
+              : t('chat.restoredBanner'),
+        };
+        setMessages((prev) => {
+          // Only prepend if we still have just the welcome message
+          if (prev.length === 1 && prev[0].id === 'welcome') {
+            return [divider, ...restored, prev[0]];
+          }
+          return prev;
+        });
+        setRestoredFromBackend(true);
+      } catch {
+        // best-effort
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatReady, sessionToken, restoredFromLocal]);
 
   // ====== On every messages change: persist to localStorage ======
   useEffect(() => {
@@ -266,13 +333,11 @@ export function ChatWindow({ isOpen, onClose, onMinimize }: ChatWindowProps) {
     }
   }, [lead, chatReady]);
 
-  // ====== On every new user/assistant message: append to chat_sessions via API ======
+  // ====== On every new user/assistant message: persist to chat_sessions via API ======
   useEffect(() => {
     if (!chatReady || !sessionToken || messages.length < 2) return;
-    // Skip the welcome message (it was pre-baked, not from the server).
-    // Send only the substantive conversation.
     const persistable = messages
-      .filter((m) => m.id !== 'welcome' && !m.isLoading)
+      .filter((m) => m.id !== 'welcome' && m.id !== 'hist-divider' && !m.id.startsWith('hist-') && !m.isLoading)
       .map((m) => ({
         role: m.role,
         content: m.content,
@@ -280,8 +345,6 @@ export function ChatWindow({ isOpen, onClose, onMinimize }: ChatWindowProps) {
       }));
     if (persistable.length === 0) return;
 
-    // Fire and forget. The endpoint is idempotent (computes diff
-    // by message_count), so we can safely re-send.
     fetch('/api/chat/session', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -291,14 +354,17 @@ export function ChatWindow({ isOpen, onClose, onMinimize }: ChatWindowProps) {
         source_page: typeof window !== 'undefined' ? window.location.pathname : null,
       }),
     }).catch(() => {
-      // Network error / API down — don't break the UX. The
-      // localStorage copy is still the source of truth for the
-      // "same day" persistence requirement.
+      // Non-fatal — local copy is the source of truth.
     });
+
+    // Phase 82: parallel-write to the 7-day backend history table.
+    // This is what makes a returning visitor see their old
+    // conversation instead of "Hi there! 👋" again. Fire-and-forget
+    // — same posture as the PATCH above.
+    persistMessages(sessionToken, persistable);
   }, [messages, chatReady, sessionToken]);
 
-  // ====== Upsert the session row on first mount so chat_sessions
-  //       exists in the DB even before the visitor sends anything. ======
+  // ====== Upsert the session row on first mount ======
   useEffect(() => {
     if (!chatReady || !sessionToken) return;
     fetch('/api/chat/session', {
@@ -314,159 +380,206 @@ export function ChatWindow({ isOpen, onClose, onMinimize }: ChatWindowProps) {
     });
   }, [chatReady, sessionToken]);
 
-  // ====== Scroll to bottom on new messages ======
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  // Phase 81: smart-scroll. Follows the tail when user is near the
+  // bottom; leaves them alone when they've scrolled up to read history.
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  // ====== Send message ======
-  const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
-
-    const userMessage: ChatMessage = {
-      id: `u-${Date.now()}`,
-      role: 'user',
-      content: input.trim(),
-    };
-
-    // Phase 29: fire chatbot_message_sent BEFORE the API
-    // call (so the event survives a network failure —
-    // we still want to know the user *tried* to send).
-    // `message_length` is the user's typed char count,
-    // useful for "are long questions more or less likely
-    // to convert?" analysis. Locale from <html lang>
-    // matches the Chatbot.tsx readLocale pattern.
-    const lang = typeof document !== 'undefined' ? document.documentElement.lang : 'en';
-    track('chatbot_message_sent', {
-      locale: lang === 'zh' ? 'zh' : 'en',
-      message_length: userMessage.content.length,
-    });
-
-    setMessages((prev) => [...prev, userMessage]);
-    setInput('');
-    setIsLoading(true);
-
-    const assistantMessage: ChatMessage = {
-      id: `a-${Date.now() + 1}`,
-      role: 'assistant',
-      content: '',
-      isLoading: true,
-    };
-
-    setMessages((prev) => [...prev, assistantMessage]);
-
-    // Conversation context for the lead capture (snapshot of the
-    // last few user messages + the latest AI reply). Sent to the
-    // lead API if the visitor fills in the form.
-    const lastFewUser = messages
-      .filter((m) => m.role === 'user')
-      .slice(-3)
-      .map((m) => ({ role: m.role, content: m.content }));
-    if (lastFewUser.length < 3) {
-      lastFewUser.push({ role: 'user', content: userMessage.content });
+    if (followTail) {
+      scrollToBottom(messages.length > 1 ? 'smooth' : 'auto');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages, followTail]);
 
-    try {
-      const response = await fetch('/api/ai/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: messages.concat(userMessage).map((m) => ({
-            role: m.role,
-            content: m.content,
-          })),
-        }),
+  // ====== Send message (or start a stoppable stream) ======
+  const handleSend = useCallback(
+    async (overrideText?: string) => {
+      const text = (overrideText ?? input).trim();
+      if (!text || isLoading) return;
+
+      const userMessage: ChatMessage = {
+        id: `u-${Date.now()}`,
+        role: 'user',
+        content: text,
+      };
+      lastUserMessageRef.current = text;
+      retryCountRef.current = 0;
+
+      const lang = typeof document !== 'undefined' ? document.documentElement.lang : 'en';
+      const localeTag: 'en' | 'zh' = lang === 'zh' ? 'zh' : 'en';
+      track('chatbot_message_sent', {
+        locale: localeTag,
+        message_length: userMessage.content.length,
       });
 
-      if (!response.ok) {
-        // Phase 36: surface the server's actual error message so the
-        // end-user sees "Too many messages. Wait 30s before trying
-        // again." instead of the generic "Failed to send message".
-        // The server returns JSON {error, code, retryAfterSec} for
-        // both 429 (rate-limited) and 500 (AI provider failure).
-        let serverMessage = 'Failed to send message';
-        try {
-          const errBody = (await response.json()) as { error?: string };
-          if (errBody?.error) serverMessage = errBody.error;
-        } catch {
-          // server returned non-JSON; fall back to generic copy
+      setMessages((prev) => [...prev, userMessage]);
+      if (!overrideText) setInput('');
+      setIsLoading(true);
+
+      const assistantMessage: ChatMessage = {
+        id: `a-${Date.now() + 1}`,
+        role: 'assistant',
+        content: '',
+        isLoading: true,
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+
+      // Track typing-label visibility for analytics (throttled).
+      let typingLabelFired = false;
+      const fireTypingLabelOnce = () => {
+        if (typingLabelFired) return;
+        typingLabelFired = true;
+        track('chatbot_typing_label_visible', { locale: localeTag });
+      };
+
+      const controller = registerAbort(sessionToken);
+
+      try {
+        const response = await fetch('/api/ai/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messages: messages.concat(userMessage).map((m) => ({
+              role: m.role,
+              content: m.content,
+            })),
+          }),
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          let serverMessage = 'Failed to send message';
+          try {
+            const errBody = (await response.json()) as { error?: string };
+            if (errBody?.error) serverMessage = errBody.error;
+          } catch {
+            // server returned non-JSON; fall back to generic copy
+          }
+          throw new Error(serverMessage);
         }
-        throw new Error(serverMessage);
-      }
 
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error('No response body');
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error('No response body');
 
-      const decoder = new TextDecoder();
-      let fullContent = '';
+        const decoder = new TextDecoder();
+        let fullContent = '';
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n\n');
 
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n\n');
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6);
+              if (data === '[DONE]') continue;
 
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-            if (data === '[DONE]') continue;
-
-            try {
-              const parsed = JSON.parse(data);
-              if (parsed.content) {
-                fullContent += parsed.content;
-                setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === assistantMessage.id
-                      ? { ...m, content: fullContent, isLoading: false }
-                      : m,
-                  ),
-                );
+              try {
+                const parsed = JSON.parse(data);
+                if (parsed.content) {
+                  fullContent += parsed.content;
+                  fireTypingLabelOnce();
+                  setMessages((prev) =>
+                    prev.map((m) =>
+                      m.id === assistantMessage.id
+                        ? { ...m, content: fullContent, isLoading: false }
+                        : m,
+                    ),
+                  );
+                }
+              } catch {
+                // skip unparseable SSE line
               }
-            } catch {
-              // skip unparseable SSE line
             }
           }
         }
+      } catch (error) {
+        // Aborted by Stop — keep the partial response and tag it.
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantMessage.id
+                ? {
+                    ...m,
+                    content: m.content
+                      ? `${m.content} ${t('chat.stoppedSuffix')}`
+                      : t('chat.stoppedSuffix'),
+                    isLoading: false,
+                    stopped: true,
+                  }
+                : m,
+            ),
+          );
+          return;
+        }
+        console.error('Error sending message:', error);
+        const friendly =
+          error instanceof Error
+            ? error.message
+            : 'Sorry, I encountered an error. Please try again or contact SICA directly for assistance.';
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantMessage.id
+              ? { ...m, content: friendly, isLoading: false, isError: true }
+              : m,
+          ),
+        );
+      } finally {
+        clearAbort(sessionToken);
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('Error sending message:', error);
-      // Phase 36: surface the server's actual error message from
-      // the throw above. For 429 the server returns "You're sending
-      // messages too quickly. Please wait 30s before trying again."
-      // so the end-user gets a useful retry countdown instead of a
-      // generic apology. For 500 the server returns the AI provider
-      // error text — the user gets to tell us what happened.
-      const friendly =
-        error instanceof Error
-          ? error.message
-          : 'Sorry, I encountered an error. Please try again or contact SICA directly for assistance.';
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === assistantMessage.id
-            ? {
-                ...m,
-                content: friendly,
-                isLoading: false,
-              }
-            : m,
-        ),
-      );
-    } finally {
-      setIsLoading(false);
+    },
+    [input, isLoading, messages, sessionToken, t],
+  );
+
+  // Phase 81: Stop button mid-stream
+  const handleStop = useCallback(() => {
+    abortStream(sessionToken);
+    track('chatbot_stop_clicked', {
+      locale: (typeof document !== 'undefined' && document.documentElement.lang === 'zh') ? 'zh' : 'en',
+    });
+  }, [sessionToken]);
+
+  // Phase 81: Retry the last user message after an error
+  const handleRetry = useCallback(async () => {
+    const text = lastUserMessageRef.current;
+    if (!text) return;
+    retryCountRef.current += 1;
+    track('chatbot_message_retry_clicked', {
+      locale: (typeof document !== 'undefined' && document.documentElement.lang === 'zh') ? 'zh' : 'en',
+      attempt_number: retryCountRef.current,
+    });
+    // Drop the last error assistant bubble before re-sending so the
+    // list doesn't double up.
+    setMessages((prev) => prev.filter((m) => !m.isError));
+    await handleSend(text);
+  }, [handleSend]);
+
+  // Phase 81: textarea auto-resize + keyboard handling
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+    const el = e.target;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      void handleSend();
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
+  // ====== Suggested prompt click ======
+  const handleSuggestedPrompt = useCallback(
+    (prompt: SuggestedPrompt, index: number) => {
+      track('chatbot_suggested_prompt_clicked', {
+        locale: (typeof document !== 'undefined' && document.documentElement.lang === 'zh') ? 'zh' : 'en',
+        prompt_index: index,
+      });
+      void handleSend(prompt.starter);
+    },
+    [handleSend],
+  );
 
   // ====== Lead form submit ======
   const handleLeadSubmit = async (e: React.FormEvent) => {
@@ -483,7 +596,7 @@ export function ChatWindow({ isOpen, onClose, onMinimize }: ChatWindowProps) {
     setLead((prev) => ({ ...prev, saving: true, error: '' }));
     try {
       const recentMessages = messages
-        .filter((m) => m.id !== 'welcome' && !m.isLoading)
+        .filter((m) => m.id !== 'welcome' && !m.id.startsWith('hist-') && m.id !== 'hist-divider' && !m.isLoading)
         .slice(-6)
         .map((m) => ({ role: m.role, content: m.content.slice(0, 500) }));
       const res = await fetch('/api/leads/chat', {
@@ -515,12 +628,8 @@ export function ChatWindow({ isOpen, onClose, onMinimize }: ChatWindowProps) {
     }
   };
 
-  // ====== Start a new conversation (clears today's localStorage
-  //       copy + generates a new session token). ======
+  // ====== New conversation (clears today's localStorage copy + generates a new session token) ======
   const handleNewConversation = () => {
-    if (!confirm('Start a new conversation? Today\'s chat will be cleared.')) {
-      return;
-    }
     const today = todayKey();
     const MESSAGES_KEY = `${STORAGE_PREFIX}_messages_${today}`;
     try {
@@ -535,8 +644,9 @@ export function ChatWindow({ isOpen, onClose, onMinimize }: ChatWindowProps) {
       // ignore
     }
     setSessionToken(newToken);
-    setMessages([{ id: 'welcome', role: 'assistant', content: WELCOME_MESSAGE }]);
+    setMessages([{ id: 'welcome', role: 'assistant', content: t('chat.welcomeMessage') }]);
     setRestoredFromLocal(false);
+    setRestoredFromBackend(false);
     setLead((prev) => ({
       ...prev,
       panel: 'collapsed',
@@ -550,22 +660,37 @@ export function ChatWindow({ isOpen, onClose, onMinimize }: ChatWindowProps) {
         interested_university: '',
       },
     }));
+    lastUserMessageRef.current = '';
+    retryCountRef.current = 0;
+    setConfirmNewChat(false);
+    track('chatbot_new_chat_clicked', {
+      locale: (typeof document !== 'undefined' && document.documentElement.lang === 'zh') ? 'zh' : 'en',
+    });
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 sm:inset-auto sm:bottom-4 sm:right-4 z-50 w-full sm:w-[380px] sm:max-w-[90vw] h-full sm:h-[640px] sm:max-h-[85vh] bg-white sm:rounded-lg shadow-2xl border-0 sm:border border-gray-200 flex flex-col">
+    <div className="fixed inset-0 sm:inset-auto sm:bottom-4 sm:right-4 z-50 w-full sm:w-[380px] sm:max-w-[90vw] h-full sm:h-[640px] sm:max-h-[85vh] bg-white sm:rounded-none shadow-2xl border-0 sm:border border-gray-200 flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-[#9B1B30]">
         <div className="flex items-center gap-2 text-white">
           <MessageSquare size={20} />
-          <h3 className="font-semibold">SICA AI Assistant</h3>
+          <h3 className="font-semibold">{t('chat.header')}</h3>
         </div>
         <div className="flex items-center gap-1">
+          {/* Phase 81: New Chat always visible */}
+          <button
+            onClick={() => setConfirmNewChat(true)}
+            className="p-1.5 text-white hover:bg-white/20 transition-colors"
+            aria-label={t('chat.newChatButton')}
+            title={t('chat.newChatButton')}
+          >
+            <Trash2 size={16} />
+          </button>
           <button
             onClick={onMinimize}
-            className="p-1.5 text-white hover:bg-white/20 rounded transition-colors"
+            className="p-1.5 text-white hover:bg-white/20 transition-colors"
             aria-label="Minimize"
             title="Minimize"
           >
@@ -573,7 +698,7 @@ export function ChatWindow({ isOpen, onClose, onMinimize }: ChatWindowProps) {
           </button>
           <button
             onClick={onClose}
-            className="p-1.5 text-white hover:bg-white/20 rounded transition-colors"
+            className="p-1.5 text-white hover:bg-white/20 transition-colors"
             aria-label="Close"
             title="Close"
           >
@@ -583,57 +708,165 @@ export function ChatWindow({ isOpen, onClose, onMinimize }: ChatWindowProps) {
       </div>
 
       {/* Lead capture panel — collapsible, above the conversation */}
-      <LeadPanel lead={lead} setLead={setLead} onSubmit={handleLeadSubmit} messages={messages} />
+      <LeadPanel lead={lead} setLead={setLead} onSubmit={handleLeadSubmit} messages={messages} t={t} />
 
-      {/* Conversation history badge */}
-      {restoredFromLocal && (
+      {/* Conversation history badge — shows for both local + backend restore */}
+      {(restoredFromLocal || restoredFromBackend) && (
         <div className="px-4 py-1.5 bg-amber-50 border-b border-amber-200 text-[11px] text-amber-800 flex items-center justify-between">
-          <span>✓ Restored today's conversation</span>
-          <button
-            onClick={handleNewConversation}
-            className="inline-flex items-center gap-1 hover:underline"
-            title="Start a new conversation"
-          >
-            <Trash2 size={11} />
-            New chat
-          </button>
+          <span>{t('chat.restoredBanner')}</span>
         </div>
       )}
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#FAFAF8]">
+      <div
+        ref={(node) => {
+          scrollContainerRef.current = node;
+          messagesEndRef.current = node;
+        }}
+        className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#FAFAF8]"
+      >
+        {/* Phase 81: suggested prompts on first open (no messages yet) */}
+        {messages.length <= 1 && messages[0]?.id === 'welcome' && !isLoading && (
+          <div className="space-y-2">
+            <div className="text-[11px] uppercase tracking-wide text-gray-500 font-semibold">
+              {t('chat.suggestedPromptsHeader')}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {suggestedPrompts.map((prompt, index) => (
+                <button
+                  key={prompt.id}
+                  onClick={() => handleSuggestedPrompt(prompt, index)}
+                  className="text-xs px-3 py-1.5 border border-[#9B1B30]/30 text-[#1B2A4A] bg-white hover:bg-[#9B1B30]/5 hover:border-[#9B1B30] transition-colors text-left"
+                >
+                  {prompt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {messages.map((message) => (
           <Message
             key={message.id}
             role={message.role}
             content={message.content}
             isLoading={message.isLoading}
+            isError={message.isError}
           />
         ))}
         <div ref={messagesEndRef} />
+        {/* Phase 81: Retry button on error assistant bubble.
+            Rendered as a sibling so we can re-use the last user message
+            from the parent component's lastUserMessageRef. */}
+        {messages.some((m) => m.isError) && lastUserMessageRef.current && !isLoading && (
+          <div className="flex justify-start pl-1">
+            <button
+              onClick={() => void handleRetry()}
+              className="inline-flex items-center gap-1 text-xs text-[#9B1B30] hover:underline"
+            >
+              <RotateCcw size={12} />
+              {t('chat.retryButton')}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Input */}
       <div className="p-4 border-t border-gray-200 bg-white">
-        <div className="flex gap-2">
-          <Input
+        <div className="flex gap-2 items-end">
+          <textarea
             value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Type your message..."
-            disabled={isLoading}
-            className="flex-1"
+            onChange={handleTextareaChange}
+            onKeyDown={handleKeyDown}
+            placeholder={t('chat.inputPlaceholder')}
+            disabled={false}
+            rows={1}
+            aria-label={t('chat.inputPlaceholder')}
+            className="flex-1 min-h-[40px] max-h-[160px] resize-none px-3 py-2 border border-gray-300 bg-white text-sm focus:outline-none focus:border-[#9B1B30] focus:ring-1 focus:ring-[#9B1B30]"
           />
-          <Button
-            onClick={handleSend}
-            disabled={!input.trim() || isLoading}
-            className="bg-[#9B1B30] hover:bg-[#7a1526] text-white"
-          >
-            <Send size={18} />
-          </Button>
+          {isLoading ? (
+            <Button
+              onClick={handleStop}
+              aria-label={t('chat.stopButton')}
+              className="bg-[#9B1B30] hover:bg-[#7A1526] text-white"
+              shape="square"
+            >
+              <Square size={18} fill="currentColor" />
+            </Button>
+          ) : (
+            <Button
+              onClick={() => void handleSend()}
+              disabled={!input.trim()}
+              aria-label={t('chat.sendButton')}
+              className="bg-[#9B1B30] hover:bg-[#7A1526] disabled:opacity-50 text-white"
+              shape="square"
+            >
+              <Send size={18} />
+            </Button>
+          )}
         </div>
       </div>
+
+      {/* Phase 81: New Chat confirmation dialog */}
+      {confirmNewChat && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white max-w-sm w-full border border-gray-300 shadow-xl">
+            <div className="px-5 py-4">
+              <h3 className="font-semibold text-[#1B2A4A] text-base">
+                {t('chat.newChatConfirmTitle')}
+              </h3>
+              <p className="text-sm text-[#4B5563] mt-2">
+                {t('chat.newChatConfirmBody')}
+              </p>
+            </div>
+            <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-200 bg-[#FAFAF8]">
+              <button
+                onClick={() => setConfirmNewChat(false)}
+                className="px-3 py-1.5 text-sm text-[#4B5563] hover:text-[#1B2A4A]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleNewConversation}
+                className="px-3 py-1.5 text-sm bg-[#9B1B30] hover:bg-[#7A1526] text-white"
+              >
+                {t('chat.newChatButton')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+// Minimal local Button (the one in src/components/ui doesn't expose shape).
+// Phase 81: rounded-none + supports square shape for the Stop button.
+function Button({
+  onClick,
+  disabled,
+  'aria-label': ariaLabel,
+  className,
+  children,
+  shape,
+}: {
+  onClick: () => void;
+  disabled?: boolean;
+  'aria-label'?: string;
+  className?: string;
+  children: React.ReactNode;
+  shape?: 'square';
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={ariaLabel}
+      className={`inline-flex items-center justify-center px-3 py-2 text-sm transition-colors disabled:cursor-not-allowed ${shape === 'square' ? 'rounded-none' : ''} ${className ?? ''}`}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -646,16 +879,16 @@ function LeadPanel({
   setLead,
   onSubmit,
   messages,
+  t,
 }: {
   lead: LeadFormState;
   setLead: React.Dispatch<React.SetStateAction<LeadFormState>>;
   onSubmit: (e: React.FormEvent) => void;
   messages: ChatMessage[];
+  t: (key: string, params?: Record<string, string | number>) => string;
 }) {
   const { panel, data, saving, error } = lead;
 
-  // Best-effort extraction from the conversation. Recomputes whenever
-  // messages change so a late self-introduction still surfaces.
   const detectedName = useMemo(
     () => extractNameFromMessages(messages),
     [messages],
@@ -665,9 +898,6 @@ function LeadPanel({
     [messages],
   );
 
-  // Pre-fill any empty field when the panel opens (or when new
-  // messages arrive while it's open). Only fills empty fields — never
-  // overwrites what the visitor has already typed.
   useEffect(() => {
     if (panel !== 'open') return;
     if (!detectedName && !detectedEmail) return;
@@ -690,10 +920,9 @@ function LeadPanel({
       <div className="px-4 py-3 bg-green-50 border-b border-green-200 text-xs text-green-800 flex items-start gap-2">
         <CheckCircle2 size={14} className="shrink-0 mt-0.5" />
         <div>
-          <div className="font-semibold">Saved — SICA will reach out within 24h.</div>
+          <div className="font-semibold">{t('chat.leadPanelSubmitted')}</div>
           <div className="text-green-700 mt-0.5">
-            A counselor will WhatsApp you with personalized program
-            suggestions.
+            A counselor will WhatsApp you with personalized program suggestions.
           </div>
         </div>
       </div>
@@ -702,19 +931,17 @@ function LeadPanel({
 
   if (panel === 'skipped' || panel === 'collapsed') {
     if (data.email) {
-      // If they already filled in an email, just show a brief
-      // confirmation rather than the full pill.
       return (
         <div className="px-4 py-2 bg-[#FAFAF8] border-b border-gray-200 text-[11px] text-[#4B5563] flex items-center justify-between">
           <span className="flex items-center gap-1.5">
             <CheckCircle2 size={12} className="text-green-600" />
-            Details saved as {data.email}
+            {t('chat.leadPanelSkipped')} ({data.email})
           </span>
           <button
             onClick={() => setLead((p) => ({ ...p, panel: 'open' }))}
             className="text-[#9B1B30] hover:underline font-medium"
           >
-            Edit
+            {t('chat.leadPanelEdit')}
           </button>
         </div>
       );
@@ -726,7 +953,7 @@ function LeadPanel({
       >
         <span className="flex items-center gap-2 font-medium">
           <UserPlus size={14} className="text-[#9B1B30]" />
-          Save my progress — get personalized advice
+          {t('chat.leadPanelPill')}
         </span>
         <ChevronDown size={14} />
       </button>
@@ -742,7 +969,7 @@ function LeadPanel({
       <div className="flex items-center justify-between">
         <div className="text-xs font-semibold text-[#1B2A4A] flex items-center gap-1.5">
           <UserPlus size={13} className="text-[#9B1B30]" />
-          Save your progress
+          {t('chat.leadPanelOpen')}
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -750,7 +977,7 @@ function LeadPanel({
             onClick={() => setLead((p) => ({ ...p, panel: 'skipped', error: '' }))}
             className="text-[10px] text-[#4B5563] hover:underline"
           >
-            Skip
+            {t('chat.leadPanelSkip')}
           </button>
           <button
             type="button"
@@ -763,8 +990,8 @@ function LeadPanel({
         </div>
       </div>
       <p className="text-[10px] text-[#4B5563] leading-snug">
-        Share a few details and a SICA counselor will follow up with
-        personalized program suggestions. Just <span className="font-semibold text-[#9B1B30]">email</span> is required.
+        Share a few details and a SICA counselor will follow up with personalized program suggestions. Just{' '}
+        <span className="font-semibold text-[#9B1B30]">email</span> is required.
       </p>
 
       {error && (
@@ -776,23 +1003,23 @@ function LeadPanel({
       <div className="grid grid-cols-2 gap-2">
         <div className="relative">
           <input
-            aria-label="Name"
-            placeholder="Name"
+            aria-label={t('chat.leadPanelFields.name')}
+            placeholder={t('chat.leadPanelFields.namePlaceholder')}
             value={data.name}
             onChange={(e) => updateField('name', e.target.value)}
             className="w-full px-2.5 py-1.5 text-xs border border-gray-300 bg-white focus:outline-none focus:border-[#9B1B30] focus:ring-1 focus:ring-[#9B1B30]"
           />
           {data.name && detectedName && data.name === detectedName && (
             <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] font-medium text-[#1B2A4A] bg-[#D4A853]/30 px-1.5 py-0.5 pointer-events-none">
-              ✓ from chat
+              {t('chat.leadPanelFromChat')}
             </span>
           )}
         </div>
         <div className="relative">
           <input
-            aria-label="Email"
+            aria-label={t('chat.leadPanelFields.email')}
             type="email"
-            placeholder="Email *"
+            placeholder={t('chat.leadPanelFields.emailPlaceholder')}
             value={data.email}
             onChange={(e) => updateField('email', e.target.value)}
             required
@@ -800,53 +1027,53 @@ function LeadPanel({
           />
           {data.email && detectedEmail && data.email === detectedEmail && (
             <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] font-medium text-[#1B2A4A] bg-[#D4A853]/30 px-1.5 py-0.5 pointer-events-none">
-              ✓ from chat
+              {t('chat.leadPanelFromChat')}
             </span>
           )}
         </div>
         <input
-          aria-label="WhatsApp"
-          placeholder="WhatsApp"
+          aria-label={t('chat.leadPanelFields.whatsapp')}
+          placeholder={t('chat.leadPanelFields.whatsapp')}
           value={data.whatsapp}
           onChange={(e) => updateField('whatsapp', e.target.value)}
           className="px-2.5 py-1.5 text-xs border border-gray-300 bg-white focus:outline-none focus:border-[#9B1B30] focus:ring-1 focus:ring-[#9B1B30]"
         />
         <select
-          aria-label="Country"
+          aria-label={t('chat.leadPanelFields.country')}
           value={data.country}
           onChange={(e) => updateField('country', e.target.value)}
           className="px-2.5 py-1.5 text-xs border border-gray-300 bg-white focus:outline-none focus:border-[#9B1B30] focus:ring-1 focus:ring-[#9B1B30]"
         >
-          <option value="">Country</option>
+          <option value="">{t('chat.leadPanelFields.countryPlaceholder')}</option>
           {COUNTRY_OPTIONS.map((c) => (
-            <option key={c} value={c}>
-              {c}
+            <option key={c.code} value={c.code}>
+              {t(c.i18nKey)}
             </option>
           ))}
         </select>
         <select
-          aria-label="Interested degree"
+          aria-label={t('chat.leadPanelFields.degree')}
           value={data.interested_degree}
           onChange={(e) => updateField('interested_degree', e.target.value as LeadForm['interested_degree'])}
           className="px-2.5 py-1.5 text-xs border border-gray-300 bg-white focus:outline-none focus:border-[#9B1B30] focus:ring-1 focus:ring-[#9B1B30]"
         >
-          <option value="">Degree</option>
-          <option value="Bachelor">Bachelor</option>
-          <option value="Master">Master</option>
-          <option value="PhD">PhD</option>
-          <option value="Language">Language</option>
-          <option value="Other">Other</option>
+          <option value="">{t('chat.leadPanelFields.degreePlaceholder')}</option>
+          <option value="Bachelor">{t('chat.degreeBachelor')}</option>
+          <option value="Master">{t('chat.degreeMaster')}</option>
+          <option value="PhD">{t('chat.degreePhd')}</option>
+          <option value="Language">{t('chat.degreeLanguage')}</option>
+          <option value="Other">{t('chat.degreeOther')}</option>
         </select>
         <input
-          aria-label="Interested program"
-          placeholder="Program of interest"
+          aria-label={t('chat.leadPanelFields.program')}
+          placeholder={t('chat.leadPanelFields.programPlaceholder')}
           value={data.interested_program}
           onChange={(e) => updateField('interested_program', e.target.value)}
           className="px-2.5 py-1.5 text-xs border border-gray-300 bg-white focus:outline-none focus:border-[#9B1B30] focus:ring-1 focus:ring-[#9B1B30]"
         />
         <input
-          aria-label="Interested university"
-          placeholder="University (optional)"
+          aria-label={t('chat.leadPanelFields.university')}
+          placeholder={t('chat.leadPanelFields.universityPlaceholder')}
           value={data.interested_university}
           onChange={(e) => updateField('interested_university', e.target.value)}
           className="col-span-2 px-2.5 py-1.5 text-xs border border-gray-300 bg-white focus:outline-none focus:border-[#9B1B30] focus:ring-1 focus:ring-[#9B1B30]"
@@ -863,10 +1090,42 @@ function LeadPanel({
         ) : (
           <>
             <UserPlus size={13} />
-            Save & Get Personalized Help
+            {t('chat.leadPanelSubmit')}
           </>
         )}
       </button>
     </form>
   );
 }
+
+/**
+ * Phase 81: country dropdown options. Code + i18n label. The code
+ * (e.g. 'ng') is what gets sent to the API; the label is what the
+ * visitor sees. Using codes instead of free-text keeps the admin lead
+ * inbox normalized for filtering.
+ */
+const COUNTRY_OPTIONS: ReadonlyArray<{ code: string; i18nKey: string }> = [
+  { code: 'ng', i18nKey: 'chat.countries.ng' },
+  { code: 'gh', i18nKey: 'chat.countries.gh' },
+  { code: 'ke', i18nKey: 'chat.countries.ke' },
+  { code: 'za', i18nKey: 'chat.countries.za' },
+  { code: 'eg', i18nKey: 'chat.countries.eg' },
+  { code: 'ma', i18nKey: 'chat.countries.ma' },
+  { code: 'in', i18nKey: 'chat.countries.in' },
+  { code: 'bd', i18nKey: 'chat.countries.bd' },
+  { code: 'pk', i18nKey: 'chat.countries.pk' },
+  { code: 'ph', i18nKey: 'chat.countries.ph' },
+  { code: 'id', i18nKey: 'chat.countries.id' },
+  { code: 'vn', i18nKey: 'chat.countries.vn' },
+  { code: 'th', i18nKey: 'chat.countries.th' },
+  { code: 'my', i18nKey: 'chat.countries.my' },
+  { code: 'kz', i18nKey: 'chat.countries.kz' },
+  { code: 'uz', i18nKey: 'chat.countries.uz' },
+  { code: 'ru', i18nKey: 'chat.countries.ru' },
+  { code: 'tr', i18nKey: 'chat.countries.tr' },
+  { code: 'br', i18nKey: 'chat.countries.br' },
+  { code: 'mx', i18nKey: 'chat.countries.mx' },
+  { code: 'us', i18nKey: 'chat.countries.us' },
+  { code: 'gb', i18nKey: 'chat.countries.gb' },
+  { code: 'other', i18nKey: 'chat.countries.other' },
+];

@@ -159,6 +159,48 @@ export interface AnalyticsEventMap {
     locale: 'en' | 'zh';
   };
   // -----------------------------------------------------------------
+  // Phase 81: Public-chat UX enhancements.
+  //
+  // These six events track the new chat-widget UX surfaces so we can
+  // measure whether the suggested-prompt chips drive engagement, the
+  // stop button gets used, retries are attempted after errors, and
+  // mobile swipe-down-to-close replaces the X-tap pattern. All carry
+  // `locale` for en/zh segmentation consistent with the rest of the map.
+  // -----------------------------------------------------------------
+  /** User clicked the Stop button mid-stream. */
+  chatbot_stop_clicked: {
+    locale: 'en' | 'zh';
+  };
+  /** User clicked a suggested-prompt chip on first open. */
+  chatbot_suggested_prompt_clicked: {
+    locale: 'en' | 'zh';
+    /** 0-indexed position of the chip in the curated list. */
+    prompt_index: number;
+  };
+  /** User clicked the Retry button on an error assistant bubble. */
+  chatbot_message_retry_clicked: {
+    locale: 'en' | 'zh';
+    /** 1 for first retry, 2+ for repeat retries on the same message. */
+    attempt_number: number;
+  };
+  /** User clicked "New chat" in the header (or confirmed the dialog). */
+  chatbot_new_chat_clicked: {
+    locale: 'en' | 'zh';
+  };
+  /** User dismissed the chat on mobile by swiping down >80px. */
+  chatbot_swipe_close: {
+    locale: 'en' | 'zh';
+  };
+  /**
+   * The "SICA is typing…" label rendered on top of the bouncing dots.
+   * Throttled internally to once per stream so a long conversation
+   * doesn't emit many events. Useful to verify the label is actually
+   * visible (vs. only the dots in some flows).
+   */
+  chatbot_typing_label_visible: {
+    locale: 'en' | 'zh';
+  };
+  // -----------------------------------------------------------------
   // Partner portal events (Phase: partner documents UI)
   //
   // The three partner events are added to the same map (not split
