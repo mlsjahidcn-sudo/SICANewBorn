@@ -31,6 +31,14 @@ function getResend(): Resend | null {
 
 const FROM = 'SICA <noreply@sica.com.cn>';
 
+// Phase 83: canonical site URL used in email footer links so they
+// work in production (not just localhost). SITE_URL is defined in
+// src/lib/site-url.ts and reads NEXT_PUBLIC_SITE_URL with a sensible
+// fallback — see that file for the rationale.
+const ADMIN_LEADS_URL = `${SITE_URL}/admin/leads`;
+const ADMIN_ASSESSMENTS_URL = `${SITE_URL}/admin/assessments`;
+const STUDENT_LOGIN_URL = `${SITE_URL}/student/login`;
+
 /** Send admin notification when someone submits the contact form. */
 export async function sendContactNotification(params: {
   name: string;
@@ -61,7 +69,7 @@ export async function sendContactNotification(params: {
         <tr><td style="padding:6px 12px;font-weight:bold;background:#f5f5f5">Source Page</td><td style="padding:6px 12px">${params.sourcePage ?? '—'}</td></tr>
         <tr><td style="padding:6px 12px;font-weight:bold;background:#f5f5f5">Submitted At</td><td style="padding:6px 12px">${params.submittedAt}</td></tr>
       </table>
-      <p style="margin-top:16px;font-size:12px;color:#888">Log in to the <a href="http://localhost:5050/admin/leads">admin panel</a> to update the status.</p>
+      <p style="margin-top:16px;font-size:12px;color:#888">Log in to the <a href="${ADMIN_LEADS_URL}">admin panel</a> to update the status.</p>
     `,
     text: [
       'New Contact Form Submission',
@@ -73,7 +81,7 @@ export async function sendContactNotification(params: {
       `Source Page: ${params.sourcePage ?? '—'}`,
       `Submitted At: ${params.submittedAt}`,
       '',
-      'Log in to the admin panel to update the status: http://localhost:5050/admin/leads',
+      `Log in to the admin panel to update the status: ${ADMIN_LEADS_URL}`,
     ].join('\n'),
   });
 }
@@ -116,7 +124,7 @@ export async function sendAssessmentNotification(params: {
         <tr><td style="padding:6px 12px;font-weight:bold;background:#f5f5f5">Source Page</td><td style="padding:6px 12px">${params.sourcePage ?? '—'}</td></tr>
         <tr><td style="padding:6px 12px;font-weight:bold;background:#f5f5f5">Submitted At</td><td style="padding:6px 12px">${params.submittedAt}</td></tr>
       </table>
-      <p style="margin-top:16px;font-size:12px;color:#888">Log in to the <a href="http://localhost:5050/admin/assessments">admin panel</a> to review and respond.</p>
+      <p style="margin-top:16px;font-size:12px;color:#888">Log in to the <a href="${ADMIN_ASSESSMENTS_URL}">admin panel</a> to review and respond.</p>
     `,
     text: [
       'New Academic Assessment Submission',
@@ -131,7 +139,7 @@ export async function sendAssessmentNotification(params: {
       `Source Page: ${params.sourcePage ?? '—'}`,
       `Submitted At: ${params.submittedAt}`,
       '',
-      'Log in to the admin panel to review: http://localhost:5050/admin/assessments',
+      `Log in to the admin panel to review: ${ADMIN_ASSESSMENTS_URL}`,
     ].join('\n'),
   });
 }
@@ -169,22 +177,22 @@ export async function sendStudentWelcome(params: {
         <tr><td style="padding:8px;background:#f5f5f5;font-weight:bold">Temporary password</td><td style="padding:8px;font-family:monospace;background:#fffbe6;border:1px solid #f0c000">${params.temporaryPassword}</td></tr>
       </table>
       <p style="font-family:sans-serif;margin-top:16px"><strong>Important:</strong> please log in and reset your password immediately. The temporary password expires in 7 days.</p>
-      <p style="font-family:sans-serif;margin-top:16px"><a href="http://localhost:5050/student/login" style="background:#9B1B30;color:white;padding:10px 20px;text-decoration:none;border-radius:0">Log in to SICA</a></p>
-      <p style="font-family:sans-serif;font-size:12px;color:#888;margin-top:24px">If you didn't expect this email, please contact your SICA advisor.</p>
-    `,
-    text: [
-      `Welcome, ${params.firstName}!`,
-      ``,
-      `An SICA administrator (${params.createdByAdmin}) has created an account for you.`,
-      ``,
-      `Email: ${params.email}`,
-      `Temporary password: ${params.temporaryPassword}`,
-      ``,
-      `Important: please log in and reset your password immediately.`,
-      `Login URL: http://localhost:5050/student/login`,
-      ``,
-      `If you didn't expect this email, please contact your SICA advisor.`,
-    ].join('\n'),
+<p style="font-family:sans-serif;margin-top:16px"><a href="${STUDENT_LOGIN_URL}" style="background:#9B1B30;color:white;padding:10px 20px;text-decoration:none;border-radius:0">Log in to SICA</a></p>
+    <p style="font-family:sans-serif;font-size:12px;color:#888;margin-top:24px">If you didn't expect this email, please contact your SICA advisor.</p>
+  `,
+  text: [
+    `Welcome, ${params.firstName}!`,
+    ``,
+    `An SICA administrator (${params.createdByAdmin}) has created an account for you.`,
+    ``,
+    `Email: ${params.email}`,
+    `Temporary password: ${params.temporaryPassword}`,
+    ``,
+    `Important: please log in and reset your password immediately.`,
+    `Login URL: ${STUDENT_LOGIN_URL}`,
+    ``,
+    `If you didn't expect this email, please contact your SICA advisor.`,
+  ].join('\n'),
   });
 }
 

@@ -99,10 +99,14 @@ const STATUS_COLOR: Record<string, string> = {
   Contacted: 'bg-purple-100 text-purple-800',
 };
 
+// Phase 83: assessment whitelist now matches the unified DB
+// taxonomy. DB CHECK allows all 8 values; UI exposes the 5 most
+// commonly used for assessment pipeline. To expose more, add
+// to the array below — no migration required.
 const STATUS_WHITELIST: Record<LeadType, string[]> = {
   contact: ['New', 'In Progress', 'Resolved', 'Spam'],
   chat: ['New', 'Contacted', 'Qualified', 'Unqualified'],
-  assessment: ['Pending', 'Reviewed', 'Contacted', 'Accepted', 'Rejected'],
+  assessment: ['New', 'Pending', 'Reviewed', 'Contacted', 'Accepted', 'Rejected'],
 };
 
 // ACTION_LABEL and ACTION_ICON stay English — `action` is a DB enum that
@@ -150,6 +154,27 @@ export default function LeadDetailPage() {
   const type = (searchParams.get('type') || 'contact') as LeadType;
   const id = params.id;
 
+  // Phase 83: signed URL for transcript download. We mint a 1-hour
+  // link on click rather than embedding the storage path so the
+  // bucket can stay private (matches the pattern used for
+  // student_documents on /student/documents).
+  const openTranscriptSignedUrl = useCallback(
+    async (storagePath: string) => {
+      if (!storagePath) return;
+      try {
+        const res = await apiFetchJson<{ url: string }>(
+          `/api/admin/leads/${id}/transcript-url?type=${type}&path=${encodeURIComponent(storagePath)}`,
+        );
+        if (res.url) {
+          window.open(res.url, '_blank', 'noopener,noreferrer');
+        }
+      } catch {
+        // Best-effort — show a toast if a state existed; otherwise silently fail.
+      }
+    },
+    [id, type],
+  );
+
   const [lead, setLead] = useState<Record<string, unknown> | null>(null);
   const [history, setHistory] = useState<HistoryRow[]>([]);
   const [team, setTeam] = useState<TeamMember[]>([]);
@@ -171,6 +196,9 @@ export default function LeadDetailPage() {
 
   // Editable form fields
   const [statusVal, setStatusVal] = useState<string>('');
+  // Phase 83: admin writes go to `reviewer_notes` (separate column).
+  // The user's submitted `notes` is rendered read-only above the editor
+  // so reviewers don't accidentally overwrite it.
   const [notesVal, setNotesVal] = useState<string>('');
   const [assigneeVal, setAssigneeVal] = useState<string>(''); // 'unassigned' | user_id
   const [contactChannel, setContactChannel] = useState<string>('whatsapp');
@@ -221,7 +249,7 @@ export default function LeadDetailPage() {
       setLead(leadRes.lead);
       setHistory(leadRes.history || []);
       setStatusVal(String(leadRes.lead.status || ''));
-      setNotesVal(String(leadRes.lead.notes || ''));
+      setNotesVal(String(leadRes.lead.reviewer_notes ?? leadRes.lead.notes ?? ''));
       setAssigneeVal(
         leadRes.lead.assigned_to ? String(leadRes.lead.assigned_to) : 'unassigned',
       );
@@ -620,6 +648,51 @@ export default function LeadDetailPage() {
             </Card>
           )}
 
+          {/* Phase 83: Assessment-specific fields that were previously
+              stored but never rendered. target_universities + date_of_birth
+              + the transcript download link live here. */}
+          {(pickString(lead, ['target_universities']) ||
+            pickString(lead, ['date_of_birth']) ||
+            pickString(lead, ['transcript_storage_path']) ||
+            pickString(lead, ['transcript_file_name'])) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">{t('adminLeadDetail.cardAssessmentDetails')}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                {pickString(lead, ['target_universities']) && (
+                  <div>
+                    <span className="font-medium text-gray-600">
+                      {t('adminLeadDetail.fieldTargetUniversities')}
+                    </span>{' '}
+                    {pickString(lead, ['target_universities'])}
+                  </div>
+                )}
+                {pickString(lead, ['date_of_birth']) && (
+                  <div>
+                    <span className="font-medium text-gray-600">
+                      {t('adminLeadDetail.fieldDateOfBirth')}
+                    </span>{' '}
+                    {pickString(lead, ['date_of_birth'])}
+                  </div>
+                )}
+                {pickString(lead, ['transcript_storage_path']) && (
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-gray-500" />
+                    <button
+                      type="button"
+                      onClick={() => openTranscriptSignedUrl(String(lead.transcript_storage_path))}
+                      className="text-[#1B2A4A] underline hover:text-[#9B1B30] text-left"
+                    >
+                      {t('adminLeadDetail.viewTranscript')}{' '}
+                      {lead.transcript_file_name ? `(${lead.transcript_file_name})` : ''}
+                    </button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Edit form */}
           <Card>
             <CardHeader>
@@ -667,6 +740,19 @@ export default function LeadDetailPage() {
                 <label className="text-sm font-medium text-gray-700 block mb-1">
                   {t('adminLeadDetail.labelNotes')}
                 </label>
+                {/* Phase 83: render the user's submitted notes as
+                    read-only above the reviewer textarea so admins
+                    can see what the lead actually said before adding
+                    their own notes. We don't edit `notes` from here
+                    — that's reviewer_notes only. */}
+                <div className="mb-2 px-3 py-2 bg-[#FAFAF8] border border-gray-200 text-xs text-gray-700 whitespace-pre-wrap">
+                  <span className="font-medium text-gray-600 block mb-1">
+                    {t('adminLeadDetail.userNotesLabel')}
+                  </span>
+                  {pickString(lead, ['notes']) || (
+                    <span className="italic text-gray-500">{t('adminLeadDetail.userNotesEmpty')}</span>
+                  )}
+                </div>
                 <Textarea
                   value={notesVal}
                   onChange={(e) => setNotesVal(e.target.value)}

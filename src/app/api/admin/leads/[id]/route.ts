@@ -28,10 +28,14 @@ export const dynamic = 'force-dynamic';
 
 type LeadType = 'contact' | 'chat' | 'assessment';
 
+// Phase 83: assessment whitelist matches the unified DB taxonomy.
+// DB CHECK allows all 8 values; this whitelist exposes the 6 most
+// commonly used for assessment pipeline. To add more, just append
+// to the array — no migration required.
 const STATUS_WHITELIST: Record<LeadType, string[]> = {
   contact: ['New', 'In Progress', 'Resolved', 'Spam'],
   chat: ['New', 'Contacted', 'Qualified', 'Unqualified'],
-  assessment: ['Pending', 'Reviewed', 'Contacted', 'Accepted', 'Rejected'],
+  assessment: ['New', 'Pending', 'Reviewed', 'Contacted', 'Accepted', 'Rejected'],
 };
 
 function tableFor(t: LeadType): string {
@@ -173,10 +177,14 @@ export async function PATCH(
   }
 
   if (typeof body.notes === 'string') {
-    const prev = (current as { notes?: string | null }).notes ?? null;
+    // Phase 83: admin notes go to the dedicated `reviewer_notes`
+    // column so we don't overwrite the user's submitted `notes`
+    // (which would silently destroy the free-text the assessment
+    // form saved — see the audit that surfaced this regression).
+    const prev = (current as { reviewer_notes?: string | null }).reviewer_notes ?? null;
     if (prev !== body.notes) {
-      updates.notes = body.notes;
-      // We don't store the full old notes text (could be long). Just signal it changed.
+      updates.reviewer_notes = body.notes;
+      // We don't store the full old text (could be long). Just signal it changed.
       historyRows.push({
         action: 'notes_updated',
         from_value: prev ? 'previous' : null,
@@ -231,6 +239,23 @@ export async function PATCH(
 
     const { error: updErr } = await supabase.from(table).update(updates).eq('id', id);
     if (updErr) {
+      // Phase 83: surface a friendly message when the DB CHECK
+      // constraint rejects the status. The raw Supabase error text
+      // (e.g. "new row for relation 'student_assessments' violates
+      // check constraint 'student_assessments_status_check'") used
+      // to leak internal schema names to admins.
+      const isStatusCheck =
+        updErr.code === '23514' ||
+        updErr.message.includes('check constraint') ||
+        updErr.message.includes('status_check');
+      if (isStatusCheck) {
+        return NextResponse.json(
+          {
+            error: `Status "${updates.status}" is not allowed for ${type} leads. Allowed: ${STATUS_WHITELIST[type].join(', ')}.`,
+          },
+          { status: 400 },
+        );
+      }
       return NextResponse.json({ error: updErr.message }, { status: 500 });
     }
   }

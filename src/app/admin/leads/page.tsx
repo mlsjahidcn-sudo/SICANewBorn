@@ -121,10 +121,12 @@ const TYPE_COLOR: Record<LeadType, string> = {
   assessment: 'bg-[#D4A853] text-[#1B2A4A]',
 };
 
+// Phase 83: matches the unified DB taxonomy (status CHECK constraint).
+// To expose more options in the list filter, append here.
 const STATUS_OPTIONS: Record<LeadType, string[]> = {
   contact: ['New', 'In Progress', 'Resolved', 'Spam'],
   chat: ['New', 'Contacted', 'Qualified', 'Unqualified'],
-  assessment: ['Pending', 'Reviewed', 'Contacted', 'Accepted', 'Rejected'],
+  assessment: ['New', 'Pending', 'Reviewed', 'Contacted', 'Accepted', 'Rejected'],
 };
 
 export default function LeadsPage() {
