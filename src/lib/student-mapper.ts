@@ -139,7 +139,6 @@ export const STUDENT_SORTABLE_FIELDS = [
   'updated_at',
   'first_name',
   'last_name',
-  'ranking',
 ] as const;
 export type StudentSortField = (typeof STUDENT_SORTABLE_FIELDS)[number];
 

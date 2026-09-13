@@ -3,6 +3,7 @@ import { requireAdmin, buildServiceClient, getServerEnv } from '@/lib/supabase-a
 import { mapStudentFromDb, mapStudentToDb, parseSource, parseStatus } from '@/lib/student-mapper';
 import { sendStudentWelcome } from '@/lib/email';
 import { sanitizeOrTerm, parseIntParam } from '@/lib/postgrest';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 /**
  * GET /api/admin/students
@@ -155,6 +156,26 @@ export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
+  // H3: rate limit (30/15min per admin). Each create triggers
+  // auth.admin.createUser + sendStudentWelcome (real Resend send).
+  // Caps abuse-from-inside — stolen admin token can't burn the
+  // Resend quota + spam the auth.users table.
+  const rl = checkRateLimit({
+    action: 'admin-student-create',
+    key: auth.user.id,
+    max: 30,
+    windowMs: 15 * 60 * 1000,
+  });
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: 'Too many student creations. Please slow down.' },
+      {
+        status: 429,
+        headers: { 'Retry-After': String(rl.retryAfterSec) },
+      },
+    );
   }
 
   try {
