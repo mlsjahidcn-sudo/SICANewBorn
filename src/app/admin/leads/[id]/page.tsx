@@ -207,7 +207,6 @@ export default function LeadDetailPage() {
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [emailTemplateId, setEmailTemplateId] = useState<string>('');
   const [emailOverrideSubject, setEmailOverrideSubject] = useState<string>('');
-  const [emailOverrideHtml, setEmailOverrideHtml] = useState<string>('');
   const [emailOverrideText, setEmailOverrideText] = useState<string>('');
   const [emailSending, setEmailSending] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
@@ -331,7 +330,6 @@ export default function LeadDetailPage() {
     setEmailError(null);
     setEmailTemplateId(templates[0]?.id || '');
     setEmailOverrideSubject('');
-    setEmailOverrideHtml('');
     setEmailOverrideText('');
     setEmailSendTest(false);
     setEmailModalOpen(true);
@@ -430,7 +428,6 @@ export default function LeadDetailPage() {
         body.template_id = emailTemplateId;
       } else {
         body.subject = emailOverrideSubject;
-        body.body_html = emailOverrideHtml;
         body.body_text = emailOverrideText;
       }
       const res = await apiFetchJson<{ rendered: { subject: string } }>(
@@ -1021,16 +1018,6 @@ export default function LeadDetailPage() {
                       value={emailOverrideSubject}
                       onChange={(e) => setEmailOverrideSubject(e.target.value)}
                       placeholder={t('adminLeadDetail.subjectOverridePlaceholder')}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-600 block mb-1">{t('adminLeadDetail.labelBodyHtml')}</label>
-                    <textarea
-                      value={emailOverrideHtml}
-                      onChange={(e) => setEmailOverrideHtml(e.target.value)}
-                      rows={6}
-                      className="w-full border border-gray-300 px-2 py-1 text-xs font-mono"
-                      placeholder={t('adminLeadDetail.bodyHtmlPlaceholder')}
                     />
                   </div>
                   <div>

@@ -5,34 +5,29 @@
  *
  * Phase 3: pending partners bubble to the top with a yellow badge
  * and a one-click "Approve" action.
+ * Phase 85: server-side pagination + search + i18n.
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import {
   Building2,
   CheckCircle,
-  Clock,
-  XCircle,
-  AlertCircle,
-  Users,
-  Search,
-  Filter,
   Loader2,
+  Search,
+  Plus,
+  Users,
   Mail,
   ArrowRight,
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { apiFetchJson, ApiError } from '@/lib/api-client';
 import { Badge } from '@/components/ui/badge';
+import { useI18n } from '@/lib/i18n';
 
 interface AdminPartner {
   id: string;
@@ -51,6 +46,14 @@ interface AdminPartner {
   team_pending: number;
 }
 
+interface PartnersListResponse {
+  partners: AdminPartner[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 const STATUS_COLOR: Record<string, string> = {
   pending: 'bg-[#D4A853] text-[#1B2A4A]',
   active: 'bg-green-100 text-green-800',
@@ -64,52 +67,61 @@ const STATUS_LABEL: Record<string, string> = {
   rejected: 'Rejected',
 };
 
+const PAGE_SIZE = 20;
+
 export default function AdminPartnersPage() {
+  const { t, locale } = useI18n();
   const [partners, setPartners] = useState<AdminPartner[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState('all');
-  const [search, setSearch] = useState('');
   const [approvingId, setApprovingId] = useState<string | null>(null);
+
+  // Debounced search (300ms after the last keystroke, matching /admin/students)
+  const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  useEffect(() => {
+    const timer = setTimeout(() => setSearchQuery(searchInput), 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  // Reset to page 1 whenever a filter changes (otherwise the user can
+  // land on a page that no longer exists after a filter narrows the
+  // result set).
+  useEffect(() => {
+    setPage(1);
+  }, [statusFilter, searchQuery]);
 
   const load = useCallback(async () => {
     setIsLoading(true);
     setLoadError(null);
     try {
-      const params = new URLSearchParams();
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(PAGE_SIZE),
+      });
       if (statusFilter !== 'all') params.set('status', statusFilter);
-      const res = await apiFetchJson<{ partners: AdminPartner[] }>(
-        `/api/admin/partners${params.toString() ? `?${params}` : ''}`,
+      if (searchQuery.trim()) params.set('search', searchQuery.trim());
+      const res = await apiFetchJson<PartnersListResponse>(
+        `/api/admin/partners?${params.toString()}`,
       );
       setPartners(res.partners || []);
+      setTotal(res.total || 0);
     } catch (err) {
       setLoadError(err instanceof ApiError ? err.message : 'Failed to load partners');
     } finally {
       setIsLoading(false);
     }
-  }, [statusFilter]);
+  }, [page, statusFilter, searchQuery]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  const filtered = partners.filter((p) => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    return (
-      p.company_name.toLowerCase().includes(q) ||
-      p.contact_person.toLowerCase().includes(q) ||
-      p.email.toLowerCase().includes(q) ||
-      p.country?.toLowerCase().includes(q)
-    );
-  });
-
-  const counts = {
-    pending: partners.filter((p) => p.status === 'pending').length,
-    active: partners.filter((p) => p.status === 'active').length,
-    suspended: partners.filter((p) => p.status === 'suspended').length,
-    rejected: partners.filter((p) => p.status === 'rejected').length,
-  };
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const hasActiveFilter = statusFilter !== 'all' || searchQuery.trim().length > 0;
 
   const quickApprove = async (p: AdminPartner) => {
     if (!confirm(`Approve ${p.company_name}? They will be able to sign in immediately.`)) {
@@ -130,13 +142,23 @@ export default function AdminPartnersPage() {
     }
   };
 
+  // Locale-aware date formatter (mirrors Phase 52 partner detail pattern)
+  const localeTag = locale === 'zh' ? 'zh-CN' : 'en-US';
+  const fmtDate = (iso: string) => new Date(iso).toLocaleDateString(localeTag);
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-[#1B2A4A]">Partners</h1>
-        <p className="text-gray-500 mt-1">
-          Partner organizations. Approve new signups, manage teams, suspend bad actors.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-[#1B2A4A]">{t('adminPartners.title')}</h1>
+          <p className="text-gray-500 mt-1">{t('adminPartners.subtitle')}</p>
+        </div>
+        <Button asChild className="bg-[#9B1B30] hover:bg-[#7A1526]">
+          <Link href="/admin/partners/new">
+            <Plus className="w-4 h-4 mr-2" />
+            {t('adminPartners.buttonAddPartner')}
+          </Link>
+        </Button>
       </div>
 
       {loadError && (
@@ -159,8 +181,10 @@ export default function AdminPartnersPage() {
             }`}
           >
             {s === 'all'
-              ? `All (${partners.length})`
-              : `${STATUS_LABEL[s] || s} (${counts[s as keyof typeof counts] || 0})`}
+              ? `${t('adminPartners.allLabel')} (${total})`
+              : `${STATUS_LABEL[s] || s} (${
+                  partners.filter((p) => p.status === s).length
+                })`}
           </button>
         ))}
       </div>
@@ -171,9 +195,9 @@ export default function AdminPartnersPage() {
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             <Input
-              placeholder="Search by company, contact, email, country..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t('adminPartners.searchPlaceholder')}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               className="pl-10"
             />
           </div>
@@ -184,15 +208,15 @@ export default function AdminPartnersPage() {
         <div className="flex items-center justify-center py-12">
           <Spinner size="md" className="text-[#1B2A4A]" />
         </div>
-      ) : filtered.length === 0 ? (
+      ) : partners.length === 0 ? (
         <div className="bg-white border border-gray-200 px-6 py-12 text-center text-gray-500">
-          {partners.length === 0
-            ? 'No partner applications yet. They will appear here when someone signs up at /partner/register.'
-            : 'No partners match your filters.'}
+          {hasActiveFilter
+            ? t('adminPartners.emptyFiltered')
+            : t('adminPartners.emptyNone')}
         </div>
       ) : (
         <div className="space-y-2">
-          {filtered.map((p) => (
+          {partners.map((p) => (
             <div
               key={p.id}
               className={`bg-white border p-4 ${
@@ -215,9 +239,12 @@ export default function AdminPartnersPage() {
                     </Badge>
                     {p.team_count > 0 && (
                       <span className="text-xs text-gray-500 flex items-center gap-1">
-                        <Users size={12} /> {p.team_count} member
-                        {p.team_count === 1 ? '' : 's'}
-                        {p.team_pending > 0 && ` (${p.team_pending} pending)`}
+                        <Users size={12} /> {p.team_count}{' '}
+                        {p.team_count === 1
+                          ? t('adminPartners.members_one')
+                          : t('adminPartners.members_other')}
+                        {p.team_pending > 0 &&
+                          ` ${t('adminPartners.pendingInline', { count: p.team_pending })}`}
                       </span>
                     )}
                   </div>
@@ -234,12 +261,16 @@ export default function AdminPartnersPage() {
                   </p>
                   {p.notes && (
                     <p className="text-sm text-gray-700 mt-1 line-clamp-2">
-                      <span className="font-medium text-gray-500">Notes:</span> {p.notes}
+                      <span className="font-medium text-gray-500">
+                        {t('adminPartners.notesInline')}
+                      </span>{' '}
+                      {p.notes}
                     </p>
                   )}
                   <p className="text-xs text-gray-400 mt-1">
-                    Signed up {new Date(p.created_at).toLocaleDateString()}
-                    {p.commission_rate != null && ` · ${p.commission_rate}% commission`}
+                    {t('adminPartners.signedUpOn', { date: fmtDate(p.created_at) })}
+                    {p.commission_rate != null &&
+                      ` ${t('adminPartners.commissionInline', { rate: p.commission_rate })}`}
                   </p>
                 </div>
                 <div className="flex flex-col gap-2 flex-shrink-0">
@@ -255,18 +286,55 @@ export default function AdminPartnersPage() {
                       ) : (
                         <CheckCircle className="h-3 w-3 mr-1" />
                       )}
-                      Approve
+                      {t('adminPartners.buttonApprove')}
                     </Button>
                   )}
                   <Link href={`/admin/partners/${p.id}`}>
                     <Button variant="outline" size="sm" className="w-full">
-                      Details <ArrowRight className="h-3 w-3 ml-1" />
+                      {t('adminPartners.buttonDetails')}{' '}
+                      <ArrowRight className="h-3 w-3 ml-1" />
                     </Button>
                   </Link>
                 </div>
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Pagination footer */}
+      {!isLoading && total > 0 && (
+        <div className="flex items-center justify-between pt-2 border-t">
+          <p className="text-sm text-gray-500">
+            {t('adminPartners.paginationShowing', {
+              from: (page - 1) * PAGE_SIZE + 1,
+              to: Math.min(page * PAGE_SIZE, total),
+              total,
+            })}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              {t('adminPartners.paginationPrev')}
+            </Button>
+            <span className="text-sm text-gray-600">
+              {t('adminPartners.paginationPageOf', { page, total: totalPages })}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+            >
+              {t('adminPartners.paginationNext')}
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
         </div>
       )}
     </div>

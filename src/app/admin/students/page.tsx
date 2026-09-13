@@ -49,6 +49,12 @@ export default function AdminStudentsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<AdminStudent | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  // Phase 85 — student delete refactor. The single suspend dialog was
+  // replaced with a 2-step "Manage student" flow:
+  //   step=manage  → show Suspend + Delete-permanently buttons
+  //   step=delete  → reveal an email-typed-to-confirm second step
+  const [manageStep, setManageStep] = useState<'manage' | 'delete'>('manage');
+  const [confirmEmailInput, setConfirmEmailInput] = useState('');
   // Incremented by the refresh button — included in the fetch effect's
   // deps so refresh actually re-fetches (the old setPage((p) => p) was
   // always a React no-op).
@@ -111,10 +117,20 @@ export default function AdminStudentsPage() {
 
   const handleDeleteStudent = (student: AdminStudent) => {
     setStudentToDelete(student);
+    setManageStep('manage');
+    setConfirmEmailInput('');
     setDeleteDialogOpen(true);
   };
 
-  const confirmDeleteStudent = async () => {
+  const closeManageDialog = () => {
+    if (isDeleting) return;
+    setDeleteDialogOpen(false);
+    setStudentToDelete(null);
+    setManageStep('manage');
+    setConfirmEmailInput('');
+  };
+
+  const confirmSuspendStudent = async () => {
     if (!studentToDelete) return;
     setIsDeleting(true);
     try {
@@ -122,12 +138,34 @@ export default function AdminStudentsPage() {
       // checked res.ok, so a failed suspend still removed the row
       // from the UI while the DB stayed untouched.
       await apiFetchJson(`/api/admin/students/${studentToDelete.id}`, { method: 'DELETE' });
-      // Remove from local state immediately; the effect refetches via
-      // refreshToken so counts/stats stay accurate.
       setStudents((prev) => prev.filter((s) => s.id !== studentToDelete.id));
       setTotal((prev) => Math.max(0, prev - 1));
-      setDeleteDialogOpen(false);
-      setStudentToDelete(null);
+      closeManageDialog();
+      setRefreshToken((n) => n + 1);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('adminStudents.errorFailedDelete'));
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const confirmHardDeleteStudent = async () => {
+    if (!studentToDelete) return;
+    const expected = (studentToDelete.email ?? '').trim().toLowerCase();
+    const provided = confirmEmailInput.trim().toLowerCase();
+    if (!expected || expected !== provided) {
+      setError(t('adminStudents.errorEmailMismatch'));
+      return;
+    }
+    setIsDeleting(true);
+    try {
+      await apiFetchJson(`/api/admin/students/${studentToDelete.id}`, {
+        method: 'DELETE',
+        body: JSON.stringify({ action: 'delete', confirmEmail: confirmEmailInput }),
+      });
+      setStudents((prev) => prev.filter((s) => s.id !== studentToDelete.id));
+      setTotal((prev) => Math.max(0, prev - 1));
+      closeManageDialog();
       setRefreshToken((n) => n + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('adminStudents.errorFailedDelete'));
@@ -174,15 +212,46 @@ export default function AdminStudentsPage() {
     }
   };
 
-  // Stats: computed from the current page only (good enough for the
-  // cards; for production we'd add a /api/admin/students/stats endpoint
-  // that does server-side aggregation).
-  const stats = {
-    total,
-    active: students.filter((s) => s.status === 'Active').length,
-    pending: students.filter((s) => s.status === 'Pending').length,
-    offline: students.filter((s) => s.isOffline).length,
-  };
+  // Stats: real DB counts (not the page slice). The 4 cards show total +
+  // active + pending + offline; suspended/inactive are still returned
+  // by the endpoint for any future card addition.
+  // Brief 0-flash while the stats fetch is in flight is acceptable.
+  const [stats, setStats] = useState<{
+    total: number;
+    active: number;
+    pending: number;
+    suspended: number;
+    inactive: number;
+    offline: number;
+  }>({ total: 0, active: 0, pending: 0, suspended: 0, inactive: 0, offline: 0 });
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch('/api/admin/students/stats', {
+      headers: { Accept: 'application/json' },
+      signal: controller.signal,
+    })
+      .then(async (res) => {
+        if (!res.ok) return;
+        const data = await res.json();
+        setStats({
+          total: Number(data.total) || 0,
+          active: Number(data.active) || 0,
+          pending: Number(data.pending) || 0,
+          suspended: Number(data.suspended) || 0,
+          inactive: Number(data.inactive) || 0,
+          offline: Number(data.offline) || 0,
+        });
+      })
+      .catch((err) => {
+        if (err?.name !== 'AbortError') {
+          // Swallow — the cards just keep showing 0. The list query
+          // above already surfaces its own error banner.
+          console.error('[admin-students] stats fetch failed', err);
+        }
+      });
+    return () => controller.abort();
+  }, [refreshToken]);
 
   return (
     <div className="space-y-6">
@@ -400,7 +469,7 @@ export default function AdminStudentsPage() {
                             <Trash2 className="w-4 h-4 mr-2" />
                             {student.status === 'Suspended'
                               ? t('adminStudents.actionAlreadySuspended')
-                              : t('adminStudents.actionSuspend')}
+                              : t('adminStudents.actionDelete')}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -448,13 +517,29 @@ export default function AdminStudentsPage() {
         </CardContent>
       </Card>
 
-      {/* Delete (Suspend) Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      {/* Manage Student Dialog (Phase 85 — 2-step suspend / hard delete) */}
+      <Dialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) closeManageDialog();
+        }}
+      >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t('adminStudents.suspendDialogTitle')}</DialogTitle>
+            <DialogTitle>
+              {manageStep === 'delete'
+                ? t('adminStudents.hardDeleteDialogTitle', {
+                    name:
+                      [studentToDelete?.firstName, studentToDelete?.lastName].filter(Boolean).join(' ').trim() ||
+                      studentToDelete?.email ||
+                      '',
+                  })
+                : t('adminStudents.manageDialogTitle')}
+            </DialogTitle>
             <DialogDescription>
-              {t('adminStudents.suspendDialogBody')}
+              {manageStep === 'delete'
+                ? t('adminStudents.hardDeleteDialogBody')
+                : t('adminStudents.manageDialogBody')}
             </DialogDescription>
           </DialogHeader>
 
@@ -472,20 +557,77 @@ export default function AdminStudentsPage() {
                   <div className="text-sm text-[#4B5563]">{studentToDelete.email}</div>
                 </div>
               </div>
+
+              {manageStep === 'delete' && (
+                <div className="mt-4 space-y-2">
+                  <label className="text-sm font-medium text-[#1F2937]" htmlFor="hard-delete-confirm-email">
+                    {t('adminStudents.hardDeleteConfirmLabel')}
+                  </label>
+                  <Input
+                    id="hard-delete-confirm-email"
+                    value={confirmEmailInput}
+                    onChange={(e) => setConfirmEmailInput(e.target.value)}
+                    placeholder={t('adminStudents.hardDeleteConfirmPlaceholder')}
+                    disabled={isDeleting}
+                    autoComplete="off"
+                  />
+                  <p className="text-xs text-[#4B5563]">{studentToDelete.email}</p>
+                </div>
+              )}
             </div>
           )}
 
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setDeleteDialogOpen(false)} disabled={isDeleting}>
-              {t('common.cancel')}
-            </Button>
             <Button
-              className="bg-red-600 hover:bg-red-700"
-              onClick={confirmDeleteStudent}
+              variant="ghost"
+              onClick={() => {
+                if (manageStep === 'delete') {
+                  setManageStep('manage');
+                  setConfirmEmailInput('');
+                } else {
+                  closeManageDialog();
+                }
+              }}
               disabled={isDeleting}
             >
-              {isDeleting ? t('adminStudents.suspendDialogSubmitting') : t('adminStudents.suspendDialogConfirm')}
+              {manageStep === 'delete' ? t('adminStudents.buttonSuspend') : t('common.cancel')}
             </Button>
+            {manageStep === 'manage' ? (
+              <>
+                <Button
+                  className="bg-[#1B2A4A] hover:bg-[#243560] text-white"
+                  onClick={confirmSuspendStudent}
+                  disabled={isDeleting || studentToDelete?.status === 'Suspended'}
+                >
+                  {isDeleting
+                    ? t('adminStudents.suspendDialogSubmitting')
+                    : t('adminStudents.buttonSuspend')}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="border-red-600 text-red-600 hover:bg-red-50"
+                  onClick={() => setManageStep('delete')}
+                  disabled={isDeleting}
+                >
+                  {t('adminStudents.buttonHardDelete')}
+                </Button>
+              </>
+            ) : (
+              <Button
+                className="bg-red-600 hover:bg-red-700"
+                onClick={confirmHardDeleteStudent}
+                disabled={
+                  isDeleting ||
+                  !studentToDelete ||
+                  confirmEmailInput.trim().toLowerCase() !==
+                    (studentToDelete.email ?? '').trim().toLowerCase()
+                }
+              >
+                {isDeleting
+                  ? t('adminStudents.suspendDialogSubmitting')
+                  : t('adminStudents.buttonHardDelete')}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

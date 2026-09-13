@@ -13,9 +13,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { apiFetchJson } from '@/lib/api-client';
+import { useI18n } from '@/lib/i18n';
 import type { AdminStudent } from '@/lib/student-mapper';
-
-const STEPS = ['Personal Info', 'Education', 'Language & Target', 'Review'];
 
 // Fields with fixed columns. Everything else lives in `extra` JSONB.
 const FIXED_FIELDS = [
@@ -34,7 +33,15 @@ const FIXED_FIELDS = [
 export default function AdminStudentEditPage() {
   const params = useParams();
   const router = useRouter();
+  const { t } = useI18n();
   const studentId = params.id as string;
+
+  const STEPS = [
+    t('adminStudentForm.step1Title'),
+    t('adminStudentForm.step2Title'),
+    t('adminStudentForm.step3TitleEdit'),
+    t('adminStudentForm.step4Title'),
+  ];
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -76,7 +83,7 @@ export default function AdminStudentEditPage() {
         if (err.status === 404) {
           setNotFound(true);
         } else {
-          setError(err.message || 'Failed to load student');
+          setError(err.message || t('adminStudentForm.errorLoadFailed'));
         }
       })
       .finally(() => {
@@ -84,7 +91,7 @@ export default function AdminStudentEditPage() {
       });
 
     return () => controller.abort();
-  }, [studentId]);
+  }, [studentId, t]);
 
   const handleInputChange = (name: string, value: string) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -120,7 +127,7 @@ export default function AdminStudentEditPage() {
       });
       router.push(`/admin/students/${studentId}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update student');
+      setError(err instanceof Error ? err.message : t('adminStudentForm.errorUpdateFailed'));
     } finally {
       setIsSaving(false);
     }
@@ -151,10 +158,10 @@ export default function AdminStudentEditPage() {
           <Card>
             <CardContent className="pt-6 text-center py-12">
               <AlertCircle className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-              <h3 className="text-lg font-semibold mb-2">Student Not Found</h3>
-              <p className="text-gray-500 mb-4">This student may have been deleted or doesn't exist.</p>
+              <h3 className="text-lg font-semibold mb-2">{t('adminStudentForm.notFoundTitle')}</h3>
+              <p className="text-gray-500 mb-4">{t('adminStudentForm.notFoundBody')}</p>
               <Button onClick={() => router.push('/admin/students')}>
-                Back to Students
+                {t('adminStudentForm.buttonBackToStudents')}
               </Button>
             </CardContent>
           </Card>
@@ -173,11 +180,11 @@ export default function AdminStudentEditPage() {
           <div className="flex items-center gap-4">
             <Button variant="ghost" onClick={() => router.push(`/admin/students/${studentId}`)}>
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Student
+              {t('adminStudentForm.buttonBackToStudent')}
             </Button>
           </div>
           <Badge className="bg-[#1B2A4A] text-white">
-            Edit Student
+            {t('adminStudentForm.pageTitleEdit')}
           </Badge>
         </div>
 
@@ -214,43 +221,43 @@ export default function AdminStudentEditPage() {
             {/* Step 1: Personal Info */}
             {currentStep === 0 && (
               <div className="space-y-6">
-                <h3 className="text-lg font-semibold">Personal Information</h3>
+                <h3 className="text-lg font-semibold">{t('adminStudentForm.sectionPersonalInfo')}</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name *</Label>
+                    <Label htmlFor="firstName">{t('adminStudentForm.fieldFirstName')}</Label>
                     <Input id="firstName" value={v('firstName')} onChange={(e) => handleInputChange('firstName', e.target.value)} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name *</Label>
+                    <Label htmlFor="lastName">{t('adminStudentForm.fieldLastName')}</Label>
                     <Input id="lastName" value={v('lastName')} onChange={(e) => handleInputChange('lastName', e.target.value)} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="dateOfBirth">Date of Birth *</Label>
+                    <Label htmlFor="dateOfBirth">{t('adminStudentForm.fieldDateOfBirth')}</Label>
                     <Input id="dateOfBirth" type="date" value={v('dateOfBirth')} onChange={(e) => handleInputChange('dateOfBirth', e.target.value)} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="nationality">Nationality *</Label>
-                    <Input id="nationality" value={v('nationality')} onChange={(e) => handleInputChange('nationality', e.target.value)} placeholder="e.g., Bangladesh" />
+                    <Label htmlFor="nationality">{t('adminStudentForm.fieldNationality')}</Label>
+                    <Input id="nationality" value={v('nationality')} onChange={(e) => handleInputChange('nationality', e.target.value)} placeholder={t('adminStudentForm.placeholderNationalityEdit')} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="gender">Gender</Label>
+                    <Label htmlFor="gender">{t('adminStudentForm.fieldGender')}</Label>
                     <Select value={v('gender')} onValueChange={(value) => handleInputChange('gender', value)}>
-                      <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder={t('adminStudentForm.selectGender')} /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Male">Male</SelectItem>
-                        <SelectItem value="Female">Female</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
+                        <SelectItem value="Male">{t('adminStudentForm.optionMale')}</SelectItem>
+                        <SelectItem value="Female">{t('adminStudentForm.optionFemale')}</SelectItem>
+                        <SelectItem value="Other">{t('adminStudentForm.optionOther')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="maritalStatus">Marital Status</Label>
+                    <Label htmlFor="maritalStatus">{t('adminStudentForm.fieldMaritalStatus')}</Label>
                     <Select value={v('maritalStatus')} onValueChange={(value) => handleInputChange('maritalStatus', value)}>
-                      <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder={t('adminStudentForm.selectMaritalStatus')} /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Single">Single</SelectItem>
-                        <SelectItem value="Married">Married</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
+                        <SelectItem value="Single">{t('adminStudentForm.optionSingle')}</SelectItem>
+                        <SelectItem value="Married">{t('adminStudentForm.optionMarried')}</SelectItem>
+                        <SelectItem value="Other">{t('adminStudentForm.optionOther')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -258,38 +265,38 @@ export default function AdminStudentEditPage() {
 
                 <Separator />
 
-                <h3 className="text-lg font-semibold">Contact Information</h3>
+                <h3 className="text-lg font-semibold">{t('adminStudentForm.sectionContactInfo')}</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email *</Label>
+                    <Label htmlFor="email">{t('adminStudentForm.fieldEmail')}</Label>
                     <Input id="email" type="email" value={v('email')} onChange={(e) => handleInputChange('email', e.target.value)} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="phone">Phone *</Label>
-                    <Input id="phone" value={v('phone')} onChange={(e) => handleInputChange('phone', e.target.value)} placeholder="+86 138 0000 0000" />
+                    <Label htmlFor="phone">{t('adminStudentForm.fieldPhone')}</Label>
+                    <Input id="phone" value={v('phone')} onChange={(e) => handleInputChange('phone', e.target.value)} placeholder={t('adminStudentForm.placeholderPhone')} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="whatsapp">WhatsApp</Label>
+                    <Label htmlFor="whatsapp">{t('adminStudentForm.fieldWhatsApp')}</Label>
                     <Input id="whatsapp" value={v('whatsapp')} onChange={(e) => handleInputChange('whatsapp', e.target.value)} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="country">Country</Label>
+                    <Label htmlFor="country">{t('adminStudentForm.fieldCountry')}</Label>
                     <Input id="country" value={v('country')} onChange={(e) => handleInputChange('country', e.target.value)} />
                   </div>
                   <div className="space-y-2 col-span-2">
-                    <Label htmlFor="address">Address</Label>
+                    <Label htmlFor="address">{t('adminStudentForm.fieldAddress')}</Label>
                     <Textarea id="address" value={v('address')} onChange={(e) => handleInputChange('address', e.target.value)} rows={2} />
                   </div>
                 </div>
 
                 <Separator />
 
-                <h3 className="text-lg font-semibold">Status</h3>
+                <h3 className="text-lg font-semibold">{t('adminStudentForm.sectionStatus')}</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="status">Student Status</Label>
+                    <Label htmlFor="status">{t('adminStudentForm.fieldStudentStatus')}</Label>
                     <Select value={v('status')} onValueChange={(value) => handleInputChange('status', value)}>
-                      <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder={t('adminStudentForm.selectStudentStatus')} /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Active">Active</SelectItem>
                         <SelectItem value="Inactive">Inactive</SelectItem>
@@ -299,13 +306,13 @@ export default function AdminStudentEditPage() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="source">Source</Label>
+                    <Label htmlFor="source">{t('adminStudentForm.fieldSource')}</Label>
                     <Select value={v('source')} onValueChange={(value) => handleInputChange('source', value)}>
-                      <SelectTrigger><SelectValue placeholder="Select source" /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder={t('adminStudentForm.selectSource')} /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Admin">Admin (Offline)</SelectItem>
-                        <SelectItem value="Partner">Partner</SelectItem>
-                        <SelectItem value="Online">Online (Self-signup)</SelectItem>
+                        <SelectItem value="Admin">{t('adminStudentForm.optionSourceAdmin')}</SelectItem>
+                        <SelectItem value="Partner">{t('adminStudentForm.optionSourcePartner')}</SelectItem>
+                        <SelectItem value="Online">{t('adminStudentForm.optionSourceOnline')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -316,49 +323,49 @@ export default function AdminStudentEditPage() {
             {/* Step 2: Education */}
             {currentStep === 1 && (
               <div className="space-y-6">
-                <h3 className="text-lg font-semibold">High School</h3>
+                <h3 className="text-lg font-semibold">{t('adminStudentForm.sectionHighSchool')}</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2 col-span-2">
-                    <Label htmlFor="highSchoolName">High School Name</Label>
+                    <Label htmlFor="highSchoolName">{t('adminStudentForm.fieldHighSchoolName')}</Label>
                     <Input id="highSchoolName" value={v('highSchoolName')} onChange={(e) => handleInputChange('highSchoolName', e.target.value)} />
                   </div>
-                  <div className="space-y-2"><Label htmlFor="highSchoolCity">City</Label>
+                  <div className="space-y-2"><Label htmlFor="highSchoolCity">{t('adminStudentForm.fieldCity')}</Label>
                     <Input id="highSchoolCity" value={v('highSchoolCity')} onChange={(e) => handleInputChange('highSchoolCity', e.target.value)} /></div>
-                  <div className="space-y-2"><Label htmlFor="highSchoolCountry">Country</Label>
+                  <div className="space-y-2"><Label htmlFor="highSchoolCountry">{t('adminStudentForm.fieldHighSchoolCountry')}</Label>
                     <Input id="highSchoolCountry" value={v('highSchoolCountry')} onChange={(e) => handleInputChange('highSchoolCountry', e.target.value)} /></div>
-                  <div className="space-y-2"><Label htmlFor="highSchoolGPA">GPA</Label>
-                    <Input id="highSchoolGPA" value={v('highSchoolGPA')} onChange={(e) => handleInputChange('highSchoolGPA', e.target.value)} placeholder="e.g., 3.8/4.0" /></div>
-                  <div className="space-y-2"><Label htmlFor="highSchoolGraduationDate">Graduation Date</Label>
+                  <div className="space-y-2"><Label htmlFor="highSchoolGPA">{t('adminStudentForm.fieldGpa')}</Label>
+                    <Input id="highSchoolGPA" value={v('highSchoolGPA')} onChange={(e) => handleInputChange('highSchoolGPA', e.target.value)} placeholder={t('adminStudentForm.placeholderGpa')} /></div>
+                  <div className="space-y-2"><Label htmlFor="highSchoolGraduationDate">{t('adminStudentForm.fieldGraduationDate')}</Label>
                     <Input id="highSchoolGraduationDate" type="date" value={v('highSchoolGraduationDate')} onChange={(e) => handleInputChange('highSchoolGraduationDate', e.target.value)} /></div>
                 </div>
 
                 <Separator />
 
-                <h3 className="text-lg font-semibold">Bachelor's Degree (if applicable)</h3>
+                <h3 className="text-lg font-semibold">{t('adminStudentForm.sectionBachelorsDegree')}</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2 col-span-2">
-                    <Label htmlFor="bachelorUniversityName">University Name</Label>
+                    <Label htmlFor="bachelorUniversityName">{t('adminStudentForm.fieldUniversityName')}</Label>
                     <Input id="bachelorUniversityName" value={v('bachelorUniversityName')} onChange={(e) => handleInputChange('bachelorUniversityName', e.target.value)} /></div>
-                  <div className="space-y-2"><Label htmlFor="bachelorMajor">Major</Label>
+                  <div className="space-y-2"><Label htmlFor="bachelorMajor">{t('adminStudentForm.fieldMajor')}</Label>
                     <Input id="bachelorMajor" value={v('bachelorMajor')} onChange={(e) => handleInputChange('bachelorMajor', e.target.value)} /></div>
-                  <div className="space-y-2"><Label htmlFor="bachelorGPA">GPA</Label>
+                  <div className="space-y-2"><Label htmlFor="bachelorGPA">{t('adminStudentForm.fieldGpa')}</Label>
                     <Input id="bachelorGPA" value={v('bachelorGPA')} onChange={(e) => handleInputChange('bachelorGPA', e.target.value)} /></div>
-                  <div className="space-y-2"><Label htmlFor="bachelorGraduationDate">Graduation Date</Label>
+                  <div className="space-y-2"><Label htmlFor="bachelorGraduationDate">{t('adminStudentForm.fieldGraduationDate')}</Label>
                     <Input id="bachelorGraduationDate" type="date" value={v('bachelorGraduationDate')} onChange={(e) => handleInputChange('bachelorGraduationDate', e.target.value)} /></div>
                 </div>
 
                 <Separator />
 
-                <h3 className="text-lg font-semibold">Master's Degree (if applicable)</h3>
+                <h3 className="text-lg font-semibold">{t('adminStudentForm.sectionMastersDegree')}</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2 col-span-2">
-                    <Label htmlFor="masterUniversityName">University Name</Label>
+                    <Label htmlFor="masterUniversityName">{t('adminStudentForm.fieldUniversityName')}</Label>
                     <Input id="masterUniversityName" value={v('masterUniversityName')} onChange={(e) => handleInputChange('masterUniversityName', e.target.value)} /></div>
-                  <div className="space-y-2"><Label htmlFor="masterMajor">Major</Label>
+                  <div className="space-y-2"><Label htmlFor="masterMajor">{t('adminStudentForm.fieldMajor')}</Label>
                     <Input id="masterMajor" value={v('masterMajor')} onChange={(e) => handleInputChange('masterMajor', e.target.value)} /></div>
-                  <div className="space-y-2"><Label htmlFor="masterGPA">GPA</Label>
+                  <div className="space-y-2"><Label htmlFor="masterGPA">{t('adminStudentForm.fieldGpa')}</Label>
                     <Input id="masterGPA" value={v('masterGPA')} onChange={(e) => handleInputChange('masterGPA', e.target.value)} /></div>
-                  <div className="space-y-2"><Label htmlFor="masterGraduationDate">Graduation Date</Label>
+                  <div className="space-y-2"><Label htmlFor="masterGraduationDate">{t('adminStudentForm.fieldGraduationDate')}</Label>
                     <Input id="masterGraduationDate" type="date" value={v('masterGraduationDate')} onChange={(e) => handleInputChange('masterGraduationDate', e.target.value)} /></div>
                 </div>
               </div>
@@ -367,11 +374,11 @@ export default function AdminStudentEditPage() {
             {/* Step 3: Language & Target */}
             {currentStep === 2 && (
               <div className="space-y-6">
-                <h3 className="text-lg font-semibold">Language Proficiency</h3>
+                <h3 className="text-lg font-semibold">{t('adminStudentForm.sectionLanguageProficiency')}</h3>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2"><Label htmlFor="hskLevel">HSK Level</Label>
+                  <div className="space-y-2"><Label htmlFor="hskLevel">{t('adminStudentForm.fieldHskLevel')}</Label>
                     <Select value={v('hskLevel')} onValueChange={(value) => handleInputChange('hskLevel', value)}>
-                      <SelectTrigger><SelectValue placeholder="Select HSK level" /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder={t('adminStudentForm.selectHskLevel')} /></SelectTrigger>
                       <SelectContent>
                         {['1','2','3','4','5','6'].map((n) => (
                           <SelectItem key={n} value={n}>HSK {n}</SelectItem>
@@ -379,21 +386,21 @@ export default function AdminStudentEditPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2"><Label htmlFor="hskScore">HSK Score</Label>
-                    <Input id="hskScore" value={v('hskScore')} onChange={(e) => handleInputChange('hskScore', e.target.value)} placeholder="e.g., 280" /></div>
-                  <div className="space-y-2"><Label htmlFor="ieltsScore">IELTS Score</Label>
-                    <Input id="ieltsScore" value={v('ieltsScore')} onChange={(e) => handleInputChange('ieltsScore', e.target.value)} placeholder="e.g., 6.5" /></div>
-                  <div className="space-y-2"><Label htmlFor="toeflScore">TOEFL Score</Label>
-                    <Input id="toeflScore" value={v('toeflScore')} onChange={(e) => handleInputChange('toeflScore', e.target.value)} placeholder="e.g., 90" /></div>
+                  <div className="space-y-2"><Label htmlFor="hskScore">{t('adminStudentForm.fieldHskScore')}</Label>
+                    <Input id="hskScore" value={v('hskScore')} onChange={(e) => handleInputChange('hskScore', e.target.value)} placeholder={t('adminStudentForm.placeholderHskScore')} /></div>
+                  <div className="space-y-2"><Label htmlFor="ieltsScore">{t('adminStudentForm.fieldIeltsScore')}</Label>
+                    <Input id="ieltsScore" value={v('ieltsScore')} onChange={(e) => handleInputChange('ieltsScore', e.target.value)} placeholder={t('adminStudentForm.placeholderIeltsScore')} /></div>
+                  <div className="space-y-2"><Label htmlFor="toeflScore">{t('adminStudentForm.fieldToeflScore')}</Label>
+                    <Input id="toeflScore" value={v('toeflScore')} onChange={(e) => handleInputChange('toeflScore', e.target.value)} placeholder={t('adminStudentForm.placeholderToeflScore')} /></div>
                 </div>
 
                 <Separator />
 
-                <h3 className="text-lg font-semibold">Target Application</h3>
+                <h3 className="text-lg font-semibold">{t('adminStudentForm.sectionTargetApplication')}</h3>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2"><Label htmlFor="targetDegree">Target Degree</Label>
+                  <div className="space-y-2"><Label htmlFor="targetDegree">{t('adminStudentForm.fieldTargetDegree')}</Label>
                     <Select value={v('targetDegree')} onValueChange={(value) => handleInputChange('targetDegree', value)}>
-                      <SelectTrigger><SelectValue placeholder="Select degree" /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder={t('adminStudentForm.selectDegree')} /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Bachelor">Bachelor's</SelectItem>
                         <SelectItem value="Master">Master's</SelectItem>
@@ -402,9 +409,9 @@ export default function AdminStudentEditPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2"><Label htmlFor="targetIntake">Target Intake</Label>
+                  <div className="space-y-2"><Label htmlFor="targetIntake">{t('adminStudentForm.fieldTargetIntake')}</Label>
                     <Select value={v('targetIntake')} onValueChange={(value) => handleInputChange('targetIntake', value)}>
-                      <SelectTrigger><SelectValue placeholder="Select intake" /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder={t('adminStudentForm.selectIntake')} /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="September 2025">September 2025</SelectItem>
                         <SelectItem value="March 2026">March 2026</SelectItem>
@@ -417,14 +424,14 @@ export default function AdminStudentEditPage() {
 
                 <Separator />
 
-                <h3 className="text-lg font-semibold">Notes</h3>
+                <h3 className="text-lg font-semibold">{t('adminStudentForm.fieldNotes')}</h3>
                 <div className="space-y-2">
                   <Textarea
                     id="notes"
                     value={v('notes')}
                     onChange={(e) => handleInputChange('notes', e.target.value)}
                     rows={4}
-                    placeholder="Any additional notes about this student..."
+                    placeholder={t('adminStudentForm.placeholderNotesEdit')}
                   />
                 </div>
               </div>
@@ -433,35 +440,39 @@ export default function AdminStudentEditPage() {
             {/* Step 4: Review */}
             {currentStep === 3 && (
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Review</h3>
-                <p className="text-sm text-gray-600">
-                  Confirm the changes below, then click <strong>Update Student</strong> to save.
-                </p>
+                <h3 className="text-lg font-semibold">{t('adminStudentForm.step4Title')}</h3>
+                <p
+                  className="text-sm text-gray-600"
+                  // reviewDescriptionEdit includes inline <strong> markup around
+                  // the "Update Student" CTA reference — same pattern the
+                  // hardcoded English copy used.
+                  dangerouslySetInnerHTML={{ __html: t('adminStudentForm.reviewDescriptionEdit') }}
+                />
                 <Card>
-                  <CardHeader><CardTitle>Personal</CardTitle></CardHeader>
+                  <CardHeader><CardTitle>{t('adminStudentForm.reviewCardPersonalEdit')}</CardTitle></CardHeader>
                   <CardContent className="text-sm space-y-1">
-                    <p><span className="text-gray-500">Name:</span> {v('firstName')} {v('lastName')}</p>
-                    <p><span className="text-gray-500">DOB:</span> {v('dateOfBirth') || '—'}</p>
-                    <p><span className="text-gray-500">Nationality:</span> {v('nationality') || '—'}</p>
-                    <p><span className="text-gray-500">Email:</span> {v('email')}</p>
-                    <p><span className="text-gray-500">Phone:</span> {v('phone')}</p>
-                    <p><span className="text-gray-500">Status:</span> {v('status') || 'Active'}</p>
-                    <p><span className="text-gray-500">Source:</span> {v('source') || 'Online'}</p>
+                    <p><span className="text-gray-500">{t('adminStudentForm.reviewLabelName')}</span> {v('firstName')} {v('lastName')}</p>
+                    <p><span className="text-gray-500">{t('adminStudentForm.reviewLabelDob')}</span> {v('dateOfBirth') || '—'}</p>
+                    <p><span className="text-gray-500">{t('adminStudentForm.reviewLabelNationality')}</span> {v('nationality') || '—'}</p>
+                    <p><span className="text-gray-500">{t('adminStudentForm.reviewLabelEmail')}</span> {v('email')}</p>
+                    <p><span className="text-gray-500">{t('adminStudentForm.reviewLabelPhone')}</span> {v('phone')}</p>
+                    <p><span className="text-gray-500">{t('adminStudentForm.reviewLabelStatus')}</span> {v('status') || 'Active'}</p>
+                    <p><span className="text-gray-500">{t('adminStudentForm.reviewLabelSource')}</span> {v('source') || 'Online'}</p>
                   </CardContent>
                 </Card>
                 <Card>
-                  <CardHeader><CardTitle>Target</CardTitle></CardHeader>
+                  <CardHeader><CardTitle>{t('adminStudentForm.reviewCardTargetEdit')}</CardTitle></CardHeader>
                   <CardContent className="text-sm space-y-1">
-                    <p><span className="text-gray-500">Target Degree:</span> {v('targetDegree') || '—'}</p>
-                    <p><span className="text-gray-500">Target Intake:</span> {v('targetIntake') || '—'}</p>
-                    <p><span className="text-gray-500">HSK Level:</span> {v('hskLevel') || '—'}</p>
-                    <p><span className="text-gray-500">IELTS:</span> {v('ieltsScore') || '—'}</p>
-                    <p><span className="text-gray-500">TOEFL:</span> {v('toeflScore') || '—'}</p>
+                    <p><span className="text-gray-500">{t('adminStudentForm.reviewLabelTargetDegree')}</span> {v('targetDegree') || '—'}</p>
+                    <p><span className="text-gray-500">{t('adminStudentForm.reviewLabelTargetIntake')}</span> {v('targetIntake') || '—'}</p>
+                    <p><span className="text-gray-500">{t('adminStudentForm.reviewLabelHskLevel')}</span> {v('hskLevel') || '—'}</p>
+                    <p><span className="text-gray-500">{t('adminStudentForm.reviewLabelIelts')}</span> {v('ieltsScore') || '—'}</p>
+                    <p><span className="text-gray-500">{t('adminStudentForm.reviewLabelToefl')}</span> {v('toeflScore') || '—'}</p>
                   </CardContent>
                 </Card>
                 {v('notes') && (
                   <Card>
-                    <CardHeader><CardTitle>Notes</CardTitle></CardHeader>
+                    <CardHeader><CardTitle>{t('adminStudentForm.reviewCardNotesEdit')}</CardTitle></CardHeader>
                     <CardContent><p className="text-sm">{v('notes')}</p></CardContent>
                   </Card>
                 )}
@@ -473,7 +484,7 @@ export default function AdminStudentEditPage() {
         {error && (
           <Card className="border-red-200 bg-red-50">
             <CardContent className="pt-4 pb-4">
-              <p className="text-red-800 text-sm"><strong>Error:</strong> {error}</p>
+              <p className="text-red-800 text-sm"><strong>{t('adminStudentForm.errorPrefix')}</strong> {error}</p>
             </CardContent>
           </Card>
         )}
@@ -485,21 +496,21 @@ export default function AdminStudentEditPage() {
             onClick={currentStep === 0 ? () => router.push(`/admin/students/${studentId}`) : handlePrevious}
           >
             {currentStep === 0 ? (
-              <><ArrowLeft className="h-4 w-4 mr-2" /> Cancel</>
+              <><ArrowLeft className="h-4 w-4 mr-2" /> {t('adminStudentForm.buttonCancel')}</>
             ) : (
-              <><ChevronLeft className="h-4 w-4 mr-2" /> Previous</>
+              <><ChevronLeft className="h-4 w-4 mr-2" /> {t('adminStudentForm.buttonPrevious')}</>
             )}
           </Button>
           {currentStep < STEPS.length - 1 ? (
             <Button onClick={handleNext} className="bg-[#1B2A4A] hover:bg-[#152138]">
-              Next <ChevronRight className="h-4 w-4 ml-2" />
+              {t('adminStudentForm.buttonNext')} <ChevronRight className="h-4 w-4 ml-2" />
             </Button>
           ) : (
             <Button onClick={handleSave} disabled={isSaving} className="bg-[#9B1B30] hover:bg-[#7A1526]">
               {isSaving ? (
-                <><><Spinner size="sm" className="mr-2" /> Saving...</></>
+                <><><Spinner size="sm" className="mr-2" /> {t('adminStudentForm.buttonSaving')}</></>
               ) : (
-                <><Check className="h-4 w-4 mr-2" /> Update Student</>
+                <><Check className="h-4 w-4 mr-2" /> {t('adminStudentForm.buttonUpdateEdit')}</>
               )}
             </Button>
           )}

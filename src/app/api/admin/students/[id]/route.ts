@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, buildServiceClient, getServerEnv } from '@/lib/supabase-auth';
 import { mapStudentFromDb, mapStudentToDb } from '@/lib/student-mapper';
 import { sendStudentSuspended } from '@/lib/email';
+import { checkRateLimit } from '@/lib/rate-limit';
+import { deleteStudentDocFile } from '@/lib/storage';
 
 /**
  * GET /api/admin/students/[id]
@@ -12,9 +14,18 @@ import { sendStudentSuspended } from '@/lib/email';
  * splits it into fixed-column updates + `extra` JSONB updates.
  *
  * DELETE /api/admin/students/[id]
- * Soft-delete: sets status='Suspended'. Preserves the row for audit.
- * Hard delete (cascade) is NOT exposed via API — go via the Supabase
- * dashboard if you really need to nuke a row.
+ * Two actions (selected via the optional request body):
+ *   - { action: 'suspend' } (default, back-compat for callers that
+ *     send no body) — soft-delete: sets status='Suspended' and
+ *     sends the suspension email. The row is preserved for audit.
+ *   - { action: 'delete', confirmEmail } — hard delete: cascade
+ *     clear partner FKs, best-effort storage cleanup, then
+ *     `auth.admin.deleteUser(id)` which cascades through the
+ *     `student_profiles.id → auth.users.id` FK to all child tables
+ *     (student_applications, student_documents, student_notes,
+ *     student_notifications, student_assessments, chat_leads, …).
+ *     Requires `confirmEmail` to match the student's email
+ *     (case-insensitive, trimmed) — defense against fat-finger.
  *
  * Auth: any admin (requireAdmin). Service-role client for all reads
  * and writes.
@@ -157,8 +168,26 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 }
 
 // ---------------------------------------------------------------------------
-// DELETE single student (soft-delete)
+// DELETE single student (suspend + hard delete variants)
 // ---------------------------------------------------------------------------
+interface DeleteBody {
+  action?: 'suspend' | 'delete';
+  confirmEmail?: string;
+}
+
+async function readDeleteBody(request: NextRequest): Promise<DeleteBody | null> {
+  // Empty body / no body / non-JSON body → treat as legacy suspend call.
+  const raw = request.headers.get('content-length');
+  if (!raw || raw === '0') return {};
+  try {
+    const body = (await request.json()) as unknown;
+    if (!body || typeof body !== 'object') return {};
+    return body as DeleteBody;
+  } catch {
+    return {};
+  }
+}
+
 export async function DELETE(request: NextRequest, context: RouteContext) {
   if (!getServerEnv().serviceKey) {
     return NextResponse.json(
@@ -172,11 +201,45 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
+  // Rate limit: 30 hits per 15 min per admin. Same ceiling the student
+  // doc-delete routes use (Phase 78). The bucket key is shared between
+  // suspend + hard delete — both are destructive enough that 30/min is
+  // generous for legit use but blocks fat-finger loops.
+  const rl = checkRateLimit({
+    action: 'admin-student-delete',
+    key: auth.user.id,
+    max: 30,
+    windowMs: 15 * 60 * 1000,
+  });
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please slow down.' },
+      {
+        status: 429,
+        headers: { 'Retry-After': String(rl.retryAfterSec) },
+      },
+    );
+  }
+
   const { id } = await context.params;
   if (!id) {
     return NextResponse.json({ error: 'Missing student id' }, { status: 400 });
   }
 
+  const body = (await readDeleteBody(request)) ?? {};
+  const action = body.action ?? 'suspend';
+
+  if (action === 'delete') {
+    return hardDeleteStudent(request, id, body);
+  }
+
+  return suspendStudent(id, auth.user);
+}
+
+async function suspendStudent(
+  id: string,
+  adminUser: { id: string; email?: string | null; user_metadata?: Record<string, unknown> | null },
+) {
   try {
     const service = buildServiceClient();
 
@@ -190,38 +253,146 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       .single();
 
     if (error) {
-      console.error('[admin/students/:id DELETE] supabase error:', error);
+      console.error('[admin/students/:id DELETE:suspend] supabase error:', error);
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
     if (!data) {
       return NextResponse.json({ error: 'Student not found' }, { status: 404 });
     }
 
-    // Fire-and-forget suspension email. We re-read the student above
-    // to get the email; the welcome path doesn't need this because
-    // the admin provides the email in the request body.
+    // Fire-and-forget suspension email.
     if (data.email) {
-       
       void sendStudentSuspended({
         firstName: data.first_name || 'Student',
         email: data.email,
         suspendedByAdmin:
-          (auth.user.user_metadata?.full_name as string | undefined) ||
-          auth.user.email ||
+          (adminUser.user_metadata?.full_name as string | undefined) ||
+          adminUser.email ||
           'SICA Admin',
         suspendedAt: new Date(data.updated_at).toLocaleString(),
       }).catch((err) => console.error('[sendStudentSuspended] failed:', err));
     }
 
     return NextResponse.json({
-      success: true,
+      ok: true,
+      action: 'suspended',
       id: data.id,
       status: data.status,
       deletedAt: data.updated_at,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
-    console.error('[admin/students/:id DELETE] unhandled:', err);
+    console.error('[admin/students/:id DELETE:suspend] unhandled:', err);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+async function hardDeleteStudent(
+  _request: NextRequest,
+  id: string,
+  body: DeleteBody,
+) {
+  try {
+    const service = buildServiceClient();
+
+    // 1. Confirm the student exists + grab the email. Doing this first
+    //    means a bogus id 404s cleanly without a half-applied cascade.
+    const { data: student, error: fetchErr } = await service
+      .from('student_profiles')
+      .select('id, email, first_name, last_name')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (fetchErr) {
+      console.error('[admin/students/:id DELETE:delete] fetch error:', fetchErr);
+      return NextResponse.json({ error: fetchErr.message }, { status: 500 });
+    }
+    if (!student) {
+      return NextResponse.json({ error: 'Student not found' }, { status: 404 });
+    }
+
+    // 2. Refuse unless confirmEmail matches (case-insensitive, trimmed).
+    if (!body.confirmEmail || typeof body.confirmEmail !== 'string') {
+      return NextResponse.json(
+        { error: 'confirmEmail is required for hard delete' },
+        { status: 400 },
+      );
+    }
+    const expected = (student.email ?? '').trim().toLowerCase();
+    const provided = body.confirmEmail.trim().toLowerCase();
+    if (!expected || expected !== provided) {
+      return NextResponse.json(
+        { error: 'confirmEmail does not match the student email' },
+        { status: 400 },
+      );
+    }
+
+    // 3. Explicit clear of partner FKs (Phase 61 trigger would
+    //    propagate a new value, but being explicit avoids any race
+    //    where the trigger runs before the cascading delete).
+    const { error: paErr } = await service
+      .from('partner_applications')
+      .update({ linked_student_profile_id: null })
+      .eq('linked_student_profile_id', id);
+    if (paErr) {
+      console.error('[admin/students/:id DELETE:delete] partner_applications clear error:', paErr);
+      // Continue — not fatal, FKs will become dangling on the next step.
+    }
+    const { error: psErr } = await service
+      .from('partner_students')
+      .update({ linked_student_profile_id: null })
+      .eq('linked_student_profile_id', id);
+    if (psErr) {
+      console.error('[admin/students/:id DELETE:delete] partner_students clear error:', psErr);
+    }
+
+    // 4. Best-effort storage cleanup. Read every file_url for this
+    //    student, then remove each from the bucket. Failures are
+      //    logged but don't block the cascade — orphan files can be
+      //    cleaned up later by ops; we don't want to keep a DB row
+      //    alive just because a storage object is stuck.
+    const { data: docs, error: docsErr } = await service
+      .from('student_documents')
+      .select('id, file_url')
+      .eq('student_id', id);
+    if (docsErr) {
+      console.error('[admin/students/:id DELETE:delete] docs read error:', docsErr);
+    } else if (docs && docs.length > 0) {
+      await Promise.all(
+        docs.map(async (doc) => {
+          if (!doc.file_url) return;
+          try {
+            const ok = await deleteStudentDocFile(doc.file_url);
+            if (!ok) {
+              console.warn(
+                `[admin/students/:id DELETE:delete] deleteStudentDocFile returned false for doc ${doc.id} (${doc.file_url})`,
+              );
+            }
+          } catch (err) {
+            console.error(
+              `[admin/students/:id DELETE:delete] storage remove failed for doc ${doc.id}:`,
+              err,
+            );
+          }
+        }),
+      );
+    }
+
+    // 5. Cascade delete. `student_profiles.id REFERENCES auth.users(id)`
+    //    ON DELETE CASCADE means deleting the auth.users row nukes the
+    //    profile + every table that FKs into it (student_applications,
+    //    student_documents, student_notes, student_notifications,
+    //    student_assessments, chat_leads, etc.).
+    const { error: delErr } = await service.auth.admin.deleteUser(id);
+    if (delErr) {
+      console.error('[admin/students/:id DELETE:delete] deleteUser error:', delErr);
+      return NextResponse.json({ error: delErr.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true, action: 'deleted', id });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[admin/students/:id DELETE:delete] unhandled:', err);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

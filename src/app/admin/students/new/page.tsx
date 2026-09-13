@@ -24,6 +24,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { apiFetchJson } from '@/lib/api-client';
+import { useI18n } from '@/lib/i18n';
 
 // Fields that map to fixed columns in student_profiles.
 // Everything else goes to the `extra` JSONB blob.
@@ -42,6 +43,7 @@ const FIXED_FIELDS = [
 
 export default function AdminAddStudentPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [step, setStep] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -151,7 +153,7 @@ export default function AdminAddStudentPage() {
         temporaryPassword: data.temporaryPassword,
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create student');
+      setError(err instanceof Error ? err.message : t('adminStudentForm.errorCreateFailed'));
     } finally {
       setIsSaving(false);
     }
@@ -181,9 +183,10 @@ export default function AdminAddStudentPage() {
                 <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
                   <CheckCircle2 className="w-10 h-10 text-green-600" />
                 </div>
-                <h2 className="text-2xl font-bold text-[#1B2A4A]">Student Created</h2>
+                <h2 className="text-2xl font-bold text-[#1B2A4A]">{t('adminStudentForm.successTitle')}</h2>
                 <p className="text-[#4B5563] mt-2">
-                  <strong>{success.studentName || success.studentEmail}</strong> is now in the system.
+                  <strong>{success.studentName || success.studentEmail}</strong>{' '}
+                  {t('adminStudentForm.successMessage')}
                 </p>
               </div>
 
@@ -193,11 +196,10 @@ export default function AdminAddStudentPage() {
                     <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
                     <div className="flex-1">
                       <p className="font-semibold text-amber-900 text-sm">
-                        Temporary password — share with the student NOW
+                        {t('adminStudentForm.passwordHintTitle')}
                       </p>
                       <p className="text-amber-800 text-sm mt-1">
-                        The student must use this to log in, then reset it on first use.
-                        This password will not be shown again.
+                        {t('adminStudentForm.passwordHintBody')}
                       </p>
                       <div className="mt-3 flex items-center gap-2">
                         <code className="flex-1 px-3 py-2 bg-white border border-amber-300 rounded font-mono text-sm select-all">
@@ -205,7 +207,9 @@ export default function AdminAddStudentPage() {
                         </code>
                         <Button size="sm" variant="outline" onClick={copyPassword}>
                           <Copy className="w-4 h-4 mr-1" />
-                          {copied ? 'Copied' : 'Copy'}
+                          {copied
+                            ? t('adminStudentForm.buttonCopied')
+                            : t('adminStudentForm.buttonCopy')}
                         </Button>
                       </div>
                     </div>
@@ -215,14 +219,14 @@ export default function AdminAddStudentPage() {
 
               <div className="flex items-center justify-center gap-3">
                 <Button variant="outline" asChild>
-                  <Link href="/admin/students">Back to Students</Link>
+                  <Link href="/admin/students">{t('adminStudentForm.buttonBackToStudents')}</Link>
                 </Button>
                 <Button
                   className="bg-[#9B1B30] hover:bg-[#7A1526]"
                   asChild
                 >
                   <Link href={`/admin/students/${success.studentId}`}>
-                    View Student Profile
+                    {t('adminStudentForm.buttonViewStudent')}
                   </Link>
                 </Button>
               </div>
@@ -244,12 +248,12 @@ export default function AdminAddStudentPage() {
             </Link>
             <div>
               <h1 className="text-2xl font-bold text-[#1B2A4A] flex items-center gap-3">
-                Add New Student
+                {t('adminStudentForm.pageTitleNew')}
                 <Badge className="bg-[#9B1B30] hover:bg-[#7A1526]">
-                  Offline Student
+                  {t('adminStudentForm.badgeOfflineStudent')}
                 </Badge>
               </h1>
-              <p className="text-[#4B5563] mt-1">Enter offline student information</p>
+              <p className="text-[#4B5563] mt-1">{t('adminStudentForm.pageSubtitleNew')}</p>
             </div>
           </div>
         </div>
@@ -262,10 +266,10 @@ export default function AdminAddStudentPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               {[
-                { n: 1, label: 'Personal Info', Icon: User },
-                { n: 2, label: 'Education', Icon: GraduationCap },
-                { n: 3, label: 'Language', Icon: BookOpen },
-                { n: 4, label: 'Review', Icon: CheckCircle2 },
+                { n: 1, label: t('adminStudentForm.step1Title'), Icon: User },
+                { n: 2, label: t('adminStudentForm.step2Title'), Icon: GraduationCap },
+                { n: 3, label: t('adminStudentForm.step3TitleNew'), Icon: BookOpen },
+                { n: 4, label: t('adminStudentForm.step4Title'), Icon: CheckCircle2 },
               ].map(({ n, label, Icon }) => (
                 <div key={n} className="flex items-center min-w-0">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold shrink-0 ${
@@ -298,12 +302,12 @@ export default function AdminAddStudentPage() {
               <div className="space-y-6">
                 <div className="flex items-center gap-2">
                   <User className="w-5 h-5 text-[#1B2A4A]" />
-                  <h2 className="text-lg font-semibold text-[#1B2A4A]">Personal Information</h2>
+                  <h2 className="text-lg font-semibold text-[#1B2A4A]">{t('adminStudentForm.sectionPersonalInfo')}</h2>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <Label htmlFor="firstName" className="text-[#1B2A4A]">First Name *</Label>
+                    <Label htmlFor="firstName" className="text-[#1B2A4A]">{t('adminStudentForm.fieldFirstName')}</Label>
                     <Input
                       id="firstName"
                       name="firstName"
@@ -314,7 +318,7 @@ export default function AdminAddStudentPage() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="lastName" className="text-[#1B2A4A]">Last Name *</Label>
+                    <Label htmlFor="lastName" className="text-[#1B2A4A]">{t('adminStudentForm.fieldLastName')}</Label>
                     <Input
                       id="lastName"
                       name="lastName"
@@ -325,7 +329,7 @@ export default function AdminAddStudentPage() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="dateOfBirth" className="text-[#1B2A4A]">Date of Birth *</Label>
+                    <Label htmlFor="dateOfBirth" className="text-[#1B2A4A]">{t('adminStudentForm.fieldDateOfBirth')}</Label>
                     <Input
                       id="dateOfBirth"
                       name="dateOfBirth"
@@ -337,19 +341,19 @@ export default function AdminAddStudentPage() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="nationality" className="text-[#1B2A4A]">Nationality *</Label>
+                    <Label htmlFor="nationality" className="text-[#1B2A4A]">{t('adminStudentForm.fieldNationality')}</Label>
                     <Input
                       id="nationality"
                       name="nationality"
                       value={formData.nationality}
                       onChange={(e) => handleInputChange(e.target.name, e.target.value)}
                       className="mt-2"
-                      placeholder="e.g., USA, UK, China"
+                      placeholder={t('adminStudentForm.placeholderNationalityNew')}
                       required
                     />
                   </div>
                   <div>
-                    <Label htmlFor="passportNumber" className="text-[#1B2A4A]">Passport Number</Label>
+                    <Label htmlFor="passportNumber" className="text-[#1B2A4A]">{t('adminStudentForm.fieldPassportNumber')}</Label>
                     <Input
                       id="passportNumber"
                       name="passportNumber"
@@ -359,15 +363,15 @@ export default function AdminAddStudentPage() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="gender" className="text-[#1B2A4A]">Gender</Label>
+                    <Label htmlFor="gender" className="text-[#1B2A4A]">{t('adminStudentForm.fieldGender')}</Label>
                     <Select name="gender" value={formData.gender} onValueChange={(value) => handleInputChange('gender', value)}>
                       <SelectTrigger className="mt-2">
-                        <SelectValue placeholder="Select gender" />
+                        <SelectValue placeholder={t('adminStudentForm.selectGender')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Male">Male</SelectItem>
-                        <SelectItem value="Female">Female</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
+                        <SelectItem value="Male">{t('adminStudentForm.optionMale')}</SelectItem>
+                        <SelectItem value="Female">{t('adminStudentForm.optionFemale')}</SelectItem>
+                        <SelectItem value="Other">{t('adminStudentForm.optionOther')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -377,11 +381,11 @@ export default function AdminAddStudentPage() {
 
                 <div className="flex items-center gap-2">
                   <User className="w-5 h-5 text-[#1B2A4A]" />
-                  <h3 className="text-md font-semibold text-[#1B2A4A]">Contact Information</h3>
+                  <h3 className="text-md font-semibold text-[#1B2A4A]">{t('adminStudentForm.sectionContactInfo')}</h3>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <Label htmlFor="email" className="text-[#1B2A4A]">Email *</Label>
+                    <Label htmlFor="email" className="text-[#1B2A4A]">{t('adminStudentForm.fieldEmail')}</Label>
                     <Input
                       id="email"
                       name="email"
@@ -393,7 +397,7 @@ export default function AdminAddStudentPage() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="phone" className="text-[#1B2A4A]">Phone *</Label>
+                    <Label htmlFor="phone" className="text-[#1B2A4A]">{t('adminStudentForm.fieldPhone')}</Label>
                     <Input
                       id="phone"
                       name="phone"
@@ -405,7 +409,7 @@ export default function AdminAddStudentPage() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="whatsapp" className="text-[#1B2A4A]">WhatsApp</Label>
+                    <Label htmlFor="whatsapp" className="text-[#1B2A4A]">{t('adminStudentForm.fieldWhatsApp')}</Label>
                     <Input
                       id="whatsapp"
                       name="whatsapp"
@@ -416,7 +420,7 @@ export default function AdminAddStudentPage() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="country" className="text-[#1B2A4A]">Country *</Label>
+                    <Label htmlFor="country" className="text-[#1B2A4A]">{t('adminStudentForm.fieldCountryRequired')}</Label>
                     <Input
                       id="country"
                       name="country"
@@ -427,7 +431,7 @@ export default function AdminAddStudentPage() {
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <Label htmlFor="address" className="text-[#1B2A4A]">Address</Label>
+                    <Label htmlFor="address" className="text-[#1B2A4A]">{t('adminStudentForm.fieldAddress')}</Label>
                     <Textarea
                       id="address"
                       name="address"
@@ -445,15 +449,15 @@ export default function AdminAddStudentPage() {
               <div className="space-y-6">
                 <div className="flex items-center gap-2">
                   <GraduationCap className="w-5 h-5 text-[#1B2A4A]" />
-                  <h2 className="text-lg font-semibold text-[#1B2A4A]">Education Background</h2>
+                  <h2 className="text-lg font-semibold text-[#1B2A4A]">{t('adminStudentForm.sectionEducationBackground')}</h2>
                 </div>
                 
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-md font-semibold text-[#1B2A4A] mb-4">High School</h3>
+                    <h3 className="text-md font-semibold text-[#1B2A4A] mb-4">{t('adminStudentForm.sectionHighSchool')}</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="md:col-span-2">
-                        <Label htmlFor="highSchoolName" className="text-[#1B2A4A]">High School Name</Label>
+                        <Label htmlFor="highSchoolName" className="text-[#1B2A4A]">{t('adminStudentForm.fieldHighSchoolName')}</Label>
                         <Input
                           id="highSchoolName"
                           name="highSchoolName"
@@ -463,7 +467,7 @@ export default function AdminAddStudentPage() {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="highSchoolCity" className="text-[#1B2A4A]">City</Label>
+                        <Label htmlFor="highSchoolCity" className="text-[#1B2A4A]">{t('adminStudentForm.fieldCity')}</Label>
                         <Input
                           id="highSchoolCity"
                           name="highSchoolCity"
@@ -473,7 +477,7 @@ export default function AdminAddStudentPage() {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="highSchoolCountry" className="text-[#1B2A4A]">Country</Label>
+                        <Label htmlFor="highSchoolCountry" className="text-[#1B2A4A]">{t('adminStudentForm.fieldHighSchoolCountry')}</Label>
                         <Input
                           id="highSchoolCountry"
                           name="highSchoolCountry"
@@ -483,18 +487,18 @@ export default function AdminAddStudentPage() {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="highSchoolGPA" className="text-[#1B2A4A]">GPA</Label>
+                        <Label htmlFor="highSchoolGPA" className="text-[#1B2A4A]">{t('adminStudentForm.fieldGpa')}</Label>
                         <Input
                           id="highSchoolGPA"
                           name="highSchoolGPA"
                           value={formData.highSchoolGPA}
                           onChange={(e) => handleInputChange(e.target.name, e.target.value)}
                           className="mt-2"
-                          placeholder="e.g., 3.8/4.0"
+                          placeholder={t('adminStudentForm.placeholderGpa')}
                         />
                       </div>
                       <div>
-                        <Label htmlFor="highSchoolGraduationDate" className="text-[#1B2A4A]">Graduation Date</Label>
+                        <Label htmlFor="highSchoolGraduationDate" className="text-[#1B2A4A]">{t('adminStudentForm.fieldGraduationDate')}</Label>
                         <Input
                           id="highSchoolGraduationDate"
                           name="highSchoolGraduationDate"
@@ -510,10 +514,10 @@ export default function AdminAddStudentPage() {
                   <Separator className="my-6" />
 
                   <div>
-                    <h3 className="text-md font-semibold text-[#1B2A4A] mb-4">Bachelor's Degree (if applicable)</h3>
+                    <h3 className="text-md font-semibold text-[#1B2A4A] mb-4">{t('adminStudentForm.sectionBachelorsDegree')}</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="md:col-span-2">
-                        <Label htmlFor="bachelorUniversityName" className="text-[#1B2A4A]">University Name</Label>
+                        <Label htmlFor="bachelorUniversityName" className="text-[#1B2A4A]">{t('adminStudentForm.fieldUniversityName')}</Label>
                         <Input
                           id="bachelorUniversityName"
                           name="bachelorUniversityName"
@@ -523,7 +527,7 @@ export default function AdminAddStudentPage() {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="bachelorMajor" className="text-[#1B2A4A]">Major</Label>
+                        <Label htmlFor="bachelorMajor" className="text-[#1B2A4A]">{t('adminStudentForm.fieldMajor')}</Label>
                         <Input
                           id="bachelorMajor"
                           name="bachelorMajor"
@@ -533,7 +537,7 @@ export default function AdminAddStudentPage() {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="bachelorGPA" className="text-[#1B2A4A]">GPA</Label>
+                        <Label htmlFor="bachelorGPA" className="text-[#1B2A4A]">{t('adminStudentForm.fieldGpa')}</Label>
                         <Input
                           id="bachelorGPA"
                           name="bachelorGPA"
@@ -543,7 +547,7 @@ export default function AdminAddStudentPage() {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="bachelorGraduationDate" className="text-[#1B2A4A]">Graduation Date</Label>
+                        <Label htmlFor="bachelorGraduationDate" className="text-[#1B2A4A]">{t('adminStudentForm.fieldGraduationDate')}</Label>
                         <Input
                           id="bachelorGraduationDate"
                           name="bachelorGraduationDate"
@@ -563,15 +567,15 @@ export default function AdminAddStudentPage() {
               <div className="space-y-6">
                 <div className="flex items-center gap-2">
                   <BookOpen className="w-5 h-5 text-[#1B2A4A]" />
-                  <h2 className="text-lg font-semibold text-[#1B2A4A]">Language Proficiency & Target</h2>
+                  <h2 className="text-lg font-semibold text-[#1B2A4A]">{t('adminStudentForm.sectionLanguageTarget')}</h2>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <Label htmlFor="hskLevel" className="text-[#1B2A4A]">HSK Level</Label>
+                    <Label htmlFor="hskLevel" className="text-[#1B2A4A]">{t('adminStudentForm.fieldHskLevel')}</Label>
                     <Select name="hskLevel" value={formData.hskLevel} onValueChange={(value) => handleInputChange('hskLevel', value)}>
                       <SelectTrigger className="mt-2">
-                        <SelectValue placeholder="Select HSK level" />
+                        <SelectValue placeholder={t('adminStudentForm.selectHskLevel')} />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="1">HSK 1</SelectItem>
@@ -584,36 +588,36 @@ export default function AdminAddStudentPage() {
                     </Select>
                   </div>
                   <div>
-                    <Label htmlFor="hskScore" className="text-[#1B2A4A]">HSK Score</Label>
+                    <Label htmlFor="hskScore" className="text-[#1B2A4A]">{t('adminStudentForm.fieldHskScore')}</Label>
                     <Input
                       id="hskScore"
                       name="hskScore"
                       value={formData.hskScore}
                       onChange={(e) => handleInputChange(e.target.name, e.target.value)}
                       className="mt-2"
-                      placeholder="e.g., 280"
+                      placeholder={t('adminStudentForm.placeholderHskScore')}
                     />
                   </div>
                   <div>
-                    <Label htmlFor="ieltsScore" className="text-[#1B2A4A]">IELTS Score</Label>
+                    <Label htmlFor="ieltsScore" className="text-[#1B2A4A]">{t('adminStudentForm.fieldIeltsScore')}</Label>
                     <Input
                       id="ieltsScore"
                       name="ieltsScore"
                       value={formData.ieltsScore}
                       onChange={(e) => handleInputChange(e.target.name, e.target.value)}
                       className="mt-2"
-                      placeholder="e.g., 6.5"
+                      placeholder={t('adminStudentForm.placeholderIeltsScore')}
                     />
                   </div>
                   <div>
-                    <Label htmlFor="toeflScore" className="text-[#1B2A4A]">TOEFL Score</Label>
+                    <Label htmlFor="toeflScore" className="text-[#1B2A4A]">{t('adminStudentForm.fieldToeflScore')}</Label>
                     <Input
                       id="toeflScore"
                       name="toeflScore"
                       value={formData.toeflScore}
                       onChange={(e) => handleInputChange(e.target.name, e.target.value)}
                       className="mt-2"
-                      placeholder="e.g., 90"
+                      placeholder={t('adminStudentForm.placeholderToeflScore')}
                     />
                   </div>
                 </div>
@@ -621,13 +625,13 @@ export default function AdminAddStudentPage() {
                 <Separator className="my-6" />
 
                 <div>
-                  <h3 className="text-md font-semibold text-[#1B2A4A] mb-4">Target Application</h3>
+                  <h3 className="text-md font-semibold text-[#1B2A4A] mb-4">{t('adminStudentForm.sectionTargetApplication')}</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <Label htmlFor="targetDegree" className="text-[#1B2A4A]">Target Degree</Label>
+                      <Label htmlFor="targetDegree" className="text-[#1B2A4A]">{t('adminStudentForm.fieldTargetDegree')}</Label>
                       <Select name="targetDegree" value={formData.targetDegree} onValueChange={(value) => handleInputChange('targetDegree', value)}>
                         <SelectTrigger className="mt-2">
-                          <SelectValue placeholder="Select degree" />
+                          <SelectValue placeholder={t('adminStudentForm.selectDegree')} />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Bachelor">Bachelor's Degree</SelectItem>
@@ -638,10 +642,10 @@ export default function AdminAddStudentPage() {
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="targetIntake" className="text-[#1B2A4A]">Target Intake</Label>
+                      <Label htmlFor="targetIntake" className="text-[#1B2A4A]">{t('adminStudentForm.fieldTargetIntake')}</Label>
                       <Select name="targetIntake" value={formData.targetIntake} onValueChange={(value) => handleInputChange('targetIntake', value)}>
                         <SelectTrigger className="mt-2">
-                          <SelectValue placeholder="Select intake" />
+                          <SelectValue placeholder={t('adminStudentForm.selectIntake')} />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="September 2025">September 2025</SelectItem>
@@ -656,7 +660,7 @@ export default function AdminAddStudentPage() {
                 <Separator className="my-6" />
 
                 <div className="mt-8">
-                  <Label htmlFor="notes" className="text-[#1B2A4A]">Additional Notes</Label>
+                  <Label htmlFor="notes" className="text-[#1B2A4A]">{t('adminStudentForm.sectionAdditionalNotes')}</Label>
                   <Textarea
                     id="notes"
                     name="notes"
@@ -664,7 +668,7 @@ export default function AdminAddStudentPage() {
                     onChange={(e) => handleInputChange(e.target.name, e.target.value)}
                     rows={5}
                     className="mt-2"
-                    placeholder="Any additional information about the student..."
+                    placeholder={t('adminStudentForm.placeholderNotesNew')}
                   />
                 </div>
               </div>
@@ -674,22 +678,22 @@ export default function AdminAddStudentPage() {
               <div className="space-y-6">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-5 h-5 text-[#1B2A4A]" />
-                  <h2 className="text-lg font-semibold text-[#1B2A4A]">Review Student Information</h2>
+                  <h2 className="text-lg font-semibold text-[#1B2A4A]">{t('adminStudentForm.reviewHeadingNew')}</h2>
                 </div>
                 
                 <div className="space-y-6">
                   <Card>
                     <CardHeader>
-                      <CardTitle className="text-[#1B2A4A]">Personal Information</CardTitle>
+                      <CardTitle className="text-[#1B2A4A]">{t('adminStudentForm.reviewCardPersonalNew')}</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div><span className="text-[#4B5563]">Name:</span> <span className="font-medium">{formData.firstName} {formData.lastName}</span></div>
-                        <div><span className="text-[#4B5563]">Date of Birth:</span> <span className="font-medium">{formData.dateOfBirth || '-'}</span></div>
-                        <div><span className="text-[#4B5563]">Nationality:</span> <span className="font-medium">{formData.nationality || '-'}</span></div>
-                        <div><span className="text-[#4B5563]">Email:</span> <span className="font-medium">{formData.email || '-'}</span></div>
-                        <div><span className="text-[#4B5563]">Phone:</span> <span className="font-medium">{formData.phone || '-'}</span></div>
-                        <div><span className="text-[#4B5563]">Country:</span> <span className="font-medium">{formData.country || '-'}</span></div>
+                        <div><span className="text-[#4B5563]">{t('adminStudentForm.reviewLabelName')}</span> <span className="font-medium">{formData.firstName} {formData.lastName}</span></div>
+                        <div><span className="text-[#4B5563]">{t('adminStudentForm.reviewLabelDateOfBirth')}</span> <span className="font-medium">{formData.dateOfBirth || '-'}</span></div>
+                        <div><span className="text-[#4B5563]">{t('adminStudentForm.reviewLabelNationality')}</span> <span className="font-medium">{formData.nationality || '-'}</span></div>
+                        <div><span className="text-[#4B5563]">{t('adminStudentForm.reviewLabelEmail')}</span> <span className="font-medium">{formData.email || '-'}</span></div>
+                        <div><span className="text-[#4B5563]">{t('adminStudentForm.reviewLabelPhone')}</span> <span className="font-medium">{formData.phone || '-'}</span></div>
+                        <div><span className="text-[#4B5563]">{t('adminStudentForm.reviewLabelCountry')}</span> <span className="font-medium">{formData.country || '-'}</span></div>
                       </div>
                     </CardContent>
                   </Card>
@@ -697,17 +701,17 @@ export default function AdminAddStudentPage() {
                   {(formData.highSchoolName || formData.bachelorUniversityName) && (
                     <Card>
                       <CardHeader>
-                        <CardTitle className="text-[#1B2A4A]">Education</CardTitle>
+                        <CardTitle className="text-[#1B2A4A]">{t('adminStudentForm.reviewCardEducationNew')}</CardTitle>
                       </CardHeader>
                       <CardContent>
                         <div className="grid grid-cols-2 gap-4 text-sm">
                           {formData.highSchoolName && (
-                            <div className="col-span-2"><span className="text-[#4B5563]">High School:</span> <span className="font-medium">{formData.highSchoolName}</span></div>
+                            <div className="col-span-2"><span className="text-[#4B5563]">{t('adminStudentForm.reviewLabelHighSchool')}</span> <span className="font-medium">{formData.highSchoolName}</span></div>
                           )}
                           {formData.bachelorUniversityName && (
                             <>
-                              <div><span className="text-[#4B5563]">Bachelor's University:</span> <span className="font-medium">{formData.bachelorUniversityName}</span></div>
-                              <div><span className="text-[#4B5563]">Major:</span> <span className="font-medium">{formData.bachelorMajor}</span></div>
+                              <div><span className="text-[#4B5563]">{t('adminStudentForm.reviewLabelBachelorsUniversity')}</span> <span className="font-medium">{formData.bachelorUniversityName}</span></div>
+                              <div><span className="text-[#4B5563]">{t('adminStudentForm.reviewLabelMajor')}</span> <span className="font-medium">{formData.bachelorMajor}</span></div>
                             </>
                           )}
                         </div>
@@ -718,24 +722,24 @@ export default function AdminAddStudentPage() {
                   {(formData.hskLevel || formData.ieltsScore || formData.toeflScore || formData.targetDegree) && (
                     <Card>
                       <CardHeader>
-                        <CardTitle className="text-[#1B2A4A]">Language & Target</CardTitle>
+                        <CardTitle className="text-[#1B2A4A]">{t('adminStudentForm.reviewCardLanguageTargetNew')}</CardTitle>
                       </CardHeader>
                       <CardContent>
                         <div className="grid grid-cols-2 gap-4 text-sm">
                           {formData.hskLevel && (
-                            <div><span className="text-[#4B5563]">HSK Level:</span> <span className="font-medium">{formData.hskLevel}</span></div>
+                            <div><span className="text-[#4B5563]">{t('adminStudentForm.reviewLabelHskLevel')}</span> <span className="font-medium">{formData.hskLevel}</span></div>
                           )}
                           {formData.ieltsScore && (
-                            <div><span className="text-[#4B5563]">IELTS:</span> <span className="font-medium">{formData.ieltsScore}</span></div>
+                            <div><span className="text-[#4B5563]">{t('adminStudentForm.reviewLabelIelts')}</span> <span className="font-medium">{formData.ieltsScore}</span></div>
                           )}
                           {formData.toeflScore && (
-                            <div><span className="text-[#4B5563]">TOEFL:</span> <span className="font-medium">{formData.toeflScore}</span></div>
+                            <div><span className="text-[#4B5563]">{t('adminStudentForm.reviewLabelToefl')}</span> <span className="font-medium">{formData.toeflScore}</span></div>
                           )}
                           {formData.targetDegree && (
-                            <div><span className="text-[#4B5563]">Target Degree:</span> <span className="font-medium">{formData.targetDegree}</span></div>
+                            <div><span className="text-[#4B5563]">{t('adminStudentForm.reviewLabelTargetDegree')}</span> <span className="font-medium">{formData.targetDegree}</span></div>
                           )}
                           {formData.targetIntake && (
-                            <div><span className="text-[#4B5563]">Target Intake:</span> <span className="font-medium">{formData.targetIntake}</span></div>
+                            <div><span className="text-[#4B5563]">{t('adminStudentForm.reviewLabelTargetIntake')}</span> <span className="font-medium">{formData.targetIntake}</span></div>
                           )}
                         </div>
                       </CardContent>
@@ -754,31 +758,31 @@ export default function AdminAddStudentPage() {
               variant="secondary"
               onClick={() => setStep(step - 1)}
             >
-              Previous
+              {t('adminStudentForm.buttonPrevious')}
             </Button>
           ) : (
             <Button variant="secondary" asChild>
               <Link href="/admin/students">
-                Cancel
+                {t('adminStudentForm.buttonCancel')}
               </Link>
             </Button>
           )}
           
           {step < totalSteps ? (
             <Button onClick={() => setStep(step + 1)} className="bg-[#1B2A4A] hover:bg-[#152138]">
-              Next
+              {t('adminStudentForm.buttonNext')}
             </Button>
           ) : (
             <Button onClick={handleSave} disabled={isSaving} className="bg-[#9B1B30] hover:bg-[#7A1526]">
               {isSaving ? (
                 <>
                   <Spinner size="sm" className="mr-2" />
-                  Saving...
+                  {t('adminStudentForm.buttonSaving')}
                 </>
               ) : (
                 <>
                   <Save className="w-4 h-4 mr-2" />
-                  Save Student
+                  {t('adminStudentForm.buttonSaveNew')}
                 </>
               )}
             </Button>
@@ -789,7 +793,7 @@ export default function AdminAddStudentPage() {
           <Card className="border-red-200 bg-red-50">
             <CardContent className="pt-4 pb-4">
               <p className="text-red-800 text-sm">
-                <strong>Error:</strong> {error}
+                <strong>{t('adminStudentForm.errorPrefix')}</strong> {error}
               </p>
             </CardContent>
           </Card>
