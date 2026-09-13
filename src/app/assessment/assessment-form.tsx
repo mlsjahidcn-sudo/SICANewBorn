@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, type FormEvent, type ChangeEvent } from 'react';
+import { useState, useEffect, useRef, useCallback, type FormEvent, type ChangeEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Spinner } from '@/components/ui/spinner';
 import { getCurrentUtm } from '@/lib/utm';
@@ -114,9 +114,14 @@ export function AssessmentForm() {
     intendedMajor: '—',
   });
 
-  // Refs for per-step validation. The form is still uncontrolled
-  // (FormData on submit) but the wizard needs to read individual
-  // field values to validate before advancing.
+  // Refs for per-step validation AND for the final submit. The
+  // wizard renders each step conditionally (`currentStep === N`),
+  // so previous-step fields are unmounted from the DOM by the
+  // time the user reaches the submit step — `new FormData(form)`
+  // would capture an empty form. Instead we read values from refs
+  // directly at submit time. This also lets step 1's
+  // `targetUniversities` ref participate in the payload even though
+  // it doesn't have a focused validation hook today.
   const firstNameRef = useRef<HTMLInputElement>(null);
   const lastNameRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
@@ -125,6 +130,8 @@ export function AssessmentForm() {
   const dateOfBirthRef = useRef<HTMLInputElement>(null);
   const currentEducationRef = useRef<HTMLSelectElement>(null);
   const intendedMajorRef = useRef<HTMLInputElement>(null);
+  const targetUniversitiesRef = useRef<HTMLInputElement>(null);
+  const notesRef = useRef<HTMLTextAreaElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
   // Pre-fill the Intended Major field when the user comes from a
@@ -138,36 +145,76 @@ export function AssessmentForm() {
     }
   }, []);
 
+  // Phase 83: the wizard renders each step conditionally. When
+  // the user reaches step 3, the inputs from steps 0-2 are
+  // unmounted from the DOM. Reading values via `new FormData(form)`
+  // or individual refs at submit time returns empty strings.
+  //
+  // The fix: mirror the live form values into a single React
+  // state object via a delegated `input` listener. The values
+  // persist in React state across step unmounts because they
+  // live outside the DOM. We then read from state at submit
+  // time (and for the summary card).
+  //
+  // Note: `new FormData(form)` doesn't see unmounted inputs but
+  // it DOES still fire for currently-mounted inputs (i.e. step
+  // 3's `notes` field). So as long as we capture every input
+  // event into state, we have everything we need.
+  const [formValues, setFormValues] = useState<Record<string, string>>({
+    firstName: '',
+    lastName: '',
+    email: '',
+    whatsapp: '',
+    country: '',
+    dateOfBirth: '',
+    currentEducation: '',
+    intendedMajor: '',
+    targetUniversities: '',
+    notes: '',
+  });
+  const updateFormValue = useCallback((name: string, value: string) => {
+    setFormValues((prev) => (prev[name] === value ? prev : { ...prev, [name]: value }));
+  }, []);
+
   // Keep the pre-submit summary in sync with the live form values.
-  // We attach a single delegated `input` listener to the form (via
-  // the ref) and update state on every change. This is a post-
-  // render side effect, so it doesn't violate the React refs
-  // rule of "no ref access during render".
+  // Mirrors `formValues` into a friendlier shape for the summary card.
+  useEffect(() => {
+    setSummary({
+      name:
+        [formValues.firstName, formValues.lastName]
+          .filter(Boolean)
+          .join(' ')
+          .trim() || '—',
+      email: formValues.email || '—',
+      country: formValues.country || '—',
+      currentEducation: formValues.currentEducation || '—',
+      intendedMajor: formValues.intendedMajor || '—',
+    });
+  }, [formValues]);
+
+  // Wire the delegated input listener once on mount. Captures
+  // every input event from every step into React state. Listener
+  // stays attached as steps mount/unmount because the form ref
+  // itself never unmounts.
   useEffect(() => {
     const form = formRef.current;
     if (!form) return;
-    const update = () => {
-      const data = new FormData(form);
-      setSummary({
-        name:
-          [data.get('firstName'), data.get('lastName')]
-            .filter(Boolean)
-            .join(' ')
-            .trim() || '—',
-        email: (data.get('email') as string)?.trim() || '—',
-        country: (data.get('country') as string)?.trim() || '—',
-        currentEducation: (data.get('currentEducation') as string)?.trim() || '—',
-        intendedMajor: (data.get('intendedMajor') as string)?.trim() || '—',
-      });
+    const handler = (e: Event) => {
+      const target = e.target as
+        | HTMLInputElement
+        | HTMLSelectElement
+        | HTMLTextAreaElement
+        | null;
+      if (!target || !target.name) return;
+      updateFormValue(target.name, target.value);
     };
-    update();
-    form.addEventListener('input', update);
-    form.addEventListener('change', update);
+    form.addEventListener('input', handler);
+    form.addEventListener('change', handler);
     return () => {
-      form.removeEventListener('input', update);
-      form.removeEventListener('change', update);
+      form.removeEventListener('input', handler);
+      form.removeEventListener('change', handler);
     };
-  }, [currentStep, status]);
+  }, [updateFormValue, formValues]);
 
   // Per-step validation. Returns null if step is valid; otherwise
   // returns the name of the first invalid field (which we focus).
@@ -296,32 +343,40 @@ export function AssessmentForm() {
     }
   };
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setStatus('submitting');
     setErrorMsg('');
 
-    const form = e.currentTarget;
-    const data = new FormData(form);
+    // Phase 83 fix: read values from React state (formValues),
+    // not from the DOM. The wizard renders each step
+    // conditionally so previous-step inputs are unmounted by
+    // the time the user reaches submit — reading from refs or
+    // FormData both return empty strings. formValues is
+    // mirrored from input events (see useEffect above) and
+    // persists across step unmounts.
+    const honeypotEl = e.currentTarget.querySelector<HTMLInputElement>('[name="website"]');
+
     // Phase 26: spread UTM + click-id attribution into the
     // payload. Mirrors the contact-form pattern — helper
     // reads sessionStorage (cross-page survival) and falls
-    // back to the current URL. Spreads the (possibly empty)
-    // object so a direct visit omits the keys cleanly.
+    // back to the current URL.
     const utm = getCurrentUtm();
     const payload = {
-      firstName: data.get('firstName'),
-      lastName: data.get('lastName'),
-      email: data.get('email'),
-      whatsapp: data.get('whatsapp'),
-      country: data.get('country'),
-      dateOfBirth: data.get('dateOfBirth') || '',
-      currentEducation: data.get('currentEducation') || '',
-      intendedMajor: data.get('intendedMajor') || '',
-      targetUniversities: data.get('targetUniversities') || '',
-      notes: data.get('notes') || '',
+      firstName: formValues.firstName.trim(),
+      lastName: formValues.lastName.trim(),
+      email: formValues.email.trim(),
+      whatsapp: formValues.whatsapp.trim(),
+      country: formValues.country.trim(),
+      dateOfBirth: formValues.dateOfBirth.trim(),
+      currentEducation: formValues.currentEducation.trim(),
+      intendedMajor: formValues.intendedMajor.trim(),
+      targetUniversities: formValues.targetUniversities.trim(),
+      notes: formValues.notes.trim(),
       // Track 1.1: honeypot — hidden `website` input only bots fill.
-      website: data.get('website') || '',
+      // Read directly from the still-mounted honeypot input
+      // (it's outside the conditional step blocks, so it survives).
+      website: honeypotEl?.value?.trim() ?? '',
       sourcePage: window.location.pathname,
       ...utm,
     };
@@ -356,7 +411,20 @@ export function AssessmentForm() {
         has_transcript: storagePath != null,
         interest: interestParam || undefined,
       });
-      form.reset();
+      // Reset React form state too (formValues). The DOM reset is
+      // not enough since the inputs are now backed by state.
+      setFormValues({
+        firstName: '',
+        lastName: '',
+        email: '',
+        whatsapp: '',
+        country: '',
+        dateOfBirth: '',
+        currentEducation: '',
+        intendedMajor: '',
+        targetUniversities: '',
+        notes: '',
+      });
       // Phase 27: redirect to the thank-you page. Pass through
       // the ?interest=<slug> + ?interestName=<name> params if
       // the user came from a university detail page's Apply CTA
@@ -613,6 +681,7 @@ export function AssessmentForm() {
                 {t('assessment.targetUniversities')}
               </label>
               <input
+                ref={targetUniversitiesRef}
                 type="text"
                 name="targetUniversities"
                 className="w-full border border-gray-300 px-4 py-2.5 text-sm text-[#1F2937] bg-white rounded-none focus:border-[#9B1B30] focus:outline-none focus:ring-1 focus:ring-[#9B1B30]"
@@ -715,6 +784,7 @@ export function AssessmentForm() {
             </p>
             <div>
               <textarea
+                ref={notesRef}
                 name="notes"
                 rows={6}
                 className="w-full border border-gray-300 px-4 py-2.5 text-sm text-[#1F2937] bg-white rounded-none focus:border-[#9B1B30] focus:outline-none focus:ring-1 focus:ring-[#9B1B30] resize-vertical"
