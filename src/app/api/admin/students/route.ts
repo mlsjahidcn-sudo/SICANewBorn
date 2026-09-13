@@ -276,8 +276,12 @@ export async function POST(request: NextRequest) {
     // Fire-and-forget welcome email. Don't block the response on it —
     // the admin already has the temp password in the response body
     // and can re-share it manually if Resend fails.
-     
-    void sendStudentWelcome({
+    //
+    // M10: track the result so the API response can surface
+    // `emailSent: false` when Resend is down. The admin UI can
+    // warn the admin + show a "Re-send welcome email" button
+    // instead of silently failing.
+    const emailSent = await sendStudentWelcome({
       firstName: body.firstName,
       lastName: body.lastName,
       email: body.email,
@@ -287,7 +291,10 @@ export async function POST(request: NextRequest) {
         auth.user.email ||
         'SICA Admin',
       createdAt: new Date().toISOString(),
-    }).catch((err) => console.error('[sendStudentWelcome] failed:', err));
+    }).catch((err) => {
+      console.error('[sendStudentWelcome] failed:', err);
+      return false;
+    });
 
     return NextResponse.json(
       {
@@ -295,6 +302,7 @@ export async function POST(request: NextRequest) {
         // Return the temp password ONCE so the admin can share it. The
         // student will reset it on first login.
         temporaryPassword: body.password ? undefined : password,
+        emailSent,
       },
       { status: 201 },
     );

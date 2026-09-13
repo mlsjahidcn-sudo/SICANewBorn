@@ -417,9 +417,9 @@ export async function sendStudentWelcome(params: {
   temporaryPassword: string;
   createdByAdmin: string;
   createdAt: string;
-}) {
-  if (!isEmailConfigured()) return;
-  await sendTemplatedEmail({
+}): Promise<boolean> {
+  if (!isEmailConfigured()) return false;
+  return await sendTemplatedEmail({
     to: params.email,
     slug: 'notification.student_welcome',
     locale: 'en',

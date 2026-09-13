@@ -52,6 +52,7 @@ export default function AdminAddStudentPage() {
     studentName: string;
     studentEmail: string;
     temporaryPassword?: string;
+    emailSent: boolean;
   } | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -85,12 +86,6 @@ export default function AdminAddStudentPage() {
     bachelorMajor: '',
     bachelorGPA: '',
     bachelorGraduationDate: '',
-    masterUniversityName: '',
-    masterUniversityCity: '',
-    masterUniversityCountry: '',
-    masterMajor: '',
-    masterGPA: '',
-    masterGraduationDate: '',
 
     // Language Proficiency
     hskLevel: '',
@@ -142,6 +137,7 @@ export default function AdminAddStudentPage() {
       const data = await apiFetchJson<{
         student: { id: string; firstName: string; lastName: string; email: string };
         temporaryPassword?: string;
+        emailSent?: boolean;
       }>('/api/admin/students', {
         method: 'POST',
         body: JSON.stringify(buildPayload()),
@@ -151,6 +147,7 @@ export default function AdminAddStudentPage() {
         studentName: `${data.student.firstName} ${data.student.lastName}`.trim(),
         studentEmail: data.student.email,
         temporaryPassword: data.temporaryPassword,
+        emailSent: data.emailSent !== false,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : t('adminStudentForm.errorCreateFailed'));
@@ -189,6 +186,18 @@ export default function AdminAddStudentPage() {
                   {t('adminStudentForm.successMessage')}
                 </p>
               </div>
+
+              {/* M10: warn the admin when Resend was down + the welcome
+                  email didn't go out. They can still share the password
+                  manually + retry from the detail page. */}
+              {!success.emailSent && (
+                <div className="bg-amber-50 border border-amber-200 rounded p-3 mb-6 text-sm flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-amber-900">
+                    {t('adminStudentForm.welcomeEmailFailed')}
+                  </p>
+                </div>
+              )}
 
               {success.temporaryPassword && (
                 <div className="bg-amber-50 border border-amber-200 rounded p-4 mb-6">
@@ -694,6 +703,12 @@ export default function AdminAddStudentPage() {
                         <div><span className="text-[#4B5563]">{t('adminStudentForm.reviewLabelEmail')}</span> <span className="font-medium">{formData.email || '-'}</span></div>
                         <div><span className="text-[#4B5563]">{t('adminStudentForm.reviewLabelPhone')}</span> <span className="font-medium">{formData.phone || '-'}</span></div>
                         <div><span className="text-[#4B5563]">{t('adminStudentForm.reviewLabelCountry')}</span> <span className="font-medium">{formData.country || '-'}</span></div>
+                        {formData.whatsapp && (
+                          <div><span className="text-[#4B5563]">{t('adminStudentForm.fieldWhatsApp')}</span> <span className="font-medium">{formData.whatsapp}</span></div>
+                        )}
+                        {formData.passportNumber && (
+                          <div><span className="text-[#4B5563]">{t('adminStudentForm.reviewLabelPassport')}</span> <span className="font-medium">{formData.passportNumber}</span></div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
