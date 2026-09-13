@@ -7,13 +7,14 @@
  *      contact form is submitted. Reads the active drip templates
  *      from email_templates (category='drip') and inserts one row
  *      in email_drips per step. Schedules based on each template's
- *      step_index + delay_ms.
+ *      step_index + delay_ms. Persists recipient_locale on the row
+ *      so the worker can render in the right language later.
  *   2. processPendingDrips() — called by the setInterval in
  *      server.ts AND by the /api/email/drip-cron endpoint
  *      (idempotent — safe to call from both). Picks up rows
- *      where status='pending' AND scheduled_at <= NOW(), reads
- *      the template by slug, renders with the renderer, sends via
- *      Resend, marks 'sent'.
+ *      where status='pending' AND scheduled_at <= NOW(), sends
+ *      via the centralized sendTemplatedEmail pipeline, marks
+ *      'sent' or 'failed'.
  *   3. unsubscribe() — marks all future drips for a given email
  *      as 'skipped_unsubscribed' so they never go out.
  *
@@ -22,6 +23,11 @@
  * gone — schedules are now driven by the DB. Admins can edit copy
  * without redeploying.
  *
+ * Phase 84: rendering + sending moved to the centralized
+ * `@/lib/email` module (text-only pipeline). This file now
+ * just persists rows, looks up recipient locale at schedule
+ * time, and hands the row off to `sendTemplatedEmail`.
+ *
  * Concurrency note: this is a single-process scheduler. If the
  * site is scaled to multiple instances, add a `SELECT ... FOR
  * UPDATE SKIP LOCKED` to claim a row before sending. For
@@ -29,12 +35,14 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { Resend } from 'resend';
 import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
-import { renderTemplate } from '@/lib/email/renderer';
+import {
+  isEmailConfigured,
+  lookupRecipientLocale,
+  sendTemplatedEmail,
+  type EmailLocale,
+} from '@/lib/email/index';
 import { makeUnsubToken } from './tokens';
-
-const FROM = 'SICA <noreply@sica.com.cn>';
 
 export interface DripLead {
   sourceKind: 'assessment' | 'contact';
@@ -43,6 +51,10 @@ export interface DripLead {
   firstName: string;
   country?: string;
   intendedMajor?: string;
+  /** `sica-locale` cookie value (visitor's preferred site language). */
+  cookieLocale?: string | null;
+  /** Raw Accept-Language request header. */
+  acceptLanguage?: string | null;
 }
 
 interface DripRow {
@@ -53,6 +65,7 @@ interface DripRow {
   recipient_first_name: string | null;
   recipient_country: string | null;
   recipient_field: string | null;
+  recipient_locale: string | null;
   step_key: string;
   step_index: number;
   scheduled_at: string;
@@ -62,28 +75,20 @@ interface DripRow {
 interface DripTemplate {
   id: string;
   slug: string;
-  subject: string;
-  body_html: string;
-  body_text: string;
-  variables: string[];
   step_index: number;
   delay_ms: number;
-}
-
-function getResend(): Resend | null {
-  if (!process.env.RESEND_API_KEY) return null;
-  return new Resend(process.env.RESEND_API_KEY);
 }
 
 /**
  * Read the active drip templates from the DB. We sort by step_index
  * so the schedule is always in the right order even if the admin
- * re-orders them in the UI.
+ * re-orders them in the UI. Phase 84: we only need id/slug/step/
+ * delay — subject/body now live in loadTemplate().
  */
 async function loadDripTemplates(supabase: SupabaseClient): Promise<DripTemplate[]> {
   const { data, error } = await supabase
     .from('email_templates')
-    .select('id, slug, subject, body_html, body_text, variables, step_index, delay_ms')
+    .select('id, slug, step_index, delay_ms')
     .eq('category', 'drip')
     .eq('is_active', true)
     .not('step_index', 'is', null)
@@ -96,20 +101,12 @@ async function loadDripTemplates(supabase: SupabaseClient): Promise<DripTemplate
     const row = r as {
       id: string;
       slug: string;
-      subject: string;
-      body_html: string;
-      body_text: string;
-      variables: unknown;
       step_index: number;
       delay_ms: number;
     };
     return {
       id: row.id,
       slug: row.slug,
-      subject: row.subject,
-      body_html: row.body_html,
-      body_text: row.body_text,
-      variables: Array.isArray(row.variables) ? (row.variables as string[]) : [],
       step_index: row.step_index,
       delay_ms: row.delay_ms,
     };
@@ -130,8 +127,8 @@ export async function scheduleDripSequence(lead: DripLead): Promise<{
   const supabase = getSupabaseServer();
   if (!supabase) return { scheduled: 0, skipped: 0, templates: 0 };
 
-  if (!process.env.RESEND_API_KEY) {
-    console.log('[drip] RESEND_API_KEY not set, skipping schedule for', lead.email);
+  if (!isEmailConfigured()) {
+    console.log('[drip] Resend/email not configured, skipping schedule for', lead.email);
     return { scheduled: 0, skipped: 0, templates: 0 };
   }
 
@@ -141,6 +138,14 @@ export async function scheduleDripSequence(lead: DripLead): Promise<{
     return { scheduled: 0, skipped: 0, templates: 0 };
   }
 
+  // Phase 84: resolve the recipient locale once, at schedule time,
+  // so the worker can render correctly without re-resolving from
+  // a now-gone cookie/header. Persisted on each row.
+  const locale: EmailLocale = await lookupRecipientLocale({
+    cookieLocale: lead.cookieLocale ?? null,
+    acceptLanguage: lead.acceptLanguage ?? null,
+  });
+
   const now = Date.now();
   const rows = templates.map((tpl) => ({
     source_kind: lead.sourceKind,
@@ -149,6 +154,7 @@ export async function scheduleDripSequence(lead: DripLead): Promise<{
     recipient_first_name: lead.firstName || null,
     recipient_country: lead.country || null,
     recipient_field: lead.intendedMajor || null,
+    recipient_locale: locale,
     step_key: tpl.slug, // e.g. 'drip.welcome'
     step_index: tpl.step_index,
     scheduled_at: new Date(now + tpl.delay_ms).toISOString(),
@@ -177,7 +183,8 @@ export async function scheduleDripSequence(lead: DripLead): Promise<{
 
 /**
  * Process all pending drips that are due (scheduled_at <= NOW()).
- * Sends each one via Resend, marks the row as 'sent' or 'failed'.
+ * Sends each one through the centralized email pipeline, marks the
+ * row as 'sent' or 'failed'.
  *
  * Returns a summary of what happened. Safe to call repeatedly.
  */
@@ -197,8 +204,7 @@ export async function processPendingDrips(opts: {
     return { picked: 0, sent: 0, failed: 0, errors: ['Supabase not configured'] };
   }
 
-  const resend = getResend();
-  if (!resend) {
+  if (!isEmailConfigured()) {
     return { picked: 0, sent: 0, failed: 0, errors: ['Resend not configured'] };
   }
 
@@ -228,63 +234,32 @@ export async function processPendingDrips(opts: {
     return { picked: 0, sent: 0, failed, errors };
   }
 
-  // Load all drip templates once (we'll look up by slug for each row)
-  const templates = await loadDripTemplates(supabase);
-  const templateBySlug = new Map(templates.map((t) => [t.slug, t]));
-
   for (const row of rows as DripRow[]) {
-    const tpl = templateBySlug.get(row.step_key);
-    if (!tpl) {
-      errors.push(`no template for slug ${row.step_key}`);
-      await supabase
-        .from('email_drips')
-        .update({ status: 'failed', error: `template ${row.step_key} not found or inactive` })
-        .eq('id', row.id);
-      failed++;
-      continue;
-    }
+    // Locale was persisted at schedule time (Phase 84). Fall back
+    // to 'en' for rows backfilled before the migration landed.
+    const locale: EmailLocale = row.recipient_locale === 'zh' ? 'zh' : 'en';
 
-    const ctx = {
+    const variables: Record<string, string> = {
       firstName: row.recipient_first_name || 'there',
       email: row.recipient_email,
-      country: row.recipient_country || undefined,
-      intendedMajor: row.recipient_field || undefined,
+      country: row.recipient_country || '',
+      intendedMajor: row.recipient_field || '',
       sourceKind: row.source_kind,
       sourceId: row.source_id,
-      unsubToken: makeUnsubToken(row.recipient_email),
     };
 
-    let rendered;
     try {
-      rendered = renderTemplate({
-        subject: tpl.subject,
-        bodyHtml: tpl.body_html,
-        bodyText: tpl.body_text,
-        context: ctx,
-        allowedVariables: tpl.variables,
-      });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'render error';
-      errors.push(`render ${row.id}: ${msg}`);
-      await supabase
-        .from('email_drips')
-        .update({ status: 'failed', error: msg })
-        .eq('id', row.id);
-      failed++;
-      continue;
-    }
-
-    try {
-      const result = await resend.emails.send({
-        from: FROM,
+      const ok = await sendTemplatedEmail({
         to: row.recipient_email,
-        subject: rendered.subject,
-        html: rendered.html,
-        text: rendered.text,
+        slug: row.step_key,
+        locale,
+        variables,
+        unsubscribeToken: makeUnsubToken(row.recipient_email),
+        supabase,
       });
 
-      if (result.error) {
-        throw new Error(result.error.message);
+      if (!ok) {
+        throw new Error('sendTemplatedEmail returned false');
       }
 
       await supabase
@@ -292,7 +267,6 @@ export async function processPendingDrips(opts: {
         .update({
           status: 'sent',
           sent_at: new Date().toISOString(),
-          resend_message_id: result.data?.id ?? null,
           error: null,
         })
         .eq('id', row.id);
@@ -365,7 +339,7 @@ export function startDripScheduler(): void {
   if (started) return;
   started = true;
 
-  if (!isSupabaseServerConfigured() || !process.env.RESEND_API_KEY) {
+  if (!isSupabaseServerConfigured() || !isEmailConfigured()) {
     console.log('[drip] scheduler not started (Supabase or Resend not configured)');
     return;
   }

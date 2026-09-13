@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies, headers } from 'next/headers';
 import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
 import { sendAssessmentNotification } from '@/lib/email';
 import { scheduleDripSequence } from '@/lib/email/drip/scheduler';
@@ -147,6 +148,8 @@ export async function POST(request: NextRequest) {
     // in the future). Fire-and-forget so it doesn't block the
     // response. Idempotent — re-submitting the form won't
     // double-schedule.
+    const cookieStore = await cookies();
+    const headerStore = await headers();
     scheduleDripSequence({
       sourceKind: 'assessment',
       sourceId: data.id,
@@ -154,6 +157,8 @@ export async function POST(request: NextRequest) {
       firstName,
       country,
       intendedMajor: (body.intendedMajor as string) || undefined,
+      cookieLocale: cookieStore.get('sica-locale')?.value ?? null,
+      acceptLanguage: headerStore.get('accept-language'),
     }).catch((err) =>
       console.error('[POST /api/assessments] drip schedule failed:', err),
     );

@@ -5,9 +5,16 @@
  *
  * Three-column layout:
  *   - Left: list of templates, filtered by category
- *   - Middle: editor for the selected template (subject, body_html,
- *             body_text, variables, schedule fields)
+ *   - Middle: editor for the selected template (subject, body_text,
+ *             bilingual subject_zh / body_text_zh, language discriminator,
+ *             variables, schedule fields)
  *   - Right: live preview rendered with sample variables
+ *
+ * Phase 84: text-only — body_html was dropped. The editor now has a
+ * "Chinese variant" block (subject_zh + body_text_zh) under the
+ * English body, plus a small language discriminator Select.
+ * The preview pane renders plain text via <pre> (no more
+ * dangerouslySetInnerHTML).
  *
  * The "Send test" button renders + sends the template to the
  * admin's email (ADMIN_EMAIL) so they can sanity-check in their
@@ -41,6 +48,8 @@ import {
 import { apiFetchJson, ApiError } from '@/lib/api-client';
 import { Badge } from '@/components/ui/badge';
 
+type EmailLanguage = 'en' | 'zh';
+
 interface Template {
   id: string;
   slug: string;
@@ -48,8 +57,10 @@ interface Template {
   description: string | null;
   category: 'drip' | 'status' | 'oneoff';
   subject: string;
-  body_html: string;
+  subject_zh: string | null;
   body_text: string;
+  body_text_zh: string | null;
+  language: EmailLanguage;
   variables: string[];
   is_active: boolean;
   step_index: number | null;
@@ -93,7 +104,6 @@ export default function EmailTemplatesPage() {
   // template row directly, so the user can type without re-renders
   // blowing away their cursor position).
   const [form, setForm] = useState<Partial<Template>>({});
-  const [previewHtml, setPreviewHtml] = useState<string>('');
   const [previewSubject, setPreviewSubject] = useState<string>('');
   const [previewText, setPreviewText] = useState<string>('');
   const [isRendering, setIsRendering] = useState(false);
@@ -143,8 +153,10 @@ export default function EmailTemplatesPage() {
         name: form.name,
         description: form.description,
         subject: form.subject,
-        body_html: form.body_html,
+        subject_zh: form.subject_zh,
         body_text: form.body_text,
+        body_text_zh: form.body_text_zh,
+        language: form.language,
         variables: form.variables,
         is_active: form.is_active,
       };
@@ -174,7 +186,7 @@ export default function EmailTemplatesPage() {
     setIsRendering(true);
     setSaveError(null);
     try {
-      const res = await apiFetchJson<{ rendered: { subject: string; html: string; text: string } }>(
+      const res = await apiFetchJson<{ rendered: { subject: string; text: string } }>(
         '/api/admin/emails/templates/preview',
         {
           method: 'POST',
@@ -182,14 +194,12 @@ export default function EmailTemplatesPage() {
           body: JSON.stringify({
             template_id: selected?.id,
             subject: form.subject,
-            body_html: form.body_html,
             body_text: form.body_text,
             useSample: true,
           }),
         },
       );
       setPreviewSubject(res.rendered.subject);
-      setPreviewHtml(res.rendered.html);
       setPreviewText(res.rendered.text);
     } catch (err) {
       setSaveError(err instanceof ApiError ? err.message : 'Render failed');
@@ -250,8 +260,10 @@ export default function EmailTemplatesPage() {
           description: '',
           category,
           subject: 'Subject line here',
-          body_html: '<p>Hi {{firstName}},</p><p>Body here.</p>',
+          subject_zh: '中文标题',
           body_text: 'Hi {{firstName}},\n\nBody here.',
+          body_text_zh: '你好 {{firstName}}，\n\n正文。',
+          language: 'en',
           variables: category === 'drip' ? ['firstName', 'siteUrl', 'unsubToken'] : [],
           is_active: false,
         }),
@@ -421,11 +433,33 @@ export default function EmailTemplatesPage() {
               </div>
 
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Subject</label>
+                <label className="text-xs font-medium text-gray-600 block mb-1">Subject (English)</label>
                 <Input
                   value={form.subject || ''}
                   onChange={(e) => setForm((f) => ({ ...f, subject: e.target.value }))}
                 />
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-gray-600 block mb-1">
+                  Language discriminator
+                </label>
+                <Select
+                  value={form.language || 'en'}
+                  onValueChange={(v) => setForm((f) => ({ ...f, language: v as EmailLanguage }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="en">en (English primary)</SelectItem>
+                    <SelectItem value="zh">zh (Chinese primary)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Which variant the renderer picks by default. Auto-falls back to English if the
+                  chosen variant is empty.
+                </p>
               </div>
 
               <div>
@@ -471,26 +505,43 @@ export default function EmailTemplatesPage() {
 
               <div>
                 <label className="text-xs font-medium text-gray-600 block mb-1">
-                  Body (HTML) <span className="text-gray-400">— use <code className="bg-gray-100 px-1">$IF_VAR$</code> / <code className="bg-gray-100 px-1">$ELSE$</code> / <code className="bg-gray-100 px-1">$ENDIF$</code> for conditionals</span>
-                </label>
-                <Textarea
-                  value={form.body_html || ''}
-                  onChange={(e) => setForm((f) => ({ ...f, body_html: e.target.value }))}
-                  rows={12}
-                  className="font-mono text-xs"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">
                   Body (plain text)
+                  <span className="text-gray-400"> — use <code className="bg-gray-100 px-1">{'{{var}}'}</code> for substitution</span>
                 </label>
                 <Textarea
                   value={form.body_text || ''}
                   onChange={(e) => setForm((f) => ({ ...f, body_text: e.target.value }))}
-                  rows={6}
+                  rows={10}
                   className="font-mono text-xs"
                 />
+              </div>
+
+              <div className="border-t pt-4 space-y-3">
+                <div>
+                  <h4 className="text-sm font-semibold text-[#1B2A4A]">Chinese variant</h4>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Used automatically when the recipient's locale is Chinese, or when the
+                    language discriminator above is set to zh.
+                  </p>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600 block mb-1">Subject (中文)</label>
+                  <Input
+                    value={form.subject_zh || ''}
+                    onChange={(e) => setForm((f) => ({ ...f, subject_zh: e.target.value }))}
+                    placeholder="中文标题"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600 block mb-1">Body (中文)</label>
+                  <Textarea
+                    value={form.body_text_zh || ''}
+                    onChange={(e) => setForm((f) => ({ ...f, body_text_zh: e.target.value }))}
+                    rows={8}
+                    className="font-mono text-xs"
+                    placeholder="中文正文，使用 {{变量名}} 进行占位符替换"
+                  />
+                </div>
               </div>
 
               <div>
@@ -557,17 +608,10 @@ export default function EmailTemplatesPage() {
                 <p className="text-sm font-medium text-[#1F2937] mb-4 border-b pb-3">
                   {previewSubject || '—'}
                 </p>
-                <p className="text-xs text-gray-500 mb-1">Body (HTML rendered)</p>
-                <div
-                  className="text-sm text-[#1F2937] prose prose-sm max-w-none"
-                  dangerouslySetInnerHTML={{ __html: previewHtml || '<p class="text-gray-400">Click Re-render preview</p>' }}
-                />
-                <details className="mt-4">
-                  <summary className="text-xs text-gray-500 cursor-pointer">Plain text</summary>
-                  <pre className="mt-2 text-xs text-gray-700 whitespace-pre-wrap bg-gray-50 p-2">
-                    {previewText}
-                  </pre>
-                </details>
+                <p className="text-xs text-gray-500 mb-1">Body (plain text)</p>
+                <pre className="text-xs text-[#1F2937] whitespace-pre-wrap bg-gray-50 p-3 border border-gray-200 font-mono">
+                  {previewText || 'Click Re-render preview'}
+                </pre>
               </div>
             </div>
           ) : (

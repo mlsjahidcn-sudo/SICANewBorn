@@ -38,14 +38,17 @@ export async function PATCH(
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  // Whitelist writable fields
+  // Whitelist writable fields (Phase 84: body_html dropped; bilingual
+  // subject/body + language discriminator are the new writable text fields)
   const updates: Record<string, unknown> = { updated_by: auth.user.id };
   const allowed: string[] = [
     'name',
     'description',
     'subject',
-    'body_html',
+    'subject_zh',
     'body_text',
+    'body_text_zh',
+    'language',
     'variables',
     'is_active',
     'step_index',

@@ -4,9 +4,13 @@
  * GET  /api/admin/emails/templates?category=drip|status|oneoff
  * POST /api/admin/emails/templates
  *
- * Read returns the full editable content (subject + body_html +
- * body_text + variables + schedule fields). Updates happen on the
- * /[id] route, sends on /[id]/send.
+ * Read returns the full editable content (subject + body_text +
+ * bilingual subject/body + variables + schedule fields). Updates
+ * happen on the /[id] route, sends on /[id]/send.
+ *
+ * Phase 84: `body_html` was dropped — text-only pipeline now.
+ * New columns: `language` (en|zh discriminator), `subject_zh`,
+ * `body_text_zh`.
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServer } from '@/lib/supabase-server';
@@ -15,6 +19,7 @@ import { requireAdmin } from '@/lib/supabase-auth';
 export const dynamic = 'force-dynamic';
 
 const CATEGORIES = ['drip', 'status', 'oneoff'] as const;
+const LANGUAGES = ['en', 'zh'] as const;
 
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
@@ -32,7 +37,9 @@ export async function GET(request: NextRequest) {
 
   let q = supabase
     .from('email_templates')
-    .select('id, slug, name, description, category, subject, body_html, body_text, variables, is_active, step_index, delay_ms, updated_at, updated_by, created_at')
+    .select(
+      'id, slug, name, description, category, language, subject, subject_zh, body_text, body_text_zh, variables, is_active, step_index, delay_ms, updated_at, updated_by, created_at',
+    )
     .order('category', { ascending: true })
     .order('step_index', { ascending: true, nullsFirst: false })
     .order('slug', { ascending: true });
@@ -52,9 +59,11 @@ interface CreateBody {
   name?: string;
   description?: string;
   category?: string;
+  language?: string;
   subject?: string;
-  body_html?: string;
+  subject_zh?: string;
   body_text?: string;
+  body_text_zh?: string;
   variables?: string[];
   is_active?: boolean;
   step_index?: number | null;
@@ -79,11 +88,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  if (!body.slug || !body.name || !body.category || !body.subject || !body.body_html || !body.body_text) {
+  if (!body.slug || !body.name || !body.category || !body.subject || !body.body_text) {
     return NextResponse.json(
       {
-        error:
-          'slug, name, category, subject, body_html, body_text are required',
+        error: 'slug, name, category, subject, body_text are required',
       },
       { status: 400 },
     );
@@ -91,6 +99,13 @@ export async function POST(request: NextRequest) {
   if (!(CATEGORIES as readonly string[]).includes(body.category)) {
     return NextResponse.json(
       { error: `category must be one of: ${CATEGORIES.join(', ')}` },
+      { status: 400 },
+    );
+  }
+  const language = (body.language || 'en') as 'en' | 'zh';
+  if (!(LANGUAGES as readonly string[]).includes(language)) {
+    return NextResponse.json(
+      { error: `language must be one of: ${LANGUAGES.join(', ')}` },
       { status: 400 },
     );
   }
@@ -110,9 +125,11 @@ export async function POST(request: NextRequest) {
       name: body.name,
       description: body.description || null,
       category: body.category,
+      language,
       subject: body.subject,
-      body_html: body.body_html,
+      subject_zh: body.subject_zh || null,
       body_text: body.body_text,
+      body_text_zh: body.body_text_zh || null,
       variables: body.variables || [],
       is_active: body.is_active !== false,
       step_index: body.category === 'drip' ? (body.step_index ?? null) : null,

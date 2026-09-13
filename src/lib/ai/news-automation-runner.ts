@@ -1,4 +1,4 @@
-import { Resend } from 'resend';
+import { sendTextEmail } from '@/lib/email';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServer } from '@/lib/supabase-server';
 import { getAIProvider } from '@/lib/ai/provider';
@@ -423,13 +423,7 @@ ${args.errorLog}
 
 Check /admin/news → Automation to investigate or retry.`;
   try {
-    const resend = new Resend(process.env.RESEND_API_KEY);
-    await resend.emails.send({
-      from: 'SICA <noreply@sica.com.cn>',
-      to,
-      subject,
-      text,
-    });
+    await sendTextEmail({ to, subject, text });
   } catch (err) {
     console.error('[generate-news] failure notification email failed:', err);
   }

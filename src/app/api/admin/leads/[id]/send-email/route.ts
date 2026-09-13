@@ -1,4 +1,3 @@
-import { SITE_URL } from '@/lib/site-url';
 /**
  * Admin: send a one-off email to a lead.
  *
@@ -6,8 +5,7 @@ import { SITE_URL } from '@/lib/site-url';
  * body: {
  *   template_id?: string,    // render this template
  *   subject?: string,        // OR override the template's subject
- *   body_html?: string,
- *   body_text?: string,
+ *   body_text?: string,      // (custom one-off — required when no template_id)
  *   variables?: { ... },     // context for the template
  *   to_email?: string,       // override the recipient (default = lead's email)
  *   to_name?: string,
@@ -15,23 +13,33 @@ import { SITE_URL } from '@/lib/site-url';
  * }
  *
  * Either pick a template (template_id) or write a custom one-off
- * (subject + body_html + body_text). Either way, the result is
- * rendered with the renderer, sent via Resend, and logged to
- * email_log.
+ * (subject + body_text). Either way, the result is rendered with
+ * the central email module (Phase 84), sent via Resend, and
+ * logged to email_log.
  *
- * Response: { log, rendered }
+ * Phase 84: text-only — body_html removed from this route.
+ * Templated sends go through `sendTemplatedEmail`; custom one-offs
+ * through `sendTextEmail`. Both end up in email_log with status +
+ * resend_message_id.
+ *
+ * Response: { log, rendered: { subject } }
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServer } from '@/lib/supabase-server';
 import { requireAdmin } from '@/lib/supabase-auth';
-import { renderTemplate } from '@/lib/email/renderer';
-import { Resend } from 'resend';
+import {
+  formatWithSignature,
+  loadTemplate,
+  renderTextTemplate,
+  sendTemplatedEmail,
+  sendTextEmail,
+  type EmailLocale,
+} from '@/lib/email/index';
+import { SITE_URL } from '@/lib/site-url';
 
 export const dynamic = 'force-dynamic';
 
 type LeadType = 'contact' | 'chat' | 'assessment';
-
-const FROM = 'SICA <noreply@sica.com.cn>';
 
 function tableFor(t: LeadType): string {
   switch (t) {
@@ -84,12 +92,12 @@ export async function POST(
   let body: {
     template_id?: string;
     subject?: string;
-    body_html?: string;
     body_text?: string;
     variables?: Record<string, string>;
     to_email?: string;
     to_name?: string;
     send_test?: boolean;
+    locale?: string;
   };
   try {
     body = await request.json();
@@ -110,46 +118,31 @@ export async function POST(
     return NextResponse.json({ error: 'Lead not found' }, { status: 404 });
   }
 
-  // Resolve subject + bodies
-  let subject = body.subject || '';
-  let bodyHtml = body.body_html || '';
-  let bodyText = body.body_text || '';
-  let allowed: string[] | undefined;
+  const leadRow = lead as Record<string, unknown>;
+
+  // Resolve template (slug + active check)
   let templateSlug: string | null = null;
   let templateId: string | null = null;
-
   if (body.template_id) {
-    const { data: tpl, error: tplErr } = await supabase
+    const { data: tplMeta, error: tplErr } = await supabase
       .from('email_templates')
-      .select('id, slug, subject, body_html, body_text, variables, is_active')
+      .select('id, slug, is_active')
       .eq('id', body.template_id)
       .maybeSingle();
     if (tplErr) {
       return NextResponse.json({ error: tplErr.message }, { status: 500 });
     }
-    if (!tpl) {
+    if (!tplMeta) {
       return NextResponse.json({ error: 'Template not found' }, { status: 404 });
     }
-    if (!tpl.is_active) {
+    if (!tplMeta.is_active) {
       return NextResponse.json({ error: 'Template is inactive' }, { status: 400 });
     }
-    templateId = tpl.id;
-    templateSlug = tpl.slug;
-    subject = body.subject || tpl.subject;
-    bodyHtml = body.body_html || tpl.body_html;
-    bodyText = body.body_text || tpl.body_text;
-    allowed = Array.isArray(tpl.variables) ? (tpl.variables as string[]) : undefined;
+    templateId = tplMeta.id;
+    templateSlug = tplMeta.slug;
   }
 
-  if (!subject || !bodyHtml) {
-    return NextResponse.json(
-      { error: 'Provide template_id OR subject+body_html' },
-      { status: 400 },
-    );
-  }
-
-  // Build context. Start with the lead's known fields as defaults.
-  const leadRow = lead as Record<string, unknown>;
+  // Resolve recipient + send-test path
   let toEmail: string | null = body.to_email || pickString(leadRow, ['email']);
   let toName: string | null =
     body.to_name ||
@@ -180,7 +173,7 @@ export async function POST(
   }
 
   // Default context from the lead row
-  const ctx: Record<string, string> = {
+  const variables: Record<string, string> = {
     firstName: (toName || '').split(' ')[0] || 'there',
     country: pickString(leadRow, ['country']) || '',
     intendedMajor:
@@ -192,27 +185,45 @@ export async function POST(
     ...(body.variables || {}),
   };
 
-  // Render
-  let rendered;
-  try {
-    rendered = renderTemplate({
-      subject,
-      bodyHtml,
-      bodyText,
-      context: ctx,
-      allowedVariables: allowed,
-    });
-  } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'render failed' },
-      { status: 400 },
-    );
+  const locale: EmailLocale = body.locale === 'zh' ? 'zh' : 'en';
+
+  // Render subject + body_text up front. The templated branch uses
+  // loadTemplate + renderTextTemplate; the custom branch uses the
+  // caller's literal subject + body_text. Either way, we end up
+  // with a final (subject, bodyText) pair that we run through
+  // formatWithSignature.
+  let finalSubject: string;
+  let finalBodyText: string;
+  if (templateSlug) {
+    const tpl = await loadTemplate(templateSlug, locale, supabase);
+    if (!tpl) {
+      return NextResponse.json(
+        { error: 'Template not found or inactive' },
+        { status: 404 },
+      );
+    }
+    finalSubject = body.subject || tpl.subject;
+    finalBodyText = renderTextTemplate(tpl.body_text, variables);
+  } else {
+    if (!body.subject || !body.body_text) {
+      return NextResponse.json(
+        { error: 'Provide template_id OR subject+body_text' },
+        { status: 400 },
+      );
+    }
+    finalSubject = body.subject;
+    finalBodyText = renderTextTemplate(body.body_text, variables);
   }
 
-  // Dry-run fallback: when RESEND_API_KEY isn't set, log the email
-  // anyway so the admin can verify the template + variables in
-  // the email_log table. Returns 503 so the UI can show "not sent"
-  // distinctly.
+  const rendered = formatWithSignature({
+    subject: finalSubject,
+    bodyText: finalBodyText,
+  });
+
+  // Rate-limit-fallback dry-run path: when RESEND_API_KEY isn't set,
+  // log the email anyway so the admin can verify the template +
+  // variables in the email_log table. Returns 503 so the UI can show
+  // "not sent" distinctly.
   if (!process.env.RESEND_API_KEY) {
     const { data: log, error: logErr } = await supabase
       .from('email_log')
@@ -224,7 +235,6 @@ export async function POST(
         to_email: toEmail,
         to_name: toName,
         subject: rendered.subject,
-        body_html: rendered.html,
         body_text: rendered.text,
         resend_message_id: null,
         status: 'failed',
@@ -237,6 +247,17 @@ export async function POST(
     if (logErr) {
       return NextResponse.json({ error: logErr.message }, { status: 500 });
     }
+    await supabase.from('lead_history').insert({
+      lead_type: type,
+      lead_id: id,
+      admin_id: auth.user.id,
+      action: 'notes_updated',
+      from_value: null,
+      to_value: null,
+      note: body.send_test
+        ? `Sent test email (dry-run): ${rendered.subject}`
+        : `Sent email (dry-run): ${rendered.subject}`,
+    });
     return NextResponse.json(
       {
         log,
@@ -247,20 +268,35 @@ export async function POST(
     );
   }
 
-  // Send via Resend
-  const resend = new Resend(process.env.RESEND_API_KEY);
-  const now = new Date().toISOString();
-  const result = await resend.emails.send({
-    from: FROM,
-    to: toEmail,
-    replyTo: process.env.ADMIN_EMAIL,
-    subject: rendered.subject,
-    html: rendered.html,
-    text: rendered.text,
-  });
+  // Actual send. Templated path uses sendTemplatedEmail (it re-loads
+  // and re-renders internally with our variables); custom one-off
+  // path uses sendTextEmail directly with the pre-rendered output.
+  let sendOk = false;
+  let sendError: string | null = null;
+  let resendId: string | null = null;
+  const replyTo = process.env.ADMIN_EMAIL || undefined;
+  if (templateSlug) {
+    sendOk = await sendTemplatedEmail({
+      to: toEmail,
+      slug: templateSlug,
+      locale,
+      variables,
+      supabase,
+      ...(replyTo ? { replyTo } : {}),
+    });
+  } else {
+    const result = await sendTextEmail({
+      to: toEmail,
+      subject: rendered.subject,
+      text: rendered.text,
+      ...(replyTo ? { replyTo } : {}),
+    });
+    sendOk = result.ok;
+    resendId = result.id ?? null;
+    sendError = result.error ?? null;
+  }
 
-  const resendOk = !result.error;
-  const resendId = result.data?.id ?? null;
+  const now = new Date().toISOString();
 
   // Log to email_log
   const { data: log, error: logErr } = await supabase
@@ -273,13 +309,12 @@ export async function POST(
       to_email: toEmail,
       to_name: toName,
       subject: rendered.subject,
-      body_html: rendered.html,
       body_text: rendered.text,
       resend_message_id: resendId,
-      status: resendOk ? 'sent' : 'failed',
-      error: result.error?.message ?? null,
+      status: sendOk ? 'sent' : 'failed',
+      error: sendError,
       sent_by: auth.user.id,
-      sent_at: resendOk ? now : null,
+      sent_at: sendOk ? now : null,
     })
     .select('*')
     .single();
