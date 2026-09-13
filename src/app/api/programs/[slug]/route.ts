@@ -10,6 +10,8 @@ import { requireAdmin } from '@/lib/supabase-auth';
 import { mapProgramFromDb, mapProgramToDb } from '@/lib/catalog-mappers';
 // Phase 72: emit B2B webhook events on program mutations.
 import { dispatchEvent } from '@/lib/webhook-emitter';
+// Track 1.3 U4 #1: cascade delete helpers.
+import { isForceDelete, summarizeCascade } from '@/lib/cascade-delete';
 
 export async function GET(
   _request: Request,
@@ -110,19 +112,87 @@ export async function DELETE(
   }
 
   const { slug } = await params;
-  const { error } = await supabaseServer
+  const url = new URL(request.url);
+  const force = isForceDelete(url);
+
+  // Track 1.3 U4 #1: count dependent partner_promotions. partner_applications
+  // also FK to program_slug (CASCADE) but they're transparent — we surface
+  // their count separately so admins know what they're deleting.
+  const [{ count: promoCount }, { count: appCount }] = await Promise.all([
+    supabaseServer
+      .from('partner_promotions')
+      .select('id', { count: 'exact', head: true })
+      .eq('program_slug', slug),
+    supabaseServer
+      .from('partner_applications')
+      .select('id', { count: 'exact', head: true })
+      .eq('program_slug', slug),
+  ]);
+
+  // For the cascade-summary helper we lump both into partnerPromotions
+  // (it's the only count the helper knows about). Real response shape
+  // below surfaces both numbers separately.
+  const summary = summarizeCascade({
+    programs: 0, // no nested programs under a program
+    partnerPromotions: (promoCount ?? 0) + (appCount ?? 0),
+  });
+
+  if (!summary.ok) {
+    return NextResponse.json(
+      {
+        error: summary.hint,
+        code: 'CASCADE_BLOCKED',
+        counts: {
+          partnerPromotions: promoCount ?? 0,
+          partnerApplications: appCount ?? 0,
+          total: (promoCount ?? 0) + (appCount ?? 0),
+        },
+        requiresForce: true,
+      },
+      { status: 409 },
+    );
+  }
+
+  // When force=true, delete the dependents first. partner_applications
+  // has ON DELETE CASCADE on program_slug, so it'll go automatically when
+  // the program row dies — but we explicitly delete partner_promotions
+  // first since that's a real FK with CASCADE we want to surface in the
+  // return counts.
+  if (force && (promoCount ?? 0) > 0) {
+    const { error: promoErr } = await supabaseServer
+      .from('partner_promotions')
+      .delete()
+      .eq('program_slug', slug);
+    if (promoErr) {
+      console.error('[programs/:slug DELETE] promotions cascade error:', promoErr);
+      return NextResponse.json(
+        { error: 'Failed to delete dependent promotions', code: 'CASCADE_FAILED' },
+        { status: 500 },
+      );
+    }
+  }
+
+  const { error, count: deletedCount } = await supabaseServer
     .from('programs')
-    .delete()
+    .delete({ count: 'exact' })
     .eq('slug', slug);
 
   if (error) {
     console.error('[programs/:slug DELETE] supabase error:', error);
     return NextResponse.json({ error: 'Failed to delete program' }, { status: 400 });
   }
+
   revalidateTag(CACHE_TAGS.programs, 'default');
   revalidateTag(CACHE_TAGS.program(slug), 'default');
   // Phase 72: fire program.deleted webhook
   void dispatchEvent('program.deleted', { slug });
-  return NextResponse.json({ success: true });
+  return NextResponse.json({
+    success: true,
+    counts: {
+      partnerPromotions: promoCount ?? 0,
+      partnerApplications: appCount ?? 0,
+    },
+    deleted: (deletedCount ?? 0) > 0,
+  });
 }
 

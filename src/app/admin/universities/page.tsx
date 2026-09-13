@@ -11,7 +11,7 @@ import { ConfirmDialog } from '@/components/admin/confirm-dialog';
 import { AIGenerateModal } from '@/components/admin/ai-generate-modal';
 import { AIBulkGenerateModal } from '@/components/admin/ai-bulk-generate-modal';
 import { useI18n } from '@/lib/i18n';
-import { apiFetch } from '@/lib/api-client';
+import { apiFetch, apiFetchJson, ApiError } from '@/lib/api-client';
 
 // Phase 55: page size for the admin table. 25 keeps the table
 // scannable on a 1080p screen without scrolling for the first
@@ -42,6 +42,14 @@ function UniversitiesPageInner() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<University | null>(null);
+  // Track 1.3 U4 #1: when the API refuses a delete (409 CASCADE_BLOCKED),
+  // we surface the child counts here so the confirm dialog can warn
+  // before the user re-confirms with ?force=true.
+  const [cascadeCounts, setCascadeCounts] = useState<{
+    programs: number;
+    partnerPromotions: number;
+  } | null>(null);
+  const [cascadePending, setCascadePending] = useState(false);
   const [showAIModal, setShowAIModal] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [aiMode, setAiMode] = useState<'create' | 'regenerate'>('create');
@@ -118,24 +126,46 @@ function UniversitiesPageInner() {
     }
   }, [loadingMore, hasMore, debouncedSearch, page, universities.length, addToast, t]);
 
-  const handleDelete = useCallback(async (uni: University) => {
-    try {
-      const res = await apiFetch(`/api/universities/${uni.slug}`, { method: 'DELETE' });
-      if (res.ok) {
+  const handleDelete = useCallback(
+    async (uni: University, force = false) => {
+      try {
+        const url = force
+          ? `/api/universities/${uni.slug}?force=true`
+          : `/api/universities/${uni.slug}`;
+        await apiFetchJson<{
+          success: true;
+          counts: { programs: number; partnerPromotions: number };
+          deleted: boolean;
+        }>(url, { method: 'DELETE' });
         // Remove the row locally instead of re-fetching the full
         // page (the API is paginated; the deleted row is the last
         // one we want to disappear visually).
         setUniversities((prev) => prev.filter((u) => u.slug !== uni.slug));
         setTotal((prev) => Math.max(0, prev - 1));
+        setCascadeCounts(null);
         addToast(t('adminUniversities.toastDeleted'), 'success');
-      } else {
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 409) {
+          // CASCADE_BLOCKED — surface the counts in the dialog so
+          // the admin can re-confirm with force.
+          const body = err.body as {
+            code?: string;
+            counts?: { programs: number; partnerPromotions: number };
+          } | null;
+          if (body && body.code === 'CASCADE_BLOCKED' && body.counts) {
+            setCascadeCounts(body.counts);
+            setCascadePending(false);
+            return;
+          }
+        }
         addToast(t('adminUniversities.toastDeleteFailed'), 'error');
       }
-    } catch {
-      addToast(t('adminUniversities.toastDeleteFailed'), 'error');
-    }
-    setDeleteTarget(null);
-  }, [addToast, t]);
+      setDeleteTarget(null);
+      setCascadeCounts(null);
+      setCascadePending(false);
+    },
+    [addToast, t],
+  );
 
   const openAIModalCreate = () => {
     setAiMode('create');
@@ -324,11 +354,49 @@ function UniversitiesPageInner() {
 
       <ConfirmDialog
         open={!!deleteTarget}
-        onCancel={() => setDeleteTarget(null)}
-        onConfirm={() => deleteTarget && handleDelete(deleteTarget)}
-        title={t('adminUniversities.deleteConfirmTitle')}
-        message={t('adminUniversities.deleteConfirmMessage', { name: deleteTarget?.name ?? '' })}
-        confirmText={t('adminUniversities.delete')}
+        onCancel={() => {
+          setDeleteTarget(null);
+          setCascadeCounts(null);
+          setCascadePending(false);
+        }}
+        onConfirm={() => {
+          if (!deleteTarget) return;
+          // First click → tentative delete. If the API returns 409
+          // CASCADE_BLOCKED, we set `cascadeCounts` and the dialog
+          // re-renders with the impact summary + a "force" label on
+          // the confirm button. Second click → ?force=true.
+          if (cascadeCounts) {
+            setCascadePending(true);
+            void handleDelete(deleteTarget, true);
+            return;
+          }
+          void handleDelete(deleteTarget, false);
+        }}
+        title={
+          cascadeCounts
+            ? t('adminUniversities.cascadeConfirmTitle', {
+                name: deleteTarget?.name ?? '',
+                programs: cascadeCounts.programs,
+                promotions: cascadeCounts.partnerPromotions,
+              })
+            : t('adminUniversities.deleteConfirmTitle')
+        }
+        message={
+          cascadeCounts
+            ? t('adminUniversities.cascadeConfirmMessage', {
+                programs: cascadeCounts.programs,
+                promotions: cascadeCounts.partnerPromotions,
+              })
+            : t('adminUniversities.deleteConfirmMessage', {
+                name: deleteTarget?.name ?? '',
+              })
+        }
+        confirmText={
+          cascadeCounts
+            ? t('adminUniversities.cascadeConfirmForce')
+            : t('adminUniversities.delete')
+        }
+        variant={cascadeCounts ? 'warning' : 'danger'}
       />
 
       <AIGenerateModal

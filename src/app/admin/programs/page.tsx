@@ -7,7 +7,7 @@ import { programs as staticPrograms, universities as staticUniversities, type Pr
 import { ToastProvider, useToast } from '@/components/admin/toast';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
 import { useI18n } from '@/lib/i18n';
-import { apiFetch } from '@/lib/api-client';
+import { apiFetchJson, ApiError } from '@/lib/api-client';
 
 // Phase 56: page size for the admin programs table. 25 keeps
 // the table scannable, matches the universities page (admin is
@@ -52,6 +52,13 @@ function ProgramsPageInner() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filterDegree, setFilterDegree] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<Program | null>(null);
+  // Track 1.3 U4 #1: when the API refuses a delete (409 CASCADE_BLOCKED),
+  // we surface the child counts here so the confirm dialog can warn
+  // before the user re-confirms with ?force=true.
+  const [cascadeCounts, setCascadeCounts] = useState<{
+    partnerPromotions: number;
+    partnerApplications: number;
+  } | null>(null);
 
   // Fetch live programs from the API and merge with the static
   // fallback by slug. DB wins on conflict (richer data, fresher
@@ -132,22 +139,34 @@ function ProgramsPageInner() {
   };
 
   const handleDelete = useCallback(
-    async (prog: Program) => {
+    async (prog: Program, force = false) => {
       try {
-        const res = await apiFetch(`/api/programs/${prog.slug}`, { method: 'DELETE' });
-        if (res.ok) {
-          // Local remove: the DB still serves the merged list as
-          // the source of truth, but we patch the in-memory copy
-          // to match. The next mount will re-fetch.
-          setPrograms((prev) => prev.filter((p) => p.slug !== prog.slug));
-          addToast(t('adminPrograms.toastDeleted'), 'success');
-        } else {
-          addToast(t('adminPrograms.toastDeleteFailed'), 'error');
+        const url = force
+          ? `/api/programs/${prog.slug}?force=true`
+          : `/api/programs/${prog.slug}`;
+        await apiFetchJson<{
+          success: true;
+          counts: { partnerPromotions: number; partnerApplications: number };
+          deleted: boolean;
+        }>(url, { method: 'DELETE' });
+        setPrograms((prev) => prev.filter((p) => p.slug !== prog.slug));
+        setCascadeCounts(null);
+        addToast(t('adminPrograms.toastDeleted'), 'success');
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 409) {
+          const body = err.body as {
+            code?: string;
+            counts?: { partnerPromotions: number; partnerApplications: number };
+          } | null;
+          if (body && body.code === 'CASCADE_BLOCKED' && body.counts) {
+            setCascadeCounts(body.counts);
+            return;
+          }
         }
-      } catch {
         addToast(t('adminPrograms.toastDeleteFailed'), 'error');
       }
       setDeleteTarget(null);
+      setCascadeCounts(null);
     },
     [addToast, t],
   );
@@ -313,11 +332,43 @@ function ProgramsPageInner() {
 
       <ConfirmDialog
         open={!!deleteTarget}
-        onCancel={() => setDeleteTarget(null)}
-        onConfirm={() => deleteTarget && handleDelete(deleteTarget)}
-        title={t('adminPrograms.deleteDialogTitle')}
-        message={t('adminPrograms.deleteDialogMessage', { name: deleteTarget?.name ?? '' })}
-        confirmText={t('adminPrograms.deleteDialogConfirm')}
+        onCancel={() => {
+          setDeleteTarget(null);
+          setCascadeCounts(null);
+        }}
+        onConfirm={() => {
+          if (!deleteTarget) return;
+          if (cascadeCounts) {
+            void handleDelete(deleteTarget, true);
+            return;
+          }
+          void handleDelete(deleteTarget, false);
+        }}
+        title={
+          cascadeCounts
+            ? t('adminPrograms.cascadeDialogTitle', {
+                name: deleteTarget?.name ?? '',
+                promotions: cascadeCounts.partnerPromotions,
+                applications: cascadeCounts.partnerApplications,
+              })
+            : t('adminPrograms.deleteDialogTitle')
+        }
+        message={
+          cascadeCounts
+            ? t('adminPrograms.cascadeDialogMessage', {
+                promotions: cascadeCounts.partnerPromotions,
+                applications: cascadeCounts.partnerApplications,
+              })
+            : t('adminPrograms.deleteDialogMessage', {
+                name: deleteTarget?.name ?? '',
+              })
+        }
+        confirmText={
+          cascadeCounts
+            ? t('adminPrograms.cascadeDialogForce')
+            : t('adminPrograms.deleteDialogConfirm')
+        }
+        variant={cascadeCounts ? 'warning' : 'danger'}
       />
     </div>
   );

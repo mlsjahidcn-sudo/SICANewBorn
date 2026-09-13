@@ -2383,6 +2383,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminUniversities.loadMoreEnd': '— end of list —',
     'adminUniversities.deleteConfirmTitle': 'Delete University',
     'adminUniversities.deleteConfirmMessage': 'Are you sure you want to delete "{{name}}"? This action cannot be undone.',
+    'adminUniversities.cascadeConfirmTitle': 'Delete "{{name}}" + dependents',
+    'adminUniversities.cascadeConfirmMessage': 'This will also delete {{programs}} program(s) and {{promotions}} partner promotion(s) linked to this university. This action cannot be undone.',
+    'adminUniversities.cascadeConfirmForce': 'Yes, delete all',
     'adminUniversities.toastDeleted': 'University deleted successfully',
     'adminUniversities.toastDeleteFailed': 'Failed to delete university',
     'adminUniversities.toastUpdatedViaAi': 'University updated via AI re-generation!',
@@ -3049,6 +3052,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminPrograms.deleteDialogTitle': 'Delete Program',
     'adminPrograms.deleteDialogMessage': 'Are you sure you want to delete "{{name}}"? This action cannot be undone.',
     'adminPrograms.deleteDialogConfirm': 'Delete',
+    'adminPrograms.cascadeDialogTitle': 'Delete "{{name}}" + dependents',
+    'adminPrograms.cascadeDialogMessage': 'This will also delete {{promotions}} partner promotion(s) and {{applications}} partner application(s) linked to this program. Partner applications will cascade automatically.',
+    'adminPrograms.cascadeDialogForce': 'Yes, delete all',
     'adminPrograms.fallbackError':
       'Could not reach /api/programs — showing local fallback. If you recently imported programs, refresh to retry.',
 
@@ -6353,6 +6359,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminUniversities.loadMoreEnd': '— 已加载全部 —',
     'adminUniversities.deleteConfirmTitle': '删除大学',
     'adminUniversities.deleteConfirmMessage': '确定删除「{{name}}」吗？此操作无法撤销。',
+    'adminUniversities.cascadeConfirmTitle': '删除「{{name}}」及其关联数据',
+    'adminUniversities.cascadeConfirmMessage': '将同时删除 {{programs}} 个项目 + {{promotions}} 个合作伙伴推广。此操作无法撤销。',
+    'adminUniversities.cascadeConfirmForce': '确认全部删除',
     'adminUniversities.toastDeleted': '已成功删除大学',
     'adminUniversities.toastDeleteFailed': '删除大学失败',
     'adminUniversities.toastUpdatedViaAi': '大学已通过 AI 重新生成并更新！',
@@ -6995,6 +7004,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminPrograms.deleteDialogTitle': '删除项目',
     'adminPrograms.deleteDialogMessage': '确定要删除「{{name}}」吗？该操作不可撤销。',
     'adminPrograms.deleteDialogConfirm': '删除',
+    'adminPrograms.cascadeDialogTitle': '删除「{{name}}」及其关联数据',
+    'adminPrograms.cascadeDialogMessage': '将同时删除 {{promotions}} 个合作伙伴推广 + {{applications}} 个合作伙伴申请（申请记录会自动级联删除）。',
+    'adminPrograms.cascadeDialogForce': '确认全部删除',
     'adminPrograms.fallbackError':
       '无法连接到 /api/projects —— 当前显示的是本地缓存。如近期导入了项目，请刷新重试。',
 
