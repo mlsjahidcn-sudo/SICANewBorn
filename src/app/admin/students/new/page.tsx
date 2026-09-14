@@ -282,7 +282,7 @@ export default function AdminAddStudentPage() {
         studentName: `${data.student.firstName} ${data.student.lastName}`.trim(),
         studentEmail: data.student.email,
         temporaryPassword: data.temporaryPassword,
-        emailSent: data.emailSent !== false,
+        emailSent: data.emailSent === true,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : t('adminStudentForm.errorCreateFailed'));
@@ -582,7 +582,10 @@ export default function AdminAddStudentPage() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <Label htmlFor="email" className="text-[#1B2A4A]">{t('adminStudentForm.fieldEmail')}</Label>
+                    <Label htmlFor="email" className="text-[#1B2A4A]">
+                      {t('adminStudentForm.fieldEmail')}
+                      <span className="text-gray-400 text-xs ml-2">{t('adminStudentForm.optionalForPartner')}</span>
+                    </Label>
                     <Input
                       id="email"
                       name="email"
@@ -590,11 +593,14 @@ export default function AdminAddStudentPage() {
                       value={formData.email}
                       onChange={(e) => handleInputChange(e.target.name, e.target.value)}
                       className="mt-2"
-                      required
+                      placeholder={t('adminStudentForm.placeholderEmail')}
                     />
                   </div>
                   <div>
-                    <Label htmlFor="phone" className="text-[#1B2A4A]">{t('adminStudentForm.fieldPhone')}</Label>
+                    <Label htmlFor="phone" className="text-[#1B2A4A]">
+                      {t('adminStudentForm.fieldPhone')}
+                      <span className="text-gray-400 text-xs ml-2">{t('adminStudentForm.optionalForPartner')}</span>
+                    </Label>
                     <Input
                       id="phone"
                       name="phone"
@@ -602,7 +608,7 @@ export default function AdminAddStudentPage() {
                       value={formData.phone}
                       onChange={(e) => handleInputChange(e.target.name, e.target.value)}
                       className="mt-2"
-                      required
+                      placeholder={t('adminStudentForm.placeholderPhone')}
                     />
                   </div>
                   <div>
@@ -617,14 +623,17 @@ export default function AdminAddStudentPage() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="country" className="text-[#1B2A4A]">{t('adminStudentForm.fieldCountryRequired')}</Label>
+                    <Label htmlFor="country" className="text-[#1B2A4A]">
+                      {t('adminStudentForm.fieldCountry')}
+                      <span className="text-gray-400 text-xs ml-2">{t('adminStudentForm.optionalForPartner')}</span>
+                    </Label>
                     <Input
                       id="country"
                       name="country"
                       value={formData.country}
                       onChange={(e) => handleInputChange(e.target.name, e.target.value)}
                       className="mt-2"
-                      required
+                      placeholder={t('adminStudentForm.placeholderCountry')}
                     />
                   </div>
                   <div className="md:col-span-2">

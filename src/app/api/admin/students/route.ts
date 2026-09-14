@@ -181,16 +181,22 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    // Validate required fields
-    if (!body.email || typeof body.email !== 'string') {
-      return NextResponse.json({ error: 'email is required' }, { status: 400 });
-    }
+    // Validate required fields.
+    // Email is now OPTIONAL (Phase 90) — partner-referred students
+    // don't need it on the admin side; the partner has it. When the
+    // admin leaves it blank, we synthesize a placeholder email so
+    // Supabase auth.users (which has email NOT NULL) accepts the row.
+    // Phone + country were never required by the schema, only by the
+    // wizard's HTML `required` attribute (which we also removed).
     if (!body.firstName || !body.lastName) {
       return NextResponse.json(
         { error: 'firstName and lastName are required' },
         { status: 400 },
       );
     }
+    const emailRaw =
+      typeof body.email === 'string' ? body.email.trim() : '';
+    const hasRealEmail = emailRaw.length > 0;
     // Validate source if provided
     if (body.source !== undefined && !parseSource(body.source)) {
       return NextResponse.json(
@@ -212,9 +218,19 @@ export async function POST(request: NextRequest) {
 
     const service = buildServiceClient();
 
+    // Synthesize a placeholder email when the admin didn't provide one
+    // (Phase 90: partner-referred students don't need a real email).
+    // Format: sica-noemail-{userId}@sica.invalid — guarantees uniqueness
+    // (randomUUID suffix) and uses an unresolvable TLD so no email
+    // ever gets sent to it. The student_profiles row will store the
+    // real email if/when the student fills one in via /student/profile.
+    const emailForAuth = hasRealEmail
+      ? emailRaw
+      : `sica-noemail-${crypto.randomUUID()}@sica.invalid`;
+
     // 1. Create the auth.users row via the admin API
     const { data: authData, error: authError } = await service.auth.admin.createUser({
-      email: body.email,
+      email: emailForAuth,
       password,
       email_confirm: true, // admin-created; no email confirmation needed
       user_metadata: {
@@ -222,6 +238,9 @@ export async function POST(request: NextRequest) {
         last_name: body.lastName,
         role: 'student',
         source,
+        // Phase 90: flag the placeholder so future email-merge logic
+        // (Phase A link) can detect + skip.
+        email_provided: hasRealEmail,
       },
     });
 
@@ -244,10 +263,15 @@ export async function POST(request: NextRequest) {
     // 2. Upsert the student_profiles row. The handle_new_student_user
     //    trigger may have already inserted an empty row from step 1 —
     //    we want to overwrite it with our payload.
+    // Phase 90: only write the real email to student_profiles when the
+    // admin actually provided one. The placeholder stays in auth.users
+    // (the FK column requires NOT NULL) but we don't want it surfaced
+    // to the admin views or partner CRM.
+    const profileEmail = hasRealEmail ? emailRaw : '';
     const { dbRow, extraUpdates } = mapStudentToDb({ ...body, id: userId });
     dbRow.id = userId;
     dbRow.user_id = userId;
-    dbRow.email = body.email;
+    dbRow.email = profileEmail;
     dbRow.source = source;
     if (Object.keys(extraUpdates).length > 0) {
       dbRow.extra = extraUpdates;
@@ -281,20 +305,27 @@ export async function POST(request: NextRequest) {
     // `emailSent: false` when Resend is down. The admin UI can
     // warn the admin + show a "Re-send welcome email" button
     // instead of silently failing.
-    const emailSent = await sendStudentWelcome({
-      firstName: body.firstName,
-      lastName: body.lastName,
-      email: body.email,
-      temporaryPassword: body.password ? '(admin-set)' : password,
-      createdByAdmin:
-        (auth.user.user_metadata?.full_name as string | undefined) ||
-        auth.user.email ||
-        'SICA Admin',
-      createdAt: new Date().toISOString(),
-    }).catch((err) => {
-      console.error('[sendStudentWelcome] failed:', err);
-      return false;
-    });
+    //
+    // Phase 90: skip the welcome email entirely when no real email was
+    // provided (partner-referred students) — sending to the placeholder
+    // would just bounce + pollute the Resend bounce list.
+    let emailSent = false;
+    if (hasRealEmail) {
+      emailSent = await sendStudentWelcome({
+        firstName: body.firstName,
+        lastName: body.lastName,
+        email: emailRaw,
+        temporaryPassword: body.password ? '(admin-set)' : password,
+        createdByAdmin:
+          (auth.user.user_metadata?.full_name as string | undefined) ||
+          auth.user.email ||
+          'SICA Admin',
+        createdAt: new Date().toISOString(),
+      }).catch((err) => {
+        console.error('[sendStudentWelcome] failed:', err);
+        return false;
+      });
+    }
 
     return NextResponse.json(
       {
