@@ -24,6 +24,27 @@ export interface ChatMessage {
   content: string;
 }
 
+/**
+ * Phase 89: multi-modal content for vision models. OpenAI-compatible
+ * shape — both Doubao Vision (`doubao-1-5-vision-pro`) and DeepSeek
+ * VL2 (`deepseek-vl2-chat`) accept either:
+ *   - a plain string (text-only, unchanged from ChatMessage)
+ *   - an array of content parts, each typed as text or image_url.
+ *
+ * The `image_url` URL can be either `https://...` (CDN) or a
+ * `data:image/jpeg;base64,...` data URL (inline). We use the
+ * data URL form in OCR routes so we don't have to make the
+ * file publicly accessible just for the model to read it.
+ */
+export type VisionContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image_url'; image_url: { url: string } };
+
+export interface VisionChatMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string | VisionContentPart[];
+}
+
 export interface ChatOptions {
   /** Override the env-var default model for this call only. */
   model?: string;
@@ -59,6 +80,17 @@ export interface AIProvider {
   chat(messages: ChatMessage[], options?: ChatOptions): Promise<ChatResponse>;
   /** Streaming chat completion. Yields text deltas. */
   stream(messages: ChatMessage[], options?: ChatOptions): AsyncIterable<StreamChunk>;
+  /**
+   * Vision chat completion (Phase 89). Accepts multi-modal content
+   * (text + image_url). Returns the full response text — callers
+   * parse the JSON payload themselves. Not all models are vision-
+   * capable; the route must set ChatOptions.model to a vision-capable
+   * endpoint (e.g. `doubao-1-5-vision-pro`, `deepseek-vl2-chat`).
+   */
+  visionChat(
+    messages: VisionChatMessage[],
+    options?: ChatOptions,
+  ): Promise<ChatResponse>;
 }
 
 // ---------------------------------------------------------------------------
@@ -102,6 +134,51 @@ class DoubaoProvider implements AIProvider {
     const res = await this.fetchCompletion(messages, options, true);
     if (!res.body) throw new Error('Doubao: no response body for stream');
     yield* parseOpenAIStream(res.body);
+  }
+
+  async visionChat(
+    messages: VisionChatMessage[],
+    options: ChatOptions = {},
+  ): Promise<ChatResponse> {
+    // Phase 89: same wire format as chat() — the OpenAI-compatible
+    // body shape, just with multi-modal content. We force
+    // stream=false (no streaming on the vision path for now; OCR
+    // responses are small).
+    const res = await this.fetchVisionCompletion(messages, options);
+    const data = (await res.json()) as {
+      choices: Array<{ message: { content: string } }>;
+      model: string;
+      usage?: ChatResponse['usage'];
+    };
+    return {
+      content: data.choices?.[0]?.message?.content ?? '',
+      model: data.model ?? this.defaultModel,
+      usage: data.usage,
+    };
+  }
+
+  private async fetchVisionCompletion(
+    messages: VisionChatMessage[],
+    options: ChatOptions,
+  ): Promise<Response> {
+    const res = await fetch(`${this.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: options.model ?? this.defaultModel,
+        messages,
+        stream: false,
+        temperature: options.temperature ?? 0.7,
+        ...(options.maxTokens ? { max_tokens: options.maxTokens } : {}),
+      }),
+    });
+    if (!res.ok) {
+      throw new Error(`Doubao ${await readProviderError(res)}`);
+    }
+    return res;
   }
 
   private async fetchCompletion(
@@ -179,6 +256,47 @@ class DeepSeekProvider implements AIProvider {
     const res = await this.fetchCompletion(messages, options, true);
     if (!res.body) throw new Error('DeepSeek: no response body for stream');
     yield* parseOpenAIStream(res.body);
+  }
+
+  async visionChat(
+    messages: VisionChatMessage[],
+    options: ChatOptions = {},
+  ): Promise<ChatResponse> {
+    const res = await this.fetchVisionCompletion(messages, options);
+    const data = (await res.json()) as {
+      choices: Array<{ message: { content: string } }>;
+      model: string;
+      usage?: ChatResponse['usage'];
+    };
+    return {
+      content: data.choices?.[0]?.message?.content ?? '',
+      model: data.model ?? this.defaultModel,
+      usage: data.usage,
+    };
+  }
+
+  private async fetchVisionCompletion(
+    messages: VisionChatMessage[],
+    options: ChatOptions,
+  ): Promise<Response> {
+    const res = await fetch(`${this.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: options.model ?? this.defaultModel,
+        messages,
+        stream: false,
+        temperature: options.temperature ?? 0.7,
+        ...(options.maxTokens ? { max_tokens: options.maxTokens } : {}),
+      }),
+    });
+    if (!res.ok) {
+      throw new Error(`DeepSeek ${await readProviderError(res)}`);
+    }
+    return res;
   }
 
   private async fetchCompletion(

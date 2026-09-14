@@ -22,7 +22,7 @@ export function getStorageClient() {
 }
 
 const TRANSCRIPT_BUCKET = 'transcripts';
-const STUDENT_DOCS_BUCKET = 'student-documents';
+export const STUDENT_DOCS_BUCKET = 'student-documents';
 
 // ---------------------------------------------------------------------------
 // Transcript helpers (existing, untouched)

@@ -56,6 +56,12 @@ export interface AdminStudent {
   // Round-tripped through `extra` JSONB. Optional in the shape so old
   // rows (with empty extra) don't fail TypeScript checks.
   extra?: Record<string, unknown>;
+
+  // Phase 89: passport issue/expiry dates — surfaced from `extra` JSONB.
+  // No fixed columns (the DB schema doesn't have them) so they're
+  // optional on the shape too.
+  passportIssueDate?: string;
+  passportExpiryDate?: string;
 }
 
 export type AdminStudentStatus = AdminStudent['status'];
@@ -95,6 +101,15 @@ export function mapStudentFromDb(row: Record<string, unknown>): AdminStudent {
     createdAt: (row.created_at as string) || new Date().toISOString(),
     updatedAt: (row.updated_at as string) || new Date().toISOString(),
     extra,
+    // Phase 89: passportIssueDate / passportExpiryDate live in the
+    // `extra` JSONB blob. Surface them as top-level fields for the
+    // detail page + edit form convenience.
+    passportIssueDate: typeof extra.passportIssueDate === 'string'
+      ? extra.passportIssueDate
+      : undefined,
+    passportExpiryDate: typeof extra.passportExpiryDate === 'string'
+      ? extra.passportExpiryDate
+      : undefined,
   };
 }
 
@@ -140,6 +155,13 @@ export function mapStudentToDb(input: Partial<AdminStudent>): {
   const extraUpdates: Record<string, unknown> = {};
   if (input.gender !== undefined) extraUpdates.gender = input.gender;
   if (input.notes !== undefined) extraUpdates.notes = input.notes;
+  // Phase 89: passport issue/expiry dates from OCR.
+  if (input.passportIssueDate !== undefined) {
+    extraUpdates.passportIssueDate = input.passportIssueDate;
+  }
+  if (input.passportExpiryDate !== undefined) {
+    extraUpdates.passportExpiryDate = input.passportExpiryDate;
+  }
   // Future fields (whatsapp, HSK, IELTS, bachelor, etc.) can be added
   // here as we add form fields to the new/edit pages. Keep this
   // surface tight and explicit — every field here is something the

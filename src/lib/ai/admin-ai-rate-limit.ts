@@ -39,6 +39,10 @@ const ADMIN_AI_LIMITS = {
   'bulk-suggest-names': 5,
   'generate-blog': 3,
   'run-automation': 5,
+  // Phase 89: OCR for passport + transcript. Each OCR call is ~1-4K
+  // tokens (one image/PDF in, JSON out). 15/15min covers ~5 students
+  // × 2 documents + retries without blocking admin work.
+  'student-ocr': 15,
 } as const;
 
 export type AdminAIAction = keyof typeof ADMIN_AI_LIMITS;

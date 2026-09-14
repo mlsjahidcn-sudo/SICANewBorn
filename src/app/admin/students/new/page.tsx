@@ -11,6 +11,8 @@ import {
   CheckCircle2,
   Copy,
   AlertCircle,
+  Sparkles,
+  UploadCloud,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -26,6 +28,12 @@ import { Separator } from '@/components/ui/separator';
 import { apiFetchJson } from '@/lib/api-client';
 import { ALL_COUNTRIES, NATIONALITY_CUSTOM } from '@/lib/common-countries';
 import { useI18n } from '@/lib/i18n';
+import {
+  OcrUploadModal,
+  type OcrResult,
+  type PassportOcrResult,
+  type TranscriptOcrResult,
+} from '@/components/admin/ocr-upload-modal';
 
 // Fields that map to fixed columns in student_profiles.
 // Everything else goes to the `extra` JSONB blob.
@@ -96,6 +104,8 @@ export default function AdminAddStudentPage() {
     dateOfBirth: '',
     nationality: '',
     passportNumber: '',
+    passportIssueDate: '',
+    passportExpiryDate: '',
     gender: '',
     maritalStatus: '',
     partnerInfo: '',
@@ -164,6 +174,62 @@ export default function AdminAddStudentPage() {
     ALL_COUNTRIES.some((c) => c.value === formData.nationality)
       ? formData.nationality
       : NATIONALITY_CUSTOM;
+
+  // Phase 89: OCR modal state + apply handlers.
+  const [ocrKind, setOcrKind] = useState<'passport' | 'transcript' | null>(null);
+  const openPassportOcr = () => setOcrKind('passport');
+  const openTranscriptOcr = () => setOcrKind('transcript');
+  const closeOcr = () => setOcrKind(null);
+
+  function applyPassportOcr(result: PassportOcrResult): void {
+    const set = (k: keyof typeof formData, v: string | null) =>
+      handleInputChange(k, v ?? '');
+    set('firstName', result.firstName);
+    set('lastName', result.lastName);
+    set('dateOfBirth', result.dateOfBirth);
+    set('nationality', result.nationality);
+    set('passportNumber', result.passportNumber);
+    set('gender', result.gender);
+    set('passportIssueDate', result.passportIssueDate);
+    set('passportExpiryDate', result.passportExpiryDate);
+  }
+
+  function applyTranscriptOcr(result: TranscriptOcrResult): void {
+    const set = (k: keyof typeof formData, v: string | null) =>
+      handleInputChange(k, v ?? '');
+    set('highSchoolName', result.highSchoolName);
+    set('highSchoolCity', result.highSchoolCity);
+    set('highSchoolCountry', result.highSchoolCountry);
+    set('highSchoolGPA', result.highSchoolGPA);
+    set('highSchoolGraduationDate', result.highSchoolGraduationDate);
+  }
+
+  const applyOcr = (result: OcrResult) => {
+    if (ocrKind === 'passport') {
+      applyPassportOcr(result as PassportOcrResult);
+    } else if (ocrKind === 'transcript') {
+      applyTranscriptOcr(result as TranscriptOcrResult);
+    }
+  };
+
+  const passportExistingFields = ([
+    formData.firstName,
+    formData.lastName,
+    formData.dateOfBirth,
+    formData.nationality,
+    formData.passportNumber,
+    formData.gender,
+    formData.passportIssueDate,
+    formData.passportExpiryDate,
+  ] as Array<string | null>).filter((v) => v && v.length > 0) as string[];
+
+  const transcriptExistingFields = ([
+    formData.highSchoolName,
+    formData.highSchoolCity,
+    formData.highSchoolCountry,
+    formData.highSchoolGPA,
+    formData.highSchoolGraduationDate,
+  ] as Array<string | null>).filter((v) => v && v.length > 0) as string[];
 
   /**
    * Split the form into:
@@ -378,11 +444,21 @@ export default function AdminAddStudentPage() {
           <CardContent className="pt-6">
             {step === 1 && (
               <div className="space-y-6">
-                <div className="flex items-center gap-2">
-                  <User className="w-5 h-5 text-[#1B2A4A]" />
-                  <h2 className="text-lg font-semibold text-[#1B2A4A]">{t('adminStudentForm.sectionPersonalInfo')}</h2>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <User className="w-5 h-5 text-[#1B2A4A]" />
+                    <h2 className="text-lg font-semibold text-[#1B2A4A]">{t('adminStudentForm.sectionPersonalInfo')}</h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={openPassportOcr}
+                    className="inline-flex items-center gap-1 text-xs border border-[#1B2A4A] text-[#1B2A4A] px-2.5 py-1 hover:bg-[#1B2A4A] hover:text-white transition-colors"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    {t('adminStudentForm.ocrButtonPassport')}
+                  </button>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <Label htmlFor="firstName" className="text-[#1B2A4A]">{t('adminStudentForm.fieldFirstName')}</Label>
@@ -457,6 +533,28 @@ export default function AdminAddStudentPage() {
                       id="passportNumber"
                       name="passportNumber"
                       value={formData.passportNumber}
+                      onChange={(e) => handleInputChange(e.target.name, e.target.value)}
+                      className="mt-2"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="passportIssueDate" className="text-[#1B2A4A]">{t('adminStudentForm.fieldPassportIssueDate')}</Label>
+                    <Input
+                      id="passportIssueDate"
+                      name="passportIssueDate"
+                      type="date"
+                      value={formData.passportIssueDate}
+                      onChange={(e) => handleInputChange(e.target.name, e.target.value)}
+                      className="mt-2"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="passportExpiryDate" className="text-[#1B2A4A]">{t('adminStudentForm.fieldPassportExpiryDate')}</Label>
+                    <Input
+                      id="passportExpiryDate"
+                      name="passportExpiryDate"
+                      type="date"
+                      value={formData.passportExpiryDate}
                       onChange={(e) => handleInputChange(e.target.name, e.target.value)}
                       className="mt-2"
                     />
@@ -567,10 +665,20 @@ export default function AdminAddStudentPage() {
                   <GraduationCap className="w-5 h-5 text-[#1B2A4A]" />
                   <h2 className="text-lg font-semibold text-[#1B2A4A]">{t('adminStudentForm.sectionEducationBackground')}</h2>
                 </div>
-                
+
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-md font-semibold text-[#1B2A4A] mb-4">{t('adminStudentForm.sectionHighSchool')}</h3>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-md font-semibold text-[#1B2A4A]">{t('adminStudentForm.sectionHighSchool')}</h3>
+                      <button
+                        type="button"
+                        onClick={openTranscriptOcr}
+                        className="inline-flex items-center gap-1 text-xs border border-[#1B2A4A] text-[#1B2A4A] px-2.5 py-1 hover:bg-[#1B2A4A] hover:text-white transition-colors"
+                      >
+                        <Sparkles className="w-3 h-3" />
+                        {t('adminStudentForm.ocrButtonTranscript')}
+                      </button>
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="md:col-span-2">
                         <Label htmlFor="highSchoolName" className="text-[#1B2A4A]">{t('adminStudentForm.fieldHighSchoolName')}</Label>
@@ -970,6 +1078,27 @@ export default function AdminAddStudentPage() {
           </Card>
         )}
       </div>
+
+      {/* Phase 89: OCR modals — single instance, kind-driven so we
+          don't mount two modals side by side. */}
+      {ocrKind === 'passport' && (
+        <OcrUploadModal
+          open
+          onOpenChange={(o) => !o && closeOcr()}
+          kind="passport"
+          existingFieldKeys={passportExistingFields}
+          onApply={applyOcr}
+        />
+      )}
+      {ocrKind === 'transcript' && (
+        <OcrUploadModal
+          open
+          onOpenChange={(o) => !o && closeOcr()}
+          kind="transcript"
+          existingFieldKeys={transcriptExistingFields}
+          onApply={applyOcr}
+        />
+      )}
     </div>
   );
 }

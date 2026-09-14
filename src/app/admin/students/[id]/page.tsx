@@ -315,6 +315,8 @@ export default function AdminStudentDetailPage() {
                     <Row label={t('adminStudentDetail.fieldDateOfBirth')} value={student.dateOfBirth} />
                     <Row label={t('adminStudentDetail.fieldNationality')} value={student.nationality} />
                     <Row label={t('adminStudentDetail.fieldGender')} value={student.extra?.gender as string | undefined} />
+                    <Row label={t('adminStudentDetail.fieldPassportIssueDate')} value={student.passportIssueDate} />
+                    <Row label={t('adminStudentDetail.fieldPassportExpiryDate')} value={student.passportExpiryDate} />
                   </div>
                 </div>
                 <div>
