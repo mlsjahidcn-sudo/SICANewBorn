@@ -24,6 +24,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { apiFetchJson } from '@/lib/api-client';
+import { ALL_COUNTRIES, NATIONALITY_CUSTOM } from '@/lib/common-countries';
 import { useI18n } from '@/lib/i18n';
 
 // Fields that map to fixed columns in student_profiles.
@@ -71,6 +72,22 @@ export default function AdminAddStudentPage() {
         /* swallow — the SelectContent falls back to one static option */
       });
   }, []);
+
+  // Phase 89: country dropdown with full ISO 3166-1 list + Custom
+  // fallback for legacy / unlisted values. Mirrors the partner student
+  // form pattern (src/app/partner/students/new/page.tsx).
+  const [showCustomNationality, setShowCustomNationality] = useState(false);
+  useEffect(() => {
+    // If a loaded value (e.g. on the edit page) isn't in ALL_COUNTRIES,
+    // show the free-text fallback so the admin sees what was previously
+    // stored instead of a silent mismatch.
+    if (
+      formData.nationality &&
+      !ALL_COUNTRIES.some((c) => c.value === formData.nationality)
+    ) {
+      setShowCustomNationality(true);
+    }
+  }, []); // mount only — the wizard's nationality state is set later
 
   const [formData, setFormData] = useState({
     // Personal Info
@@ -125,6 +142,28 @@ export default function AdminAddStudentPage() {
   const handleInputChange = (name: string, value: string) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
+
+  // Phase 89: inline arrow handlers (kept terse — TSX in this file
+  // gets confused by longer function declarations inside the
+  // component body, breaking the JSX parser downstream).
+  const handleNationalitySelectChange = (value: string): void => {
+    if (value === NATIONALITY_CUSTOM) {
+      setShowCustomNationality(true);
+    } else {
+      setShowCustomNationality(false);
+      handleInputChange('nationality', value);
+    }
+  };
+
+  // Derive the Select value at the top so JSX doesn't need a
+  // multi-line ternary inside the value={...} attribute (TSX
+  // parsing inside attribute values is unreliable when the
+  // expression contains other ternaries).
+  const selectNationalityValue: string =
+    formData.nationality &&
+    ALL_COUNTRIES.some((c) => c.value === formData.nationality)
+      ? formData.nationality
+      : NATIONALITY_CUSTOM;
 
   /**
    * Split the form into:
@@ -381,15 +420,36 @@ export default function AdminAddStudentPage() {
                   </div>
                   <div>
                     <Label htmlFor="nationality" className="text-[#1B2A4A]">{t('adminStudentForm.fieldNationality')}</Label>
-                    <Input
-                      id="nationality"
-                      name="nationality"
-                      value={formData.nationality}
-                      onChange={(e) => handleInputChange(e.target.name, e.target.value)}
-                      className="mt-2"
-                      placeholder={t('adminStudentForm.placeholderNationalityNew')}
-                      required
-                    />
+                    {showCustomNationality ? (
+                      <Input
+                        id="nationality"
+                        name="nationality"
+                        value={formData.nationality}
+                        onChange={(e) => handleInputChange(e.target.name, e.target.value)}
+                        className="mt-2"
+                        placeholder={t('adminStudentForm.placeholderNationalityNew')}
+                        required
+                      />
+                    ) : (
+                      <Select
+                        value={selectNationalityValue}
+                        onValueChange={handleNationalitySelectChange}
+                      >
+                        <SelectTrigger className="mt-2">
+                          <SelectValue placeholder={t('adminStudentForm.placeholderNationalityNew')} />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[320px]">
+                          {ALL_COUNTRIES.map((c) => (
+                            <SelectItem key={c.code} value={c.value}>
+                              {c.label} ({c.code})
+                            </SelectItem>
+                          ))}
+                          <SelectItem value={NATIONALITY_CUSTOM}>
+                            {t('adminStudentForm.fieldNationalityOther')}
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
                   <div>
                     <Label htmlFor="passportNumber" className="text-[#1B2A4A]">{t('adminStudentForm.fieldPassportNumber')}</Label>

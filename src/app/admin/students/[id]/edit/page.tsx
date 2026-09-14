@@ -15,6 +15,7 @@ import { Separator } from '@/components/ui/separator';
 import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 import type { AdminStudent } from '@/lib/student-mapper';
+import { ALL_COUNTRIES, NATIONALITY_CUSTOM } from '@/lib/common-countries';
 
 // Fields with fixed columns. Everything else lives in `extra` JSONB.
 const FIXED_FIELDS = [
@@ -237,7 +238,39 @@ export default function AdminStudentEditPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="nationality">{t('adminStudentForm.fieldNationality')}</Label>
-                    <Input id="nationality" value={v('nationality')} onChange={(e) => handleInputChange('nationality', e.target.value)} placeholder={t('adminStudentForm.placeholderNationalityEdit')} />
+                    {v('nationality') && !ALL_COUNTRIES.some((c) => c.value === v('nationality')) ? (
+                      <Input
+                        id="nationality"
+                        value={v('nationality')}
+                        onChange={(e) => handleInputChange('nationality', e.target.value)}
+                        placeholder={t('adminStudentForm.placeholderNationalityEdit')}
+                      />
+                    ) : (
+                      <Select
+                        value={v('nationality') || NATIONALITY_CUSTOM}
+                        onValueChange={(value) => {
+                          if (value === NATIONALITY_CUSTOM) {
+                            handleInputChange('nationality', '');
+                          } else {
+                            handleInputChange('nationality', value);
+                          }
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={t('adminStudentForm.placeholderNationalityEdit')} />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[320px]">
+                          {ALL_COUNTRIES.map((c) => (
+                            <SelectItem key={c.code} value={c.value}>
+                              {c.label} ({c.code})
+                            </SelectItem>
+                          ))}
+                          <SelectItem value={NATIONALITY_CUSTOM}>
+                            {t('adminStudentForm.fieldNationalityOther')}
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="gender">{t('adminStudentForm.fieldGender')}</Label>
