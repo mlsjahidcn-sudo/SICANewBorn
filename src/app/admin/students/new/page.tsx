@@ -81,6 +81,7 @@ export default function AdminAddStudentPage() {
     passportNumber: '',
     gender: '',
     maritalStatus: '',
+    partnerInfo: '',
 
     // Contact Info
     email: '',
@@ -480,6 +481,23 @@ export default function AdminAddStudentPage() {
                     />
                   </div>
                 </div>
+
+                <Separator className="my-6" />
+
+                <div className="md:col-span-2">
+                  <Label htmlFor="partnerInfo" className="text-[#1B2A4A]">
+                    {t('adminStudentForm.fieldPartnerInfo')}
+                  </Label>
+                  <Textarea
+                    id="partnerInfo"
+                    name="partnerInfo"
+                    value={formData.partnerInfo}
+                    onChange={(e) => handleInputChange(e.target.name, e.target.value)}
+                    placeholder={t('adminStudentForm.placeholderPartnerInfo')}
+                    rows={3}
+                    className="mt-2"
+                  />
+                </div>
               </div>
             )}
 
@@ -771,6 +789,12 @@ export default function AdminAddStudentPage() {
                         )}
                         {formData.passportNumber && (
                           <div><span className="text-[#4B5563]">{t('adminStudentForm.reviewLabelPassport')}</span> <span className="font-medium">{formData.passportNumber}</span></div>
+                        )}
+                        {formData.partnerInfo && (
+                          <div className="col-span-2">
+                            <span className="text-[#4B5563]">{t('adminStudentForm.reviewLabelPartnerInfo')}</span>{' '}
+                            <span className="font-medium whitespace-pre-wrap">{formData.partnerInfo}</span>
+                          </div>
                         )}
                       </div>
                     </CardContent>

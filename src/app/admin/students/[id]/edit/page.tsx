@@ -287,6 +287,16 @@ export default function AdminStudentEditPage() {
                     <Label htmlFor="address">{t('adminStudentForm.fieldAddress')}</Label>
                     <Textarea id="address" value={v('address')} onChange={(e) => handleInputChange('address', e.target.value)} rows={2} />
                   </div>
+                  <div className="space-y-2 col-span-2">
+                    <Label htmlFor="partnerInfo">{t('adminStudentForm.fieldPartnerInfo')}</Label>
+                    <Textarea
+                      id="partnerInfo"
+                      value={v('partnerInfo')}
+                      onChange={(e) => handleInputChange('partnerInfo', e.target.value)}
+                      placeholder={t('adminStudentForm.placeholderPartnerInfo')}
+                      rows={3}
+                    />
+                  </div>
                 </div>
 
                 <Separator />

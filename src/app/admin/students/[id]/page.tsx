@@ -328,6 +328,15 @@ export default function AdminStudentDetailPage() {
                 </div>
               </div>
               <Separator className="my-6" />
+              {student.extra?.partnerInfo ? (
+                <div>
+                  <h4 className="font-semibold mb-4">{t('adminStudentDetail.partnerInfoTitle')}</h4>
+                  <p className="text-sm whitespace-pre-wrap text-[#374151]">
+                    {student.extra.partnerInfo as string}
+                  </p>
+                </div>
+              ) : null}
+              <Separator className="my-6" />
               <div>
                 <h4 className="font-semibold mb-4">{t('adminStudentDetail.studyTargetTitle')}</h4>
                 <div className="grid grid-cols-2 gap-6">
