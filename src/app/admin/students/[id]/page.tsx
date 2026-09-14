@@ -333,6 +333,7 @@ export default function AdminStudentDetailPage() {
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-3 text-sm">
                     <Row label={t('adminStudentDetail.fieldTargetDegree')} value={student.targetDegree} />
+                    <Row label={t('adminStudentDetail.fieldTargetField')} value={student.targetField} />
                     <Row label={t('adminStudentDetail.fieldTargetIntake')} value={student.targetIntake} />
                     <Row label={t('adminStudentDetail.fieldSource')} value={student.source} />
                   </div>
@@ -342,6 +343,28 @@ export default function AdminStudentDetailPage() {
                     <Row label={t('adminStudentDetail.fieldToefl')} value={student.extra?.toeflScore as string | undefined} />
                   </div>
                 </div>
+                {/* Phase 88: render preferred_universities as badges. Was
+                    previously dropped by the mapper — students who set
+                    preferred universities via /student/profile or via the
+                    partner-link endpoint had them in the DB but invisible
+                    to the admin. */}
+                {student.preferredUniversities.length > 0 && (
+                  <div className="mt-4">
+                    <span className="text-gray-500 text-sm">
+                      {t('adminStudentDetail.fieldPreferredUniversities')}
+                    </span>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {student.preferredUniversities.map((u) => (
+                        <Badge
+                          key={u}
+                          className="bg-[#1B2A4A] text-white hover:bg-[#1B2A4A]"
+                        >
+                          {u}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

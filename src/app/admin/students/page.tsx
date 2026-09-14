@@ -227,13 +227,19 @@ export default function AdminStudentsPage() {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch('/api/admin/students/stats', {
-      headers: { Accept: 'application/json' },
-      signal: controller.signal,
-    })
-      .then(async (res) => {
-        if (!res.ok) return;
-        const data = await res.json();
+    // Bug fix: was raw `fetch()` which doesn't attach the Supabase
+    // Bearer token, so requireAdmin 401'd the call and the cards
+    // silently stayed at 0. apiFetchJson attaches the token from
+    // supabase.auth.getSession() automatically.
+    apiFetchJson<{
+      total: number;
+      active: number;
+      pending: number;
+      suspended: number;
+      inactive: number;
+      offline: number;
+    }>('/api/admin/students/stats', { signal: controller.signal })
+      .then((data) => {
         setStats({
           total: Number(data.total) || 0,
           active: Number(data.active) || 0,
@@ -243,12 +249,9 @@ export default function AdminStudentsPage() {
           offline: Number(data.offline) || 0,
         });
       })
-      .catch((err) => {
-        if (err?.name !== 'AbortError') {
-          // Swallow — the cards just keep showing 0. The list query
-          // above already surfaces its own error banner.
-          console.error('[admin-students] stats fetch failed', err);
-        }
+      .catch((err: { name?: string }) => {
+        if (err?.name === 'AbortError') return;
+        console.error('[admin-students] stats fetch failed', err);
       });
     return () => controller.abort();
   }, [refreshToken]);

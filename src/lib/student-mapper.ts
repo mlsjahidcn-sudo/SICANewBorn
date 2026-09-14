@@ -42,6 +42,10 @@ export interface AdminStudent {
   targetDegree: string;
   targetField: string;
   targetIntake: string;
+  /** Phase 88: student_profiles.preferred_universities TEXT[]. Was
+   * previously silently dropped by the mapper — admin list/detail
+   * rendered nothing. Now first-class on the AdminStudent shape. */
+  preferredUniversities: string[];
   isOffline: boolean;
   source: 'Admin' | 'Partner' | 'Online';
   status: 'Active' | 'Inactive' | 'Pending' | 'Suspended';
@@ -63,6 +67,13 @@ export type AdminStudentSource = AdminStudent['source'];
  */
 export function mapStudentFromDb(row: Record<string, unknown>): AdminStudent {
   const extra = (row.extra as Record<string, unknown> | null) || {};
+  // Phase 88: read student_profiles.preferred_universities TEXT[].
+  // The student portal signup + the partner-link endpoint both
+  // populate this; the admin mapper used to drop it on read.
+  const preferredRaw = row.preferred_universities as unknown;
+  const preferredUniversities: string[] = Array.isArray(preferredRaw)
+    ? preferredRaw.filter((v): v is string => typeof v === 'string')
+    : [];
   return {
     id: row.id as string,
     firstName: (row.first_name as string) || '',
@@ -75,6 +86,7 @@ export function mapStudentFromDb(row: Record<string, unknown>): AdminStudent {
     targetDegree: (row.target_degree as string) || '',
     targetField: (row.target_field as string) || '',
     targetIntake: (row.target_intake as string) || '',
+    preferredUniversities,
     source: ((row.source as string) || 'Online') as AdminStudentSource,
     // isOffline is derived — admin-added students are offline, others online.
     isOffline: row.source === 'Admin',
@@ -112,6 +124,15 @@ export function mapStudentToDb(input: Partial<AdminStudent>): {
   if (input.targetDegree !== undefined) dbRow.target_degree = input.targetDegree;
   if (input.targetField !== undefined) dbRow.target_field = input.targetField;
   if (input.targetIntake !== undefined) dbRow.target_intake = input.targetIntake;
+  // Phase 88: write preferred_universities TEXT[] with defensive
+  // normalization. The admin wizard submits an array of slugs/names;
+  // strip empties + non-strings so the column doesn't accumulate
+  // junk from the comma-separated form input.
+  if (input.preferredUniversities !== undefined) {
+    dbRow.preferred_universities = input.preferredUniversities
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+  }
   if (input.source !== undefined) dbRow.source = input.source;
   if (input.status !== undefined) dbRow.status = input.status;
 

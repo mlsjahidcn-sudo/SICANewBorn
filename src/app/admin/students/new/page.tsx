@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
@@ -36,7 +36,9 @@ const FIXED_FIELDS = [
   'email',
   'phone',
   'targetDegree',
+  'targetField',
   'targetIntake',
+  'preferredUniversities',
   'source',
   'status',
 ] as const;
@@ -55,6 +57,20 @@ export default function AdminAddStudentPage() {
     emailSent: boolean;
   } | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Phase 88: fetch active intake_periods dynamically (Phase 25
+  // pattern) instead of the hardcoded 3-option list. Falls back to
+  // a static option if the API fails so the wizard doesn't break.
+  const [intakes, setIntakes] = useState<{ id: string; label: string }[]>([]);
+  useEffect(() => {
+    apiFetchJson<{ intakes?: { id: string; label: string }[] }>('/api/intakes?active=true')
+      .then((d) => {
+        if (d && Array.isArray(d.intakes)) setIntakes(d.intakes);
+      })
+      .catch(() => {
+        /* swallow — the SelectContent falls back to one static option */
+      });
+  }, []);
 
   const [formData, setFormData] = useState({
     // Personal Info
@@ -95,7 +111,9 @@ export default function AdminAddStudentPage() {
 
     // Target
     targetDegree: '',
+    targetField: '',
     targetIntake: '',
+    preferredUniversities: '',
 
     // Notes
     notes: ''
@@ -118,6 +136,17 @@ export default function AdminAddStudentPage() {
     const extra: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(formData)) {
       if (value === '' || value === null || value === undefined) continue;
+      // Phase 88: convert the comma-separated preferredUniversities
+      // string into the TEXT[] the mapper expects. Stays as a single
+      // input on the UI to avoid dragging in a multi-select component.
+      if (key === 'preferredUniversities' && typeof value === 'string') {
+        const arr = value
+          .split(',')
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0);
+        if (arr.length > 0) payload.preferredUniversities = arr;
+        continue;
+      }
       if ((FIXED_FIELDS as readonly string[]).includes(key)) {
         payload[key] = value;
       } else {
@@ -657,11 +686,45 @@ export default function AdminAddStudentPage() {
                           <SelectValue placeholder={t('adminStudentForm.selectIntake')} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="September 2025">September 2025</SelectItem>
-                          <SelectItem value="March 2026">March 2026</SelectItem>
-                          <SelectItem value="September 2026">September 2026</SelectItem>
+                          {intakes.length === 0 ? (
+                            <SelectItem value="September 2025">September 2025</SelectItem>
+                          ) : (
+                            intakes.map((i) => (
+                              <SelectItem key={i.id} value={i.label}>{i.label}</SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
+                    </div>
+                  </div>
+
+                  {/* Phase 88: targetField + preferredUniversities inputs. */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <div>
+                      <Label htmlFor="targetField" className="text-[#1B2A4A]">
+                        {t('adminStudentForm.fieldTargetField')}
+                      </Label>
+                      <Input
+                        id="targetField"
+                        name="targetField"
+                        value={formData.targetField}
+                        onChange={(e) => handleInputChange(e.target.name, e.target.value)}
+                        placeholder={t('adminStudentForm.placeholderTargetField')}
+                        className="mt-2"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="preferredUniversities" className="text-[#1B2A4A]">
+                        {t('adminStudentForm.fieldPreferredUniversities')}
+                      </Label>
+                      <Input
+                        id="preferredUniversities"
+                        name="preferredUniversities"
+                        value={formData.preferredUniversities}
+                        onChange={(e) => handleInputChange(e.target.name, e.target.value)}
+                        placeholder={t('adminStudentForm.placeholderPreferredUniversities')}
+                        className="mt-2"
+                      />
                     </div>
                   </div>
                 </div>
@@ -734,7 +797,7 @@ export default function AdminAddStudentPage() {
                     </Card>
                   )}
 
-                  {(formData.hskLevel || formData.ieltsScore || formData.toeflScore || formData.targetDegree) && (
+                  {(formData.hskLevel || formData.ieltsScore || formData.toeflScore || formData.targetDegree || formData.targetField || formData.preferredUniversities) && (
                     <Card>
                       <CardHeader>
                         <CardTitle className="text-[#1B2A4A]">{t('adminStudentForm.reviewCardLanguageTargetNew')}</CardTitle>
@@ -753,8 +816,17 @@ export default function AdminAddStudentPage() {
                           {formData.targetDegree && (
                             <div><span className="text-[#4B5563]">{t('adminStudentForm.reviewLabelTargetDegree')}</span> <span className="font-medium">{formData.targetDegree}</span></div>
                           )}
+                          {formData.targetField && (
+                            <div><span className="text-[#4B5563]">{t('adminStudentForm.reviewLabelTargetField')}</span> <span className="font-medium">{formData.targetField}</span></div>
+                          )}
                           {formData.targetIntake && (
                             <div><span className="text-[#4B5563]">{t('adminStudentForm.reviewLabelTargetIntake')}</span> <span className="font-medium">{formData.targetIntake}</span></div>
+                          )}
+                          {formData.preferredUniversities && (
+                            <div className="col-span-2">
+                              <span className="text-[#4B5563]">{t('adminStudentForm.reviewLabelPreferredUniversities')}</span>{' '}
+                              <span className="font-medium">{formData.preferredUniversities}</span>
+                            </div>
                           )}
                         </div>
                       </CardContent>

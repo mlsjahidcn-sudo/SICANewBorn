@@ -47,6 +47,9 @@ describe('mapStudentFromDb', () => {
       targetDegree: 'Master',
       targetField: '',
       targetIntake: 'September 2026',
+      // Phase 88: preferredUniversities added — defaults to [] when
+      // the DB column is missing or null.
+      preferredUniversities: [],
       isOffline: false, // source !== 'Admin'
       source: 'Online',
       status: 'Active',
