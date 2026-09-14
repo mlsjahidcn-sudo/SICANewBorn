@@ -187,7 +187,7 @@ async function fetchLiveData(): Promise<LiveData> {
       .limit(PROG_CAP * 4 /* over-fetch so we can group+cap per discipline */),
     supabase
       .from('scholarships')
-      .select('slug, name, type, coverage, amount, deadline')
+      .select('slug, name, type, coverage, deadline')
       .order('name')
       .limit(SCHOL_CAP),
   ]);

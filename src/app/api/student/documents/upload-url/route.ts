@@ -6,6 +6,16 @@ import {
   validateFileSize,
   validateFileName,
 } from '@/lib/storage-validation';
+import { checkRateLimit } from '@/lib/rate-limit';
+
+// Phase 78: per-user rate limit on signed-URL mints. A logged-in
+// student could loop on this endpoint and burn Supabase Storage API
+// quota or mint short-lived URLs at scale. 30 mints / 15 min is
+// generous (a single application needs ~5-10 docs) but blocks
+// abuse-from-inside. Process-local sliding window — same caveats as
+// every other rate limit (see src/lib/rate-limit.ts).
+const UPLOAD_URL_RATE_MAX = 30;
+const UPLOAD_URL_RATE_WINDOW_MS = 15 * 60 * 1000;
 
 export const dynamic = 'force-dynamic';
 
@@ -48,6 +58,27 @@ export async function POST(request: NextRequest) {
   const auth = await getRequestAuth(request);
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
+  // Per-user rate limit on signed-URL mints.
+  const rl = checkRateLimit({
+    action: 'student-doc-upload-url',
+    key: auth.user.id,
+    max: UPLOAD_URL_RATE_MAX,
+    windowMs: UPLOAD_URL_RATE_WINDOW_MS,
+  });
+  if (!rl.ok) {
+    return NextResponse.json(
+      {
+        error: `Too many upload requests. Try again in ${rl.retryAfterSec} seconds.`,
+        code: 'RATE_LIMITED',
+        retryAfterSec: rl.retryAfterSec,
+      },
+      {
+        status: 429,
+        headers: { 'Retry-After': String(rl.retryAfterSec) },
+      },
+    );
   }
 
   let body: Record<string, unknown>;

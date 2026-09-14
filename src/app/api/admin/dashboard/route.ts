@@ -79,16 +79,24 @@ export async function GET(request: NextRequest) {
         .select('id', { count: 'exact', head: true })
         .in('status', ['Submitted', 'Under Review', 'Documents Requested']),
 
-      // Partner applications counts
-      service.from('partner_applications').select('id', { count: 'exact', head: true }),
+      // Partner applications counts. Phase 62: exclude archive rows so
+      // these match the admin list (which defaults to un-archived) —
+      // otherwise the dashboard "Applications"/"Active" cards
+      // over-report vs what the admin actually sees.
       service
         .from('partner_applications')
         .select('id', { count: 'exact', head: true })
-        .gte('created_at', sevenDaysAgo),
+        .is('archived_at', null),
       service
         .from('partner_applications')
         .select('id', { count: 'exact', head: true })
-        .in('status', ['Submitted', 'In Review']),
+        .gte('created_at', sevenDaysAgo)
+        .is('archived_at', null),
+      service
+        .from('partner_applications')
+        .select('id', { count: 'exact', head: true })
+        .in('status', ['Submitted', 'In Review'])
+        .is('archived_at', null),
 
       // Last 6 applications (newest first)
       service

@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server';
 import { getRequestAuth } from '@/lib/supabase-auth';
+import { deleteStudentDocFile } from '@/lib/storage';
+import { checkRateLimit } from '@/lib/rate-limit';
+
+// Phase 78: per-user rate limit on DELETE. 30 deletes / 15 min.
+const DELETE_RATE_MAX = 30;
+const DELETE_RATE_WINDOW_MS = 15 * 60 * 1000;
 
 export async function GET(
   request: Request,
@@ -94,6 +100,44 @@ export async function DELETE(
     }
     const { supabase, user } = auth;
 
+    // Per-user rate limit on DELETE.
+    const rl = checkRateLimit({
+      action: 'student-doc-delete',
+      key: auth.user.id,
+      max: DELETE_RATE_MAX,
+      windowMs: DELETE_RATE_WINDOW_MS,
+    });
+    if (!rl.ok) {
+      return NextResponse.json(
+        {
+          error: `Too many delete requests. Try again in ${rl.retryAfterSec} seconds.`,
+          code: 'RATE_LIMITED',
+          retryAfterSec: rl.retryAfterSec,
+        },
+        {
+          status: 429,
+          headers: { 'Retry-After': String(rl.retryAfterSec) },
+        },
+      );
+    }
+
+    // Phase 78: fetch the row first so we can clean up the storage
+    // object after the DB delete. Without this, the file_url in
+    // Supabase Storage orphaned over time (the storage object was
+    // never reachable again — the row that pointed to it was gone).
+    const { data: row, error: fetchErr } = await supabase
+      .from('student_documents')
+      .select('file_url')
+      .eq('id', params.id)
+      .eq('student_id', user.id)
+      .single();
+
+    if (fetchErr || !row) {
+      // Either the row doesn't exist or it isn't the student's.
+      // Return 404 in both cases — don't leak existence.
+      return NextResponse.json({ error: 'Document not found' }, { status: 404 });
+    }
+
     const { error } = await supabase
       .from('student_documents')
       .delete()
@@ -102,6 +146,19 @@ export async function DELETE(
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    // Best-effort storage cleanup. If this fails the row is already
+    // gone so the admin review queue won't surface a dangling
+    // reference — the file just orphans in Storage. Logged for
+    // ops to clean up via the dashboard if the bucket fills up.
+    if (row.file_url) {
+      const cleaned = await deleteStudentDocFile(row.file_url);
+      if (!cleaned) {
+        console.warn(
+          `[Student Document DELETE] DB row ${params.id} deleted but storage object ${row.file_url} not removed`,
+        );
+      }
     }
 
     return NextResponse.json({ success: true });

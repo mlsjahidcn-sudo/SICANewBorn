@@ -3,7 +3,7 @@ import next from 'next';
 
 /**
  * Custom server entry. Wraps Next.js so we can deploy as a single
- * `node dist/server.js` process on Railway / any container host.
+ * `node dist/server.js` process on any container host.
  *
  * Why the dev-mode detection matters: the original Coze-era code
  * checked `COZE_PROJECT_ENV !== 'PROD'`, which is fine on the Coze
@@ -23,8 +23,19 @@ import next from 'next';
  *   - Local `pnpm dev`              → dev mode (no env vars set)
  *   - Local `NODE_ENV=production node dist/server.js` → production
  *   - Railway / Docker             → production (NODE_ENV=production by default)
+ *   - Cloudflare Workers           → production (handled by OpenNext adapter,
+ *     this custom server is NOT used in Cloudflare deploys — Cloudflare
+ *     runs the @opennextjs/cloudflare worker directly via wrangler)
  *   - Coze dev                      → dev (COZE_PROJECT_ENV=DEV)
  *   - Coze prod                     → production (COZE_PROJECT_ENV=PROD)
+ *
+ * Phase 68: removed Sentry captureException block. Sentry's Node SDK
+ * was incompatible with Cloudflare Workers (`node:diagnostics_channel`
+ * not available in the V8 isolate runtime), and the @sentry/nextjs
+ * package transitively pulled Node-only modules into the build. The
+ * runtime SDK is no longer wired here. See AGENTS.md for how to
+ * re-enable (requires switching to @sentry/cloudflare or
+ * @sentry/edge for the Worker runtime).
  */
 function resolveDevMode(): boolean {
   if (process.env.COZE_PROJECT_ENV === 'DEV') return true;
@@ -50,34 +61,12 @@ app.prepare().then(() => {
       await handle(req, res);
     } catch (err) {
       console.error('[server] error handling', req.url, err);
-      // Capture to Sentry before responding. Lazy import keeps the
-      // server.ts bundle thin when SENTRY_DSN is unset (no-op below).
-      // Safe even if init() hasn't run yet — captureException queues
-      // internally and ships once the SDK is ready.
-      if (process.env.SENTRY_DSN) {
-        try {
-          const Sentry = (await import('@sentry/nextjs')).default;
-          Sentry.captureException(err, { tags: { source: 'custom-server', url: req.url ?? '' } });
-        } catch {
-          // Best-effort — never block the error response on Sentry.
-        }
-      }
       res.statusCode = 500;
       res.end('Internal server error');
     }
   });
-  server.once('error', async (err) => {
+  server.once('error', (err) => {
     console.error('[server] fatal', err);
-    if (process.env.SENTRY_DSN) {
-      try {
-        const Sentry = (await import('@sentry/nextjs')).default;
-        Sentry.captureException(err, { tags: { source: 'custom-server-listener' } });
-        // Give Sentry a chance to flush before we exit.
-        await Sentry.flush(2000).catch(() => {});
-      } catch {
-        // Best-effort
-      }
-    }
     process.exit(1);
   });
   server.listen(port, () => {

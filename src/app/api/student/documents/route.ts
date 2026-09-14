@@ -1,6 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getRequestAuth } from '@/lib/supabase-auth';
 import { isAllowedMimeType } from '@/lib/storage-validation';
+import { checkRateLimit } from '@/lib/rate-limit';
+
+// Phase 78: per-user rate limit on row finalization. Caps spam of
+// student_documents inserts (each insert creates a storage object
+// reference and a review-queue row). Same sliding-window primitive
+// as the upload-url endpoint. 30 row creations / 15 min.
+const FINALIZE_RATE_MAX = 30;
+const FINALIZE_RATE_WINDOW_MS = 15 * 60 * 1000;
 
 export const dynamic = 'force-dynamic';
 
@@ -65,6 +73,27 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
     const { supabase, user } = auth;
+
+    // Per-user rate limit on row finalization.
+    const rl = checkRateLimit({
+      action: 'student-doc-finalize',
+      key: auth.user.id,
+      max: FINALIZE_RATE_MAX,
+      windowMs: FINALIZE_RATE_WINDOW_MS,
+    });
+    if (!rl.ok) {
+      return NextResponse.json(
+        {
+          error: `Too many document uploads. Try again in ${rl.retryAfterSec} seconds.`,
+          code: 'RATE_LIMITED',
+          retryAfterSec: rl.retryAfterSec,
+        },
+        {
+          status: 429,
+          headers: { 'Retry-After': String(rl.retryAfterSec) },
+        },
+      );
+    }
 
     let body: Record<string, unknown>;
     try {

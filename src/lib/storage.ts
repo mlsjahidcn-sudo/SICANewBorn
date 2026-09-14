@@ -110,12 +110,32 @@ export interface StudentDocUploadUrl {
  * The path is intentionally NOT a function of the file name — sanitized
  * timestamps + random suffix are appended. We keep the original
  * `fileName` in the row's `file_name` column for human display.
+ *
+ * Phase 78 security note: this function uses the service-role key to
+ * mint the signed URL (the anon key can't create upload URLs for paths
+ * it doesn't own). The caller MUST pass the authenticated user's id —
+ * never a client-supplied value. The runtime assertion below is
+ * defense-in-depth so a future caller can't accidentally bypass the
+ * student-prefix isolation enforced by storage RLS.
  */
 export async function createStudentDocUploadUrl(
   studentId: string,
   documentId: string,
   originalFileName: string,
 ): Promise<StudentDocUploadUrl | null> {
+  // Defense-in-depth: refuse to mint a URL for a student-id path
+  // that doesn't look like a valid UUID. The route layer (which
+  // passes auth.user.id) already enforces this; this is the second
+  // gate.
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!UUID_RE.test(studentId) || !UUID_RE.test(documentId)) {
+    console.error(
+      '[createStudentDocUploadUrl] refusing to mint URL — studentId/documentId is not a valid UUID',
+      { studentId, documentId },
+    );
+    return null;
+  }
+
   const supabase = getStorageClient();
   if (!supabase) return null;
 
@@ -124,6 +144,17 @@ export async function createStudentDocUploadUrl(
   const safeExt = ext.replace(/[^a-z0-9]/g, '').slice(0, 8) || 'pdf';
   const safeName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${safeExt}`;
   const storagePath = `${studentId}/${documentId}-${safeName}`;
+
+  // Second defense-in-depth check: the constructed path must begin
+  // with the studentId we validated above. Catches any future refactor
+  // that mis-templates the path.
+  if (!storagePath.startsWith(`${studentId}/`)) {
+    console.error(
+      '[createStudentDocUploadUrl] storagePath is not namespaced under studentId',
+      { studentId, storagePath },
+    );
+    return null;
+  }
 
   const { data, error } = await supabase.storage
     .from(STUDENT_DOCS_BUCKET)

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Plus, Eye, Trash2, MoreHorizontal, ArrowUpRight, ArrowDownRight, Minus, RefreshCw, AlertCircle, Search, Users, Building2, UserPlus, CheckSquare, Square, X, StickyNote, Flag, Download, CalendarClock } from 'lucide-react';
+import { Plus, Eye, Trash2, MoreHorizontal, ArrowUpRight, ArrowDownRight, Minus, RefreshCw, AlertCircle, Search, Users, Building2, UserPlus, CheckSquare, Square, X, StickyNote, Flag, Download, CalendarClock, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -18,6 +18,7 @@ import {
 import { ListPageSkeleton } from '@/components/partner/skeletons';
 import { useStudentList } from '@/hooks/use-student-list';
 import { apiFetch, apiFetchJson } from '@/lib/api-client';
+import { downloadCsvViaApi } from '@/lib/download-csv';
 import { APPLICATION_STATUSES, ApplicationStatus } from '@/lib/application-mapper';
 import { parseIntakeFilter, getCanonicalCohorts } from '@/lib/intake-normalize';
 
@@ -168,6 +169,7 @@ export default function AdminApplicationsPage() {
   const [page, setPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Filter state
   const [searchInput, setSearchInput] = useState('');
@@ -336,10 +338,13 @@ export default function AdminApplicationsPage() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  // Reset to page 1 when tab or filters change
+  // Reset to page 1 when tab or filters change. Phase 77: `partnerOnly`
+  // was missing — deep-linking into `?surface=partner` (e.g. from an
+  // admin partner-app detail back-link) while on page 3 kept page 3,
+  // which could render empty because the partner surface has few pages.
   useEffect(() => {
     setPage(1);
-  }, [activeTab, statusFilter, studentFilter, searchQuery, intakeFilter]);
+  }, [activeTab, statusFilter, studentFilter, searchQuery, intakeFilter, partnerOnly]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -371,6 +376,54 @@ export default function AdminApplicationsPage() {
   const handleDelete = (application: Application) => {
     setApplicationToDelete(application);
     setDeleteDialogOpen(true);
+  };
+
+  // Export the currently filtered list. This used to be `window.open`
+  // to the export endpoint in a new tab — but a plain navigation can't
+  // send the Authorization header, so the export 401'd in the tab.
+  // Now we route through apiFetch (attaches the bearer token) + a Blob
+  // download, mirroring the partner applications export.
+  const handleExportCsv = async () => {
+    setIsExporting(true);
+    setError(null);
+    try {
+      const params = new URLSearchParams();
+      if (partnerOnly) {
+        params.set('surface', 'partner');
+      } else if (activeTab !== 'all') {
+        params.set('source', activeTab);
+      }
+      if (statusFilter !== 'all') params.set('status', statusFilter);
+      if (searchQuery.trim()) params.set('search', searchQuery.trim());
+      if (intakeFilter) params.set('intake', intakeFilter);
+      await downloadCsvViaApi(
+        `/api/admin/applications/export${params.toString() ? `?${params}` : ''}`,
+        `sica-applications-${new Date().toISOString().slice(0, 10)}.csv`,
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to export applications');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // Export just the selected rows, then clear the selection.
+  const handleExportSelected = async () => {
+    setIsExporting(true);
+    setError(null);
+    try {
+      const params = new URLSearchParams({ ids: Array.from(selectedIds).join(',') });
+      if (intakeFilter) params.set('intake', intakeFilter);
+      await downloadCsvViaApi(
+        `/api/admin/applications/export?${params.toString()}`,
+        `sica-applications-${new Date().toISOString().slice(0, 10)}.csv`,
+      );
+      setSelectedIds(new Set());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to export selected applications');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   // S31: bulk action handlers. Each handler:
@@ -528,25 +581,12 @@ export default function AdminApplicationsPage() {
           <Button
             variant="outline"
             className="rounded-none"
-            onClick={() => {
-              // Build a query string that mirrors the list
-              // endpoint's filter semantics so the export is
-              // scoped to what the admin sees.
-              const params = new URLSearchParams();
-              if (partnerOnly) {
-                params.set('surface', 'partner');
-              } else if (activeTab !== 'all') {
-                params.set('source', activeTab);
-              }
-              if (statusFilter !== 'all') params.set('status', statusFilter);
-              if (searchQuery.trim()) params.set('search', searchQuery.trim());
-              if (intakeFilter) params.set('intake', intakeFilter);
-              window.open(`/api/admin/applications/export?${params.toString()}`, '_blank');
-            }}
+            onClick={() => void handleExportCsv()}
+            disabled={isExporting}
             title="Download the currently visible (filtered) rows as a CSV"
           >
-            <Download className="w-4 h-4 mr-2" />
-            Export CSV
+            {isExporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+            {isExporting ? 'Exporting…' : 'Export CSV'}
           </Button>
           <Button
             className="bg-[#9B1B30] hover:bg-[#7A1526] text-white"
@@ -1224,30 +1264,20 @@ export default function AdminApplicationsPage() {
               >
                 <Trash2 size={14} className="mr-1.5" /> Delete
               </Button>
-              {/* S33: Export selected. Opens the export endpoint
-                  with the current selection as ?ids=... The
-                  response is a CSV file download — we use
-                  window.open in a new tab so the admin's current
-                  filter / list state stays intact. */}
+              {/* S33 / Phase 77: Export selected. Routes through
+                  apiFetch + a Blob download (now that window.open
+                  can't send the Authorization header this would
+                  otherwise 401 in a new tab). Clears the selection
+                  after — the export is fire-and-forget; the next
+                  page load is the source of truth and a stale id
+                  could re-target a row the admin thought was
+                  already exported. */}
               <Button
                 variant="outline"
                 size="sm"
                 className="rounded-none"
-                onClick={() => {
-                  const idsParam = Array.from(selectedIds).join(',');
-                  const params = new URLSearchParams({ ids: idsParam });
-                  if (intakeFilter) params.set('intake', intakeFilter);
-                  window.open(
-                    `/api/admin/applications/export?${params.toString()}`,
-                    '_blank',
-                  );
-                  // Clear the selection — the export is fire-and-
-                  // forget; the next page load is the source of
-                  // truth and a stale id could re-target a row
-                  // the admin thought was already exported.
-                  setSelectedIds(new Set());
-                }}
-                disabled={bulkRunning}
+                onClick={() => void handleExportSelected()}
+                disabled={bulkRunning || isExporting}
                 title={`Download ${selectedIds.size} selected row(s) as a CSV`}
               >
                 <Download size={14} className="mr-1.5" /> Export selected

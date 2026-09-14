@@ -63,9 +63,13 @@ export async function GET(_request: NextRequest) {
     // S28: partner CRM surface (partner_applications table) is a
     // separate count. The admin UI's "Partner" tab blends
     // `partner + partnerCrm`.
+    // Phase 62: archive filter — the list endpoint defaults partner
+    // rows to `archived_at IS NULL`, so the counts must match or the
+    // tab badge / stat cards over-report vs the rows actually shown.
     const partnerCrmQuery = service
       .from('partner_applications')
-      .select('id', { count: 'exact', head: true });
+      .select('id', { count: 'exact', head: true })
+      .is('archived_at', null);
 
     // Phase 32: per-status + per-priority breakdowns. We select
     // only the columns we care about (no `head: true` — we need
@@ -81,6 +85,7 @@ export async function GET(_request: NextRequest) {
     const partnerStatusQuery = service
       .from('partner_applications')
       .select('status, priority')
+      .is('archived_at', null)
       .range(0, 4999);
 
     const [total, offline, online, partner, partnerCrm, studentStatus, partnerStatus] =

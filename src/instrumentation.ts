@@ -1,37 +1,13 @@
 /**
  * Next.js instrumentation hook — runs once per server startup.
  *
- * Used here to wire Sentry error + performance monitoring on the
- * server side. The init is env-gated: Sentry is a no-op when
- * `SENTRY_DSN` is unset, so local dev and preview deploys without
- * a DSN pay zero overhead (no transport, no network calls, no
- * build-time wrapping).
+ * Phase 68: Sentry init DISABLED. The project uses Cloudflare Pages
+ * for deploy (via @opennextjs/cloudflare) and Cloudflare Workers
+ * runtimes don't support @sentry/nextjs (the Node server SDK uses
+ * `node:diagnostics_channel` which doesn't exist in V8 isolates).
+ * The dependency was removed entirely; this file is kept as a
+ * no-op so Next.js's instrumentation hook contract is still satisfied.
  *
- * NEXT_RUNTIME is set by Next.js to one of:
- *   - "nodejs" — the long-lived server (default)
- *   - "edge"   — middleware / edge API routes
- *
- * We init Sentry separately for each runtime because the
- * `Sentry.init()` options need to match the runtime (e.g. edge
- * can't use Node modules). One process import per runtime is the
- * canonical Sentry Next.js pattern.
- *
- * Sentry v10 is bundled — if you want to silence the build-time
- * "tunnel route" warnings without a DSN, set SENTRY_DSN anyway
- * (Sentry still no-ops without a real DSN inside init()).
- *
- * See:
- *   - https://docs.sentry.io/platforms/javascript/guides/nextjs/
- *   - https://nextjs.org/docs/app/building-your-application/optimizing/instrumentation
+ * To re-enable: see the matching comment in src/instrumentation-client.ts.
  */
-export async function register(): Promise<void> {
-  const dsn = process.env.SENTRY_DSN;
-  if (!dsn) return; // no-op — local dev / preview deploys without DSN
-
-  if (process.env.NEXT_RUNTIME === 'nodejs') {
-    await import('./sentry.server.config');
-  }
-  if (process.env.NEXT_RUNTIME === 'edge') {
-    await import('./sentry.edge.config');
-  }
-}
+export {};
