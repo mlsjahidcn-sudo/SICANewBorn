@@ -5,13 +5,13 @@ import { decodeUnsubToken } from '@/lib/email/drip/tokens';
 export const dynamic = 'force-dynamic';
 
 /**
- * GET/POST /api/email/unsubscribe?token=<base64url-email>
+ * GET/POST /api/email/unsubscribe?token=<signed-token>
  *
  * One-click unsubscribe. Marks all future pending drips for the
- * email as 'skipped_unsubscribed'. The token is a base64url
- * encoding of the email — not cryptographically secret, but it
- * keeps the unsubscribe URL short and prevents trivial scraping
- * of email addresses from the email body.
+ * email as 'skipped_unsubscribed'. Tokens are HMAC-signed as of
+ * Phase 93 (src/lib/email/drip/tokens.ts); legacy unsigned tokens
+ * from already-sent emails are still accepted. The URL stays short
+ * and keeps raw email addresses out of the email body.
  *
  * Returns a simple HTML confirmation page (works in browsers
  * when the user clicks the link in the email footer).

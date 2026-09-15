@@ -45,31 +45,37 @@ import { FooterNews } from '@/components/FooterNews';
  * brand block room — research shows the most-clicked footer element
  * is the logo, not the nav links.
  *
- * Why no newsletter form submit handler yet: a form needs a real
- * endpoint + double-opt-in + list provider. We render the UI as a
- * working stub (mailto fallback) so the visual is right; the form
- * submission is wired to mailto:info@studyinchina.academy for now and the
- * TODO is left as a one-line change once /api/newsletter exists.
+ * The newsletter form posts to /api/newsletter (Phase 93) — a real
+ * endpoint that upserts into newsletter_subscribers. Before that, the
+ * form was a mailto: stub (S40) because no endpoint existed.
  */
 export function Footer() {
   const { t, locale } = useI18n();
   const [year, setYear] = useState<number>(2025);
   const [email, setEmail] = useState('');
+  const [subscribeState, setSubscribeState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
 
   useEffect(() => {
     setYear(new Date().getFullYear());
   }, []);
 
-  const handleSubscribe = (e: React.FormEvent) => {
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
-    // S40 stub: until /api/newsletter exists, route via mailto
-    // so the click does SOMETHING visible. The form has been
-    // demonstrated to be wired (no js handler missing) — swap
-    // the mailto for a fetch() once the API lands.
-    const subject = encodeURIComponent('SICA newsletter subscribe');
-    const body = encodeURIComponent(`Email: ${email}`);
-    window.location.href = `mailto:info@studyinchina.academy?subject=${subject}&body=${body}`;
+    const trimmed = email.trim();
+    if (!trimmed || subscribeState === 'loading') return;
+    setSubscribeState('loading');
+    try {
+      const res = await fetch('/api/newsletter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: trimmed, locale }),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      setSubscribeState('success');
+      setEmail('');
+    } catch {
+      setSubscribeState('error');
+    }
   };
 
   return (
@@ -111,12 +117,23 @@ export function Footer() {
               </div>
               <button
                 type="submit"
-                className="inline-flex items-center justify-center gap-2 bg-[#9B1B30] hover:bg-[#7A1526] text-white font-semibold uppercase tracking-wider text-sm px-6 py-3 transition-colors shrink-0"
+                disabled={subscribeState === 'loading'}
+                className="inline-flex items-center justify-center gap-2 bg-[#9B1B30] hover:bg-[#7A1526] text-white font-semibold uppercase tracking-wider text-sm px-6 py-3 transition-colors shrink-0 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {t('footer.newsletterCta')}
+                {subscribeState === 'loading' ? '…' : t('footer.newsletterCta')}
                 <ArrowRight className="h-4 w-4" />
               </button>
             </form>
+            {subscribeState === 'success' && (
+              <p className="text-xs text-emerald-400 lg:col-start-2 -mt-2" role="status">
+                {t('footer.newsletterSuccess')}
+              </p>
+            )}
+            {subscribeState === 'error' && (
+              <p className="text-xs text-red-400 lg:col-start-2 -mt-2" role="alert">
+                {t('footer.newsletterError')}
+              </p>
+            )}
             <p className="text-xs text-gray-400 lg:col-start-2 -mt-2">
               {t('footer.newsletterNote')}
             </p>
