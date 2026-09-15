@@ -372,8 +372,8 @@ export default function AdminNewApplicationPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAF8]">
-      <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+    <div>
+      <div className="max-w-4xl space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">

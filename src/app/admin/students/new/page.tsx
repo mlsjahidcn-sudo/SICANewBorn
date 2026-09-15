@@ -307,8 +307,8 @@ export default function AdminAddStudentPage() {
   // Success state: show the temp password + next-step actions
   if (success) {
     return (
-      <div className="min-h-screen bg-[#FAFAF8]">
-        <div className="max-w-2xl mx-auto px-4 py-12 space-y-6">
+      <div>
+        <div className="max-w-2xl space-y-6">
           <Card>
             <CardContent className="pt-6">
               <div className="text-center mb-6">
@@ -382,8 +382,8 @@ export default function AdminAddStudentPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAFAF8]">
-      <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+    <div>
+      <div className="max-w-4xl space-y-6">
         {/* Page Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
