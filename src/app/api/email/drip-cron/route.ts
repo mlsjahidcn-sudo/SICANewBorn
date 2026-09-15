@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { processPendingDrips } from '@/lib/email/drip/scheduler';
+import { verifyCronSecret } from '@/lib/cron-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,19 +13,17 @@ export const dynamic = 'force-dynamic';
  * Railway Cron, GitHub Actions cron) for stricter SLAs or to
  * backfill after a server restart.
  *
- * Secured with a shared secret in the `x-cron-secret` header.
- * If DRIP_CRON_SECRET is not set, the endpoint is unauthenticated
- * (dev-friendly but should be configured for production).
+ * Secured with a shared secret in the `x-cron-secret` header
+ * (timing-safe compare via src/lib/cron-auth.ts). If
+ * DRIP_CRON_SECRET is not set, the endpoint fails CLOSED in
+ * production (503) and stays open only outside production.
  *
  * Returns a JSON summary of what was processed.
  */
 export async function GET(request: NextRequest) {
-  const expected = process.env.DRIP_CRON_SECRET;
-  if (expected) {
-    const got = request.headers.get('x-cron-secret');
-    if (got !== expected) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  const cron = verifyCronSecret(request, 'DRIP_CRON_SECRET');
+  if (!cron.ok) {
+    return NextResponse.json({ error: cron.error }, { status: cron.status });
   }
 
   const start = Date.now();

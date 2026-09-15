@@ -79,7 +79,10 @@ export async function POST(request: NextRequest) {
   }
 
   const folderId = randomUUID();
-  const result = await createTranscriptUploadUrl(folderId, fileName);
+  // fileType is already validated against the allowlist above — pass it
+  // through so the storage path extension is derived from the MIME type,
+  // not the client-controlled fileName (Phase 91: stored-XSS fix).
+  const result = await createTranscriptUploadUrl(folderId, fileName, fileType);
   if (!result) {
     return NextResponse.json(
       { error: 'Failed to generate upload URL. Storage may not be configured.' },

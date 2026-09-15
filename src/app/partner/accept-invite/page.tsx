@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/lib/auth-context';
+import { supabase } from '@/lib/supabase-browser';
 import { useI18n } from '@/lib/i18n';
 
 function AcceptInviteInner() {
@@ -38,10 +39,14 @@ function AcceptInviteInner() {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
-  // Pre-fill email from token (base64url JSON)
+  // Pre-fill email from the token's payload part. Tokens are
+  // `<base64url payload>.<base64url hmac>` (src/lib/invite-token.ts) —
+  // split off the signature before decoding (the server re-validates
+  // everything on POST; this is display convenience only).
   useEffect(() => {
     try {
-      const json = atob(token.replace(/-/g, '+').replace(/_/g, '/'));
+      const payload = token.split('.')[0];
+      const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
       const parsed = JSON.parse(json);
       if (typeof parsed.email === 'string') {
         setEmail(parsed.email);
@@ -95,9 +100,19 @@ function AcceptInviteInner() {
         setError(signInErr);
         return;
       }
+      // Send the fresh session so the server can bind the invite to the
+      // signed-in user (a mismatched account is rejected server-side).
+      let accessToken: string | undefined;
+      if (supabase) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        accessToken = sessionData.session?.access_token;
+      }
       const res = await fetch('/api/partner/accept-invite', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
         body: JSON.stringify({ token }),
       });
       const body = await res.json();

@@ -21,6 +21,7 @@ import { findUserIdByEmail, hydrateUserEmails, primeEmailToUserIdCache } from '@
 import { checkRateLimit } from '@/lib/rate-limit';
 import { sendTemplatedEmail, isEmailConfigured } from '@/lib/email/index';
 import { SITE_URL } from '@/lib/site-url';
+import { signInviteToken } from '@/lib/invite-token';
 
 export const dynamic = 'force-dynamic';
 
@@ -200,17 +201,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // 3. Generate invite token
-  const token = Buffer.from(
-    JSON.stringify({
-      partner_id: auth.partnerId,
-      email,
-      user_id: userId,
-      invited_by: auth.user.id,
-      exp: Date.now() + INVITE_TTL_DAYS * 86400 * 1000,
-    }),
-    'utf-8',
-  ).toString('base64url');
+  // 3. Generate invite token (HMAC-signed — see src/lib/invite-token.ts)
+  const token = signInviteToken({
+    partner_id: auth.partnerId,
+    email,
+    user_id: userId,
+    invited_by: auth.user.id,
+    exp: Date.now() + INVITE_TTL_DAYS * 86400 * 1000,
+  });
 
   // 4. Insert team_members row with status='pending_invite'
   const { data: member, error: mErr } = await service

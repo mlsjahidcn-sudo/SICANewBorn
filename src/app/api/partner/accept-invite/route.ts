@@ -23,39 +23,13 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { buildServiceClient, getServerEnv } from '@/lib/supabase-auth';
+import { verifyInviteToken } from '@/lib/invite-token';
 
 export const dynamic = 'force-dynamic';
 
 interface AcceptBody {
   token?: string;
   password?: string;
-}
-
-interface InviteToken {
-  partner_id: string;
-  email: string;
-  user_id: string;
-  invited_by: string;
-  exp: number; // ms epoch
-}
-
-function decodeToken(token: string): InviteToken | null {
-  try {
-    const json = Buffer.from(token, 'base64url').toString('utf-8');
-    const parsed = JSON.parse(json);
-    if (
-      typeof parsed.partner_id === 'string' &&
-      typeof parsed.email === 'string' &&
-      typeof parsed.user_id === 'string' &&
-      typeof parsed.invited_by === 'string' &&
-      typeof parsed.exp === 'number'
-    ) {
-      return parsed as InviteToken;
-    }
-    return null;
-  } catch {
-    return null;
-  }
 }
 
 export async function POST(request: NextRequest) {
@@ -73,7 +47,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'token is required' }, { status: 400 });
   }
 
-  const token = decodeToken(body.token);
+  const token = verifyInviteToken(body.token);
   if (!token) {
     return NextResponse.json({ error: 'Invalid token' }, { status: 400 });
   }
@@ -82,6 +56,29 @@ export async function POST(request: NextRequest) {
   }
 
   const service = buildServiceClient();
+
+  // Phase 91: JWT binding. When the caller presents a session (the
+  // sign-in-and-accept flow does), it must belong to the invited user —
+  // a valid token in the wrong hands can't be cashed by a different
+  // signed-in account. The pre-sign-in password-setup flow (setup=1,
+  // brand-new user) has no session yet and relies on the HMAC signature
+  // alone.
+  const authHeader = request.headers.get('authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    const jwt = authHeader.slice('Bearer '.length).trim();
+    if (jwt) {
+      const { data: userData, error: userErr } = await service.auth.getUser(jwt);
+      if (userErr || !userData?.user) {
+        return NextResponse.json({ error: 'Invalid session token' }, { status: 401 });
+      }
+      if (userData.user.id !== token.user_id) {
+        return NextResponse.json(
+          { error: 'This invite was issued for a different account. Sign in with the invited email.' },
+          { status: 403 },
+        );
+      }
+    }
+  }
 
   // 1. Find the team_members row by (partner_id, user_id)
   const { data: member, error: mErr } = await service

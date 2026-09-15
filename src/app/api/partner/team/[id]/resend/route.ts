@@ -20,6 +20,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { buildServiceClient, requireTeamMember, getServerEnv } from '@/lib/supabase-auth';
 import { sendTemplatedEmail, isEmailConfigured } from '@/lib/email/index';
 import { SITE_URL } from '@/lib/site-url';
+import { signInviteToken } from '@/lib/invite-token';
 
 export const dynamic = 'force-dynamic';
 
@@ -75,17 +76,15 @@ export async function POST(
   // Heuristic: if the user has no `last_sign_in_at`, they're a new user.
   const isNewUser = !userData?.user?.last_sign_in_at;
 
-  // Regenerate the invite token (the previous one might be expired)
-  const token = Buffer.from(
-    JSON.stringify({
-      partner_id: auth.partnerId,
-      email,
-      user_id: m.user_id,
-      invited_by: auth.user.id,
-      exp: Date.now() + INVITE_TTL_DAYS * 86400 * 1000,
-    }),
-    'utf-8',
-  ).toString('base64url');
+  // Regenerate the invite token (the previous one might be expired).
+  // HMAC-signed — see src/lib/invite-token.ts.
+  const token = signInviteToken({
+    partner_id: auth.partnerId,
+    email,
+    user_id: m.user_id,
+    invited_by: auth.user.id,
+    exp: Date.now() + INVITE_TTL_DAYS * 86400 * 1000,
+  });
 
   // Refresh invited_at so the team table shows the resend
   await service

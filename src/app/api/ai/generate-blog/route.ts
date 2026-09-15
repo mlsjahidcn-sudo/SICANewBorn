@@ -2,16 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAIProvider } from '@/lib/ai/provider';
 import { captureAIError } from '@/lib/ai/with-capture';
 import { checkAdminAIRateLimit } from '@/lib/ai/admin-ai-rate-limit';
-import { getRequestAuth } from '@/lib/supabase-auth';
+import { requireAdmin } from '@/lib/supabase-auth';
 import { buildBlogSystemPrompt, buildBlogUserPrompt } from '@/lib/ai/blog-prompts';
-import {
-  sanitizeMarkdown,
-  scrubThirdPartyAgencies,
-  scrubFaq,
-  slugify,
-  extractJsonObject,
-  normalizeBlogPayload,
-} from '@/lib/ai/blog-sanitize';
+import { extractJsonObject, normalizeBlogPayload } from '@/lib/ai/blog-sanitize';
 
 /**
  * POST /api/ai/generate-blog
@@ -36,7 +29,10 @@ import {
 export async function POST(request: NextRequest) {
   // Phase 36: gate on admin auth + per-admin rate limit. Same
   // security fix as generate-university (Phase 1 had no gate here).
-  const auth = await getRequestAuth(request);
+  // Phase 91: the gate was actually getRequestAuth — any logged-in
+  // user (e.g. a student) passed and could burn AI quota. requireAdmin,
+  // same as generate-university.
+  const auth = await requireAdmin(request);
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }

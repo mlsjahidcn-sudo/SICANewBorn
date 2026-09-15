@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runGenerateNews, RunArgs } from '@/lib/ai/news-automation-runner';
+import { verifyCronSecret } from '@/lib/cron-auth';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300; // 5 minutes — the longest run can take ~3 minutes (5 topics × ~30s AI call each)
@@ -11,9 +12,10 @@ export const maxDuration = 300; // 5 minutes — the longest run can take ~3 min
 // inserts drafts, audit-logs the run. Admin reviews drafts in
 // /admin/news and clicks Publish.
 //
-// Auth: shared secret in the x-cron-secret header. If
-// NEWS_CRON_SECRET is not set, the endpoint is unauthenticated
-// (dev-friendly; configure for production — see docs/news-automation.md).
+// Auth: shared secret in the x-cron-secret header (timing-safe compare
+// via src/lib/cron-auth.ts). If NEWS_CRON_SECRET is not set, the
+// endpoint fails CLOSED in production (503) and stays dev-friendly
+// (open) outside production — see docs/news-automation.md.
 //
 //   GET  /api/cron/generate-news?count=5&length=short
 //   POST /api/cron/generate-news   { count?, length?, topicIds? }
@@ -32,12 +34,9 @@ export async function POST(request: NextRequest) {
 }
 
 async function runWithCronAuth(request: NextRequest, base: RunArgs) {
-  const expected = process.env.NEWS_CRON_SECRET;
-  if (expected) {
-    const got = request.headers.get('x-cron-secret');
-    if (got !== expected) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  const cron = verifyCronSecret(request, 'NEWS_CRON_SECRET');
+  if (!cron.ok) {
+    return NextResponse.json({ error: cron.error }, { status: cron.status });
   }
 
   let body: RunArgs = { ...base };

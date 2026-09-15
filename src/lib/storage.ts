@@ -25,17 +25,47 @@ const TRANSCRIPT_BUCKET = 'transcripts';
 export const STUDENT_DOCS_BUCKET = 'student-documents';
 
 // ---------------------------------------------------------------------------
-// Transcript helpers (existing, untouched)
+// Transcript helpers
 // ---------------------------------------------------------------------------
+
+/**
+ * MIME → storage extension map for transcripts. Mirrors the transcripts
+ * bucket's allowed_mime_types (database/2026-08-26_restore_transcripts_bucket.sql).
+ * The extension in the storage path MUST come from the validated MIME type,
+ * not the user-supplied fileName — a `fileType=application/pdf,
+ * fileName=x.html` upload would otherwise land an .html object in the
+ * bucket (stored-content XSS when the signed URL is opened in a browser).
+ */
+const TRANSCRIPT_MIME_EXT: Record<string, string> = {
+  'application/pdf': 'pdf',
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/jpg': 'jpg',
+  'application/msword': 'doc',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+};
+
+/**
+ * Resolve the storage extension for a transcript upload. Prefers the
+ * (route-validated) MIME type; falls back to the filename extension only
+ * when it's in the same allowlist, else 'pdf'.
+ */
+export function transcriptExtFor(mimeType: string | undefined, fileName: string): string {
+  if (mimeType && TRANSCRIPT_MIME_EXT[mimeType]) return TRANSCRIPT_MIME_EXT[mimeType];
+  const ext = (fileName.split('.').pop() || '').toLowerCase();
+  const normalized = ext === 'jpeg' ? 'jpg' : ext;
+  return Object.values(TRANSCRIPT_MIME_EXT).includes(normalized) ? normalized : 'pdf';
+}
 
 export async function createTranscriptUploadUrl(
   folderId: string,
   fileName: string,
+  fileType?: string,
 ): Promise<{ uploadUrl: string; storagePath: string } | null> {
   const supabase = getStorageClient();
   if (!supabase) return null;
 
-  const ext = fileName.split('.').pop() || 'pdf';
+  const ext = transcriptExtFor(fileType, fileName);
   const safeName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
   const storagePath = `assessments/${folderId}/${safeName}`;
 

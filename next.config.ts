@@ -13,12 +13,23 @@ const baseConfig: NextConfig = {
   },
   allowedDevOrigins: ['*.dev.coze.site'],
   images: {
+    // Phase 91: explicit host allowlist (was `hostname: '*'`, which let
+    // the Next image optimizer proxy arbitrary hosts). Verified against
+    // production data 2026-09-15: universities.logo → cdn.urongda.com +
+    // static-data.gaokao.cn; universities.image → static-data.gaokao.cn +
+    // images.unsplash.com; news_posts.cover_image → i.imgur.com; static
+    // seed fallbacks → studyinchina.csc.edu.cn; documents / admission
+    // notices / partner fee proofs render from signed URLs on the
+    // Supabase storage host (not a secret — the anon key ships to every
+    // browser anyway). When an admin starts using a new external image
+    // host, add it to this list.
     remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: '*',
-        pathname: '/**',
-      },
+      { protocol: 'https', hostname: 'cdn.urongda.com' },
+      { protocol: 'https', hostname: 'static-data.gaokao.cn' },
+      { protocol: 'https', hostname: 'images.unsplash.com' },
+      { protocol: 'https', hostname: 'studyinchina.csc.edu.cn' },
+      { protocol: 'https', hostname: 'i.imgur.com' },
+      { protocol: 'https', hostname: 'wbzdwwvtbaftjxecgdxk.supabase.co' },
     ],
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
@@ -59,6 +70,23 @@ const baseConfig: NextConfig = {
         has: [{ type: 'host', value: 'www.studyinchina.academy' }],
         destination: 'https://studyinchina.academy/:path*',
         permanent: true,
+      },
+    ];
+  },
+  // Phase 91: baseline security headers on every response. A strict CSP
+  // needs nonce infrastructure (GA + Next inline scripts), so it's
+  // deliberately left out here — these are the zero-risk headers.
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains' },
+        ],
       },
     ];
   },

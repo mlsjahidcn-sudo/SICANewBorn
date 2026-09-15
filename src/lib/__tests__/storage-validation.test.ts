@@ -5,7 +5,7 @@ import {
   validateFileName,
   isAllowedMimeType,
 } from '@/lib/storage-validation';
-import { STUDENT_DOC_MAX_BYTES } from '@/lib/storage';
+import { STUDENT_DOC_MAX_BYTES, transcriptExtFor } from '@/lib/storage';
 
 describe('storage-validation', () => {
   describe('isAllowedMimeType', () => {
@@ -86,6 +86,38 @@ describe('storage-validation', () => {
     });
     it('fails for too long', () => {
       expect(validateFileName('a'.repeat(256)).ok).toBe(false);
+    });
+  });
+
+  // Phase 91: the transcript storage-path extension must come from the
+  // validated MIME type, never the client-controlled fileName — otherwise
+  // `fileType=application/pdf, fileName=x.html` lands an .html object in
+  // the bucket (stored-content XSS when opened from the signed URL).
+  describe('transcriptExtFor', () => {
+    it('prefers the MIME type over the filename extension', () => {
+      expect(transcriptExtFor('application/pdf', 'x.html')).toBe('pdf');
+      expect(transcriptExtFor('image/jpeg', 'photo.txt')).toBe('jpg');
+      expect(transcriptExtFor('image/png', 'no-extension')).toBe('png');
+      expect(
+        transcriptExtFor(
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'a.bin',
+        ),
+      ).toBe('docx');
+      expect(transcriptExtFor('application/msword', 'a.exe')).toBe('doc');
+    });
+
+    it('falls back to the filename extension only when it is allowlisted', () => {
+      expect(transcriptExtFor(undefined, 'report.PDF')).toBe('pdf');
+      expect(transcriptExtFor(undefined, 'scan.jpeg')).toBe('jpg');
+      expect(transcriptExtFor(undefined, 'malware.html')).toBe('pdf');
+      expect(transcriptExtFor(undefined, 'archive.zip')).toBe('pdf');
+      expect(transcriptExtFor(undefined, 'noext')).toBe('pdf');
+      expect(transcriptExtFor(undefined, '')).toBe('pdf');
+    });
+
+    it('accepts image/jpg as an alias of image/jpeg', () => {
+      expect(transcriptExtFor('image/jpg', 'x.html')).toBe('jpg');
     });
   });
 });
