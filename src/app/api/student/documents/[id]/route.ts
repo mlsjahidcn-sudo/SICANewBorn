@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server';
 import { getRequestAuth } from '@/lib/supabase-auth';
 import { deleteStudentDocFile } from '@/lib/storage';
 import { checkRateLimit } from '@/lib/rate-limit';
+import {
+  pickStudentEditableDocumentUpdates,
+  isApplicationOwnedBy,
+} from '@/lib/student-document-validation';
 
 // Phase 78: per-user rate limit on DELETE. 30 deletes / 15 min.
 const DELETE_RATE_MAX = 30;
@@ -49,24 +53,48 @@ export async function PUT(
     }
     const { supabase, user } = auth;
 
-    const body = await request.json();
-    const {
-      id,
-      created_at,
-      uploaded_at,
-      verified_at,
-      // Phase S20: pull out the camelCase wrapper fields and map to
-      // their snake_case column names. Without this the PATCH sends
-      // `applicationId` to the DB, which has the column `application_id`
-      // — Supabase would silently ignore the unknown key and the
-      // link would never persist.
-      applicationId,
-      ...rest
-    } = body;
-    const updates: Record<string, unknown> = { ...rest };
-    if (applicationId !== undefined) {
-      // Allow explicit null to unlink a doc from an application
-      updates.application_id = applicationId === null ? null : applicationId;
+    let body: Record<string, unknown>;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    }
+
+    // Phase 96: strict field allow-list. The old code spread ...rest
+    // into the UPDATE (after stripping only id/created_at/uploaded_at/
+    // verified_at), so a student could PATCH { "status": "Verified",
+    // "verified_by": "<uuid>" } on their own row and self-verify.
+    // Students may edit content fields only — never the review fields.
+    const updates = pickStudentEditableDocumentUpdates(body);
+
+    // Application (re)linkage goes through the camelCase wrapper and is
+    // ownership-checked. Explicit null unlinks the doc. The snake_case
+    // `application_id` key is NOT in the allow-list, so this wrapper is
+    // the only path that can set it.
+    if (body.applicationId !== undefined) {
+      const applicationId = body.applicationId;
+      if (applicationId === null) {
+        updates.application_id = null;
+      } else if (typeof applicationId === 'string') {
+        // Phase 96: ownership — previously any UUID was accepted, so a
+        // student could attach their documents to ANOTHER student's
+        // application (whose detail view fetches documents by
+        // application_id). 404, not 403 — don't leak other
+        // applications' existence.
+        if (!(await isApplicationOwnedBy(supabase, applicationId, user.id))) {
+          return NextResponse.json({ error: 'Application not found' }, { status: 404 });
+        }
+        updates.application_id = applicationId;
+      } else {
+        return NextResponse.json(
+          { error: 'applicationId must be a string or null' },
+          { status: 400 },
+        );
+      }
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: 'No editable fields provided' }, { status: 400 });
     }
 
     const { data: document, error } = await supabase

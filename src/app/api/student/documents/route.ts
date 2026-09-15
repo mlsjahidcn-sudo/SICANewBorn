@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getRequestAuth } from '@/lib/supabase-auth';
 import { isAllowedMimeType } from '@/lib/storage-validation';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { isApplicationOwnedBy } from '@/lib/student-document-validation';
 
 // Phase 78: per-user rate limit on row finalization. Caps spam of
 // student_documents inserts (each insert creates a storage object
@@ -179,14 +180,26 @@ export async function POST(request: Request) {
     if (typeof body.fileSize === 'number') {
       row.file_size = body.fileSize;
     }
-    if (
-      typeof body.applicationId === 'string' &&
-      body.applicationId.match(/^[0-9a-f-]{36}$/i)
-    ) {
-      row.application_id = body.applicationId;
+    // Phase 96: applicationId linkage is ownership-checked — previously
+    // any 36-hex string was accepted, so a student could attach their
+    // documents to ANOTHER student's application (whose detail view
+    // fetches documents by application_id). 404, not 403 — don't leak
+    // other applications' existence.
+    let applicationIdValue: string | null = null;
+    if (body.applicationId !== undefined && body.applicationId !== null) {
+      if (typeof body.applicationId !== 'string') {
+        return NextResponse.json({ error: 'applicationId must be a string' }, { status: 400 });
+      }
+      if (!(await isApplicationOwnedBy(supabase, body.applicationId, user.id))) {
+        return NextResponse.json({ error: 'Application not found' }, { status: 404 });
+      }
+      applicationIdValue = body.applicationId;
     }
     if (typeof body.notes === 'string' && body.notes.trim()) {
       row.notes = body.notes.trim();
+    }
+    if (applicationIdValue) {
+      row.application_id = applicationIdValue;
     }
     if (typeof body.id === 'string' && body.id.match(/^[0-9a-f-]{36}$/i)) {
       // Allow client to reuse the pre-allocated documentId from upload-url

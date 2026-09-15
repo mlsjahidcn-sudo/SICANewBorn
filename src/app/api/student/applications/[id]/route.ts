@@ -44,6 +44,11 @@ export async function GET(
         .from('student_documents')
         .select('*')
         .eq('application_id', params.id)
+        // Phase 96: defense in depth — the application row is already
+        // scoped to user.id above, but scope the document fetch too so
+        // a doc linked to the wrong application can never surface here
+        // (write-side ownership check added the same phase).
+        .eq('student_id', user.id)
         .order('uploaded_at', { ascending: false }),
       supabase
         .from('application_timeline')
