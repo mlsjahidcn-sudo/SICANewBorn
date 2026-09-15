@@ -175,6 +175,5 @@ Desktop.ini
 .coze-logs
 .preview
 
-# Cloudflare OpenNext/Wrangler build output
-.open-next/
-.wrangler/
+# AI coding-tool session data (Kilo plans etc.)
+.kilo/

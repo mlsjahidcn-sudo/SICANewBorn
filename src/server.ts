@@ -20,12 +20,12 @@ import next from 'next';
  *   4. anything else                  → dev (default; covers `pnpm dev` locally)
  *
  * This way:
- *   - Local `pnpm dev`              → dev mode (no env vars set)
+ *   - Local `npm run dev`           → dev mode (no env vars set)
  *   - Local `NODE_ENV=production node dist/server.js` → production
- *   - Railway / Docker             → production (NODE_ENV=production by default)
- *   - Cloudflare Workers           → production (handled by OpenNext adapter,
- *     this custom server is NOT used in Cloudflare deploys — Cloudflare
- *     runs the @opennextjs/cloudflare worker directly via wrangler)
+ *   - Hostinger (the only deploy target since Phase 91) → production
+ *     (NODE_ENV=production; the in-process drip + webhook schedulers
+ *     below only run on this Node server, which is exactly why the
+ *     deploy target matters)
  *   - Coze dev                      → dev (COZE_PROJECT_ENV=DEV)
  *   - Coze prod                     → production (COZE_PROJECT_ENV=PROD)
  *
