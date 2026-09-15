@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { apiFetchJson } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { useI18n } from '@/lib/i18n';
-import { DocumentUploader, DocumentCategory } from '@/components/student/DocumentUploader';
+import { DocumentUploader } from '@/components/student/DocumentUploader';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 // We keep the *static* enumerations (degreeLevels, documentTypes)
 // from data.ts — those are closed taxonomies the wizard drives.
@@ -117,16 +117,23 @@ function PrefillBadge({ t, children }: { t: (key: string, params?: Record<string
   );
 }
 
-// data.ts DocumentType.category is the same union as student-data.ts
-// DocumentCategory, but TypeScript doesn't unify across files. We trust
-// the runtime values match (they do — both are 'Identity' | 'Academic' |
-// 'Language' | 'Financial' | 'Recommendation' | 'Other').
-const mapDocCategoryToStudentCategory = (c: string): DocumentCategory =>
-  c as DocumentCategory;
-// Type-only imports (we removed the mock-student-data runtime imports
-// in S14.6; we keep just the types so the SyncableDocument interface
-// and DocumentStatus union still resolve.)
-import type { StudentDocument, DocumentStatus } from '@/lib/student-data';
+// Phase 95: explicit category + row mapping (see student-document-mapper).
+// The old code blind-cast DocumentType.category as the API's DocumentCategory
+// and trusted "the runtime values match" — they don't: data.ts uses
+// 'Student Basic' | 'Academic' | 'Application Specific' while the POST
+// endpoint only accepts 'Identity' | 'Academic' | 'Language' | 'Financial' |
+// 'Recommendation' | 'Other', so every non-Academic upload 400'd.
+// The documents rows are also mapped once on fetch — GET returns raw
+// snake_case columns and the old camelCase match
+// (sd.documentTypeId === docType.id) was always undefined.
+import {
+  mapDocCategoryToStudentCategory,
+  mapStudentDocumentRow,
+  isDocumentUsable,
+  type StudentDocumentView,
+  type StudentDocumentDbRow,
+} from '@/lib/student-document-mapper';
+import type { DocumentStatus } from '@/lib/student-data';
 
 // Step labels are translation keys — resolved via t() at render
 // time so the step indicator flips with the locale.
@@ -138,7 +145,7 @@ const steps = [
 
 interface SyncableDocument {
   documentType: DocumentType;
-  studentDoc?: StudentDocument;
+  studentDoc?: StudentDocumentView;
   selected: boolean;
 }
 
@@ -306,14 +313,25 @@ export default function StudentNewApplicationPage() {
   // NOT mockStudentAccounts[0]). The studentDocuments hook fetches
   // their own documents from /api/student/documents.
   const { user } = useAuth();
-  const [studentDocuments, setStudentDocuments] = useState<Array<{
-    id: string;
-    documentTypeId: string;
-    name: string;
-    status: 'Pending' | 'Uploaded' | 'Verified' | 'Rejected';
-    fileName?: string;
-  }>>([]);
+  // Phase 95: rows from GET /api/student/documents are snake_case DB
+  // columns — mapped once on fetch to the camelCase view (see
+  // refetchStudentDocuments below), otherwise sd.documentTypeId in the
+  // syncableDocuments memo was always undefined and uploaded docs never
+  // matched the step-2 checklist.
+  const [studentDocuments, setStudentDocuments] = useState<StudentDocumentView[]>([]);
   const [documentsLoading, setDocumentsLoading] = useState(false);
+
+  // Refetch the student's documents and map them to the camelCase view.
+  // Used by the mount effect and after each step-2 upload.
+  const refetchStudentDocuments = (signal?: AbortSignal) => {
+    setDocumentsLoading(true);
+    return apiFetchJson<{ data: StudentDocumentDbRow[] }>('/api/student/documents', { signal })
+      .then((d) => setStudentDocuments((d.data || []).map(mapStudentDocumentRow)))
+      .catch(() => setStudentDocuments([]))
+      .finally(() => {
+        if (!signal?.aborted) setDocumentsLoading(false);
+      });
+  };
 
   // Phase S20: fetch universities + programs from the API. Both
   // endpoints are public, no auth required, paginated — we pass
@@ -417,24 +435,16 @@ export default function StudentNewApplicationPage() {
 
   useEffect(() => {
     const controller = new AbortController();
-    setDocumentsLoading(true);
     // Phase S20: the API returns { data: [...] } not { documents: [...] }.
-    // The previous code looked for d.documents and got undefined, so the
-    // wizard started with no docs visible even when the student had
-    // uploaded some. Fixed.
-    apiFetchJson<{ data: typeof studentDocuments }>('/api/student/documents', {
-      signal: controller.signal,
-    })
-      .then((d) => setStudentDocuments(d.data || []))
-      .catch(() => setStudentDocuments([]))
-      .finally(() => {
-        if (!controller.signal.aborted) setDocumentsLoading(false);
-      });
+    // Phase 95: rows are snake_case DB columns — refetchStudentDocuments
+    // maps them to the camelCase view so the step-2 checklist matches.
+    void refetchStudentDocuments(controller.signal);
     return () => controller.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
   // Get syncable documents based on degree level
-  const syncableDocuments = useMemo(() => {
+  const syncableDocuments = useMemo<SyncableDocument[]>(() => {
     if (!applicationData.targetDegreeLevel) return [];
     // Narrow: after the guard, targetDegreeLevel is 'Bachelor' | 'Master' | 'PhD'
     const level = applicationData.targetDegreeLevel;
@@ -445,9 +455,13 @@ export default function StudentNewApplicationPage() {
 
     return applicableDocs.map(docType => {
       const studentDoc = studentDocuments.find((sd) => sd.documentTypeId === docType.id);
+      // isAutoSync checks the data.ts category (NOT the API category we
+      // map to at upload time) — 'Student Basic' docs auto-select once
+      // an usable upload exists.
       const isAutoSync = docType.category === 'Student Basic';
-      const isSelected = applicationData.selectedDocuments.includes(docType.id) ||
-        (isAutoSync && studentDoc && ['Uploaded', 'Verified'].includes(studentDoc.status));
+      const isSelected =
+        applicationData.selectedDocuments.includes(docType.id) ||
+        Boolean(isAutoSync && studentDoc && isDocumentUsable(studentDoc.status));
 
       return {
         documentType: docType,
@@ -706,7 +720,9 @@ export default function StudentNewApplicationPage() {
   const syncStats = useMemo(() => {
     const total = syncableDocuments.length;
     const selected = syncableDocuments.filter(d => d.selected).length;
-    const available = syncableDocuments.filter(d => d.studentDoc && ['Uploaded', 'Verified'].includes(d.studentDoc.status)).length;
+    // Phase 95: uploads finalize as 'Pending' (never 'Uploaded') —
+    // count Pending/Uploaded/Verified as available via isDocumentUsable.
+    const available = syncableDocuments.filter(d => d.studentDoc && isDocumentUsable(d.studentDoc.status)).length;
     return { total, selected, available };
   }, [syncableDocuments]);
 
@@ -717,13 +733,13 @@ export default function StudentNewApplicationPage() {
     const selected = syncableDocuments.filter(d => d.selected);
     if (selected.length === 0) return true;
     return selected.every(
-      (d) => d.studentDoc && ['Uploaded', 'Verified'].includes(d.studentDoc.status),
+      (d) => d.studentDoc && isDocumentUsable(d.studentDoc.status),
     );
   }, [syncableDocuments]);
   const selectedMissingUploads = useMemo(
     () =>
       syncableDocuments.filter(
-        (d) => d.selected && (!d.studentDoc || !['Uploaded', 'Verified'].includes(d.studentDoc.status)),
+        (d) => d.selected && (!d.studentDoc || !isDocumentUsable(d.studentDoc.status)),
       ),
     [syncableDocuments],
   );
@@ -1093,22 +1109,17 @@ export default function StudentNewApplicationPage() {
                               documentTypeId={doc.documentType.id}
                               documentName={doc.documentType.name}
                               category={mapDocCategoryToStudentCategory(doc.documentType.category)}
-                              onUploaded={(uploaded) => {
-                                // Re-fetch so the doc moves from "missing" → "selected"
-                                setDocumentsLoading(true);
-                                apiFetchJson<{ data: Array<{ id: string; documentTypeId: string; name: string; status: 'Pending' | 'Uploaded' | 'Verified' | 'Rejected'; fileName?: string }> }>(
-                                  '/api/student/documents',
-                                )
-                                  .then((d) => setStudentDocuments(d.data || []))
-                                  .catch(() => {})
-                                  .finally(() => setDocumentsLoading(false));
+                              onUploaded={() => {
+                                // Re-fetch so the doc moves from "missing" →
+                                // "selected". Rows are mapped to the camelCase
+                                // view (Phase 95) so the checklist matches.
+                                void refetchStudentDocuments();
                                 // M8: the old `pendingDocIds` tracking
                                 // call is gone — linkOrphanDocsToApplication
                                 // (called after POST) re-fetches every
                                 // orphan and links them, so we don't
                                 // need to track per-upload IDs in
                                 // session state anymore.
-                                console.log('[student/new] document uploaded:', uploaded.id);
                               }}
                               compact
                             />
