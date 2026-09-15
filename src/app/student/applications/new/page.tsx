@@ -246,24 +246,34 @@ export default function StudentNewApplicationPage() {
             additionalNotes: string | null;
             university: string;
             program: string;
+            // Phase 97: the API now returns the university/program
+            // slugs — restore the pickers directly instead of
+            // name-matching against the catalog arrays, which are
+            // fetched by a separate effect and are still EMPTY when
+            // this mount effect runs (stale closure — the old name
+            // match never hit, so a resumed draft lost its program
+            // and "Save as draft" errored with "Pick a university").
+            universityId: string;
+            programId: string | null;
           };
         }>(`/api/student/applications/${resumeId}`);
         const a = data.application;
-        // Match the program by its display name to recover the slug,
-        // since the API returns the name not the id. Fall back to the
-        // existing form value if no match.
-        const matchedProgram = programs.find(
-          (p) => p.name === a.program || p.slug === a.program,
-        );
+        // Slug-first restore; fall back to name matching only for old
+        // rows where university_id/program_id might be missing.
+        const matchedProgram = a.programId
+          ? programs.find((p) => p.slug === a.programId)
+          : programs.find((p) => p.name === a.program || p.slug === a.program);
         const matchedUniversity = matchedProgram
           ? universities.find((u) => u.slug === matchedProgram.universitySlug)
-          : universities.find((u) => u.name === a.university);
+          : a.universityId
+            ? universities.find((u) => u.slug === a.universityId)
+            : universities.find((u) => u.name === a.university);
         setApplicationData((prev) => ({
           ...prev,
           targetDegreeLevel:
             a.degree && isDegreeLevel(a.degree) ? a.degree : prev.targetDegreeLevel,
-          targetProgramSlug: matchedProgram?.slug || prev.targetProgramSlug,
-          targetUniversity: matchedUniversity?.slug || prev.targetUniversity,
+          targetProgramSlug: a.programId || matchedProgram?.slug || prev.targetProgramSlug,
+          targetUniversity: a.universityId || matchedUniversity?.slug || prev.targetUniversity,
           intendedIntake: a.intake || prev.intendedIntake,
           personalStatement: a.personalStatement || prev.personalStatement,
           additionalNotes: a.additionalNotes || prev.additionalNotes,

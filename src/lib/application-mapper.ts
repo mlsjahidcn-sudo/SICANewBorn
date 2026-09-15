@@ -182,8 +182,17 @@ export interface StudentApplication {
   applicationNumber: string | null;
   university: string;
   universityNameCn: string | null;
+  /**
+   * Phase 97: the university slug (student_applications.university_id
+   * stores the wizard's slug, not a UUID). Surfaced so the wizard's
+   * ?resume= flow can restore the pickers directly — no name→slug
+   * reverse matching against a possibly-unloaded catalog.
+   */
+  universityId: string;
   program: string;
   programNameCn: string | null;
+  /** Phase 97: the program slug, same rationale as universityId. */
+  programId: string | null;
   degree: string;
   intake: string;
   status: string;
@@ -209,8 +218,10 @@ export function mapApplicationForStudent(row: RawApp): StudentApplication {
     applicationNumber: row.application_number,
     university: row.university_name,
     universityNameCn: row.university_name_cn,
+    universityId: row.university_id,
     program: row.program_name,
     programNameCn: row.program_name_cn,
+    programId: row.program_id,
     degree: row.degree,
     intake: row.intake,
     status: row.status,
@@ -222,6 +233,28 @@ export function mapApplicationForStudent(row: RawApp): StudentApplication {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+/**
+ * Phase 97: fields every Submitted application must carry. POST has
+ * always validated these, but PUT's Draft→Submitted (and Rejected→
+ * Submitted resubmit) path didn't — a draft missing degree/intake
+ * could be stamped submitted_at and shipped.
+ *
+ * Returns the missing field names (snake_case) — empty array = ready.
+ */
+export function missingSubmitFields(row: {
+  university_name?: string | null;
+  program_name?: string | null;
+  degree?: string | null;
+  intake?: string | null;
+}): string[] {
+  const missing: string[] = [];
+  if (!row.university_name || !row.university_name.trim()) missing.push('university');
+  if (!row.program_name || !row.program_name.trim()) missing.push('program');
+  if (!row.degree || !row.degree.trim()) missing.push('degree');
+  if (!row.intake || !row.intake.trim()) missing.push('intake');
+  return missing;
 }
 
 /**

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getRequestAuth } from '@/lib/supabase-auth';
-import { mapApplicationForStudent } from '@/lib/application-mapper';
+import { mapApplicationForStudent, missingSubmitFields } from '@/lib/application-mapper';
 import { insertTimelineEvent } from '@/lib/timeline';
 
 /**
@@ -123,10 +123,12 @@ export async function PUT(
 
     const body = await request.json();
 
-    // 1. Fetch the existing row first so we can validate the transition
+    // 1. Fetch the existing row first so we can validate the transition.
+    // Phase 97: widened to the submit-required fields so Draft→Submitted
+    // can be re-validated (POST always validated these; PUT didn't).
     const { data: existingRow } = await supabase
       .from('student_applications')
-      .select('status, application_number, personal_statement, additional_notes')
+      .select('status, application_number, personal_statement, additional_notes, university_name, program_name, degree, intake')
       .eq('id', params.id)
       .eq('student_id', user.id)
       .maybeSingle();
@@ -201,6 +203,29 @@ export async function PUT(
       }
       allowed.status = body.status;
       if (body.status === 'Submitted') {
+        // Phase 97: re-validate the submit-required fields on the
+        // transition (POST has always checked these; PUT didn't — a
+        // draft missing degree/intake could be stamped submitted_at).
+        // The check runs against the POST-update shape: any allowed
+        // draft-field edits from THIS request override the stored row.
+        const missing = missingSubmitFields({
+          university_name:
+            (typeof allowed.university_name === 'string' && allowed.university_name) ||
+            existingRow.university_name,
+          program_name:
+            (typeof allowed.program_name === 'string' && allowed.program_name) ||
+            existingRow.program_name,
+          degree: (typeof allowed.degree === 'string' && allowed.degree) || existingRow.degree,
+          intake: (typeof allowed.intake === 'string' && allowed.intake) || existingRow.intake,
+        });
+        if (missing.length > 0) {
+          return NextResponse.json(
+            {
+              error: `Cannot submit yet — missing required fields: ${missing.join(', ')}. Fill them in and try again.`,
+            },
+            { status: 400 },
+          );
+        }
         // First submit OR resubmit after rejection — stamp fresh submitted_at
         allowed.submitted_at = new Date().toISOString();
       }

@@ -105,7 +105,15 @@ export default function StudentDashboardPage() {
     (async () => {
       try {
         const [appsRes, docsRes, notifsRes, profileRes] = await Promise.all([
-          apiFetchJson<{ data: StudentApplication[] }>('/api/student/applications'),
+          // Phase 97: the list API returns { applications, total, ... }
+          // (Phase 1.1 pagination envelope) — NOT { data: [...] }. The
+          // old `appsRes.data` read was always undefined, so the
+          // Total/Pending/Accepted stat cards, the recent-applications
+          // card, and the docs-needed/draft banners rendered empty for
+          // every student.
+          apiFetchJson<{ applications: StudentApplication[] }>(
+            '/api/student/applications',
+          ),
           apiFetchJson<{ data: StudentDocument[] }>('/api/student/documents'),
           apiFetchJson<{ notifications: StudentNotifSummary[] }>(
             '/api/student/notifications?limit=3',
@@ -115,7 +123,7 @@ export default function StudentDashboardPage() {
           ),
         ]);
         if (cancelled) return;
-        setApplications(appsRes.data || []);
+        setApplications(appsRes.applications || []);
         setDocuments(docsRes.data || []);
         setLatestNotifs(notifsRes.notifications || []);
         setProfile(profileRes.data || null);

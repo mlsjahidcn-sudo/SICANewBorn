@@ -11,6 +11,8 @@ import {
   deriveDisplayName,
   deriveStudentFullName,
   mapApplicationFromDb,
+  mapApplicationForStudent,
+  missingSubmitFields,
   type RawApp,
 } from '@/lib/application-mapper';
 
@@ -203,5 +205,77 @@ describe('mapApplicationFromDb — name fallback', () => {
       },
     });
     expect(result.studentName).toBe('legacy.user');
+  });
+});
+// Phase 97: submit-field re-validation + slug surfacing for the
+// wizard's ?resume= flow.
+describe('missingSubmitFields', () => {
+  it('returns [] for a complete row', () => {
+    expect(
+      missingSubmitFields({
+        university_name: 'Tsinghua University',
+        program_name: 'BSc Computer Science',
+        degree: 'Bachelor',
+        intake: '2026 Fall',
+      }),
+    ).toEqual([]);
+  });
+
+  it('lists every missing field (null, empty, whitespace)', () => {
+    expect(
+      missingSubmitFields({
+        university_name: 'Tsinghua University',
+        program_name: null,
+        degree: '   ',
+        intake: '',
+      }),
+    ).toEqual(['program', 'degree', 'intake']);
+  });
+
+  it('returns all four for an empty row', () => {
+    expect(missingSubmitFields({})).toEqual(['university', 'program', 'degree', 'intake']);
+  });
+});
+
+describe('mapApplicationForStudent (Phase 97 slug fields)', () => {
+  const studentRow: RawApp = {
+    id: 'app-2',
+    student_id: null,
+    university_id: 'tsinghua-university',
+    university_name: 'Tsinghua University',
+    university_name_cn: null,
+    program_id: 'bsc-computer-science',
+    program_name: 'CS',
+    program_name_cn: null,
+    degree: 'Bachelor',
+    degree_level: null,
+    intake: '2026 Fall',
+    status: 'Submitted',
+    priority: null,
+    submitted_at: null,
+    reviewed_at: null,
+    decision_date: null,
+    decision: null,
+    decision_letter_url: null,
+    student_notes: null,
+    personal_statement: null,
+    additional_notes: null,
+    admin_notes: null,
+    application_number: 'APP-002',
+    applicant_name: null,
+    applicant_email: null,
+    applicant_phone: null,
+    applicant_nationality: null,
+    created_at: '2026-08-01T00:00:00Z',
+    updated_at: '2026-08-01T00:00:00Z',
+    student: null,
+  };
+
+  it('surfaces universityId + programId so the resume flow needs no name matching', () => {
+    const result = mapApplicationForStudent(studentRow);
+    expect(result.universityId).toBe('tsinghua-university');
+    expect(result.programId).toBe('bsc-computer-science');
+    expect(result.university).toBe('Tsinghua University');
+    expect(result.program).toBe('CS');
   });
 });
