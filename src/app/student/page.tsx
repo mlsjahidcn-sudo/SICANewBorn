@@ -347,10 +347,10 @@ export default function StudentDashboardPage() {
           <AlertCircle className="h-5 w-5 text-[#9B1B30] flex-shrink-0" />
           <div className="flex-1">
             <p className="font-semibold text-[#1B2A4A]">
-              {t('studentDashboard.profileIncompleteTitle', { percent: profileCompletion.percent })}
+              {t('student.profileIncompleteTitle', { percent: profileCompletion.percent })}
             </p>
             <p className="text-sm text-gray-700 mt-0.5">
-              {t('studentDashboard.profileIncompleteBody')}
+              {t('student.profileIncompleteBody')}
             </p>
           </div>
           <Link href="/student/profile" className="sm:ml-auto">
@@ -358,7 +358,7 @@ export default function StudentDashboardPage() {
               size="sm"
               className="bg-[#9B1B30] hover:bg-[#7A1526] text-white rounded-none"
             >
-              {t('studentDashboard.profileIncompleteCta')}
+              {t('student.profileIncompleteCta')}
               <ArrowRight className="h-4 w-4 ml-1" />
             </Button>
           </Link>
