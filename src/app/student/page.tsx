@@ -281,8 +281,18 @@ export default function StudentDashboardPage() {
   }
 
   const formatBytes = (bytes?: number | null) => {
-    if (!bytes) return '—';
-    return `${(bytes / 1024).toFixed(0)} KB`;
+    if (bytes === null || bytes === undefined || bytes <= 0) return '—';
+    // Auto-scale: anything under 1 MB keeps the KB reading the
+    // dashboard used to display (so users aren't surprised by a
+    // 200 KB file suddenly showing as "0 MB"); anything bigger
+    // jumps to MB / GB with one decimal place.
+    if (bytes < 1024 * 1024) {
+      return `${(bytes / 1024).toFixed(0)} KB`;
+    }
+    if (bytes < 1024 * 1024 * 1024) {
+      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    }
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
   };
 
   return (

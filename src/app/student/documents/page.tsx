@@ -75,8 +75,8 @@ export default function StudentDocumentsPage() {
   const [activeCategory, setActiveCategory] = useState<'All' | DocumentCategory>(
     (searchParams.get('category') as DocumentCategory) || 'All',
   );
-  const [activeStatus, setActiveStatus] = useState<'all' | 'Pending' | 'Uploaded' | 'Verified' | 'Rejected'>(
-    (searchParams.get('status') as 'all' | 'Pending' | 'Uploaded' | 'Verified' | 'Rejected') || 'all',
+  const [activeStatus, setActiveStatus] = useState<'all' | 'Pending' | 'Verified' | 'Rejected'>(
+    (searchParams.get('status') as 'all' | 'Pending' | 'Verified' | 'Rejected') || 'all',
   );
   const [sortKey, setSortKey] = useState<'uploaded_at' | 'name' | 'status'>(
     (searchParams.get('sort') as 'uploaded_at' | 'name' | 'status') || 'uploaded_at',
@@ -208,11 +208,7 @@ export default function StudentDocumentsPage() {
     const id = docToDelete.id;
     setDocToDelete(null);
     try {
-      const res = await fetch(`/api/student/documents/${id}`, { method: 'DELETE' });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || `Delete failed (HTTP ${res.status})`);
-      }
+      await apiFetchJson(`/api/student/documents/${id}`, { method: 'DELETE' });
       setDocuments((prev) => prev.filter((d) => d.id !== id));
     } catch (err) {
       setError(err instanceof Error ? err.message : t('studentDocs.errorDelete'));
@@ -252,7 +248,7 @@ export default function StudentDocumentsPage() {
   const handleReuploaded = async (doc: DbStudentDocument, uploaded: UploadedDocument) => {
     setReuploadId(null);
     try {
-      await fetch(`/api/student/documents/${doc.id}`, { method: 'DELETE' });
+      await apiFetchJson(`/api/student/documents/${doc.id}`, { method: 'DELETE' });
     } catch (err) {
       console.error('[student/documents] failed to delete old rejected doc:', err);
     }
@@ -435,7 +431,6 @@ export default function StudentDocumentsPage() {
           <SelectContent className="rounded-none">
             <SelectItem value="all">{t('studentDocs.statusAll')}</SelectItem>
             <SelectItem value="Pending">{t('studentDocs.statusPending')}</SelectItem>
-            <SelectItem value="Uploaded">{t('studentDocs.statusUploaded')}</SelectItem>
             <SelectItem value="Verified">{t('studentDocs.statusVerified')}</SelectItem>
             <SelectItem value="Rejected">{t('studentDocs.statusRejected')}</SelectItem>
           </SelectContent>

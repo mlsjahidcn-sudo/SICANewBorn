@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Bell, Check, CheckCheck, Inbox, Filter, RefreshCw, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -86,6 +87,7 @@ function timeAgo(
 
 export default function StudentNotificationsPage() {
   const { t } = useI18n();
+  const router = useRouter();
   const [notifications, setNotifications] = useState<StudentNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -161,18 +163,35 @@ export default function StudentNotificationsPage() {
   }, []);
 
   const markRead = useCallback(async (id: string) => {
-    // Optimistic update
+    // Optimistic update — capture the previous state so we can
+    // roll back if the PATCH fails (Phase 103: prior to this the
+    // failure path only triggered a refetch, leaving the UI in an
+    // inconsistent "marked read in the list but unread on the
+    // server" state for the rest of the session).
+    let previous: StudentNotification | undefined;
     setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, is_read: true, read_at: new Date().toISOString() } : n)),
+      prev.map((n) => {
+        if (n.id !== id) return n;
+        previous = n;
+        return { ...n, is_read: true, read_at: new Date().toISOString() };
+      }),
     );
     setUnreadCount((c) => Math.max(0, c - 1));
     try {
       await apiFetch(`/api/student/notifications/${id}`, { method: 'PATCH' });
     } catch (err) {
       console.error('markRead failed:', err);
-      setRetryNonce((n) => n + 1);
+      // Roll back the optimistic update so the UI matches the
+      // server again.
+      if (previous) {
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === id ? previous! : n)),
+        );
+      }
+      setUnreadCount((c) => c + 1);
+      setError(err instanceof Error ? err.message : t('studentNotif.errorMarkRead'));
     }
-  }, []);
+  }, [t]);
 
   const markAll = useCallback(async () => {
     if (unreadCount === 0) return;
@@ -197,33 +216,58 @@ export default function StudentNotificationsPage() {
   // Phase 4C: delete a notification from the inbox.
   const deleteNotif = useCallback(async (id: string) => {
     setDeletingId(id);
+    // Optimistic delete — capture the row + its index so we can
+    // restore it on failure (Phase 103: prior to this, a failed
+    // DELETE silently left the row visible and the user had no
+    // signal that their click hadn't taken effect).
+    let previous: StudentNotification | undefined;
+    let previousIndex = -1;
+    setNotifications((prev) => {
+      previousIndex = prev.findIndex((n) => n.id === id);
+      previous = prev[previousIndex];
+      return prev.filter((n) => n.id !== id);
+    });
+    setTotal((t) => Math.max(0, t - 1));
+    const wasUnread = previous && !previous.is_read;
+    if (wasUnread) setUnreadCount((c) => Math.max(0, c - 1));
     try {
       await apiFetch(`/api/student/notifications/${id}`, { method: 'DELETE' });
-      setNotifications((prev) => prev.filter((n) => n.id !== id));
-      setTotal((t) => Math.max(0, t - 1));
-      setUnreadCount((c) => {
-        const removed = notifications.find((n) => n.id === id);
-        return removed && !removed.is_read ? Math.max(0, c - 1) : c;
-      });
     } catch (err) {
+      console.error('deleteNotif failed:', err);
+      // Roll back: re-insert the row at its original index.
+      if (previous) {
+        setNotifications((prev) => {
+          const next = [...prev];
+          const insertAt = previousIndex >= 0 && previousIndex <= next.length ? previousIndex : next.length;
+          next.splice(insertAt, 0, previous!);
+          return next;
+        });
+      }
+      setTotal((t) => t + 1);
+      if (wasUnread) setUnreadCount((c) => c + 1);
       setError(err instanceof Error ? err.message : t('studentNotif.errorDelete'));
     } finally {
       setDeletingId(null);
     }
-  }, [notifications]);
+  }, [t]);
 
   const onRowClick = useCallback(
     (n: StudentNotification) => {
       if (!n.is_read) markRead(n.id);
-      // Phase 1.2: deep-link to the relevant application (or
-      // document) if the notification has a link_url. Falls
-      // through silently if the link is missing — the row
-      // still marks as read on click.
+      // Phase 103: router.push (not window.location.href) so we get
+      // a soft client-side navigation — no full page reload, the
+      // student layout's pollers + auth context survive.
+      // Falls back to window.location.href for absolute URLs (e.g.
+      // external links) because router.push only accepts paths.
       if (n.link_url) {
-        window.location.href = n.link_url;
+        if (/^https?:\/\//i.test(n.link_url)) {
+          window.location.href = n.link_url;
+        } else {
+          router.push(n.link_url);
+        }
       }
     },
-    [markRead],
+    [markRead, router],
   );
 
   return (

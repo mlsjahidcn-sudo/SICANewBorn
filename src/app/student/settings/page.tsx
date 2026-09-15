@@ -9,6 +9,7 @@ import { useAuth } from '@/lib/auth-context';
 import { useI18n } from '@/lib/i18n';
 import { supabase, isSupabaseConfigured as isSupabaseBrowserConfigured } from '@/lib/supabase-browser';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
+import { SITE_URL } from '@/lib/site-url';
 
 type Status =
   | { kind: 'idle' }
@@ -40,7 +41,7 @@ export default function StudentSettingsPage() {
       return;
     }
     const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-      redirectTo: `${window.location.origin}/student/login?reset=1`,
+      redirectTo: `${SITE_URL}/student/login?reset=1`,
     });
     if (error) {
       setStatus({ kind: 'err', message: error.message });
