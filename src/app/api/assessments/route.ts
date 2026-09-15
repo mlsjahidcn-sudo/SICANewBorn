@@ -3,7 +3,6 @@ import { cookies, headers } from 'next/headers';
 import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
 import { sendAssessmentNotification } from '@/lib/email';
 import { scheduleDripSequence } from '@/lib/email/drip/scheduler';
-import { fireAndForget } from '@/lib/wabpo-fire';
 import { checkPublicRateLimit, isHoneypotFilled } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
@@ -162,27 +161,6 @@ export async function POST(request: NextRequest) {
     }).catch((err) =>
       console.error('[POST /api/assessments] drip schedule failed:', err),
     );
-    // Phase 46: auto-welcome WhatsApp. Best-effort, no-throw.
-    // The assessment row is rich — pass the full set so future
-    // templates can use intended_major / target_intake without a refetch.
-    const intendedMajor = (body.intendedMajor as string) || null;
-    fireAndForget({
-      leadType: 'assessment',
-      leadId: data.id,
-      leadRow: {
-        first_name: firstName,
-        last_name: lastName,
-        name: `${firstName} ${lastName}`.trim(),
-        email,
-        whatsapp,
-        country,
-        intended_major: intendedMajor,
-        target_universities: (body.targetUniversities as string) || null,
-      },
-      templateName: 'lead_welcome_v1',
-      historyAction: 'whatsapp_welcome_sent',
-      historyNote: `source=assessment | major=${intendedMajor || 'n/a'}`,
-    }).catch(() => {/* never throws — defensive only */});
     return NextResponse.json({ success: true, id: data.id });
   } catch (err) {
     console.error('[POST /api/assessments] unexpected error:', err);

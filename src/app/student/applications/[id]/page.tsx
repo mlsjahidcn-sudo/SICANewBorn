@@ -21,6 +21,7 @@ import {
 import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 import type { StudentApplication } from '@/lib/application-mapper';
+import { STUDENT_STATUS_TRANSITIONS } from '@/lib/application-mapper';
 
 // ---------- Types ----------
 
@@ -119,19 +120,21 @@ export default function StudentApplicationDetailPage() {
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
 
   /**
-   * Phase 1: Withdraw — student-driven transition to terminal
-   * Withdrawn. Allowed for Draft, Submitted, and any in-flight state
-   * EXCEPT Accepted / Decision Made / Rejected / Withdrawn (terminal).
-   * Backend enforces the same rules in STUDENT_STATUS_TRANSITIONS.
+   * Phase 98: the action buttons are derived from the same transition
+   * matrix the server validates against (STUDENT_STATUS_TRANSITIONS in
+   * application-mapper.ts). The old hand-written lists had drifted —
+   * they offered Withdraw on Under Review / Documents Requested, which
+   * the API always rejected with a 400.
    */
-  const canWithdraw = !!application && !['Withdrawn', 'Accepted', 'Decision Made', 'Rejected'].includes(application.status);
-
-  /**
-   * Phase 1: Resubmit — student-driven transition:
-   *   Documents Requested → Under Review  (after re-uploading)
-   *   Rejected             → Submitted     (second-chance flow)
-   */
-  const canResubmit = !!application && ['Documents Requested', 'Rejected'].includes(application.status);
+  const allowedNextStatuses =
+    (application && STUDENT_STATUS_TRANSITIONS[application.status]) || [];
+  const canWithdraw = allowedNextStatuses.includes('Withdrawn');
+  // "Resubmit" is two different flows: Documents Requested → Under
+  // Review (after re-uploading the requested docs) and Rejected →
+  // Submitted (second-chance flow).
+  const canResubmitDocs = allowedNextStatuses.includes('Under Review');
+  const canResubmitRejected = allowedNextStatuses.includes('Submitted');
+  const canResubmit = canResubmitDocs || canResubmitRejected;
 
   /** Phase 1: Editable draft — student can resume from /new (which
    * accepts existing applicationId) or via a dedicated edit page. */

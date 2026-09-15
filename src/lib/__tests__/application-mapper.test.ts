@@ -13,6 +13,8 @@ import {
   mapApplicationFromDb,
   mapApplicationForStudent,
   missingSubmitFields,
+  APPLICATION_STATUSES,
+  STUDENT_STATUS_TRANSITIONS,
   type RawApp,
 } from '@/lib/application-mapper';
 
@@ -277,5 +279,38 @@ describe('mapApplicationForStudent (Phase 97 slug fields)', () => {
     expect(result.programId).toBe('bsc-computer-science');
     expect(result.university).toBe('Tsinghua University');
     expect(result.program).toBe('CS');
+  });
+});
+
+describe('STUDENT_STATUS_TRANSITIONS (Phase 98 shared matrix)', () => {
+  it('allows Withdrawn only from Draft and Submitted', () => {
+    for (const [from, next] of Object.entries(STUDENT_STATUS_TRANSITIONS)) {
+      // Distinct targets only — the same-status no-op entry would
+      // trivially contain 'Withdrawn' for from='Withdrawn'.
+      const distinctTargets = (next as string[]).filter((s) => s !== from);
+      const canWithdraw = distinctTargets.includes('Withdrawn');
+      if (from === 'Draft' || from === 'Submitted') {
+        expect(canWithdraw, `${from} should allow withdraw`).toBe(true);
+      } else {
+        expect(canWithdraw, `${from} should NOT allow withdraw`).toBe(false);
+      }
+    }
+  });
+
+  it('covers the two resubmit flows', () => {
+    expect(STUDENT_STATUS_TRANSITIONS.Rejected).toContain('Submitted');
+    expect(STUDENT_STATUS_TRANSITIONS['Documents Requested']).toContain('Under Review');
+  });
+
+  it('terminal / in-review statuses map to themselves only', () => {
+    for (const s of ['Under Review', 'Decision Made', 'Accepted', 'Withdrawn']) {
+      expect(STUDENT_STATUS_TRANSITIONS[s]).toEqual([s]);
+    }
+  });
+
+  it('covers every APPLICATION_STATUS key', () => {
+    for (const s of APPLICATION_STATUSES) {
+      expect(Array.isArray(STUDENT_STATUS_TRANSITIONS[s])).toBe(true);
+    }
   });
 });

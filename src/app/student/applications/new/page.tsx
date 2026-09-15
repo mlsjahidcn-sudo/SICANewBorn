@@ -640,12 +640,16 @@ export default function StudentNewApplicationPage() {
             { method: 'POST', body: JSON.stringify(payload) },
           );
       setCreatedAppId(data.application.id);
-      // Phase S20: link any docs uploaded during this session to the
-      // (now-existing) application. Skipped on resume — those docs
-      // are already linked to the resumed application.
-      if (!isResuming) {
-        await linkOrphanDocsToApplication(data.application.id);
-      }
+      // Phase S20 → Phase 98: ALWAYS link orphan docs to this
+      // application. The old `if (!isResuming)` guard assumed a resumed
+      // draft's docs were already linked — true for docs attached when
+      // the draft was created, but docs uploaded DURING the resumed
+      // session are created with application_id = NULL and stayed
+      // orphans forever. linkOrphanDocsToApplication is idempotent
+      // (only patches application_id IS NULL rows); note it sweeps ALL
+      // of the student's orphans into this application — students can
+      // unlink from /student/documents.
+      await linkOrphanDocsToApplication(data.application.id);
       setDraftSaved(true);
       // Brief delay so the success message is visible
       setTimeout(() => {
@@ -686,13 +690,11 @@ export default function StudentNewApplicationPage() {
             { method: 'POST', body: JSON.stringify(payload) },
           );
       setCreatedAppId(data.application.id);
-      // Phase S20: link any docs uploaded during this session to the
-      // new application. Without this, docs uploaded in step 2 stay
-      // orphans (application_id = NULL) because the application row
-      // didn't exist at upload time.
-      if (!isResuming) {
-        await linkOrphanDocsToApplication(data.application.id);
-      }
+      // Phase 98: orphan linking is unconditional now — see the comment
+      // in handleSaveAsDraft. On the submit path (resume flow) this is
+      // the ONLY chance to attach docs uploaded during the resumed
+      // session; the old guard orphaned them forever.
+      await linkOrphanDocsToApplication(data.application.id);
       // Brief delay so the success message is visible before navigating
       setTimeout(() => router.push('/student/applications'), 1500);
     } catch (err) {

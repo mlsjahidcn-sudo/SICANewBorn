@@ -273,6 +273,27 @@ export const APPLICATION_STATUSES = [
 ] as const;
 export type ApplicationStatus = (typeof APPLICATION_STATUSES)[number];
 
+/**
+ * Phase 98: the single source of truth for which status transitions a
+ * STUDENT may drive. The PUT route validates against this, and the
+ * detail page derives its Withdraw/Resubmit buttons from it — the old
+ * hand-written UI list allowed Withdraw on Under Review /
+ * Documents Requested, which the server always rejected with a 400.
+ *
+ * Same-status entries are the no-op path. Terminal statuses map to
+ * themselves only.
+ */
+export const STUDENT_STATUS_TRANSITIONS: Record<string, string[]> = {
+  Draft: ['Draft', 'Withdrawn'],
+  Submitted: ['Submitted', 'Withdrawn'],
+  'Documents Requested': ['Documents Requested', 'Under Review'],
+  Rejected: ['Rejected', 'Submitted'],
+  'Under Review': ['Under Review'],
+  'Decision Made': ['Decision Made'],
+  Accepted: ['Accepted'],
+  Withdrawn: ['Withdrawn'],
+};
+
 export function parseApplicationStatus(input: unknown): ApplicationStatus | null {
   return (APPLICATION_STATUSES as readonly string[]).includes(input as string)
     ? (input as ApplicationStatus)

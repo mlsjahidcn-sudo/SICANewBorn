@@ -91,7 +91,7 @@ export function _resetRateLimits(): void {
 // The public intake endpoints (/api/leads, /api/assessments,
 // /api/leads/chat, /api/upload/transcript, /api/chat/session) take
 // anonymous POSTs and several of them spend real money per call
-// (Resend email, WABPO WhatsApp, drip scheduling). Two buckets per
+// (Resend email, drip scheduling). Two buckets per
 // request:
 //
 //   per-IP  — the standard abuse guard (first x-forwarded-for hop)

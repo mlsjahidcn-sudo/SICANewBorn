@@ -68,8 +68,6 @@ const navItems = [
   // Phase 51: Success Stories — public showcase of admission notices.
   // Sits next to Applications because both surface student outcomes.
   { href: '/admin/admission-notices', key: 'admissionNotices', icon: Trophy },
-  // Phase 46: Bulk WhatsApp send — admin tool for promotional blasts
-  { href: '/admin/leads/bulk-send', key: 'bulkSend', icon: Send },
   // S34: Cohort View — read-only dashboard grouping apps by
   // intake. Sits right below Applications because it's the
   // "where am I in the pipeline" companion view.

@@ -177,3 +177,6 @@ Desktop.ini
 
 # AI coding-tool session data (Kilo plans etc.)
 .kilo/
+
+# Mimosa security-scan hook state
+.mimosa/

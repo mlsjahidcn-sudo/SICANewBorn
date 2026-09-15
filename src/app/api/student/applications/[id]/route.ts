@@ -1,7 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getRequestAuth } from '@/lib/supabase-auth';
-import { mapApplicationForStudent, missingSubmitFields } from '@/lib/application-mapper';
+import {
+  mapApplicationForStudent,
+  missingSubmitFields,
+  STUDENT_STATUS_TRANSITIONS,
+} from '@/lib/application-mapper';
 import { insertTimelineEvent } from '@/lib/timeline';
+import { isEmailConfigured, sendTextEmail } from '@/lib/email';
+import { SITE_URL } from '@/lib/site-url';
 
 /**
  * GET   /api/student/applications/[id] — student views their own application
@@ -96,18 +102,12 @@ export async function GET(
  * Blocked fields (id, student_id, application_number, submitted_at,
  * reviewed_at, decision_*, admin_notes, etc.) are silently stripped
  * before the UPDATE.
+ *
+ * Phase 98: the transition matrix itself moved to
+ * STUDENT_STATUS_TRANSITIONS in src/lib/application-mapper.ts — shared
+ * with the detail page so the UI's action buttons can never drift
+ * from what the server allows.
  */
-const STUDENT_STATUS_TRANSITIONS: Record<string, string[]> = {
-  Draft: ['Draft', 'Withdrawn'], // Draft → Draft is a no-op but allowed
-  Submitted: ['Submitted', 'Withdrawn'],
-  'Documents Requested': ['Documents Requested', 'Under Review'],
-  Rejected: ['Rejected', 'Submitted'],
-  // Terminal — student cannot transition out:
-  'Under Review': ['Under Review'],
-  'Decision Made': ['Decision Made'],
-  Accepted: ['Accepted'],
-  Withdrawn: ['Withdrawn'],
-};
 
 export async function PUT(
   request: Request,
@@ -201,6 +201,24 @@ export async function PUT(
           additional_notes: allowed.additional_notes ?? existingRow.additional_notes,
         } as Parameters<typeof mapApplicationForStudent>[0]) });
       }
+      // Phase 98: "Documents Requested → Under Review" means "I've added
+      // the requested documents" — require at least one usable doc on
+      // this application before allowing the flip. Previously the
+      // resubmit loop was honor-system: a student could flip back to
+      // Under Review without uploading anything.
+      if (currentStatus === 'Documents Requested' && body.status === 'Under Review') {
+        const { count: usableDocs, error: cntErr } = await supabase
+          .from('student_documents')
+          .select('id', { count: 'exact', head: true })
+          .eq('application_id', params.id)
+          .in('status', ['Pending', 'Uploaded', 'Verified']);
+        if (!cntErr && (!usableDocs || usableDocs < 1)) {
+          return NextResponse.json(
+            { error: 'Upload at least one document before marking this application resubmitted.' },
+            { status: 400 },
+          );
+        }
+      }
       allowed.status = body.status;
       if (body.status === 'Submitted') {
         // Phase 97: re-validate the submit-required fields on the
@@ -268,6 +286,30 @@ export async function PUT(
         notes: note,
         created_by: user.id,
       });
+
+      // Phase 98: best-effort admin heads-up. Previously a
+      // student-driven status change wrote a timeline event and nothing
+      // else — withdraws and resubmits were invisible until an admin
+      // happened to refresh the queue. Fire-and-forget: an email
+      // failure must never fail the student's action.
+      const adminTo =
+        process.env.ADMIN_NOTIFICATION_EMAIL ?? process.env.ADMIN_EMAIL ?? '';
+      if (adminTo && isEmailConfigured()) {
+        const appRef = (existingRow.application_number as string | null) ?? params.id;
+        void sendTextEmail({
+          to: adminTo,
+          subject: `[SICA] Application ${appRef}: ${fromStatus} → ${toStatus}`,
+          text: [
+            'A student moved their application.',
+            '',
+            `Application: ${appRef}`,
+            `Transition: ${fromStatus} → ${toStatus}`,
+            `Review: ${SITE_URL}/admin/applications/${params.id}`,
+          ].join('\n'),
+        }).catch((err) =>
+          console.error('[Student Application PUT] admin notify failed:', err),
+        );
+      }
     }
 
     return NextResponse.json({ application: mapApplicationForStudent(row) });
