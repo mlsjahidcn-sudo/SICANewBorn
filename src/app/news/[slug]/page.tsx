@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
+import { unstable_cache } from 'next/cache';
 import Link from 'next/link';
-import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { Calendar, Clock, ChevronRight, Tag, User, ArrowLeft, ArrowRight, Share2, ListChecks, HelpCircle, BookOpen, ExternalLink, History } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
@@ -67,33 +67,55 @@ const CATEGORY_LABEL: Record<string, string> = {
 
 export const dynamic = 'force-dynamic';
 
-async function fetchPostBySlug(slug: string): Promise<NewsRow | null> {
-  if (!isSupabaseServerConfigured()) return null;
-  const supabase = getSupabaseServer();
-  if (!supabase) return null;
-  const { data } = await supabase
-    .from('news_posts')
-    .select('*')
-    .eq('slug', slug)
-    .eq('status', 'published')
-    .maybeSingle();
-  return (data as NewsRow | null) ?? null;
-}
+// Phase 92: these two queries used to run per request — and
+// fetchPostBySlug ran TWICE per request (generateMetadata + page body)
+// with no memoization. Both are now unstable_cache'd (5-min TTL —
+// news edits propagate within a few minutes, admin redeploys sooner)
+// so a warm detail view costs zero Supabase queries. Null results are
+// cached too — a 404 scan can't hammer the DB.
+const getPostBySlug = unstable_cache(
+  async (slug: string): Promise<NewsRow | null> => {
+    try {
+      if (!isSupabaseServerConfigured()) return null;
+      const supabase = getSupabaseServer();
+      if (!supabase) return null;
+      const { data } = await supabase
+        .from('news_posts')
+        .select('*')
+        .eq('slug', slug)
+        .eq('status', 'published')
+        .maybeSingle();
+      return (data as NewsRow | null) ?? null;
+    } catch {
+      return null;
+    }
+  },
+  ['news-post-by-slug'],
+  { revalidate: 300 },
+);
 
-async function fetchRelatedPosts(currentId: string, category: string, limit = 3): Promise<NewsRow[]> {
-  if (!isSupabaseServerConfigured()) return [];
-  const supabase = getSupabaseServer();
-  if (!supabase) return [];
-  const { data } = await supabase
-    .from('news_posts')
-    .select('id, slug, title_en, title_zh, excerpt_en, excerpt_zh, cover_image, category, tags, author, published_at, read_time_minutes')
-    .eq('status', 'published')
-    .eq('category', category)
-    .neq('id', currentId)
-    .order('published_at', { ascending: false })
-    .limit(limit);
-  return (data as NewsRow[] | null) ?? [];
-}
+const getRelatedPosts = unstable_cache(
+  async (currentId: string, category: string, limit = 3): Promise<NewsRow[]> => {
+    try {
+      if (!isSupabaseServerConfigured()) return [];
+      const supabase = getSupabaseServer();
+      if (!supabase) return [];
+      const { data } = await supabase
+        .from('news_posts')
+        .select('id, slug, title_en, title_zh, excerpt_en, excerpt_zh, cover_image, category, tags, author, published_at, read_time_minutes')
+        .eq('status', 'published')
+        .eq('category', category)
+        .neq('id', currentId)
+        .order('published_at', { ascending: false })
+        .limit(limit);
+      return (data as NewsRow[] | null) ?? [];
+    } catch {
+      return [];
+    }
+  },
+  ['news-related-posts'],
+  { revalidate: 300 },
+);
 
 export async function generateMetadata({
   params,
@@ -102,7 +124,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const [post, locale] = await Promise.all([
-    fetchPostBySlug(slug),
+    getPostBySlug(slug),
     getServerLocale(),
   ]);
   if (!post) {
@@ -163,10 +185,10 @@ export default async function NewsPostPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const post = await fetchPostBySlug(slug);
+  const post = await getPostBySlug(slug);
   if (!post) notFound();
   const [related, locale] = await Promise.all([
-    fetchRelatedPosts(post.id, post.category),
+    getRelatedPosts(post.id, post.category),
     getServerLocale(),
   ]);
 

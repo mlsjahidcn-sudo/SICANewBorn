@@ -307,17 +307,44 @@ export function ChatWindow({ isOpen, onClose, onMinimize }: ChatWindowProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatReady, sessionToken, restoredFromLocal]);
 
-  // ====== On every messages change: persist to localStorage ======
+  // ====== Persist messages to localStorage (debounced) ======
+  // Phase 92: this used to JSON.stringify + write the whole transcript
+  // on EVERY state update — i.e. once per SSE chunk during a streamed
+  // reply. Trailing 500ms debounce; the unmount flush below covers the
+  // "closed the tab mid-debounce" case.
+  const messagesRef = useRef(messages);
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
   useEffect(() => {
     if (!chatReady) return;
-    const today = todayKey();
-    const MESSAGES_KEY = `${STORAGE_PREFIX}_messages_${today}`;
-    try {
-      localStorage.setItem(MESSAGES_KEY, JSON.stringify(messages));
-    } catch {
-      // localStorage quota / private mode — fail silently
-    }
+    const timer = setTimeout(() => {
+      const today = todayKey();
+      const MESSAGES_KEY = `${STORAGE_PREFIX}_messages_${today}`;
+      try {
+        localStorage.setItem(MESSAGES_KEY, JSON.stringify(messagesRef.current));
+      } catch {
+        // localStorage quota / private mode — fail silently
+      }
+    }, 500);
+    return () => clearTimeout(timer);
   }, [messages, chatReady]);
+
+  // Final flush in case the component unmounts with a pending debounce.
+  useEffect(() => {
+    return () => {
+      try {
+        const today = todayKey();
+        localStorage.setItem(
+          `${STORAGE_PREFIX}_messages_${today}`,
+          JSON.stringify(messagesRef.current),
+        );
+      } catch {
+        // ignore
+      }
+    };
+  }, []);
 
   // ====== Persist lead form partial state to localStorage ======
   useEffect(() => {
@@ -333,9 +360,14 @@ export function ChatWindow({ isOpen, onClose, onMinimize }: ChatWindowProps) {
     }
   }, [lead, chatReady]);
 
-  // ====== On every new user/assistant message: persist to chat_sessions via API ======
+  // ====== Persist new user/assistant messages to the backend ======
   useEffect(() => {
     if (!chatReady || !sessionToken || messages.length < 2) return;
+    // Phase 92: while a streamed reply is in flight this payload is
+    // identical on every SSE chunk — persist once when the stream
+    // settles (component isLoading flips false in the finally block)
+    // instead of a PATCH + history POST per chunk.
+    if (isLoading) return;
     const persistable = messages
       .filter((m) => m.id !== 'welcome' && m.id !== 'hist-divider' && !m.id.startsWith('hist-') && !m.isLoading)
       .map((m) => ({
@@ -362,7 +394,7 @@ export function ChatWindow({ isOpen, onClose, onMinimize }: ChatWindowProps) {
     // conversation instead of "Hi there! 👋" again. Fire-and-forget
     // — same posture as the PATCH above.
     persistMessages(sessionToken, persistable);
-  }, [messages, chatReady, sessionToken]);
+  }, [messages, chatReady, sessionToken, isLoading]);
 
   // ====== Upsert the session row on first mount ======
   useEffect(() => {
@@ -379,6 +411,25 @@ export function ChatWindow({ isOpen, onClose, onMinimize }: ChatWindowProps) {
       // Non-fatal — local copy is the source of truth
     });
   }, [chatReady, sessionToken]);
+
+  // Phase 92: the visitor closing the chat does NOT unmount this
+  // component (Chatbot keeps it rendered with isOpen=false), so an
+  // in-flight stream used to keep burning tokens invisibly in the
+  // background. Abort it on close — the AbortError path tags the
+  // partial reply with the "(stopped)" suffix so nothing on screen is
+  // lost — and on true unmount as belt-and-braces.
+  useEffect(() => {
+    if (!isOpen && sessionToken) {
+      abortStream(sessionToken);
+    }
+  }, [isOpen, sessionToken]);
+
+  useEffect(() => {
+    const token = sessionToken;
+    return () => {
+      if (token) abortStream(token);
+    };
+  }, [sessionToken]);
 
   // Phase 81: smart-scroll. Follows the tail when user is near the
   // bottom; leaves them alone when they've scrolled up to read history.

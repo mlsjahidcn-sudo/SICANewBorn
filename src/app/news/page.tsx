@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
+import { unstable_cache } from 'next/cache';
 import Link from 'next/link';
-import Image from 'next/image';
 import { ArrowRight, Calendar, Clock, ChevronRight, Newspaper, X, Tag } from 'lucide-react';
 import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
 import { buildLanguageAlternates } from '@/lib/alternates';
@@ -33,18 +33,31 @@ const categoryKeys: Record<string, string> = {
 
 export const dynamic = 'force-dynamic';
 
-async function fetchPublishedPosts(limit = 100): Promise<NewsRow[]> {
-  if (!isSupabaseServerConfigured()) return [];
-  const supabase = getSupabaseServer();
-  if (!supabase) return [];
-  const { data } = await supabase
-    .from('news_posts')
-    .select('id, slug, title_en, title_zh, excerpt_en, excerpt_zh, cover_image, category, tags, author, published_at, read_time_minutes')
-    .eq('status', 'published')
-    .order('published_at', { ascending: false })
-    .limit(limit);
-  return (data as NewsRow[] | null) ?? [];
-}
+// Phase 92: was a raw per-request query under `force-dynamic` — every
+// visitor hit Supabase for the same published-posts list. Cached with
+// a 5-min TTL (drafts → published show up within a few minutes) and a
+// try/catch so a Supabase hiccup renders the empty state instead of
+// bubbling to the global error boundary.
+const getPublishedPosts = unstable_cache(
+  async (limit = 100): Promise<NewsRow[]> => {
+    try {
+      if (!isSupabaseServerConfigured()) return [];
+      const supabase = getSupabaseServer();
+      if (!supabase) return [];
+      const { data } = await supabase
+        .from('news_posts')
+        .select('id, slug, title_en, title_zh, excerpt_en, excerpt_zh, cover_image, category, tags, author, published_at, read_time_minutes')
+        .eq('status', 'published')
+        .order('published_at', { ascending: false })
+        .limit(limit);
+      return (data as NewsRow[] | null) ?? [];
+    } catch {
+      return [];
+    }
+  },
+  ['news-published-list'],
+  { revalidate: 300 },
+);
 
 export async function generateMetadata(
   // S37: include ?tag= in the canonical URL when a tag filter is
@@ -87,7 +100,7 @@ export default async function NewsIndexPage(
   ]);
   const activeTag = (sp.tag || '').trim();
   const activeQuery = (sp.q || '').trim();
-  const allPosts = await fetchPublishedPosts();
+  const allPosts = await getPublishedPosts();
 
   // Apply tag + free-text filters. When a tag is set, the post's
   // tags array must contain it (case-insensitive). To keep the

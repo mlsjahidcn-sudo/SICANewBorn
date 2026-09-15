@@ -86,10 +86,15 @@ export default function ThankYouClient() {
   // broke (e.g. bookmarked link, missing param).
   const interestName = searchParams.get('interestName');
   const interestLabel = interestName || interest;
-  // Pre-compute the reference number once per mount so it
-  // stays stable across re-renders (e.g. if the user opens
-  // the share modal, the number doesn't change).
-  const [reference] = useState(() => generateReferenceNumber());
+  // Phase 92: generate the reference on the client, after mount. A
+  // `useState(() => generateReferenceNumber())` initializer runs during
+  // SSR too — and `new Date()` + `Math.random()` produce a different
+  // value server-side vs client-side, a guaranteed hydration mismatch
+  // on this public conversion page.
+  const [reference, setReference] = useState<string | null>(null);
+  useEffect(() => {
+    setReference(generateReferenceNumber());
+  }, []);
   const [copied, setCopied] = useState(false);
 
   // Auto-clear the "Copied!" flash after 2s. Standard pattern,
@@ -105,9 +110,12 @@ export default function ThankYouClient() {
 
   // Pre-fill the WhatsApp link with a context-aware message
   // so the counselor knows where the lead is coming from.
+  // `reference` is null until the post-mount effect above runs —
+  // the SSR'd href simply omits the ref suffix.
+  const refSuffix = reference ? ` (ref: ${reference})` : '';
   const whatsappContext = source === 'assessment'
-    ? `Hi SICA, I just submitted the assessment (ref: ${reference}). Following up.`
-    : `Hi SICA, I just sent a message through the contact form (ref: ${reference}). Following up.`;
+    ? `Hi SICA, I just submitted the assessment${refSuffix}. Following up.`
+    : `Hi SICA, I just sent a message through the contact form${refSuffix}. Following up.`;
   const whatsappUrl = `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(whatsappContext)}`;
 
   const copyToClipboard = async (text: string) => {
@@ -156,7 +164,7 @@ export default function ThankYouClient() {
               {t('thankYou.referenceLabel')}
             </p>
             <p className="font-mono text-lg sm:text-xl text-white font-semibold select-all">
-              {reference}
+              {reference ?? '···'}
             </p>
             <p className="text-xs text-gray-400 mt-1">
               {t('thankYou.referenceHelp')}
@@ -222,7 +230,7 @@ export default function ThankYouClient() {
             </a>
             {/* Email — best for longer questions */}
             <a
-              href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Following up (ref: ${reference})`)}`}
+              href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Following up${refSuffix}`)}`}
               className="block bg-[#FAFAF8] border border-gray-200 p-5 hover:border-[#1B2A4A] transition-colors group"
             >
               <Mail className="h-7 w-7 text-[#1B2A4A] mb-3" />

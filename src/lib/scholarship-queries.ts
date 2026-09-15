@@ -39,6 +39,16 @@ export const getScholarships = unstable_cache(
   },
 );
 
+/**
+ * Server-only single-scholarship fetch. Reuses the cached list and
+ * filters in memory — one cache entry serves both the listing and all
+ * detail pages. Returns null when the slug is unknown (callers 404).
+ */
+export async function getScholarshipBySlug(slug: string): Promise<Scholarship | null> {
+  const all = await getScholarships();
+  return all.find((s) => s.slug === slug) ?? null;
+}
+
 function toStringArray(value: unknown): string[] {
   if (Array.isArray(value)) return value.map(String);
   if (typeof value === 'string') return value.split(/[\n•·]+/).map((s) => s.trim()).filter(Boolean);
