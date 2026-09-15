@@ -582,6 +582,10 @@ export const translations: Record<Locale, Record<string, string>> = {
     // Student Portal
     'student.welcomeBack': 'Welcome back',
     'student.manageApplications': 'Manage your applications and documents',
+    'student.profileIncompleteTitle': 'Your profile is {{percent}}% complete',
+    'student.profileIncompleteBody': "Add the rest of your basic info — date of birth, education, and target intake — so SICA can match you with the right universities, programs, and scholarships.",
+    'student.profileIncompleteCta': 'Complete your profile',
+    'studentProfile.missingFieldsLabel': 'Still needed',
     'student.totalApplications': 'Total Applications',
     'student.thisCycle': 'This cycle',
     'student.pendingReview': 'Pending Review',
@@ -4665,6 +4669,10 @@ export const translations: Record<Locale, Record<string, string>> = {
     // Student Portal
     'student.welcomeBack': '欢迎回来',
     'student.manageApplications': '管理你的申请和文档',
+    'student.profileIncompleteTitle': '你的资料已完成 {{percent}}%',
+    'student.profileIncompleteBody': '补全你的基本信息——出生日期、学历和目标入学时间——SICA 才能为你匹配最合适的大学、专业和奖学金。',
+    'student.profileIncompleteCta': '完善个人资料',
+    'studentProfile.missingFieldsLabel': '还缺少',
     'student.totalApplications': '申请总数',
     'student.thisCycle': '本周期',
     'student.pendingReview': '待审核',

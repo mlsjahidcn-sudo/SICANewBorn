@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { apiFetchJson } from '@/lib/api-client';
+import { computeBasicProfileCompletion } from '@/lib/student-profile-completion';
 
 interface StudentProfile {
   id: string;
@@ -143,24 +144,24 @@ export default function StudentProfilePage() {
     void load(); // re-fetch the canonical state
   };
 
-  // Phase 4D: profile completeness meter. We count the fields that
-  // meaningfully help SICA advise + process applications.
-  const COMPLETENESS_FIELDS: Array<keyof StudentProfile> = [
-    'first_name',
-    'last_name',
-    'phone',
-    'nationality',
-    'date_of_birth',
-    'highest_education',
-    'target_degree',
-    'target_field',
-    'target_intake',
-  ];
-  const completedFields = COMPLETENESS_FIELDS.filter((k) => {
-    const v = profile[k];
-    return v !== null && v !== undefined && String(v).trim() !== '';
-  }).length;
-  const completeness = Math.round((completedFields / COMPLETENESS_FIELDS.length) * 100);
+  // Phase 4D → Phase 94: profile completeness meter now uses the
+  // shared basic-profile field list (same source as the dashboard
+  // banner and the profile API's `completion` block).
+  const { missing: missingFields, percent: completeness } = computeBasicProfileCompletion(profile);
+
+  // Missing-field chip labels — keyed to the same i18n labels the
+  // form fields below use, so the chip text matches the form.
+  const FIELD_LABEL_KEYS: Record<string, string> = {
+    first_name: 'studentProfile.firstName',
+    last_name: 'studentProfile.lastName',
+    phone: 'studentProfile.phone',
+    nationality: 'studentProfile.nationality',
+    date_of_birth: 'studentProfile.dateOfBirth',
+    highest_education: 'studentProfile.highestEducation',
+    target_degree: 'studentProfile.targetDegree',
+    target_field: 'studentProfile.fieldOfStudy',
+    target_intake: 'studentProfile.targetIntake',
+  };
 
   if (isLoading) {
     return (
@@ -240,6 +241,23 @@ export default function StudentProfilePage() {
               <Progress value={completeness} className="h-2" />
             </div>
           </div>
+          {/* Phase 94: name exactly which fields are still missing so
+              the student doesn't have to open Edit to find out. */}
+          {missingFields.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-[#1B2A4A]/10 flex flex-wrap items-center gap-1.5">
+              <span className="text-xs text-[#4B5563] mr-1">
+                {t('studentProfile.missingFieldsLabel')}:
+              </span>
+              {missingFields.map((field) => (
+                <span
+                  key={field}
+                  className="px-2 py-0.5 text-xs bg-white border border-gray-300 text-[#4B5563]"
+                >
+                  {t(FIELD_LABEL_KEYS[field] ?? field)}
+                </span>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 

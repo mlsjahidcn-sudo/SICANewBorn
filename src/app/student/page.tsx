@@ -23,6 +23,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { StudentDashboardSkeleton } from '@/components/student/skeletons';
+import { computeBasicProfileCompletion } from '@/lib/student-profile-completion';
 
 // Real DB shapes (subset of fields we display)
 interface StudentApplication {
@@ -66,9 +67,15 @@ export default function StudentDashboardPage() {
   const [applications, setApplications] = useState<StudentApplication[]>([]);
   const [documents, setDocuments] = useState<StudentDocument[]>([]);
   // Phase 4A: profile-aware greeting and progress context.
+  // Phase 94: extended so the basic-profile completion banner can
+  // check the same fields the profile page's meter tracks.
   interface StudentProfileSummary {
     first_name?: string | null;
     last_name?: string | null;
+    phone?: string | null;
+    nationality?: string | null;
+    date_of_birth?: string | null;
+    highest_education?: string | null;
     target_degree?: string | null;
     target_field?: string | null;
     target_intake?: string | null;
@@ -135,6 +142,13 @@ export default function StudentDashboardPage() {
   const resumableDrafts = applications.filter((a) => a.status === 'Draft');
   const recentApplications = applications.slice(0, 2);
   const recentDocuments = documents.slice(0, 3);
+
+  // Phase 94: post-signup profile completion. Signup fills 5 of the 9
+  // basic fields via the registration trigger; this banner is what
+  // chases the rest (DOB, education, target intake) so SICA actually
+  // receives the student's basic info. profile===null (no row yet)
+  // counts as maximally incomplete.
+  const profileCompletion = computeBasicProfileCompletion(profile);
 
   const getStatusColor = (status: string) =>
     STATUS_COLOR[status] || 'bg-yellow-100 text-yellow-800';
@@ -319,6 +333,32 @@ export default function StudentDashboardPage() {
               className="border-[#1B2A4A] text-[#1B2A4A] hover:bg-[#1B2A4A] hover:text-white rounded-none"
             >
               Resume
+              <ArrowRight className="h-4 w-4 ml-1" />
+            </Button>
+          </Link>
+        </div>
+      )}
+
+      {/* Phase 94: basic-profile completion banner — shown until the
+          9 basic fields are filled. Sits below the docs/draft action
+          banners (those are more urgent) but above everything else. */}
+      {!profileCompletion.complete && (
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 border-l-4 border-[#D4A853] bg-amber-50 rounded-none">
+          <AlertCircle className="h-5 w-5 text-[#9B1B30] flex-shrink-0" />
+          <div className="flex-1">
+            <p className="font-semibold text-[#1B2A4A]">
+              {t('studentDashboard.profileIncompleteTitle', { percent: profileCompletion.percent })}
+            </p>
+            <p className="text-sm text-gray-700 mt-0.5">
+              {t('studentDashboard.profileIncompleteBody')}
+            </p>
+          </div>
+          <Link href="/student/profile" className="sm:ml-auto">
+            <Button
+              size="sm"
+              className="bg-[#9B1B30] hover:bg-[#7A1526] text-white rounded-none"
+            >
+              {t('studentDashboard.profileIncompleteCta')}
               <ArrowRight className="h-4 w-4 ml-1" />
             </Button>
           </Link>

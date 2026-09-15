@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getRequestAuth } from '@/lib/supabase-auth';
+import { computeBasicProfileCompletion } from '@/lib/student-profile-completion';
 
 export async function GET(request: Request) {
   try {
@@ -19,7 +20,12 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ data: profile });
+    // Phase 94: server-computed basic-profile completion — the same
+    // helper the dashboard banner and the profile-page meter use, so
+    // all three surfaces agree on what's missing.
+    const completion = computeBasicProfileCompletion(profile);
+
+    return NextResponse.json({ data: profile, completion });
   } catch (error) {
     console.error('[Student Profile GET]', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
