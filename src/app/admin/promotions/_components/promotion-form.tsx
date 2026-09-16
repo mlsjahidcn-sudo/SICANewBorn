@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { apiFetchJson } from '@/lib/api-client';
 import { useToast } from '@/components/admin/toast';
+import { useI18n } from '@/lib/i18n';
 import { COMMON_COUNTRIES } from '@/lib/common-countries';
 import type { PartnerPromotionWithDetails } from '@/lib/partner-promotion-mapper';
 
@@ -85,6 +86,7 @@ function CountryMultiSelect({
   values: string[];
   onChange: (values: string[]) => void;
 }) {
+  const { t } = useI18n();
   const [search, setSearch] = useState('');
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -112,7 +114,7 @@ function CountryMultiSelect({
         <div className="flex items-center gap-2 border-b border-gray-200 px-3 py-2">
           <Search className="h-4 w-4 text-gray-400" />
           <Input
-            placeholder="Search countries..."
+            placeholder={t('adminPromotions.form.countrySearchPlaceholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="border-0 focus-visible:ring-0 h-8 px-0"
@@ -143,7 +145,7 @@ function CountryMultiSelect({
             );
           })}
           {filtered.length === 0 && (
-            <div className="text-sm text-gray-500 text-center py-4">No countries match</div>
+            <div className="text-sm text-gray-500 text-center py-4">{t('adminPromotions.form.countryNoMatches')}</div>
           )}
         </div>
       </div>
@@ -169,6 +171,7 @@ function CountryMultiSelect({
 export function PromotionForm({ promotionId }: { promotionId?: string }) {
   const router = useRouter();
   const { addToast } = useToast();
+  const { t } = useI18n();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [optionsLoading, setOptionsLoading] = useState(true);
@@ -187,10 +190,10 @@ export function PromotionForm({ promotionId }: { promotionId?: string }) {
         setPrograms(res.programs || []);
       })
       .catch((err) => {
-        addToast(err instanceof Error ? err.message : 'Failed to load options', 'error');
+        addToast(err instanceof Error ? err.message : t('adminPromotions.form.errorLoadOptions'), 'error');
       })
       .finally(() => setOptionsLoading(false));
-  }, [addToast]);
+  }, [addToast, t]);
 
   useEffect(() => {
     if (!promotionId) {
@@ -202,10 +205,10 @@ export function PromotionForm({ promotionId }: { promotionId?: string }) {
         setForm(promotionToForm(res.promotion));
       })
       .catch((err) => {
-        addToast(err instanceof Error ? err.message : 'Failed to load promotion', 'error');
+        addToast(err instanceof Error ? err.message : t('adminPromotions.form.errorLoadPromotion'), 'error');
       })
       .finally(() => setIsLoading(false));
-  }, [promotionId, addToast]);
+  }, [promotionId, addToast, t]);
 
   const selectedUniversity = useMemo(
     () => universities.find((u) => u.id === form.universityId),
@@ -241,10 +244,10 @@ export function PromotionForm({ promotionId }: { promotionId?: string }) {
   };
 
   const validate = (): string | null => {
-    if (!form.universityId) return 'Please select a university';
-    if (form.programIds.length === 0) return 'Please select at least one program';
+    if (!form.universityId) return t('adminPromotions.form.errorUniversity');
+    if (form.programIds.length === 0) return t('adminPromotions.form.errorProgram');
     const amount = parseFloat(form.serviceFeeAmount);
-    if (!Number.isFinite(amount) || amount <= 0) return 'Service fee must be a positive number';
+    if (!Number.isFinite(amount) || amount <= 0) return t('adminPromotions.form.errorAmount');
     return null;
   };
 
@@ -277,7 +280,7 @@ export function PromotionForm({ promotionId }: { promotionId?: string }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ...basePayload, programId: form.programIds[0] }),
         });
-        addToast('Promotion updated successfully', 'success');
+        addToast(t('adminPromotions.form.successUpdate'), 'success');
       } else {
         await Promise.all(
           form.programIds.map((programId) =>
@@ -288,11 +291,11 @@ export function PromotionForm({ promotionId }: { promotionId?: string }) {
             }),
           ),
         );
-        addToast(`${form.programIds.length} promotion(s) created successfully`, 'success');
+        addToast(t('adminPromotions.form.successCreate', { count: form.programIds.length }), 'success');
       }
       router.push('/admin/promotions');
     } catch (err) {
-      addToast(err instanceof Error ? err.message : 'Failed to save promotion', 'error');
+      addToast(err instanceof Error ? err.message : t('adminPromotions.form.errorSave'), 'error');
     } finally {
       setIsSaving(false);
     }
@@ -301,7 +304,7 @@ export function PromotionForm({ promotionId }: { promotionId?: string }) {
   if (isLoading || optionsLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Loading...</div>
+        <div className="text-gray-500">{t('common.loading')}</div>
       </div>
     );
   }
@@ -321,37 +324,37 @@ export function PromotionForm({ promotionId }: { promotionId?: string }) {
         </button>
         <div>
           <h1 className="text-2xl font-bold text-[#1F2937]">
-            {promotionId ? 'Edit Promotion' : 'Add Promotion'}
+            {promotionId ? t('adminPromotions.form.editTitle') : t('adminPromotions.form.addTitle')}
           </h1>
           <p className="text-[#4B5563] text-sm mt-1">
             {promotionId
-              ? 'Update the promoted program, fee, and restrictions.'
-              : 'Choose a university program to promote to partners.'}
+              ? t('adminPromotions.form.editSubtitle')
+              : t('adminPromotions.form.addSubtitle')}
           </p>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Program & University</CardTitle>
+          <CardTitle>{t('adminPromotions.form.sectionProgram')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-[#1F2937] mb-1">University *</label>
+            <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('adminPromotions.form.fieldUniversity')}</label>
             <SearchableSelect
               value={form.universityId}
               onChange={handleUniversityChange}
               options={universityOptions}
-              placeholder="Select a university"
-              emptyText="No universities found"
-              searchPlaceholder="Search universities..."
+              placeholder={t('adminPromotions.form.placeholderUniversity')}
+              emptyText={t('adminPromotions.form.emptyUniversity')}
+              searchPlaceholder={t('adminPromotions.form.searchUniversity')}
               loading={optionsLoading}
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-[#1F2937] mb-1">
-              {isEdit ? 'Program *' : 'Programs *'}
+              {isEdit ? t('adminPromotions.form.fieldProgramSingular') : t('adminPromotions.form.fieldProgramPlural')}
             </label>
             {isEdit ? (
               <div className="px-3 py-2 border border-gray-300 bg-gray-50 text-sm text-[#1F2937]">
@@ -361,11 +364,11 @@ export function PromotionForm({ promotionId }: { promotionId?: string }) {
               <div className="border border-gray-300 bg-white">
                 {!selectedUniversity ? (
                   <div className="p-3 text-sm text-gray-500">
-                    Select a university first to see its programs
+                    {t('adminPromotions.form.programEmptyUniversity')}
                   </div>
                 ) : programOptions.length === 0 ? (
                   <div className="p-3 text-sm text-gray-500">
-                    No programs found for this university
+                    {t('adminPromotions.form.programEmptyNone')}
                   </div>
                 ) : (
                   <div className="h-60 overflow-y-auto p-2 space-y-1">
@@ -405,7 +408,7 @@ export function PromotionForm({ promotionId }: { promotionId?: string }) {
                 )}
                 {form.programIds.length > 0 && (
                   <div className="border-t border-gray-200 px-3 py-2 text-xs text-gray-600">
-                    {form.programIds.length} program{form.programIds.length === 1 ? '' : 's'} selected
+                    {t('adminPromotions.form.programsSelected', { count: form.programIds.length })}
                   </div>
                 )}
               </div>
@@ -416,12 +419,12 @@ export function PromotionForm({ promotionId }: { promotionId?: string }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Service Fee</CardTitle>
+          <CardTitle>{t('adminPromotions.form.sectionFee')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1">Amount *</label>
+              <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('adminPromotions.form.fieldAmount')}</label>
               <Input
                 type="number"
                 min="0.01"
@@ -429,11 +432,11 @@ export function PromotionForm({ promotionId }: { promotionId?: string }) {
                 required
                 value={form.serviceFeeAmount}
                 onChange={(e) => handleChange('serviceFeeAmount', e.target.value)}
-                placeholder="e.g. 5000"
+                placeholder={t('adminPromotions.form.placeholderAmount')}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1">Currency</label>
+              <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('adminPromotions.form.fieldCurrency')}</label>
               <select
                 value={form.serviceFeeCurrency}
                 onChange={(e) => handleChange('serviceFeeCurrency', e.target.value)}
@@ -450,12 +453,12 @@ export function PromotionForm({ promotionId }: { promotionId?: string }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Visibility & Status</CardTitle>
+          <CardTitle>{t('adminPromotions.form.sectionVisibility')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1">Visibility</label>
+              <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('adminPromotions.form.fieldVisibility')}</label>
               <select
                 value={form.visibility}
                 onChange={(e) =>
@@ -463,32 +466,32 @@ export function PromotionForm({ promotionId }: { promotionId?: string }) {
                 }
                 className={inputClass}
               >
-                <option value="partner_only">Partner Only</option>
-                <option value="public_and_partner">Public + Partner</option>
+                <option value="partner_only">{t('adminPromotions.form.visibilityPartnerOnly')}</option>
+                <option value="public_and_partner">{t('adminPromotions.form.visibilityPublic')}</option>
               </select>
               <p className="text-xs text-gray-500 mt-1">
-                Partner Only hides the service-fee promotion from public pages.
+                {t('adminPromotions.form.visibilityHint')}
               </p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1">Status</label>
+              <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('adminPromotions.form.fieldStatus')}</label>
               <select
                 value={form.status}
                 onChange={(e) => handleChange('status', e.target.value as FormState['status'])}
                 className={inputClass}
               >
-                <option value="active">Active</option>
-                <option value="paused">Paused</option>
-                <option value="archived">Archived</option>
+                <option value="active">{t('adminPromotions.form.statusActive')}</option>
+                <option value="paused">{t('adminPromotions.form.statusPaused')}</option>
+                <option value="archived">{t('adminPromotions.form.statusArchived')}</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1">Priority</label>
+              <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('adminPromotions.form.fieldPriority')}</label>
               <Input
                 type="number"
                 value={form.priority}
                 onChange={(e) => handleChange('priority', e.target.value)}
-                placeholder="Higher = shown first"
+                placeholder={t('adminPromotions.form.placeholderPriority')}
               />
             </div>
           </div>
@@ -497,16 +500,16 @@ export function PromotionForm({ promotionId }: { promotionId?: string }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Country Restrictions</CardTitle>
+          <CardTitle>{t('adminPromotions.form.sectionCountries')}</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <CountryMultiSelect
-            label="Target Countries (leave empty for all)"
+            label={t('adminPromotions.form.fieldTargetCountries')}
             values={form.targetCountries}
             onChange={(values) => handleChange('targetCountries', values)}
           />
           <CountryMultiSelect
-            label="Restricted Countries"
+            label={t('adminPromotions.form.fieldRestrictedCountries')}
             values={form.restrictedCountries}
             onChange={(values) => handleChange('restrictedCountries', values)}
           />
@@ -515,27 +518,27 @@ export function PromotionForm({ promotionId }: { promotionId?: string }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Notes</CardTitle>
+          <CardTitle>{t('adminPromotions.form.sectionNotes')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-[#1F2937] mb-1">Internal Notes</label>
+            <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('adminPromotions.form.fieldInternalNotes')}</label>
             <textarea
               value={form.internalNotes}
               onChange={(e) => handleChange('internalNotes', e.target.value)}
               rows={3}
               className={inputClass}
-              placeholder="Admin-only notes about this promotion"
+              placeholder={t('adminPromotions.form.placeholderInternalNotes')}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#1F2937] mb-1">Partner-Facing Notes</label>
+            <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('adminPromotions.form.fieldPartnerNotes')}</label>
             <textarea
               value={form.partnerNotes}
               onChange={(e) => handleChange('partnerNotes', e.target.value)}
               rows={3}
               className={inputClass}
-              placeholder="Notes shown to partners on the promotion detail page"
+              placeholder={t('adminPromotions.form.placeholderPartnerNotes')}
             />
           </div>
         </CardContent>
@@ -548,14 +551,18 @@ export function PromotionForm({ promotionId }: { promotionId?: string }) {
           className="bg-[#9B1B30] hover:bg-[#7A1625] text-white"
         >
           <Save className="w-4 h-4 mr-2" />
-          {isSaving ? 'Saving...' : promotionId ? 'Update Promotion' : 'Create Promotion'}
+          {isSaving
+            ? t('adminPromotions.form.saving')
+            : promotionId
+              ? t('adminPromotions.form.submitUpdate')
+              : t('adminPromotions.form.submitCreate')}
         </Button>
         <Button
           type="button"
           variant="outline"
           onClick={() => router.push('/admin/promotions')}
         >
-          Cancel
+          {t('adminCommon.cancel')}
         </Button>
       </div>
     </form>
