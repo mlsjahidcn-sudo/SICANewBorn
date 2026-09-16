@@ -2311,6 +2311,10 @@ export const translations: Record<Locale, Record<string, string>> = {
     // the same operator surface (B2B integrations).
     'adminNav.webhooks': 'Webhooks',
     'adminNav.settings': 'Settings',
+    // Phase 106: shared admin chrome (used by ConfirmDialog defaults
+    // and any future shared admin component).
+    'adminCommon.confirm': 'Confirm',
+    'adminCommon.cancel': 'Cancel',
     // Phase 37: Admin Portal — login + register
     'adminAuth.loginTitle': 'SICA Admin',
     'adminAuth.loginSubtitle': 'Sign in to your admin account',
@@ -6319,6 +6323,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminNav.apiKeys': 'API 密钥',
     'adminNav.webhooks': 'Webhooks',
     'adminNav.settings': '设置',
+    // Phase 106: 共享管理后台 chrome
+    'adminCommon.confirm': '确认',
+    'adminCommon.cancel': '取消',
     // Phase 37: Admin Portal — login + register
     'adminAuth.loginTitle': 'SICA 管理后台',
     'adminAuth.loginSubtitle': '登录管理员账户',

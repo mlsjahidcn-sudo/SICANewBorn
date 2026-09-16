@@ -1,6 +1,7 @@
 'use client';
 
 import { AlertTriangle, X } from 'lucide-react';
+import { useI18n } from '@/lib/i18n';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -18,13 +19,21 @@ export function ConfirmDialog({
   open,
   title,
   message,
-  cancelLabel = 'Cancel',
+  cancelLabel,
   variant = 'danger',
   onConfirm,
   onClose,
   onCancel,
-  confirmText = 'Confirm',
+  confirmText,
 }: ConfirmDialogProps) {
+  // Phase 106 / Batch A1: default button labels were 'Cancel' / 'Confirm'
+  // (English only). Now read from the i18n context so non-English admins
+  // get localized chrome. Callers can still override via the
+  // `cancelLabel` / `confirmText` props.
+  const { t } = useI18n();
+  const effectiveCancelLabel = cancelLabel ?? t('adminCommon.cancel');
+  const effectiveConfirmText = confirmText ?? t('adminCommon.confirm');
+
   if (!open) return null;
 
   const confirmBg =
@@ -57,14 +66,14 @@ export function ConfirmDialog({
                 className="px-4 py-2 text-sm border border-gray-300 text-[#4B5563] hover:bg-gray-50"
                 style={{ borderRadius: 0 }}
               >
-                {cancelLabel}
+                {effectiveCancelLabel}
               </button>
               <button
                 onClick={() => onConfirm?.()}
                 className={`px-4 py-2 text-sm text-white font-medium ${confirmBg}`}
                 style={{ borderRadius: 0 }}
               >
-                {confirmText}
+                {effectiveConfirmText}
               </button>
             </div>
           </div>
