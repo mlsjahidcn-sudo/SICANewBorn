@@ -103,6 +103,66 @@ export async function PATCH(
 
   try {
     const body = await request.json();
+
+    // Phase 109 Batch 5: restore action. Companion to the DELETE
+    // handler that sets status='Withdrawn'. Restoring re-opens the
+    // row as 'Submitted' (so the lifecycle continues from the
+    // queue side) and writes a stage_history event so the timeline
+    // tab surfaces it.
+    //
+    // Body: { action: 'restore' }
+    //
+    // Refuses to restore rows that aren't Withdrawn (only terminal-
+    // undo-able state) — if the admin wants to re-open an
+    // Accepted/Under Review row they should just edit it normally.
+    if (body && typeof body === 'object' && (body as { action?: string }).action === 'restore') {
+      const service = buildServiceClient();
+      // Read the current status to refuse non-Withdrawn rows + capture
+      // from_status for the stage_history event.
+      const { data: existing } = await service
+        .from('student_applications')
+        .select('id, status')
+        .eq('id', id)
+        .maybeSingle();
+      if (!existing) {
+        return NextResponse.json({ error: 'Application not found' }, { status: 404 });
+      }
+      const fromStatus = (existing as { status: string }).status;
+      if (fromStatus !== 'Withdrawn') {
+        return NextResponse.json(
+          { error: `Cannot restore a row in status '${fromStatus}' (only Withdrawn rows can be restored)` },
+          { status: 400 },
+        );
+      }
+      const nowIso = new Date().toISOString();
+      const { data: updated, error: restoreErr } = await service
+        .from('student_applications')
+        .update({ status: 'Submitted', reviewed_at: nowIso })
+        .eq('id', id)
+        .select('*')
+        .single();
+      if (restoreErr) {
+        return NextResponse.json({ error: restoreErr.message }, { status: 400 });
+      }
+      // Best-effort stage_history write so the timeline tab shows
+      // the restore event. Mirrors the Phase 107 PATCH path —
+      // failure here doesn't fail the user-visible restore.
+      try {
+        await service.from('application_stage_history').insert({
+          application_id: id,
+          from_status: fromStatus,
+          to_status: 'Submitted',
+          actor_id: auth.user.id,
+          actor_email: auth.user.email || null,
+          actor_role: 'admin',
+          note: 'Restored from Withdrawn',
+        });
+      } catch (eventErr) {
+        console.warn('[admin/applications PATCH restore] event insert failed:', eventErr);
+      }
+      return NextResponse.json({ success: true, application: updated });
+    }
+
     // Whitelist real student_applications columns. The old blocklist
     // (only 4 keys excluded) passed anything through — including the
     // edit page's bogus `university`/`program` keys, which made every

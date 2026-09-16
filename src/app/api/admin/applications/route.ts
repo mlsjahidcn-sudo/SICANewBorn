@@ -629,6 +629,65 @@ export async function POST(request: NextRequest) {
 
     const service = buildServiceClient();
 
+    // Phase 109 Batch 5: duplicate-application guard. Refuses to
+    // create a second non-terminal application for the same
+    // (student OR applicant_email) + (university_id OR
+    // university_name) + (program_id OR program_name) + intake
+    // tuple. The wizard surfaces this as a 409 with the existing
+    // application's number + a "View it?" deep link.
+    //
+    // Why "non-terminal": a student who's already Withdrawn /
+    // Rejected can absolutely re-apply for the same cohort
+    // (e.g., re-applied after improving their IELTS). Terminal
+    // statuses (Rejected / Withdrawn) are excluded from the
+    // check; everything else (Submitted, Under Review,
+    // Documents Requested, Decision Made, Accepted) blocks a
+    // second row.
+    //
+    // Match keys are intentionally loose on identifiers
+    // (university_id OR university_name, program_id OR
+    // program_name) because the wizard writes both (the live
+    // catalog from /api/universities populates university_id;
+    // manual entries only have university_name). Same for
+    // program.
+    {
+      const dupQuery = service
+        .from('student_applications')
+        .select('id, application_number, status')
+        .eq('intake', body.intake)
+        .not('status', 'in', '("Rejected","Withdrawn")')
+        .limit(1);
+      if (hasStudent) {
+        dupQuery.eq('student_id', body.studentId as string);
+      } else if (hasApplicant) {
+        dupQuery.eq('applicant_email', body.applicantEmail as string);
+      }
+      if (body.universityId) {
+        dupQuery.eq('university_id', body.universityId);
+      } else {
+        dupQuery.eq('university_name', body.universityName as string);
+      }
+      if (body.programId) {
+        dupQuery.eq('program_id', body.programId);
+      } else {
+        dupQuery.eq('program_name', body.programName as string);
+      }
+      const { data: existing } = await dupQuery.maybeSingle();
+      if (existing) {
+        return NextResponse.json(
+          {
+            error: 'A non-terminal application already exists for this student/cohort.',
+            code: 'DUPLICATE_APPLICATION',
+            existingId: (existing as { id: string }).id,
+            existingApplicationNumber: (existing as { application_number?: string | null })
+              .application_number,
+            existingStatus: (existing as { status: string }).status,
+          },
+          { status: 409 },
+        );
+      }
+    }
+
     // Generate application_number atomically (S5 fix)
     const { data: rpcData, error: rpcError } = await service.rpc('generate_application_number');
     if (rpcError || !rpcData) {

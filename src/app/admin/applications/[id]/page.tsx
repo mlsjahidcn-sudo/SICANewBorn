@@ -387,6 +387,39 @@ export default function AdminApplicationDetailPage() {
                     Withdraw
                   </Button>
                 </div>
+              ) : app.status === 'Withdrawn' ? (
+                <div className="space-y-2">
+                  <div className="text-center text-sm text-[#4B5563] mb-2">
+                    Current status: <Badge className={status.color}>{status.label}</Badge>
+                  </div>
+                  <Button
+                    className="w-full"
+                    onClick={async () => {
+                      setIsUpdating(true);
+                      try {
+                        await apiFetchJson(
+                          `/api/admin/applications/${app.id}`,
+                          {
+                            method: 'PATCH',
+                            headers: { 'content-type': 'application/json' },
+                            body: JSON.stringify({ action: 'restore' }),
+                          },
+                        );
+                        await load();
+                      } catch (err) {
+                        setError(
+                          err instanceof Error ? err.message : 'Restore failed',
+                        );
+                      } finally {
+                        setIsUpdating(false);
+                      }
+                    }}
+                    disabled={isUpdating}
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Restore from Withdrawn
+                  </Button>
+                </div>
               ) : (
                 <div className="text-center text-sm text-[#4B5563]">
                   Current status: <Badge className={status.color}>{status.label}</Badge>
