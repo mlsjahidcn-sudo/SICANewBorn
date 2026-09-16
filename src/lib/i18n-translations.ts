@@ -3538,6 +3538,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     // Phase 107 — admin application detail (Timeline tab + Mark as Enrolled)
     'adminAppDetail.tabOverview': 'Overview',
     'adminAppDetail.tabTimeline': 'Timeline',
+    'adminAppDetail.tabDocuments': 'Documents',
     'adminAppDetail.timelineEmpty': 'No status changes recorded yet. Updates appear here as soon as you change the application status.',
     'adminAppDetail.timelineKindStage': 'Status change',
     'adminAppDetail.timelineKindNote': 'Note',
@@ -7980,6 +7981,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     // Phase 107 — 管理后台申请详情（时间线标签 + 标记入学）
     'adminAppDetail.tabOverview': '概览',
     'adminAppDetail.tabTimeline': '时间线',
+    'adminAppDetail.tabDocuments': '文档',
     'adminAppDetail.timelineEmpty': '尚无状态变更记录。更新状态后会立即显示在这里。',
     'adminAppDetail.timelineKindStage': '状态变更',
     'adminAppDetail.timelineKindNote': '备注',

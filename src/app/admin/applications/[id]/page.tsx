@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DocumentsTab } from '../_components/documents-tab';
 import { apiFetch, apiFetchJson } from '@/lib/api-client';
 import { APPLICATION_STATUSES, type ApplicationStatus } from '@/lib/application-mapper';
 import { useI18n } from '@/lib/i18n';
@@ -275,6 +276,10 @@ export default function AdminApplicationDetailPage() {
           <Tabs defaultValue="overview">
             <TabsList>
               <TabsTrigger value="overview">{t('adminAppDetail.tabOverview')}</TabsTrigger>
+              <TabsTrigger value="documents">
+                <FileText className="h-3 w-3 mr-1 inline" />
+                {t('adminAppDetail.tabDocuments')}
+              </TabsTrigger>
               <TabsTrigger value="timeline">
                 <Clock className="h-3 w-3 mr-1 inline" />
                 {t('adminAppDetail.tabTimeline')}
@@ -332,6 +337,13 @@ export default function AdminApplicationDetailPage() {
                   )}
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="documents">
+              <DocumentsTab
+                applicationId={app.id}
+                studentId={app.studentId || null}
+              />
             </TabsContent>
 
             <TabsContent value="timeline">
