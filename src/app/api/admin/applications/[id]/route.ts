@@ -118,11 +118,22 @@ export async function PATCH(
       'additional_notes', 'admin_notes',
       'applicant_name', 'applicant_email', 'applicant_phone',
       'applicant_nationality',
+      // Phase 107 — lead attribution + enrollment + timeline-visibility
+      // fields are admin-managed. lead_id/lead_type are polymorphic;
+      // the API layer (Batch 5) will validate the (id, type) pair before
+      // insert. enrolled_at is only writable via /api/admin/applications/
+      // [id]/enroll — the route below strips it from this payload.
+      'lead_id', 'lead_type',
+      'timeline_visible_to_student',
     ]);
     const updates: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(body)) {
       if (UPDATABLE.has(k)) updates[k] = v;
     }
+    // Phase 107: enrolled_at is exclusively written via the /enroll
+    // subroute so a stray PATCH cannot overwrite a completed enrollment
+    // without the deposit/visa payload. Strip it here as defense in depth.
+    delete (updates as Record<string, unknown>).enrolled_at;
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: 'No updatable fields' }, { status: 400 });
     }
@@ -179,6 +190,40 @@ export async function PATCH(
         notes: body.notes || `Status changed to ${newStatus} by admin.`,
         created_by: auth.user.id,
       });
+
+      // Phase 107 — also write the structured stage_history row so the
+      // admin Timeline tab has a clean source of stage transitions
+      // (actor + from→to + optional internal marker) separate from the
+      // free-text application_timeline notes. The two tables complement
+      // each other; this batch keeps the legacy table write for
+      // backward compatibility with the student timeline tab.
+      const noteBody: string | null =
+        typeof body.notes === 'string' && body.notes.trim().length > 0
+          ? body.notes
+          : null;
+      const internalFlag = body.internal === true;
+      const stageNote = noteBody
+        ? internalFlag
+          ? `[internal] ${noteBody}`
+          : noteBody
+        : internalFlag
+          ? '[internal]'
+          : null;
+      const { error: stageErr } = await service
+        .from('application_stage_history')
+        .insert({
+          application_id: id,
+          from_status: before.status,
+          to_status: newStatus,
+          actor_id: auth.user.id,
+          actor_email: auth.user.email ?? null,
+          actor_role: 'admin',
+          note: stageNote,
+        });
+      if (stageErr) {
+        // Don't fail the response — the timeline row already succeeded.
+        console.error('[admin/applications PATCH] stage_history insert failed:', stageErr);
+      }
 
       // Email the applicant (fire-and-forget — never block the response
       // on email). Admin can opt out per-update with notify_applicant=false.

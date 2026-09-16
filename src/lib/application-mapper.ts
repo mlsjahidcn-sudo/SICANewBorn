@@ -84,6 +84,20 @@ export interface AdminApplication {
   personalStatement: string | null;
   additionalNotes: string | null;
   adminNotes: string | null;
+  // Phase 107 Batch 4: lead attribution. Polymorphic — pair leadId with
+  // leadType ('chat_lead' | 'student_assessment' | 'contact_submission').
+  leadId: string | null;
+  leadType: 'chat_lead' | 'student_assessment' | 'contact_submission' | null;
+  // Phase 107 Batch 2: enrollment stage. Null until /enroll writes the
+  // application_enrollments row + sets this timestamp.
+  enrolledAt: string | null;
+  decision: string | null;
+  decisionDate: string | null;
+  priority: string | null;
+  submittedAt: string | null;
+  reviewedAt: string | null;
+  // Phase 107 Batch 6: opt-out for internal timeline events.
+  timelineVisibleToStudent: boolean;
 }
 
 export type RawApp = {
@@ -116,6 +130,14 @@ export type RawApp = {
   applicant_nationality: string | null;
   created_at: string;
   updated_at: string;
+  // Phase 107 — lead attribution + enrollment fields read off
+  // student_applications when present (left as optional since
+  // some callers — including the partner_admin route — may select
+  // a narrower set).
+  lead_id?: string | null;
+  lead_type?: string | null;
+  enrolled_at?: string | null;
+  timeline_visible_to_student?: boolean;
   student?: {
     id: string;
     first_name: string | null;
@@ -159,6 +181,18 @@ export function mapApplicationFromDb(row: RawApp): AdminApplication {
     personalStatement: row.personal_statement,
     additionalNotes: row.additional_notes,
     adminNotes: row.admin_notes,
+    // Phase 107 — new fields. Polymorphic lead pair; empty when none.
+    leadId: row.lead_id ?? null,
+    leadType:
+      (row.lead_type as AdminApplication['leadType']) ??
+      (row.lead_id ? null : null),
+    enrolledAt: row.enrolled_at ?? null,
+    decision: row.decision,
+    decisionDate: row.decision_date,
+    priority: row.priority,
+    submittedAt: row.submitted_at,
+    reviewedAt: row.reviewed_at,
+    timelineVisibleToStudent: row.timeline_visible_to_student ?? true,
   };
 }
 
@@ -210,6 +244,10 @@ export interface StudentApplication {
   reviewedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  // Phase 107 — enrollment banner. Surfaced to the student so they
+  // see a green "Enrolled" state on the detail page once the admin
+  // has finalized the application.
+  enrolledAt: string | null;
 }
 
 export function mapApplicationForStudent(row: RawApp): StudentApplication {
@@ -232,6 +270,7 @@ export function mapApplicationForStudent(row: RawApp): StudentApplication {
     reviewedAt: row.reviewed_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    enrolledAt: row.enrolled_at ?? null,
   };
 }
 
@@ -298,4 +337,57 @@ export function parseApplicationStatus(input: unknown): ApplicationStatus | null
   return (APPLICATION_STATUSES as readonly string[]).includes(input as string)
     ? (input as ApplicationStatus)
     : null;
+}
+
+// ----------------------------------------------------------------------------
+// Phase 107 — lead attribution
+// ----------------------------------------------------------------------------
+
+/**
+ * Polymorphic lead types that can be back-linked to a student_application.
+ * Kept in sync with the student_applications_lead_type_check constraint
+ * added in database/2026-09-17_phase107_applications_foundation.sql.
+ */
+export const STUDENT_LEAD_TYPES = [
+  'chat_lead',
+  'student_assessment',
+  'contact_submission',
+] as const;
+export type StudentLeadType = (typeof STUDENT_LEAD_TYPES)[number];
+
+export function parseStudentLeadType(input: unknown): StudentLeadType | null {
+  return (STUDENT_LEAD_TYPES as readonly string[]).includes(input as string)
+    ? (input as StudentLeadType)
+    : null;
+}
+
+/**
+ * Validates that an admin POST to /api/admin/applications has either a
+ * studentId OR (applicantName + applicantEmail) — the existing lead
+ * path. Phase 107 Batch 5 additionally accepts a (leadId, leadType) pair
+ * as a stronger claim than the soft email match.
+ */
+export function leadAttributionIsValid(input: {
+  studentId?: string | null;
+  applicantName?: string | null;
+  applicantEmail?: string | null;
+  leadId?: string | null;
+  leadType?: string | null;
+}): { ok: true } | { ok: false; reason: string } {
+  const hasStudent = !!input.studentId;
+  const hasLeadPath =
+    !!input.applicantName?.trim() && !!input.applicantEmail?.trim();
+  if (!hasStudent && !hasLeadPath) {
+    return {
+      ok: false,
+      reason: 'Either studentId or applicantName+applicantEmail is required',
+    };
+  }
+  if (input.leadId && !input.leadType) {
+    return { ok: false, reason: 'leadType is required when leadId is set' };
+  }
+  if (input.leadType && !parseStudentLeadType(input.leadType)) {
+    return { ok: false, reason: `Unknown leadType: ${input.leadType}` };
+  }
+  return { ok: true };
 }
