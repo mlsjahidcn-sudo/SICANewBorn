@@ -2618,6 +2618,18 @@ export const translations: Record<Locale, Record<string, string>> = {
     // Phase 108 Batch 6: CSV export
     'adminFees.exportCsv': 'Export CSV',
     'adminFees.exportSelected': 'Export selected',
+    // Phase 108 Batch 8: timeline tab + overdue cron
+    'adminFees.timelineNoEvents': 'No audit events yet',
+    'adminFees.timelineLoadError': 'Failed to load audit events',
+    'adminFees.timelineEventCreated': 'Fee created',
+    'adminFees.timelineEventStatusChanged': 'Status changed',
+    'adminFees.timelineEventAmountPaidChanged': 'Payment recorded',
+    'adminFees.timelineEventBulkAction': 'Bulk action',
+    'adminFees.timelineEventPaymentProof': 'Payment proof updated',
+    'adminFees.timelineFromTo': '{{from}} → {{to}}',
+    'adminFees.timelineBy': 'by {{email}}',
+    'adminFees.timelineBulkChip': 'Bulk action: {{count}} fees',
+    'adminFees.kpiOverdueAutoNote': 'Auto-marked overdue by daily cron',
     // Phase 106 B3: Admin Settings (profile / password / site)
     'adminSettings.title': 'Settings',
     'adminSettings.subtitle': 'Manage your account and site settings',
@@ -7056,6 +7068,18 @@ export const translations: Record<Locale, Record<string, string>> = {
     // Phase 108 Batch 6: CSV 导出
     'adminFees.exportCsv': '导出 CSV',
     'adminFees.exportSelected': '导出已选',
+    // Phase 108 Batch 8: 时间线选项卡 + 逾期 cron
+    'adminFees.timelineNoEvents': '暂无审计事件',
+    'adminFees.timelineLoadError': '加载审计事件失败',
+    'adminFees.timelineEventCreated': '费用已创建',
+    'adminFees.timelineEventStatusChanged': '状态变更',
+    'adminFees.timelineEventAmountPaidChanged': '已记录付款',
+    'adminFees.timelineEventBulkAction': '批量操作',
+    'adminFees.timelineEventPaymentProof': '支付凭证已更新',
+    'adminFees.timelineFromTo': '{{from}} → {{to}}',
+    'adminFees.timelineBy': '操作人：{{email}}',
+    'adminFees.timelineBulkChip': '批量操作：{{count}} 条',
+    'adminFees.kpiOverdueAutoNote': '由每日 cron 自动标记为逾期',
     // Phase 106 B3: 管理后台设置（资料 / 密码 / 站点）
     'adminSettings.title': '设置',
     'adminSettings.subtitle': '管理你的账户与站点设置',

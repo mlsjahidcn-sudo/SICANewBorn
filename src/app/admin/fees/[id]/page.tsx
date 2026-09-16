@@ -22,6 +22,7 @@ import { apiFetch, apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 import type { StudentFee, StudentFeeStatus } from '@/lib/student-fee-mapper';
 import { currencySymbol } from '@/lib/currency';
+import { FeeTimelineTab } from '../_components/timeline-tab';
 
 interface JoinedStudent {
   id: string;
@@ -330,8 +331,10 @@ export default function AdminFeeDetailPage({ params }: { params: Promise<{ id: s
           <Card>
             <CardHeader>
               <CardTitle>{t('adminFees.detailTabTimeline')}</CardTitle>
-              <CardDescription>{t('adminFees.detailTimelinePlaceholder')}</CardDescription>
             </CardHeader>
+            <CardContent>
+              <FeeTimelineTab feeId={fee.id} />
+            </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
