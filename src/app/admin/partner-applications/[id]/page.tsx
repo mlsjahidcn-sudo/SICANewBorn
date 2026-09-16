@@ -5,8 +5,14 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft, Calendar, Building, Mail, Phone, Globe, Hash, Flag,
-  CheckCircle2, XCircle, Loader2, Link2, Pencil,
+  CheckCircle2, XCircle, Loader2, Link2, Pencil, GraduationCap,
 } from 'lucide-react';
+// Phase 107 Batch 7: render the linked student_application's
+// enrollment row as a read-only summary. Partner CRM is intentionally
+// view-only on enrollment (the partner doesn't drive deposit/visa
+// — the admin does, via /admin/applications/[id]). The type is
+// imported for the response payload only.
+import type { ApplicationEnrollment } from '@/lib/application-history-mapper';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -76,6 +82,17 @@ export default function AdminPartnerApplicationDetailPage() {
   const { t } = useI18n();
 
   const [app, setApp] = useState<PartnerApplication | null>(null);
+  // Phase 107 Batch 7: enrollment state for the linked student_app.
+  // Set by the GET response when this partner_application has a
+  // linked_student_profile_id; null otherwise.
+  const [linkedStudentApplication, setLinkedStudentApplication] = useState<{
+    id: string;
+    applicationNumber: string | null;
+    status: string;
+    enrolledAt: string | null;
+    decision: string | null;
+  } | null>(null);
+  const [enrollment, setEnrollment] = useState<ApplicationEnrollment | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSavingStatus, setIsSavingStatus] = useState(false);
@@ -104,11 +121,22 @@ export default function AdminPartnerApplicationDetailPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await apiFetchJson<{ application: PartnerApplication }>(
-        `/api/admin/partner-applications/${applicationId}`,
-      );
+      const res = await apiFetchJson<{
+        application: PartnerApplication;
+        linkedStudentApplication?: {
+          id: string;
+          applicationNumber: string | null;
+          status: string;
+          enrolledAt: string | null;
+          decision: string | null;
+        } | null;
+        enrollment?: ApplicationEnrollment | null;
+      }>(`/api/admin/partner-applications/${applicationId}`);
       setApp(res.application);
       setAdminNotes(res.application.notes ?? '');
+      // Phase 107 Batch 7: surface the linked enrollment state.
+      setLinkedStudentApplication(res.linkedStudentApplication ?? null);
+      setEnrollment(res.enrollment ?? null);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : 'Failed to load application.',
@@ -644,6 +672,82 @@ export default function AdminPartnerApplicationDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Phase 107 Batch 7: enrollment summary for the linked student
+          application. Read-only on this surface — the partner CRM
+          doesn't drive enrollment, the admin does via the student_app
+          detail page. We render only when linkedStudentApplication
+          was returned (i.e. linked_student_profile_id is set AND
+          that profile has a student_application row). */}
+      {linkedStudentApplication && (
+        <Card className="rounded-none">
+          <CardHeader>
+            <CardTitle className="text-[#1B2A4A] flex items-center gap-2">
+              <GraduationCap className="w-4 h-4" /> Enrollment
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[#4B5563] min-w-32">Linked application:</span>
+              <Link
+                href={`/admin/applications/${linkedStudentApplication.id}`}
+                className="text-[#1B2A4A] hover:underline font-medium"
+              >
+                {linkedStudentApplication.applicationNumber ||
+                  linkedStudentApplication.id.slice(0, 8)}{' '}
+                · {linkedStudentApplication.status}
+              </Link>
+              {linkedStudentApplication.decision && (
+                <span className="text-xs text-gray-500">
+                  (decision: {linkedStudentApplication.decision})
+                </span>
+              )}
+            </div>
+            {enrollment ? (
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[#4B5563] min-w-32">Status:</span>
+                  <span className="inline-flex items-center px-2 py-0.5 text-xs font-semibold bg-green-700 text-white">
+                    Enrolled
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[#4B5563] min-w-32">Enrolled at:</span>
+                  <span>{new Date(enrollment.enrolledAt).toLocaleString()}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[#4B5563] min-w-32">Deposit:</span>
+                  <span>
+                    {enrollment.depositAmount !== null
+                      ? `${enrollment.depositCurrency ?? 'CNY'} ${enrollment.depositAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+                      : '—'}
+                    {enrollment.depositPaidAt && (
+                      <span className="text-xs text-gray-500 ml-2">
+                        (paid {new Date(enrollment.depositPaidAt).toLocaleDateString()})
+                      </span>
+                    )}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[#4B5563] min-w-32">Visa:</span>
+                  <span>{enrollment.visaStatus}</span>
+                </div>
+                {enrollment.arrivalDate && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#4B5563] min-w-32">Arrival:</span>
+                    <span>{new Date(enrollment.arrivalDate).toLocaleDateString()}</span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-500">
+                Not yet enrolled. Mark as enrolled from the linked student
+                application detail page.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Phase A: links to the partner student record and the real
           student profile (when linked). */}

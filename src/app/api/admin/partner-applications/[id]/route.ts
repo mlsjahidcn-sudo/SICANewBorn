@@ -7,6 +7,11 @@ import {
   mapPartnerApplicationToDb,
   parsePartnerApplicationStatus,
 } from '@/lib/partner-application-mapper';
+import {
+  mapEnrollmentFromDb,
+  type ApplicationEnrollment,
+  type ApplicationEnrollmentDbRow,
+} from '@/lib/application-history-mapper';
 
 /**
  * GET   /api/admin/partner-applications/[id] — admin view of a single row
@@ -102,11 +107,78 @@ export async function GET(
       const u = await service.auth.admin.getUserById(createdBy);
       createdByEmail = u.data?.user?.email || null;
     }
+
+    // Phase 107 Batch 7: surface the linked student_application's
+    // enrollment state when this partner_application is linked via
+    // linked_student_profile_id. The admin CRM detail page renders
+    // an Enrollment card when enrollment is present. Two parallel
+    // reads: the student_application row (for enrolled_at + the link)
+    // and the application_enrollments row (1:1 PK on application_id).
+    // Errors are swallowed — this is best-effort enrichment; the
+    // partner_application GET never fails because enrollment lookup
+    // hiccupped.
+    const linkedProfileId = (data as { linked_student_profile_id?: string | null })
+      .linked_student_profile_id;
+    let linkedStudentApplication: {
+      id: string;
+      applicationNumber: string | null;
+      status: string;
+      enrolledAt: string | null;
+      decision: string | null;
+    } | null = null;
+    let enrollment: ApplicationEnrollment | null = null;
+    if (linkedProfileId) {
+      try {
+        const { data: saRow } = await service
+          .from('student_applications')
+          .select('id, application_number, status, enrolled_at, decision')
+          .eq('student_id', linkedProfileId)
+          // Phase 33: a partner can create multiple student_application
+          // rows for the same student over time. Prefer the most
+          // recent one (which is what the admin would care about for
+          // enrollment state).
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (saRow) {
+          const sa = saRow as {
+            id: string;
+            application_number: string | null;
+            status: string;
+            enrolled_at: string | null;
+            decision: string | null;
+          };
+          linkedStudentApplication = {
+            id: sa.id,
+            applicationNumber: sa.application_number,
+            status: sa.status,
+            enrolledAt: sa.enrolled_at,
+            decision: sa.decision,
+          };
+          // Fetch the enrollment row (1:1 PK lookup on application_id).
+          if (sa.enrolled_at) {
+            const { data: enrRow } = await service
+              .from('application_enrollments')
+              .select('*')
+              .eq('application_id', sa.id)
+              .maybeSingle();
+            if (enrRow) {
+              enrollment = mapEnrollmentFromDb(enrRow as ApplicationEnrollmentDbRow);
+            }
+          }
+        }
+      } catch (linkErr) {
+        console.error('[admin/partner-applications/:id GET] linked enrollment lookup failed:', linkErr);
+      }
+    }
+
     return NextResponse.json({
       application: mapPartnerApplicationFromDb({
         ...(data as Record<string, unknown>),
         created_by_email: createdByEmail,
       } as Parameters<typeof mapPartnerApplicationFromDb>[0]),
+      linkedStudentApplication,
+      enrollment,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
