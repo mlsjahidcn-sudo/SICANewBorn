@@ -248,6 +248,11 @@ export interface StudentApplication {
   // see a green "Enrolled" state on the detail page once the admin
   // has finalized the application.
   enrolledAt: string | null;
+  // Phase 107 Batch 6: opt-out for internal timeline events. When
+  // false the server suppresses application_timeline + stage_history
+  // rows from the GET response. Defaults to true so existing rows
+  // (where the column is NULL) stay visible.
+  timelineVisibleToStudent: boolean;
 }
 
 export function mapApplicationForStudent(row: RawApp): StudentApplication {
@@ -271,6 +276,7 @@ export function mapApplicationForStudent(row: RawApp): StudentApplication {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     enrolledAt: row.enrolled_at ?? null,
+    timelineVisibleToStudent: row.timeline_visible_to_student ?? true,
   };
 }
 

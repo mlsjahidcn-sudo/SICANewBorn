@@ -892,6 +892,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'studentAppDetail.resubmitDialogBodyDocsRequested': 'SICA will be notified that your requested documents have been re-uploaded and the application is back in the review queue.',
     'studentAppDetail.resubmitApplication': 'Resubmit Application',
     'studentAppDetail.markResubmittedBtn': 'Mark as Resubmitted',
+    // Phase 107 Batch 6: Enrolled banner shown on student detail page
+    'studentAppDetail.enrolledTitle': 'You are enrolled',
+    'studentAppDetail.enrolledBody': 'Welcome to {{university}}! Your slot is confirmed for {{date}}. Check your email for visa + onboarding next steps.',
     // Student Portal — documents (extra)
     'studentDocs.uploadNewTitle': 'Upload a new document',
     'studentDocs.noDocTypesInCategory': 'No document types in this category.',
@@ -5275,6 +5278,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'studentAppDetail.resubmitDialogBodyDocsRequested': 'SICA 将收到通知：你已重新上传所请求的文档，申请将重新进入审核队列。',
     'studentAppDetail.resubmitApplication': '重新提交申请',
     'studentAppDetail.markResubmittedBtn': '标记为已重新提交',
+    // Phase 107 Batch 6: 入学横幅（学生详情页）
+    'studentAppDetail.enrolledTitle': '你已成功入学',
+    'studentAppDetail.enrolledBody': '欢迎加入 {{university}}！你的名额已为 {{date}} 锁定。请查收邮件获取签证与入学指引。',
     // Student Portal — documents (extra)
     'studentDocs.uploadNewTitle': '上传新文档',
     'studentDocs.noDocTypesInCategory': '此分类下暂无文档类型。',

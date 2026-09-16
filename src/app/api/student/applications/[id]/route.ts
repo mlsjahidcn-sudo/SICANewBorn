@@ -44,8 +44,14 @@ export async function GET(
       return NextResponse.json({ error: 'Application not found' }, { status: 404 });
     }
 
-    // Also fetch related documents + timeline (for the detail page)
-    const [docsRes, timelineRes] = await Promise.all([
+    // Also fetch related documents + timeline (for the detail page).
+    // Phase 107 Batch 6: respect `application.timeline_visible_to_student`
+    // — when false, the application has been marked internal-only and
+    // neither the legacy application_timeline nor the new
+    // application_stage_history rows should surface to the student.
+    const timelineVisible = application.timeline_visible_to_student !== false;
+
+    const [docsRes, timelineRes, stageRes] = await Promise.all([
       supabase
         .from('student_documents')
         .select('*')
@@ -56,17 +62,31 @@ export async function GET(
         // (write-side ownership check added the same phase).
         .eq('student_id', user.id)
         .order('uploaded_at', { ascending: false }),
-      supabase
-        .from('application_timeline')
-        .select('id, application_id, status, notes, created_at, created_by')
-        .eq('application_id', params.id)
-        .order('created_at', { ascending: false }),
+      timelineVisible
+        ? supabase
+            .from('application_timeline')
+            .select('id, application_id, status, notes, created_at, created_by')
+            .eq('application_id', params.id)
+            .order('created_at', { ascending: false })
+        : Promise.resolve({ data: [], error: null } as { data: never[]; error: null }),
+      timelineVisible
+        ? supabase
+            .from('application_stage_history')
+            .select('id, application_id, from_status, to_status, note, created_at, actor_email, actor_role')
+            .eq('application_id', params.id)
+            // Per-row internal marker: stage_history rows whose note
+            // contains [internal] are admin-only (see application-history-mapper).
+            // We can't filter on `note LIKE '%[internal]%'` via PostgREST's
+            // .not pattern, so we filter client-side in the mapper.
+            .order('created_at', { ascending: false })
+        : Promise.resolve({ data: [], error: null } as { data: never[]; error: null }),
     ]);
 
     return NextResponse.json({
       application: mapApplicationForStudent(application),
       documents: docsRes.data || [],
       timeline: timelineRes.data || [],
+      stageHistory: stageRes.data || [],
     });
   } catch (error) {
     console.error('[Student Application GET]', error);

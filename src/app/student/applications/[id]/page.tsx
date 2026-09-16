@@ -22,6 +22,15 @@ import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 import type { StudentApplication } from '@/lib/application-mapper';
 import { STUDENT_STATUS_TRANSITIONS } from '@/lib/application-mapper';
+// Phase 107 Batch 6: merge legacy application_timeline + new
+// application_stage_history into a single UnifiedTimelineEvent[] for
+// the student timeline tab. Internal rows are filtered out via the
+// shared mergeTimelineForStudent helper.
+import {
+  mergeTimelineForStudent,
+  mapStageHistoryFromDb,
+  type StageHistoryDbRow,
+} from '@/lib/application-history-mapper';
 
 // ---------- Types ----------
 
@@ -55,6 +64,21 @@ interface DetailResponse {
   application: StudentApplication;
   documents: StudentDocument[];
   timeline: TimelineEvent[];
+  // Phase 107 Batch 6: structured stage_history rows. The server
+  // already filters by the parent's timeline_visible_to_student flag
+  // and the RLS policy scopes rows to the student's own applications.
+  // The detail page merges timeline + stageHistory via the same
+  // mergeTimelineForStudent() helper that the admin side uses.
+  stageHistory: Array<{
+    id: string;
+    application_id: string;
+    from_status: string | null;
+    to_status: string;
+    note: string | null;
+    created_at: string;
+    actor_email: string | null;
+    actor_role: string | null;
+  }>;
 }
 
 // ---------- Display config ----------
@@ -106,6 +130,21 @@ export default function StudentApplicationDetailPage() {
   const [application, setApplication] = useState<StudentApplication | null>(null);
   const [documents, setDocuments] = useState<StudentDocument[]>([]);
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
+  // Phase 107 Batch 6: parallel stage_history state. Merged into
+  // the timeline tab via mergeTimelineForStudent so the student sees
+  // a unified view of stage changes + notes (minus internal rows).
+  const [stageHistory, setStageHistory] = useState<
+    Array<{
+      id: string;
+      application_id: string;
+      from_status: string | null;
+      to_status: string;
+      note: string | null;
+      created_at: string;
+      actor_email: string | null;
+      actor_role: string | null;
+    }>
+  >([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
@@ -162,6 +201,7 @@ export default function StudentApplicationDetailPage() {
           `/api/student/applications/${applicationId}`,
         );
         setTimeline(detail.timeline);
+        setStageHistory(detail.stageHistory || []);
       } catch {
         // non-fatal; user will see the new event on next refresh
       }
@@ -207,6 +247,7 @@ export default function StudentApplicationDetailPage() {
       setApplication(data.application);
       setDocuments(data.documents);
       setTimeline(data.timeline);
+      setStageHistory(data.stageHistory || []);
     } catch (err) {
       const e = err as { status?: number; message?: string };
       if (e.status === 404) setNotFound(true);
@@ -337,6 +378,29 @@ export default function StudentApplicationDetailPage() {
           <div className="flex-1">
             <p className="text-sm font-semibold text-[#1B2A4A]">{t('studentAppDetail.notes')}</p>
             <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{application.adminNotes}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Phase 107 Batch 6: Enrolled banner — surfaces on the student
+          detail page once admin has finalized the enrollment
+          (deposit + visa captured via /enroll). Green to differentiate
+          from the amber admin-notes banner above; student knows
+          their slot is locked in. Shows the enrollment date when
+          known. Renders BEFORE admin-notes so it's the first thing
+          the student sees on a happy-path accepted app. */}
+      {application.enrolledAt && (
+        <div className="flex items-start gap-3 p-4 border border-green-700 bg-green-50 rounded-none">
+          <CheckCircle2 className="h-5 w-5 text-green-700 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-green-900">
+              {t('studentAppDetail.enrolledTitle')}
+            </p>
+            <p className="text-sm text-green-800 mt-1">
+              {t('studentAppDetail.enrolledBody', {
+                date: new Date(application.enrolledAt).toLocaleDateString(),
+              })}
+            </p>
           </div>
         </div>
       )}
@@ -619,36 +683,80 @@ export default function StudentApplicationDetailPage() {
         <TabsContent value="timeline" className="mt-6">
           <Card className="rounded-none border-0 shadow">
             <CardContent className="p-6">
-              {timeline.length === 0 ? (
-                <div className="text-center py-8">
-                  <Clock className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500">{t('studentAppDetail.timelineEmpty')}</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {timeline.map((event) => {
-                    const dotColor =
-                      event.status === 'Accepted' ? 'bg-green-500' :
-                      event.status === 'Rejected' ? 'bg-red-500' :
-                      event.status === 'Submitted' ? 'bg-blue-500' :
-                      'bg-[#1B2A4A]';
-                    return (
-                      <div key={event.id} className="flex items-start space-x-4">
-                        <div className={`mt-1 w-3 h-3 rounded-full ${dotColor}`} />
-                        <div className="flex-1 pb-4 border-l-2 border-gray-200 pl-4">
-                          <div className="flex items-center justify-between flex-wrap gap-2">
-                            <p className="font-semibold text-[#1B2A4A]">{event.status}</p>
-                            <span className="text-sm text-gray-500">
-                              {new Date(event.created_at).toLocaleString()}
-                            </span>
+              {(() => {
+                // Phase 107 Batch 6: merge the two sources into one
+                // shape the existing timeline UI can render without
+                // changes. The shared helper drops [internal] rows
+                // (defense in depth on top of the server's
+                // timeline_visible_to_student filter).
+                const stageRows = stageHistory.map((r) =>
+                  mapStageHistoryFromDb(r as unknown as StageHistoryDbRow),
+                );
+                const merged = mergeTimelineForStudent(
+                  stageRows,
+                  timeline.map((e) => ({
+                    id: e.id,
+                    status: e.status,
+                    notes: e.notes,
+                    createdAt: e.created_at,
+                    createdBy: e.created_by ?? null,
+                  })),
+                  application.timelineVisibleToStudent !== false,
+                );
+                if (merged.length === 0) {
+                  return (
+                    <div className="text-center py-8">
+                      <Clock className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                      <p className="text-gray-500">{t('studentAppDetail.timelineEmpty')}</p>
+                    </div>
+                  );
+                }
+                return (
+                  <div className="space-y-4">
+                    {merged.map((event) => {
+                      // Stage events carry status in toStatus; legacy
+                      // timeline notes carry it in toStatus too. Map
+                      // to a dot color via toStatus, falling back to
+                      // the canonical deep-blue.
+                      const statusForDot = event.toStatus;
+                      const dotColor =
+                        statusForDot === 'Accepted' ? 'bg-green-500' :
+                        statusForDot === 'Rejected' ? 'bg-red-500' :
+                        statusForDot === 'Submitted' ? 'bg-blue-500' :
+                        'bg-[#1B2A4A]';
+                      // Phase 107 Batch 6: stage events surface a
+                      // from→to label (e.g. "Submitted → Under
+                      // Review"); legacy notes show only their
+                      // status. Either way the dot color is keyed off
+                      // toStatus for visual consistency.
+                      const statusLabel = event.fromStatus
+                        ? `${event.fromStatus} → ${event.toStatus}`
+                        : event.toStatus;
+                      return (
+                        <div key={event.id} className="flex items-start space-x-4">
+                          <div className={`mt-1 w-3 h-3 rounded-full ${dotColor}`} />
+                          <div className="flex-1 pb-4 border-l-2 border-gray-200 pl-4">
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <p className="font-semibold text-[#1F2937]">
+                                {statusLabel}
+                              </p>
+                              <span className="text-xs text-gray-500">
+                                {event.actorLabel} ·{' '}
+                                {new Date(event.timestamp).toLocaleString()}
+                              </span>
+                            </div>
+                            {event.note && (
+                              <p className="text-gray-600 mt-1 whitespace-pre-wrap">
+                                {event.note}
+                              </p>
+                            )}
                           </div>
-                          {event.notes && <p className="text-gray-600 mt-1">{event.notes}</p>}
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
         </TabsContent>
