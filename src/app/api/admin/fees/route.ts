@@ -131,6 +131,7 @@ export async function POST(request: NextRequest) {
         status: body.status || 'Pending',
         payment_method: body.paymentMethod,
         notes: body.notes,
+        updated_by: auth.user.id,
       })
       .select('*')
       .single();
@@ -139,6 +140,22 @@ export async function POST(request: NextRequest) {
       console.error('[admin/fees POST] supabase error:', error);
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
+
+    // Phase 108 Batch 7: best-effort audit event for the create.
+    // The `created` event has from_status=null, to_status=initial status.
+    try {
+      await service.from('student_fee_events').insert({
+        fee_id: data.id,
+        event_type: 'created',
+        actor_id: auth.user.id,
+        actor_email: auth.user.email || null,
+        from_status: null,
+        to_status: data.status,
+      });
+    } catch (eventInsertErr) {
+      console.warn('[admin/fees POST] event insert failed:', eventInsertErr);
+    }
+
     return NextResponse.json({ fee: data }, { status: 201 });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';

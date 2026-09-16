@@ -84,10 +84,11 @@ export async function POST(request: NextRequest) {
 
     for (const id of feeIds as string[]) {
       try {
+        let targetStatus: string | null = null;
+        let fromStatus: string | null = null;
+        let updatePayload: Record<string, unknown> = {};
+
         if (bulkAction === 'markPaid') {
-          // Read the row first to get the amount (PostgREST can't
-          // .update(col=row.col) without an RPC). One extra round
-          // trip per row is fine at this scale.
           const { data: existing, error: readErr } = await service
             .from('student_fees')
             .select('amount, status')
@@ -101,8 +102,6 @@ export async function POST(request: NextRequest) {
             failed.push({ id, error: 'Fee not found' });
             continue;
           }
-          // Refuse to mark already-Paid or already-Cancelled as Paid
-          // — those are terminal or already-done transitions.
           if (existing.status === 'Paid') {
             failed.push({ id, error: 'Already Paid' });
             continue;
@@ -111,22 +110,15 @@ export async function POST(request: NextRequest) {
             failed.push({ id, error: 'Already Cancelled' });
             continue;
           }
-          const { error: updateErr } = await service
-            .from('student_fees')
-            .update({
-              status: 'Paid',
-              amount_paid: existing.amount,
-              paid_date: today,
-            })
-            .eq('id', id);
-          if (updateErr) {
-            failed.push({ id, error: updateErr.message });
-          } else {
-            updated.push(id);
-          }
+          fromStatus = existing.status;
+          targetStatus = 'Paid';
+          updatePayload = {
+            status: 'Paid',
+            amount_paid: existing.amount,
+            paid_date: today,
+            updated_by: auth.user.id,
+          };
         } else if (bulkAction === 'markPartial') {
-          // Refuse to move Paid/Cancelled into Partial (terminal
-          // / already-valid states).
           const { data: existing, error: readErr } = await service
             .from('student_fees')
             .select('status')
@@ -144,25 +136,46 @@ export async function POST(request: NextRequest) {
             failed.push({ id, error: `Cannot move ${existing.status} to Partial` });
             continue;
           }
-          const { error: updateErr } = await service
-            .from('student_fees')
-            .update({ status: 'Partial' })
-            .eq('id', id);
-          if (updateErr) {
-            failed.push({ id, error: updateErr.message });
-          } else {
-            updated.push(id);
-          }
+          fromStatus = existing.status;
+          targetStatus = 'Partial';
+          updatePayload = { status: 'Partial', updated_by: auth.user.id };
         } else if (bulkAction === 'cancel') {
-          const { error: updateErr } = await service
+          const { data: existing } = await service
             .from('student_fees')
-            .update({ status: 'Cancelled' })
-            .eq('id', id);
-          if (updateErr) {
-            failed.push({ id, error: updateErr.message });
-          } else {
-            updated.push(id);
-          }
+            .select('status')
+            .eq('id', id)
+            .maybeSingle();
+          fromStatus = existing?.status || null;
+          targetStatus = 'Cancelled';
+          updatePayload = { status: 'Cancelled', updated_by: auth.user.id };
+        }
+
+        const { error: updateErr } = await service
+          .from('student_fees')
+          .update(updatePayload)
+          .eq('id', id);
+
+        if (updateErr) {
+          failed.push({ id, error: updateErr.message });
+          continue;
+        }
+        updated.push(id);
+
+        // Phase 108 Batch 7: best-effort audit event. event_type =
+        // 'bulk_action' so the timeline tab can render an amber chip
+        // distinguishing bulk ops from single-row edits.
+        try {
+          await service.from('student_fee_events').insert({
+            fee_id: id,
+            event_type: 'bulk_action',
+            actor_id: auth.user.id,
+            actor_email: auth.user.email || null,
+            from_status: fromStatus,
+            to_status: targetStatus,
+            note: `Bulk ${bulkAction} (${feeIds.length} fees selected)`,
+          });
+        } catch (eventInsertErr) {
+          console.warn('[admin/fees/bulk] event insert failed:', eventInsertErr);
         }
       } catch (err) {
         failed.push({
