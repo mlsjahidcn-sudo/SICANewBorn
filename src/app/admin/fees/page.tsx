@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, Trash2, DollarSign, CheckCircle, Clock, AlertCircle, ArrowDown, ArrowUp, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, Trash2, DollarSign, CheckCircle, Clock, AlertCircle, ArrowDown, ArrowUp, ChevronLeft, ChevronRight, X, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -171,6 +171,28 @@ export default function AdminFeesPage() {
     }
   };
 
+  // Phase 108 Batch 6: CSV export. With no selection, export the
+  // current filter set (rebuilds the same query params the list
+  // fetch used); with a selection, export only those ids.
+  const handleExport = (mode: 'filtered' | 'selected') => {
+    const params = new URLSearchParams();
+    if (mode === 'selected') {
+      if (selectedIds.size === 0) return;
+      params.set('ids', Array.from(selectedIds).join(','));
+    } else {
+      if (searchQuery.trim()) params.set('search', searchQuery.trim());
+      if (statusFilter !== 'all') params.set('status', statusFilter);
+      if (typeFilter !== 'all') params.set('feeType', typeFilter);
+      if (studentFilter !== 'all') params.set('student', studentFilter);
+    }
+    // Open in new tab — the route streams the CSV as an attachment.
+    const url = `/api/admin/fees/export?${params}`;
+    window.open(url, '_blank');
+    if (mode === 'selected') {
+      setSelectedIds(new Set());
+    }
+  };
+
   const getStatusBadgeVariant = (status: StudentFeeStatus) => {
     switch (status) {
       case 'Paid':
@@ -255,13 +277,22 @@ export default function AdminFeesPage() {
           <h1 className="text-2xl font-bold text-[#1B2A4A]">{t('adminFees.title')}</h1>
           <p className="text-gray-600">{t('adminFees.subtitle')}</p>
         </div>
-        <Button
-          className="bg-[#9B1B30] hover:bg-[#7A1625] text-white"
-          onClick={() => router.push('/admin/fees/new')}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          {t('adminFees.addFee')}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => handleExport('filtered')}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            {t('adminFees.exportCsv')}
+          </Button>
+          <Button
+            className="bg-[#9B1B30] hover:bg-[#7A1625] text-white"
+            onClick={() => router.push('/admin/fees/new')}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            {t('adminFees.addFee')}
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -564,6 +595,15 @@ export default function AdminFeesPage() {
               </Button>
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => handleExport('selected')}
+                disabled={bulkPending}
+              >
+                <Download className="h-3 w-3 mr-1" />
+                {t('adminFees.exportSelected')}
+              </Button>
               <Button
                 size="sm"
                 variant="secondary"

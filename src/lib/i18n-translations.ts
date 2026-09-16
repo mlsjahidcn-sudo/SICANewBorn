@@ -2615,6 +2615,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminFees.bulkClear': 'Clear selection',
     'adminFees.bulkSelectAll': 'Select all',
     'adminFees.errorBulk': 'Bulk action failed',
+    // Phase 108 Batch 6: CSV export
+    'adminFees.exportCsv': 'Export CSV',
+    'adminFees.exportSelected': 'Export selected',
     // Phase 106 B3: Admin Settings (profile / password / site)
     'adminSettings.title': 'Settings',
     'adminSettings.subtitle': 'Manage your account and site settings',
@@ -7050,6 +7053,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminFees.bulkClear': '清除选择',
     'adminFees.bulkSelectAll': '全选',
     'adminFees.errorBulk': '批量操作失败',
+    // Phase 108 Batch 6: CSV 导出
+    'adminFees.exportCsv': '导出 CSV',
+    'adminFees.exportSelected': '导出已选',
     // Phase 106 B3: 管理后台设置（资料 / 密码 / 站点）
     'adminSettings.title': '设置',
     'adminSettings.subtitle': '管理你的账户与站点设置',
