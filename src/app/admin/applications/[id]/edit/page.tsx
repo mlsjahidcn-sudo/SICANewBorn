@@ -25,6 +25,21 @@ const STATUS_OPTIONS = [
   { value: 'Withdrawn', label: 'Withdrawn' },
 ] as const;
 
+const PRIORITY_OPTIONS = [
+  { value: 'Low', label: 'Low' },
+  { value: 'Normal', label: 'Normal' },
+  { value: 'High', label: 'High' },
+  { value: 'Urgent', label: 'Urgent' },
+] as const;
+
+const DECISION_OPTIONS = [
+  { value: '', label: '— (no decision yet)' },
+  { value: 'Pending', label: 'Pending' },
+  { value: 'Accepted', label: 'Accepted' },
+  { value: 'Rejected', label: 'Rejected' },
+  { value: 'Waitlisted', label: 'Waitlisted' },
+] as const;
+
 interface AdminApplication {
   id: string;
   studentId: string | null;
@@ -40,6 +55,19 @@ interface AdminApplication {
   applicationNumber?: string;
   createdAt: string;
   notes?: string;
+  // Phase 109 Batch 4: surface the full set of admin-managed fields
+  // from the API. The detail page already reads these; the edit page
+  // can now write them too.
+  priority?: string;
+  personalStatement?: string | null;
+  additionalNotes?: string | null;
+  adminNotes?: string | null;
+  decision?: string | null;
+  decisionDate?: string | null;
+  applicantName?: string | null;
+  applicantEmail?: string | null;
+  applicantPhone?: string | null;
+  applicantNationality?: string | null;
 }
 
 export default function AdminApplicationEditPage() {
@@ -54,21 +82,40 @@ export default function AdminApplicationEditPage() {
 
   const [formData, setFormData] = useState<{
     status: string;
+    priority: string;
     university: string;
     program: string;
     degree: string;
     intake: string;
+    personalStatement: string;
+    additionalNotes: string;
     adminNotes: string;
+    decision: string;
+    decisionDate: string;
+    applicantName: string;
+    applicantEmail: string;
+    applicantPhone: string;
+    applicantNationality: string;
   }>({
     status: 'Submitted',
+    priority: 'Normal',
     university: '',
     program: '',
     degree: '',
     intake: '',
+    personalStatement: '',
+    additionalNotes: '',
     adminNotes: '',
+    decision: '',
+    decisionDate: '',
+    applicantName: '',
+    applicantEmail: '',
+    applicantPhone: '',
+    applicantNationality: '',
   });
 
   const [originalStatus, setOriginalStatus] = useState<string>('');
+  const [isLinked, setIsLinked] = useState<boolean>(true);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -81,13 +128,25 @@ export default function AdminApplicationEditPage() {
       .then(({ application }) => {
         setFormData({
           status: application.status,
+          priority: application.priority || 'Normal',
           university: application.university,
           program: application.program,
           degree: application.degree,
           intake: application.intake,
-          adminNotes: application.notes || '',
+          personalStatement: application.personalStatement || '',
+          additionalNotes: application.additionalNotes || '',
+          adminNotes: application.adminNotes || application.notes || '',
+          decision: application.decision || '',
+          decisionDate: application.decisionDate
+            ? application.decisionDate.slice(0, 10)
+            : '',
+          applicantName: application.applicantName || '',
+          applicantEmail: application.applicantEmail || '',
+          applicantPhone: application.applicantPhone || '',
+          applicantNationality: application.applicantNationality || '',
         });
         setOriginalStatus(application.status);
+        setIsLinked(application.isLinked);
       })
       .catch((err) => {
         if (err.name === 'AbortError') return;
@@ -104,15 +163,27 @@ export default function AdminApplicationEditPage() {
     setIsSaving(true);
     setError(null);
     try {
+      // PATCH payload — only sends fields the API's whitelist accepts.
+      // The server strips unknown fields; we still keep the payload
+      // tight for clarity.
       await apiFetchJson(`/api/admin/applications/${id}`, {
         method: 'PATCH',
         body: JSON.stringify({
           status: formData.status,
+          priority: formData.priority,
           university_name: formData.university,
           program_name: formData.program,
           degree: formData.degree,
           intake: formData.intake,
-          admin_notes: formData.adminNotes,
+          personal_statement: formData.personalStatement || null,
+          additional_notes: formData.additionalNotes || null,
+          admin_notes: formData.adminNotes || null,
+          decision: formData.decision || null,
+          decision_date: formData.decisionDate || null,
+          applicant_name: formData.applicantName || null,
+          applicant_email: formData.applicantEmail || null,
+          applicant_phone: formData.applicantPhone || null,
+          applicant_nationality: formData.applicantNationality || null,
         }),
       });
       router.push(`/admin/applications/${id}`);
@@ -233,18 +304,136 @@ export default function AdminApplicationEditPage() {
             )}
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="priority">Priority</Label>
+              <Select
+                value={formData.priority}
+                onValueChange={(v) => setFormData({ ...formData, priority: v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Select priority" /></SelectTrigger>
+                <SelectContent>
+                  {PRIORITY_OPTIONS.map((p) => (
+                    <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="decision">Decision</Label>
+              <Select
+                value={formData.decision}
+                onValueChange={(v) => setFormData({ ...formData, decision: v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Select decision" /></SelectTrigger>
+                <SelectContent>
+                  {DECISION_OPTIONS.map((d) => (
+                    <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="decisionDate">Decision date</Label>
+              <Input
+                id="decisionDate"
+                type="date"
+                value={formData.decisionDate}
+                onChange={(e) => setFormData({ ...formData, decisionDate: e.target.value })}
+              />
+            </div>
+          </div>
+
           <div className="space-y-2">
-            <Label htmlFor="adminNotes">Admin Notes</Label>
+            <Label htmlFor="personalStatement">Personal statement (student-visible)</Label>
+            <Textarea
+              id="personalStatement"
+              value={formData.personalStatement}
+              onChange={(e) => setFormData({ ...formData, personalStatement: e.target.value })}
+              rows={5}
+              maxLength={4000}
+              placeholder="Personal statement shown to the student / partner / admissions team"
+            />
+            <p className="text-xs text-gray-500">{formData.personalStatement.length} / 4000</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="additionalNotes">Additional notes (student-visible)</Label>
+            <Textarea
+              id="additionalNotes"
+              value={formData.additionalNotes}
+              onChange={(e) => setFormData({ ...formData, additionalNotes: e.target.value })}
+              rows={4}
+              maxLength={2000}
+              placeholder="Notes the student can read"
+            />
+            <p className="text-xs text-gray-500">{formData.additionalNotes.length} / 2000</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="adminNotes">Admin notes (admin-only)</Label>
             <Textarea
               id="adminNotes"
               value={formData.adminNotes}
               onChange={(e) => setFormData({ ...formData, adminNotes: e.target.value })}
               rows={4}
+              maxLength={4000}
               placeholder="Internal notes (not shown to the student)..."
             />
+            <p className="text-xs text-gray-500">{formData.adminNotes.length} / 4000</p>
           </div>
         </CardContent>
       </Card>
+
+      {!isLinked && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Applicant Info (lead path)</CardTitle>
+            <p className="text-xs text-gray-500">
+              This application has no linked student account. Edit the applicant's contact info here —
+              until the claim flow ships, leave this section as-is and let the lead convert into a student
+              on its own.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="applicantName">Name</Label>
+                <Input
+                  id="applicantName"
+                  value={formData.applicantName}
+                  onChange={(e) => setFormData({ ...formData, applicantName: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="applicantEmail">Email</Label>
+                <Input
+                  id="applicantEmail"
+                  type="email"
+                  value={formData.applicantEmail}
+                  onChange={(e) => setFormData({ ...formData, applicantEmail: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="applicantPhone">Phone</Label>
+                <Input
+                  id="applicantPhone"
+                  value={formData.applicantPhone}
+                  onChange={(e) => setFormData({ ...formData, applicantPhone: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="applicantNationality">Nationality</Label>
+                <Input
+                  id="applicantNationality"
+                  value={formData.applicantNationality}
+                  onChange={(e) => setFormData({ ...formData, applicantNationality: e.target.value })}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {error && (
         <Card className="border-red-200 bg-red-50">
