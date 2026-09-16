@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ChevronRight, Check, User, FileText, GraduationCap, AlertCircle } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Check, User, FileText, GraduationCap, AlertCircle, Upload as UploadIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,8 @@ import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { degreeLevels, intendedIntakes, documentTypes } from '@/lib/data';
+import { useI18n } from '@/lib/i18n';
+import { AdminDocUploadDialog } from '../_components/admin-doc-upload-dialog';
 // Phase 20: universidades + programs were imported from the static
 // `data.ts` fallback (the 9-school / 17-program set shipped with
 // the repo). Any school or program an admin added through
@@ -79,6 +81,15 @@ export default function AdminNewApplicationPage() {
   const [selectedStudent, setSelectedStudent] = useState<AdminStudent | null>(null);
   const [studentDocuments, setStudentDocuments] = useState<StudentDocument[]>([]);
   const [studentDocumentsLoading, setStudentDocumentsLoading] = useState(false);
+  // Phase 109 Batch 2: docs uploaded by the admin during THIS wizard
+  // session. Rendered under the "Available Documents" panel + added
+  // to selectedDocuments so the Phase 18 Promise.allSettled block
+  // links them to the new application.
+  const [uploadedDocs, setUploadedDocs] = useState<
+    Array<{ id: string; name: string; fileName?: string }>
+  >([]);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const { t } = useI18n();
   // Phase 20: live catalog. Was `useState(programs)` /
   // `useState(universities)` reading the static `data.ts` fallback
   // (the 9-school / 17-program set). Admin-added schools + programs
@@ -746,6 +757,59 @@ export default function AdminNewApplicationPage() {
                       </Card>
                     )}
 
+                    {/* Phase 109 Batch 2: Admin document upload — disabled on
+                        the lead path (formData.studentId is null) per the
+                        design choice in the Phase 109 plan. Uploaded docs
+                        are appended to `uploadedDocs` + auto-added to
+                        selectedDocuments so the Phase 18 link flow picks
+                        them up. */}
+                    <div className="border border-gray-200 rounded-none p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-[#1F2937]">
+                          {t('adminAppUpload.title')}
+                        </Label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setUploadDialogOpen(true)}
+                          disabled={!formData.studentId}
+                        >
+                          <UploadIcon className="h-4 w-4 mr-2" />
+                          {t('adminAppUpload.openButton')}
+                        </Button>
+                      </div>
+                      {!formData.studentId && (
+                        <p className="text-xs text-gray-500">
+                          {t('adminAppUpload.errorLeadDisabled')}
+                        </p>
+                      )}
+                      {uploadedDocs.length > 0 && (
+                        <ul className="space-y-1">
+                          {uploadedDocs.map((d) => (
+                            <li
+                              key={d.id}
+                              className="flex items-center gap-2 text-sm text-gray-700"
+                            >
+                              <Check className="h-4 w-4 text-green-600" />
+                              <span className="font-medium">{d.name}</span>
+                              {d.fileName && (
+                                <span className="text-xs text-gray-500">
+                                  ({d.fileName})
+                                </span>
+                              )}
+                              <Badge className="rounded-none text-xs bg-green-100 text-green-700">
+                                {t('adminAppUpload.uploadedBadge')}
+                              </Badge>
+                              <Badge className="rounded-none text-xs bg-blue-100 text-blue-700">
+                                {t('adminAppUpload.linkBadge')}
+                              </Badge>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+
                     {(studentDocuments.length > 0 || studentDocumentsLoading) && formData.studentId && (
                       <div>
                         <div className="flex items-center justify-between mb-3">
@@ -1314,6 +1378,29 @@ export default function AdminNewApplicationPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Phase 109 Batch 2: Admin document upload dialog. The
+          `onUploaded` callback appends the new doc to local
+          `uploadedDocs` state AND adds its id to `selectedDocuments`
+          so the Phase 18 `Promise.allSettled` block links it to the
+          freshly-created application. */}
+      {formData.studentId && (
+        <AdminDocUploadDialog
+          open={uploadDialogOpen}
+          onOpenChange={setUploadDialogOpen}
+          studentId={formData.studentId}
+          applicationId={null}
+          onUploaded={(doc) => {
+            setUploadedDocs((prev) => [...prev, doc]);
+            setFormData((prev) => ({
+              ...prev,
+              selectedDocuments: prev.selectedDocuments.includes(doc.id)
+                ? prev.selectedDocuments
+                : [...prev.selectedDocuments, doc.id],
+            }));
+          }}
+        />
+      )}
     </div>
   );
 }
