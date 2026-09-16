@@ -26,9 +26,15 @@ export async function GET(
     const { data, error } = await service
       .from('student_fees')
       .select(
+        // Note: student_applications stores the slug-like identifiers as
+        // `university_id` / `program_id` (varchar), not `university_slug`
+        // / `program_slug`. The wizard's mapper (Phase 97) confirmed
+        // university_id IS the slug. The error
+        // "column student_applications_1.university_slug does not exist"
+        // surfaced when this select was deployed — fixed.
         `*,
          student:student_profiles!student_id (id, first_name, last_name, email),
-         application:student_applications!application_id (id, application_number, university_slug, program_slug)`,
+         application:student_applications!application_id (id, application_number, university_id, program_id)`,
       )
       .eq('id', id)
       .maybeSingle();
@@ -50,8 +56,8 @@ export async function GET(
       application?: {
         id: string;
         application_number: string | null;
-        university_slug: string | null;
-        program_slug: string | null;
+        university_id: string | null;
+        program_id: string | null;
       } | null;
     };
     const row = data as typeof data & Joined;
@@ -71,8 +77,8 @@ export async function GET(
           ? {
               id: row.application.id,
               applicationNumber: row.application.application_number,
-              universitySlug: row.application.university_slug,
-              programSlug: row.application.program_slug,
+              universitySlug: row.application.university_id,
+              programSlug: row.application.program_id,
             }
           : null,
       },
@@ -143,7 +149,7 @@ export async function PATCH(
       .from('student_fees')
       .update(updates)
       .eq('id', id)
-      .select('*, student:student_profiles!student_id (id, first_name, last_name, email), application:student_applications!application_id (id, application_number, university_slug, program_slug)')
+      .select('*, student:student_profiles!student_id (id, first_name, last_name, email), application:student_applications!application_id (id, application_number, university_id, program_id)')
       .single();
 
     if (error) {
