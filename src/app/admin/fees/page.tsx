@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, Trash2, DollarSign, CheckCircle, Clock, AlertCircle, ArrowDown, ArrowUp, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, Trash2, DollarSign, CheckCircle, Clock, AlertCircle, ArrowDown, ArrowUp, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -11,6 +11,8 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useStudentList } from '@/hooks/use-student-list';
 import { apiFetch, apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
@@ -54,6 +56,12 @@ export default function AdminFeesPage() {
     totalPendingByCurrency: Record<string, number>;
     perStatusCapped?: boolean;
   } | null>(null);
+  // Phase 108 Batch 5: bulk selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkAction, setBulkAction] = useState<'markPaid' | 'markPartial' | 'cancel' | null>(null);
+  const [bulkPending, setBulkPending] = useState(false);
+  const [bulkResult, setBulkResult] = useState<{ updated: number; failed: Array<{ id: string; error: string }> } | null>(null);
+  const [reloadNonce, setReloadNonce] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -101,7 +109,7 @@ export default function AdminFeesPage() {
         if (!controller.signal.aborted) setIsLoading(false);
       });
     return () => controller.abort();
-  }, [page, searchQuery, statusFilter, typeFilter, studentFilter]);
+  }, [page, searchQuery, statusFilter, typeFilter, studentFilter, reloadNonce]);
 
   // Debounce search
   useEffect(() => {
@@ -109,9 +117,10 @@ export default function AdminFeesPage() {
     return () => clearTimeout(t);
   }, [searchInput]);
 
-  // Reset to page 1 on filter change
+  // Reset to page 1 on filter change + clear bulk selection (Phase 108 Batch 5)
   useEffect(() => {
     setPage(1);
+    setSelectedIds(new Set());
   }, [statusFilter, typeFilter, studentFilter, searchQuery]);
 
   const confirmCancel = async () => {
@@ -125,6 +134,40 @@ export default function AdminFeesPage() {
       setError(err instanceof Error ? err.message : t('adminFees.errorCancel'));
     } finally {
       setIsCancelling(null);
+    }
+  };
+
+  // Phase 108 Batch 5: bulk submit handler. `bulkAction` holds the
+  // pending action (the AlertDialog "open" state). When the user
+  // confirms, we POST the action + the selected ids to
+  // /api/admin/fees/bulk and surface the result.
+  const confirmBulk = async () => {
+    if (!bulkAction || selectedIds.size === 0) return;
+    setBulkPending(true);
+    try {
+      const result = await apiFetchJson<{
+        updated: number;
+        failed: Array<{ id: string; error: string }>;
+      }>('/api/admin/fees/bulk', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          feeIds: Array.from(selectedIds),
+          action: bulkAction,
+        }),
+      });
+      setBulkResult(result);
+      setBulkAction(null);
+      // Clear selection + force-refresh the list to reflect the new
+      // statuses. Counts auto-refresh on next mount via the parallel
+      // counts fetch (reloadNonce triggers the same useEffect).
+      setSelectedIds(new Set());
+      setReloadNonce((n) => n + 1);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('adminFees.errorBulk'));
+      setBulkAction(null);
+    } finally {
+      setBulkPending(false);
     }
   };
 
@@ -375,6 +418,19 @@ export default function AdminFeesPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={filteredFees.length > 0 && selectedIds.size === filteredFees.length}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedIds(new Set(filteredFees.map((f) => f.id)));
+                      } else {
+                        setSelectedIds(new Set());
+                      }
+                    }}
+                    aria-label={t('adminFees.bulkSelectAll')}
+                  />
+                </TableHead>
                 <TableHead>{t('adminFees.colStudent')}</TableHead>
                 <TableHead>{t('adminFees.colType')}</TableHead>
                 <TableHead>{t('adminFees.colAmount')}</TableHead>
@@ -387,7 +443,7 @@ export default function AdminFeesPage() {
             <TableBody>
               {filteredFees.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-gray-500">
+                  <TableCell colSpan={8} className="text-center py-12 text-gray-500">
                     <DollarSign className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                     <p className="text-lg">{t('adminFees.empty')}</p>
                     <p className="text-sm">{t('adminFees.emptyHint')}</p>
@@ -395,7 +451,24 @@ export default function AdminFeesPage() {
                 </TableRow>
               ) : (
                 filteredFees.map(fee => (
-                  <TableRow key={fee.id}>
+                  <TableRow
+                    key={fee.id}
+                    className={selectedIds.has(fee.id) ? 'bg-[#FEF2F4]' : ''}
+                  >
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.has(fee.id)}
+                        onCheckedChange={(checked) => {
+                          setSelectedIds((prev) => {
+                            const next = new Set(prev);
+                            if (checked) next.add(fee.id);
+                            else next.delete(fee.id);
+                            return next;
+                          });
+                        }}
+                        aria-label={`Select ${fee.studentName}`}
+                      />
+                    </TableCell>
                     <TableCell>
                       <div>
                         <div className="font-medium text-[#1B2A4A]">
@@ -473,6 +546,55 @@ export default function AdminFeesPage() {
             </TableBody>
           </Table>
         </CardContent>
+
+        {selectedIds.size > 0 && (
+          <div className="sticky bottom-0 bg-[#9B1B30] text-white px-4 py-3 flex items-center justify-between z-10">
+            <div className="flex items-center gap-3">
+              <span className="font-medium">
+                {t('adminFees.bulkSelectedCount', { count: selectedIds.size })}
+              </span>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-white hover:bg-[#7A1625]"
+                onClick={() => setSelectedIds(new Set())}
+              >
+                <X className="h-3 w-3 mr-1" />
+                {t('adminFees.bulkClear')}
+              </Button>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => setBulkAction('markPaid')}
+                disabled={bulkPending}
+              >
+                <CheckCircle className="h-3 w-3 mr-1" />
+                {t('adminFees.bulkActionMarkPaid')}
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => setBulkAction('markPartial')}
+                disabled={bulkPending}
+              >
+                {t('adminFees.bulkActionMarkPartial')}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-white border-white hover:bg-[#7A1625]"
+                onClick={() => setBulkAction('cancel')}
+                disabled={bulkPending}
+              >
+                <Trash2 className="h-3 w-3 mr-1" />
+                {t('adminFees.bulkActionCancel')}
+              </Button>
+            </div>
+          </div>
+        )}
+
         <CardContent className="flex items-center justify-between border-t px-4 py-3 text-sm text-gray-600">
           <div>
             {t('adminFees.paginationSummary', {
@@ -508,6 +630,86 @@ export default function AdminFeesPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Phase 108 Batch 5: bulk action confirm + result dialogs */}
+      <AlertDialog
+        open={bulkAction !== null}
+        onOpenChange={(open) => {
+          if (!open && !bulkPending) setBulkAction(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('adminFees.bulkConfirmTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {bulkAction === 'markPaid' &&
+                t('adminFees.bulkConfirmBodyPaid', { count: selectedIds.size })}
+              {bulkAction === 'markPartial' &&
+                t('adminFees.bulkConfirmBodyPartial', { count: selectedIds.size })}
+              {bulkAction === 'cancel' &&
+                t('adminFees.bulkConfirmBodyCancel', { count: selectedIds.size })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkPending}>
+              {t('adminFees.cancelFee')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                confirmBulk();
+              }}
+              disabled={bulkPending}
+              className={
+                bulkAction === 'cancel' ? 'bg-red-600 hover:bg-red-700 text-white' : ''
+              }
+            >
+              {bulkPending ? '…' : t('adminFees.bulkConfirmTitle')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={bulkResult !== null}
+        onOpenChange={(open) => {
+          if (!open) setBulkResult(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('adminFees.bulkResultTitle')}</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm">
+                <div className="text-green-700 font-medium">
+                  {t('adminFees.bulkResultUpdated', {
+                    count: bulkResult?.updated ?? 0,
+                  })}
+                </div>
+                {(bulkResult?.failed ?? []).length > 0 && (
+                  <div className="text-red-700">
+                    {t('adminFees.bulkResultFailed', {
+                      count: bulkResult?.failed.length ?? 0,
+                    })}
+                    <ul className="mt-1 ml-4 list-disc text-xs">
+                      {bulkResult?.failed.slice(0, 20).map((f) => (
+                        <li key={f.id}>
+                          {f.id.slice(0, 8)}… — {f.error}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setBulkResult(null)}>
+OK
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
