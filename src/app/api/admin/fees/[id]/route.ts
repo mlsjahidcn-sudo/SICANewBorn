@@ -3,9 +3,84 @@ import { requireAdmin, buildServiceClient, getServerEnv } from '@/lib/supabase-a
 import { mapStudentFeeFromDb } from '@/lib/student-fee-mapper';
 
 /**
+ * GET    /api/admin/fees/[id]  — single fee with student + application joins
  * PATCH  /api/admin/fees/[id]  — update a fee (mark as paid, change amount, etc.)
- * DELETE /api/admin/fees/[id]  — hard delete (use sparingly; prefer marking Cancelled)
+ * DELETE /api/admin/fees/[id]  — soft cancel (sets status='Cancelled')
  */
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> },
+) {
+  if (!getServerEnv().serviceKey) {
+    return NextResponse.json({ error: 'Supabase not configured' }, { status: 503 });
+  }
+  const auth = await requireAdmin(request);
+  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
+  const { id } = await context.params;
+  if (!id) return NextResponse.json({ error: 'Missing fee id' }, { status: 400 });
+
+  try {
+    const service = buildServiceClient();
+    const { data, error } = await service
+      .from('student_fees')
+      .select(
+        `*,
+         student:student_profiles!student_id (id, first_name, last_name, email),
+         application:student_applications!application_id (id, application_number, university_slug, program_slug)`,
+      )
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    if (!data) {
+      return NextResponse.json({ error: 'Fee not found' }, { status: 404 });
+    }
+
+    type Joined = {
+      student?: {
+        id: string;
+        first_name: string;
+        last_name: string;
+        email: string;
+      } | null;
+      application?: {
+        id: string;
+        application_number: string | null;
+        university_slug: string | null;
+        program_slug: string | null;
+      } | null;
+    };
+    const row = data as typeof data & Joined;
+    const mapped = mapStudentFeeFromDb(row);
+    return NextResponse.json({
+      fee: {
+        ...mapped,
+        student: row.student
+          ? {
+              id: row.student.id,
+              firstName: row.student.first_name,
+              lastName: row.student.last_name,
+              email: row.student.email,
+            }
+          : null,
+        application: row.application
+          ? {
+              id: row.application.id,
+              applicationNumber: row.application.application_number,
+              universitySlug: row.application.university_slug,
+              programSlug: row.application.program_slug,
+            }
+          : null,
+      },
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
 export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ id: string }> },
@@ -63,7 +138,7 @@ export async function PATCH(
       .from('student_fees')
       .update(updates)
       .eq('id', id)
-      .select('*')
+      .select('*, student:student_profiles!student_id (id, first_name, last_name, email), application:student_applications!application_id (id, application_number, university_slug, program_slug)')
       .single();
 
     if (error) {
