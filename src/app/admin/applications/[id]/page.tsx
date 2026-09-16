@@ -3,15 +3,21 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
-  ArrowLeft, CheckCircle, XCircle, Clock, Mail, Phone, FileText, Calendar,
-  AlertCircle, Edit, RefreshCw, GraduationCap, BookOpen, FileCheck, Trash2,
+  ArrowLeft, CheckCircle, XCircle, Mail, FileText, Calendar,
+  AlertCircle, Edit, RefreshCw, GraduationCap, BookOpen, Trash2,
+  Clock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { apiFetch, apiFetchJson } from '@/lib/api-client';
 import { APPLICATION_STATUSES, type ApplicationStatus } from '@/lib/application-mapper';
+import { useI18n } from '@/lib/i18n';
+import type { ApplicationEnrollment } from '@/lib/application-history-mapper';
+import { EnrollmentCard } from '../_components/enrollment-card';
+import { TimelineTab } from '../_components/timeline-tab';
 
 interface AdminApplication {
   id: string;
@@ -28,6 +34,10 @@ interface AdminApplication {
   applicationNumber?: string;
   createdAt: string;
   notes?: string;
+  // Phase 107 — lead attribution + enrollment
+  leadId?: string | null;
+  leadType?: 'chat_lead' | 'student_assessment' | 'contact_submission' | null;
+  enrolledAt?: string | null;
 }
 
 /**
@@ -58,15 +68,14 @@ export default function AdminApplicationDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
+  const { t } = useI18n();
 
   const [app, setApp] = useState<AdminApplication | null>(null);
+  const [enrollment, setEnrollment] = useState<ApplicationEnrollment | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
-  // Phase 32: typed to the canonical `ApplicationStatus` enum so a
-  // status rename in the mapper is caught at compile-time here, not
-  // at runtime as a 400 from the API.
   const [confirmAction, setConfirmAction] = useState<AdminAction | null>(null);
   const [notifyApplicant, setNotifyApplicant] = useState(true);
   const [applicantNote, setApplicantNote] = useState('');
@@ -80,6 +89,22 @@ export default function AdminApplicationDetailPage() {
         `/api/admin/applications/${id}`,
       );
       setApp(application);
+
+      // Phase 107 — fetch the enrollment row in parallel; the timeline
+      // tab is lazy-loaded on first activation so we don't pay for it on
+      // every page mount.
+      try {
+        const enr = await apiFetchJson<{ enrollment: ApplicationEnrollment | null }>(
+          `/api/admin/applications/${id}/enrollment`,
+        ).catch(() => null);
+        if (enr && (enr as { enrollment: ApplicationEnrollment | null }).enrollment) {
+          setEnrollment((enr as { enrollment: ApplicationEnrollment }).enrollment);
+        } else {
+          setEnrollment(null);
+        }
+      } catch {
+        setEnrollment(null);
+      }
     } catch (err) {
       const e = err as { status?: number; message?: string };
       if (e.status === 404) {
@@ -173,15 +198,19 @@ export default function AdminApplicationDetailPage() {
     );
   }
 
-  // Phase 32: `app.status` is a `string` from the API, not the typed
-  // enum — narrow to a valid ApplicationStatus key (or fall back to a
-  // grey badge) so an unknown future status from a stale API cache
-  // doesn't surface a blank badge.
   const status: { label: string; color: string } = (
     (APPLICATION_STATUSES as readonly string[]).includes(app.status)
       ? statusDisplay[app.status as ApplicationStatus]
       : null
   ) ?? { label: app.status, color: 'bg-gray-100 text-gray-800' };
+
+  const leadTypeLabel = app.leadType
+    ? app.leadType === 'chat_lead'
+      ? t('adminAppDetail.leadFromChat')
+      : app.leadType === 'student_assessment'
+        ? t('adminAppDetail.leadFromAssessment')
+        : t('adminAppDetail.leadFromContact')
+    : null;
 
   return (
     <div className="space-y-6">
@@ -193,15 +222,28 @@ export default function AdminApplicationDetailPage() {
             Back
           </Button>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-bold text-[#1F2937]">
                 {app.applicationNumber || app.id.slice(0, 8)}
               </h1>
               <Badge className={status.color}>{status.label}</Badge>
+              {app.enrolledAt && (
+                <Badge className="bg-green-700 text-white">
+                  <CheckCircle className="w-3 h-3 mr-1 inline" />
+                  Enrolled
+                </Badge>
+              )}
             </div>
             <p className="text-[#4B5563] text-sm mt-1">
               {app.studentName} · {app.university} · {app.program}
             </p>
+            {leadTypeLabel && (
+              <p className="text-xs text-[#4B5563] mt-1">
+                <span className="inline-flex items-center px-1.5 py-0.5 bg-blue-50 text-blue-800 text-xs font-medium">
+                  {leadTypeLabel}
+                </span>
+              </p>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -230,56 +272,72 @@ export default function AdminApplicationDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main */}
         <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Mail className="w-5 h-5 text-[#1B2A4A]" />
-                Applicant Information
-                {!app.isLinked && (
-                  <Badge className="bg-[#9B1B30] text-white text-xs ml-2">No account yet</Badge>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                <Field label="Name" value={app.studentName} icon={<FileText className="w-4 h-4" />} />
-                <Field label="Email" value={app.studentEmail || '—'} icon={<Mail className="w-4 h-4" />} />
-                <Field label="Source" value={app.source} icon={<User2Icon className="w-4 h-4" />} />
-                <Field label="Created" value={new Date(app.createdAt).toLocaleString()} icon={<Calendar className="w-4 h-4" />} />
-              </div>
-              {!app.isLinked && (
-                <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded text-xs text-amber-900">
-                  This application was created for a lead who hasn't signed up yet. Once they create an account, link this application to their <code>student_profiles</code> row via the future "claim" flow.
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <Tabs defaultValue="overview">
+            <TabsList>
+              <TabsTrigger value="overview">{t('adminAppDetail.tabOverview')}</TabsTrigger>
+              <TabsTrigger value="timeline">
+                <Clock className="h-3 w-3 mr-1 inline" />
+                {t('adminAppDetail.tabTimeline')}
+              </TabsTrigger>
+            </TabsList>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <GraduationCap className="w-5 h-5 text-[#1B2A4A]" />
-                Application Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                <Field label="University" value={app.university} icon={<BookOpen className="w-4 h-4" />} />
-                <Field label="Program" value={app.program} icon={<BookOpen className="w-4 h-4" />} />
-                <Field label="Degree" value={app.degree} />
-                <Field label="Intake" value={app.intake} />
-              </div>
-              {app.notes && (
-                <>
-                  <Separator className="my-4" />
-                  <div>
-                    <div className="text-xs text-[#4B5563] mb-1">Admin Notes</div>
-                    <div className="text-sm text-[#1F2937] whitespace-pre-wrap">{app.notes}</div>
+            <TabsContent value="overview" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Mail className="w-5 h-5 text-[#1B2A4A]" />
+                    Applicant Information
+                    {!app.isLinked && (
+                      <Badge className="bg-[#9B1B30] text-white text-xs ml-2">No account yet</Badge>
+                    )}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                    <Field label="Name" value={app.studentName} icon={<FileText className="w-4 h-4" />} />
+                    <Field label="Email" value={app.studentEmail || '—'} icon={<Mail className="w-4 h-4" />} />
+                    <Field label="Source" value={app.source} icon={<User2Icon className="w-4 h-4" />} />
+                    <Field label="Created" value={new Date(app.createdAt).toLocaleString()} icon={<Calendar className="w-4 h-4" />} />
                   </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
+                  {!app.isLinked && (
+                    <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded text-xs text-amber-900">
+                      This application was created for a lead who hasn't signed up yet. Once they create an account, link this application to their <code>student_profiles</code> row via the future "claim" flow.
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <GraduationCap className="w-5 h-5 text-[#1B2A4A]" />
+                    Application Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                    <Field label="University" value={app.university} icon={<BookOpen className="w-4 h-4" />} />
+                    <Field label="Program" value={app.program} icon={<BookOpen className="w-4 h-4" />} />
+                    <Field label="Degree" value={app.degree} />
+                    <Field label="Intake" value={app.intake} />
+                  </div>
+                  {app.notes && (
+                    <>
+                      <Separator className="my-4" />
+                      <div>
+                        <div className="text-xs text-[#4B5563] mb-1">Admin Notes</div>
+                        <div className="text-sm text-[#1F2937] whitespace-pre-wrap">{app.notes}</div>
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="timeline">
+              <TimelineTab applicationId={app.id} />
+            </TabsContent>
+          </Tabs>
         </div>
 
         {/* Sidebar */}
@@ -324,6 +382,13 @@ export default function AdminApplicationDetailPage() {
               )}
             </CardContent>
           </Card>
+
+          <EnrollmentCard
+            applicationId={app.id}
+            status={app.status}
+            enrollment={enrollment}
+            onChanged={load}
+          />
         </div>
       </div>
 
@@ -410,9 +475,9 @@ function Field({ label, value, icon }: { label: string; value: string; icon?: Re
 function User2Icon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <path d="M14 19a6 6 0 0 0-12 0" />
+      <path d="14 19a6 6 0 0 0-12 0" />
       <circle cx="8" cy="9" r="4" />
-      <path d="M22 19a6 6 0 0 0-6-5 4 4 0 0 0-1 5" />
+      <path d="22 19a6 6 0 0 0-6-5 4 4 0 0 0-1 5" />
       <path d="M16 3.13a4 4 0 0 1 0 7.75" />
     </svg>
   );
