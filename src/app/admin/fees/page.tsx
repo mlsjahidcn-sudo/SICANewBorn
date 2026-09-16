@@ -13,6 +13,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Skeleton } from '@/components/ui/skeleton';
 import { useStudentList } from '@/hooks/use-student-list';
 import { apiFetch, apiFetchJson } from '@/lib/api-client';
+import { useI18n } from '@/lib/i18n';
 
 interface AdminFee {
   id: string;
@@ -38,6 +39,7 @@ const adminFeeStatuses = ['Pending', 'Partial', 'Paid', 'Overdue', 'Cancelled'] 
 const adminFeeTypes = ['Application', 'Tuition', 'Service', 'Visa', 'Other'] as const;
 
 export default function AdminFeesPage() {
+  const { t } = useI18n();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [fees, setFees] = useState<AdminFee[]>([]);
@@ -102,7 +104,7 @@ export default function AdminFeesPage() {
       setFees((prev) => prev.map((f) => (f.id === feeToCancel.id ? { ...f, status: 'Cancelled' } : f)));
       setFeeToCancel(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to cancel fee');
+      setError(err instanceof Error ? err.message : t('adminFees.errorCancel'));
     } finally {
       setIsCancelling(null);
     }
@@ -188,62 +190,62 @@ export default function AdminFeesPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#1B2A4A]">Fee Management</h1>
-          <p className="text-gray-600">Manage student fees and payments</p>
+          <h1 className="text-2xl font-bold text-[#1B2A4A]">{t('adminFees.title')}</h1>
+          <p className="text-gray-600">{t('adminFees.subtitle')}</p>
         </div>
-        <Button 
+        <Button
           className="bg-[#9B1B30] hover:bg-[#7A1625] text-white"
           onClick={() => router.push('/admin/fees/new')}
         >
           <Plus className="h-4 w-4 mr-2" />
-          Add Fee
+          {t('adminFees.addFee')}
         </Button>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Total Revenue</CardDescription>
+            <CardDescription>{t('adminFees.kpiRevenue')}</CardDescription>
             <CardTitle className="text-2xl text-green-600">${totalRevenue.toLocaleString()}</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center text-sm text-gray-600">
             <ArrowUp className="h-4 w-4 mr-1 text-green-500" />
-            From paid fees
+            {t('adminFees.kpiRevenueDesc')}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Pending Amount</CardDescription>
+            <CardDescription>{t('adminFees.kpiPendingAmount')}</CardDescription>
             <CardTitle className="text-2xl text-amber-600">${pendingAmount.toLocaleString()}</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center text-sm text-gray-600">
             <Clock className="h-4 w-4 mr-1 text-amber-500" />
-            Awaiting payment
+            {t('adminFees.kpiPendingAmountDesc')}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Paid Fees</CardDescription>
+            <CardDescription>{t('adminFees.kpiPaidCount')}</CardDescription>
             <CardTitle className="text-2xl">
               {fees.filter(f => f.status === 'Paid').length}
             </CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-gray-600">
-            Fully completed
+            {t('adminFees.kpiPaidCountDesc')}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Pending Fees</CardDescription>
+            <CardDescription>{t('adminFees.kpiPendingCount')}</CardDescription>
             <CardTitle className="text-2xl text-amber-600">
               {fees.filter(f => f.status === 'Pending' || f.status === 'Partial').length}
             </CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-gray-600">
-            Need attention
+            {t('adminFees.kpiPendingCountDesc')}
           </CardContent>
         </Card>
       </div>
@@ -253,20 +255,20 @@ export default function AdminFeesPage() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
-              placeholder="Search by student name..."
+              placeholder={t('adminFees.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
             />
           </div>
         </div>
-        
+
         <select
           value={studentFilter}
           onChange={(e) => setStudentFilter(e.target.value)}
           className="h-10 px-3 rounded-md border border-gray-300 bg-white text-sm"
         >
-          <option value="all">All Students</option>
+          <option value="all">{t('adminFees.allStudents')}</option>
           {students.map(student => (
             <option key={student.id} value={student.id}>
               {student.firstName} {student.lastName}
@@ -279,7 +281,7 @@ export default function AdminFeesPage() {
           onChange={(e) => setStatusFilter(e.target.value)}
           className="h-10 px-3 rounded-md border border-gray-300 bg-white text-sm"
         >
-          <option value="all">All Status</option>
+          <option value="all">{t('adminFees.allStatus')}</option>
           {adminFeeStatuses.map(status => (
             <option key={status} value={status}>{status}</option>
           ))}
@@ -290,7 +292,7 @@ export default function AdminFeesPage() {
           onChange={(e) => setTypeFilter(e.target.value)}
           className="h-10 px-3 rounded-md border border-gray-300 bg-white text-sm"
         >
-          <option value="all">All Types</option>
+          <option value="all">{t('adminFees.allTypes')}</option>
           {adminFeeTypes.map(type => (
             <option key={type} value={type}>{type}</option>
           ))}
@@ -302,13 +304,13 @@ export default function AdminFeesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Student</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Total Amount</TableHead>
-                <TableHead>Paid</TableHead>
-                <TableHead>Due Date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t('adminFees.colStudent')}</TableHead>
+                <TableHead>{t('adminFees.colType')}</TableHead>
+                <TableHead>{t('adminFees.colAmount')}</TableHead>
+                <TableHead>{t('adminFees.colPaid')}</TableHead>
+                <TableHead>{t('adminFees.colDue')}</TableHead>
+                <TableHead>{t('adminFees.colStatus')}</TableHead>
+                <TableHead className="text-right">{t('adminFees.colActions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -316,8 +318,8 @@ export default function AdminFeesPage() {
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-12 text-gray-500">
                     <DollarSign className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                    <p className="text-lg">No fees found</p>
-                    <p className="text-sm">Try adjusting your filters</p>
+                    <p className="text-lg">{t('adminFees.empty')}</p>
+                    <p className="text-sm">{t('adminFees.emptyHint')}</p>
                   </TableCell>
                 </TableRow>
               ) : (
@@ -330,7 +332,7 @@ export default function AdminFeesPage() {
                         </div>
                         {fee.paymentMethod && (
                           <div className="text-xs text-gray-500">
-                            via {fee.paymentMethod}
+                            {t('adminFees.viaPrefix')} {fee.paymentMethod}
                           </div>
                         )}
                       </div>
@@ -353,14 +355,14 @@ export default function AdminFeesPage() {
                       {fee.amountPaid && fee.amountPaid < fee.amount && (
                         <div className="text-xs text-amber-600">
                           {fee.currency === 'CNY' ? '¥' : '$'}
-                          {(fee.amount - fee.amountPaid).toLocaleString()} remaining
+                          {(fee.amount - fee.amountPaid).toLocaleString()} {t('adminFees.remaining')}
                         </div>
                       )}
                     </TableCell>
                     <TableCell>
                       {fee.dueDate ? new Date(fee.dueDate).toLocaleDateString() : '—'}
                       {fee.status === 'Overdue' && (
-                        <div className="text-xs text-red-500">Overdue</div>
+                        <div className="text-xs text-red-500">{t('adminFees.overdueInline')}</div>
                       )}
                     </TableCell>
                     <TableCell>
@@ -381,15 +383,15 @@ export default function AdminFeesPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => router.push(`/admin/fees/${fee.id}`)}>
                             <Eye className="h-4 w-4 mr-2" />
-                            View
+                            {t('adminFees.actionView')}
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => router.push(`/admin/fees/${fee.id}/edit`)}>
                             <Edit className="h-4 w-4 mr-2" />
-                            Edit
+                            {t('adminFees.actionEdit')}
                           </DropdownMenuItem>
                           <DropdownMenuItem className="text-red-600">
                             <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
+                            {t('adminFees.actionDelete')}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
