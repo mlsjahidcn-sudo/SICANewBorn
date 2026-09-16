@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { apiFetchJson } from '@/lib/api-client';
+import { useI18n } from '@/lib/i18n';
 
 interface FunnelReport {
   dateRange: { from: string; to: string };
@@ -37,6 +38,7 @@ interface FunnelReport {
 const COLORS = ['#9B1B30', '#1B2A4A', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6'];
 
 export default function AdminReportsPage() {
+  const { t } = useI18n();
   const [isLoading, setIsLoading] = useState(true);
   const [report, setReport] = useState<FunnelReport | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +55,7 @@ export default function AdminReportsPage() {
       const data = await apiFetchJson<FunnelReport>(`/api/admin/reports/funnel?${params}`);
       setReport(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load report');
+      setError(err instanceof Error ? err.message : t('adminReports.errorLoad'));
     } finally {
       setIsLoading(false);
     }
@@ -87,9 +89,9 @@ export default function AdminReportsPage() {
   if (!report) {
     return (
       <div className="text-center py-12 text-gray-500">
-        <p>Failed to load report. {error}</p>
+        <p>{t('adminReports.loadFailed')} {error}</p>
         <Button onClick={fetchReport} className="mt-4 bg-[#9B1B30] hover:bg-[#7A1625] text-white">
-          Retry
+          {t('adminReports.retry')}
         </Button>
       </div>
     );
@@ -99,16 +101,16 @@ export default function AdminReportsPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#1B2A4A]">Reports & Insights</h1>
+          <h1 className="text-2xl font-bold text-[#1B2A4A]">{t('adminReports.title')}</h1>
           <p className="text-gray-600">
-            Funnel overview for {report.dateRange.from} → {report.dateRange.to}
+            {t('adminReports.subtitle', { from: report.dateRange.from, to: report.dateRange.to })}
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
           <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-auto" />
           <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-auto" />
           <Button onClick={fetchReport} className="bg-[#9B1B30] hover:bg-[#7A1625] text-white">
-            Update
+            {t('adminReports.update')}
           </Button>
         </div>
       </div>
@@ -117,7 +119,7 @@ export default function AdminReportsPage() {
         <div className="rounded-md bg-red-50 p-4 text-sm text-red-700">
           {error}
           <button className="ml-2 underline" onClick={() => setError(null)}>
-            Dismiss
+            {t('adminReports.dismiss')}
           </button>
         </div>
       )}
@@ -126,43 +128,43 @@ export default function AdminReportsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Total Leads</CardDescription>
+            <CardDescription>{t('adminReports.kpiLeads')}</CardDescription>
             <CardTitle className="text-2xl flex items-center gap-2">
               <Users className="h-5 w-5 text-[#9B1B30]" />
               {totalLeads.toLocaleString()}
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-gray-600">Across all sources</CardContent>
+          <CardContent className="text-sm text-gray-600">{t('adminReports.kpiLeadsDesc')}</CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Applications</CardDescription>
+            <CardDescription>{t('adminReports.kpiApps')}</CardDescription>
             <CardTitle className="text-2xl flex items-center gap-2">
               <FileText className="h-5 w-5 text-[#1B2A4A]" />
               {report.totalApplications.toLocaleString()}
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-gray-600">Partner + Online</CardContent>
+          <CardContent className="text-sm text-gray-600">{t('adminReports.kpiAppsDesc')}</CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Accepted</CardDescription>
+            <CardDescription>{t('adminReports.kpiAccepted')}</CardDescription>
             <CardTitle className="text-2xl flex items-center gap-2">
               <CheckCircle className="h-5 w-5 text-green-600" />
               {report.acceptedApplications.toLocaleString()}
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-gray-600">Accepted offers</CardContent>
+          <CardContent className="text-sm text-gray-600">{t('adminReports.kpiAcceptedDesc')}</CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Acceptance Rate</CardDescription>
+            <CardDescription>{t('adminReports.kpiRate')}</CardDescription>
             <CardTitle className="text-2xl flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-amber-600" />
               {report.acceptanceRate}%
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-gray-600">Accepted / Total applications</CardContent>
+          <CardContent className="text-sm text-gray-600">{t('adminReports.kpiRateDesc')}</CardContent>
         </Card>
       </div>
 
@@ -171,9 +173,9 @@ export default function AdminReportsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-[#9B1B30]" />
-            Daily Trends
+            {t('adminReports.dailyTrends')}
           </CardTitle>
-          <CardDescription>Leads, applications, and accepted applications over time</CardDescription>
+          <CardDescription>{t('adminReports.dailyTrendsDesc')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="h-80">
@@ -197,8 +199,8 @@ export default function AdminReportsPage() {
         {/* Lead Sources */}
         <Card>
           <CardHeader>
-            <CardTitle>Lead Sources</CardTitle>
-            <CardDescription>Where inbound leads came from</CardDescription>
+            <CardTitle>{t('adminReports.leadSources')}</CardTitle>
+            <CardDescription>{t('adminReports.leadSourcesDesc')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-72">
@@ -222,8 +224,8 @@ export default function AdminReportsPage() {
         {/* Partner vs Online */}
         <Card>
           <CardHeader>
-            <CardTitle>Partner vs Online</CardTitle>
-            <CardDescription>Application volume split by source</CardDescription>
+            <CardTitle>{t('adminReports.partnerVsOnline')}</CardTitle>
+            <CardDescription>{t('adminReports.partnerVsOnlineDesc')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-72">
@@ -256,8 +258,8 @@ export default function AdminReportsPage() {
       {/* Application Status */}
       <Card>
         <CardHeader>
-          <CardTitle>Applications by Status</CardTitle>
-          <CardDescription>Combined student and partner application statuses</CardDescription>
+          <CardTitle>{t('adminReports.appsByStatus')}</CardTitle>
+          <CardDescription>{t('adminReports.appsByStatusDesc')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="h-72">

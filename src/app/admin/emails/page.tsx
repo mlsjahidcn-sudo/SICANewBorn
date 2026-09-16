@@ -47,6 +47,7 @@ import {
 } from 'lucide-react';
 import { apiFetchJson, ApiError } from '@/lib/api-client';
 import { Badge } from '@/components/ui/badge';
+import { useI18n } from '@/lib/i18n';
 
 type EmailLanguage = 'en' | 'zh';
 
@@ -82,14 +83,15 @@ const CATEGORY_COLOR: Record<Template['category'], string> = {
   oneoff: 'bg-[#D4A853] text-[#1B2A4A]',
 };
 
-function delayLabel(ms: number | null): string {
+function delayLabel(ms: number | null, t: (k: string, p?: Record<string, string | number>) => string): string {
   if (ms == null) return '';
-  if (ms === 0) return 'immediately';
-  if (ms < 86400000) return `${ms / 3600000}h after capture`;
-  return `${ms / 86400000}d after capture`;
+  if (ms === 0) return t('adminEmails.delayImmediately');
+  if (ms < 86400000) return t('adminEmails.delayHours', { hours: ms / 3600000 });
+  return t('adminEmails.delayDays', { days: ms / 86400000 });
 }
 
 export default function EmailTemplatesPage() {
+  const { t } = useI18n();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -176,7 +178,7 @@ export default function EmailTemplatesPage() {
       setSaveSuccess('Saved');
       setTimeout(() => setSaveSuccess(null), 2000);
     } catch (err) {
-      setSaveError(err instanceof ApiError ? err.message : 'Save failed');
+      setSaveError(err instanceof ApiError ? err.message : t('adminEmails.errorSave'));
     } finally {
       setIsSaving(false);
     }
@@ -202,7 +204,7 @@ export default function EmailTemplatesPage() {
       setPreviewSubject(res.rendered.subject);
       setPreviewText(res.rendered.text);
     } catch (err) {
-      setSaveError(err instanceof ApiError ? err.message : 'Render failed');
+      setSaveError(err instanceof ApiError ? err.message : t('adminEmails.errorRender'));
     } finally {
       setIsRendering(false);
     }
@@ -239,10 +241,10 @@ export default function EmailTemplatesPage() {
           },
         }),
       });
-      setSaveSuccess('Test sent to your admin email');
+      setSaveSuccess(t('adminEmails.testSent'));
       setTimeout(() => setSaveSuccess(null), 3000);
     } catch (err) {
-      setSaveError(err instanceof ApiError ? err.message : 'Test send failed');
+      setSaveError(err instanceof ApiError ? err.message : t('adminEmails.errorTestSend'));
     } finally {
       setIsSendingTest(false);
     }
@@ -271,19 +273,19 @@ export default function EmailTemplatesPage() {
       setTemplates((prev) => [...prev, res.template]);
       setSelectedId(res.template.id);
     } catch (err) {
-      setSaveError(err instanceof ApiError ? err.message : 'Create failed');
+      setSaveError(err instanceof ApiError ? err.message : t('adminEmails.errorCreate'));
     }
   };
 
   const deleteTemplate = async (id: string) => {
-    if (!confirm('Delete this template? Cannot be undone.')) return;
+    if (!confirm(t('adminEmails.confirmDelete'))) return;
     setSaveError(null);
     try {
       await apiFetchJson(`/api/admin/emails/templates/${id}`, { method: 'DELETE' });
       setTemplates((prev) => prev.filter((t) => t.id !== id));
       if (selectedId === id) setSelectedId(null);
     } catch (err) {
-      setSaveError(err instanceof ApiError ? err.message : 'Delete failed');
+      setSaveError(err instanceof ApiError ? err.message : t('adminEmails.errorDelete'));
     }
   };
 
@@ -293,9 +295,9 @@ export default function EmailTemplatesPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#1B2A4A]">Email templates</h1>
+          <h1 className="text-2xl font-bold text-[#1B2A4A]">{t('adminEmails.title')}</h1>
           <p className="text-gray-500 mt-1">
-            Edit copy, schedule, and variables for every email SICA sends. Changes apply immediately.
+            {t('adminEmails.subtitle')}
           </p>
         </div>
         <div className="flex gap-2 text-sm">
@@ -338,7 +340,7 @@ export default function EmailTemplatesPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All categories</SelectItem>
+                <SelectItem value="all">{t('adminEmails.allCategories')}</SelectItem>
                 {CATEGORIES.map((c) => (
                   <SelectItem key={c.value} value={c.value}>
                     {c.label}
@@ -354,30 +356,30 @@ export default function EmailTemplatesPage() {
             </div>
           ) : (
             <div className="space-y-1">
-              {filtered.map((t) => (
+              {filtered.map((tmpl) => (
                 <button
-                  key={t.id}
-                  onClick={() => setSelectedId(t.id)}
+                  key={tmpl.id}
+                  onClick={() => setSelectedId(tmpl.id)}
                   className={`w-full text-left p-3 border ${
-                    selectedId === t.id
+                    selectedId === tmpl.id
                       ? 'border-[#1B2A4A] bg-[#1B2A4A]/5'
                       : 'border-gray-200 bg-white hover:border-[#9B1B30]/50'
                   }`}
                 >
                   <div className="flex items-center gap-2 mb-1">
-                    <span className={`text-xs px-1.5 py-0.5 font-semibold ${CATEGORY_COLOR[t.category]}`}>
-                      {t.category}
+                    <span className={`text-xs px-1.5 py-0.5 font-semibold ${CATEGORY_COLOR[tmpl.category]}`}>
+                      {tmpl.category}
                     </span>
-                    {!t.is_active && (
-                      <span className="text-xs text-gray-500">(inactive)</span>
+                    {!tmpl.is_active && (
+                      <span className="text-xs text-gray-500">{t('adminEmails.inactiveBadge')}</span>
                     )}
                   </div>
-                  <p className="font-medium text-sm text-[#1B2A4A] truncate">{t.name}</p>
-                  <p className="text-xs text-gray-500 font-mono mt-0.5">{t.slug}</p>
-                  {t.category === 'drip' && (
+                  <p className="font-medium text-sm text-[#1B2A4A] truncate">{tmpl.name}</p>
+                  <p className="text-xs text-gray-500 font-mono mt-0.5">{tmpl.slug}</p>
+                  {tmpl.category === 'drip' && (
                     <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
                       <Clock size={10} />
-                      Step {t.step_index} · {delayLabel(t.delay_ms)}
+                      {t('adminEmails.stepInline', { step: tmpl.step_index ?? 0, delay: delayLabel(tmpl.delay_ms, t) })}
                     </p>
                   )}
                 </button>
@@ -395,7 +397,7 @@ export default function EmailTemplatesPage() {
                 className="w-full justify-start"
               >
                 <Plus size={14} className="mr-1" />
-                New {c.value} template
+                {t('adminEmails.newTemplateInline', { category: c.value })}
               </Button>
             ))}
           </div>
@@ -406,7 +408,7 @@ export default function EmailTemplatesPage() {
           {!selected ? (
             <div className="bg-white border border-gray-200 px-6 py-16 text-center text-gray-500">
               <Mail className="w-10 h-10 mx-auto mb-3 text-gray-300" />
-              <p>Select a template to edit, or create a new one.</p>
+              <p>{t('adminEmails.editorEmpty')}</p>
             </div>
           ) : (
             <div className="bg-white border border-gray-200 p-5 space-y-4">
@@ -416,7 +418,7 @@ export default function EmailTemplatesPage() {
                     value={form.name || ''}
                     onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                     className="text-lg font-semibold border-0 px-0 focus:ring-0"
-                    placeholder="Template name"
+                    placeholder={t('adminEmails.placeholderTemplateName')}
                   />
                   <p className="text-xs text-gray-500 font-mono mt-1">{selected.slug}</p>
                 </div>
@@ -427,13 +429,13 @@ export default function EmailTemplatesPage() {
                       checked={!!form.is_active}
                       onChange={(e) => setForm((f) => ({ ...f, is_active: e.target.checked }))}
                     />
-                    Active
+                    {t('adminEmails.fieldActive')}
                   </label>
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Subject (English)</label>
+                <label className="text-xs font-medium text-gray-600 block mb-1">{t('adminEmails.fieldSubjectEn')}</label>
                 <Input
                   value={form.subject || ''}
                   onChange={(e) => setForm((f) => ({ ...f, subject: e.target.value }))}
@@ -442,7 +444,7 @@ export default function EmailTemplatesPage() {
 
               <div>
                 <label className="text-xs font-medium text-gray-600 block mb-1">
-                  Language discriminator
+                  {t('adminEmails.fieldLanguage')}
                 </label>
                 <Select
                   value={form.language || 'en'}
@@ -452,22 +454,21 @@ export default function EmailTemplatesPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="en">en (English primary)</SelectItem>
-                    <SelectItem value="zh">zh (Chinese primary)</SelectItem>
+                    <SelectItem value="en">{t('adminEmails.languageEn')}</SelectItem>
+                    <SelectItem value="zh">{t('adminEmails.languageZh')}</SelectItem>
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  Which variant the renderer picks by default. Auto-falls back to English if the
-                  chosen variant is empty.
+                  {t('adminEmails.languageHint')}
                 </p>
               </div>
 
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">Description (internal)</label>
+                <label className="text-xs font-medium text-gray-600 block mb-1">{t('adminEmails.fieldDescription')}</label>
                 <Input
                   value={form.description || ''}
                   onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                  placeholder="What this template is for"
+                  placeholder={t('adminEmails.placeholderDescription')}
                 />
               </div>
 
@@ -475,7 +476,7 @@ export default function EmailTemplatesPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-medium text-gray-600 block mb-1">
-                      Step index (0..3)
+                      {t('adminEmails.fieldStepIndex')}
                     </label>
                     <Input
                       type="number"
@@ -488,7 +489,7 @@ export default function EmailTemplatesPage() {
                   </div>
                   <div>
                     <label className="text-xs font-medium text-gray-600 block mb-1">
-                      Delay (ms)
+                      {t('adminEmails.fieldDelayMs')}
                     </label>
                     <Input
                       type="number"
@@ -498,15 +499,15 @@ export default function EmailTemplatesPage() {
                         setForm((f) => ({ ...f, delay_ms: parseInt(e.target.value, 10) || 0 }))
                       }
                     />
-                    <p className="text-xs text-gray-500 mt-0.5">{delayLabel(form.delay_ms ?? 0)}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{delayLabel(form.delay_ms ?? 0, t)}</p>
                   </div>
                 </div>
               )}
 
               <div>
                 <label className="text-xs font-medium text-gray-600 block mb-1">
-                  Body (plain text)
-                  <span className="text-gray-400"> — use <code className="bg-gray-100 px-1">{'{{var}}'}</code> for substitution</span>
+                  {t('adminEmails.fieldBodyText')}
+                  <span className="text-gray-400"> {t('adminEmails.fieldBodyHint')}</span>
                 </label>
                 <Textarea
                   value={form.body_text || ''}
@@ -518,35 +519,34 @@ export default function EmailTemplatesPage() {
 
               <div className="border-t pt-4 space-y-3">
                 <div>
-                  <h4 className="text-sm font-semibold text-[#1B2A4A]">Chinese variant</h4>
+                  <h4 className="text-sm font-semibold text-[#1B2A4A]">{t('adminEmails.chineseVariant')}</h4>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    Used automatically when the recipient's locale is Chinese, or when the
-                    language discriminator above is set to zh.
+                    {t('adminEmails.chineseVariantHint')}
                   </p>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-600 block mb-1">Subject (中文)</label>
+                  <label className="text-xs font-medium text-gray-600 block mb-1">{t('adminEmails.fieldSubjectZh')}</label>
                   <Input
                     value={form.subject_zh || ''}
                     onChange={(e) => setForm((f) => ({ ...f, subject_zh: e.target.value }))}
-                    placeholder="中文标题"
+                    placeholder={t('adminEmails.placeholderSubjectZh')}
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-600 block mb-1">Body (中文)</label>
+                  <label className="text-xs font-medium text-gray-600 block mb-1">{t('adminEmails.fieldBodyZh')}</label>
                   <Textarea
                     value={form.body_text_zh || ''}
                     onChange={(e) => setForm((f) => ({ ...f, body_text_zh: e.target.value }))}
                     rows={8}
                     className="font-mono text-xs"
-                    placeholder="中文正文，使用 {{变量名}} 进行占位符替换"
+                    placeholder={t('adminEmails.placeholderBodyZh')}
                   />
                 </div>
               </div>
 
               <div>
                 <label className="text-xs font-medium text-gray-600 block mb-1">
-                  Variables used (comma-separated, for documentation)
+                  {t('adminEmails.fieldVariables')}
                 </label>
                 <Input
                   value={(form.variables || []).join(', ')}
@@ -559,7 +559,7 @@ export default function EmailTemplatesPage() {
                         .filter(Boolean),
                     }))
                   }
-                  placeholder="firstName, country, intendedMajor"
+                  placeholder={t('adminEmails.placeholderVariables')}
                 />
               </div>
 
@@ -574,11 +574,11 @@ export default function EmailTemplatesPage() {
                 </Button>
                 <Button onClick={renderPreview} variant="outline" disabled={isRendering}>
                   {isRendering ? <Spinner size="xs" /> : <Eye size={14} className="mr-1" />}
-                  Re-render preview
+                  {t('adminEmails.rerender')}
                 </Button>
                 <Button onClick={sendTest} variant="outline" disabled={isSendingTest}>
                   {isSendingTest ? <Spinner size="xs" /> : <Send size={14} className="mr-1" />}
-                  Send test to me
+                  {t('adminEmails.sendTest')}
                 </Button>
                 <Button
                   onClick={() => deleteTemplate(selected.id)}
@@ -601,7 +601,7 @@ export default function EmailTemplatesPage() {
                 <h3 className="font-semibold text-[#1B2A4A] flex items-center gap-2">
                   <Eye size={14} /> Preview
                 </h3>
-                <Badge className="bg-gray-100 text-gray-700 text-xs">Sample data</Badge>
+                <Badge className="bg-gray-100 text-gray-700 text-xs">{t('adminEmails.previewSample')}</Badge>
               </div>
               <div className="p-4 max-h-[600px] overflow-y-auto">
                 <p className="text-xs text-gray-500 mb-1">Subject</p>
@@ -610,14 +610,14 @@ export default function EmailTemplatesPage() {
                 </p>
                 <p className="text-xs text-gray-500 mb-1">Body (plain text)</p>
                 <pre className="text-xs text-[#1F2937] whitespace-pre-wrap bg-gray-50 p-3 border border-gray-200 font-mono">
-                  {previewText || 'Click Re-render preview'}
+                  {previewText || t('adminEmails.previewEmpty')}
                 </pre>
               </div>
             </div>
           ) : (
             <div className="text-sm text-gray-400 text-center py-12">
               <ChevronRight className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-              Pick a template to preview
+              {t('adminEmails.previewPick')}
             </div>
           )}
         </div>

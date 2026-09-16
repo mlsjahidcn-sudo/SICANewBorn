@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { apiFetchJson, ApiError } from '@/lib/api-client';
+import { useI18n } from '@/lib/i18n';
 
 interface Assessment {
   id: string;
@@ -75,6 +76,7 @@ function formatBytes(bytes: number | null) {
 }
 
 export default function AssessmentsPage() {
+  const { t } = useI18n();
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -96,7 +98,7 @@ export default function AssessmentsPage() {
       );
       setAssessments(res.assessments || []);
     } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : 'Failed to load assessments');
+      setLoadError(err instanceof ApiError ? err.message : t('adminAssessments.errorLoad'));
     } finally {
       setIsLoading(false);
     }
@@ -131,7 +133,7 @@ export default function AssessmentsPage() {
       });
       setAssessments((prev) => prev.map((a) => (a.id === id ? { ...a, status } : a)));
     } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : 'Failed to update');
+      setLoadError(err instanceof ApiError ? err.message : t('adminAssessments.errorUpdate'));
     } finally {
       setUpdatingId(null);
     }
@@ -150,7 +152,7 @@ export default function AssessmentsPage() {
       a.click();
       document.body.removeChild(a);
     } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : 'Failed to download');
+      setLoadError(err instanceof ApiError ? err.message : t('adminAssessments.errorDownload'));
     } finally {
       setDownloadingId(null);
     }
@@ -162,10 +164,10 @@ export default function AssessmentsPage() {
         <div>
           <h1 className="text-2xl font-bold text-[#1F2937] flex items-center gap-2">
             <ClipboardList className="h-6 w-6 text-[#1B2A4A]" />
-            Assessments
+            {t('adminAssessments.title')}
           </h1>
           <p className="text-sm text-gray-600 mt-1">
-            Free academic assessment submissions from /assessment. {assessments.length} total.
+            {t('adminAssessments.subtitle', { count: assessments.length })}
           </p>
         </div>
       </div>
@@ -185,7 +187,7 @@ export default function AssessmentsPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   type="text"
-                  placeholder="Search by name, email, country, or WhatsApp..."
+                  placeholder={t('adminAssessments.searchPlaceholder')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
@@ -201,11 +203,11 @@ export default function AssessmentsPage() {
                   </div>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="New">New</SelectItem>
-                  <SelectItem value="Reviewing">Reviewing</SelectItem>
-                  <SelectItem value="Completed">Completed</SelectItem>
-                  <SelectItem value="Rejected">Rejected</SelectItem>
+                  <SelectItem value="all">{t('adminAssessments.statusAll')}</SelectItem>
+                  <SelectItem value="New">{t('adminAssessments.statusNew')}</SelectItem>
+                  <SelectItem value="Reviewing">{t('adminAssessments.statusReviewing')}</SelectItem>
+                  <SelectItem value="Completed">{t('adminAssessments.statusCompleted')}</SelectItem>
+                  <SelectItem value="Rejected">{t('adminAssessments.statusRejected')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -222,8 +224,8 @@ export default function AssessmentsPage() {
           ) : filtered.length === 0 ? (
             <div className="bg-white border border-gray-200 px-4 py-12 text-center text-gray-500">
               {assessments.length === 0
-                ? 'No assessments yet. Submissions from /assessment will appear here.'
-                : 'No assessments match your filters.'}
+                ? t('adminAssessments.emptyAll')
+                : t('adminAssessments.emptyFiltered')}
             </div>
           ) : (
             filtered.map((a) => {
@@ -323,25 +325,25 @@ export default function AssessmentsPage() {
                   <ExternalLink className="h-3 w-3" />
                 </a>
                 <div className="text-gray-600">
-                  <span className="font-medium">Country:</span> {selected.country}
+                  <span className="font-medium">{t('adminAssessments.detailCountry')}</span> {selected.country}
                 </div>
                 {selected.date_of_birth && (
                   <div className="text-gray-600">
-                    <span className="font-medium">DOB:</span> {selected.date_of_birth} (
+                    <span className="font-medium">{t('adminAssessments.detailDob')}</span> {selected.date_of_birth} (
                     {calculateAge(selected.date_of_birth)}y)
                   </div>
                 )}
                 <div className="text-gray-600">
-                  <span className="font-medium">Education:</span> {selected.current_education || '—'}
+                  <span className="font-medium">{t('adminAssessments.detailEducation')}</span> {selected.current_education || '—'}
                 </div>
                 {selected.intended_major && (
                   <div className="text-gray-600">
-                    <span className="font-medium">Intended Major:</span> {selected.intended_major}
+                    <span className="font-medium">{t('adminAssessments.detailMajor')}</span> {selected.intended_major}
                   </div>
                 )}
                 {selected.target_universities && (
                   <div className="text-gray-600">
-                    <span className="font-medium">Target Universities:</span>{' '}
+                    <span className="font-medium">{t('adminAssessments.detailTargets')}</span>{' '}
                     {selected.target_universities}
                   </div>
                 )}
@@ -349,7 +351,7 @@ export default function AssessmentsPage() {
 
               {selected.has_transcript && (
                 <div className="border-b pb-4">
-                  <p className="text-sm text-gray-600 font-medium mb-2">Transcript</p>
+                  <p className="text-sm text-gray-600 font-medium mb-2">{t('adminAssessments.transcriptTitle')}</p>
                   <div className="bg-gray-50 border border-gray-200 p-3 text-sm flex items-center gap-2">
                     <FileText className="h-4 w-4 text-[#1B2A4A]" />
                     <span className="font-mono text-xs truncate flex-1">{selected.transcript_file_name}</span>
@@ -370,11 +372,11 @@ export default function AssessmentsPage() {
                       ) : (
                         <Download className="h-3 w-3" />
                       )}
-                      <span className="ml-1">Download File</span>
+                      <span className="ml-1">{t('adminAssessments.downloadFile')}</span>
                     </Button>
                   ) : (
                     <p className="text-xs text-gray-500 mt-2">
-                      ⚠ No file uploaded — request by email.
+                      {t('adminAssessments.noFileWarning')}
                     </p>
                   )}
                 </div>
@@ -382,13 +384,13 @@ export default function AssessmentsPage() {
 
               {selected.notes && (
                 <div className="border-b pb-4">
-                  <p className="text-sm text-gray-600 font-medium mb-2">Notes</p>
+                  <p className="text-sm text-gray-600 font-medium mb-2">{t('adminAssessments.notesTitle')}</p>
                   <p className="text-sm text-gray-800 whitespace-pre-wrap">{selected.notes}</p>
                 </div>
               )}
 
               <div>
-                <p className="text-sm text-gray-600 font-medium mb-2">Status</p>
+                <p className="text-sm text-gray-600 font-medium mb-2">{t('adminAssessments.statusTitle')}</p>
                 <div className="flex flex-wrap gap-2">
                   {(['New', 'Reviewing', 'Completed', 'Rejected'] as const).map((s) => (
                     <Button

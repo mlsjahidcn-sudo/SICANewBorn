@@ -20,6 +20,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { ArrowRight, Users, CalendarClock, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { apiFetchJson } from '@/lib/api-client';
+import { useI18n } from '@/lib/i18n';
 
 interface CohortBucket {
   cohort: string;
@@ -61,6 +62,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function AdminCohortsPage() {
+  const { t } = useI18n();
   const [isLoading, setIsLoading] = useState(true);
   const [cohorts, setCohorts] = useState<CohortBucket[]>([]);
   const [totals, setTotals] = useState({ total: 0, student: 0, partner: 0 });
@@ -75,7 +77,7 @@ export default function AdminCohortsPage() {
       setCohorts(data.cohorts || []);
       setTotals(data.totals || { total: 0, student: 0, partner: 0 });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load cohorts');
+      setError(err instanceof Error ? err.message : t('adminCohorts.errorLoad'));
       setCohorts([]);
     } finally {
       setIsLoading(false);
@@ -91,20 +93,20 @@ export default function AdminCohortsPage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#1B2A4A]">Cohort View</h1>
+          <h1 className="text-2xl font-bold text-[#1B2A4A]">{t('adminCohorts.title')}</h1>
           <p className="text-[#4B5563] mt-1">
-            All student and partner applications grouped by target intake.
+            {t('adminCohorts.subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 text-xs text-[#4B5563]">
             <CalendarClock className="w-4 h-4" />
             <span>
-              <strong className="text-[#1B2A4A]">{totals.total}</strong> apps
+              <strong className="text-[#1B2A4A]">{totals.total}</strong> {t('adminCohorts.appsCount')}
               {' · '}
-              <strong className="text-[#1B2A4A]">{totals.student}</strong> student
+              <strong className="text-[#1B2A4A]">{totals.student}</strong> {t('adminCohorts.studentCount')}
               {' · '}
-              <strong className="text-[#1B2A4A]">{totals.partner}</strong> partner CRM
+              <strong className="text-[#1B2A4A]">{totals.partner}</strong> {t('adminCohorts.partnerCount')}
             </span>
           </div>
           <Button
@@ -113,7 +115,7 @@ export default function AdminCohortsPage() {
             className="rounded-none"
             onClick={() => setRetryNonce((n) => n + 1)}
             disabled={isLoading}
-            title="Reload cohort data"
+            title={t('adminCohorts.reloadTitle')}
           >
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
@@ -125,7 +127,7 @@ export default function AdminCohortsPage() {
         <div className="border border-red-200 bg-red-50 p-4 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
           <div>
-            <h3 className="text-sm font-semibold text-red-900">Could not load cohort data</h3>
+            <h3 className="text-sm font-semibold text-red-900">{t('adminCohorts.errorTitle')}</h3>
             <p className="text-xs text-red-700 mt-1 font-mono">{error}</p>
             <Button
               variant="outline"
@@ -134,7 +136,7 @@ export default function AdminCohortsPage() {
               onClick={() => setRetryNonce((n) => n + 1)}
             >
               <RefreshCw className="w-4 h-4 mr-2" />
-              Try again
+              {t('adminCohorts.tryAgain')}
             </Button>
           </div>
         </div>
@@ -160,6 +162,7 @@ export default function AdminCohortsPage() {
 }
 
 function CohortCard({ bucket }: { bucket: CohortBucket }) {
+  const { t } = useI18n();
   const hasApps = bucket.total > 0;
   return (
     <Card className="rounded-none border border-gray-200 shadow-sm">
@@ -170,12 +173,12 @@ function CohortCard({ bucket }: { bucket: CohortBucket }) {
               {bucket.cohort}
               {bucket.isUnassigned && (
                 <span className="ml-2 text-xs font-normal text-amber-700">
-                  (no intake set)
+                  {t('adminCohorts.noIntakeBadge')}
                 </span>
               )}
             </CardTitle>
             {!bucket.isCanonical && !bucket.isUnassigned && (
-              <p className="text-xs text-[#6B7280] mt-0.5">Historical cohort</p>
+              <p className="text-xs text-[#6B7280] mt-0.5">{t('adminCohorts.historicalBadge')}</p>
             )}
           </div>
           <Badge
@@ -183,7 +186,7 @@ function CohortCard({ bucket }: { bucket: CohortBucket }) {
               hasApps ? 'bg-[#9B1B30] text-white' : 'bg-gray-100 text-gray-600'
             }`}
           >
-            {bucket.total} {bucket.total === 1 ? 'app' : 'apps'}
+            {bucket.total} {bucket.total === 1 ? t('adminCohorts.appSingular') : t('adminCohorts.appPlural')}
           </Badge>
         </div>
       </CardHeader>
@@ -195,14 +198,14 @@ function CohortCard({ bucket }: { bucket: CohortBucket }) {
               <div className="flex items-center gap-1">
                 <Users className="w-3.5 h-3.5" />
                 <span>
-                  <strong className="text-[#1B2A4A]">{bucket.studentCount}</strong> student
+                  <strong className="text-[#1B2A4A]">{bucket.studentCount}</strong> {t('adminCohorts.studentInline')}
                 </span>
               </div>
               {bucket.partnerCount > 0 && (
                 <div className="flex items-center gap-1">
                   <Users className="w-3.5 h-3.5" />
                   <span>
-                    <strong className="text-[#1B2A4A]">{bucket.partnerCount}</strong> partner CRM
+                    <strong className="text-[#1B2A4A]">{bucket.partnerCount}</strong> {t('adminCohorts.partnerInline')}
                   </span>
                 </div>
               )}
@@ -212,7 +215,7 @@ function CohortCard({ bucket }: { bucket: CohortBucket }) {
             {Object.keys(bucket.byStatus).length > 0 && (
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-[#6B7280] mb-1.5">
-                  Status
+                  {t('adminCohorts.statusHeader')}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {Object.entries(bucket.byStatus)
@@ -235,7 +238,7 @@ function CohortCard({ bucket }: { bucket: CohortBucket }) {
             {Object.keys(bucket.byPriority).length > 0 && (
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-[#6B7280] mb-1.5">
-                  Priority
+                  {t('adminCohorts.priorityHeader')}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {PRIORITY_ORDER.map((p) =>
@@ -258,7 +261,7 @@ function CohortCard({ bucket }: { bucket: CohortBucket }) {
             {bucket.sampleNames.length > 0 && (
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-[#6B7280] mb-1">
-                  Sample
+                  {t('adminCohorts.sampleHeader')}
                 </p>
                 <p className="text-xs text-[#4B5563] truncate">
                   {bucket.sampleNames.join(' · ')}
@@ -271,19 +274,19 @@ function CohortCard({ bucket }: { bucket: CohortBucket }) {
               href={`/admin/applications?intake=${encodeURIComponent(bucket.slug)}`}
               className="inline-flex items-center gap-1 text-xs text-[#9B1B30] hover:underline mt-1"
             >
-              View applications
+              {t('adminCohorts.viewApplications')}
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </>
         ) : (
           <div className="py-3 text-center">
-            <p className="text-sm text-[#6B7280]">No applications yet</p>
+            <p className="text-sm text-[#6B7280]">{t('adminCohorts.emptyTitle')}</p>
             <p className="text-xs text-[#9CA3AF] mt-1">
               {bucket.isCanonical
-                ? "Students haven't applied for this intake yet."
+                ? t('adminCohorts.emptyCanonical')
                 : bucket.isUnassigned
-                ? 'These apps have no intake value set.'
-                : 'No historical applications in this cohort.'}
+                ? t('adminCohorts.emptyUnassigned')
+                : t('adminCohorts.emptyHistorical')}
             </p>
           </div>
         )}
