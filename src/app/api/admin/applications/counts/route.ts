@@ -18,6 +18,8 @@ import { requireAdmin, buildServiceClient } from '@/lib/supabase-auth';
  *   {
  *     total, online, partner, partnerCrm, offline,
  *     submitted, inReview, urgent,
+ *     // Phase 107 Batch 4: enrollment + decision breakdowns
+ *     enrolled, byDecision: { [decision: string]: number },
  *     // per-status / per-priority breakdowns for finer UIs
  *     byStatus: { [status: string]: number },
  *     byPriority: { [priority: string]: number },
@@ -78,26 +80,43 @@ export async function GET(_request: NextRequest) {
     // than 5000 apps, the per-status counts become a lower bound
     // (we surface a hint in the UI — see page.tsx). 5K is well
     // above the realistic scale for v1.
+    // Phase 107 Batch 4: also pulls `decision` for byDecision breakdown
+    // and uses `head: true` separately for an exact enrolled count.
     const studentStatusQuery = service
       .from('student_applications')
-      .select('status, priority')
+      .select('status, priority, decision')
       .range(0, 4999);
     const partnerStatusQuery = service
       .from('partner_applications')
-      .select('status, priority')
+      .select('status, priority, decision')
       .is('archived_at', null)
       .range(0, 4999);
+    // Exact enrollment count via a separate head-count query (avoids
+    // relying on the 5000-row cap of the status breakdown).
+    const enrolledCountQuery = service
+      .from('student_applications')
+      .select('id', { count: 'exact', head: true })
+      .not('enrolled_at', 'is', null);
 
-    const [total, offline, online, partner, partnerCrm, studentStatus, partnerStatus] =
-      await Promise.all([
-        totalQuery,
-        offlineQuery,
-        onlineQuery,
-        partnerQuery,
-        partnerCrmQuery,
-        studentStatusQuery,
-        partnerStatusQuery,
-      ]);
+    const [
+      total,
+      offline,
+      online,
+      partner,
+      partnerCrm,
+      studentStatus,
+      partnerStatus,
+      enrolledCount,
+    ] = await Promise.all([
+      totalQuery,
+      offlineQuery,
+      onlineQuery,
+      partnerQuery,
+      partnerCrmQuery,
+      studentStatusQuery,
+      partnerStatusQuery,
+      enrolledCountQuery,
+    ]);
 
     if (total.error) return NextResponse.json({ error: total.error.message }, { status: 500 });
     if (offline.error) return NextResponse.json({ error: offline.error.message }, { status: 500 });
@@ -108,6 +127,8 @@ export async function GET(_request: NextRequest) {
       return NextResponse.json({ error: studentStatus.error.message }, { status: 500 });
     if (partnerStatus.error)
       return NextResponse.json({ error: partnerStatus.error.message }, { status: 500 });
+    if (enrolledCount.error)
+      return NextResponse.json({ error: enrolledCount.error.message }, { status: 500 });
 
     // Phase 32: bucket the per-status + per-priority rows in JS.
     // Two surfaces — student and partner — both feed into the
@@ -117,19 +138,27 @@ export async function GET(_request: NextRequest) {
     // the UI can look up the bucket it cares about without
     // cross-taxonomy gymnastics; the headline `submitted` /
     // `inReview` / `urgent` numbers below do the mapping once.
+    // Phase 107 Batch 4: also buckets `decision` into byDecision so
+    // the admin list can render a "Has decision" filter chip with a
+    // count next to it (mirrors the per-status breakdowns).
     const byStatus: Record<string, number> = {};
     const byPriority: Record<string, number> = {};
+    const byDecision: Record<string, number> = {};
     for (const row of studentStatus.data || []) {
       const s = (row as { status?: string | null }).status || 'Unknown';
       const p = (row as { priority?: string | null }).priority || 'Normal';
+      const d = (row as { decision?: string | null }).decision || 'None';
       byStatus[s] = (byStatus[s] || 0) + 1;
       byPriority[p] = (byPriority[p] || 0) + 1;
+      byDecision[d] = (byDecision[d] || 0) + 1;
     }
     for (const row of partnerStatus.data || []) {
       const s = (row as { status?: string | null }).status || 'Unknown';
       const p = (row as { priority?: string | null }).priority || 'Normal';
+      const d = (row as { decision?: string | null }).decision || 'None';
       byStatus[s] = (byStatus[s] || 0) + 1;
       byPriority[p] = (byPriority[p] || 0) + 1;
+      byDecision[d] = (byDecision[d] || 0) + 1;
     }
 
     // Headline cross-taxonomy numbers:
@@ -149,6 +178,9 @@ export async function GET(_request: NextRequest) {
       submitted,
       inReview,
       urgent,
+      // Phase 107 Batch 4: exact enrolled count + decision breakdown.
+      enrolled: enrolledCount.count || 0,
+      byDecision,
       byStatus,
       byPriority,
       // Flag: when the pipeline exceeds 5000 rows on either

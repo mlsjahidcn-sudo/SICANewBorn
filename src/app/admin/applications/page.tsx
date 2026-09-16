@@ -34,8 +34,8 @@ interface Application {
   status: string;
   // S28: 'Partner CRM' is the partner_applications table;
   // 'Partner' is a student_applications row whose student's
-  // source='Partner'. They share the same "Partner" tab in
-  // the UI but link to different detail pages.
+  // source='Partner'. They share the same "Partner" tab in the
+  // UI but link to different detail pages.
   source: 'Online' | 'Admin' | 'Partner' | 'Partner CRM';
   surface: 'student' | 'partner';
   applicationNumber?: string;
@@ -50,6 +50,15 @@ interface Application {
   partnerOrgName?: string | null;
   createdAt: string;
   notes?: string;
+  // Phase 107 Batch 4: lead attribution + enrollment fields.
+  // Populated for surface='student' rows; null for surface='partner'.
+  leadId?: string | null;
+  leadType?: 'chat_lead' | 'student_assessment' | 'contact_submission' | null;
+  enrolledAt?: string | null;
+  // decision lives on student_applications.decision for surface='student'
+  // rows and partner_applications.decision for surface='partner' rows.
+  // The list API already returns partnerDecision on the unified row.
+  decision?: string | null;
 }
 
 const PAGE_SIZE = 20;
@@ -176,6 +185,12 @@ export default function AdminApplicationsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [studentFilter, setStudentFilter] = useState<string>('all');
+  // Phase 107 Batch 4: two new filter chips. 'all' = no filter;
+  // 'with-decision' / 'no-decision' filter student_applications.decision;
+  // 'enrolled' / 'not-enrolled' filter student_applications.enrolled_at.
+  // Partner rows are unaffected by either filter.
+  const [decisionFilter, setDecisionFilter] = useState<'all' | 'with' | 'without'>('all');
+  const [enrolledFilter, setEnrolledFilter] = useState<'all' | 'enrolled' | 'not-enrolled'>('all');
 
   // Tab badge counts
   // Phase 32: extended to also carry per-status + per-priority
@@ -192,6 +207,9 @@ export default function AdminApplicationsPage() {
     submitted: number;
     inReview: number;
     urgent: number;
+    // Phase 107 Batch 4: enrollment + decision breakdowns.
+    enrolled: number;
+    byDecision: Record<string, number>;
     byStatus: Record<string, number>;
     byPriority: Record<string, number>;
     perStatusCapped: boolean;
@@ -250,11 +268,23 @@ export default function AdminApplicationsPage() {
         submitted: number;
         inReview: number;
         urgent: number;
+        // Phase 107 Batch 4: optional fields — older API versions
+        // (before the Phase 107 migration + Batch 4 endpoint change)
+        // won't return these. Treat as `number | undefined` and
+        // normalize before storing in counts state.
+        enrolled?: number;
+        byDecision?: Record<string, number>;
         byStatus: Record<string, number>;
         byPriority: Record<string, number>;
         perStatusCapped: boolean;
       }>('/api/admin/applications/counts');
-      setCounts(data);
+      // Normalize missing optional fields before storing so the state
+      // type stays strict (the stored shape always has them).
+      setCounts({
+        ...data,
+        enrolled: data.enrolled ?? 0,
+        byDecision: data.byDecision ?? {},
+      });
       setCountsError(null);
     } catch (err) {
       // Counts are non-critical — show a small warning, keep the page usable
@@ -298,6 +328,11 @@ export default function AdminApplicationsPage() {
     if (statusFilter !== 'all') params.set('status', statusFilter);
     if (studentFilter !== 'all') params.set('student', studentFilter);
     if (intakeFilter) params.set('intake', intakeFilter);
+    // Phase 107 Batch 4: decision + enrollment filters.
+    if (decisionFilter === 'with') params.set('hasDecision', 'true');
+    if (decisionFilter === 'without') params.set('hasDecision', 'false');
+    if (enrolledFilter === 'enrolled') params.set('enrolled', 'true');
+    if (enrolledFilter === 'not-enrolled') params.set('enrolled', 'false');
 
     // Safety timeout — never let the page hang on a stalled network call.
     timeoutId = setTimeout(() => controller.abort(), 15_000);
@@ -330,7 +365,7 @@ export default function AdminApplicationsPage() {
       controller.abort();
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [page, searchQuery, statusFilter, studentFilter, activeTab, intakeFilter, partnerOnly, retryNonce]);
+  }, [page, searchQuery, statusFilter, studentFilter, activeTab, intakeFilter, partnerOnly, retryNonce, decisionFilter, enrolledFilter]);
 
   // Debounce search — wait 300ms after the user stops typing before firing
   useEffect(() => {
@@ -396,6 +431,11 @@ export default function AdminApplicationsPage() {
       if (statusFilter !== 'all') params.set('status', statusFilter);
       if (searchQuery.trim()) params.set('search', searchQuery.trim());
       if (intakeFilter) params.set('intake', intakeFilter);
+      // Phase 107 Batch 4: propagate decision + enrollment filters
+      if (decisionFilter === 'with') params.set('hasDecision', 'true');
+      if (decisionFilter === 'without') params.set('hasDecision', 'false');
+      if (enrolledFilter === 'enrolled') params.set('enrolled', 'true');
+      if (enrolledFilter === 'not-enrolled') params.set('enrolled', 'false');
       await downloadCsvViaApi(
         `/api/admin/applications/export${params.toString() ? `?${params}` : ''}`,
         `sica-applications-${new Date().toISOString().slice(0, 10)}.csv`,
@@ -414,6 +454,10 @@ export default function AdminApplicationsPage() {
     try {
       const params = new URLSearchParams({ ids: Array.from(selectedIds).join(',') });
       if (intakeFilter) params.set('intake', intakeFilter);
+      if (decisionFilter === 'with') params.set('hasDecision', 'true');
+      if (decisionFilter === 'without') params.set('hasDecision', 'false');
+      if (enrolledFilter === 'enrolled') params.set('enrolled', 'true');
+      if (enrolledFilter === 'not-enrolled') params.set('enrolled', 'false');
       await downloadCsvViaApi(
         `/api/admin/applications/export?${params.toString()}`,
         `sica-applications-${new Date().toISOString().slice(0, 10)}.csv`,
@@ -834,8 +878,71 @@ export default function AdminApplicationsPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                {/* Phase 107 Batch 4: decision + enrollment dropdowns.
+                    'all' = no filter; the chip below shows the
+                    active state. */}
+                <Select
+                  value={decisionFilter}
+                  onValueChange={(v) => setDecisionFilter(v as 'all' | 'with' | 'without')}
+                >
+                  <SelectTrigger className="w-[160px] rounded-none">
+                    <SelectValue placeholder="All Decisions" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Decisions</SelectItem>
+                    <SelectItem value="with">Has decision</SelectItem>
+                    <SelectItem value="without">No decision yet</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={enrolledFilter}
+                  onValueChange={(v) =>
+                    setEnrolledFilter(v as 'all' | 'enrolled' | 'not-enrolled')
+                  }
+                >
+                  <SelectTrigger className="w-[160px] rounded-none">
+                    <SelectValue placeholder="All Enrollment" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Enrollment</SelectItem>
+                    <SelectItem value="enrolled">Enrolled</SelectItem>
+                    <SelectItem value="not-enrolled">Not enrolled</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
+            {/* Phase 107 Batch 4: decision + enrollment filter chips.
+                Each chip is a toggle button; clicking the active
+                chip resets to 'all'. The chips mirror the existing
+                cohort pill UX (visible when non-default). */}
+            {(decisionFilter !== 'all' || enrolledFilter !== 'all') && (
+              <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-gray-100">
+                {decisionFilter !== 'all' && (
+                  <span className="inline-flex items-center gap-1 bg-blue-50 border border-blue-200 px-2.5 py-1 text-xs text-blue-800">
+                    {decisionFilter === 'with' ? 'Has decision' : 'No decision yet'}
+                    <button
+                      onClick={() => setDecisionFilter('all')}
+                      className="ml-1 text-blue-700 hover:text-blue-900"
+                      aria-label="Clear decision filter"
+                    >
+                      <X size={12} />
+                    </button>
+                  </span>
+                )}
+                {enrolledFilter !== 'all' && (
+                  <span className="inline-flex items-center gap-1 bg-green-50 border border-green-200 px-2.5 py-1 text-xs text-green-800">
+                    {enrolledFilter === 'enrolled' ? 'Enrolled' : 'Not enrolled'}
+                    <button
+                      onClick={() => setEnrolledFilter('all')}
+                      className="ml-1 text-green-700 hover:text-green-900"
+                      aria-label="Clear enrollment filter"
+                    >
+                      <X size={12} />
+                    </button>
+                  </span>
+                )}
+              </div>
+            )}
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -885,6 +992,14 @@ export default function AdminApplicationsPage() {
                       <>
                         <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">University & Program</th>
                         <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">Status</th>
+                        {/* Phase 107 Batch 4: Decision + Enrollment
+                            columns (student surface only — partner
+                            already had Decision in its partnerOnly
+                            block). Compact badges; the Enrollment
+                            column renders "Yes" with a date when
+                            the row was marked enrolled. */}
+                        <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">Decision</th>
+                        <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">Enrolled</th>
                         <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">Source</th>
                         <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">Created</th>
                         <th className="text-right px-6 py-3 font-semibold text-[#1B2A4A]">Actions</th>
@@ -895,13 +1010,13 @@ export default function AdminApplicationsPage() {
                 <tbody>
                   {isLoading && applications.length === 0 ? (
                     <tr>
-                      <td colSpan={partnerOnly ? 9 : 6} className="px-6 py-12 text-center">
+                      <td colSpan={partnerOnly ? 9 : 8} className="px-6 py-12 text-center">
                         <Spinner size="md" className="text-[#1B2A4A] mx-auto" />
                       </td>
                     </tr>
                   ) : filteredApplications.length === 0 ? (
                     <tr>
-                      <td colSpan={partnerOnly ? 9 : 6} className="px-6 py-12 text-center text-[#4B5563]">
+                      <td colSpan={partnerOnly ? 9 : 8} className="px-6 py-12 text-center text-[#4B5563]">
                         {applications.length === 0 ? (
                           <>
                             <p>
@@ -1059,6 +1174,27 @@ export default function AdminApplicationsPage() {
                                   {application.degree ? ` • ${application.degree}` : ''}
                                 </div>
                                 <div className="text-xs text-[#6B7280] mt-1">{application.intake}</div>
+                                {/* Phase 107 Batch 4: lead attribution
+                                    chip — surfaces where this row came
+                                    from when it was back-linked by the
+                                    admin "Add Application" wizard. */}
+                                {application.leadType && (
+                                  <span
+                                    title={
+                                      application.leadId
+                                        ? `Lead id: ${application.leadId}`
+                                        : undefined
+                                    }
+                                    className="inline-flex items-center mt-1 px-1.5 py-0.5 text-[10px] font-medium bg-blue-50 text-blue-800 border border-blue-200"
+                                  >
+                                    From{' '}
+                                    {application.leadType === 'chat_lead'
+                                      ? 'chat lead'
+                                      : application.leadType === 'student_assessment'
+                                        ? 'assessment'
+                                        : 'contact form'}
+                                  </span>
+                                )}
                               </div>
                             </td>
                           )}
@@ -1073,6 +1209,42 @@ export default function AdminApplicationsPage() {
                                 application.status}
                             </Badge>
                           </td>
+                          {!partnerOnly && (
+                            <>
+                              {/* Phase 107 Batch 4: Decision column
+                                  (student surface only). Mirrors the
+                                  partner-side rendering for
+                                  consistency. */}
+                              <td className="px-6 py-4">
+                                {application.decision ? (
+                                  <Badge
+                                    className={`rounded-none border ${
+                                      application.decision === 'Accepted'
+                                        ? 'bg-green-100 text-green-800'
+                                        : application.decision === 'Rejected'
+                                          ? 'bg-red-100 text-red-800'
+                                          : application.decision === 'Waitlisted'
+                                            ? 'bg-yellow-100 text-yellow-800'
+                                            : 'bg-gray-100 text-gray-700'
+                                    }`}
+                                  >
+                                    {application.decision}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-xs text-gray-400">—</span>
+                                )}
+                              </td>
+                              <td className="px-6 py-4">
+                                {application.enrolledAt ? (
+                                  <Badge className="rounded-none border bg-green-700 text-white">
+                                    Yes
+                                  </Badge>
+                                ) : (
+                                  <span className="text-xs text-gray-400">—</span>
+                                )}
+                              </td>
+                            </>
+                          )}
                           {!partnerOnly && (
                             <td className="px-6 py-4">
                               <Badge className={`${sourceColors[application.source]} rounded-none`}>

@@ -83,6 +83,21 @@ export async function GET(request: NextRequest) {
     const sourceOnly =
       source && (source === 'Online' || source === 'Admin') ? source : null;
 
+    // Phase 107 Batch 4: hasDecision + enrolled filters. These apply
+    // to student_applications (which carry decision / enrolled_at);
+    // partner rows always pass through (the JS-side filter below
+    // keeps the partner rows regardless).
+    const hasDecisionParam = searchParams.get('hasDecision');
+    const enrolledParam = searchParams.get('enrolled');
+    const hasDecision =
+      hasDecisionParam === 'true' ? true :
+      hasDecisionParam === 'false' ? false :
+      null;
+    const enrolled =
+      enrolledParam === 'true' ? true :
+      enrolledParam === 'false' ? false :
+      null;
+
     // Phase 32: cross-taxonomy status pass-through for the
     // Partner tab. The student taxonomy has 'Under Review'; the
     // partner taxonomy has 'In Review' (same meaning). The list
@@ -122,6 +137,8 @@ export async function GET(request: NextRequest) {
           // Over-fetch when we'll JS-filter on the source so the
           // paginated slice still has `limit` rows after filter.
           fetchLimit: studentFetchLimit,
+          hasDecision,
+          enrolled,
         })
       : Promise.resolve<{ data: RawApp[]; count: number | null; error?: undefined }>({
           data: [],
@@ -238,6 +255,10 @@ async function fetchStudentApplications(
     source: string | null; // 'Online' | 'Admin' (Partner goes via Partner tab)
     search: string | null;
     fetchLimit: number;
+    // Phase 107 Batch 4: optional decision / enrollment filters.
+    // Pushed into SQL when set; null means "any".
+    hasDecision: boolean | null;
+    enrolled: boolean | null;
   },
 ): Promise<{ data: RawApp[]; count: number | null; error?: { message: string } }> {
   // For the Admin (offline) source we can push the filter into SQL —
@@ -259,6 +280,11 @@ async function fetchStudentApplications(
   if (opts.student) query = query.eq('student_id', opts.student);
   if (opts.status) query = query.eq('status', opts.status);
   if (isOfflineFilter) query = query.is('student_id', null);
+  // Phase 107 Batch 4: decision / enrollment SQL filters.
+  if (opts.hasDecision === true) query = query.not('decision', 'is', null);
+  if (opts.hasDecision === false) query = query.is('decision', null);
+  if (opts.enrolled === true) query = query.not('enrolled_at', 'is', null);
+  if (opts.enrolled === false) query = query.is('enrolled_at', null);
   if (opts.search) {
     // Phase 32: include the applicant name/email columns so a
     // search for "John" or "john@gmail.com" actually finds the
