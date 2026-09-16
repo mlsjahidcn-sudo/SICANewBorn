@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, buildServiceClient, getServerEnv } from '@/lib/supabase-auth';
 import { insertTimelineEvent } from '@/lib/timeline';
-import { mapApplicationFromDb, RawApp } from '@/lib/application-mapper';
+import { mapApplicationFromDb, RawApp, leadAttributionIsValid, type StudentLeadType } from '@/lib/application-mapper';
 import { normalizeIntake, parseIntakeFilter } from '@/lib/intake-normalize';
 import {
   PARTNER_APPLICATION_DEGREES,
@@ -597,6 +597,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Phase 107 Batch 5: lead attribution. If leadId + leadType are
+    // both set, validate the pair and persist it on the new row so
+    // the admin list surfaces a "From <type>" chip and so the eventual
+    // /admin/leads/[id] page can find its reverse-link. Either
+    // studentId OR applicantEmail is still required (the lead is the
+    // SOURCE — it doesn't replace the application payload).
+    const leadId = typeof body.leadId === 'string' ? body.leadId.trim() : '';
+    const leadTypeRaw = typeof body.leadType === 'string' ? body.leadType.trim() : '';
+    const hasLead = !!leadId && !!leadTypeRaw;
+    const attribution = leadAttributionIsValid({
+      studentId: hasStudent ? body.studentId : null,
+      applicantName: body.applicantName,
+      applicantEmail: body.applicantEmail,
+      leadId: leadId || null,
+      leadType: leadTypeRaw || null,
+    });
+    if (!attribution.ok) {
+      return NextResponse.json({ error: attribution.reason }, { status: 400 });
+    }
+    const leadType = (leadTypeRaw || null) as StudentLeadType | null;
+
     // Validate status if provided
     const requestedStatus = body.status || 'Submitted';
     if (!(ALLOWED_STATUSES as readonly string[]).includes(requestedStatus)) {
@@ -639,6 +660,11 @@ export async function POST(request: NextRequest) {
       insert.applicant_phone = body.applicantPhone || null;
       insert.applicant_nationality = body.applicantNationality || null;
     }
+    // Phase 107 Batch 5: lead attribution columns (polymorphic FK).
+    if (hasLead && leadId && leadType) {
+      insert.lead_id = leadId;
+      insert.lead_type = leadType;
+    }
 
     const { data, error } = await service
       .from('student_applications')
@@ -649,6 +675,19 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error('[admin/applications POST] supabase error:', error);
       return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    // Phase 107 Batch 5: atomic lead.status=Converted flip. We don't
+    // want to fail the application POST if the lead update fails —
+    // the application is the source of truth for the admin's intent
+    // and the lead row is best-effort housekeeping. Logged so the
+    // admin can re-trigger from /admin/leads/[id] if needed.
+    if (hasLead && leadId && leadType) {
+      try {
+        await flipLeadToConverted(service, leadType, leadId);
+      } catch (leadErr) {
+        console.error('[admin/applications POST] lead.status flip failed:', leadErr);
+      }
     }
 
     // Audit trail: write a timeline event
@@ -666,4 +705,49 @@ export async function POST(request: NextRequest) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     return NextResponse.json({ error: message }, { status: 500 });
   }
+}
+
+/**
+ * Phase 107 Batch 5: mark a lead row as converted when an
+ * application is created from it. The "Converted" status value
+ * doesn't exist on every lead surface — the function picks the
+ * best equivalent per table:
+ *   - chat_leads.status:        'Converted' (already exists)
+ *   - student_assessments.status: 'Accepted' (no 'Converted' enum
+ *                                  value; 'Accepted' semantically
+ *                                  means "moved to next stage")
+ *   - contact_submissions.status: 'Resolved' (no 'Converted' enum
+ *                                  value; 'Resolved' is the closest
+ *                                  closed state).
+ *
+ * Errors are thrown so the caller can log + continue — the application
+ * is already created and is the source of truth.
+ */
+async function flipLeadToConverted(
+  service: ReturnType<typeof buildServiceClient>,
+  leadType: StudentLeadType,
+  leadId: string,
+): Promise<void> {
+  if (leadType === 'chat_lead') {
+    const { error } = await service
+      .from('chat_leads')
+      .update({ status: 'Converted' })
+      .eq('id', leadId);
+    if (error) throw error;
+    return;
+  }
+  if (leadType === 'student_assessment') {
+    const { error } = await service
+      .from('student_assessments')
+      .update({ status: 'Accepted' })
+      .eq('id', leadId);
+    if (error) throw error;
+    return;
+  }
+  // contact_submission
+  const { error } = await service
+    .from('contact_submissions')
+    .update({ status: 'Resolved' })
+    .eq('id', leadId);
+  if (error) throw error;
 }

@@ -59,6 +59,13 @@ interface FormData {
   priority: 'Low' | 'Normal' | 'High' | 'Urgent';
   syncDocuments: boolean;
   selectedDocuments: string[];
+  // Phase 107 Batch 5: lead attribution. When the admin picks a
+  // matching lead from the "Found existing lead(s)" picker, the
+  // (id, type) pair gets persisted on the new student_applications
+  // row AND the lead's status gets flipped to a closed state.
+  // Both are cleared when the admin clears the applicant email.
+  leadId: string | null;
+  leadType: 'chat_lead' | 'student_assessment' | 'contact_submission' | null;
 }
 
 export default function AdminNewApplicationPage() {
@@ -106,7 +113,11 @@ export default function AdminNewApplicationPage() {
     // explicitly so the DB default doesn't override.
     priority: 'Normal',
     syncDocuments: false,
-    selectedDocuments: []
+    selectedDocuments: [],
+    // Phase 107 Batch 5: no lead selected by default — admin
+    // can pick one from the lookup results or proceed without.
+    leadId: null,
+    leadType: null,
   });
 
   // Phase 20: fetch the live university + program catalog on mount.
@@ -238,8 +249,78 @@ export default function AdminNewApplicationPage() {
     };
   }, [formData.studentId, students]);
 
+  // Phase 107 Batch 5: lead auto-detection. When the admin types a
+  // non-empty applicantEmail and no studentId is set, we probe the
+  // three lead tables (chat_leads / student_assessments /
+  // contact_submissions) for matches and surface them as a "Found
+  // existing lead(s)" banner above the applicant fields. Picking one
+  // stores leadId + leadType in formData so the API can back-link
+  // and flip the lead's status to a "converted" closed state.
+  // Debounced 400ms — the same rhythm as the admin/students
+  // email-availability probe.
+  const [leadMatches, setLeadMatches] = useState<
+    Array<{
+      id: string;
+      type: 'chat_lead' | 'student_assessment' | 'contact_submission';
+      label: string;
+      createdAt: string;
+    }>
+  >([]);
+  const [leadMatchesLoading, setLeadMatchesLoading] = useState(false);
+  useEffect(() => {
+    // Only run when the admin is on the lead path (no studentId).
+    if (formData.studentId) {
+      setLeadMatches([]);
+      return;
+    }
+    const email = formData.applicantEmail.trim();
+    if (!email || !email.includes('@')) {
+      setLeadMatches([]);
+      return;
+    }
+    let cancelled = false;
+    setLeadMatchesLoading(true);
+    const handle = setTimeout(async () => {
+      try {
+        const res = await apiFetchJson<{
+          matches: Array<{
+            id: string;
+            type: 'chat_lead' | 'student_assessment' | 'contact_submission';
+            label: string;
+            createdAt: string;
+          }>;
+        }>(`/api/admin/leads/lookup?email=${encodeURIComponent(email)}`);
+        if (cancelled) return;
+        setLeadMatches(res.matches || []);
+      } catch (err) {
+        if (cancelled) return;
+        console.error('[admin/applications/new] lead lookup failed:', err);
+        setLeadMatches([]);
+      } finally {
+        if (!cancelled) setLeadMatchesLoading(false);
+      }
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(handle);
+    };
+  }, [formData.studentId, formData.applicantEmail]);
+
   const handleChange = (field: keyof FormData, value: string | boolean | string[] | null) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => {
+      // Phase 107 Batch 5: changing the applicant email invalidates any
+      // previously-picked lead (the email-match was on the prior
+      // value). Clearing leadId/leadType forces the admin to re-pick.
+      if (field === 'applicantEmail') {
+        return { ...prev, applicantEmail: String(value), leadId: null, leadType: null };
+      }
+      // Switching from the lead path to a linked student also drops
+      // the lead attribution — the back-link no longer applies.
+      if (field === 'studentId' && value) {
+        return { ...prev, studentId: String(value), leadId: null, leadType: null };
+      }
+      return { ...prev, [field]: value };
+    });
   };
 
   const toggleDocument = (docId: string) => {
@@ -298,6 +379,14 @@ export default function AdminNewApplicationPage() {
         payload.applicantEmail = formData.applicantEmail;
         if (formData.applicantPhone) payload.applicantPhone = formData.applicantPhone;
         if (formData.applicantNationality) payload.applicantNationality = formData.applicantNationality;
+        // Phase 107 Batch 5: if the admin picked a matching lead from
+        // the lookup picker, send the (id, type) pair. The server
+        // validates the pair and atomically flips the lead's status
+        // to a closed state.
+        if (formData.leadId && formData.leadType) {
+          payload.leadId = formData.leadId;
+          payload.leadType = formData.leadType;
+        }
       }
       const res = await apiFetchJson<{ application: { id: string } }>(
         '/api/admin/applications',
@@ -518,6 +607,75 @@ export default function AdminNewApplicationPage() {
                           onChange={(e) => handleChange('applicantEmail', e.target.value)}
                           placeholder="lead@example.com"
                         />
+                        {/* Phase 107 Batch 5: lead auto-link picker.
+                            The leadMatches effect above probes all
+                            three lead tables for an exact-email match.
+                            When matches arrive, surface them as
+                            selectable buttons; picking one writes
+                            (leadId, leadType) to formData so the POST
+                            routes back to it. Clear via the X on the
+                            current selection banner. */}
+                        {!formData.studentId &&
+                          (leadMatchesLoading || leadMatches.length > 0 || formData.leadId) && (
+                            <div className="mt-2 space-y-2">
+                              {leadMatchesLoading && (
+                                <p className="text-xs text-[#4B5563]">
+                                  Looking for matching leads…
+                                </p>
+                              )}
+                              {!leadMatchesLoading &&
+                                leadMatches.length === 0 &&
+                                formData.applicantEmail.includes('@') && (
+                                  <p className="text-xs text-gray-500">
+                                    No matching leads found for this email.
+                                  </p>
+                                )}
+                              {!leadMatchesLoading && leadMatches.length > 0 && (
+                                <div className="border border-blue-200 bg-blue-50 p-2 space-y-1">
+                                  <p className="text-xs font-medium text-blue-900">
+                                    Found {leadMatches.length} matching lead
+                                    {leadMatches.length === 1 ? '' : 's'} —
+                                    link to back-fill the application:
+                                  </p>
+                                  <div className="space-y-1">
+                                    {leadMatches.map((m) => {
+                                      const selected =
+                                        formData.leadId === m.id &&
+                                        formData.leadType === m.type;
+                                      return (
+                                        <button
+                                          key={`${m.type}:${m.id}`}
+                                          type="button"
+                                          onClick={() =>
+                                            setFormData((prev) => ({
+                                              ...prev,
+                                              leadId: selected ? null : m.id,
+                                              leadType: selected
+                                                ? null
+                                                : m.type,
+                                            }))
+                                          }
+                                          className={`w-full text-left text-xs px-2 py-1.5 border ${
+                                            selected
+                                              ? 'border-blue-500 bg-blue-100 text-blue-900'
+                                              : 'border-blue-200 bg-white hover:bg-blue-50'
+                                          }`}
+                                        >
+                                          {m.label}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+                              {formData.leadId && formData.leadType && (
+                                <p className="text-xs text-blue-800">
+                                  Linked to existing lead — its status will
+                                  be set to a closed state on save.
+                                </p>
+                              )}
+                            </div>
+                          )}
                       </div>
                       <div>
                         <Label className="text-[#1F2937]">Phone (optional)</Label>
