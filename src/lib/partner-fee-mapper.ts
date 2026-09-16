@@ -104,18 +104,9 @@ export function mapPartnerFeeFromDb(row: RawPartnerFee): PartnerFee {
   };
 }
 
-export function currencySymbol(currency: string): string {
-  switch (currency) {
-    case 'CNY':
-      return '¥';
-    case 'USD':
-      return '$';
-    case 'EUR':
-      return '€';
-    default:
-      return currency;
-  }
-}
+// Re-exported from the shared `currency` module so existing imports keep
+// working. New callers should import directly from `@/lib/currency`.
+export { currencySymbol } from './currency';
 
 export function mapPartnerFeeToDb(payload: Record<string, unknown>): Record<string, unknown> {
   const row: Record<string, unknown> = {};

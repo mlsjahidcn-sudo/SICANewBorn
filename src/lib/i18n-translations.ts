@@ -2524,6 +2524,11 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminFees.actionEdit': 'Edit',
     'adminFees.actionDelete': 'Delete',
     'adminFees.errorCancel': 'Failed to cancel fee',
+    // Phase 108 Batch 1: pagination
+    'adminFees.paginationSummary': 'Showing {{from}}–{{to}} of {{total}}',
+    'adminFees.paginationPrev': 'Previous',
+    'adminFees.paginationNext': 'Next',
+    'adminFees.paginationPageOf': 'Page {{page}} of {{totalPages}}',
     // Phase 106 B3: Admin Settings (profile / password / site)
     'adminSettings.title': 'Settings',
     'adminSettings.subtitle': 'Manage your account and site settings',
@@ -6868,6 +6873,11 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminFees.actionEdit': '编辑',
     'adminFees.actionDelete': '删除',
     'adminFees.errorCancel': '取消费用失败',
+    // Phase 108 Batch 1: 分页
+    'adminFees.paginationSummary': '显示 {{from}}–{{to}} 共 {{total}}',
+    'adminFees.paginationPrev': '上一页',
+    'adminFees.paginationNext': '下一页',
+    'adminFees.paginationPageOf': '第 {{page}} 页 / 共 {{totalPages}} 页',
     // Phase 106 B3: 管理后台设置（资料 / 密码 / 站点）
     'adminSettings.title': '设置',
     'adminSettings.subtitle': '管理你的账户与站点设置',

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, buildServiceClient, getServerEnv } from '@/lib/supabase-auth';
+import { mapStudentFeeFromDb } from '@/lib/student-fee-mapper';
 
 /**
  * PATCH  /api/admin/fees/[id]  — update a fee (mark as paid, change amount, etc.)
@@ -69,7 +70,7 @@ export async function PATCH(
       console.error('[admin/fees/:id PATCH] supabase error:', error);
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
-    return NextResponse.json({ fee: data });
+    return NextResponse.json({ fee: mapStudentFeeFromDb(data) });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     return NextResponse.json({ error: message }, { status: 500 });
@@ -101,7 +102,9 @@ export async function DELETE(
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
-    return NextResponse.json({ success: true, fee: data });
+    // DELETE returns the soft-cancelled row, not the original — clients
+    // re-fetch if they need the full mapped shape.
+    return NextResponse.json({ success: true, fee: { id: data.id, status: data.status } });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     return NextResponse.json({ error: message }, { status: 500 });

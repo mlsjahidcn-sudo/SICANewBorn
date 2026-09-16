@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, buildServiceClient, getServerEnv } from '@/lib/supabase-auth';
+import {
+  mapStudentFeeFromDb,
+  parseStudentFeeStatus,
+  parseStudentFeeType,
+  parseStudentFeeCurrency,
+  type RawStudentFee,
+} from '@/lib/student-fee-mapper';
 
 /**
  * GET  /api/admin/fees  — list fees with filters
@@ -55,44 +62,23 @@ export async function GET(request: NextRequest) {
     }
 
     // Normalize: snake_case → camelCase + flatten the joined student
-    type RawFee = {
+    type JoinedStudent = {
       id: string;
-      student_id: string;
-      application_id?: string;
-      fee_type: string;
-      description?: string;
-      amount: number;
-      currency: string;
-      amount_paid: number;
-      due_date?: string;
-      paid_date?: string;
-      status: string;
-      payment_method?: string;
-      notes?: string;
-      created_at: string;
-      updated_at: string;
-      student?: { id: string; first_name: string; last_name: string; email: string; source: string } | null;
-    };
+      first_name: string;
+      last_name: string;
+      email: string;
+      source: string;
+    } | null;
+    type RawJoinedFee = RawStudentFee & { student?: JoinedStudent };
 
-    const fees = ((data || []) as RawFee[]).map((f) => ({
-      id: f.id,
-      studentId: f.student_id,
-      studentName: `${f.student?.first_name || ''} ${f.student?.last_name || ''}`.trim() || '—',
-      studentEmail: f.student?.email || '',
-      applicationId: f.application_id,
-      feeType: f.fee_type,
-      description: f.description,
-      amount: Number(f.amount),
-      currency: f.currency,
-      amountPaid: Number(f.amount_paid),
-      dueDate: f.due_date,
-      paidDate: f.paid_date,
-      status: f.status,
-      paymentMethod: f.payment_method,
-      notes: f.notes,
-      createdAt: f.created_at,
-      updatedAt: f.updated_at,
-    }));
+    const fees = ((data || []) as RawJoinedFee[]).map((f) => {
+      const mapped = mapStudentFeeFromDb(f);
+      return {
+        ...mapped,
+        studentName: `${f.student?.first_name || ''} ${f.student?.last_name || ''}`.trim() || '—',
+        studentEmail: f.student?.email || '',
+      };
+    });
 
     return NextResponse.json({
       fees,
@@ -117,9 +103,17 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     if (!body.studentId) return NextResponse.json({ error: 'studentId is required' }, { status: 400 });
-    if (!body.feeType) return NextResponse.json({ error: 'feeType is required' }, { status: 400 });
+    if (!parseStudentFeeType(body.feeType)) {
+      return NextResponse.json({ error: 'feeType is required (one of Application|Tuition|Service|Visa|Other)' }, { status: 400 });
+    }
     if (typeof body.amount !== 'number' || body.amount <= 0) {
       return NextResponse.json({ error: 'amount must be a positive number' }, { status: 400 });
+    }
+    if (body.currency !== undefined && !parseStudentFeeCurrency(body.currency)) {
+      return NextResponse.json({ error: 'currency must be one of CNY|USD|EUR' }, { status: 400 });
+    }
+    if (body.status !== undefined && !parseStudentFeeStatus(body.status)) {
+      return NextResponse.json({ error: 'status must be one of Pending|Partial|Paid|Overdue|Cancelled' }, { status: 400 });
     }
 
     const service = buildServiceClient();

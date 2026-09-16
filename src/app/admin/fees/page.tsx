@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, Trash2, DollarSign, CheckCircle, Clock, AlertCircle, ArrowDown, ArrowUp } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, Eye, Edit, Trash2, DollarSign, CheckCircle, Clock, AlertCircle, ArrowDown, ArrowUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -14,29 +14,19 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useStudentList } from '@/hooks/use-student-list';
 import { apiFetch, apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
+import {
+  STUDENT_FEE_STATUSES,
+  STUDENT_FEE_TYPES,
+  type StudentFee,
+  type StudentFeeStatus,
+  type StudentFeeType,
+} from '@/lib/student-fee-mapper';
+import { currencySymbol } from '@/lib/currency';
 
-interface AdminFee {
-  id: string;
-  studentId: string;
+type AdminFee = StudentFee & {
   studentName: string;
   studentEmail: string;
-  applicationId?: string;
-  feeType: string;
-  description?: string;
-  amount: number;
-  currency: string;
-  amountPaid: number;
-  dueDate?: string;
-  paidDate?: string;
-  status: 'Pending' | 'Partial' | 'Paid' | 'Overdue' | 'Cancelled' | 'Refunded';
-  paymentMethod?: string;
-  notes?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-const adminFeeStatuses = ['Pending', 'Partial', 'Paid', 'Overdue', 'Cancelled'] as const;
-const adminFeeTypes = ['Application', 'Tuition', 'Service', 'Visa', 'Other'] as const;
+};
 
 export default function AdminFeesPage() {
   const { t } = useI18n();
@@ -52,6 +42,7 @@ export default function AdminFeesPage() {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [studentFilter, setStudentFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [isCancelling, setIsCancelling] = useState<string | null>(null);
   const [feeToCancel, setFeeToCancel] = useState<AdminFee | null>(null);
 
@@ -65,18 +56,20 @@ export default function AdminFeesPage() {
     if (typeFilter !== 'all') params.set('feeType', typeFilter);
     if (studentFilter !== 'all') params.set('student', studentFilter);
 
-    apiFetchJson<{ fees: AdminFee[]; total: number }>(`/api/admin/fees?${params}`, {
+    apiFetchJson<{ fees: AdminFee[]; total: number; totalPages: number }>(`/api/admin/fees?${params}`, {
       signal: controller.signal,
     })
       .then((d) => {
         setFees(d.fees);
         setTotal(d.total);
+        setTotalPages(d.totalPages ?? Math.ceil((d.total || 0) / 20));
       })
       .catch((err) => {
         if (err.name !== 'AbortError') {
           setError(err.message || 'Failed to load fees');
           setFees([]);
           setTotal(0);
+          setTotalPages(1);
         }
       })
       .finally(() => {
@@ -110,7 +103,7 @@ export default function AdminFeesPage() {
     }
   };
 
-  const getStatusBadgeVariant = (status: AdminFee['status']) => {
+  const getStatusBadgeVariant = (status: StudentFeeStatus) => {
     switch (status) {
       case 'Paid':
         return 'default';
@@ -120,8 +113,6 @@ export default function AdminFeesPage() {
         return 'outline';
       case 'Overdue':
         return 'destructive';
-      case 'Refunded':
-        return 'outline';
       case 'Cancelled':
         return 'outline';
       default:
@@ -129,7 +120,7 @@ export default function AdminFeesPage() {
     }
   };
 
-  const getStatusIcon = (status: AdminFee['status']) => {
+  const getStatusIcon = (status: StudentFeeStatus) => {
     switch (status) {
       case 'Paid':
         return <CheckCircle className="h-4 w-4 text-green-500" />;
@@ -206,7 +197,7 @@ export default function AdminFeesPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>{t('adminFees.kpiRevenue')}</CardDescription>
-            <CardTitle className="text-2xl text-green-600">${totalRevenue.toLocaleString()}</CardTitle>
+            <CardTitle className="text-2xl text-green-600">¥{totalRevenue.toLocaleString()}</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center text-sm text-gray-600">
             <ArrowUp className="h-4 w-4 mr-1 text-green-500" />
@@ -217,7 +208,7 @@ export default function AdminFeesPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>{t('adminFees.kpiPendingAmount')}</CardDescription>
-            <CardTitle className="text-2xl text-amber-600">${pendingAmount.toLocaleString()}</CardTitle>
+            <CardTitle className="text-2xl text-amber-600">¥{pendingAmount.toLocaleString()}</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center text-sm text-gray-600">
             <Clock className="h-4 w-4 mr-1 text-amber-500" />
@@ -282,7 +273,7 @@ export default function AdminFeesPage() {
           className="h-10 px-3 rounded-md border border-gray-300 bg-white text-sm"
         >
           <option value="all">{t('adminFees.allStatus')}</option>
-          {adminFeeStatuses.map(status => (
+          {STUDENT_FEE_STATUSES.map(status => (
             <option key={status} value={status}>{status}</option>
           ))}
         </select>
@@ -293,7 +284,7 @@ export default function AdminFeesPage() {
           className="h-10 px-3 rounded-md border border-gray-300 bg-white text-sm"
         >
           <option value="all">{t('adminFees.allTypes')}</option>
-          {adminFeeTypes.map(type => (
+          {STUDENT_FEE_TYPES.map(type => (
             <option key={type} value={type}>{type}</option>
           ))}
         </select>
@@ -342,7 +333,7 @@ export default function AdminFeesPage() {
                     </TableCell>
                     <TableCell>
                       <div className="font-semibold">
-                        ${fee.amount.toLocaleString()}
+                        {currencySymbol(fee.currency)}{fee.amount.toLocaleString()}
                       </div>
                       <div className="text-xs text-gray-500">
                         {fee.currency}
@@ -350,11 +341,11 @@ export default function AdminFeesPage() {
                     </TableCell>
                     <TableCell>
                       <div className={fee.amountPaid === fee.amount ? 'text-green-600 font-semibold' : 'text-gray-600'}>
-                        ${(fee.amountPaid || 0).toLocaleString()}
+                        {currencySymbol(fee.currency)}{(fee.amountPaid || 0).toLocaleString()}
                       </div>
                       {fee.amountPaid && fee.amountPaid < fee.amount && (
                         <div className="text-xs text-amber-600">
-                          {fee.currency === 'CNY' ? '¥' : '$'}
+                          {currencySymbol(fee.currency)}
                           {(fee.amount - fee.amountPaid).toLocaleString()} {t('adminFees.remaining')}
                         </div>
                       )}
@@ -401,6 +392,40 @@ export default function AdminFeesPage() {
               )}
             </TableBody>
           </Table>
+        </CardContent>
+        <CardContent className="flex items-center justify-between border-t px-4 py-3 text-sm text-gray-600">
+          <div>
+            {t('adminFees.paginationSummary', {
+              from: fees.length === 0 ? 0 : (page - 1) * 20 + 1,
+              to: (page - 1) * 20 + fees.length,
+              total: total.toLocaleString(),
+            })}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              aria-label={t('adminFees.paginationPrev')}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              {t('adminFees.paginationPrev')}
+            </Button>
+            <span className="text-gray-700">
+              {t('adminFees.paginationPageOf', { page, totalPages })}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              aria-label={t('adminFees.paginationNext')}
+            >
+              {t('adminFees.paginationNext')}
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>
