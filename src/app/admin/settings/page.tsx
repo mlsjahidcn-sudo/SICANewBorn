@@ -4,9 +4,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { User, Lock, Building2 } from 'lucide-react';
 import { ToastProvider, useToast } from '@/components/admin/toast';
 import { apiFetch } from '@/lib/api-client';
+import { useI18n } from '@/lib/i18n';
 
 function SettingsPageInner() {
   const { addToast } = useToast();
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'site'>('profile');
   const [profile, setProfile] = useState({ fullName: '', email: '' });
   const [passwords, setPasswords] = useState({ current: '', newPass: '', confirm: '' });
@@ -37,37 +39,37 @@ function SettingsPageInner() {
   }, []);
 
   const handleProfileSave = useCallback(() => {
-    addToast('Profile updated successfully', 'success');
-  }, [addToast]);
+    addToast(t('adminSettings.profileSuccess'), 'success');
+  }, [addToast, t]);
 
   const handlePasswordChange = useCallback(() => {
     if (passwords.newPass !== passwords.confirm) {
-      addToast('Passwords do not match', 'error');
+      addToast(t('adminSettings.passwordMismatch'), 'error');
       return;
     }
     if (passwords.newPass.length < 8) {
-      addToast('Password must be at least 8 characters', 'error');
+      addToast(t('adminSettings.passwordTooShort'), 'error');
       return;
     }
-    addToast('Password updated successfully', 'success');
+    addToast(t('adminSettings.passwordSuccess'), 'success');
     setPasswords({ current: '', newPass: '', confirm: '' });
-  }, [passwords, addToast]);
+  }, [passwords, addToast, t]);
 
   const handleSiteSave = useCallback(() => {
-    addToast('Site settings updated successfully', 'success');
-  }, [addToast]);
+    addToast(t('adminSettings.siteSuccess'), 'success');
+  }, [addToast, t]);
 
   const tabs = [
-    { id: 'profile' as const, label: 'Profile', icon: User },
-    { id: 'password' as const, label: 'Password', icon: Lock },
-    { id: 'site' as const, label: 'Site Settings', icon: Building2 },
+    { id: 'profile' as const, label: t('adminSettings.tabProfile'), icon: User },
+    { id: 'password' as const, label: t('adminSettings.tabPassword'), icon: Lock },
+    { id: 'site' as const, label: t('adminSettings.tabSite'), icon: Building2 },
   ];
 
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[#1F2937]">Settings</h1>
-        <p className="text-[#4B5563] text-sm mt-1">Manage your account and site settings</p>
+        <h1 className="text-2xl font-bold text-[#1F2937]">{t('adminSettings.title')}</h1>
+        <p className="text-[#4B5563] text-sm mt-1">{t('adminSettings.subtitle')}</p>
       </div>
 
       <div className="flex gap-1 mb-6 border-b border-gray-200">
@@ -89,10 +91,10 @@ function SettingsPageInner() {
 
       {activeTab === 'profile' && (
         <div className="bg-white border border-gray-200 p-6 max-w-xl">
-          <h2 className="text-lg font-semibold text-[#1F2937] mb-4">Profile Information</h2>
+          <h2 className="text-lg font-semibold text-[#1F2937] mb-4">{t('adminSettings.sectionProfile')}</h2>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1">Full Name</label>
+              <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('adminSettings.fieldFullName')}</label>
               <input
                 type="text"
                 value={profile.fullName}
@@ -101,7 +103,7 @@ function SettingsPageInner() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1">Email</label>
+              <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('adminSettings.fieldEmail')}</label>
               <input
                 type="email"
                 value={profile.email}
@@ -113,7 +115,7 @@ function SettingsPageInner() {
               onClick={handleProfileSave}
               className="bg-[#9B1B30] text-white px-6 py-2.5 text-sm font-semibold hover:bg-[#7A1526] transition-colors"
             >
-              Save Profile
+              {t('adminSettings.saveProfile')}
             </button>
           </div>
         </div>
@@ -121,10 +123,10 @@ function SettingsPageInner() {
 
       {activeTab === 'password' && (
         <div className="bg-white border border-gray-200 p-6 max-w-xl">
-          <h2 className="text-lg font-semibold text-[#1F2937] mb-4">Change Password</h2>
+          <h2 className="text-lg font-semibold text-[#1F2937] mb-4">{t('adminSettings.sectionPassword')}</h2>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1">Current Password</label>
+              <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('adminSettings.fieldCurrentPassword')}</label>
               <input
                 type="password"
                 value={passwords.current}
@@ -133,7 +135,7 @@ function SettingsPageInner() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1">New Password</label>
+              <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('adminSettings.fieldNewPassword')}</label>
               <input
                 type="password"
                 value={passwords.newPass}
@@ -142,7 +144,7 @@ function SettingsPageInner() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1">Confirm New Password</label>
+              <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('adminSettings.fieldConfirmPassword')}</label>
               <input
                 type="password"
                 value={passwords.confirm}
@@ -151,13 +153,13 @@ function SettingsPageInner() {
               />
             </div>
             {passwords.newPass && passwords.confirm && passwords.newPass !== passwords.confirm && (
-              <p className="text-red-600 text-sm">Passwords do not match</p>
+              <p className="text-red-600 text-sm">{t('adminSettings.passwordMismatch')}</p>
             )}
             <button
               onClick={handlePasswordChange}
               className="bg-[#9B1B30] text-white px-6 py-2.5 text-sm font-semibold hover:bg-[#7A1526] transition-colors"
             >
-              Update Password
+              {t('adminSettings.updatePassword')}
             </button>
           </div>
         </div>
@@ -165,10 +167,10 @@ function SettingsPageInner() {
 
       {activeTab === 'site' && (
         <div className="bg-white border border-gray-200 p-6 max-w-xl">
-          <h2 className="text-lg font-semibold text-[#1F2937] mb-4">Site Settings</h2>
+          <h2 className="text-lg font-semibold text-[#1F2937] mb-4">{t('adminSettings.sectionSite')}</h2>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1">Contact Email</label>
+              <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('adminSettings.fieldContactEmail')}</label>
               <input
                 type="email"
                 value={siteSettings.contactEmail}
@@ -177,7 +179,7 @@ function SettingsPageInner() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1">Phone</label>
+              <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('adminSettings.fieldPhone')}</label>
               <input
                 type="text"
                 value={siteSettings.phone}
@@ -186,7 +188,7 @@ function SettingsPageInner() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1">WeChat ID</label>
+              <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('adminSettings.fieldWechat')}</label>
               <input
                 type="text"
                 value={siteSettings.wechat}
@@ -195,7 +197,7 @@ function SettingsPageInner() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1">WhatsApp Number</label>
+              <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('adminSettings.fieldWhatsapp')}</label>
               <input
                 type="text"
                 value={siteSettings.whatsapp}
@@ -204,7 +206,7 @@ function SettingsPageInner() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1">Address</label>
+              <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('adminSettings.fieldAddress')}</label>
               <textarea
                 value={siteSettings.address}
                 onChange={(e) => setSiteSettings(s => ({ ...s, address: e.target.value }))}
@@ -213,7 +215,7 @@ function SettingsPageInner() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1">Office Hours</label>
+              <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('adminSettings.fieldOfficeHours')}</label>
               <input
                 type="text"
                 value={siteSettings.officeHours}
@@ -225,7 +227,7 @@ function SettingsPageInner() {
               onClick={handleSiteSave}
               className="bg-[#9B1B30] text-white px-6 py-2.5 text-sm font-semibold hover:bg-[#7A1526] transition-colors"
             >
-              Save Settings
+              {t('adminSettings.saveSettings')}
             </button>
           </div>
         </div>
