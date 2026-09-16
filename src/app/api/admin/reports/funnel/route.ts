@@ -73,25 +73,35 @@ export async function GET(request: NextRequest) {
     p_to: toIso,
   });
 
+  // Phase 107 Batch 8: enrolled time series (4th line on the chart).
+  // RPC added in database/2026-09-17_admin_reports_enrolled.sql.
+  const enrolledTimeSeriesQuery = service.rpc('admin_reports_enrolled_timeseries', {
+    p_from: fromIso,
+    p_to: toIso,
+  });
+
   try {
     const [
       { data: leadSources, error: leadSourcesErr },
       { data: applicationsByStatus, error: appsErr },
       { data: sourceSplit, error: splitErr },
       { data: timeSeries, error: tsErr },
+      { data: enrolledTimeSeries, error: enrolledErr },
     ] = await Promise.all([
       leadSourcesQuery,
       applicationsByStatusQuery,
       sourceSplitQuery,
       timeSeriesQuery,
+      enrolledTimeSeriesQuery,
     ]);
 
-    if (leadSourcesErr || appsErr || splitErr || tsErr) {
+    if (leadSourcesErr || appsErr || splitErr || tsErr || enrolledErr) {
       console.error('[admin/reports/funnel] rpc errors:', {
         leadSourcesErr,
         appsErr,
         splitErr,
         tsErr,
+        enrolledErr,
       });
       return NextResponse.json({ error: 'Failed to load report data' }, { status: 500 });
     }
@@ -110,6 +120,13 @@ export async function GET(request: NextRequest) {
       )?.count ?? 0;
     const acceptanceRate = totalApps > 0 ? Math.round((accepted / totalApps) * 1000) / 10 : 0;
 
+    // Phase 107 Batch 8: enrolled rate + enrolled time series.
+    // Sum the per-day counts (the RPC returns one row per day, even
+    // when the count is 0 — the date series is always contiguous).
+    const enrolledSeries = (enrolledTimeSeries as { date: string; enrolled: number }[] | null) ?? [];
+    const totalEnrolled = enrolledSeries.reduce((s, r) => s + (r.enrolled ?? 0), 0);
+    const enrolledRate = accepted > 0 ? Math.round((totalEnrolled / accepted) * 1000) / 10 : 0;
+
     return NextResponse.json({
       dateRange: { from: formatISODate(from), to: formatISODate(to) },
       leadSources: (leadSources as { source: string; count: number }[] | null) ?? [],
@@ -122,6 +139,10 @@ export async function GET(request: NextRequest) {
       totalApplications: totalApps,
       acceptedApplications: accepted,
       timeSeries: (timeSeries as { date: string; leads: number; applications: number; accepted: number }[] | null) ?? [],
+      // Phase 107 Batch 8: 4th line + 5th KPI card.
+      enrolledTimeSeries: enrolledSeries,
+      enrolledApplications: totalEnrolled,
+      enrolledRate,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';

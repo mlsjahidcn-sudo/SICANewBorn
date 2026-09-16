@@ -33,6 +33,13 @@ interface FunnelReport {
   totalApplications: number;
   acceptedApplications: number;
   timeSeries: { date: string; leads: number; applications: number; accepted: number }[];
+  // Phase 107 Batch 8: per-day enrolled counts (4th line) + headline
+  // enrolled total + enrolled/accepted rate. Older backend versions
+  // (pre-migration) won't return these — they're optional in the
+  // client type and the UI falls back to 0.
+  enrolledTimeSeries?: { date: string; enrolled: number }[];
+  enrolledApplications?: number;
+  enrolledRate?: number;
 }
 
 const COLORS = ['#9B1B30', '#1B2A4A', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6'];
@@ -125,7 +132,7 @@ export default function AdminReportsPage() {
       )}
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>{t('adminReports.kpiLeads')}</CardDescription>
@@ -166,6 +173,26 @@ export default function AdminReportsPage() {
           </CardHeader>
           <CardContent className="text-sm text-gray-600">{t('adminReports.kpiRateDesc')}</CardContent>
         </Card>
+        {/* Phase 107 Batch 8: 5th KPI card. Combines the enrolled
+            total + the enrolled/accepted rate in one card so the
+            admin can see at a glance how many accepted applications
+            actually converted into enrolled students. Renders even
+            when the optional field is missing (older backend). */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>{t('adminReports.kpiEnrolled')}</CardDescription>
+            <CardTitle className="text-2xl flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-[#1B2A4A]" />
+              {(report.enrolledApplications ?? 0).toLocaleString()}
+              <span className="text-base font-medium text-[#4B5563]">
+                / {report.enrolledRate ?? 0}%
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-gray-600">
+            {t('adminReports.kpiEnrolledDesc')}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Time Series */}
@@ -178,20 +205,35 @@ export default function AdminReportsPage() {
           <CardDescription>{t('adminReports.dailyTrendsDesc')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={report.timeSeries}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="leads" stroke={COLORS[0]} strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="applications" stroke={COLORS[2]} strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="accepted" stroke={COLORS[3]} strokeWidth={2} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+          {(() => {
+            // Phase 107 Batch 8: merge enrolled counts into the same
+            // timeSeries shape so the chart can render a 4th line.
+            // The enrolled RPC returns one row per day (zero-filled),
+            // so a simple join by date key suffices.
+            const enrichedSeries = report.timeSeries.map((row) => {
+              const enrolledForDay = report.enrolledTimeSeries?.find(
+                (e) => e.date === row.date,
+              );
+              return { ...row, enrolled: enrolledForDay?.enrolled ?? 0 };
+            });
+            return (
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={enrichedSeries}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                    <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} />
+                    <Tooltip />
+                    <Legend />
+                    <Line type="monotone" dataKey="leads" stroke={COLORS[0]} strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="applications" stroke={COLORS[2]} strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="accepted" stroke={COLORS[3]} strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="enrolled" stroke={COLORS[5]} strokeWidth={2} dot={false} strokeDasharray="4 2" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            );
+          })()}
         </CardContent>
       </Card>
 

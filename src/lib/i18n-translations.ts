@@ -2478,6 +2478,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminReports.kpiAcceptedDesc': 'Accepted offers',
     'adminReports.kpiRate': 'Acceptance Rate',
     'adminReports.kpiRateDesc': 'Accepted / Total applications',
+    // Phase 107 Batch 8: enrolled KPI card (5th) on the reports dashboard
+    'adminReports.kpiEnrolled': 'Enrolled',
+    'adminReports.kpiEnrolledDesc': 'Enrolled students in this window — a stricter signal than Accepted',
     'adminReports.dailyTrends': 'Daily Trends',
     'adminReports.dailyTrendsDesc': 'Leads, applications, and accepted applications over time',
     'adminReports.leadSources': 'Lead Sources',
@@ -6819,6 +6822,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminReports.kpiAcceptedDesc': '已发放录取',
     'adminReports.kpiRate': '录取率',
     'adminReports.kpiRateDesc': '录取数 / 申请总数',
+    // Phase 107 Batch 8: 入学 KPI（第 5 张）
+    'adminReports.kpiEnrolled': '已入学',
+    'adminReports.kpiEnrolledDesc': '本窗口内实际入学的学生 — 比「录取」更严格的信号',
     'adminReports.dailyTrends': '每日趋势',
     'adminReports.dailyTrendsDesc': '线索、申请与录取的时间序列',
     'adminReports.leadSources': '线索来源',
