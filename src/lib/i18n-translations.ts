@@ -2529,6 +2529,15 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminFees.paginationPrev': 'Previous',
     'adminFees.paginationNext': 'Next',
     'adminFees.paginationPageOf': 'Page {{page}} of {{totalPages}}',
+    // Phase 108 Batch 2: counts endpoint + per-currency KPI display
+    'adminFees.kpiRevenueCny': 'CNY revenue',
+    'adminFees.kpiRevenueUsd': 'USD revenue',
+    'adminFees.kpiRevenueEur': 'EUR revenue',
+    'adminFees.kpiPendingCny': 'CNY pending',
+    'adminFees.kpiPendingUsd': 'USD pending',
+    'adminFees.kpiPendingEur': 'EUR pending',
+    'adminFees.kpiOverdueCount': 'Overdue fees',
+    'adminFees.perStatusCappedHint': 'Showing estimates — pipeline exceeds 5000 rows.',
     // Phase 106 B3: Admin Settings (profile / password / site)
     'adminSettings.title': 'Settings',
     'adminSettings.subtitle': 'Manage your account and site settings',
@@ -6878,6 +6887,15 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminFees.paginationPrev': '上一页',
     'adminFees.paginationNext': '下一页',
     'adminFees.paginationPageOf': '第 {{page}} 页 / 共 {{totalPages}} 页',
+    // Phase 108 Batch 2: counts endpoint + per-currency KPI display
+    'adminFees.kpiRevenueCny': '人民币收入',
+    'adminFees.kpiRevenueUsd': '美元收入',
+    'adminFees.kpiRevenueEur': '欧元收入',
+    'adminFees.kpiPendingCny': '人民币待收',
+    'adminFees.kpiPendingUsd': '美元待收',
+    'adminFees.kpiPendingEur': '欧元待收',
+    'adminFees.kpiOverdueCount': '逾期费用',
+    'adminFees.perStatusCappedHint': '数据为估算值——管道超过 5000 行。',
     // Phase 106 B3: 管理后台设置（资料 / 密码 / 站点）
     'adminSettings.title': '设置',
     'adminSettings.subtitle': '管理你的账户与站点设置',

@@ -45,6 +45,15 @@ export default function AdminFeesPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [isCancelling, setIsCancelling] = useState<string | null>(null);
   const [feeToCancel, setFeeToCancel] = useState<AdminFee | null>(null);
+  // Phase 108 Batch 2: counts endpoint replaces the slice-math KPI bug.
+  const [counts, setCounts] = useState<{
+    paidCount: number;
+    pendingCount: number;
+    overdueCount: number;
+    totalRevenueByCurrency: Record<string, number>;
+    totalPendingByCurrency: Record<string, number>;
+    perStatusCapped?: boolean;
+  } | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -71,6 +80,22 @@ export default function AdminFeesPage() {
           setTotal(0);
           setTotalPages(1);
         }
+      });
+
+    // Counts fetch is parallel — independent of the list. A failure
+    // here doesn't block the list (the KPIs just stay at their last
+    // value, setCounts is never called with the failure).
+    apiFetchJson<{
+      paidCount: number;
+      pendingCount: number;
+      overdueCount: number;
+      totalRevenueByCurrency: Record<string, number>;
+      totalPendingByCurrency: Record<string, number>;
+      perStatusCapped?: boolean;
+    }>('/api/admin/fees/counts', { signal: controller.signal })
+      .then((c) => setCounts(c))
+      .catch(() => {
+        /* swallow — KPI cards keep last value */
       })
       .finally(() => {
         if (!controller.signal.aborted) setIsLoading(false);
@@ -141,13 +166,16 @@ export default function AdminFeesPage() {
     return matchesSearch && matchesStatus && matchesType && matchesStudent;
   });
 
-  const totalRevenue = fees
-    .filter(f => f.status === 'Paid')
-    .reduce((sum, f) => sum + (f.amountPaid || 0), 0);
-  
-  const pendingAmount = fees
-    .filter(f => f.status === 'Pending' || f.status === 'Partial')
-    .reduce((sum, f) => sum + (f.amount - (f.amountPaid || 0)), 0);
+  // Phase 108 Batch 2: read KPIs from the counts endpoint (accurate across
+  // the full pipeline) instead of computing from the visible page slice.
+  // Until the counts fetch lands we show 0; the KPIs render with a Skeleton
+  // on initial mount anyway.
+  const revenueCny = counts?.totalRevenueByCurrency?.CNY ?? 0;
+  const revenueUsd = counts?.totalRevenueByCurrency?.USD ?? 0;
+  const revenueEur = counts?.totalRevenueByCurrency?.EUR ?? 0;
+  const pendingCny = counts?.totalPendingByCurrency?.CNY ?? 0;
+  const pendingUsd = counts?.totalPendingByCurrency?.USD ?? 0;
+  const pendingEur = counts?.totalPendingByCurrency?.EUR ?? 0;
 
   if (isLoading) {
     return (
@@ -161,7 +189,7 @@ export default function AdminFeesPage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map(i => (
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => (
             <Skeleton key={i} className="h-24" />
           ))}
         </div>
@@ -196,32 +224,39 @@ export default function AdminFeesPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>{t('adminFees.kpiRevenue')}</CardDescription>
-            <CardTitle className="text-2xl text-green-600">¥{totalRevenue.toLocaleString()}</CardTitle>
+            <CardDescription>{t('adminFees.kpiRevenueCny')}</CardDescription>
+            <CardTitle className="text-2xl text-green-600">¥{revenueCny.toLocaleString()}</CardTitle>
           </CardHeader>
-          <CardContent className="flex items-center text-sm text-gray-600">
-            <ArrowUp className="h-4 w-4 mr-1 text-green-500" />
+          <CardContent className="text-sm text-gray-600">
+            <ArrowUp className="h-4 w-4 mr-1 text-green-500 inline" />
             {t('adminFees.kpiRevenueDesc')}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>{t('adminFees.kpiPendingAmount')}</CardDescription>
-            <CardTitle className="text-2xl text-amber-600">¥{pendingAmount.toLocaleString()}</CardTitle>
+            <CardDescription>{t('adminFees.kpiRevenueUsd')}</CardDescription>
+            <CardTitle className="text-2xl text-green-600">${revenueUsd.toLocaleString()}</CardTitle>
           </CardHeader>
-          <CardContent className="flex items-center text-sm text-gray-600">
-            <Clock className="h-4 w-4 mr-1 text-amber-500" />
-            {t('adminFees.kpiPendingAmountDesc')}
+          <CardContent className="text-sm text-gray-600">
+            {t('adminFees.kpiRevenueDesc')}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>{t('adminFees.kpiRevenueEur')}</CardDescription>
+            <CardTitle className="text-2xl text-green-600">€{revenueEur.toLocaleString()}</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-gray-600">
+            {t('adminFees.kpiRevenueDesc')}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>{t('adminFees.kpiPaidCount')}</CardDescription>
-            <CardTitle className="text-2xl">
-              {fees.filter(f => f.status === 'Paid').length}
-            </CardTitle>
+            <CardTitle className="text-2xl">{(counts?.paidCount ?? 0).toLocaleString()}</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-gray-600">
             {t('adminFees.kpiPaidCountDesc')}
@@ -230,16 +265,61 @@ export default function AdminFeesPage() {
 
         <Card>
           <CardHeader className="pb-2">
+            <CardDescription>{t('adminFees.kpiPendingCny')}</CardDescription>
+            <CardTitle className="text-2xl text-amber-600">¥{pendingCny.toLocaleString()}</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-gray-600">
+            <Clock className="h-4 w-4 mr-1 text-amber-500 inline" />
+            {t('adminFees.kpiPendingAmountDesc')}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>{t('adminFees.kpiPendingUsd')}</CardDescription>
+            <CardTitle className="text-2xl text-amber-600">${pendingUsd.toLocaleString()}</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-gray-600">
+            {t('adminFees.kpiPendingAmountDesc')}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>{t('adminFees.kpiPendingEur')}</CardDescription>
+            <CardTitle className="text-2xl text-amber-600">€{pendingEur.toLocaleString()}</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-gray-600">
+            {t('adminFees.kpiPendingAmountDesc')}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>{t('adminFees.kpiOverdueCount')}</CardDescription>
+            <CardTitle className="text-2xl text-red-600">{(counts?.overdueCount ?? 0).toLocaleString()}</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-gray-600">
+            {t('adminFees.kpiPendingCountDesc')}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
             <CardDescription>{t('adminFees.kpiPendingCount')}</CardDescription>
-            <CardTitle className="text-2xl text-amber-600">
-              {fees.filter(f => f.status === 'Pending' || f.status === 'Partial').length}
-            </CardTitle>
+            <CardTitle className="text-2xl text-amber-600">{(counts?.pendingCount ?? 0).toLocaleString()}</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-gray-600">
             {t('adminFees.kpiPendingCountDesc')}
           </CardContent>
         </Card>
       </div>
+
+      {counts?.perStatusCapped && (
+        <div className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-3 py-2 rounded">
+          {t('adminFees.perStatusCappedHint')}
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex-1">
