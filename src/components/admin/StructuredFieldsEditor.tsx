@@ -18,11 +18,19 @@
  * The fields are independent — the parent picks which ones to
  * include via the `field` prop. The component doesn't know (or
  * care) about the rest of the form.
+ *
+ * Phase 106: every chrome string is now pulled from the admin
+ * i18n context under the `adminNews.structuredFields.*` namespace
+ * (with one shared `adminCommon.moveUp` / `.moveDown` / `.remove`
+ * triplet for the row controls that are shared by all 4 field
+ * variants). The icon + field shape stay in TS — only the user-
+ * facing copy translates.
  */
 
 import React, { useCallback } from 'react';
 import { Plus, X, GripVertical, ArrowUp, ArrowDown, ListChecks, BookOpen, HelpCircle, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useI18n } from '@/lib/i18n';
 
 type StructuredField = 'key_takeaways' | 'at_a_glance' | 'faq' | 'sources';
 
@@ -38,47 +46,46 @@ interface Props {
   onChange: (next: unknown) => void;
 }
 
-const FIELD_META: Record<StructuredField, {
-  title: string;
-  description: string;
+interface FieldMetaShape {
   icon: React.ElementType;
-  addLabel: string;
-  emptyHint: string;
-}> = {
-  key_takeaways: {
-    title: 'Key takeaways (AEO)',
-    description: '3-5 short bullets that power the TL;DR box on the public post. Each under 90 characters.',
-    icon: ListChecks,
-    addLabel: 'Add takeaway',
-    emptyHint: 'No takeaways yet. Add 3-5 distilled facts that a reader should remember.',
-  },
-  at_a_glance: {
-    title: 'At a glance (GEO)',
-    description: '4-6 {label, value} fact rows. LLMs (ChatGPT, Perplexity, Claude) extract from these when composing answers. Keep values short and atomic — years, numbers, deadlines, ranks.',
-    icon: BookOpen,
-    addLabel: 'Add fact',
-    emptyHint: 'No facts yet. Add specific data points (founded, QS rank, tuition, deadline…).',
-  },
-  faq: {
-    title: 'Frequently asked questions (AEO)',
-    description: '3-5 Q&A pairs. Rendered as a visible accordion AND as FAQPage JSON-LD (Google rich result). Each answer 40-60 words, leads with the answer.',
-    icon: HelpCircle,
-    addLabel: 'Add Q&A',
-    emptyHint: 'No Q&A yet. Real questions a student would type into Google.',
-  },
-  sources: {
-    title: 'Sources (GEO)',
-    description: '2-4 {label, url} citations. Rendered as a footer + Article JSON-LD isBasedOn. Public sources only (campuschina.org, moe.gov.cn, the university\'s own page, Wikipedia).',
-    icon: ExternalLink,
-    addLabel: 'Add source',
-    emptyHint: 'No sources yet. Add 2-4 public references that ground the claims in the body.',
-  },
+}
+
+// The labels / hints / descriptions all move into the component
+// body so they can be read from useI18n() per render — leaving
+// only the icon mapping here keeps the icon stable across locales
+// while the text is rendered from the locale table.
+const FIELD_META: Record<StructuredField, FieldMetaShape> = {
+  key_takeaways: { icon: ListChecks },
+  at_a_glance: { icon: BookOpen },
+  faq: { icon: HelpCircle },
+  sources: { icon: ExternalLink },
 };
 
 export function StructuredFieldsEditor({ field, value, onChange }: Props) {
+  const { t } = useI18n();
   const meta = FIELD_META[field];
   const Icon = meta.icon;
   const rows = Array.isArray(value) ? (value as AnyRow[]) : [];
+
+  // Resolve the field-specific chrome once per render. The keys
+  // are namespaced under adminNews.structuredFields.* and use the
+  // field name as a sub-namespace (e.g.
+  // adminNews.structuredFields.keyTakeaways.title).
+  const ns = `adminNews.structuredFields.${camelCase(field)}`;
+  const title = t(`${ns}.title`);
+  const description = t(`${ns}.description`);
+  const addLabel = t(`${ns}.addLabel`);
+  const emptyHint = t(`${ns}.emptyHint`);
+
+  const placeholders = {
+    keyTakeaway: t(`${ns}.placeholders.takeaway`),
+    glanceLabel: t(`${ns}.placeholders.glanceLabel`),
+    glanceValue: t(`${ns}.placeholders.glanceValue`),
+    faqQuestion: t(`${ns}.placeholders.faqQuestion`),
+    faqAnswer: t(`${ns}.placeholders.faqAnswer`),
+    sourceLabel: t(`${ns}.placeholders.sourceLabel`),
+    sourceUrl: t(`${ns}.placeholders.sourceUrl`),
+  };
 
   const setRows = useCallback(
     (next: AnyRow[]) => onChange(next),
@@ -123,13 +130,13 @@ export function StructuredFieldsEditor({ field, value, onChange }: Props) {
     <div className="bg-white border border-gray-200 p-5">
       <div className="flex items-center gap-2 mb-1">
         <Icon className="h-4 w-4 text-[#1B2A4A]" />
-        <h3 className="text-sm font-semibold text-[#1B2A4A]">{meta.title}</h3>
+        <h3 className="text-sm font-semibold text-[#1B2A4A]">{title}</h3>
       </div>
-      <p className="text-xs text-gray-500 mb-4">{meta.description}</p>
+      <p className="text-xs text-gray-500 mb-4">{description}</p>
 
       {rows.length === 0 ? (
         <div className="border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500">
-          {meta.emptyHint}
+          {emptyHint}
         </div>
       ) : (
         <div className="space-y-3">
@@ -146,7 +153,7 @@ export function StructuredFieldsEditor({ field, value, onChange }: Props) {
                     onClick={() => move(idx, -1)}
                     disabled={idx === 0}
                     className="text-gray-400 hover:text-[#1B2A4A] disabled:opacity-30"
-                    title="Move up"
+                    title={t('adminCommon.moveUp')}
                   >
                     <ArrowUp className="h-3.5 w-3.5" />
                   </button>
@@ -156,7 +163,7 @@ export function StructuredFieldsEditor({ field, value, onChange }: Props) {
                     onClick={() => move(idx, 1)}
                     disabled={idx === rows.length - 1}
                     className="text-gray-400 hover:text-[#1B2A4A] disabled:opacity-30"
-                    title="Move down"
+                    title={t('adminCommon.moveDown')}
                   >
                     <ArrowDown className="h-3.5 w-3.5" />
                   </button>
@@ -172,7 +179,7 @@ export function StructuredFieldsEditor({ field, value, onChange }: Props) {
                         next[idx] = e.target.value;
                         setRows(next);
                       }}
-                      placeholder="e.g. CSC covers tuition, dorm, and ¥2,500/month stipend"
+                      placeholder={placeholders.keyTakeaway}
                       className="w-full px-3 py-2 border border-gray-300 text-sm focus:outline-none focus:border-[#9B1B30]"
                     />
                   ) : field === 'at_a_glance' ? (
@@ -181,14 +188,14 @@ export function StructuredFieldsEditor({ field, value, onChange }: Props) {
                         type="text"
                         value={(row as GlanceRow).label}
                         onChange={(e) => updateAt(idx, { label: e.target.value })}
-                        placeholder="Label (e.g. QS Rank)"
+                        placeholder={placeholders.glanceLabel}
                         className="px-3 py-2 border border-gray-300 text-sm focus:outline-none focus:border-[#9B1B30]"
                       />
                       <input
                         type="text"
                         value={(row as GlanceRow).value}
                         onChange={(e) => updateAt(idx, { value: e.target.value })}
-                        placeholder="Value (e.g. #20 (2025))"
+                        placeholder={placeholders.glanceValue}
                         className="col-span-2 px-3 py-2 border border-gray-300 text-sm focus:outline-none focus:border-[#9B1B30]"
                       />
                     </div>
@@ -198,14 +205,14 @@ export function StructuredFieldsEditor({ field, value, onChange }: Props) {
                         type="text"
                         value={(row as FaqRow).question}
                         onChange={(e) => updateAt(idx, { question: e.target.value })}
-                        placeholder="Question (conversational, include the target keyword)"
+                        placeholder={placeholders.faqQuestion}
                         className="w-full px-3 py-2 border border-gray-300 text-sm font-medium focus:outline-none focus:border-[#9B1B30]"
                       />
                       <textarea
                         value={(row as FaqRow).answer}
                         onChange={(e) => updateAt(idx, { answer: e.target.value })}
                         rows={3}
-                        placeholder="40-60 word answer. Lead with the answer, not preamble."
+                        placeholder={placeholders.faqAnswer}
                         className="w-full px-3 py-2 border border-gray-300 text-sm focus:outline-none focus:border-[#9B1B30] resize-none"
                       />
                     </>
@@ -215,14 +222,14 @@ export function StructuredFieldsEditor({ field, value, onChange }: Props) {
                         type="text"
                         value={(row as SourceRow).label}
                         onChange={(e) => updateAt(idx, { label: e.target.value })}
-                        placeholder="Label (e.g. CSC 2025 Annual Report)"
+                        placeholder={placeholders.sourceLabel}
                         className="col-span-2 px-3 py-2 border border-gray-300 text-sm focus:outline-none focus:border-[#9B1B30]"
                       />
                       <input
                         type="url"
                         value={(row as SourceRow).url}
                         onChange={(e) => updateAt(idx, { url: e.target.value })}
-                        placeholder="https://..."
+                        placeholder={placeholders.sourceUrl}
                         className="px-3 py-2 border border-gray-300 text-sm font-mono focus:outline-none focus:border-[#9B1B30]"
                       />
                     </div>
@@ -233,7 +240,7 @@ export function StructuredFieldsEditor({ field, value, onChange }: Props) {
                   type="button"
                   onClick={() => removeAt(idx)}
                   className="text-gray-400 hover:text-red-600 mt-1"
-                  title="Remove"
+                  title={t('adminCommon.remove')}
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -251,8 +258,16 @@ export function StructuredFieldsEditor({ field, value, onChange }: Props) {
         onClick={addRow}
       >
         <Plus className="h-3.5 w-3.5 mr-1.5" />
-        {meta.addLabel}
+        {addLabel}
       </Button>
     </div>
   );
+}
+
+// Map the DB column name to the camelCase sub-namespace used in
+// the i18n table. Keeping the conversion local to this file
+// means changing the DB column later doesn't break translation
+// lookup as long as the sub-namespace keys stay in sync.
+function camelCase(s: string): string {
+  return s.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
 }
