@@ -39,6 +39,23 @@ export default function StudentRegisterPage() {
     e.preventDefault();
     setError('');
 
+    const requiredFields: Array<{ key: string; label: string; value: string }> = [
+      { key: 'firstName', label: t('studentRegister.firstName'), value: firstName },
+      { key: 'lastName', label: t('studentRegister.lastName'), value: lastName },
+      { key: 'email', label: t('studentRegister.email'), value: email },
+      { key: 'country', label: t('studentRegister.country'), value: country },
+      { key: 'whatsapp', label: t('studentRegister.whatsapp'), value: whatsapp },
+      { key: 'degree', label: t('studentRegister.degree'), value: degree },
+      { key: 'interestedProgram', label: t('studentRegister.interestedProgram'), value: interestedProgram },
+      { key: 'password', label: t('studentRegister.password'), value: password },
+      { key: 'confirmPassword', label: t('studentRegister.confirmPassword'), value: confirmPassword },
+    ];
+    const missing = requiredFields.find((f) => !f.value.trim());
+    if (missing) {
+      setError(t('studentRegister.fieldRequired', { field: missing.label }));
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError(t('studentRegister.passwordMismatch'));
       return;
@@ -49,21 +66,16 @@ export default function StudentRegisterPage() {
       return;
     }
 
-    if (!firstName.trim() || !lastName.trim()) {
-      setError(t('studentRegister.nameRequired'));
-      return;
-    }
-
     setLoading(true);
 
     const fullName = `${firstName.trim()} ${lastName.trim()}`;
     const { error } = await signUp(email, password, fullName, 'student', {
       first_name: firstName.trim(),
       last_name: lastName.trim(),
-      country: country.trim() || undefined,
-      whatsapp: whatsapp.trim() || undefined,
-      degree: degree.trim() || undefined,
-      interested_program: interestedProgram.trim() || undefined,
+      country: country.trim(),
+      whatsapp: whatsapp.trim(),
+      degree: degree.trim(),
+      interested_program: interestedProgram.trim(),
     });
     if (error) {
       setError(error);

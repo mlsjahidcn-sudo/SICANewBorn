@@ -679,7 +679,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'studentRegister.signIn': 'Sign in',
     'studentRegister.passwordTooShort': 'Password must be at least 8 characters',
     'studentRegister.passwordMismatch': 'Passwords do not match',
-    'studentRegister.nameRequired': 'First and last name are required',
+    'studentRegister.fieldRequired': '{{field}} is required',
     'studentRegister.consent': 'I agree to the Terms of Service and Privacy Policy',
     'studentRegister.backToSite': '← Back to SICA Website',
     // Student Portal — applications list
@@ -5213,7 +5213,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'studentRegister.signIn': '登录',
     'studentRegister.passwordTooShort': '密码至少需要 8 个字符',
     'studentRegister.passwordMismatch': '两次输入的密码不一致',
-    'studentRegister.nameRequired': '请输入名和姓',
+    'studentRegister.fieldRequired': '请填写{{field}}',
     'studentRegister.consent': '我同意服务条款和隐私政策',
     'studentRegister.backToSite': '← 返回 SICA 官网',
     // Student Portal — applications list

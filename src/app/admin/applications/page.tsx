@@ -858,11 +858,18 @@ export default function AdminApplicationsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Students</SelectItem>
-                    {students.map(student => (
-                      <SelectItem key={student.id} value={student.id}>
-                        {student.firstName} {student.lastName}
-                      </SelectItem>
-                    ))}
+                    {students
+                      .map(student => {
+                        const fullName = `${student.firstName ?? ''} ${student.lastName ?? ''}`.trim();
+                        const label = fullName || student.email || student.id.slice(0, 8);
+                        return { id: student.id, label };
+                      })
+                      .filter(({ label }) => label.length > 0)
+                      .map(({ id, label }) => (
+                        <SelectItem key={id} value={id}>
+                          {label}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -962,7 +969,7 @@ export default function AdminApplicationsPage() {
                             ? 'indeterminate'
                             : false
                         }
-                        onChange={toggleSelectAllVisible}
+                        onCheckedChange={toggleSelectAllVisible}
                         aria-label="Select all visible"
                       />
                     </th>
@@ -1094,7 +1101,7 @@ export default function AdminApplicationsPage() {
                           <td className="px-4 py-4 w-10" onClick={(e) => e.stopPropagation()}>
                             <Checkbox
                               checked={isSelected}
-                              onChange={() => toggleSelected(application.id)}
+                              onCheckedChange={() => toggleSelected(application.id)}
                               aria-label={`Select ${application.studentName || 'application'}`}
                             />
                           </td>
