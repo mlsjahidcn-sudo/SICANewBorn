@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { apiFetchJson } from '@/lib/api-client';
+import { useI18n } from '@/lib/i18n';
 
 const STATUS_OPTIONS = [
   { value: 'Draft', label: 'Draft' },
@@ -74,6 +75,7 @@ export default function AdminApplicationEditPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
+  const { t } = useI18n();
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -213,7 +215,7 @@ export default function AdminApplicationEditPage() {
         <Card>
           <CardContent className="pt-6 text-center py-12">
             <AlertCircle className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-            <h3 className="text-lg font-semibold mb-2">Application Not Found</h3>
+            <h3 className="text-lg font-semibold mb-2">{t('adminAppEdit.notFoundTitle')}</h3>
           </CardContent>
         </Card>
       </div>
@@ -227,14 +229,14 @@ export default function AdminApplicationEditPage() {
       <div className="flex items-center justify-between">
         <Button variant="ghost" onClick={() => router.push(`/admin/applications/${id}`)}>
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Application
+          {t('adminAppEdit.backToApplication')}
         </Button>
-        <Badge className="bg-[#1B2A4A] text-white">Edit Application</Badge>
+        <Badge className="bg-[#1B2A4A] text-white">{t('adminAppEdit.title')}</Badge>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Application Details</CardTitle>
+          <CardTitle>{t('adminAppEdit.sectionDetails')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -388,11 +390,9 @@ export default function AdminApplicationEditPage() {
       {!isLinked && (
         <Card>
           <CardHeader>
-            <CardTitle>Applicant Info (lead path)</CardTitle>
+            <CardTitle>{t('adminAppEdit.applicantSection')}</CardTitle>
             <p className="text-xs text-gray-500">
-              This application has no linked student account. Edit the applicant's contact info here —
-              until the claim flow ships, leave this section as-is and let the lead convert into a student
-              on its own.
+              {t('adminAppEdit.applicantHint')}
             </p>
           </CardHeader>
           <CardContent className="space-y-4">

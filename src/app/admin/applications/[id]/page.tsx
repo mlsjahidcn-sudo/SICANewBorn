@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DocumentsTab } from '../_components/documents-tab';
+import { NotesTab } from '../_components/notes-tab';
 import { apiFetch, apiFetchJson } from '@/lib/api-client';
 import { APPLICATION_STATUSES, type ApplicationStatus } from '@/lib/application-mapper';
 import { useI18n } from '@/lib/i18n';
@@ -280,6 +281,10 @@ export default function AdminApplicationDetailPage() {
                 <FileText className="h-3 w-3 mr-1 inline" />
                 {t('adminAppDetail.tabDocuments')}
               </TabsTrigger>
+              <TabsTrigger value="notes">
+                <Edit className="h-3 w-3 mr-1 inline" />
+                {t('adminAppDetail.tabNotes')}
+              </TabsTrigger>
               <TabsTrigger value="timeline">
                 <Clock className="h-3 w-3 mr-1 inline" />
                 {t('adminAppDetail.tabTimeline')}
@@ -344,6 +349,10 @@ export default function AdminApplicationDetailPage() {
                 applicationId={app.id}
                 studentId={app.studentId || null}
               />
+            </TabsContent>
+
+            <TabsContent value="notes">
+              <NotesTab applicationId={app.id} />
             </TabsContent>
 
             <TabsContent value="timeline">
