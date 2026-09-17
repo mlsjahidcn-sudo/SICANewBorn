@@ -857,7 +857,7 @@ export default function PartnerApplicationsPage() {
          admin pattern; per-row result toast tells the user
          how many rows were updated vs failed. */}
      {selectedIds.size > 0 && (
-       <div className="fixed bottom-0 left-0 right-0 z-30 border-t-2 border-[#9B1B30] bg-white shadow-lg">
+       <div className="sticky bottom-0 z-30 border-t-2 border-[#9B1B30] bg-white shadow-lg">
          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-3 flex-wrap">
            <span className="text-sm font-semibold text-[#1B2A4A]">
              {t('partnerApps.bulkSelected', { n: selectedIds.size })}

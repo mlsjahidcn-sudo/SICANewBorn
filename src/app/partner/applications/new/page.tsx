@@ -280,6 +280,11 @@ export default function PartnerNewApplicationPage() {
         // Section 6 — program & application
         university: formData.university.trim(),
         program: formData.program.trim(),
+        // Phase 112: persist the catalog slug alongside the human-readable
+        // program name. The SearchableSelect sets formData.programSlug
+        // when the partner picks a row. Manual-mode rows (notInCatalog
+        // checked) send empty string → DB NULL.
+        programSlug: formData.programSlug.trim() || undefined,
         intake: formData.intake.trim() || undefined,
         degree: formData.degree || undefined,
         hasStudiedInChina: formData.hasStudiedInChina,

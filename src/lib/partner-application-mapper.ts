@@ -195,6 +195,11 @@ export interface PartnerApplication {
   studentPhone?: string | null;
   university: string;
   program: string;
+  // Phase 112: catalog programs.slug at write time. NULL means the
+  // row was created with a free-text program not in the live
+  // catalog (manual-mode row). The edit page matches by slug first,
+  // falls back to name when this is null.
+  programSlug?: string | null;
   intake?: string | null;
   degree?: string | null;
   nationality?: string | null;
@@ -340,6 +345,7 @@ interface RawPartnerApplication {
   student_phone?: string | null;
   university: string;
   program: string;
+  program_slug?: string | null;
   intake?: string | null;
   degree?: string | null;
   nationality?: string | null;
@@ -418,6 +424,7 @@ export function mapPartnerApplicationFromDb(row: RawPartnerApplication): Partner
     studentPhone: row.student_phone ?? null,
     university: row.university ?? '',
     program: row.program ?? '',
+    programSlug: row.program_slug ?? null,
     intake: row.intake ?? null,
     degree: row.degree ?? null,
     nationality: row.nationality ?? null,
@@ -554,6 +561,14 @@ export function mapPartnerApplicationToDb(
   if (payload.studentPhone !== undefined) row.student_phone = payload.studentPhone || null;
   if (payload.university !== undefined) row.university = String(payload.university).trim();
   if (payload.program !== undefined) row.program = String(payload.program).trim();
+  // Phase 112: persist the catalog slug alongside the human-readable
+  // program name. Caller (PartnerApplicationForm) sends both via the
+  // SearchableSelect — slug is the canonical lookup key. Trim to
+  // empty string → NULL so the index stays clean.
+  if (payload.programSlug !== undefined) {
+    const slug = String(payload.programSlug).trim();
+    row.program_slug = slug || null;
+  }
   if (payload.intake !== undefined) row.intake = payload.intake || null;
   if (payload.degree !== undefined) {
     if (payload.degree && !parsePartnerApplicationDegree(payload.degree)) {

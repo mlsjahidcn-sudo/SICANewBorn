@@ -69,11 +69,17 @@ export default function PartnerEditApplicationPage() {
       const a = res.application;
       setUniversities(u.universities || []);
       setPrograms(p.programs || []);
-      // Phase A: derive programSlug from the stored program name so the
-      // SearchableSelect can display the selected program. If the name
-      // has changed or isn't in the live catalog, the picker stays empty
-      // and the partner can re-select.
-      const matchedProgram = (p.programs || []).find((prog) => prog.name === a.program);
+      // Phase 112: prefer matching by `program_slug` (set on write
+      // by the new-app form's SearchableSelect). Falls back to name
+      // matching for rows that pre-date Phase 112 or were created
+      // without a slug (manual-mode rows where partner typed
+      // free-text). Without the slug-preference, two programs at
+      // the same school sharing a name (BSc + MSc "Computer
+      // Science") would resolve to whichever sorted first.
+      const matchedProgram = a.programSlug
+        ? (p.programs || []).find((prog) => prog.slug === a.programSlug)
+          ?? (p.programs || []).find((prog) => prog.name === a.program)
+        : (p.programs || []).find((prog) => prog.name === a.program);
       const loaded: PartnerApplicationFormData = {
         studentId: a.studentId ?? '',
         studentName: a.studentName ?? '',
