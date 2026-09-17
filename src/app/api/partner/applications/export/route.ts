@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireTeamMember, getServerEnv } from '@/lib/supabase-auth';
+import { requireTeamMember, getServerEnv, buildServiceClient } from '@/lib/supabase-auth';
+import { hydrateUserEmails } from '@/lib/partner-user-lookup';
 import {
   mapPartnerApplicationFromDb,
   parsePartnerApplicationStatus,
@@ -80,7 +81,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Hydrate created_by_email the same way the list endpoint does
+    // Hydrate created_by_email the same way the list endpoint does.
+    // Phase 111a: previously used `auth.admin.listUsers({ perPage: 200 })`
+    // which silently truncated at 201+ users AND leaked the entire
+    // project's auth.users into the partner server's memory. Now via
+    // the partner-scoped helper (parallel `getUserById` + 60s cache).
     const userIds = Array.from(
       new Set(
         (data || [])
@@ -90,12 +95,9 @@ export async function GET(request: NextRequest) {
     );
     const emailMap = new Map<string, string>();
     if (userIds.length) {
-      const { buildServiceClient } = await import('@/lib/supabase-auth');
-      const { data: usersPage } = await buildServiceClient().auth.admin.listUsers({
-        perPage: 200,
-      });
-      for (const u of usersPage?.users || []) {
-        if (userIds.includes(u.id)) emailMap.set(u.id, u.email || '');
+      const hydrated = await hydrateUserEmails(buildServiceClient(), userIds);
+      for (const [uid, meta] of hydrated) {
+        if (meta.email) emailMap.set(uid, meta.email);
       }
     }
 
@@ -200,6 +202,10 @@ export async function GET(request: NextRequest) {
         'Cache-Control': 'no-store',
         'X-Row-Count': String(rows.length),
         'X-Max-Rows': String(MAX_EXPORT_ROWS),
+        // Phase 111b: explicit truncation flag. Client reads this
+        // and surfaces a banner so the partner knows they hit the
+        // 1000-row cap (and which filters to narrow).
+        'X-Truncated': String(rows.length >= MAX_EXPORT_ROWS),
       },
     });
   } catch (err) {

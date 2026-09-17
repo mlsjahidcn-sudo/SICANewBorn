@@ -17,6 +17,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { requireTeamMember, buildServiceClient, getServerEnv } from '@/lib/supabase-auth';
+import { hydrateUserEmails } from '@/lib/partner-user-lookup';
 
 export const dynamic = 'force-dynamic';
 
@@ -79,12 +80,14 @@ export async function GET(
     return NextResponse.json({ reviewer: null });
   }
 
-  // Hydrate the email via auth.admin. We batch up to 200 users
-  // per call (Supabase limit) and find our actor. Cheap on a
-  // 1-row result; could be optimized to a direct getUserById
-  // but the batched call keeps the code simple.
-  const { data: usersPage } = await service.auth.admin.listUsers({ perPage: 200 });
-  const email = usersPage?.users.find((u) => u.id === createdBy)?.email || null;
+  // Phase 111a: hydrate via the partner-scoped helper instead of
+  // `auth.admin.listUsers({ perPage: 200 })`. The old call silently
+  // truncated the email lookup at 201+ users in the project AND
+  // pulled every auth.users row into the partner server's memory
+  // (privacy leak). `hydrateUserEmails` does a direct
+  // `getUserById` for just the one id we need, with a 60s cache.
+  const hydrated = await hydrateUserEmails(service, [createdBy]);
+  const email = hydrated.get(createdBy)?.email || null;
 
   return NextResponse.json({
     reviewer: {
