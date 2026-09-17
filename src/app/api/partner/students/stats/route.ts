@@ -25,54 +25,67 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // We need counts for active (non-archived) rows by status and a
-    // separate archived count. Supabase doesn't support GROUP BY in
-    // the JS client, so we issue two cheap count queries + one status
-    // breakdown fetch. For partners with very large student lists,
-    // fetching all rows to count in JS is expensive; we instead fetch
-    // only the status column for active rows.
-    const [activeStatusesRes, archivedCountRes] = await Promise.all([
-      auth.supabase
-        .from('partner_students')
-        .select('status')
-        .is('archived_at', null),
-      auth.supabase
-        .from('partner_students')
-        .select('id', { count: 'exact', head: true })
-        .not('archived_at', 'is', null),
-    ]);
+    // Phase 111d: was selecting all active rows' `status` column and
+    // counting in JS. For a 10k-row partner this is a 10k-row network
+    // payload to count 6 buckets. Replaced with per-bucket `count:
+    // 'exact'` queries — same answer, 0-byte payload for the JS side.
+    // 7 buckets in parallel.
+    const archivedQ = auth.supabase
+      .from('partner_students')
+      .select('id', { count: 'exact', head: true })
+      .not('archived_at', 'is', null);
 
-    if (activeStatusesRes.error) {
-      console.error('[partner/students/stats GET] active statuses error:', activeStatusesRes.error);
-      return NextResponse.json({ error: activeStatusesRes.error.message }, { status: 500 });
+    const newQ = auth.supabase
+      .from('partner_students')
+      .select('id', { count: 'exact', head: true })
+      .is('archived_at', null)
+      .eq('status', 'New');
+
+    const inProgressQ = auth.supabase
+      .from('partner_students')
+      .select('id', { count: 'exact', head: true })
+      .is('archived_at', null)
+      .eq('status', 'In Progress');
+
+    const appliedQ = auth.supabase
+      .from('partner_students')
+      .select('id', { count: 'exact', head: true })
+      .is('archived_at', null)
+      .eq('status', 'Applied');
+
+    const acceptedQ = auth.supabase
+      .from('partner_students')
+      .select('id', { count: 'exact', head: true })
+      .is('archived_at', null)
+      .eq('status', 'Accepted');
+
+    const rejectedQ = auth.supabase
+      .from('partner_students')
+      .select('id', { count: 'exact', head: true })
+      .is('archived_at', null)
+      .eq('status', 'Rejected');
+
+    const [archivedRes, newRes, inProgressRes, appliedRes, acceptedRes, rejectedRes] =
+      await Promise.all([archivedQ, newQ, inProgressQ, appliedQ, acceptedQ, rejectedQ]);
+
+    const firstError = [archivedRes, newRes, inProgressRes, appliedRes, acceptedRes, rejectedRes]
+      .find((r) => r.error);
+    if (firstError?.error) {
+      console.error('[partner/students/stats GET] count error:', firstError.error.message);
+      return NextResponse.json({ error: firstError.error.message }, { status: 500 });
     }
-    if (archivedCountRes.error) {
-      console.error('[partner/students/stats GET] archived count error:', archivedCountRes.error);
-      return NextResponse.json({ error: archivedCountRes.error.message }, { status: 500 });
-    }
 
-    const rows = (activeStatusesRes.data || []) as { status?: string | null }[];
-    const counts = {
-      total: rows.length + (archivedCountRes.count || 0),
-      new: 0,
-      inProgress: 0,
-      applied: 0,
-      accepted: 0,
-      rejected: 0,
-      archived: archivedCountRes.count || 0,
-    };
-
-    for (const row of rows) {
-      switch (row.status) {
-        case 'New': counts.new++; break;
-        case 'In Progress': counts.inProgress++; break;
-        case 'Applied': counts.applied++; break;
-        case 'Accepted': counts.accepted++; break;
-        case 'Rejected': counts.rejected++; break;
-      }
-    }
-
-    return NextResponse.json(counts);
+    const total = (newRes.count || 0) + (inProgressRes.count || 0) + (appliedRes.count || 0) +
+      (acceptedRes.count || 0) + (rejectedRes.count || 0) + (archivedRes.count || 0);
+    return NextResponse.json({
+      total,
+      new: newRes.count || 0,
+      inProgress: inProgressRes.count || 0,
+      applied: appliedRes.count || 0,
+      accepted: acceptedRes.count || 0,
+      rejected: rejectedRes.count || 0,
+      archived: archivedRes.count || 0,
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[partner/students/stats GET] unhandled:', err);

@@ -14,16 +14,17 @@ import { Card, CardContent } from '@/components/ui/card';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
+import { isDeepEqual } from '@/lib/object-equal';
 import { getPartnerStudentStatusLabel } from '@/lib/partner-enum-labels';
 import {
   PARTNER_STUDENT_STATUSES,
   PartnerStudentStatus,
 } from '@/lib/partner-student-mapper';
-import { COMMON_COUNTRIES, NATIONALITY_CUSTOM } from '@/lib/common-countries';
+import { COMMON_COUNTRIES, NATIONALITY_CUSTOM, NATIONALITY_NONE } from '@/lib/common-countries';
 // Phase 54: shadcn <Select> reserves '' for the placeholder state —
-// can't use empty string as a SelectItem value. Same sentinel as
-// the new-student form.
-const NATIONALITY_NONE = '__none__';
+// can't use empty string as a SelectItem value. Phase 111d: the
+// sentinel + helper now live in @/lib/common-countries so the
+// new-student form doesn't have to redeclare them.
 import type { University, Program } from '@/lib/data';
 
 interface FormData {
@@ -170,9 +171,12 @@ export default function PartnerEditStudentPage() {
       if (isSaving) return; // mid-save: let the navigation happen
       const initial = initialFormDataRef.current;
       if (!initial || !formData) return;
-      // Cheap dirty check: stringify + compare. We only
-      // call this on beforeunload so the cost is fine.
-      if (JSON.stringify(initial) === JSON.stringify(formData)) return;
+      // Phase 111d: was JSON.stringify(initial) === JSON.stringify(formData).
+      // Stringify is order-dependent (V8 serializes keys in
+      // declaration order) so any refactor that reorders keys
+      // silently breaks dirty detection. Use the structural
+      // helper instead.
+      if (isDeepEqual(initial, formData)) return;
       e.preventDefault();
       e.returnValue = '';
     };
@@ -202,7 +206,7 @@ export default function PartnerEditStudentPage() {
     // values — a "gmial.com" typo used to silently store.
     const trimmedEmail = formData.studentEmail.trim();
     if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      setError(t('partnerAppNew.errorStudentEmailInvalid'));
+      setError(t('partnerStudentEdit.errorStudentEmailInvalid'));
       return;
     }
 

@@ -25,62 +25,92 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Fetch active rows' status + priority, plus an exact archived count.
+    // Phase 111d: was selecting active rows (status + priority) and
+    // counting in JS. For a partner with 10k rows this is a 10k-row
+    // network payload to count a single bucket. Replaced with
+    // per-bucket `count: 'exact'` queries — same answer, 0-byte
+    // payload for the JS side. 6 buckets in parallel.
+    //
+    // Buckets:
+    //   inReview = Submitted + In Review (cross-taxonomy)
+    //   submitted = Submitted only
+    //   accepted = Accepted
+    //   urgent = priority IN (High, Urgent)
+    //   archived = archived_at NOT NULL
+    //   total = archived + (active rows in any status)
+    //
     // Phase 1: scope to the calling partner (and member if applicable).
-    let activeQ = auth.supabase
-      .from('partner_applications')
-      .select('status,priority')
-      .is('archived_at', null)
-      .eq('partner_id', auth.partnerId);
-    let archivedQ = auth.supabase
+    // The Supabase builder type narrows on each .eq() call, so we
+    // build each query inline with a fresh chain (no shared helper).
+    const basePartner = () =>
+      auth.supabase
+        .from('partner_applications')
+        .select('id', { count: 'exact', head: true })
+        .eq('partner_id', auth.partnerId)
+        .is('archived_at', null);
+    const basePartnerArchived = () =>
+      auth.supabase
+        .from('partner_applications')
+        .select('id', { count: 'exact', head: true })
+        .eq('partner_id', auth.partnerId)
+        .not('archived_at', 'is', null);
+
+    const totalActiveQ = basePartner();
+    const archivedQ = basePartnerArchived();
+    const inReviewQ = auth.supabase
       .from('partner_applications')
       .select('id', { count: 'exact', head: true })
-      .not('archived_at', 'is', null)
-      .eq('partner_id', auth.partnerId);
+      .eq('partner_id', auth.partnerId)
+      .is('archived_at', null)
+      .in('status', ['Submitted', 'In Review']);
+    const submittedQ = auth.supabase
+      .from('partner_applications')
+      .select('id', { count: 'exact', head: true })
+      .eq('partner_id', auth.partnerId)
+      .is('archived_at', null)
+      .eq('status', 'Submitted');
+    const acceptedQ = auth.supabase
+      .from('partner_applications')
+      .select('id', { count: 'exact', head: true })
+      .eq('partner_id', auth.partnerId)
+      .is('archived_at', null)
+      .eq('status', 'Accepted');
+    const urgentQ = auth.supabase
+      .from('partner_applications')
+      .select('id', { count: 'exact', head: true })
+      .eq('partner_id', auth.partnerId)
+      .is('archived_at', null)
+      .in('priority', ['High', 'Urgent']);
 
+    // Phase 1 continued: team members only see rows they created.
     if (auth.role === 'member') {
-      activeQ = activeQ.eq('created_by_user_id', auth.user.id);
-      archivedQ = archivedQ.eq('created_by_user_id', auth.user.id);
+      totalActiveQ.eq('created_by_user_id', auth.user.id);
+      archivedQ.eq('created_by_user_id', auth.user.id);
+      inReviewQ.eq('created_by_user_id', auth.user.id);
+      submittedQ.eq('created_by_user_id', auth.user.id);
+      acceptedQ.eq('created_by_user_id', auth.user.id);
+      urgentQ.eq('created_by_user_id', auth.user.id);
     }
 
-    const [activeRes, archivedCountRes] = await Promise.all([activeQ, archivedQ]);
+    const [totalRes, archivedRes, inReviewRes, submittedRes, acceptedRes, urgentRes] =
+      await Promise.all([totalActiveQ, archivedQ, inReviewQ, submittedQ, acceptedQ, urgentQ]);
 
-    if (activeRes.error) {
-      console.error('[partner/applications/stats GET] active rows error:', activeRes.error);
-      return NextResponse.json({ error: activeRes.error.message }, { status: 500 });
-    }
-    if (archivedCountRes.error) {
-      console.error('[partner/applications/stats GET] archived count error:', archivedCountRes.error);
-      return NextResponse.json({ error: archivedCountRes.error.message }, { status: 500 });
-    }
-
-    const rows = (activeRes.data || []) as Array<{ status?: string | null; priority?: string | null }>;
-    const archived = archivedCountRes.count || 0;
-    const counts = {
-      total: rows.length + archived,
-      inReview: 0,
-      submitted: 0,
-      accepted: 0,
-      urgent: 0,
-      archived,
-    };
-
-    for (const row of rows) {
-      if (row.status === 'Submitted' || row.status === 'In Review') {
-        counts.inReview++;
-      }
-      if (row.status === 'Submitted') {
-        counts.submitted++;
-      }
-      if (row.status === 'Accepted') {
-        counts.accepted++;
-      }
-      if (row.priority === 'High' || row.priority === 'Urgent') {
-        counts.urgent++;
-      }
+    const firstError = [totalRes, archivedRes, inReviewRes, submittedRes, acceptedRes, urgentRes]
+      .find((r) => r.error);
+    if (firstError?.error) {
+      console.error('[partner/applications/stats GET] count error:', firstError.error.message);
+      return NextResponse.json({ error: firstError.error.message }, { status: 500 });
     }
 
-    return NextResponse.json(counts);
+    const total = (totalRes.count || 0) + (archivedRes.count || 0);
+    return NextResponse.json({
+      total,
+      inReview: inReviewRes.count || 0,
+      submitted: submittedRes.count || 0,
+      accepted: acceptedRes.count || 0,
+      urgent: urgentRes.count || 0,
+      archived: archivedRes.count || 0,
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[partner/applications/stats GET] unhandled:', err);

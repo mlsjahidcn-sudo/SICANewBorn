@@ -85,6 +85,25 @@ export const COMMON_COUNTRIES: CountryOption[] = [
 export const NATIONALITY_CUSTOM = '__custom__';
 
 /**
+ * Phase 111d: "no nationality selected" sentinel for the partner
+ * student new + edit pages. Used by the <Select value="...">
+ * binding when the partner hasn't picked anything yet — Radix
+ * doesn't allow empty string as a Select value, so we round-trip
+ * through this sentinel and convert back to "" on submit. Centralized
+ * here (was duplicated verbatim in students/new and students/[id]/edit).
+ */
+export const NATIONALITY_NONE = '__none__';
+
+/**
+ * Phase 111d: type-guard + companion to NATIONALITY_NONE. Use this
+ * in form pre-fill paths instead of `value === NATIONALITY_NONE`
+ * everywhere — keeps the sentinel string in one place.
+ */
+export function nationalityIsNone(value: string | undefined | ''): boolean {
+  return value === NATIONALITY_NONE;
+}
+
+/**
  * Full ISO 3166-1 country list (249 entries). Used by the admin
  * student wizard + edit form so admins can pick ANY nationality
  * (not just SICA's top-40 partner-CRM markets). Values are the

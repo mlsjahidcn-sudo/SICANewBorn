@@ -19,10 +19,11 @@ import {
   PARTNER_STUDENT_STATUSES,
   PartnerStudentStatus,
 } from '@/lib/partner-student-mapper';
-import { COMMON_COUNTRIES, NATIONALITY_CUSTOM } from '@/lib/common-countries';
+import { COMMON_COUNTRIES, NATIONALITY_CUSTOM, NATIONALITY_NONE } from '@/lib/common-countries';
 // Phase 54: shadcn <Select> reserves '' for the placeholder state —
-// can't use empty string as a SelectItem value. Sentinel below.
-const NATIONALITY_NONE = '__none__';
+// can't use empty string as a SelectItem value. Phase 111d: the
+// sentinel + helper now live in @/lib/common-countries so the
+// edit page doesn't have to redeclare them.
 import type { University, Program } from '@/lib/data';
 
 interface FormData {
@@ -143,18 +144,23 @@ export default function PartnerAddStudentPage() {
     // partner application form (Phase 23 M9).
     const trimmedEmail = formData.studentEmail.trim();
     if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      setError(t('partnerAppNew.errorStudentEmailInvalid'));
+      setError(t('partnerStudentNew.errorStudentEmailInvalid'));
       return;
     }
 
     setIsSaving(true);
     try {
-      // Map to the camelCase shape the API expects. Empty strings become
-      // null via the mapper, so we can just send the trimmed values.
-      const payload = {
-        studentName: formData.studentName.trim(),
-        studentEmail: formData.studentEmail.trim() || undefined,
-        studentPhone: formData.studentPhone.trim() || undefined,
+// Map to the camelCase shape the API expects. Empty strings become
+        // null via the mapper, so we can just send the trimmed values.
+        const payload = {
+          studentName: formData.studentName.trim(),
+          // Phase 111d: reuse `trimmedEmail` from the validation
+          // block above so the post-validation + the payload share
+          // the exact same string. Previously the form re-trimmed
+          // and a stray whitespace could pass validation but slip
+          // a " "(space) into the DB.
+          studentEmail: trimmedEmail || undefined,
+          studentPhone: formData.studentPhone.trim() || undefined,
         nationality: formData.nationality.trim() || undefined,
         targetUniversity: formData.targetUniversity.trim() || undefined,
         targetProgram: formData.targetProgram.trim() || undefined,
