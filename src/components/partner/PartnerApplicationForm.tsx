@@ -1075,7 +1075,7 @@ export function PartnerApplicationForm({
     return (
       <>
         <form onSubmit={onSubmit}>{formContent}</form>
-        <div className="sticky bottom-0 bg-white border-t border-gray-200 -mx-4 px-4 py-3 flex items-center justify-between z-10 mt-6">
+        <div className="sticky bottom-0 bg-white border-t border-gray-200 px-0 py-3 flex items-center justify-between z-10 mt-6">
           <a href={cancelHref}>
             <Button
               type="button"
