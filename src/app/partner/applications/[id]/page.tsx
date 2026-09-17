@@ -300,6 +300,11 @@ export default function PartnerApplicationDetailPage() {
     } catch (err) {
       console.error('[partner/applications/:id] clone failed:', err);
       setError(err instanceof Error ? err.message : t('partnerAppDetail.errorClone'));
+    } finally {
+      // Phase 111b: the previous version only reset cloning on the
+      // error path — a successful clone + back-navigation left the
+      // button stuck greyed-out. Reset in `finally` so the state
+      // tracks reality regardless of outcome.
       setCloning(false);
     }
   };
@@ -519,6 +524,11 @@ export default function PartnerApplicationDetailPage() {
               {t('partnerAppDetail.edit')}
             </Link>
           </Button>
+          {/* Phase 111b: warn the partner which fields won't carry
+              over when cloning — the v4 form removed several fields
+              (fundingSource, scholarshipName, whyProgram, careerPlan)
+              from the create/edit UI, so cloning would silently drop
+              them. Surface the names so the partner knows to re-fill. */}
           {/* Phase 49.3: "Clone as new application" — partners
               often submit the same student to multiple
               universities. This stores the form-ready data in
@@ -534,6 +544,7 @@ export default function PartnerApplicationDetailPage() {
             className="rounded-none"
             onClick={() => handleClone()}
             disabled={cloning}
+            title={t('partnerAppDetail.cloneTooltip')}
           >
             <ClipboardCopy className="mr-2 h-4 w-4" />
             {t('partnerAppDetail.clone')}
@@ -653,7 +664,7 @@ export default function PartnerApplicationDetailPage() {
         <Card className="rounded-none">
           <CardHeader>
             <CardTitle className="text-[#1B2A4A] flex items-center gap-2">
-              <UserIcon name="book" className="w-4 h-4" /> {t('partnerAppDetail.sectionStatus')}
+              <BookIcon className="w-4 h-4" /> {t('partnerAppDetail.sectionStatus')}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
@@ -1142,12 +1153,10 @@ function Field({
   );
 }
 
-// Local icon shim — keeps the import block short and matches the
-// pattern used elsewhere in the partner portal.
-function UserIcon({ name, className }: { name: string; className?: string }) {
-  // We import BookOpen statically at the top of the file and re-use
-  // it here. The "name" param is a future-proofing hook for the day
-  // we want to add a User icon next to student info.
-  if (name === 'book') return <BookOpen className={className} />;
+// Phase 111b: replaced the dead `UserIcon` shim (which always
+// rendered BookOpen regardless of `name`) with a direct lucide
+// import at the call site. The header subtitle next to "Status"
+// now actually renders the right icon for the surface.
+function BookIcon({ className }: { className?: string }) {
   return <BookOpen className={className} />;
 }

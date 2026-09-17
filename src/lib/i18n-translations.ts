@@ -1474,6 +1474,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerApps.newApplication': 'New Application',
     'partnerApps.exportNone': 'No applications to export',
     'partnerApps.exportCount': 'Download {{count}} row(s) as CSV',
+    'partnerApps.exportTruncatedTitle': 'Export truncated',
+    'partnerApps.exportTruncatedBody': 'Your export was capped at {{max}} rows. Narrow the status or search filters to download the remaining applications.',
+    'partnerApps.exportTruncatedDismiss': 'Dismiss',
     'partnerApps.errorExport': 'Export failed',
     'partnerApps.errorExportHttp': 'Export failed (HTTP {{status}})',
     'partnerApps.errorLoad': 'Failed to load applications.',
@@ -1536,6 +1539,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     // with ?clone=1 so the partner can pick a new program
     // for the same student.
     'partnerAppDetail.clone': 'Clone as new',
+    'partnerAppDetail.cloneTooltip': 'Carries over student profile, academic history, passport + emergency contact. Fields removed in v4 (funding source, scholarship name, why-program, career plan) are not in the new form and will not appear on the clone.',
     'partnerAppDetail.errorClone': 'Could not start the clone — please try again.',
     // Phase 49.4: "Request withdrawal" — partner cannot change
     // status (admin-only per S27). Instead, this opens a modal
@@ -1664,6 +1668,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerAppEdit.subtitleWithNumber': '{{name}} · {{university}} · {{number}}',
     'partnerAppEdit.couldNotLoad': "Couldn't load application",
     'partnerAppEdit.errorLoad': 'Failed to load application.',
+    'partnerAppEdit.notInCatalogTitle': 'Manual-entry mode',
+    'partnerAppEdit.notInCatalogBody': 'This application was created outside the current program catalog. Please review the university / program text fields below.',
     'partnerAppEdit.errorStudentNameRequired': 'Student name is required.',
     'partnerAppEdit.errorUniversityProgramRequired': 'University and program are required.',
     'partnerAppEdit.errorNotesRequiredWhenUnassigned': 'Please describe the desired school and program in the notes field.',
@@ -1849,6 +1855,10 @@ export const translations: Record<Locale, Record<string, string>> = {
     // top-40 list (long-tail countries). The placeholder
     // stays the same so the partner knows what to type.
     'partnerStudentNew.fieldNationalityOther': 'Other (type below)',
+    // Phase 111d: namespace-borrow fix — was using
+    // partnerAppNew.errorStudentEmailInvalid from this file.
+    // Per-namespace key, single source of truth.
+    'partnerStudentNew.errorStudentEmailInvalid': 'Please enter a valid email address',
     'partnerStudentNew.sectionTarget': 'Target Program',
     'partnerStudentNew.fieldTargetUniversity': 'Target University',
     'partnerStudentNew.fieldTargetUniversityPlaceholder': 'e.g., Tsinghua University',
@@ -1950,6 +1960,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerStudentEdit.fieldTargetProgram': 'Target Program',
     'partnerStudentEdit.fieldStatus': 'Status',
     'partnerStudentEdit.fieldNotes': 'Notes',
+    // Phase 111d: namespace-borrow fix — was using
+    // partnerAppNew.errorStudentEmailInvalid from this file.
+    'partnerStudentEdit.errorStudentEmailInvalid': 'Please enter a valid email address',
     'partnerStudentEdit.cancel': 'Cancel',
     'partnerStudentEdit.saveChanges': 'Save Changes',
     'partnerStudentEdit.saving': 'Saving…',
@@ -5995,6 +6008,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerApps.newApplication': '新建申请',
     'partnerApps.exportNone': '没有可导出的申请',
     'partnerApps.exportCount': '下载 {{count}} 行 CSV',
+    'partnerApps.exportTruncatedTitle': '导出已截断',
+    'partnerApps.exportTruncatedBody': '本次导出最多包含 {{max}} 行。请缩小状态或搜索筛选条件以导出剩余申请。',
+    'partnerApps.exportTruncatedDismiss': '知道了',
     'partnerApps.errorExport': '导出失败',
     'partnerApps.errorExportHttp': '导出失败（HTTP {{status}}）',
     'partnerApps.errorLoad': '加载申请失败。',
@@ -6051,6 +6067,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerAppDetail.delete': '删除',
     // Phase 49.3: see the en counterpart.
     'partnerAppDetail.clone': '克隆为新申请',
+    'partnerAppDetail.cloneTooltip': '将复制学生资料、学术背景、护照及紧急联系人。v4 表单已移除的字段（资金来源、奖学金名称、择校理由、职业规划）不会出现在克隆表单中。',
     'partnerAppDetail.errorClone': '无法开始克隆——请重试。',
     // Phase 49.4: see the en counterpart.
     'partnerAppDetail.requestWithdrawal': '请求撤回',
@@ -6173,6 +6190,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerAppEdit.subtitleWithNumber': '{{name}} · {{university}} · {{number}}',
     'partnerAppEdit.couldNotLoad': '无法加载申请',
     'partnerAppEdit.errorLoad': '加载申请失败。',
+    'partnerAppEdit.notInCatalogTitle': '手动填写模式',
+    'partnerAppEdit.notInCatalogBody': '此申请创建于当前项目目录之外。请检查下方学校与项目文本字段。',
     'partnerAppEdit.errorStudentNameRequired': '学生姓名是必填项。',
     'partnerAppEdit.errorUniversityProgramRequired': '大学和专业都是必填项。',
     'partnerAppEdit.errorNotesRequiredWhenUnassigned': '请在备注中描述目标学校和专业。',
@@ -6349,6 +6368,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerStudentNew.fieldNationalityPlaceholder': '例如：美国、英国、中国',
     // Phase 49.2: see the en counterpart.
     'partnerStudentNew.fieldNationalityOther': '其他（在下方输入）',
+    // Phase 111d: namespace-borrow fix — zh counterpart.
+    'partnerStudentNew.errorStudentEmailInvalid': '请输入有效的邮箱地址',
     'partnerStudentNew.sectionTarget': '目标专业',
     'partnerStudentNew.fieldTargetUniversity': '目标大学',
     'partnerStudentNew.fieldTargetUniversityPlaceholder': '例如：清华大学',
@@ -6445,6 +6466,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'partnerStudentEdit.fieldTargetProgram': '目标专业',
     'partnerStudentEdit.fieldStatus': '状态',
     'partnerStudentEdit.fieldNotes': '备注',
+    // Phase 111d: namespace-borrow fix — zh counterpart.
+    'partnerStudentEdit.errorStudentEmailInvalid': '请输入有效的邮箱地址',
     'partnerStudentEdit.cancel': '取消',
     'partnerStudentEdit.saveChanges': '保存修改',
     'partnerStudentEdit.saving': '保存中…',

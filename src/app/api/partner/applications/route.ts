@@ -198,9 +198,15 @@ export async function POST(request: NextRequest) {
     ];
     for (const key of partnerForbiddenFields) {
       if (body[key] !== undefined) {
+        // Phase 111b: rewrite the 403 message so the partner sees
+        // something actionable rather than the raw schema-leak
+        // wording ("Field 'status' is admin-only…"). Routes them to
+        // the support inbox instead of explaining our internal
+        // admin/partner division.
         return NextResponse.json(
           {
-            error: `Field '${key}' is admin-only. SICA's admin team sets the application status and decision.`,
+            error:
+              'Only the SICA admin team can change this field. To request a status update, contact support@sica.com.cn.',
           },
           { status: 403 },
         );

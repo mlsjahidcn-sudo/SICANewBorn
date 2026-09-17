@@ -72,6 +72,10 @@ export default function PartnerApplicationsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  // Phase 111b: export truncation banner state. Set when the
+  // server reports `X-Truncated: true` (1000-row cap hit). Cleared
+  // on next successful export or when the user dismisses it.
+  const [exportTruncated, setExportTruncated] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   // Phase B: archived visibility. 'active' hides archived rows
@@ -221,33 +225,39 @@ export default function PartnerApplicationsPage() {
     urgent: 0,
     archived: 0,
   });
+  // Phase 111b: initial fetch via the shared refetcher so the
+  // handler used after bulk / delete / restore is the same code
+  // path. The mount effect just kicks it off once.
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await apiFetchJson<{
-          total: number;
-          inReview: number;
-          submitted: number;
-          accepted: number;
-          urgent: number;
-          archived: number;
-        }>('/api/partner/applications/stats');
-        if (cancelled) return;
-        setStats(res);
-      } catch {
-        // ignore — non-fatal
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    void refetchStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleDeleteApp = (id: string) => {
     setAppToDelete(id);
     setShowDeleteModal(true);
   };
+
+  // Phase 111b: refetch stats after a bulk action so the
+  // headline cards stay honest (the previous version fetched
+  // stats once on mount and let them drift after each bulk
+  // priority change / delete / archive).
+  const refetchStats = useCallback(async () => {
+    try {
+      const res = await apiFetchJson<{
+        total: number;
+        inReview: number;
+        submitted: number;
+        accepted: number;
+        urgent: number;
+        archived: number;
+      }>('/api/partner/applications/stats');
+      setStats(res);
+    } catch {
+      // Non-fatal — silently keep the stale stats. The list
+      // refresh below is the source of truth on the table.
+    }
+  }, []);
 
   // Phase 1.4: bulk action. Per S27, partner can only do
   // priority / delete (no status, no notes). The action is
@@ -276,6 +286,7 @@ export default function PartnerApplicationsPage() {
       setBulkResult({ ok: res.updated, fail: res.failed.length });
       clearSelection();
       await fetchApps();
+      void refetchStats();
     } catch (err) {
       setError(err instanceof Error ? err.message : t('partnerApps.bulkFailed'));
     } finally {
@@ -314,6 +325,10 @@ export default function PartnerApplicationsPage() {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
+      // Phase 111b: server flags truncation via X-Truncated. Surface
+      // a banner so the partner knows they hit the 1000-row cap
+      // and needs to narrow filters for the rest.
+      setExportTruncated(res.headers.get('X-Truncated') === 'true');
     } catch (err) {
       setError(err instanceof Error ? err.message : t('partnerApps.errorExport'));
     } finally {
@@ -334,6 +349,7 @@ export default function PartnerApplicationsPage() {
       setTotal((prev) => Math.max(0, prev - 1));
       setShowDeleteModal(false);
       setAppToDelete(null);
+      void refetchStats();
     } catch (err) {
       setError(err instanceof Error ? err.message : t('partnerApps.errorDelete'));
     } finally {
@@ -362,12 +378,12 @@ export default function PartnerApplicationsPage() {
       setApplications((prev) =>
         prev.map((a) => (a.id === appToRestore ? { ...a, archivedAt: null } : a)),
       );
-      setStats((prev) => ({
-        ...prev,
-        archived: Math.max(0, prev.archived - 1),
-      }));
+      // Phase 111b: optimistic local decrement removed in favor of
+      // the shared refetcher so cards stay in sync with the list
+      // after restore + any other concurrent mutations.
       setShowRestoreModal(false);
       setAppToRestore(null);
+      void refetchStats();
     } catch (err) {
       console.error('[partner/applications] restore failed:', err);
       setError(err instanceof Error ? err.message : t('partnerApps.errorRestore'));
@@ -441,11 +457,18 @@ export default function PartnerApplicationsPage() {
               variant="outline"
               className="rounded-none"
               onClick={handleExport}
-              disabled={isExporting || applications.length === 0}
+              // Phase 111b: gate on `total` (the server-side count of
+              // rows matching the current filter set), not on the
+              // loaded page length. A partner with 200 applications
+              // matching the filter but only the first page (50)
+              // loaded saw an enabled Export button → downloaded a
+              // 200-row CSV. Total=0 is the only correct disabled
+              // signal.
+              disabled={isExporting || total === 0}
               title={
-                applications.length === 0
+                total === 0
                   ? t('partnerApps.exportNone')
-                  : t('partnerApps.exportCount', { count: applications.length })
+                  : t('partnerApps.exportCount', { count: total })
               }
             >
               <Download className={`mr-2 h-4 w-4 ${isExporting ? 'animate-spin' : ''}`} />
@@ -508,6 +531,25 @@ export default function PartnerApplicationsPage() {
       {error && (
         <Card className="rounded-none border-red-200 bg-red-50">
           <CardContent className="p-4 text-sm text-red-700">{error}</CardContent>
+        </Card>
+      )}
+
+      {exportTruncated && (
+        <Card className="rounded-none border-amber-200 bg-amber-50">
+          <CardContent className="p-4 text-sm text-amber-800 flex items-start justify-between gap-4">
+            <div>
+              <strong className="font-semibold">{t('partnerApps.exportTruncatedTitle')}</strong>
+              <p className="mt-1">{t('partnerApps.exportTruncatedBody', { max: 1000 })}</p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="rounded-none text-amber-900 hover:bg-amber-100"
+              onClick={() => setExportTruncated(false)}
+            >
+              {t('partnerApps.exportTruncatedDismiss')}
+            </Button>
+          </CardContent>
         </Card>
       )}
 
@@ -575,10 +617,16 @@ export default function PartnerApplicationsPage() {
                       checked={
                         applications.length > 0 &&
                         applications.every((a) => selectedIds.has(a.id))
+                          ? true
+                          : applications.some((a) => selectedIds.has(a.id))
+                          ? 'indeterminate'
+                          : false
                       }
-                      // indeterminate is rendered via the standard
-                      // checkbox fallback; the bulk-action bar shows
-                      // the partial count either way.
+                      // Phase 111b: previous version skipped the
+                      // indeterminate branch entirely — clicking a
+                      // header with 1-of-3 selected would clear the
+                      // selection instead of filling it. Now we
+                      // mirror the admin pattern (Phase S31).
                       onCheckedChange={(c) => {
                         if (c) {
                           setSelectedIds(

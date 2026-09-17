@@ -8,6 +8,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
+import { isDeepEqual } from '@/lib/object-equal';
 import {
   PartnerApplicationForm,
   INITIAL_FORM_DATA,
@@ -153,7 +154,12 @@ export default function PartnerEditApplicationPage() {
       if (isSaving) return;
       const initial = initialFormDataRef.current;
       if (!initial || !formData) return;
-      if (JSON.stringify(initial) === JSON.stringify(formData)) return;
+      // Phase 111d: was JSON.stringify(initial) === JSON.stringify(formData).
+      // Stringify is order-dependent (V8 serializes keys in
+      // declaration order) so any refactor that reorders keys
+      // silently breaks dirty detection. Use the structural
+      // helper instead.
+      if (isDeepEqual(initial, formData)) return;
       e.preventDefault();
       e.returnValue = '';
     };
@@ -168,6 +174,15 @@ export default function PartnerEditApplicationPage() {
 
     if (!formData.studentName.trim()) {
       setError(t('partnerAppEdit.errorStudentNameRequired'));
+      return;
+    }
+    // Phase 111d: client-side email format check parity with
+    // applications/new. The PATCH server validates too, but
+    // surfacing the error inline (instead of after submit) lets
+    // the partner fix it without a round-trip.
+    const trimmedEmail = formData.studentEmail.trim();
+    if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setError(t('partnerAppNew.errorStudentEmailInvalid'));
       return;
     }
     // Phase 54: allow saving when the partner is describing a
@@ -193,7 +208,10 @@ export default function PartnerEditApplicationPage() {
       const payload: Record<string, unknown> = {
         // Section 1
         studentName: formData.studentName.trim(),
-        studentEmail: formData.studentEmail.trim() || null,
+        // Phase 111d: reuse `trimmedEmail` from the validation
+        // block above so the validation + the payload share the
+        // exact same string.
+        studentEmail: trimmedEmail || null,
         studentPhone: formData.studentPhone.trim() || null,
         nationality: formData.nationality.trim() || null,
         dateOfBirth: formData.dateOfBirth || null,
@@ -306,6 +324,20 @@ export default function PartnerEditApplicationPage() {
       {error && (
         <Card className="rounded-none border-red-200 bg-red-50">
           <CardContent className="p-4 text-sm text-red-700">{error}</CardContent>
+        </Card>
+      )}
+
+      {/* Phase 111b: if the loaded row had an empty university or
+          program (which forces `notInCatalog` true on edit), explain
+          why so the partner understands the form switched to
+          manual-entry mode. Without this banner the partner thinks
+          the catalog is broken. */}
+      {formData.notInCatalog && (
+        <Card className="rounded-none border-amber-200 bg-amber-50">
+          <CardContent className="p-4 text-sm text-amber-800">
+            <strong className="font-semibold">{t('partnerAppEdit.notInCatalogTitle')}</strong>
+            <p className="mt-1">{t('partnerAppEdit.notInCatalogBody')}</p>
+          </CardContent>
         </Card>
       )}
 
