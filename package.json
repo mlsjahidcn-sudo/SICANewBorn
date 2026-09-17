@@ -12,7 +12,9 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "ts-check": "tsc -p tsconfig.json",
-    "validate": "npm run ts-check & npm run lint:build & wait"
+    "validate": "npm run ts-check & npm run lint:build & npm run i18n:check & wait",
+    "i18n:check": "tsx scripts/i18n-zh-gaps.ts",
+    "i18n:gaps": "tsx scripts/i18n-zh-gaps.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
