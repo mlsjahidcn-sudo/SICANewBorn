@@ -108,12 +108,23 @@ export async function PATCH(
     // Phase B: partners can archive/restore their own rows. The
     // DELETE handler already performs soft-delete; this lets the
     // UI offer a Restore action via PATCH { archived: false }.
-    if (body.archived === true) {
-      updates.archived_at = new Date().toISOString();
-      updates.archived_by_user_id = auth.user.id;
-    } else if (body.archived === false) {
-      updates.archived_at = null;
-      updates.archived_by_user_id = null;
+    // Phase 111c: reject non-boolean values with 400 so a typo'd
+    // string ("false") no longer silently no-ops. The list page
+    // (Phase 1.4) sends the bare boolean.
+    if (body.archived !== undefined) {
+      if (typeof body.archived !== 'boolean') {
+        return NextResponse.json(
+          { error: "archived must be true or false" },
+          { status: 400 },
+        );
+      }
+      if (body.archived === true) {
+        updates.archived_at = new Date().toISOString();
+        updates.archived_by_user_id = auth.user.id;
+      } else {
+        updates.archived_at = null;
+        updates.archived_by_user_id = null;
+      }
     }
 
     if (Object.keys(updates).length === 0) {

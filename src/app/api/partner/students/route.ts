@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireTeamMember, getServerEnv } from '@/lib/supabase-auth';
+import { requireTeamMember, getServerEnv, buildServiceClient } from '@/lib/supabase-auth';
+import { hydrateUserEmails } from '@/lib/partner-user-lookup';
 import { mapPartnerStudentFromDb, mapPartnerStudentToDb, parsePartnerStudentStatus } from '@/lib/partner-student-mapper';
 import { validatePartnerStudentPayload } from '@/lib/partner-validation';
 import { sanitizeOrTerm, parseIntParam } from '@/lib/postgrest';
@@ -110,9 +111,12 @@ export async function GET(request: NextRequest) {
     );
     const emailMap = new Map<string, string | null>();
     if (userIds.length) {
-      const { buildServiceClient, getServerEnv: gse } = await import('@/lib/supabase-auth');
-      if (gse().serviceKey) {
-        const { hydrateUserEmails } = await import('@/lib/partner-user-lookup');
+      // Phase 111d: top-level the dynamic imports (parity with
+      // other partner routes). `hydrateUserEmails` requires the
+      // service role; skip the lookup if no service key is set
+      // (dev convenience — the route still works, just without
+      // email hydration).
+      if (getServerEnv().serviceKey) {
         const hydrated = await hydrateUserEmails(buildServiceClient(), userIds);
         for (const [id, h] of hydrated) emailMap.set(id, h.email);
       }
@@ -222,6 +226,28 @@ export async function POST(request: NextRequest) {
     delete (dbRow as Record<string, unknown>).linked_student_profile_id;
     // Default status to 'New' for new entries
     if (!dbRow.status) dbRow.status = 'New';
+
+    // Phase 111c: if the partner supplied an email that already
+    // exists in student_profiles, auto-link the partner_students
+    // row to that profile id. Mirrors the application POST path
+    // (which inherits the link from the parent partner_students
+    // row). Best-effort: a failed lookup silently leaves the link
+    // null — the admin can set it manually later. Guard against
+    // partner-supplied emails that don't normalize to anything
+    // useful.
+    const studentEmail = (dbRow.student_email as string | null | undefined)?.trim().toLowerCase();
+    if (studentEmail) {
+      const { buildServiceClient } = await import('@/lib/supabase-auth');
+      const service = buildServiceClient();
+      const { data: profile } = await service
+        .from('student_profiles')
+        .select('id')
+        .eq('email', studentEmail)
+        .maybeSingle();
+      if (profile?.id) {
+        (dbRow as Record<string, unknown>).linked_student_profile_id = profile.id;
+      }
+    }
 
     const { data, error } = await auth.supabase
       .from('partner_students')

@@ -139,7 +139,17 @@ export async function POST(
   }
 
   try {
-    const body = await request.json();
+    // Phase 111c: refuse null / non-object bodies with a 400
+    // instead of letting `body.body` throw and surface as a
+    // generic 500. A malicious or buggy client can send `null`,
+    // an array, or a primitive here.
+    const parsed = await request.json().catch(() => null);
+    const body = (parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? parsed
+      : null) as Record<string, unknown> | null;
+    if (!body) {
+      return NextResponse.json({ error: 'Request body must be a JSON object' }, { status: 400 });
+    }
 
     // Server-side validation: body is required, ≤ 4000 chars.
     // Phase 47's per-field validation pattern.

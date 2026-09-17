@@ -99,7 +99,11 @@ export default function PartnerStudentDetailPage() {
   }
   const [notes, setNotes] = useState<PartnerStudentNote[]>([]);
   const [notesLoading, setNotesLoading] = useState(false);
-  const [notesError, setNotesError] = useState<string | null>(null);
+  // Phase 111c: per-event notes list errors (load / add / pin /
+  // delete). Split from the legacy `studentNotesError` so the
+  // Overview composer doesn't wipe the Notes-tab error on every
+  // keystroke (and vice versa).
+  const [notesListError, setNotesListError] = useState<string | null>(null);
   const [newNoteBody, setNewNoteBody] = useState('');
   const [noteAdding, setNoteAdding] = useState(false);
   const [noteBusyId, setNoteBusyId] = useState<string | null>(null);
@@ -113,6 +117,7 @@ export default function PartnerStudentDetailPage() {
 
   // Phase B: inline editing for the legacy notes field on the student row.
   const [studentNotes, setStudentNotes] = useState('');
+  const [studentNotesError, setStudentNotesError] = useState<string | null>(null);
   const [isSavingNotes, setIsSavingNotes] = useState(false);
 
   useEffect(() => {
@@ -121,7 +126,7 @@ export default function PartnerStudentDetailPage() {
 
   const saveStudentNotes = async () => {
     setIsSavingNotes(true);
-    setNotesError(null);
+    setStudentNotesError(null);
     try {
       const res = await apiFetch(`/api/partner/students/${studentId}`, {
         method: 'PATCH',
@@ -135,7 +140,7 @@ export default function PartnerStudentDetailPage() {
       const { student: updated } = await res.json();
       setStudent(updated);
     } catch (err) {
-      setNotesError(err instanceof Error ? err.message : t('partnerStudentDetail.notesSaveError'));
+      setStudentNotesError(err instanceof Error ? err.message : t('partnerStudentDetail.notesSaveError'));
     } finally {
       setIsSavingNotes(false);
     }
@@ -201,14 +206,14 @@ export default function PartnerStudentDetailPage() {
   // API already orders pinned-first then created_at desc.
   const fetchNotes = useCallback(async () => {
     setNotesLoading(true);
-    setNotesError(null);
+    setNotesListError(null);
     try {
       const res = await apiFetchJson<{ notes: PartnerStudentNote[] }>(
         `/api/partner/students/${studentId}/notes`,
       );
       setNotes(res.notes || []);
     } catch (err) {
-      setNotesError(
+      setNotesListError(
         err instanceof Error ? err.message : t('partnerStudentDetail.notesLoadError'),
       );
       setNotes([]);
@@ -271,7 +276,7 @@ export default function PartnerStudentDetailPage() {
       await fetchNotes();
       setNewNoteBody('');
     } catch (err) {
-      setNotesError(
+      setNotesListError(
         err instanceof Error ? err.message : t('partnerStudentDetail.notesAddError'),
       );
     } finally {
@@ -290,7 +295,7 @@ export default function PartnerStudentDetailPage() {
       });
       await fetchNotes();
     } catch (err) {
-      setNotesError(err instanceof Error ? err.message : t('partnerStudentDetail.notesLoadError'));
+      setNotesListError(err instanceof Error ? err.message : t('partnerStudentDetail.notesLoadError'));
     } finally {
       setNoteBusyId(null);
     }
@@ -313,7 +318,7 @@ export default function PartnerStudentDetailPage() {
       // Local remove + close — no need to re-fetch.
       setNotes((prev) => prev.filter((n) => n.id !== id));
     } catch (err) {
-      setNotesError(err instanceof Error ? err.message : t('partnerStudentDetail.notesLoadError'));
+      setNotesListError(err instanceof Error ? err.message : t('partnerStudentDetail.notesLoadError'));
     } finally {
       setNoteBusyId(null);
       setNoteDeleteId(null);
@@ -493,14 +498,14 @@ export default function PartnerStudentDetailPage() {
               <CardTitle className="text-[#1B2A4A]">{t('partnerStudentDetail.notesInlineTitle')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {notesError && (
-                <p className="text-sm text-red-700">{notesError}</p>
+              {studentNotesError && (
+                <p className="text-sm text-red-700">{studentNotesError}</p>
               )}
               <Textarea
                 value={studentNotes}
                 onChange={(e) => {
                   setStudentNotes(e.target.value);
-                  if (notesError) setNotesError(null);
+                  if (studentNotesError) setStudentNotesError(null);
                 }}
                 rows={5}
                 maxLength={4000}
@@ -651,8 +656,8 @@ export default function PartnerStudentDetailPage() {
                 </div>
               </div>
 
-              {notesError && (
-                <p className="text-sm text-red-700 mb-3">{notesError}</p>
+              {notesListError && (
+                <p className="text-sm text-red-700 mb-3">{notesListError}</p>
               )}
 
               {notesLoading ? (

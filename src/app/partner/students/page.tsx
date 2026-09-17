@@ -25,6 +25,7 @@ import { ListPageSkeleton } from '@/components/partner/skeletons';
 import { apiFetch, apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 import type { PartnerStudent, PartnerStudentStatus } from '@/lib/partner-student-mapper';
+import { getPartnerStudentStatusLabel } from '@/lib/partner-enum-labels';
 
 export default function PartnerStudentsPage() {
   const router = useRouter();
@@ -131,28 +132,28 @@ export default function PartnerStudentsPage() {
     rejected: 0,
     archived: 0,
   });
+  // Phase 111c: shared refetcher so delete + restore + initial
+  // mount use the same code path. Keeps the headline cards in
+  // sync with the list after each mutation.
+  const refetchStats = useCallback(async () => {
+    try {
+      const res = await apiFetchJson<{
+        total: number;
+        new: number;
+        inProgress: number;
+        applied: number;
+        accepted: number;
+        rejected: number;
+        archived: number;
+      }>('/api/partner/students/stats');
+      setStats(res);
+    } catch {
+      // Non-fatal: stats just stay at their previous values.
+    }
+  }, []);
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await apiFetchJson<{
-          total: number;
-          new: number;
-          inProgress: number;
-          applied: number;
-          accepted: number;
-          rejected: number;
-          archived: number;
-        }>('/api/partner/students/stats');
-        if (cancelled) return;
-        setStats(res);
-      } catch {
-        // Non-fatal: stats just stay at 0
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    void refetchStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Phase B: "Load more" appends page N+1 to the existing list.
@@ -211,13 +212,12 @@ export default function PartnerStudentsPage() {
           s.id === studentToRestore ? { ...s, archivedAt: null } : s,
         ),
       );
-      setStats((prev) => ({
-        ...prev,
-        archived: Math.max(0, prev.archived - 1),
-        total: prev.total,
-      }));
+      // Phase 111c: optimistic local decrement removed in favor of
+      // the shared refetcher so cards stay in sync with the list
+      // after restore + any other concurrent mutations.
       setShowRestoreModal(false);
       setStudentToRestore(null);
+      void refetchStats();
     } catch (err) {
       console.error('[partner/students] restore failed:', err);
       setError(err instanceof Error ? err.message : t('partnerStudents.errorRestore'));
@@ -302,6 +302,10 @@ export default function PartnerStudentsPage() {
       setTotal((prev) => Math.max(0, prev - 1));
       setShowDeleteModal(false);
       setStudentToDelete(null);
+      // Phase 111c: refetch stats so the headline cards stay in
+      // sync with the list (previous version fetched stats once on
+      // mount and let them drift after every delete).
+      void refetchStats();
     } catch (err) {
       console.error('[partner/students] delete failed:', err);
       setError(err instanceof Error ? err.message : t('partnerStudents.errorDelete'));
@@ -310,25 +314,18 @@ export default function PartnerStudentsPage() {
     }
   };
 
-  // Status labels map is DB-driven — translate the display text only
-  // (the underlying enum stays the same in the DB).
-  const STATUS_LABEL: Record<PartnerStudentStatus, string> = {
-    'New': t('partnerStudents.statusNew'),
-    'In Progress': t('partnerStudents.statusInProgress'),
-    'Applied': t('partnerStudents.statusApplied'),
-    'Accepted': t('partnerStudents.statusAccepted'),
-    'Rejected': t('partnerStudents.statusRejected'),
-  };
-
+  // Phase 111d: was a local STATUS_LABEL map mirrored from
+  // getPartnerStudentStatusLabel in @/lib/partner-enum-labels.
+  // Single source of truth — use the helper directly.
   const getStatusBadge = (status: PartnerStudentStatus) => {
     const variants: Record<PartnerStudentStatus, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }> = {
-      'New': { variant: 'secondary', label: STATUS_LABEL.New },
-      'In Progress': { variant: 'outline', label: STATUS_LABEL['In Progress'] },
-      'Applied': { variant: 'outline', label: STATUS_LABEL.Applied },
-      'Accepted': { variant: 'default', label: STATUS_LABEL.Accepted },
-      'Rejected': { variant: 'destructive', label: STATUS_LABEL.Rejected },
+      'New': { variant: 'secondary', label: getPartnerStudentStatusLabel('New', t) },
+      'In Progress': { variant: 'outline', label: getPartnerStudentStatusLabel('In Progress', t) },
+      'Applied': { variant: 'outline', label: getPartnerStudentStatusLabel('Applied', t) },
+      'Accepted': { variant: 'default', label: getPartnerStudentStatusLabel('Accepted', t) },
+      'Rejected': { variant: 'destructive', label: getPartnerStudentStatusLabel('Rejected', t) },
     };
-    const config = variants[status] || { variant: 'outline', label: status };
+    const config = variants[status] || { variant: 'outline', label: getPartnerStudentStatusLabel(status, t) };
     return <Badge variant={config.variant} className="rounded-none">{config.label}</Badge>;
   };
 
@@ -485,11 +482,11 @@ export default function PartnerStudentsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t('partnerStudents.allStatus')}</SelectItem>
-                  <SelectItem value="New">{STATUS_LABEL.New}</SelectItem>
-                  <SelectItem value="In Progress">{STATUS_LABEL['In Progress']}</SelectItem>
-                  <SelectItem value="Applied">{STATUS_LABEL.Applied}</SelectItem>
-                  <SelectItem value="Accepted">{STATUS_LABEL.Accepted}</SelectItem>
-                  <SelectItem value="Rejected">{STATUS_LABEL.Rejected}</SelectItem>
+                  <SelectItem value="New">{getPartnerStudentStatusLabel('New', t)}</SelectItem>
+                  <SelectItem value="In Progress">{getPartnerStudentStatusLabel('In Progress', t)}</SelectItem>
+                  <SelectItem value="Applied">{getPartnerStudentStatusLabel('Applied', t)}</SelectItem>
+                  <SelectItem value="Accepted">{getPartnerStudentStatusLabel('Accepted', t)}</SelectItem>
+                  <SelectItem value="Rejected">{getPartnerStudentStatusLabel('Rejected', t)}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
