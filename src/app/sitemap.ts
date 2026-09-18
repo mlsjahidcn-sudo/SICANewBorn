@@ -27,6 +27,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // landing page. Higher priority than /contact (0.5) because
     // it's the conversion page for paid-traffic channels.
     { url: `${SITE_URL}/get-started`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
+    // Phase 114: free counselling session booking — the conversion
+    // landing for "free counselling study in china" queries.
+    { url: `${SITE_URL}/counselling`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
   ];
 
   // Programmatic SEO landing pages (static, high-intent long-tail)

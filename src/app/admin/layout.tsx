@@ -30,6 +30,7 @@ import {
   Sparkles,
   Key,
   Webhook,
+  CalendarClock,
 } from 'lucide-react';
 import Link from 'next/link';
 import { SicaLogo } from '@/components/sica-logo';
@@ -48,6 +49,8 @@ const navItems = [
   { href: '/admin/news', key: 'news', icon: Newspaper },
   { href: '/admin/emails', key: 'emails', icon: Mail },
   { href: '/admin/leads', key: 'leads', icon: Users },
+  // Phase 114: free counselling session bookings from /counselling.
+  { href: '/admin/counselling', key: 'counselling', icon: CalendarClock },
   { href: '/admin/students', key: 'students', icon: UserCheck },
   { href: '/admin/partner-students', key: 'partnerStudents', icon: Users },
   { href: '/admin/documents', key: 'documents', icon: FileCheck },

@@ -541,3 +541,132 @@ export async function notifyPartnerOnStatusChange(
   if (!slug) return false;
   return sendStatusEmail(params.toEmail, params.applicantName, slug, params);
 }
+
+// ============================================================================
+// Phase 114: free counselling session booking emails
+// ============================================================================
+
+/**
+ * Render an absolute slot instant as a Beijing wall-clock line, e.g.
+ * "Sat, 19 Sep 2026, 09:30-09:40 (GMT+8)". Server Node has full ICU,
+ * so the fixed timeZone is honored.
+ */
+function formatCounsellingSlotBeijing(slotStartIso: string): string {
+  const start = new Date(slotStartIso);
+  const day = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Shanghai',
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(start);
+  const hhmm = (d: Date) =>
+    new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Shanghai',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(d);
+  const end = new Date(start.getTime() + 10 * 60 * 1000);
+  return `${day}, ${hhmm(start)}-${hhmm(end)} Beijing time (GMT+8)`;
+}
+
+/**
+ * Admin notification for a new /counselling booking. Fire-and-forget
+ * from the API route — failures are logged, never thrown.
+ */
+export async function sendCounsellingAdminNotification(params: {
+  reference: string;
+  name: string;
+  email: string;
+  phone: string;
+  country: string | null;
+  educationLevel: string | null;
+  topic: string | null;
+  slotStartIso: string;
+  locale: string;
+}): Promise<boolean> {
+  if (!isEmailConfigured()) return false;
+  const adminEmail = process.env.ADMIN_EMAIL;
+  if (!adminEmail) return false;
+  const formatted = formatCounsellingSlotBeijing(params.slotStartIso);
+  const { subject, text } = formatWithSignature({
+    subject: `New counselling booking ${params.reference} — ${formatted}`,
+    bodyText: [
+      'A new free 10-minute counselling session has been booked.',
+      '',
+      `Reference: ${params.reference}`,
+      `Slot: ${formatted}`,
+      `Name: ${params.name}`,
+      `Email: ${params.email}`,
+      `Phone: ${params.phone}`,
+      `Country: ${params.country ?? '—'}`,
+      `Education level: ${params.educationLevel ?? '—'}`,
+      `Topic: ${params.topic ?? '—'}`,
+      `Page locale: ${params.locale}`,
+      '',
+      `Manage it in the admin portal: ${SITE_URL}/admin/counselling`,
+    ].join('\n'),
+  });
+  try {
+    const result = await sendTextEmail({ to: adminEmail, subject, text });
+    return result.ok;
+  } catch (err) {
+    console.error('[email] counselling admin notification failed:', err);
+    return false;
+  }
+}
+
+/**
+ * Confirmation to the student after a successful /counselling booking.
+ * Status stays Pending until an admin confirms; the email says the
+ * advisor will send the meeting link.
+ */
+export async function sendCounsellingConfirmation(params: {
+  toEmail: string;
+  name: string;
+  reference: string;
+  slotStartIso: string;
+  locale: string;
+}): Promise<boolean> {
+  if (!isEmailConfigured()) return false;
+  const formatted = formatCounsellingSlotBeijing(params.slotStartIso);
+  const bodyText =
+    params.locale === 'zh'
+      ? [
+          `您好 ${params.name}，`,
+          '',
+          '您已成功预约 SICA 的免费 10 分钟在线咨询。',
+          '',
+          `预约编号：${params.reference}`,
+          `咨询时间：${formatted}`,
+          '',
+          '招生顾问会通过邮件或 WhatsApp 与您确认，并把会议链接发给您。',
+          '如需改期，直接回复本邮件即可。',
+        ]
+      : [
+          `Hi ${params.name},`,
+          '',
+          'Your free 10-minute online counselling session with SICA is booked.',
+          '',
+          `Reference: ${params.reference}`,
+          `Session time: ${formatted}`,
+          '',
+          'A SICA advisor will confirm shortly and send you the meeting link by email or WhatsApp.',
+          'Need a different time? Just reply to this email.',
+        ];
+  const { subject, text } = formatWithSignature({
+    subject:
+      params.locale === 'zh'
+        ? `咨询预约确认 ${params.reference}`
+        : `Your counselling session is booked — ${params.reference}`,
+    bodyText: bodyText.join('\n'),
+  });
+  try {
+    const result = await sendTextEmail({ to: params.toEmail, subject, text });
+    return result.ok;
+  } catch (err) {
+    console.error('[email] counselling confirmation failed:', err);
+    return false;
+  }
+}

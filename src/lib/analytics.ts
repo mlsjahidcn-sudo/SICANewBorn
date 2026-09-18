@@ -87,6 +87,13 @@ export interface AnalyticsEventMap {
     /** Subject category from the dropdown. */
     subject: 'general' | 'application' | 'scholarship' | 'visa' | 'other';
   };
+  /** Free counselling booking submitted successfully (Phase 114, POST 200). */
+  counselling_booking_submit: {
+    /** Page locale. */
+    locale: 'en' | 'zh';
+    /** Booking reference minted server-side (e.g. CS-20260919-K7QM). */
+    reference: string;
+  };
   /** User clicked a service-tier CTA on the /get-started sales page. */
   service_card_click: {
     /** Which tier the user clicked toward. */

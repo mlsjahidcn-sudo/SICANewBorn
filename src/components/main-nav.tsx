@@ -21,6 +21,7 @@ import {
   MessageCircle,
   Compass,
   Mail,
+  CalendarClock,
 } from 'lucide-react';
 
 interface SubItem {
@@ -182,11 +183,19 @@ export function MainNav() {
       label: t('nav.admissions'),
       // Only /assessment highlights Admissions — /contact lives in
       // the About submenu, so it highlights About.
-      activeMatch: ['/assessment'],
+      activeMatch: ['/assessment', '/counselling'],
       sections: [
         {
           title: t('nav.admissions'),
           items: [
+            {
+              // Phase 114: free 10-min counselling booking — the
+              // fastest-intent conversion path, so it leads the menu.
+              href: '/counselling',
+              label: t('nav.admissions.counselling'),
+              desc: t('nav.admissions.counsellingDesc'),
+              icon: CalendarClock,
+            },
             {
               href: '/assessment',
               label: t('nav.admissions.assessment'),
