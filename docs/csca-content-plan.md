@@ -67,8 +67,8 @@ per-session and evolve:
 | 16 | `csca-mbbs-applicants` | CSCA for MBBS & medicine applicants | csca mbbs, csca for medical students | Subject combo for med schools (Chem+Physics?), NMC/PMDC recognition context, med-school cutoff expectations | ✅ 119 |
 | 17 | `csca-english-taught-programs` | Does the CSCA apply to English-taught programs? | csca english taught, csca international program | Yes-but nuance, IELTS/TOEFL stacking, which subjects English-track applicants sit | ✅ 119 |
 | 18 | `csca-test-day-retakes` | CSCA test day & retake policy | csca test day, csca retake | Bring/leave lists, answer-sheet discipline, resit strategy, score-submission mechanics | ✅ 119 |
-| 19 | `csca-faq` | CSCA exam — 50 frequently asked questions | csca faq, csca questions | 50-Q mega-page (superset of flagship FAQs), FAQPage JSON-LD via guide `faqs` array | B5 |
-| 20 | `csca-partner-guide` | Advising clients on the CSCA — partner handbook | (partner-portal, low search volume) | For SICA partner agencies: client triage, subject-combo matrix, deadline calendar template | B5 |
+| 19 | `csca-faq` | CSCA exam — 50 frequently asked questions | csca faq, csca questions | 50-Q mega-page (superset of flagship FAQs), FAQPage JSON-LD via guide `faqs` array | ✅ 120 |
+| 20 | `csca-partner-guide` | Advising clients on the CSCA — partner handbook | (partner-portal, low search volume) | For SICA partner agencies: client triage, subject-combo matrix, deadline calendar template | ✅ 120 |
 
 ## Batching
 
@@ -82,7 +82,8 @@ per-session and evolve:
 - **Batch 4 (B4, #15–18)** — scenario pages; strong internal-link targets
   from flagship + CSC guide + MBBS guide. **SHIPPED in Phase 119.**
 - **Batch 5 (B5, #19–20)** — FAQ mega-page + partner handbook; do last so the
-  FAQ can absorb corrections discovered while writing #2–18.
+  FAQ can absorb corrections discovered while writing #2–18. **SHIPPED in
+  Phase 120 — CLUSTER COMPLETE (20/20).**
 
 ## Standing rules
 

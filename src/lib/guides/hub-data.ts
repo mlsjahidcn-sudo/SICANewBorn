@@ -485,6 +485,28 @@ export const guideCards: LocalizedGuideCards = {
       readTime: '10 min read',
       highlight: 'Exam-day ops',
     },
+    {
+      slug: 'csca-faq',
+      href: '/csca-faq',
+      icon: 'file-check',
+      category: 'listicle',
+      title: 'CSCA FAQ — 50 questions answered',
+      subtitle:
+        'Every CSCA question on one page: who, what, scoring, fees, dates, exemptions, scholarships, retakes — with the topic map to all 18 deep dives.',
+      readTime: '15 min read',
+      highlight: 'One page',
+    },
+    {
+      slug: 'csca-partner-guide',
+      href: '/csca-partner-guide',
+      icon: 'briefcase',
+      category: 'listicle',
+      title: 'CSCA partner & counselor handbook',
+      subtitle:
+        'The counselor-side playbook: 5-question client triage, combination matrix, calendar template, six mistake scripts, waiver checks at scale.',
+      readTime: '10 min read',
+      highlight: 'For partners',
+    },
   ],
   zh: [
     // ───── Process guides (Phase 39a) ─────
@@ -951,6 +973,28 @@ export const guideCards: LocalizedGuideCards = {
         '装备清单、禁带列表、保护分数的答题卡纪律，以及外科手术式的重考打法。',
       readTime: '10分钟阅读',
       highlight: '考试日作战',
+    },
+    {
+      slug: 'csca-faq',
+      href: '/csca-faq',
+      icon: 'file-check',
+      category: 'listicle',
+      title: 'CSCA 问答——50 问一次答清',
+      subtitle:
+        '一页答完所有 CSCA 问题：谁考、考什么、计分、费用、时间、豁免、奖学金、重考——附 18 篇深潜指南主题地图。',
+      readTime: '15分钟阅读',
+      highlight: '一页找齐',
+    },
+    {
+      slug: 'csca-partner-guide',
+      href: '/csca-partner-guide',
+      icon: 'briefcase',
+      category: 'listicle',
+      title: 'CSCA 合作伙伴与顾问手册',
+      subtitle:
+        '顾问侧打法：五问客户分诊、组合矩阵、日历模板、六错误话术、批量免考核验。',
+      readTime: '10分钟阅读',
+      highlight: '面向伙伴',
     },
   ],
 };
