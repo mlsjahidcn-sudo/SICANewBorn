@@ -441,6 +441,50 @@ export const guideCards: LocalizedGuideCards = {
       readTime: '9 min read',
       highlight: '80+/70+/60s',
     },
+    {
+      slug: 'csca-csc-scholarship',
+      href: '/csca-csc-scholarship',
+      icon: 'award',
+      category: 'listicle',
+      title: 'CSCA for CSC scholarship applicants',
+      subtitle:
+        'Mandatory scores from 2026: the January–April crunch mapped, two-channel strategy, scholarship-grade targets, and the file checklist.',
+      readTime: '11 min read',
+      highlight: 'Full funding',
+    },
+    {
+      slug: 'csca-mbbs-applicants',
+      href: '/csca-mbbs-applicants',
+      icon: 'heart-pulse',
+      category: 'listicle',
+      title: 'CSCA for MBBS & medicine applicants',
+      subtitle:
+        'The Math + Chemistry route, English-taught MBBS landscape, MOE listing, home-country licensing context, and the early-deadline calendar.',
+      readTime: '10 min read',
+      highlight: 'Future doctors',
+    },
+    {
+      slug: 'csca-english-taught-programs',
+      href: '/csca-english-taught-programs',
+      icon: 'graduation-cap',
+      category: 'listicle',
+      title: 'Does the CSCA apply to English-taught programs?',
+      subtitle:
+        'Yes — IELTS/TOEFL doesn\'t exempt it. What English-taught candidates sit, how the tests stack, and the verification checklist.',
+      readTime: '9 min read',
+      highlight: 'Myth busted',
+    },
+    {
+      slug: 'csca-test-day-retakes',
+      href: '/csca-test-day-retakes',
+      icon: 'clipboard-list',
+      category: 'listicle',
+      title: 'CSCA test day & retakes',
+      subtitle:
+        'The kit, the banned list, answer-sheet discipline that protects your score, and the surgical resit playbook.',
+      readTime: '10 min read',
+      highlight: 'Exam-day ops',
+    },
   ],
   zh: [
     // ───── Process guides (Phase 39a) ─────
@@ -863,6 +907,50 @@ export const guideCards: LocalizedGuideCards = {
         '无全国及格线——各校自划线。层次分数带（80+/70+/60 分段）、成绩单流转与目标设定方法。',
       readTime: '9分钟阅读',
       highlight: '80+/70+/60s',
+    },
+    {
+      slug: 'csca-csc-scholarship',
+      href: '/csca-csc-scholarship',
+      icon: 'award',
+      category: 'listicle',
+      title: 'CSC 奖学金申请者的 CSCA',
+      subtitle:
+        '2026 起强制成绩：1-4 月挤压地图、双渠道策略、奖学金级目标与材料清单。',
+      readTime: '11分钟阅读',
+      highlight: '全额资助',
+    },
+    {
+      slug: 'csca-mbbs-applicants',
+      href: '/csca-mbbs-applicants',
+      icon: 'heart-pulse',
+      category: 'listicle',
+      title: 'MBBS 与医学申请者的 CSCA',
+      subtitle:
+        '数学 + 化学路线、英文授课 MBBS 版图、MOE 名单、母国执照背景与早截止日历。',
+      readTime: '10分钟阅读',
+      highlight: '未来医生',
+    },
+    {
+      slug: 'csca-english-taught-programs',
+      href: '/csca-english-taught-programs',
+      icon: 'graduation-cap',
+      category: 'listicle',
+      title: '英文授课项目要考 CSCA 吗？',
+      subtitle:
+        '要——雅思/托福不能豁免。英文授课考生考什么、考试如何叠加与核验清单。',
+      readTime: '9分钟阅读',
+      highlight: '破除误解',
+    },
+    {
+      slug: 'csca-test-day-retakes',
+      href: '/csca-test-day-retakes',
+      icon: 'clipboard-list',
+      category: 'listicle',
+      title: 'CSCA 考试日与重考',
+      subtitle:
+        '装备清单、禁带列表、保护分数的答题卡纪律，以及外科手术式的重考打法。',
+      readTime: '10分钟阅读',
+      highlight: '考试日作战',
     },
   ],
 };
