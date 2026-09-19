@@ -412,6 +412,26 @@ export const cscaExamGuide: LocalizedGuide = {
     ctaContactLabel: 'Talk to a counselor',
     related: [
       {
+        href: '/csca-exam-dates',
+        label: 'CSCA exam dates & registration windows',
+        description: 'Which of the 5 yearly sessions to sit, and how to plan backwards from your intake.',
+      },
+      {
+        href: '/csca-exam-registration',
+        label: 'How to register for the CSCA',
+        description: 'The 8-step portal walkthrough, test centers, and the mistakes that cost candidates a session.',
+      },
+      {
+        href: '/csca-exam-fees',
+        label: 'CSCA exam fees & payment guide',
+        description: '¥450/¥700 banding, Alipay/WeChat/bank payment, and paying from outside China.',
+      },
+      {
+        href: '/csca-exam-exemptions',
+        label: 'Who must take the CSCA — and who is exempt',
+        description: 'The HSK-4 route for language programs and the Professional Chinese waiver.',
+      },
+      {
         href: '/guides/hsk',
         label: 'HSK Chinese proficiency test guide',
         description: 'Levels, scoring, test dates, and how HSK 4–6 unlocks Chinese-taught programs.',
@@ -420,11 +440,6 @@ export const cscaExamGuide: LocalizedGuide = {
         href: '/chinese-government-scholarship-csc',
         label: 'Chinese Government Scholarship (CSC)',
         description: 'Full funding: tuition + dorm + ¥2,500–3,500/month stipend + airfare. CSCA scores required from 2026.',
-      },
-      {
-        href: '/china-university-admission-requirements',
-        label: 'China university admission requirements',
-        description: 'Documents, language scores, and academic requirements by degree level and program type.',
       },
     ],
   },
@@ -824,6 +839,26 @@ export const cscaExamGuide: LocalizedGuide = {
     ctaContactLabel: '联系顾问',
     related: [
       {
+        href: '/csca-exam-dates',
+        label: 'CSCA 考试时间与报名窗口',
+        description: '每年 5 场该选哪场，以及如何从入学时间倒推规划。',
+      },
+      {
+        href: '/csca-exam-registration',
+        label: 'CSCA 报名流程详解',
+        description: '门户 8 步操作、考点选择，与让考生损失一场考试的报名错误。',
+      },
+      {
+        href: '/csca-exam-fees',
+        label: 'CSCA 考试费用与支付指南',
+        description: '¥450/¥700 分档、支付宝/微信/银行支付，以及境外付款方案。',
+      },
+      {
+        href: '/csca-exam-exemptions',
+        label: '谁必须参加 CSCA——谁可豁免',
+        description: '语言项目的 HSK-4 通道与专业中文免考。',
+      },
+      {
         href: '/guides/hsk',
         label: 'HSK 汉语水平考试指南',
         description: '级别、计分、考试时间，HSK 4-6 如何解锁中文授课项目。',
@@ -832,11 +867,6 @@ export const cscaExamGuide: LocalizedGuide = {
         href: '/chinese-government-scholarship-csc',
         label: '中国政府奖学金（CSC）',
         description: '全额资助：学费 + 住宿 + ¥2,500-3,500/月津贴 + 机票。2026 起须提交 CSCA 成绩。',
-      },
-      {
-        href: '/china-university-admission-requirements',
-        label: '中国大学录取要求',
-        description: '按学位层级与项目类型列明的材料、语言与学术要求。',
       },
     ],
   },

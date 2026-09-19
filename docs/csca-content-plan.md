@@ -50,10 +50,10 @@ per-session and evolve:
 | # | Slug (/prefix) | Working title (EN) | Target queries | Angle / key blocks | Batch |
 |---|---|---|---|---|---|
 | 1 | `csca-exam` | CSCA exam — complete guide | csca exam, china scholastic competency assessment | **SHIPPED (Phase 115)** flagship: what/who/subjects/scoring/dates/fees/HSK-diff/CSC requirement/register/prep/test-day | 115 |
-| 2 | `csca-exam-dates` | CSCA exam dates & registration windows 2026–2027 | csca exam dates, csca registration deadline | 5-session calendar table, intake-backwards planner, session-choice decision table | B1 |
-| 3 | `csca-exam-registration` | How to register for the CSCA — step-by-step | csca registration, csca sign up, csca portal | Portal walkthrough (8 steps), passport-name pitfalls, test-center selection, scam-agent warning | B1 |
-| 4 | `csca-exam-fees` | CSCA exam fees & payment guide | csca exam fee, csca cost | ¥450/¥700 banding table, Alipay/WeChat/bank-transfer how-to for non-Chinese residents, refund policy caveats | B1 |
-| 5 | `csca-exam-exemptions` | Who must take the CSCA — and who is exempt | csca exemption, csca hsk waiver | Mandatory-vs-exempt matrix, HSK 4 route, Professional-Chinese waiver, "get it in writing" checklist | B1 |
+| 2 | `csca-exam-dates` | CSCA exam dates & registration windows 2026–2027 | csca exam dates, csca registration deadline | 5-session calendar table, intake-backwards planner, session-choice decision table | ✅ 116 |
+| 3 | `csca-exam-registration` | How to register for the CSCA — step-by-step | csca registration, csca sign up, csca portal | Portal walkthrough (8 steps), passport-name pitfalls, test-center selection, scam-agent warning | ✅ 116 |
+| 4 | `csca-exam-fees` | CSCA exam fees & payment guide | csca exam fee, csca cost | ¥450/¥700 banding table, Alipay/WeChat/bank-transfer how-to for non-Chinese residents, refund policy caveats | ✅ 116 |
+| 5 | `csca-exam-exemptions` | Who must take the CSCA — and who is exempt | csca exemption, csca hsk waiver | Mandatory-vs-exempt matrix, HSK 4 route, Professional-Chinese waiver, "get it in writing" checklist | ✅ 116 |
 | 6 | `csca-mathematics-guide` | CSCA Mathematics — syllabus & prep | csca math, csca mathematics syllabus | Topic checklist vs A-Level/IB/AP overlap, 48-MCQ timing drills, no-calculator technique | B2 |
 | 7 | `csca-physics-guide` | CSCA Physics — syllabus & prep | csca physics, csca physics syllabus | Mechanics→modern topic map, formula-sheet ban (memorization list), MCQ strategy | B2 |
 | 8 | `csca-chemistry-guide` | CSCA Chemistry — syllabus & prep | csca chemistry | Inorganic/organic/physical split, who needs it (med/pharmacy/chem-eng), prep resources | B2 |
@@ -74,6 +74,7 @@ per-session and evolve:
 
 - **Batch 1 (B1, #2–5)** — the four logistics pillars. Highest immediate
   search demand (everyone registering for the next session lands here).
+  **SHIPPED in Phase 116.**
 - **Batch 2 (B2, #6–11)** — subject deep-dives. Longest articles; each can be
   its own phase or paired 2-per-phase.
 - **Batch 3 (B3, #12–14)** — comparison/decision content; converts readers

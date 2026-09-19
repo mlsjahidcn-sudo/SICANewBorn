@@ -45,6 +45,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/chinese-government-scholarship-csc`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
     // Phase 115: CSCA exam flagship — new mandatory exam for intl bachelor's applicants (2026 intake)
     { url: `${SITE_URL}/csca-exam`, lastModified: now, changeFrequency: 'monthly', priority: 0.85 },
+    // Phase 116: CSCA cluster Batch 1 — logistics pillars
+    { url: `${SITE_URL}/csca-exam-dates`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/csca-exam-registration`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/csca-exam-fees`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/csca-exam-exemptions`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/phd-in-china-international-students`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
     { url: `${SITE_URL}/china-university-admission-requirements`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
     { url: `${SITE_URL}/cost-of-living-china-by-city`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },

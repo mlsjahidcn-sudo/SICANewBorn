@@ -298,6 +298,50 @@ export const guideCards: LocalizedGuideCards = {
       readTime: '13 min read',
       highlight: 'Mandatory from 2026',
     },
+    {
+      slug: 'csca-exam-dates',
+      href: '/csca-exam-dates',
+      icon: 'calendar-clock',
+      category: 'listicle',
+      title: 'CSCA exam dates & registration windows',
+      subtitle:
+        '5 sessions a year, windows close ~15 days before each test, and how to plan backwards from your intake.',
+      readTime: '9 min read',
+      highlight: 'Plan backwards',
+    },
+    {
+      slug: 'csca-exam-registration',
+      href: '/csca-exam-registration',
+      icon: 'clipboard-list',
+      category: 'listicle',
+      title: 'How to register for the CSCA',
+      subtitle:
+        'The 8-step portal walkthrough: account, test centers, subjects, payment, admission tickets — and the 6 mistakes that cost a session.',
+      readTime: '10 min read',
+      highlight: 'Step-by-step',
+    },
+    {
+      slug: 'csca-exam-fees',
+      href: '/csca-exam-fees',
+      icon: 'wallet',
+      category: 'listicle',
+      title: 'CSCA exam fees & payment',
+      subtitle:
+        '¥450 for 1 subject, ¥700 total for 2+; Alipay/WeChat/bank transfer and paying from abroad. Compare with SAT/IELTS.',
+      readTime: '9 min read',
+      highlight: '~$100 all-in',
+    },
+    {
+      slug: 'csca-exam-exemptions',
+      href: '/csca-exam-exemptions',
+      icon: 'file-check',
+      category: 'listicle',
+      title: 'Who must take the CSCA — and who is exempt',
+      subtitle:
+        'The HSK-4 route for language programs, the Professional Chinese waiver, English-taught programs, and how to get a waiver in writing.',
+      readTime: '10 min read',
+      highlight: 'HSK 4 route',
+    },
   ],
   zh: [
     // ───── Process guides (Phase 39a) ─────
@@ -577,6 +621,50 @@ export const guideCards: LocalizedGuideCards = {
         '中国国际本科申请者新必考统一考试：科目、形式、费用、时间、豁免、CSC 强制要求。',
       readTime: '13分钟阅读',
       highlight: '2026 起必考',
+    },
+    {
+      slug: 'csca-exam-dates',
+      href: '/csca-exam-dates',
+      icon: 'calendar-clock',
+      category: 'listicle',
+      title: 'CSCA 考试时间与报名窗口',
+      subtitle:
+        '每年 5 场、报名考前约 15 天截止，以及如何从入学时间倒推规划。',
+      readTime: '9分钟阅读',
+      highlight: '倒推规划',
+    },
+    {
+      slug: 'csca-exam-registration',
+      href: '/csca-exam-registration',
+      icon: 'clipboard-list',
+      category: 'listicle',
+      title: 'CSCA 报名流程详解',
+      subtitle:
+        '门户 8 步操作：账号、考点、科目、缴费、准考证——以及让你损失一场考试的 6 个错误。',
+      readTime: '10分钟阅读',
+      highlight: '逐步操作',
+    },
+    {
+      slug: 'csca-exam-fees',
+      href: '/csca-exam-fees',
+      icon: 'wallet',
+      category: 'listicle',
+      title: 'CSCA 考试费用与支付',
+      subtitle:
+        '单科 ¥450、两科及以上合计 ¥700；支付宝/微信/银行转账与境外付款。对比 SAT/雅思。',
+      readTime: '9分钟阅读',
+      highlight: '全科约 $100',
+    },
+    {
+      slug: 'csca-exam-exemptions',
+      href: '/csca-exam-exemptions',
+      icon: 'file-check',
+      category: 'listicle',
+      title: '谁必须参加 CSCA——谁可豁免',
+      subtitle:
+        '语言项目的 HSK-4 通道、专业中文免考、英文授课项目，以及如何拿到书面豁免。',
+      readTime: '10分钟阅读',
+      highlight: 'HSK 4 通道',
     },
   ],
 };
