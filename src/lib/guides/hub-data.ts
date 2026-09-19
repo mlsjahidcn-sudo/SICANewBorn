@@ -408,6 +408,39 @@ export const guideCards: LocalizedGuideCards = {
       readTime: '11 min read',
       highlight: 'The system',
     },
+    {
+      slug: 'csca-vs-hsk',
+      href: '/csca-vs-hsk',
+      icon: 'scale',
+      category: 'listicle',
+      title: 'CSCA vs HSK — which do you need?',
+      subtitle:
+        'General proficiency vs academic competency: side-by-side, who needs both, the waiver interplay, and a 5-minute decision flow.',
+      readTime: '9 min read',
+      highlight: 'Most confused',
+    },
+    {
+      slug: 'csca-vs-sat-a-level-ib',
+      href: '/csca-vs-sat-a-level-ib',
+      icon: 'scale',
+      category: 'listicle',
+      title: 'CSCA vs SAT, A-Level & IB',
+      subtitle:
+        'International scores complement but never replace the CSCA: the transfer audit, format deltas, and the lean China-only exam stack.',
+      readTime: '10 min read',
+      highlight: 'Intl students',
+    },
+    {
+      slug: 'csca-scores-and-cutoffs',
+      href: '/csca-scores-and-cutoffs',
+      icon: 'tag',
+      category: 'listicle',
+      title: 'CSCA scores & university cutoffs',
+      subtitle:
+        'No national pass mark — universities set their own lines. Tier bands (80+/70+/60s), score-report logistics, and target-setting method.',
+      readTime: '9 min read',
+      highlight: '80+/70+/60s',
+    },
   ],
   zh: [
     // ───── Process guides (Phase 39a) ─────
@@ -797,6 +830,39 @@ export const guideCards: LocalizedGuideCards = {
         '四条备考原则、逐周日程、模考拼装、重考打法与完整资料栈。',
       readTime: '11分钟阅读',
       highlight: '整套体系',
+    },
+    {
+      slug: 'csca-vs-hsk',
+      href: '/csca-vs-hsk',
+      icon: 'scale',
+      category: 'listicle',
+      title: 'CSCA 对比 HSK——你该考哪个？',
+      subtitle:
+        '通用水平 vs 学术能力：逐项对比、谁要两个都考、免考交叉与五分钟决策流程。',
+      readTime: '9分钟阅读',
+      highlight: '最易混淆',
+    },
+    {
+      slug: 'csca-vs-sat-a-level-ib',
+      href: '/csca-vs-sat-a-level-ib',
+      icon: 'scale',
+      category: 'listicle',
+      title: 'CSCA 对比 SAT、A-Level 与 IB',
+      subtitle:
+        '国际成绩是补充、永不能替代 CSCA：可迁移性审计、形式差异与精简的仅中国考试组合。',
+      readTime: '10分钟阅读',
+      highlight: '国际学生',
+    },
+    {
+      slug: 'csca-scores-and-cutoffs',
+      href: '/csca-scores-and-cutoffs',
+      icon: 'tag',
+      category: 'listicle',
+      title: 'CSCA 分数与大学划线',
+      subtitle:
+        '无全国及格线——各校自划线。层次分数带（80+/70+/60 分段）、成绩单流转与目标设定方法。',
+      readTime: '9分钟阅读',
+      highlight: '80+/70+/60s',
     },
   ],
 };

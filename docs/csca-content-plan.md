@@ -60,9 +60,9 @@ per-session and evolve:
 | 9 | `csca-humanities-chinese-guide` | CSCA Professional Chinese — Humanities track | csca humanities chinese, 人文中文 | 80-question format, academic-vocab builder (law/business/arts), HSK5+ bridging plan | ✅ 117 |
 | 10 | `csca-stem-chinese-guide` | CSCA Professional Chinese — STEM track | csca stem chinese, 理工中文 | Technical-Chinese vocab for engineering/science, notation glossary, reading-speed drills | ✅ 117 |
 | 11 | `csca-exam-preparation` | How to prepare for the CSCA — 8-week study plan | csca preparation, csca study guide | Week-by-week plan, mock-test assembly, score-improvement framework, SICA prep pack CTA | ✅ 117 |
-| 12 | `csca-vs-hsk` | CSCA vs HSK — what's the difference | csca vs hsk, do i need hsk for csca | Side-by-side table, who needs which/both, exemption interplay, decision flowchart | B3 |
-| 13 | `csca-vs-sat-a-level-ib` | CSCA vs SAT / A-Level / IB | csca vs sat, csca a-level equivalent | Comparison table, transferability, curriculum-style differences (Chinese HS MCQ style), gap-year candidates | B3 |
-| 14 | `csca-scores-and-cutoffs` | CSCA scores explained — how universities set cutoffs | csca passing score, csca score report | 100-pt scale, no national pass mark, tier benchmarks (80+/70+/60s), score-report logistics | B3 |
+| 12 | `csca-vs-hsk` | CSCA vs HSK — what's the difference | csca vs hsk, do i need hsk for csca | Side-by-side table, who needs which/both, exemption interplay, decision flowchart | ✅ 118 |
+| 13 | `csca-vs-sat-a-level-ib` | CSCA vs SAT / A-Level / IB | csca vs sat, csca a-level equivalent | Comparison table, transferability, curriculum-style differences (Chinese HS MCQ style), gap-year candidates | ✅ 118 |
+| 14 | `csca-scores-and-cutoffs` | CSCA scores explained — how universities set cutoffs | csca passing score, csca score report | 100-pt scale, no national pass mark, tier benchmarks (80+/70+/60s), score-report logistics | ✅ 118 |
 | 15 | `csca-csc-scholarship` | CSCA for CSC scholarship applicants | csca scholarship, csc scholarship csca score | Jan–Apr deadline crunch timeline, session planning, no-score-no-shortlist rules | B4 |
 | 16 | `csca-mbbs-applicants` | CSCA for MBBS & medicine applicants | csca mbbs, csca for medical students | Subject combo for med schools (Chem+Physics?), NMC/PMDC recognition context, med-school cutoff expectations | B4 |
 | 17 | `csca-english-taught-programs` | Does the CSCA apply to English-taught programs? | csca english taught, csca international program | Yes-but nuance, IELTS/TOEFL stacking, which subjects English-track applicants sit | B4 |
@@ -78,7 +78,7 @@ per-session and evolve:
 - **Batch 2 (B2, #6–11)** — subject deep-dives. Longest articles; each can be
   its own phase or paired 2-per-phase. **SHIPPED in Phase 117.**
 - **Batch 3 (B3, #12–14)** — comparison/decision content; converts readers
-  from awareness to prep.
+  from awareness to prep. **SHIPPED in Phase 118.**
 - **Batch 4 (B4, #15–18)** — scenario pages; strong internal-link targets
   from flagship + CSC guide + MBBS guide.
 - **Batch 5 (B5, #19–20)** — FAQ mega-page + partner handbook; do last so the
