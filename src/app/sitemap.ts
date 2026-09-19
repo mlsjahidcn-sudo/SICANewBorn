@@ -43,6 +43,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/study-in-china-vs-russia-for-mbbs`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
     { url: `${SITE_URL}/china-university-application-deadlines`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
     { url: `${SITE_URL}/chinese-government-scholarship-csc`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
+    // Phase 115: CSCA exam flagship — new mandatory exam for intl bachelor's applicants (2026 intake)
+    { url: `${SITE_URL}/csca-exam`, lastModified: now, changeFrequency: 'monthly', priority: 0.85 },
     { url: `${SITE_URL}/phd-in-china-international-students`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
     { url: `${SITE_URL}/china-university-admission-requirements`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
     { url: `${SITE_URL}/cost-of-living-china-by-city`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },

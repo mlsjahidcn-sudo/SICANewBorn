@@ -287,6 +287,17 @@ export const guideCards: LocalizedGuideCards = {
       readTime: '14 min read',
       highlight: 'Indian/Pakistani/Nigerian',
     },
+    {
+      slug: 'csca-exam',
+      href: '/csca-exam',
+      icon: 'book-open',
+      category: 'listicle',
+      title: 'CSCA exam — complete guide',
+      subtitle:
+        'China\'s new mandatory admissions exam for international bachelor\'s applicants: subjects, format, fees, dates, exemptions, CSC requirement.',
+      readTime: '13 min read',
+      highlight: 'Mandatory from 2026',
+    },
   ],
   zh: [
     // ───── Process guides (Phase 39a) ─────
@@ -555,6 +566,17 @@ export const guideCards: LocalizedGuideCards = {
         '中国 vs 俄罗斯 MBBS 全方位对比——费用、学制、认证、气候、职业路径。',
       readTime: '14分钟阅读',
       highlight: '印度 / 巴基斯坦 / 尼日利亚',
+    },
+    {
+      slug: 'csca-exam',
+      href: '/csca-exam',
+      icon: 'book-open',
+      category: 'listicle',
+      title: 'CSCA 考试完全指南',
+      subtitle:
+        '中国国际本科申请者新必考统一考试：科目、形式、费用、时间、豁免、CSC 强制要求。',
+      readTime: '13分钟阅读',
+      highlight: '2026 起必考',
     },
   ],
 };
