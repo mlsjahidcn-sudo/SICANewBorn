@@ -50,6 +50,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/csca-exam-registration`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/csca-exam-fees`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/csca-exam-exemptions`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    // Phase 117: CSCA cluster Batch 2 — subject deep-dives + prep system
+    { url: `${SITE_URL}/csca-mathematics-guide`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/csca-physics-guide`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/csca-chemistry-guide`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/csca-humanities-chinese-guide`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/csca-stem-chinese-guide`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/csca-exam-preparation`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/phd-in-china-international-students`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
     { url: `${SITE_URL}/china-university-admission-requirements`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
     { url: `${SITE_URL}/cost-of-living-china-by-city`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },

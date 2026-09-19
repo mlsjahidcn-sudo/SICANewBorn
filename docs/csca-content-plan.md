@@ -54,12 +54,12 @@ per-session and evolve:
 | 3 | `csca-exam-registration` | How to register for the CSCA — step-by-step | csca registration, csca sign up, csca portal | Portal walkthrough (8 steps), passport-name pitfalls, test-center selection, scam-agent warning | ✅ 116 |
 | 4 | `csca-exam-fees` | CSCA exam fees & payment guide | csca exam fee, csca cost | ¥450/¥700 banding table, Alipay/WeChat/bank-transfer how-to for non-Chinese residents, refund policy caveats | ✅ 116 |
 | 5 | `csca-exam-exemptions` | Who must take the CSCA — and who is exempt | csca exemption, csca hsk waiver | Mandatory-vs-exempt matrix, HSK 4 route, Professional-Chinese waiver, "get it in writing" checklist | ✅ 116 |
-| 6 | `csca-mathematics-guide` | CSCA Mathematics — syllabus & prep | csca math, csca mathematics syllabus | Topic checklist vs A-Level/IB/AP overlap, 48-MCQ timing drills, no-calculator technique | B2 |
-| 7 | `csca-physics-guide` | CSCA Physics — syllabus & prep | csca physics, csca physics syllabus | Mechanics→modern topic map, formula-sheet ban (memorization list), MCQ strategy | B2 |
-| 8 | `csca-chemistry-guide` | CSCA Chemistry — syllabus & prep | csca chemistry | Inorganic/organic/physical split, who needs it (med/pharmacy/chem-eng), prep resources | B2 |
-| 9 | `csca-humanities-chinese-guide` | CSCA Professional Chinese — Humanities track | csca humanities chinese, 人文中文 | 80-question format, academic-vocab builder (law/business/arts), HSK5+ bridging plan | B2 |
-| 10 | `csca-stem-chinese-guide` | CSCA Professional Chinese — STEM track | csca stem chinese, 理工中文 | Technical-Chinese vocab for engineering/science, notation glossary, reading-speed drills | B2 |
-| 11 | `csca-exam-preparation` | How to prepare for the CSCA — 8-week study plan | csca preparation, csca study guide | Week-by-week plan, mock-test assembly, score-improvement framework, SICA prep pack CTA | B2 |
+| 6 | `csca-mathematics-guide` | CSCA Mathematics — syllabus & prep | csca math, csca mathematics syllabus | Topic checklist vs A-Level/IB/AP overlap, 48-MCQ timing drills, no-calculator technique | ✅ 117 |
+| 7 | `csca-physics-guide` | CSCA Physics — syllabus & prep | csca physics, csca physics syllabus | Mechanics→modern topic map, formula-sheet ban (memorization list), MCQ strategy | ✅ 117 |
+| 8 | `csca-chemistry-guide` | CSCA Chemistry — syllabus & prep | csca chemistry | Inorganic/organic/physical split, who needs it (med/pharmacy/chem-eng), prep resources | ✅ 117 |
+| 9 | `csca-humanities-chinese-guide` | CSCA Professional Chinese — Humanities track | csca humanities chinese, 人文中文 | 80-question format, academic-vocab builder (law/business/arts), HSK5+ bridging plan | ✅ 117 |
+| 10 | `csca-stem-chinese-guide` | CSCA Professional Chinese — STEM track | csca stem chinese, 理工中文 | Technical-Chinese vocab for engineering/science, notation glossary, reading-speed drills | ✅ 117 |
+| 11 | `csca-exam-preparation` | How to prepare for the CSCA — 8-week study plan | csca preparation, csca study guide | Week-by-week plan, mock-test assembly, score-improvement framework, SICA prep pack CTA | ✅ 117 |
 | 12 | `csca-vs-hsk` | CSCA vs HSK — what's the difference | csca vs hsk, do i need hsk for csca | Side-by-side table, who needs which/both, exemption interplay, decision flowchart | B3 |
 | 13 | `csca-vs-sat-a-level-ib` | CSCA vs SAT / A-Level / IB | csca vs sat, csca a-level equivalent | Comparison table, transferability, curriculum-style differences (Chinese HS MCQ style), gap-year candidates | B3 |
 | 14 | `csca-scores-and-cutoffs` | CSCA scores explained — how universities set cutoffs | csca passing score, csca score report | 100-pt scale, no national pass mark, tier benchmarks (80+/70+/60s), score-report logistics | B3 |
@@ -76,7 +76,7 @@ per-session and evolve:
   search demand (everyone registering for the next session lands here).
   **SHIPPED in Phase 116.**
 - **Batch 2 (B2, #6–11)** — subject deep-dives. Longest articles; each can be
-  its own phase or paired 2-per-phase.
+  its own phase or paired 2-per-phase. **SHIPPED in Phase 117.**
 - **Batch 3 (B3, #12–14)** — comparison/decision content; converts readers
   from awareness to prep.
 - **Batch 4 (B4, #15–18)** — scenario pages; strong internal-link targets

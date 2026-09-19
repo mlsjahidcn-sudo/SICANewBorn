@@ -342,6 +342,72 @@ export const guideCards: LocalizedGuideCards = {
       readTime: '10 min read',
       highlight: 'HSK 4 route',
     },
+    {
+      slug: 'csca-mathematics-guide',
+      href: '/csca-mathematics-guide',
+      icon: 'cog',
+      category: 'listicle',
+      title: 'CSCA Mathematics — syllabus & prep',
+      subtitle:
+        'The compulsory subject: 48 no-calculator MCQs in 60 minutes, the topic map vs A-Level/IB/AP, and the 75-seconds-per-question system.',
+      readTime: '10 min read',
+      highlight: 'Everyone sits it',
+    },
+    {
+      slug: 'csca-physics-guide',
+      href: '/csca-physics-guide',
+      icon: 'activity',
+      category: 'listicle',
+      title: 'CSCA Physics — syllabus & prep',
+      subtitle:
+        'Five domains from mechanics to modern physics, the formula-memorization list, diagram labels, and the three-check MCQ strategy.',
+      readTime: '9 min read',
+      highlight: 'Engineering route',
+    },
+    {
+      slug: 'csca-chemistry-guide',
+      href: '/csca-chemistry-guide',
+      icon: 'heart-pulse',
+      category: 'listicle',
+      title: 'CSCA Chemistry — syllabus & prep',
+      subtitle:
+        'Mole arithmetic without a calculator, the fact-recall flashcard layer, China-style process-flow questions — for medicine and science routes.',
+      readTime: '9 min read',
+      highlight: 'Medicine route',
+    },
+    {
+      slug: 'csca-humanities-chinese-guide',
+      href: '/csca-humanities-chinese-guide',
+      icon: 'book-open',
+      category: 'listicle',
+      title: 'CSCA Professional Chinese — Humanities track',
+      subtitle:
+        'The 80-question language track for business, law, and humanities: beyond HSK, the vocabulary layers, and the HSK-to-CSCA bridge.',
+      readTime: '10 min read',
+      highlight: 'Business & law',
+    },
+    {
+      slug: 'csca-stem-chinese-guide',
+      href: '/csca-stem-chinese-guide',
+      icon: 'cog',
+      category: 'listicle',
+      title: 'CSCA Professional Chinese — STEM track',
+      subtitle:
+        'Technical Chinese for engineering and science: the starter glossary, reading-speed drills, and the two-birds strategy with Physics/Chemistry.',
+      readTime: '10 min read',
+      highlight: '2-in-1 prep',
+    },
+    {
+      slug: 'csca-exam-preparation',
+      href: '/csca-exam-preparation',
+      icon: 'clock',
+      category: 'listicle',
+      title: 'How to prepare for the CSCA — 8-week plan',
+      subtitle:
+        'The four prep principles, the week-by-week schedule, mock assembly, the retake playbook, and the full resource stack.',
+      readTime: '11 min read',
+      highlight: 'The system',
+    },
   ],
   zh: [
     // ───── Process guides (Phase 39a) ─────
@@ -665,6 +731,72 @@ export const guideCards: LocalizedGuideCards = {
         '语言项目的 HSK-4 通道、专业中文免考、英文授课项目，以及如何拿到书面豁免。',
       readTime: '10分钟阅读',
       highlight: 'HSK 4 通道',
+    },
+    {
+      slug: 'csca-mathematics-guide',
+      href: '/csca-mathematics-guide',
+      icon: 'cog',
+      category: 'listicle',
+      title: 'CSCA 数学——大纲与备考',
+      subtitle:
+        '必考科目：60 分钟 48 道无计算器选择题、知识域对照 A-Level/IB/AP、「每题 75 秒」训练体系。',
+      readTime: '10分钟阅读',
+      highlight: '人人必考',
+    },
+    {
+      slug: 'csca-physics-guide',
+      href: '/csca-physics-guide',
+      icon: 'activity',
+      category: 'listicle',
+      title: 'CSCA 物理——大纲与备考',
+      subtitle:
+        '力学到近代物理五大知识域、公式记忆清单、图形标注词、三道检查选择题策略。',
+      readTime: '9分钟阅读',
+      highlight: '工科路线',
+    },
+    {
+      slug: 'csca-chemistry-guide',
+      href: '/csca-chemistry-guide',
+      icon: 'heart-pulse',
+      category: 'listicle',
+      title: 'CSCA 化学——大纲与备考',
+      subtitle:
+        '无计算器的物质的量运算、事实记忆闪卡层、中国式流程图题——面向医学与理科路线。',
+      readTime: '9分钟阅读',
+      highlight: '医学路线',
+    },
+    {
+      slug: 'csca-humanities-chinese-guide',
+      href: '/csca-humanities-chinese-guide',
+      icon: 'book-open',
+      category: 'listicle',
+      title: 'CSCA 专业中文——人文中文轨',
+      subtitle:
+        '面向商科、法律与人文的 80 题语言轨：超出 HSK、词汇层次与 HSK 到 CSCA 的衔接。',
+      readTime: '10分钟阅读',
+      highlight: '商科与法律',
+    },
+    {
+      slug: 'csca-stem-chinese-guide',
+      href: '/csca-stem-chinese-guide',
+      icon: 'cog',
+      category: 'listicle',
+      title: 'CSCA 专业中文——理工中文轨',
+      subtitle:
+        '工科与理科的技术中文：入门术语表、阅读速度训练、与物理化学的「一石二鸟」策略。',
+      readTime: '10分钟阅读',
+      highlight: '一举两得',
+    },
+    {
+      slug: 'csca-exam-preparation',
+      href: '/csca-exam-preparation',
+      icon: 'clock',
+      category: 'listicle',
+      title: 'CSCA 备考——八周学习计划',
+      subtitle:
+        '四条备考原则、逐周日程、模考拼装、重考打法与完整资料栈。',
+      readTime: '11分钟阅读',
+      highlight: '整套体系',
     },
   ],
 };
