@@ -4,6 +4,7 @@ import { hydrateUserEmails } from '@/lib/partner-user-lookup';
 import {
   mapPartnerApplicationFromDb,
   parsePartnerApplicationStatus,
+  parsePartnerApplicationDecision,
 } from '@/lib/partner-application-mapper';
 
 /**
@@ -54,6 +55,9 @@ export async function GET(request: NextRequest) {
     const status = parsePartnerApplicationStatus(searchParams.get('status'));
     const priority = searchParams.get('priority')?.trim() || '';
     const validPriorities = ['Low', 'Normal', 'High', 'Urgent'];
+    // Phase 122d: mirror the list endpoint's decision filter so the
+    // UI's Export button respects the visible filter set.
+    const decision = parsePartnerApplicationDecision(searchParams.get('decision'));
 
     let query = auth.supabase
       .from('partner_applications')
@@ -68,6 +72,7 @@ export async function GET(request: NextRequest) {
     if (priority && validPriorities.includes(priority)) {
       query = query.eq('priority', priority);
     }
+    if (decision) query = query.eq('decision', decision);
     if (search) {
       const safe = search.replace(/[%_]/g, '\\$&');
       query = query.or(

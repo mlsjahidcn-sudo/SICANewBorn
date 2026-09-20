@@ -215,9 +215,62 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Sort newest first (created_at desc). Partner rows may have
-    // null createdAt — push them to the bottom.
+    // Phase 122b: server-side sort across the merged surfaces. The
+    // merge already happens in JS (two tables + a UNION-style concat),
+    // so the sort runs there too — on the unified camelCase fields.
+    // Allowed: createdAt | updatedAt | studentName | status | priority
+    // | university. Null/empty values sort to the bottom regardless of
+    // direction; ties break by createdAt desc.
+    const SORT_FIELDS = [
+      'createdAt',
+      'updatedAt',
+      'studentName',
+      'status',
+      'priority',
+      'university',
+    ] as const;
+    type SortField = (typeof SORT_FIELDS)[number];
+    const sortParam = searchParams.get('sort');
+    const sortField: SortField = (SORT_FIELDS as readonly string[]).includes(sortParam ?? '')
+      ? (sortParam as SortField)
+      : 'createdAt';
+    const sortAsc = searchParams.get('order') === 'asc';
+
+    // Sort newest first (created_at desc) unless the caller asked for
+    // another field/order. Partner rows may have null createdAt — push
+    // them to the bottom.
+    const sortValue = (r: UnifiedAppRow): string => {
+      switch (sortField) {
+        case 'createdAt':
+          return r.createdAt || '';
+        case 'updatedAt':
+          return r.updatedAt || '';
+        case 'studentName':
+          return r.studentName || '';
+        case 'status':
+          return r.status || '';
+        case 'university':
+          return r.university || '';
+        case 'priority':
+          // Student rows carry the student-side priority; partner rows
+          // expose it as partnerPriority (Phase 33). Both taxonomies
+          // share the Low/Normal|Medium/High/Urgent vocabulary, so a
+          // lexicographic compare is consistent across surfaces.
+          return r.priority ?? r.partnerPriority ?? '';
+      }
+    };
     combined.sort((a, b) => {
+      if (sortField === 'createdAt') {
+        const aT = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const bT = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return sortAsc ? aT - bT : bT - aT;
+      }
+      const aS = sortValue(a).trim().toLowerCase();
+      const bS = sortValue(b).trim().toLowerCase();
+      if (!aS && bS) return 1; // empties to the bottom
+      if (aS && !bS) return -1;
+      if (aS !== bS) return sortAsc ? (aS < bS ? -1 : 1) : aS > bS ? -1 : 1;
+      // Tiebreak: newest first.
       const aT = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const bT = b.createdAt ? new Date(b.createdAt).getTime() : 0;
       return bT - aT;
@@ -454,6 +507,11 @@ interface UnifiedAppRow {
   // mixed views show these columns, partner rows render the
   // value + student rows render a '—' placeholder.
   partnerPriority?: string | null;
+  // Phase 122b: student rows carry their own priority (from
+  // mapApplicationFromDb); partner rows leave this null and use
+  // partnerPriority. Uniform field so the sort comparator (and any
+  // future consumer) reads one key.
+  priority?: string | null;
   partnerDecision?: string | null;
   partnerOrgId?: string | null;
   partnerOrgName?: string | null;

@@ -26,6 +26,7 @@ import { useI18n } from '@/lib/i18n';
 import {
   getPartnerApplicationStatusLabel,
   getPartnerApplicationPriorityLabel,
+  getPartnerApplicationDecisionLabel,
 } from '@/lib/partner-enum-labels';
 import type {
   PartnerApplication,
@@ -78,6 +79,10 @@ export default function PartnerApplicationsPage() {
   const [exportTruncated, setExportTruncated] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
+  // Phase 122d: decision filter — the API has supported ?decision=
+  // since S26; the UI never exposed it even though the list renders
+  // the Decision column.
+  const [decisionFilter, setDecisionFilter] = useState<string>('all');
   // Phase B: archived visibility. 'active' hides archived rows
   // (default), 'with_archived' shows active + archived, 'only_archived'
   // shows archived rows only. Matches the API's archived param.
@@ -157,6 +162,9 @@ export default function PartnerApplicationsPage() {
       if (debouncedSearch) params.set('search', debouncedSearch);
       if (statusFilter !== 'all') params.set('status', statusFilter);
       if (priorityFilter !== 'all') params.set('priority', priorityFilter);
+      // Phase 122d: expose the API's decision filter (the Decision
+      // column was already rendered; now it's filterable too).
+      if (decisionFilter !== 'all') params.set('decision', decisionFilter);
       // Phase B: archived filter mapping. 'active' omits the param
       // (API defaults to hiding archived), 'with_archived' sends
       // archived=true, 'only_archived' sends archived=only.
@@ -195,7 +203,7 @@ export default function PartnerApplicationsPage() {
       setIsLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch, statusFilter, priorityFilter, archivedFilter, sort, order, t]);
+  }, [debouncedSearch, statusFilter, priorityFilter, decisionFilter, archivedFilter, sort, order, t]);
 
   useEffect(() => {
     void fetchApps();
@@ -304,6 +312,7 @@ export default function PartnerApplicationsPage() {
       if (debouncedSearch) params.set('search', debouncedSearch);
       if (statusFilter !== 'all') params.set('status', statusFilter);
       if (priorityFilter !== 'all') params.set('priority', priorityFilter);
+      if (decisionFilter !== 'all') params.set('decision', decisionFilter);
       const res = await apiFetch(
         `/api/partner/applications/export${params.toString() ? `?${params}` : ''}`,
         { headers: { Accept: 'text/csv' } },
@@ -591,6 +600,21 @@ export default function PartnerApplicationsPage() {
               <SelectItem value="High">{getPartnerApplicationPriorityLabel('High', t)}</SelectItem>
               <SelectItem value="Normal">{getPartnerApplicationPriorityLabel('Normal', t)}</SelectItem>
               <SelectItem value="Low">{getPartnerApplicationPriorityLabel('Low', t)}</SelectItem>
+            </SelectContent>
+          </Select>
+          {/* Phase 122d: decision filter (API ?decision= support
+              existed since S26; this surfaces it). */}
+          <Select value={decisionFilter} onValueChange={setDecisionFilter}>
+            <SelectTrigger className="w-40 rounded-none">
+              <SelectValue placeholder={t('partnerApps.allDecision')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('partnerApps.allDecision')}</SelectItem>
+              <SelectItem value="Pending">{getPartnerApplicationDecisionLabel('Pending', t)}</SelectItem>
+              <SelectItem value="Accepted">{getPartnerApplicationDecisionLabel('Accepted', t)}</SelectItem>
+              <SelectItem value="Rejected">{getPartnerApplicationDecisionLabel('Rejected', t)}</SelectItem>
+              <SelectItem value="Waitlisted">{getPartnerApplicationDecisionLabel('Waitlisted', t)}</SelectItem>
+              <SelectItem value="Deferred">{getPartnerApplicationDecisionLabel('Deferred', t)}</SelectItem>
             </SelectContent>
           </Select>
           <Select value={archivedFilter} onValueChange={(v) => setArchivedFilter(v as typeof archivedFilter)}>

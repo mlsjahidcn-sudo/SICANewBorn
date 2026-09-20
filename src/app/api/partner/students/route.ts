@@ -127,19 +127,40 @@ export async function GET(request: NextRequest) {
     // current page and aggregate in JS.
     const studentIds = (data || []).map((r) => (r as { id?: string | null }).id).filter((id): id is string => Boolean(id));
     const countMap = new Map<string, number>();
+    // Phase 122c: document counts per student (total files uploaded
+    // through the partner documents feature). The Phase 30 RLS
+    // policies let partner teams SELECT their own rows in
+    // student_documents, so the auth-bound client sees exactly this
+    // partner's docs.
+    const docCountMap = new Map<string, number>();
     if (studentIds.length) {
-      const { data: appRows, error: countError } = await auth.supabase
-        .from('partner_applications')
-        .select('student_id')
-        .in('student_id', studentIds)
-        .is('archived_at', null);
-      if (countError) {
-        console.error('[partner/students GET] application count error:', countError);
+      const [appRes, docRes] = await Promise.all([
+        auth.supabase
+          .from('partner_applications')
+          .select('student_id')
+          .in('student_id', studentIds)
+          .is('archived_at', null),
+        auth.supabase
+          .from('student_documents')
+          .select('partner_student_id')
+          .in('partner_student_id', studentIds),
+      ]);
+      if (appRes.error) {
+        console.error('[partner/students GET] application count error:', appRes.error);
       } else {
-        for (const row of appRows || []) {
+        for (const row of appRes.data || []) {
           const sid = (row as { student_id?: string | null }).student_id;
           if (!sid) continue;
           countMap.set(sid, (countMap.get(sid) || 0) + 1);
+        }
+      }
+      if (docRes.error) {
+        console.error('[partner/students GET] document count error:', docRes.error);
+      } else {
+        for (const row of docRes.data || []) {
+          const sid = (row as { partner_student_id?: string | null }).partner_student_id;
+          if (!sid) continue;
+          docCountMap.set(sid, (docCountMap.get(sid) || 0) + 1);
         }
       }
     }
@@ -151,6 +172,7 @@ export async function GET(request: NextRequest) {
         ...(r as Record<string, unknown>),
         created_by_email: id ? emailMap.get(id) ?? null : null,
         application_count: sid ? countMap.get(sid) ?? 0 : 0,
+        document_count: sid ? docCountMap.get(sid) ?? 0 : 0,
       } as Parameters<typeof mapPartnerStudentFromDb>[0]);
     });
     const total = count || 0;

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Plus, Eye, Trash2, MoreHorizontal, ArrowUpRight, ArrowDownRight, Minus, RefreshCw, AlertCircle, Search, Users, Building2, UserPlus, CheckSquare, Square, X, StickyNote, Flag, Download, CalendarClock, Loader2 } from 'lucide-react';
+import { Plus, Eye, Trash2, MoreHorizontal, ArrowUpRight, ArrowDownRight, Minus, RefreshCw, AlertCircle, Search, Users, Building2, UserPlus, CheckSquare, Square, X, StickyNote, Flag, Download, CalendarClock, Loader2, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -192,6 +192,25 @@ export default function AdminApplicationsPage() {
   const [decisionFilter, setDecisionFilter] = useState<'all' | 'with' | 'without'>('all');
   const [enrolledFilter, setEnrolledFilter] = useState<'all' | 'enrolled' | 'not-enrolled'>('all');
 
+  // Phase 122b: server-side sort. Defaults mirror the API's original
+  // fixed behavior (created_at desc). Clicking a sortable header
+  // cycles desc → asc → back to the default.
+  const [sortBy, setSortBy] = useState<
+    'createdAt' | 'updatedAt' | 'studentName' | 'status' | 'priority' | 'university'
+  >('createdAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const handleSort = (column: typeof sortBy) => {
+    if (sortBy !== column) {
+      setSortBy(column);
+      setSortOrder('desc');
+    } else if (sortOrder === 'desc') {
+      setSortOrder('asc');
+    } else {
+      setSortBy('createdAt');
+      setSortOrder('desc');
+    }
+  };
+
   // Tab badge counts
   // Phase 32: extended to also carry per-status + per-priority
   // breakdowns (from /api/admin/applications/counts) so the
@@ -333,6 +352,9 @@ export default function AdminApplicationsPage() {
     if (decisionFilter === 'without') params.set('hasDecision', 'false');
     if (enrolledFilter === 'enrolled') params.set('enrolled', 'true');
     if (enrolledFilter === 'not-enrolled') params.set('enrolled', 'false');
+    // Phase 122b: server-side sort.
+    params.set('sort', sortBy);
+    params.set('order', sortOrder);
 
     // Safety timeout — never let the page hang on a stalled network call.
     timeoutId = setTimeout(() => controller.abort(), 15_000);
@@ -365,7 +387,7 @@ export default function AdminApplicationsPage() {
       controller.abort();
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [page, searchQuery, statusFilter, studentFilter, activeTab, intakeFilter, partnerOnly, retryNonce, decisionFilter, enrolledFilter]);
+  }, [page, searchQuery, statusFilter, studentFilter, activeTab, intakeFilter, partnerOnly, retryNonce, decisionFilter, enrolledFilter, sortBy, sortOrder]);
 
   // Debounce search — wait 300ms after the user stops typing before firing
   useEffect(() => {
@@ -973,7 +995,7 @@ export default function AdminApplicationsPage() {
                         aria-label="Select all visible"
                       />
                     </th>
-                    <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">Student</th>
+                    <AppSortHeader label="Student" column="studentName" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                     {/* Phase 33: in partnerOnly mode the Source
                         column is dropped (every row is "Partner
                         CRM" by definition) and four partner-
@@ -987,18 +1009,18 @@ export default function AdminApplicationsPage() {
                     {partnerOnly ? (
                       <>
                         <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">Partner</th>
-                        <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">University & Program</th>
-                        <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">Priority</th>
+                        <AppSortHeader label="University & Program" column="university" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                        <AppSortHeader label="Priority" column="priority" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                         <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">Decision</th>
                         <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">App #</th>
-                        <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">Status</th>
-                        <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">Created</th>
+                        <AppSortHeader label="Status" column="status" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                        <AppSortHeader label="Created" column="createdAt" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                         <th className="text-right px-6 py-3 font-semibold text-[#1B2A4A]">Actions</th>
                       </>
                     ) : (
                       <>
-                        <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">University & Program</th>
-                        <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">Status</th>
+                        <AppSortHeader label="University & Program" column="university" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                        <AppSortHeader label="Status" column="status" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                         {/* Phase 107 Batch 4: Decision + Enrollment
                             columns (student surface only — partner
                             already had Decision in its partnerOnly
@@ -1008,7 +1030,7 @@ export default function AdminApplicationsPage() {
                         <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">Decision</th>
                         <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">Enrolled</th>
                         <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">Source</th>
-                        <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">Created</th>
+                        <AppSortHeader label="Created" column="createdAt" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                         <th className="text-right px-6 py-3 font-semibold text-[#1B2A4A]">Actions</th>
                       </>
                     )}
@@ -1724,5 +1746,43 @@ export default function AdminApplicationsPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+/**
+ * Phase 122b: clickable sort header — same 3-state cycle as the
+ * partner lists (unsorted → desc → asc → default created_at desc).
+ * Rendered as a raw <th> to match this page's hand-rolled table
+ * markup.
+ */
+function AppSortHeader({
+  label,
+  column,
+  sortBy,
+  sortOrder,
+  onSort,
+}: {
+  label: string;
+  column: 'createdAt' | 'updatedAt' | 'studentName' | 'status' | 'priority' | 'university';
+  sortBy: 'createdAt' | 'updatedAt' | 'studentName' | 'status' | 'priority' | 'university';
+  sortOrder: 'asc' | 'desc';
+  onSort: (column: 'createdAt' | 'updatedAt' | 'studentName' | 'status' | 'priority' | 'university') => void;
+}) {
+  const isActive = sortBy === column;
+  const Icon = !isActive ? ChevronsUpDown : sortOrder === 'desc' ? ChevronDown : ChevronUp;
+  return (
+    <th
+      className="text-left px-6 py-3 font-semibold text-[#1B2A4A]"
+      aria-sort={isActive ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
+    >
+      <button
+        type="button"
+        onClick={() => onSort(column)}
+        className="inline-flex items-center gap-1 hover:text-[#9B1B30] transition-colors focus:outline-none focus:ring-2 focus:ring-[#9B1B30] focus:ring-offset-1"
+      >
+        {label}
+        <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#9B1B30]' : 'text-gray-400'}`} />
+      </button>
+    </th>
   );
 }

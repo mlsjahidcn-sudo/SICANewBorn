@@ -128,6 +128,44 @@ export async function GET(request: NextRequest) {
     const students = (data || []).map(mapStudentFromDb);
     const total = count || 0;
 
+    // Phase 122a: application counts for the page slice —
+    // student_applications by student_id PLUS partner_applications by
+    // the Phase A bridge column (linked_student_profile_id). Two
+    // batched IN queries cover the ≤100-row page; both are
+    // best-effort (a failure leaves the count at 0 rather than
+    // failing the list).
+    const studentIds = students.map((s) => s.id);
+    if (studentIds.length > 0) {
+      const [studentAppsRes, partnerAppsRes] = await Promise.all([
+        service.from('student_applications').select('student_id').in('student_id', studentIds),
+        service
+          .from('partner_applications')
+          .select('linked_student_profile_id')
+          .in('linked_student_profile_id', studentIds),
+      ]);
+      const counts = new Map<string, number>();
+      if (studentAppsRes.error) {
+        console.error('[admin/students GET] student app count error:', studentAppsRes.error);
+      } else {
+        for (const row of studentAppsRes.data || []) {
+          const sid = (row as { student_id?: string | null }).student_id;
+          if (sid) counts.set(sid, (counts.get(sid) || 0) + 1);
+        }
+      }
+      if (partnerAppsRes.error) {
+        console.error('[admin/students GET] partner app count error:', partnerAppsRes.error);
+      } else {
+        for (const row of partnerAppsRes.data || []) {
+          const sid = (row as { linked_student_profile_id?: string | null })
+            .linked_student_profile_id;
+          if (sid) counts.set(sid, (counts.get(sid) || 0) + 1);
+        }
+      }
+      for (const s of students) {
+        s.applicationCount = counts.get(s.id) || 0;
+      }
+    }
+
     return NextResponse.json({
       students,
       total,

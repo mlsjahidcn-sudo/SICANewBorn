@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Search, Eye, Edit, MoreHorizontal, Trash2, Download, ArchiveRestore, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { Plus, Search, Eye, Edit, MoreHorizontal, Trash2, Download, ArchiveRestore, Archive, ChevronUp, ChevronDown, ChevronsUpDown, CheckSquare } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import {
   AlertDialog,
@@ -52,6 +53,15 @@ export default function PartnerStudentsPage() {
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  // Phase 122c: server export truncation banner (X-Truncated header),
+  // mirroring the partner applications export from Phase 111b.
+  const [exportTruncated, setExportTruncated] = useState(false);
+  // Phase 122c: bulk archive/restore (parity with the applications
+  // list bulk bar).
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkConfirmAction, setBulkConfirmAction] = useState<'archive' | 'restore' | null>(null);
+  const [bulkResult, setBulkResult] = useState<string | null>(null);
   // Phase B: pagination state. Keep a synchronous ref of the current
   // list so the "Load more" handler can compute hasMore from the
   // actual rendered list, not a stale closure value.
@@ -167,6 +177,65 @@ export default function PartnerStudentsPage() {
     }
   };
 
+  // Phase 122c: clear the bulk selection when the visible row set
+  // changes — a selected id from another filter view would otherwise
+  // be bulk-acted on invisibly. (Page reset to 1 on filter change is
+  // already handled by fetchStudents' default page.)
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [debouncedSearch, statusFilter, archivedFilter]);
+
+  const toggleSelected = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleSelectAllVisible = useCallback(() => {
+    setSelectedIds((prev) => {
+      const allSelected = students.length > 0 && students.every((s) => prev.has(s.id));
+      if (allSelected) return new Set();
+      return new Set(students.map((s) => s.id));
+    });
+  }, [students]);
+
+  // Phase 122c: run a bulk archive/restore, then refresh list + stats.
+  const runBulk = async (action: 'archive' | 'restore') => {
+    if (selectedIds.size === 0) return;
+    setBulkBusy(true);
+    setError(null);
+    setBulkResult(null);
+    try {
+      const res = await apiFetchJson<{ updated: number; failed: Array<{ id: string; error: string }> }>(
+        '/api/partner/students/bulk',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids: Array.from(selectedIds), action }),
+        },
+      );
+      setSelectedIds(new Set());
+      setBulkConfirmAction(null);
+      if (res.failed && res.failed.length > 0) {
+        setError(
+          t('partnerStudents.bulkPartial', { updated: res.updated, failed: res.failed.length }),
+        );
+      } else {
+        setBulkResult(t('partnerStudents.bulkDone', { count: res.updated }));
+      }
+      await fetchStudents();
+      void refetchStats();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('partnerStudents.bulkFailed'));
+      setBulkConfirmAction(null);
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
   /**
    * Phase D: cycle the sort. Clicking an unsorted column sorts desc;
    * clicking again flips to asc; clicking a third time clears back to
@@ -226,9 +295,15 @@ export default function PartnerStudentsPage() {
     }
   };
 
-  // Phase B: export the full student list (across all pages) as CSV.
+  // Phase 122c: export via the server endpoint. The old handler
+  // rebuilt the CSV in the browser from a limit=1000 JSON fetch —
+  // silently truncating with no banner and computing application
+  // counts only for the fetched slice. The endpoint applies the same
+  // filters + sort server-side, counts apps + docs for the whole
+  // export slice, and flags the 1000-row cap via X-Truncated.
   const handleExportCsv = async () => {
     setIsExporting(true);
+    setError(null);
     try {
       const params = new URLSearchParams();
       if (debouncedSearch) params.set('search', debouncedSearch);
@@ -237,47 +312,26 @@ export default function PartnerStudentsPage() {
       else if (archivedFilter === 'all') params.set('archived', 'true');
       params.set('sort', sort);
       params.set('order', order);
-      params.set('limit', '1000');
-      params.set('page', '1');
-      const qs = params.toString();
-      const res = await apiFetchJson<{
-        students: PartnerStudent[];
-        total: number;
-      }>(`/api/partner/students${qs ? `?${qs}` : ''}`);
-
-      const rows = res.students || [];
-      const headers = ['Name', 'Email', 'Phone', 'Nationality', 'Target University', 'Target Program', 'Status', 'Archived', 'Applications', 'Created At'];
-      const escape = (v: string | null | undefined) => {
-        const s = String(v ?? '').replace(/"/g, '""');
-        return `"${s}"`;
-      };
-      const csv = [
-        headers.join(','),
-        ...rows.map((s) =>
-          [
-            escape(s.studentName),
-            escape(s.studentEmail),
-            escape(s.studentPhone),
-            escape(s.nationality),
-            escape(s.targetUniversity),
-            escape(s.targetProgram),
-            escape(s.status),
-            escape(s.archivedAt ? 'Yes' : 'No'),
-            escape(String(s.applicationCount ?? 0)),
-            escape(s.createdAt ? new Date(s.createdAt).toLocaleString() : ''),
-          ].join(','),
-        ),
-      ].join('\n');
-
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const res = await apiFetch(
+        `/api/partner/students/export?${params.toString()}`,
+        { headers: { Accept: 'text/csv' } },
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || t('partnerStudents.errorExport'));
+      }
+      const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `partner-students-${new Date().toISOString().slice(0, 10)}.csv`;
+      const cd = res.headers.get('Content-Disposition') || '';
+      const match = cd.match(/filename="?([^"]+)"?/i);
+      a.download = match?.[1] || `partner-students-${new Date().toISOString().slice(0, 10)}.csv`;
       document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
+      a.remove();
       URL.revokeObjectURL(url);
+      setExportTruncated(res.headers.get('X-Truncated') === 'true');
     } catch (err) {
       console.error('[partner/students] export failed:', err);
       setError(err instanceof Error ? err.message : t('partnerStudents.errorExport'));
@@ -384,6 +438,64 @@ export default function PartnerStudentsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Phase 122c: bulk archive confirm */}
+      <AlertDialog
+        open={bulkConfirmAction === 'archive'}
+        onOpenChange={(open) => {
+          if (!open) setBulkConfirmAction(null);
+        }}
+      >
+        <AlertDialogContent className="rounded-none">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('partnerStudents.bulkArchiveTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('partnerStudents.bulkArchiveBody', { count: selectedIds.size })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkBusy} className="rounded-none">
+              {t('partnerStudents.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => runBulk('archive')}
+              disabled={bulkBusy}
+              className="rounded-none bg-[#9B1B30] hover:bg-[#7a1626]"
+            >
+              {bulkBusy ? t('partnerStudents.bulkWorking') : t('partnerStudents.bulkArchive')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Phase 122c: bulk restore confirm */}
+      <AlertDialog
+        open={bulkConfirmAction === 'restore'}
+        onOpenChange={(open) => {
+          if (!open) setBulkConfirmAction(null);
+        }}
+      >
+        <AlertDialogContent className="rounded-none">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('partnerStudents.bulkRestoreTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('partnerStudents.bulkRestoreBody', { count: selectedIds.size })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkBusy} className="rounded-none">
+              {t('partnerStudents.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => runBulk('restore')}
+              disabled={bulkBusy}
+              className="rounded-none bg-[#1B2A4A] hover:bg-[#26345A]"
+            >
+              {bulkBusy ? t('partnerStudents.bulkWorking') : t('partnerStudents.bulkRestore')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {isLoading ? (
         <ListPageSkeleton />
       ) : (
@@ -462,6 +574,32 @@ export default function PartnerStudentsPage() {
             </Card>
           )}
 
+          {/* Phase 122c: export truncation banner (server reports the
+              1000-row cap via X-Truncated). */}
+          {exportTruncated && (
+            <Card className="rounded-none border-amber-200 bg-amber-50">
+              <CardContent className="p-4 flex items-center justify-between gap-3">
+                <p className="text-sm text-amber-800">{t('partnerStudents.exportTruncated')}</p>
+                <Button variant="ghost" size="sm" className="rounded-none" onClick={() => setExportTruncated(false)}>
+                  ✕
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Phase 122c: bulk result confirmation (full-success path;
+              partial failures surface through the error banner). */}
+          {bulkResult && (
+            <Card className="rounded-none border-emerald-200 bg-emerald-50">
+              <CardContent className="p-4 flex items-center justify-between gap-3">
+                <p className="text-sm text-emerald-800">{bulkResult}</p>
+                <Button variant="ghost" size="sm" className="rounded-none" onClick={() => setBulkResult(null)}>
+                  ✕
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
@@ -511,6 +649,20 @@ export default function PartnerStudentsPage() {
                 <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr>
+                      {/* Phase 122c: bulk selection column */}
+                      <th className="px-4 py-4 text-left w-10">
+                        <Checkbox
+                          checked={
+                            students.length > 0 && students.every((s) => selectedIds.has(s.id))
+                              ? true
+                              : students.some((s) => selectedIds.has(s.id))
+                              ? 'indeterminate'
+                              : false
+                          }
+                          onCheckedChange={toggleSelectAllVisible}
+                          aria-label={t('partnerStudents.selectAllVisible')}
+                        />
+                      </th>
                       <SortHeader
                         label={t('partnerStudents.colStudent')}
                         column="student_name"
@@ -523,6 +675,10 @@ export default function PartnerStudentsPage() {
                       <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerStudents.colTarget')}</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerStudents.colStatus')}</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerStudents.colApplications')}</th>
+                      {/* Phase 122c: per-student document count (from
+                          the Phase 30 partner-documents data). Links to
+                          the detail page's Documents tab. */}
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerStudents.colDocs')}</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-[#1B2A4A]">{t('partnerStudents.colAddedBy')}</th>
                       <SortHeader
                         label={t('partnerStudents.colAdded')}
@@ -536,7 +692,14 @@ export default function PartnerStudentsPage() {
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {students.map((student) => (
-                      <tr key={student.id} className="hover:bg-gray-50">
+                      <tr key={student.id} className={`hover:bg-gray-50 ${selectedIds.has(student.id) ? 'bg-[#9B1B30]/5' : ''}`}>
+                        <td className="px-4 py-4">
+                          <Checkbox
+                            checked={selectedIds.has(student.id)}
+                            onCheckedChange={() => toggleSelected(student.id)}
+                            aria-label={t('partnerStudents.selectRow', { name: student.studentName })}
+                          />
+                        </td>
                         <td className="px-6 py-4">
                           <Link
                             href={`/partner/students/${student.id}`}
@@ -582,6 +745,21 @@ export default function PartnerStudentsPage() {
                               className="inline-flex items-center justify-center min-w-[1.75rem] px-2 py-0.5 text-xs font-semibold bg-[#1B2A4A] text-white rounded-none hover:bg-[#2c3e6e]"
                             >
                               {student.applicationCount}
+                            </Link>
+                          ) : (
+                            <span className="text-sm text-[#4B5563]">—</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          {/* Phase 122c: document count badge (Phase 30
+                              partner-documents rows). Links to the
+                              detail page's Documents tab. */}
+                          {student.documentCount ? (
+                            <Link
+                              href={`/partner/students/${student.id}?tab=documents`}
+                              className="inline-flex items-center justify-center min-w-[1.75rem] px-2 py-0.5 text-xs font-semibold border border-[#1B2A4A] text-[#1B2A4A] rounded-none hover:bg-[#1B2A4A] hover:text-white"
+                            >
+                              {student.documentCount}
                             </Link>
                           ) : (
                             <span className="text-sm text-[#4B5563]">—</span>
@@ -679,6 +857,45 @@ export default function PartnerStudentsPage() {
               )}
             </CardContent>
           </Card>
+        </div>
+      )}
+
+      {/* Phase 122c: sticky bulk bar — archive in the active/all views,
+          restore in the archived view. Mirrors the applications list
+          bulk bar. */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t-2 border-[#9B1B30] shadow-lg">
+          <div className="max-w-[1400px] mx-auto px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex items-center gap-2 text-sm font-medium text-[#1B2A4A]">
+              <CheckSquare className="h-4 w-4 text-[#9B1B30]" />
+              {t('partnerStudents.bulkSelected', { count: selectedIds.size })}
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              {archivedFilter !== 'archived' && (
+                <Button
+                  className="rounded-none bg-[#9B1B30] hover:bg-[#7a1626]"
+                  onClick={() => setBulkConfirmAction('archive')}
+                  disabled={bulkBusy}
+                >
+                  <Archive className="mr-2 h-4 w-4" />
+                  {t('partnerStudents.bulkArchive')}
+                </Button>
+              )}
+              {archivedFilter !== 'active' && (
+                <Button
+                  className="rounded-none bg-[#1B2A4A] hover:bg-[#26345A]"
+                  onClick={() => setBulkConfirmAction('restore')}
+                  disabled={bulkBusy}
+                >
+                  <ArchiveRestore className="mr-2 h-4 w-4" />
+                  {t('partnerStudents.bulkRestore')}
+                </Button>
+              )}
+              <Button variant="ghost" className="rounded-none" onClick={() => setSelectedIds(new Set())} disabled={bulkBusy}>
+                {t('partnerStudents.bulkClear')}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </>

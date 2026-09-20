@@ -62,6 +62,13 @@ export interface AdminStudent {
   // optional on the shape too.
   passportIssueDate?: string;
   passportExpiryDate?: string;
+
+  // Phase 122a: total applications across both surfaces —
+  // student_applications by student_id PLUS partner_applications by
+  // the Phase A bridge column (linked_student_profile_id). Populated
+  // by the list + export endpoints; undefined on single-student GETs
+  // that don't need the count.
+  applicationCount?: number | null;
 }
 
 export type AdminStudentStatus = AdminStudent['status'];
@@ -110,6 +117,8 @@ export function mapStudentFromDb(row: Record<string, unknown>): AdminStudent {
     passportExpiryDate: typeof extra.passportExpiryDate === 'string'
       ? extra.passportExpiryDate
       : undefined,
+    applicationCount:
+      typeof row.application_count === 'number' ? row.application_count : null,
   };
 }
 

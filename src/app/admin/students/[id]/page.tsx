@@ -9,8 +9,8 @@
  * values stay untranslated (DB round-trip); only human-readable
  * chrome (labels, banners, empty states, note copy) translates.
  */
-import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft, Edit, AlertCircle, FileText, FileCheck, FileX, Clock,
@@ -109,6 +109,20 @@ export default function AdminStudentDetailPage() {
   const router = useRouter();
   const studentId = params.id as string;
 
+  // Phase 122a: ?tab= deep link — the students list's application-count
+  // badge links here with ?tab=applications. Invalid/missing values
+  // fall through to the Overview default.
+  const searchParams = useSearchParams();
+  const TAB_VALUES = ['overview', 'documents', 'applications', 'notes', 'activity'] as const;
+  const tabParam = searchParams.get('tab');
+  const initialTab = (TAB_VALUES as readonly string[]).includes(tabParam ?? '')
+    ? (tabParam as (typeof TAB_VALUES)[number])
+    : 'overview';
+  // Fire the lazy load for the deep-linked tab exactly once on mount
+  // (Tabs' onValueChange only runs on user clicks, so a deep link to
+  // documents/applications/activity would otherwise render an empty tab).
+  const initialTabLoaded = useRef(false);
+
   const [student, setStudent] = useState<AdminStudent | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -172,6 +186,16 @@ export default function AdminStudentDetailPage() {
     },
     [studentId],
   );
+
+  // Phase 122a: deep-linked tab lazy load (runs once — Tabs'
+  // onValueChange doesn't fire for the initial render).
+  useEffect(() => {
+    if (initialTabLoaded.current) return;
+    initialTabLoaded.current = true;
+    if (initialTab === 'documents' || initialTab === 'applications' || initialTab === 'activity') {
+      void loadTab(initialTab);
+    }
+  }, [initialTab, loadTab]);
 
   if (isLoading) {
     return (
@@ -288,7 +312,7 @@ export default function AdminStudentDetailPage() {
       </Card>
 
       {/* Tabs */}
-      <Tabs defaultValue="overview" onValueChange={(v) => {
+      <Tabs defaultValue={initialTab} onValueChange={(v) => {
         if (v === 'documents') loadTab('documents');
         if (v === 'applications') loadTab('applications');
         if (v === 'activity') loadTab('activity');

@@ -57,6 +57,9 @@ describe('mapStudentFromDb', () => {
       createdAt: '2026-01-15T10:00:00Z',
       updatedAt: '2026-05-20T14:30:00Z',
       extra: { hsk_level: '4', gender: 'Male', notes: 'priority' },
+      // Phase 122a: application count from the list endpoint — null
+      // when the row didn't come through a count-annotated query.
+      applicationCount: null,
     });
   });
 
