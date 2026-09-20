@@ -20,6 +20,7 @@ import {
   ClipboardList,
   DollarSign,
   Newspaper,
+  MessageSquare,
   Mail,
   Building2,
   LayoutGrid,
@@ -47,6 +48,9 @@ const navItems = [
   { href: '/admin/programs', key: 'programs', icon: BookOpen },
   { href: '/admin/scholarships', key: 'scholarships', icon: Award },
   { href: '/admin/news', key: 'news', icon: Newspaper },
+  // Phase 121: chatbot FAQ knowledge base + automation. The FAQ
+  // editor is the landing tab; Automation is a sub-nav inside.
+  { href: '/admin/chatbot/faqs', key: 'chatbot', icon: MessageSquare },
   { href: '/admin/emails', key: 'emails', icon: Mail },
   { href: '/admin/leads', key: 'leads', icon: Users },
   // Phase 114: free counselling session bookings from /counselling.
