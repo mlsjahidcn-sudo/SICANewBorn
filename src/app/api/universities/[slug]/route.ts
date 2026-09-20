@@ -10,6 +10,7 @@ import { requireAdmin } from '@/lib/supabase-auth';
 import { mapUniversityFromDb, mapUniversityToDb } from '@/lib/catalog-mappers';
 // Phase 72: emit B2B webhook events on university mutations.
 import { dispatchEvent } from '@/lib/webhook-emitter';
+import { invalidateLiveCatalogCache } from '@/lib/ai/live-data-context';
 // Track 1.3 U4 #1: cascade delete helpers (refuse with counts
 // unless ?force=true, then delete children first).
 import { isForceDelete, summarizeCascade } from '@/lib/cascade-delete';
@@ -95,6 +96,8 @@ export async function PUT(
     if (!data) return NextResponse.json({ error: 'University not found' }, { status: 404 });
     revalidateTag(CACHE_TAGS.universities, 'default');
     revalidateTag(CACHE_TAGS.university(slug), 'default');
+    // Phase 121: the chatbot's RAG catalog has its own 5-min cache.
+    invalidateLiveCatalogCache();
     // Phase 72: fire university.updated webhook
     void dispatchEvent('university.updated', mapUniversityFromDb(data));
     return NextResponse.json({ university: mapUniversityFromDb(data) });
@@ -196,6 +199,7 @@ export async function DELETE(
 
   revalidateTag(CACHE_TAGS.universities, 'default');
   revalidateTag(CACHE_TAGS.university(slug), 'default');
+  invalidateLiveCatalogCache();
   // Phase 72: fire university.deleted webhook
   void dispatchEvent('university.deleted', { slug });
   return NextResponse.json({

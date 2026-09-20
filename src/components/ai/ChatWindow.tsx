@@ -31,6 +31,10 @@ interface ChatMessage {
   isError?: boolean;
   /** Phase 81: trailing "(stopped)" suffix added when user clicked Stop mid-stream. */
   stopped?: boolean;
+  /** Phase 121: which path answered ('doubao'|'deepseek'|'fallback') — persisted to chat_messages.provider. */
+  provider?: string;
+  /** Phase 121: true when the rule-based canned reply answered — persisted to chat_messages.is_fallback. */
+  isFallback?: boolean;
 }
 
 interface LeadForm {
@@ -374,6 +378,12 @@ export function ChatWindow({ isOpen, onClose, onMinimize }: ChatWindowProps) {
         role: m.role,
         content: m.content,
         client_sent_at: new Date().toISOString(),
+        // Phase 121: tag assistant rows with the answering path so the
+        // FAQ automation can distinguish real LLM replies from the
+        // rule-based fallback. User rows stay null/false (the DB default).
+        ...(m.role === 'assistant'
+          ? { provider: m.provider ?? null, is_fallback: m.isFallback ?? false }
+          : {}),
       }));
     if (persistable.length === 0) return;
 
@@ -492,6 +502,8 @@ export function ChatWindow({ isOpen, onClose, onMinimize }: ChatWindowProps) {
               role: m.role,
               content: m.content,
             })),
+            // Phase 121: provenance for the unanswered-question queue.
+            session_token: sessionToken,
           }),
           signal: controller.signal,
         });
@@ -512,6 +524,11 @@ export function ChatWindow({ isOpen, onClose, onMinimize }: ChatWindowProps) {
 
         const decoder = new TextDecoder();
         let fullContent = '';
+        // Phase 121: the server announces the answering path via an
+        // SSE meta event before the content chunks (a second meta
+        // arrives if it fell back mid-flight — last one wins).
+        let replyProvider: string | undefined;
+        let replyIsFallback = false;
 
         while (true) {
           const { done, value } = await reader.read();
@@ -526,6 +543,10 @@ export function ChatWindow({ isOpen, onClose, onMinimize }: ChatWindowProps) {
 
               try {
                 const parsed = JSON.parse(data);
+                if (parsed.meta) {
+                  replyProvider = typeof parsed.meta.provider === 'string' ? parsed.meta.provider : undefined;
+                  replyIsFallback = parsed.meta.fallback === true;
+                }
                 if (parsed.content) {
                   fullContent += parsed.content;
                   fireTypingLabelOnce();
@@ -542,6 +563,16 @@ export function ChatWindow({ isOpen, onClose, onMinimize }: ChatWindowProps) {
               }
             }
           }
+        }
+
+        // Phase 121: stamp the answering path on the transcript so the
+        // session PATCH persists it into chat_messages.
+        if (fullContent) {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantMessage.id ? { ...m, provider: replyProvider, isFallback: replyIsFallback } : m,
+            ),
+          );
         }
       } catch (error) {
         // Aborted by Stop — keep the partial response and tag it.

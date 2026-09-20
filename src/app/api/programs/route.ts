@@ -11,6 +11,7 @@ import { sanitizeOrTerm, parseIntParam } from '@/lib/postgrest';
 import { mapProgramFromDb, mapProgramToDb } from '@/lib/catalog-mappers';
 // Phase 72: emit B2B webhook events on program mutations.
 import { dispatchEvent } from '@/lib/webhook-emitter';
+import { invalidateLiveCatalogCache } from '@/lib/ai/live-data-context';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -118,6 +119,8 @@ export async function POST(request: Request) {
     }
     revalidateTag(CACHE_TAGS.programs, 'default');
     revalidateTag(CACHE_TAGS.program(String(data.slug)), 'default');
+    // Phase 121: the chatbot's RAG catalog has its own 5-min cache.
+    invalidateLiveCatalogCache();
     // Phase 72: fire program.created webhook
     void dispatchEvent('program.created', mapProgramFromDb(data));
     return NextResponse.json({ program: mapProgramFromDb(data) }, { status: 201 });

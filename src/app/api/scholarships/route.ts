@@ -9,6 +9,7 @@ import { requireAdmin } from '@/lib/supabase-auth';
 import { sanitizeOrTerm, parseIntParam } from '@/lib/postgrest';
 // Track 1.3 U2: DB mappers consolidated into src/lib/catalog-mappers.ts.
 import { mapScholarshipFromDb, mapScholarshipToDb } from '@/lib/catalog-mappers';
+import { invalidateLiveCatalogCache } from '@/lib/ai/live-data-context';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -110,6 +111,8 @@ export async function POST(request: Request) {
     }
     revalidateTag(CACHE_TAGS.scholarships, 'default');
     revalidateTag(CACHE_TAGS.scholarship(String(data.slug)), 'default');
+    // Phase 121: the chatbot's RAG catalog has its own 5-min cache.
+    invalidateLiveCatalogCache();
     return NextResponse.json({ scholarship: mapScholarshipFromDb(data) }, { status: 201 });
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });

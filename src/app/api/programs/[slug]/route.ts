@@ -10,6 +10,7 @@ import { requireAdmin } from '@/lib/supabase-auth';
 import { mapProgramFromDb, mapProgramToDb } from '@/lib/catalog-mappers';
 // Phase 72: emit B2B webhook events on program mutations.
 import { dispatchEvent } from '@/lib/webhook-emitter';
+import { invalidateLiveCatalogCache } from '@/lib/ai/live-data-context';
 // Track 1.3 U4 #1: cascade delete helpers.
 import { isForceDelete, summarizeCascade } from '@/lib/cascade-delete';
 
@@ -89,6 +90,8 @@ export async function PUT(
     if (!data) return NextResponse.json({ error: 'Program not found' }, { status: 404 });
     revalidateTag(CACHE_TAGS.programs, 'default');
     revalidateTag(CACHE_TAGS.program(slug), 'default');
+    // Phase 121: the chatbot's RAG catalog has its own 5-min cache.
+    invalidateLiveCatalogCache();
     // Phase 72: fire program.updated webhook
     void dispatchEvent('program.updated', mapProgramFromDb(data));
     return NextResponse.json({ program: mapProgramFromDb(data) });
@@ -184,6 +187,7 @@ export async function DELETE(
 
   revalidateTag(CACHE_TAGS.programs, 'default');
   revalidateTag(CACHE_TAGS.program(slug), 'default');
+  invalidateLiveCatalogCache();
   // Phase 72: fire program.deleted webhook
   void dispatchEvent('program.deleted', { slug });
   return NextResponse.json({

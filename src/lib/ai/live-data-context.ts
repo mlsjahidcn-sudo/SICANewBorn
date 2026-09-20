@@ -55,6 +55,20 @@ interface CacheEntry {
 let cache: CacheEntry | null = null;
 
 /**
+ * Drop the cached live catalog (Phase 121 ops hygiene). The 5-min TTL
+ * was the only freshness mechanism, so a university/program/scholarship
+ * the admin just wrote stayed invisible to the chatbot for up to 5
+ * minutes. The admin catalog mutation routes call this after a
+ * successful write so the next chat message rebuilds from the DB.
+ * Process-local by design — on the single-process Hostinger server
+ * this reaches every future request; per-worker copies in dev HMR
+ * just expire via the TTL as before.
+ */
+export function invalidateLiveCatalogCache(): void {
+  cache = null;
+}
+
+/**
  * Map a raw `universities` row into the camelCase `University`
  * shape. Mirrors `mapUniversityFromDb` in `/api/universities/route.ts`
  * so a single source of truth would be ideal — but pulling the

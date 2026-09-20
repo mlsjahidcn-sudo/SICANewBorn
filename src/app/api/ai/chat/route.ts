@@ -1,13 +1,15 @@
 import { NextRequest } from 'next/server';
 import { SICA_CHATBOT_SYSTEM_PROMPT, SICA_UNIVERSITY_CONTEXT_PROMPT } from '@/lib/ai/prompts';
-import { getUniversityContext, getApplicationGuideContext, searchFAQ, sicaFAQ } from '@/lib/ai/knowledge';
+import { getUniversityContext, getApplicationGuideContext } from '@/lib/ai/knowledge';
+import { searchFaqs, getActiveFaqs, type ActiveFaq } from '@/lib/ai/faq-context';
+import { ingestUnansweredQuestion } from '@/lib/ai/faq-automation-runner';
 import { type University } from '@/lib/data';
 import { getAIProvider } from '@/lib/ai/provider';
 import { getLiveCatalogContext, getLiveUniversities, getDetailContext } from '@/lib/ai/live-data-context';
 import { captureAIError } from '@/lib/ai/with-capture';
 import { checkChatbotRateLimit } from '@/lib/ai/admin-ai-rate-limit';
 
-async function buildRAGContext(userMessage: string) {
+async function buildRAGContext(userMessage: string): Promise<{ context: string; faqMatched: boolean }> {
   let context = '';
 
   const universityContext = await getUniversityContext(userMessage);
@@ -15,9 +17,9 @@ async function buildRAGContext(userMessage: string) {
     context += `\n\n## Relevant University Information:\n${universityContext}`;
   }
 
-  const relevantFAQs = searchFAQ(userMessage);
-  if (relevantFAQs.length > 0) {
-    context += `\n\n## Relevant FAQs:\n${relevantFAQs.slice(0, 3).map(faq =>
+  const faqMatches = await searchFaqs(userMessage, 3);
+  if (faqMatches.length > 0) {
+    context += `\n\n## Relevant FAQs:\n${faqMatches.map(faq =>
       `Q: ${faq.question}\nA: ${faq.answer}`
     ).join('\n\n')}`;
   }
@@ -29,13 +31,14 @@ async function buildRAGContext(userMessage: string) {
     context += `\n\n## Application Process Guide:\n${getApplicationGuideContext()}`;
   }
 
-  return context;
+  return { context, faqMatched: faqMatches.length > 0 };
 }
 
 function generateIntelligentResponse(
   userMessage: string,
   conversationHistory: Array<{ role: string; content: string }>,
   liveUniversities: University[],
+  faqs: ActiveFaq[],
 ): string {
   const lowerMessage = userMessage.toLowerCase();
 
@@ -60,8 +63,9 @@ function generateIntelligentResponse(
     }
   }
   
-  // FAQ matching
-  const matchedFAQ = sicaFAQ.find(faq => 
+  // FAQ matching — Phase 121: over the DB-backed active FAQ list
+  // (static fallback when Supabase is unavailable).
+  const matchedFAQ = faqs.find(faq => 
     lowerMessage.includes(faq.question.toLowerCase().split(' ').slice(0, 3).join(' '))
   );
   
@@ -355,14 +359,23 @@ export async function POST(request: NextRequest) {
   if (rl.blocked) return rl.response;
 
   try {
-    const { messages } = await request.json();
+    const body = await request.json();
 
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+    if (!body?.messages || !Array.isArray(body.messages) || body.messages.length === 0) {
       return new Response(JSON.stringify({ error: 'Messages are required' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
+    const messages: Array<{ role: string; content: string }> = body.messages;
+
+    // Phase 121: optional session provenance for the FAQ queue. The
+    // widget sends its localStorage session token; anything else
+    // (curl, older clients) just leaves the queue row's provenance null.
+    const sessionToken =
+      typeof body.session_token === 'string' && body.session_token.length <= 64
+        ? body.session_token
+        : undefined;
 
     const lastUserMessage = messages
       .filter((m: { role: string; content: string }) => m.role === 'user')
@@ -372,7 +385,7 @@ export async function POST(request: NextRequest) {
 
     // Build RAG context + full system prompt once (used by both LLM
     // and the rule-based fallback so the prompt surface is identical).
-    const ragContext = await buildRAGContext(lastUserMessage);
+    const { context: ragContext, faqMatched } = await buildRAGContext(lastUserMessage);
     // Phase 3: live catalog context — pulls every university, program,
     // and scholarship from Supabase (5-min in-memory cache) so the bot
     // knows about schools added through /admin/universities, not just
@@ -383,6 +396,18 @@ export async function POST(request: NextRequest) {
     // scholarship the user just mentioned. Empty when nothing
     // matched, so the prompt stays tight on generic questions.
     const detailContext = await getDetailContext(lastUserMessage);
+    // Phase 121: the DB-backed active FAQ list for the rule-based
+    // fallback's own matching (cached, static fallback inside).
+    const { faqs: activeFaqs } = await getActiveFaqs();
+
+    // Phase 121: preceding-conversation excerpt for the FAQ queue, so
+    // the generator later knows what the visitor was talking about.
+    const convoContext = messages
+      .slice(0, -1)
+      .slice(-4)
+      .map((m) => `${m.role}: ${String(m.content ?? '').slice(0, 300)}`)
+      .join('\n');
+
     const fullSystemPrompt =
       `${SICA_CHATBOT_SYSTEM_PROMPT}\n\n` +
       `${SICA_UNIVERSITY_CONTEXT_PROMPT}` +
@@ -408,6 +433,22 @@ export async function POST(request: NextRequest) {
     const encoder = new TextEncoder();
     const readableStream = new ReadableStream({
       async start(controller) {
+        // Phase 121: tell the client which path is answering so the
+        // transcript carries provider/is_fallback into chat_messages
+        // (previously those columns were never populated). The meta
+        // event goes out before any content; if the LLM then fails
+        // and we fall back, a second meta event overrides it — the
+        // client keeps the LAST meta it saw for the message.
+        const safeEmit = (obj: unknown) => {
+          try {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
+            return true;
+          } catch {
+            return false;
+          }
+        };
+        safeEmit({ meta: { provider: provider.name, fallback: false } });
+
         const success = await streamProviderResponse(
           provider.name,
           llmMessages,
@@ -416,12 +457,34 @@ export async function POST(request: NextRequest) {
         );
         if (!success) {
           console.log('[AI Chat] LLM stream failed or unconfigured, using rule-based fallback');
+          safeEmit({ meta: { provider: 'fallback', fallback: true } });
+          // Phase 121: the visitor asked something we answered with
+          // canned rules — queue it so the FAQ generator can draft a
+          // real answer. Fire-and-forget; never blocks the reply.
+          void ingestUnansweredQuestion({
+            question: lastUserMessage,
+            source: 'fallback',
+            hadFaqMatch: faqMatched,
+            context: convoContext,
+            sessionToken,
+          });
           // Phase 3: pass live universities so the rule-based
           // fallback can recognize any school in the catalog,
           // not just the 9 hardcoded ones.
           const liveUniversities = await getLiveUniversities();
-          await sendIntelligentResponse(lastUserMessage, messages, liveUniversities, controller, encoder);
+          await sendIntelligentResponse(lastUserMessage, messages, liveUniversities, controller, encoder, activeFaqs);
           return;
+        }
+        // Phase 121: LLM replied, but nothing in the RAG stack
+        // matched (no FAQ, no catalog university, no named entity)
+        // — a likely knowledge gap worth queuing.
+        if (!ragContext && !detailContext) {
+          void ingestUnansweredQuestion({
+            question: lastUserMessage,
+            source: 'zero_match',
+            context: convoContext,
+            sessionToken,
+          });
         }
         try {
           controller.enqueue(encoder.encode('data: [DONE]\n\n'));
@@ -460,7 +523,8 @@ async function sendIntelligentResponse(
   messages: Array<{ role: string; content: string }>,
   liveUniversities: University[],
   controller: ReadableStreamDefaultController,
-  encoder: TextEncoder
+  encoder: TextEncoder,
+  faqs: ActiveFaq[],
 ) {
   /**
    * Stream chunks word-by-word with a tiny per-word delay so the
@@ -481,7 +545,7 @@ async function sendIntelligentResponse(
   };
 
   try {
-    const response = generateIntelligentResponse(userMessage, messages, liveUniversities);
+    const response = generateIntelligentResponse(userMessage, messages, liveUniversities, faqs);
     console.log('[AI Chat] Generated intelligent response, length:', response.length);
 
     // Stream word by word for a natural feel

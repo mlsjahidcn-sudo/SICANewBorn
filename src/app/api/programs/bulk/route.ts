@@ -7,6 +7,7 @@ import { requireAdmin } from '@/lib/supabase-auth';
 // The local mapProgramFromDb copy also read row.universidad_slug — the real
 // DB column is university_slug; the canonical mapper fixes that.
 import { mapProgramFromDb, slugify } from '@/lib/catalog-mappers';
+import { invalidateLiveCatalogCache } from '@/lib/ai/live-data-context';
 
 /**
  * POST /api/programs/bulk
@@ -144,6 +145,8 @@ export async function POST(request: Request) {
     const importedCount = data?.length || 0;
     if (importedCount > 0) {
       revalidateTag(CACHE_TAGS.programs, 'default');
+      // Phase 121: the chatbot's RAG catalog has its own 5-min cache.
+      invalidateLiveCatalogCache();
     }
     // skipped = (rows we tried to upsert) - (rows that actually inserted).
     // This is a tight approximation: it counts both in-batch
