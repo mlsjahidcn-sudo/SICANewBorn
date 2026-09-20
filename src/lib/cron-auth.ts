@@ -2,7 +2,8 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 
 /**
  * Shared auth for the cron-triggered endpoints
- * (/api/cron/generate-news, /api/email/drip-cron).
+ * (/api/cron/generate-news, /api/cron/chatbot-faqs,
+ * /api/email/drip-cron).
  *
  * Contract:
  *  - Secret set   → caller must send it in the `x-cron-secret` header
@@ -21,7 +22,7 @@ export type CronAuthResult =
 
 export function verifyCronSecret(
   request: Request,
-  envVar: 'NEWS_CRON_SECRET' | 'DRIP_CRON_SECRET' | 'STUDENT_FEES_CRON_SECRET',
+  envVar: 'NEWS_CRON_SECRET' | 'DRIP_CRON_SECRET' | 'STUDENT_FEES_CRON_SECRET' | 'FAQ_CRON_SECRET',
 ): CronAuthResult {
   const expected = process.env[envVar];
   if (!expected) {
