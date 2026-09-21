@@ -23,7 +23,7 @@ import { SITE_URL } from '@/lib/site-url';
 // Must match a domain verified on the Resend account (sica.com.cn is not;
 // studyinchina.academy is — verified 2026-09-21, DKIM + primary SPF).
 const FROM = 'SICA <noreply@studyinchina.academy>';
-const REPLY_TO = process.env.ADMIN_EMAIL || 'admin@sica.cn';
+const REPLY_TO = process.env.ADMIN_EMAIL || 'info@studyinchina.academy';
 
 const SIGNATURE = [
   '',

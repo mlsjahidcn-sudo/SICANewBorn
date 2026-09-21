@@ -158,7 +158,7 @@ DNS → **TXT record** at `_dmarc.studyinchina.academy`:
 - **Type**: `TXT`
 - **Value**:
   ```
-  v=DMARC1; p=none; rua=mailto:admin@sica.cn
+  v=DMARC1; p=none; rua=mailto:info@studyinchina.academy
   ```
 - **TTL**: 3600
 

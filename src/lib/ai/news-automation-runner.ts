@@ -415,7 +415,7 @@ async function notifyAdminOfFailure(args: {
     console.warn('[generate-news] RESEND_API_KEY not set, skipping failure email');
     return;
   }
-  const to = process.env.ADMIN_NOTIFICATION_EMAIL ?? process.env.ADMIN_EMAIL ?? 'admin@sica.cn';
+  const to = process.env.ADMIN_NOTIFICATION_EMAIL ?? process.env.ADMIN_EMAIL ?? 'info@studyinchina.academy';
   const subject = `[SICA] News automation failed — ${args.topicCount}/${args.topicCount} topics errored`;
   const text = `Run ${args.runId} failed to produce any drafts.
 

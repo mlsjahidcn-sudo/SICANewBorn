@@ -524,7 +524,7 @@ async function notifyAdminOfFailure(args: {
     console.warn('[faq-automation] RESEND_API_KEY not set, skipping failure email');
     return;
   }
-  const to = process.env.ADMIN_NOTIFICATION_EMAIL ?? process.env.ADMIN_EMAIL ?? 'admin@sica.cn';
+  const to = process.env.ADMIN_NOTIFICATION_EMAIL ?? process.env.ADMIN_EMAIL ?? 'info@studyinchina.academy';
   const subject = `[SICA] Chatbot FAQ automation failed — ${args.itemCount}/${args.itemCount} queue items errored`;
   const text = `Run ${args.runId} failed to produce any FAQ drafts.
 

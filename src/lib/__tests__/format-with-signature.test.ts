@@ -79,7 +79,7 @@ describe('formatWithSignature', () => {
     expect(out.text).toBe(
       'Body' +
         '\n\n\n' +
-        '-- \nSICA Study in China Academy\nhttps://studyinchina.academy\nadmin@sica.cn' +
+        '-- \nSICA Study in China Academy\nhttps://studyinchina.academy\ninfo@studyinchina.academy' +
         '\n\n' +
         'Update preferences or unsubscribe: ' +
         'https://studyinchina.academy/api/email/unsubscribe?token=t',
