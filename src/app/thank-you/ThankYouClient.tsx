@@ -241,9 +241,11 @@ export default function ThankYouClient() {
                 {t('thankYou.altEmailDesc')}
               </p>
             </a>
-            {/* Schedule a call — for users who want to skip back-and-forth */}
+            {/* Schedule a call — for users who want to skip back-and-forth.
+                Phase 123: now routes to the real booking wizard at /counselling
+                (was /contact?subject=Schedule%20a%20call). */}
             <a
-              href="/contact?subject=Schedule%20a%20call"
+              href="/counselling"
               className="block bg-[#FAFAF8] border border-gray-200 p-5 hover:border-[#9B1B30] transition-colors group"
             >
               <Calendar className="h-7 w-7 text-[#9B1B30] mb-3" />

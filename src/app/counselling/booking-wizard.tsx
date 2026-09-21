@@ -10,11 +10,13 @@ import {
   Clock,
   Globe2,
   Loader2,
+  MessageCircle,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { getCurrentUtm } from '@/lib/utm';
 import { track } from '@/lib/analytics';
 import { COUNSELLING_EDUCATION_LEVELS } from '@/lib/counselling-slots';
+import { WHATSAPP_PHONE } from '@/lib/contact';
 
 interface SlotOption {
   start: string;
@@ -101,6 +103,12 @@ export function BookingWizard() {
     setSelectedSlot(null);
     void loadSlots(selectedDate);
   }, [selectedDate, loadSlots]);
+
+  // Phase 123 funnel instrumentation: wizard rendered.
+  useEffect(() => {
+    track('counselling_wizard_start', { locale });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // fire once on mount; locale is stable per session
 
   const formatDateChip = (dateStr: string): string => {
     // post-mount fetch data only — no SSR mismatch risk.
@@ -213,9 +221,23 @@ export function BookingWizard() {
           <br />
           {t('counselling.successNextBody')}
         </p>
+        {/* Phase 123: WhatsApp escape hatch for anything the student
+            wants to add before the session. */}
+        <a
+          href={`https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(
+            `${t('counselling.successWhatsappMessage')} ${booked.reference}`,
+          )}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => track('whatsapp_click', { location: 'counselling_success', locale })}
+          className="inline-flex items-center gap-2 mt-4 px-6 py-3 border-2 border-[#25D366] text-[#128C4B] font-semibold uppercase tracking-wider text-sm hover:bg-[#25D366]/10 transition-colors"
+        >
+          <MessageCircle className="h-4 w-4" />
+          {t('counselling.successWhatsappCta')}
+        </a>
         <Link
           href="/"
-          className="inline-block mt-8 px-8 py-3 bg-[#9B1B30] text-white font-semibold uppercase tracking-wider text-sm hover:bg-[#7A1526] transition-colors"
+          className="inline-block mt-4 ml-0 sm:ml-3 px-8 py-3 bg-[#9B1B30] text-white font-semibold uppercase tracking-wider text-sm hover:bg-[#7A1526] transition-colors"
         >
           {t('counselling.backHome')}
         </Link>
@@ -293,7 +315,17 @@ export function BookingWizard() {
                   key={slot.start}
                   type="button"
                   disabled={!slot.available}
-                  onClick={() => setSelectedSlot(slot)}
+                  onClick={() => {
+                    setSelectedSlot(slot);
+                    // Phase 123 funnel instrumentation.
+                    const daysAhead = Math.max(
+                      0,
+                      Math.floor(
+                        (new Date(slot.start).getTime() - Date.now()) / (24 * 60 * 60 * 1000),
+                      ),
+                    );
+                    track('counselling_slot_selected', { daysAhead, locale });
+                  }}
                   className={`rounded-none border px-2 py-2 text-sm font-medium transition-colors ${
                     selectedSlot?.start === slot.start
                       ? 'border-[#9B1B30] bg-[#9B1B30] text-white'
@@ -313,6 +345,7 @@ export function BookingWizard() {
             disabled={!selectedSlot}
             onClick={() => {
               setFormError(null);
+              track('counselling_step_details', { locale });
               setStep('details');
             }}
             className="mt-8 w-full sm:w-auto px-8 py-3 bg-[#9B1B30] text-white font-semibold uppercase tracking-wider text-sm hover:bg-[#7A1526] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { buildLanguageAlternates } from "@/lib/alternates";
-import { Mail, Phone, MapPin, Clock, MessageCircle } from 'lucide-react';
+import { Mail, Phone, MapPin, Clock, MessageCircle, CalendarCheck, ArrowRight } from 'lucide-react';
 import Image from 'next/image';
 import { getServerT } from '@/lib/server-t';
 import { ContactForm } from './contact-form';
@@ -155,6 +155,24 @@ export default async function ContactPage() {
                 </div>
               </div>
             </div>
+
+            {/* Phase 123: cross-sell the free counselling booking wizard */}
+            <a
+              href="/counselling"
+              className="block bg-[#1B2A4A] p-6 hover:bg-[#14203A] transition-colors group"
+            >
+              <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                <CalendarCheck className="h-5 w-5 text-white" />
+                {t('contact.counsellingTitle')}
+              </h3>
+              <p className="text-sm text-white/80 leading-relaxed">
+                {t('contact.counsellingDesc')}
+              </p>
+              <span className="inline-flex items-center gap-1 text-xs font-semibold text-white mt-3 group-hover:underline">
+                {t('contact.counsellingCta')}
+                <ArrowRight className="h-3 w-3" />
+              </span>
+            </a>
 
             {/* Office Hours */}
             <div className="bg-white border border-gray-200 p-6">

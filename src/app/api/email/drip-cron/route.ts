@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { processPendingDrips } from '@/lib/email/drip/scheduler';
+import { processCounsellingReminders } from '@/lib/counselling/reminders';
 import { verifyCronSecret } from '@/lib/cron-auth';
 
 export const dynamic = 'force-dynamic';
@@ -12,6 +13,10 @@ export const dynamic = 'force-dynamic';
  * can hit this endpoint from an external scheduler (cron-job.org,
  * Railway Cron, GitHub Actions cron) for stricter SLAs or to
  * backfill after a server restart.
+ *
+ * Phase 123: the same tick also processes counselling session
+ * reminders (24h/2h before a Confirmed booking) so one external
+ * cron backstops both workers.
  *
  * Secured with a shared secret in the `x-cron-secret` header
  * (timing-safe compare via src/lib/cron-auth.ts). If
@@ -28,13 +33,15 @@ export async function GET(request: NextRequest) {
 
   const start = Date.now();
   const result = await processPendingDrips();
+  const reminders = await processCounsellingReminders();
   const durationMs = Date.now() - start;
 
-  console.log('[drip-cron]', JSON.stringify({ ...result, durationMs }));
+  console.log('[drip-cron]', JSON.stringify({ ...result, reminders, durationMs }));
 
   return NextResponse.json({
     ok: true,
     ...result,
+    reminders,
     durationMs,
     timestamp: new Date().toISOString(),
   });

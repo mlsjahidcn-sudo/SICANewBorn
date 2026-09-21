@@ -19,6 +19,8 @@ import { Resend } from 'resend';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServer } from '@/lib/supabase-server';
 import { SITE_URL } from '@/lib/site-url';
+import { buildCounsellingIcs } from '@/lib/counselling-ics';
+import { WHATSAPP_PHONE } from '@/lib/contact';
 
 // Must match a domain verified on the Resend account (sica.com.cn is not;
 // studyinchina.academy is — verified 2026-09-21, DKIM + primary SPF).
@@ -211,11 +213,19 @@ export interface SendTextResult {
   error?: string;
 }
 
+/** Base64-encoded file attachment (e.g. an .ics calendar invite). */
+export interface EmailAttachment {
+  filename: string;
+  content: string;
+}
+
 export async function sendTextEmail(args: {
   to: string;
   subject: string;
   text: string;
   replyTo?: string;
+  /** Optional file attachments; body stays text-only (Phase 84). */
+  attachments?: EmailAttachment[];
 }): Promise<SendTextResult> {
   const resend = getResend();
   if (!resend) return { ok: false, error: 'Resend not configured' };
@@ -227,6 +237,7 @@ export async function sendTextEmail(args: {
       subject: args.subject,
       text: args.text,
       replyTo: args.replyTo ?? REPLY_TO,
+      ...(args.attachments && args.attachments.length > 0 ? { attachments: args.attachments } : {}),
     });
     if (error || !data) return { ok: false, error: error?.message ?? 'unknown error' };
     return { ok: true, id: data.id };
@@ -670,5 +681,206 @@ export async function sendCounsellingConfirmation(params: {
   } catch (err) {
     console.error('[email] counselling confirmation failed:', err);
     return false;
+  }
+}
+
+/** Result plus the rendered subject/text so callers can snapshot email_log. */
+export type LoggedSendTextResult = SendTextResult & { subject: string | null; text: string | null };
+
+function toLogged(result: SendTextResult, subject: string, text: string): LoggedSendTextResult {
+  return { ok: result.ok, id: result.id, error: result.error, subject, text };
+}
+
+function notConfigured(): LoggedSendTextResult {
+  return { ok: false, error: 'Resend not configured', subject: null, text: null };
+}
+
+/**
+ * Phase 123: sent when an admin moves a booking to Confirmed. The
+ * Confirmed email carries an .ics invite; the caller writes the
+ * email_log row from the returned snapshot.
+ */
+export async function sendCounsellingConfirmed(params: {
+  toEmail: string;
+  name: string;
+  reference: string;
+  slotStartIso: string;
+  meetingLink: string | null;
+  locale: string;
+}): Promise<LoggedSendTextResult> {
+  if (!isEmailConfigured()) return notConfigured();
+  const zh = params.locale === 'zh';
+  const formatted = formatCounsellingSlotBeijing(params.slotStartIso);
+  const bodyText = zh
+    ? [
+        `您好 ${params.name}，`,
+        '',
+        '您的 SICA 免费 10 分钟在线咨询已确认。',
+        '',
+        `预约编号：${params.reference}`,
+        `咨询时间：${formatted}`,
+        params.meetingLink
+          ? `会议链接：${params.meetingLink}`
+          : '会议链接将在咨询开始前通过邮件或 WhatsApp 发给您。',
+        '',
+        '日历邀请（.ics）已附在本邮件中，点击即可添加到您的日历。',
+        '如需改期或取消，请直接回复本邮件。',
+      ]
+    : [
+        `Hi ${params.name},`,
+        '',
+        'Your free 10-minute counselling session with SICA is confirmed.',
+        '',
+        `Reference: ${params.reference}`,
+        `Session time: ${formatted}`,
+        params.meetingLink
+          ? `Meeting link: ${params.meetingLink}`
+          : 'The meeting link will follow by email or WhatsApp shortly before your session.',
+        '',
+        'A calendar invite (.ics) is attached — open it to add the session to your calendar.',
+        'Need to reschedule or cancel? Just reply to this email.',
+      ];
+  const { subject, text } = formatWithSignature({
+    subject: zh
+      ? `咨询已确认 ${params.reference}`
+      : `Confirmed: your counselling session — ${params.reference}`,
+    bodyText: bodyText.join('\n'),
+  });
+  try {
+    const result = await sendTextEmail({
+      to: params.toEmail,
+      subject,
+      text,
+      attachments: [
+        {
+          filename: `sica-counselling-${params.reference}.ics`,
+          content: Buffer.from(
+            buildCounsellingIcs({
+              reference: params.reference,
+              studentName: params.name,
+              slotStart: params.slotStartIso,
+              meetingLink: params.meetingLink,
+              locale: zh ? 'zh' : 'en',
+            }),
+            'utf8',
+          ).toString('base64'),
+        },
+      ],
+    });
+    return toLogged(result, subject, text);
+  } catch (err) {
+    console.error('[email] counselling confirmed failed:', err);
+    return { ok: false, error: err instanceof Error ? err.message : 'send threw', subject, text };
+  }
+}
+
+/** Phase 123: sent when an admin cancels a booking. Points at /counselling to rebook. */
+export async function sendCounsellingCancelled(params: {
+  toEmail: string;
+  name: string;
+  reference: string;
+  slotStartIso: string;
+  locale: string;
+}): Promise<LoggedSendTextResult> {
+  if (!isEmailConfigured()) return notConfigured();
+  const zh = params.locale === 'zh';
+  const formatted = formatCounsellingSlotBeijing(params.slotStartIso);
+  const bodyText = zh
+    ? [
+        `您好 ${params.name}，`,
+        '',
+        '很抱歉，您预约的 SICA 免费咨询已被取消。',
+        '',
+        `预约编号：${params.reference}`,
+        `原咨询时间：${formatted}`,
+        '',
+        `您可以随时重新预约：${SITE_URL}/counselling`,
+        '如有任何疑问，直接回复本邮件即可。',
+      ]
+    : [
+        `Hi ${params.name},`,
+        '',
+        'Your SICA free counselling session has been cancelled.',
+        '',
+        `Reference: ${params.reference}`,
+        `Original time: ${formatted}`,
+        '',
+        `You can book a new time any moment: ${SITE_URL}/counselling`,
+        'Any questions — just reply to this email.',
+      ];
+  const { subject, text } = formatWithSignature({
+    subject: zh
+      ? `咨询预约已取消 ${params.reference}`
+      : `Your counselling session was cancelled — ${params.reference}`,
+    bodyText: bodyText.join('\n'),
+  });
+  try {
+    const result = await sendTextEmail({ to: params.toEmail, subject, text });
+    return toLogged(result, subject, text);
+  } catch (err) {
+    console.error('[email] counselling cancelled failed:', err);
+    return { ok: false, error: err instanceof Error ? err.message : 'send threw', subject, text };
+  }
+}
+
+/**
+ * Phase 123: reminder before a Confirmed session. kind selects the
+ * 24h / 2h wording; the caller stamps the booking row so each fires
+ * exactly once.
+ */
+export async function sendCounsellingReminder(params: {
+  toEmail: string;
+  name: string;
+  reference: string;
+  slotStartIso: string;
+  meetingLink: string | null;
+  locale: string;
+  kind: '24h' | '2h';
+}): Promise<LoggedSendTextResult> {
+  if (!isEmailConfigured()) return notConfigured();
+  const zh = params.locale === 'zh';
+  const formatted = formatCounsellingSlotBeijing(params.slotStartIso);
+  const whenZh = params.kind === '24h' ? '24 小时后' : '即将开始';
+  const whenEn = params.kind === '24h' ? 'in 24 hours' : 'starting soon';
+  const waLink = `https://wa.me/${WHATSAPP_PHONE}`;
+  const bodyText = zh
+    ? [
+        `您好 ${params.name}，`,
+        '',
+        `温馨提示：您的 SICA 免费咨询${whenZh}开始。`,
+        '',
+        `预约编号：${params.reference}`,
+        `咨询时间：${formatted}`,
+        params.meetingLink
+          ? `会议链接：${params.meetingLink}`
+          : '会议链接将通过邮件或 WhatsApp 发送。',
+        '',
+        `如需帮助，随时 WhatsApp 联系我们：${waLink}`,
+      ]
+    : [
+        `Hi ${params.name},`,
+        '',
+        `A friendly reminder: your free SICA counselling session is ${whenEn}.`,
+        '',
+        `Reference: ${params.reference}`,
+        `Session time: ${formatted}`,
+        params.meetingLink
+          ? `Meeting link: ${params.meetingLink}`
+          : 'The meeting link will arrive by email or WhatsApp.',
+        '',
+        `Need help? WhatsApp us any time: ${waLink}`,
+      ];
+  const { subject, text } = formatWithSignature({
+    subject: zh
+      ? `咨询提醒 ${params.reference}`
+      : `Reminder: your counselling session ${whenEn} — ${params.reference}`,
+    bodyText: bodyText.join('\n'),
+  });
+  try {
+    const result = await sendTextEmail({ to: params.toEmail, subject, text });
+    return toLogged(result, subject, text);
+  } catch (err) {
+    console.error('[email] counselling reminder failed:', err);
+    return { ok: false, error: err instanceof Error ? err.message : 'send threw', subject, text };
   }
 }

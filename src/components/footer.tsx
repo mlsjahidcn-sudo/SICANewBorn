@@ -258,6 +258,7 @@ export function Footer() {
                 {t('footer.scholarshipGuide')}
               </FooterLink>
               <FooterLink href="/assessment">{t('footer.freeAssessment')}</FooterLink>
+              <FooterLink href="/counselling">{t('footer.freeCounselling')}</FooterLink>
             </ul>
           </div>
 

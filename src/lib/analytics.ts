@@ -94,6 +94,23 @@ export interface AnalyticsEventMap {
     /** Booking reference minted server-side (e.g. CS-20260919-K7QM). */
     reference: string;
   };
+  /** Counselling wizard rendered on /counselling (Phase 123 funnel). */
+  counselling_wizard_start: {
+    /** Page locale. */
+    locale: 'en' | 'zh';
+  };
+  /** User picked an available slot in step 1 (Phase 123 funnel). */
+  counselling_slot_selected: {
+    /** Whole days between now and the slot start (0 = today). */
+    daysAhead: number;
+    /** Page locale. */
+    locale: 'en' | 'zh';
+  };
+  /** User advanced from slot picking to the details form (Phase 123 funnel). */
+  counselling_step_details: {
+    /** Page locale. */
+    locale: 'en' | 'zh';
+  };
   /** User clicked a service-tier CTA on the /get-started sales page. */
   service_card_click: {
     /** Which tier the user clicked toward. */

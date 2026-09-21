@@ -89,6 +89,13 @@ app.prepare().then(() => {
       import('./lib/webhook-scheduler').then((m) => m.startWebhookScheduler()).catch((err) =>
         console.error('[server] failed to start webhook scheduler', err),
       );
+      // Phase 123: counselling session reminders (5-minute tick).
+      // 24h + 2h reminders for Confirmed bookings, stamped per booking
+      // so each fires exactly once. Same in-process pattern as the
+      // drip worker; auto-skips if Supabase or Resend isn't configured.
+      import('./lib/counselling/reminders')
+        .then((m) => m.startCounsellingReminderScheduler())
+        .catch((err) => console.error('[server] failed to start counselling reminder scheduler', err));
     } else {
       console.log('[server] dev mode — drip + webhook schedulers disabled (set NODE_ENV=production to enable)');
     }
