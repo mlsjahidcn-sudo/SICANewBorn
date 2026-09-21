@@ -79,11 +79,11 @@ echo "IndexNow key: $KEY"
 curl -X POST "https://api.indexnow.org/indexnow" \
   -H "Content-Type: application/json" \
   -d "{
-    \"host\": \"sica.com.cn\",
+    \"host\": \"studyinchina.academy\",
     \"key\": \"$KEY\",
-    \"keyLocation\": \"https://sica.com.cn/$KEY.txt\",
+    \"keyLocation\": \"https://studyinchina.academy/$KEY.txt\",
     \"urlList\": [
-      \"https://sica.com.cn/news/<slug>\"
+      \"https://studyinchina.academy/news/<slug>\"
     ]
   }"
 ```
@@ -103,8 +103,8 @@ Google doesn't accept IndexNow directly but will discover Bing's index; Bing's i
 Verify after any schema change:
 
 ```bash
-curl -s https://sica.com.cn/sitemap.xml | head -100
-curl -s https://sica.com.cn/sitemap.xml | grep -c "<loc>"
+curl -s https://studyinchina.academy/sitemap.xml | head -100
+curl -s https://studyinchina.academy/sitemap.xml | grep -c "<loc>"
 ```
 
 ## 5. Manual post-by-post checks (3 example URLs)
@@ -121,7 +121,7 @@ If all three pass Google's Rich Results Test, the system is healthy. If any fail
 This is the slowest to verify but the most valuable. After a few weeks of crawl:
 
 1. Open ChatGPT or Perplexity, ask: "What's the latest from SICA news about [topic covered in a recent post]?". If the post has the visible TL;DR + at-a-glance + sources, the answer should reference specific facts from the post with attribution. If it returns vague or wrong answers, the structured fields need denser / more atomic content.
-2. Google "site:sica.com.cn/news" — count the number of posts indexed. This is the AEO/SEO health check. If 0-2 of your 5 posts are indexed, submit them via Search Console's URL Inspection → Request Indexing.
+2. Google "site:studyinchina.academy/news" — count the number of posts indexed. This is the AEO/SEO health check. If 0-2 of your 5 posts are indexed, submit them via Search Console's URL Inspection → Request Indexing.
 3. Track LLM referral traffic in analytics (utm parameters on LLM-bot user agents if you can). ChatGPT's crawler is `GPTBot`; Perplexity is `PerplexityBot`; Claude is `ClaudeBot`. Allow them in robots.txt and watch for traffic.
 
 ## 7. Common regressions to watch for

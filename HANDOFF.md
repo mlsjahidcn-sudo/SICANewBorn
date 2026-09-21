@@ -48,7 +48,7 @@ pnpm start       # starts custom server on $PORT (default 5000 → override with
 | `DOUBAO_BASE_URL` | optional | Default: `https://ark.cn-beijing.volces.com/api/v3` |
 | `DOUBAO_MODEL` | optional | Default: `ep-20241203153141-7jv9c` |
 | `ADMIN_INVITE_TOKEN` | **yes (S2)** | `openssl rand -hex 32`. Gates `/admin/register`. Empty = registration closed. |
-| `NEXT_PUBLIC_SITE_URL` | optional | Used by sitemap, JSON-LD, OG. Default: `https://sica.com.cn` |
+| `NEXT_PUBLIC_SITE_URL` | optional | Used by sitemap, JSON-LD, OG. Default: `https://studyinchina.academy` |
 | `PORT` | optional | Dev server port. Default 5000 (problematic on Mac) |
 | `NODE_ENV` | optional | |
 

@@ -20,7 +20,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServer } from '@/lib/supabase-server';
 import { SITE_URL } from '@/lib/site-url';
 
-const FROM = 'SICA <noreply@sica.com.cn>';
+// Must match a domain verified on the Resend account (sica.com.cn is not;
+// studyinchina.academy is — verified 2026-09-21, DKIM + primary SPF).
+const FROM = 'SICA <noreply@studyinchina.academy>';
 const REPLY_TO = process.env.ADMIN_EMAIL || 'admin@sica.cn';
 
 const SIGNATURE = [

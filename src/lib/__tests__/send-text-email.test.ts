@@ -42,7 +42,7 @@ describe('sendTextEmail', () => {
     expect(mockSend).toHaveBeenCalledTimes(1);
     const call = mockSend.mock.calls[0][0];
     expect(call).toMatchObject({
-      from: 'SICA <noreply@sica.com.cn>',
+      from: 'SICA <noreply@studyinchina.academy>',
       to: 'a@b.com',
       subject: 'Hi',
       text: 'Hello there',

@@ -206,7 +206,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             error:
-              'Only the SICA admin team can change this field. To request a status update, contact support@sica.com.cn.',
+              'Only the SICA admin team can change this field. To request a status update, contact info@studyinchina.academy.',
           },
           { status: 403 },
         );

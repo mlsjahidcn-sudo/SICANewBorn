@@ -24,8 +24,11 @@ import { FooterNews } from '@/components/FooterNews';
  * migrated site-wide from the founder's personal `mlsjahid@qq.com`
  * to `support@sica.com.cn` (15 files). Phase 46 (GEO sweep, 2026-07-10)
  * re-migrated to `info@studyinchina.academy` to align with the
- * studyinchina.academy domain. To verify: `grep -r 'support@\|mlsjahid' src/`
- * should return zero matches.
+ * studyinchina.academy domain. 2026-09-21: two partner-API 403
+ * messages still carrying `support@sica.com.cn` were re-pointed to
+ * `info@studyinchina.academy`. To verify:
+ * `grep -r 'support@\|mlsjahid\|sica\.com\.cn' src/` should return
+ * zero matches.
  *
  * Layout (top to bottom):
  *   1. Newsletter band — crimson-stripped top, 1-line email signup.

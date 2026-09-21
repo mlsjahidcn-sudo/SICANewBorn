@@ -12,7 +12,7 @@
 | GA4 traffic | `NEXT_PUBLIC_GA_MEASUREMENT_ID` set, but never verified | events landing in GA4 in real time |
 | News cron | runner exists, never scheduled | 5 drafts/day auto-generated |
 | Uptime monitor | `/api/health` exposed, no one watching it | paged if site is down >5 min |
-| Email DNS | `sica.com.cn` deliverability unverified | SPF + DKIM + DMARC all green |
+| Email DNS | `studyinchina.academy` partially verified (DKIM + primary SPF green; `send` SPF CNAME + DMARC pending) | SPF + DKIM + DMARC all green |
 
 ---
 
@@ -134,33 +134,27 @@ Better Uptime → Status Pages → create a public one with the same monitor →
 
 ## 5. Email deliverability (DNS, ~30 min)
 
-Until you do this, contact-form submissions + drip emails land in spam (or bounce outright if the sender domain isn't aligned). The sender is `noreply@sica.com.cn` (Resend; auto-publishes DKIM).
+Until you do this, contact-form submissions + drip emails land in spam (or bounce outright if the sender domain isn't aligned). The sender is `noreply@studyinchina.academy` (Resend; DKIM auto-published). Note: `sica.com.cn` is NOT on the Resend account — sending from it returns 403.
 
 ### Step 1 — Verify in Resend
 
-Resend dashboard → **Domains → sica.com.cn** → status should be "Verified". If not, the DKIM CNAME records are still propagating.
+Resend dashboard → **Domains → studyinchina.academy** → status should be "Verified". As of 2026-09-21 it is `partially_verified`: DKIM + `rsend` SPF CNAME + receiving MX + tracking all green; the `send` SPF CNAME is still pending.
 
-### Step 2 — Add SPF record
+### Step 2 — Finish SPF (CNAME-based)
 
-DNS provider for `sica.com.cn` → **TXT record** at apex (`@`):
+This Resend account uses CNAME-based SPF (not the older apex TXT include). DNS provider for `studyinchina.academy`:
 
-- **Name / Host**: `@` (or blank, depending on provider)
-- **Type**: `TXT`
-- **Value**:
-  ```
-  v=spf1 include:resend.com ~all
-  ```
-- **TTL**: 3600 (1 hour)
+- **`rsend` CNAME → `rsend-apne1.forge.rmta.net`** — already verified ✅
+- **`send` CNAME → `send.forge.rmta.net`** — still pending ⚠️, add this in DNS
+- **TTL**: Auto
 
-Notes:
-- Only one SPF record per domain. If you already have one (e.g. from Google Workspace), EDIT it to add `include:resend.com` rather than creating a second.
-- `~all` = softfail (mail that doesn't match SPF is suspicious but accepted). For SICA's low-volume outbound, this is fine. Hard-fail (`-all`) is more aggressive but more likely to break legit forwarded mail.
+If you also want an apex SPF TXT for other senders, remember only one SPF record per domain — EDIT the existing one to add `include:resend.com` rather than creating a second. `~all` (softfail) is fine for SICA's low-volume outbound.
 
 ### Step 3 — Add DMARC record
 
-DNS → **TXT record** at `_dmarc.sica.com.cn`:
+DNS → **TXT record** at `_dmarc.studyinchina.academy`:
 
-- **Name / Host**: `_dmarc.sica.com.cn`
+- **Name / Host**: `_dmarc.studyinchina.academy`
 - **Type**: `TXT`
 - **Value**:
   ```

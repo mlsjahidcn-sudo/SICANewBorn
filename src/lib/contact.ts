@@ -14,7 +14,7 @@
  *   1. Update WHATSAPP_PHONE here (one line).
  *   2. Update the support email in src/lib/contact-config.ts (or
  *      wherever the canonical support email lives — see AGENTS.md
- *      for the current home: support@sica.com.cn).
+ *      for the current home: info@studyinchina.academy).
  *   3. Deploy.
  */
 
