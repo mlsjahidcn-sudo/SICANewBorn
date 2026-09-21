@@ -134,11 +134,24 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       const parsed = parseSource(body.source);
       if (!parsed) {
         return NextResponse.json(
-          { error: 'source must be one of: Admin, Partner, Online' },
+          { error: "source must be one of: Admin, Partner, Online" },
           { status: 400 },
         );
       }
       body.source = parsed;
+    }
+
+    // Phase 124: email format guard. An invalid email stored here
+    // silently breaks future status-email sends — the applicant-email
+    // resolution in /api/admin/applications/[id] PATCH reads
+    // student_profiles.email first. Empty string is allowed (it's how
+    // a Phase 90 no-email offline student clears the field).
+    if (typeof body.email === 'string' && body.email.trim() !== '') {
+      const email = body.email.trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return NextResponse.json({ error: 'Invalid email format' }, { status: 400 });
+      }
+      body.email = email;
     }
 
     const { dbRow, extraUpdates } = mapStudentToDb(body);

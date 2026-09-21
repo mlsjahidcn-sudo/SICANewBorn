@@ -79,6 +79,16 @@ export default function AdminNewApplicationPage() {
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<AdminStudent | null>(null);
+  // Phase 124: inline email capture for offline students created
+  // without one (Phase 90 made email optional on Add Offline Student).
+  // Those rows store student_profiles.email = '' — the info card used
+  // to render a blank line (looked like a sync failure) and status
+  // emails for this application would silently no-op, since the
+  // applicant-email resolution reads student_profiles.email first.
+  const [inlineEmail, setInlineEmail] = useState('');
+  const [inlineEmailSaving, setInlineEmailSaving] = useState(false);
+  const [inlineEmailError, setInlineEmailError] = useState<string | null>(null);
+  const [inlineEmailSaved, setInlineEmailSaved] = useState(false);
   const [studentDocuments, setStudentDocuments] = useState<StudentDocument[]>([]);
   const [studentDocumentsLoading, setStudentDocumentsLoading] = useState(false);
   // Phase 109 Batch 2: docs uploaded by the admin during THIS wizard
@@ -199,6 +209,9 @@ export default function AdminNewApplicationPage() {
     if (!formData.studentId) {
       setSelectedStudent(null);
       setStudentDocuments([]);
+      setInlineEmail('');
+      setInlineEmailError(null);
+      setInlineEmailSaved(false);
       setFormData(prev => ({
         ...prev,
         selectedDocuments: []
@@ -341,6 +354,35 @@ export default function AdminNewApplicationPage() {
         ? prev.selectedDocuments.filter(id => id !== docId)
         : [...prev.selectedDocuments, docId]
     }));
+  };
+
+  // Phase 124: save an email for a student who has none on file.
+  // PATCHes the student profile (same endpoint the student edit page
+  // uses) and swaps the card over to the fresh row so the email shows
+  // without a wizard reload.
+  const saveInlineEmail = async () => {
+    if (!selectedStudent) return;
+    const trimmed = inlineEmail.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      setInlineEmailError('Enter a valid email address.');
+      return;
+    }
+    setInlineEmailSaving(true);
+    setInlineEmailError(null);
+    try {
+      const data = await apiFetchJson<{ student: AdminStudent }>(
+        `/api/admin/students/${selectedStudent.id}`,
+        { method: 'PATCH', body: JSON.stringify({ email: trimmed }) },
+      );
+      setSelectedStudent(data.student);
+      setInlineEmail('');
+      setInlineEmailSaved(true);
+      setTimeout(() => setInlineEmailSaved(false), 5000);
+    } catch (err) {
+      setInlineEmailError(err instanceof Error ? err.message : 'Failed to save email.');
+    } finally {
+      setInlineEmailSaving(false);
+    }
   };
 
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -729,13 +771,13 @@ export default function AdminNewApplicationPage() {
                             <div>
                               <span className="text-[#4B5563]">Email:</span>{' '}
                               <span className="font-medium text-[#1F2937]">
-                                {selectedStudent.email}
+                                {selectedStudent.email || 'Not provided'}
                               </span>
                             </div>
                             <div>
                               <span className="text-[#4B5563]">Nationality:</span>{' '}
                               <span className="font-medium text-[#1F2937]">
-                                {selectedStudent.nationality}
+                                {selectedStudent.nationality || 'Not provided'}
                               </span>
                             </div>
                             <div>
@@ -745,6 +787,44 @@ export default function AdminNewApplicationPage() {
                               </span>
                             </div>
                           </div>
+                          {!selectedStudent.email && (
+                            <div className="border-t border-[#9B1B30]/10 pt-2 space-y-1.5">
+                              <p className="text-xs text-amber-700">
+                                No email on file — status updates can&apos;t be emailed to this
+                                student. Add one now:
+                              </p>
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  type="email"
+                                  value={inlineEmail}
+                                  onChange={(e) => {
+                                    setInlineEmail(e.target.value);
+                                    setInlineEmailError(null);
+                                  }}
+                                  placeholder="student@example.com"
+                                  className="h-8 max-w-xs text-sm"
+                                />
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={saveInlineEmail}
+                                  disabled={inlineEmailSaving || !inlineEmail.trim()}
+                                >
+                                  {inlineEmailSaving ? 'Saving…' : 'Save email'}
+                                </Button>
+                              </div>
+                              {inlineEmailError && (
+                                <p className="text-xs text-red-600">{inlineEmailError}</p>
+                              )}
+                              {inlineEmailSaved && (
+                                <p className="text-xs text-green-700">
+                                  Email saved — future status updates will be emailed to this
+                                  address.
+                                </p>
+                              )}
+                            </div>
+                          )}
                           <div className="pt-2">
                             <Badge className="bg-[#9B1B30] text-white rounded-none">
                               Offline Student
@@ -915,7 +995,7 @@ export default function AdminNewApplicationPage() {
                             <div className="font-medium text-[#1F2937]">
                               {selectedStudent.firstName} {selectedStudent.lastName}
                             </div>
-                            <div className="text-sm text-[#4B5563]">{selectedStudent.email}</div>
+                            <div className="text-sm text-[#4B5563]">{selectedStudent.email || 'No email on file'}</div>
                           </div>
                           <Badge className="ml-auto bg-[#9B1B30] text-white rounded-none">
                             Offline
@@ -1175,7 +1255,7 @@ export default function AdminNewApplicationPage() {
                                 <div className="font-medium text-[#1F2937]">
                                   {selectedStudent.firstName} {selectedStudent.lastName}
                                 </div>
-                                <div className="text-[#4B5563]">{selectedStudent.email}</div>
+                                <div className="text-[#4B5563]">{selectedStudent.email || 'No email on file'}</div>
                               </div>
                               <Badge className="ml-auto bg-[#9B1B30] text-white rounded-none">
                                 Offline
@@ -1186,13 +1266,13 @@ export default function AdminNewApplicationPage() {
                               <div>
                                 <span className="text-[#4B5563]">Nationality:</span>{' '}
                                 <span className="font-medium text-[#1F2937]">
-                                  {selectedStudent.nationality}
+                                  {selectedStudent.nationality || 'Not provided'}
                                 </span>
                               </div>
                               <div>
                                 <span className="text-[#4B5563]">Phone:</span>{' '}
                                 <span className="font-medium text-[#1F2937]">
-                                  {selectedStudent.phone}
+                                  {selectedStudent.phone || 'Not provided'}
                                 </span>
                               </div>
                               <div>
