@@ -492,29 +492,6 @@ export default function UniversityDetailClient({
                   {t('uni.orTalkToCounselor')}
                 </Link>
 
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#4B5563] mb-2">
-                    {t('productCompare.rowWhoApplies')}
-                  </p>
-                  <Link
-                    href={`/resources?university=${encodeURIComponent(slug)}`}
-                    onClick={() => {
-                      track('apply_click', {
-                        location: 'support_card_diy',
-                        locale,
-                        slug,
-                      });
-                    }}
-                    className="block"
-                  >
-                    <Button
-                      variant="outline"
-                      className="w-full border-[#1B2A4A] text-[#1B2A4A] hover:bg-[#1B2A4A] hover:text-white font-semibold text-sm"
-                    >
-                      {t('product.selfServe.ctaLabel')} →
-                    </Button>
-                  </Link>
-                </div>
                 <div className="mt-3 text-center">
                   <GetStartedCta
                     variant="inline"

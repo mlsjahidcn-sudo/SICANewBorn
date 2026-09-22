@@ -374,18 +374,6 @@ export default function ProgramDetailClient({ program, university }: ProgramDeta
                 {t('cta.apply')}
                 <ArrowRight className="h-4 w-4" />
               </Link>
-              <div className="mt-4 pt-4 border-t border-[#9B1B30]/20">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-[#4B5563] mb-2">
-                  {t('productCompare.rowWhoApplies')}
-                </p>
-                <Link
-                  href={`/resources?program=${encodeURIComponent(program.slug)}`}
-                  className="flex w-full items-center justify-center gap-2 border border-[#1B2A4A] text-[#1B2A4A] hover:bg-[#1B2A4A] hover:text-white px-4 py-2.5 text-sm font-semibold transition-colors"
-                >
-                  {t('product.selfServe.ctaLabel')}
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </div>
               <div className="mt-3 text-center">
                 <GetStartedCta
                   variant="inline"
