@@ -325,7 +325,7 @@ async function fetchStudentApplications(
     .from('student_applications')
     .select(
       `*,
-       student:student_profiles!student_id (id, first_name, last_name, email, source, status)`,
+       student:student_profiles!student_id (id, first_name, last_name, email, source, status, passport_number)`,
       { count: 'exact' },
     )
     .order('created_at', { ascending: false });

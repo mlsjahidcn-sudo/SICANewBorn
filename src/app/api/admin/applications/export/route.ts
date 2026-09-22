@@ -44,6 +44,7 @@ const CSV_COLUMNS = [
   'Student Email',
   'Student Phone',
   'Nationality',
+  'Passport Number',
   'Date of Birth',
   'Gender',
   'University',
@@ -109,6 +110,7 @@ export async function GET(request: NextRequest) {
       student_email: string | null;
       student_phone: string | null;
       nationality: string | null;
+      passport_number: string | null;
       date_of_birth: string | null;
       gender: string | null;
       university: string;
@@ -173,6 +175,7 @@ export async function GET(request: NextRequest) {
         status: string;
         nationality: string | null;
         date_of_birth: string | null;
+        passport_number: string | null;
       } | null;
     }> = [];
 
@@ -181,7 +184,7 @@ export async function GET(request: NextRequest) {
         .from('student_applications')
         .select(
           `*,
-           student:student_profiles!student_id (id, first_name, last_name, email, source, status, nationality, date_of_birth)`,
+           student:student_profiles!student_id (id, first_name, last_name, email, source, status, nationality, date_of_birth, passport_number)`,
         )
         .order('created_at', { ascending: false })
         .limit(MAX_EXPORT_ROWS);
@@ -221,6 +224,7 @@ export async function GET(request: NextRequest) {
         student_email: studentEmail || '',
         student_phone: studentPhone || '',
         nationality: nationality || '',
+        passport_number: isLinked ? r.student?.passport_number || '' : '',
         date_of_birth: r.student?.date_of_birth || '',
         gender: '', // student_profiles has no gender column
         university: r.university_name,
@@ -246,6 +250,7 @@ export async function GET(request: NextRequest) {
       student_email: string | null;
       student_phone: string | null;
       nationality: string | null;
+      passport_number: string | null;
       date_of_birth: string | null;
       gender: string | null;
       university: string;
@@ -265,7 +270,7 @@ export async function GET(request: NextRequest) {
       let q = service
         .from('partner_applications')
         .select(
-          'id, application_number, student_name, student_email, student_phone, nationality, date_of_birth, gender, university, program, degree, intake, status, decision, priority, submitted_at, created_at, updated_at, notes',
+          'id, application_number, student_name, student_email, student_phone, nationality, passport_number, date_of_birth, gender, university, program, degree, intake, status, decision, priority, submitted_at, created_at, updated_at, notes',
         )
         .order('created_at', { ascending: false })
         .limit(MAX_EXPORT_ROWS);
@@ -295,6 +300,7 @@ export async function GET(request: NextRequest) {
         student_email: r.student_email,
         student_phone: r.student_phone,
         nationality: r.nationality,
+        passport_number: r.passport_number,
         date_of_birth: r.date_of_birth,
         gender: r.gender,
         university: r.university,
@@ -363,6 +369,7 @@ export async function GET(request: NextRequest) {
         r.student_email,
         r.student_phone,
         r.nationality,
+        r.passport_number,
         r.date_of_birth,
         r.gender,
         r.university,

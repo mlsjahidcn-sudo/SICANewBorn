@@ -26,6 +26,7 @@ interface AdminApplication {
   studentId: string | null;
   studentName: string;
   studentEmail: string;
+  studentPassportNumber?: string;
   isLinked: boolean;
   university: string;
   program: string;
@@ -306,6 +307,7 @@ export default function AdminApplicationDetailPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                     <Field label="Name" value={app.studentName} icon={<FileText className="w-4 h-4" />} />
                     <Field label="Email" value={app.studentEmail || '—'} icon={<Mail className="w-4 h-4" />} />
+                    <Field label="Passport Number" value={app.studentPassportNumber || '—'} icon={<FileText className="w-4 h-4" />} />
                     <Field label="Source" value={app.source} icon={<User2Icon className="w-4 h-4" />} />
                     <Field label="Created" value={new Date(app.createdAt).toLocaleString()} icon={<Calendar className="w-4 h-4" />} />
                   </div>

@@ -61,6 +61,10 @@ export interface AdminApplication {
   studentId: string | null;
   studentName: string;
   studentEmail: string;
+  // Phase 125: passport number from the joined student_profiles row —
+  // empty for unlinked (lead) rows. Lets admins verify identity on the
+  // application without opening the student profile.
+  studentPassportNumber: string;
   isLinked: boolean;
   university: string;
   universityNameCn: string | null;
@@ -145,6 +149,7 @@ export type RawApp = {
     email: string | null;
     source: string;
     status: string;
+    passport_number?: string | null;
   } | null;
 };
 
@@ -162,6 +167,7 @@ export function mapApplicationFromDb(row: RawApp): AdminApplication {
     studentEmail: isLinked
       ? row.student!.email || ''
       : row.applicant_email || '',
+    studentPassportNumber: isLinked ? row.student!.passport_number || '' : '',
     isLinked,
     university: row.university_name,
     universityNameCn: row.university_name_cn,

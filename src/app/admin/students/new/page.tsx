@@ -44,6 +44,7 @@ const FIXED_FIELDS = [
   'nationality',
   'email',
   'phone',
+  'passportNumber',
   'targetDegree',
   'targetField',
   'targetIntake',

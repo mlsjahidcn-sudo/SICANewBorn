@@ -24,6 +24,7 @@ describe('mapStudentFromDb', () => {
       phone: '+86 10 8888 9999',
       nationality: 'Bangladesh',
       date_of_birth: '1995-04-12',
+      passport_number: 'E12345678',
       target_degree: 'Master',
       target_intake: 'September 2026',
       source: 'Online',
@@ -43,6 +44,8 @@ describe('mapStudentFromDb', () => {
       phone: '+86 10 8888 9999',
       nationality: 'Bangladesh',
       dateOfBirth: '1995-04-12',
+      // Phase 125: passport_number read off the fixed column.
+      passportNumber: 'E12345678',
       gender: 'Male',
       targetDegree: 'Master',
       targetField: '',
@@ -61,6 +64,26 @@ describe('mapStudentFromDb', () => {
       // when the row didn't come through a count-annotated query.
       applicationCount: null,
     });
+  });
+
+  it('falls back to extra.passportNumber when the fixed column is empty (Phase 125)', () => {
+    // Rows created by the admin offline form before passport_number
+    // became a FIXED_FIELD stored the value in the extra JSONB blob.
+    const student = mapStudentFromDb({
+      id: 'x',
+      passport_number: '',
+      extra: { passportNumber: 'E87654321' },
+    });
+    expect(student.passportNumber).toBe('E87654321');
+  });
+
+  it('prefers the fixed passport_number column over the extra copy', () => {
+    const student = mapStudentFromDb({
+      id: 'x',
+      passport_number: 'E11111111',
+      extra: { passportNumber: 'E22222222' },
+    });
+    expect(student.passportNumber).toBe('E11111111');
   });
 
   it('derives isOffline=true when source is Admin', () => {
@@ -103,6 +126,12 @@ describe('mapStudentToDb', () => {
   it('preserves id when provided (for upsert)', () => {
     const { dbRow } = mapStudentToDb({ id: 'abc-123', firstName: 'X' });
     expect(dbRow.id).toBe('abc-123');
+  });
+
+  it('writes passportNumber to the passport_number column (Phase 125)', () => {
+    const { dbRow, extraUpdates } = mapStudentToDb({ passportNumber: 'E12345678' });
+    expect(dbRow.passport_number).toBe('E12345678');
+    expect(Object.keys(extraUpdates)).toHaveLength(0);
   });
 
   it('routes free-form fields (gender, notes) to extraUpdates', () => {

@@ -38,6 +38,10 @@ export interface AdminStudent {
   phone: string;
   nationality: string;
   dateOfBirth: string;
+  /** Phase 125: student_profiles.passport_number (fixed column). Falls
+   * back to the `extra.passportNumber` copy the admin offline form used
+   * to write before this became a first-class field. */
+  passportNumber: string;
   gender?: string;
   targetDegree: string;
   targetField: string;
@@ -95,6 +99,14 @@ export function mapStudentFromDb(row: Record<string, unknown>): AdminStudent {
     phone: (row.phone as string) || '',
     nationality: (row.nationality as string) || '',
     dateOfBirth: (row.date_of_birth as string) || '',
+    // Phase 125: the real fixed column is written by the student
+    // self-profile page + the signup trigger. The admin offline form
+    // historically landed its input in `extra.passportNumber` instead,
+    // so fall back to that for rows created before the column write.
+    passportNumber:
+      (row.passport_number as string) ||
+      (typeof extra.passportNumber === 'string' ? extra.passportNumber : '') ||
+      '',
     gender: (extra.gender as string) || undefined,
     targetDegree: (row.target_degree as string) || '',
     targetField: (row.target_field as string) || '',
@@ -145,6 +157,9 @@ export function mapStudentToDb(input: Partial<AdminStudent>): {
   if (input.phone !== undefined) dbRow.phone = input.phone;
   if (input.nationality !== undefined) dbRow.nationality = input.nationality;
   if (input.dateOfBirth !== undefined) dbRow.date_of_birth = input.dateOfBirth;
+  // Phase 125: write the real fixed column (the offline form now sends
+  // this through FIXED_FIELDS instead of the extra JSONB blob).
+  if (input.passportNumber !== undefined) dbRow.passport_number = input.passportNumber;
   if (input.targetDegree !== undefined) dbRow.target_degree = input.targetDegree;
   if (input.targetField !== undefined) dbRow.target_field = input.targetField;
   if (input.targetIntake !== undefined) dbRow.target_intake = input.targetIntake;

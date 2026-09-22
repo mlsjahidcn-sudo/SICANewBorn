@@ -70,7 +70,7 @@ export async function GET(
     const service = buildServiceClient();
     const { data, error } = await service
       .from('student_applications')
-      .select('*, student:student_profiles!student_id (id, first_name, last_name, email, source, status)')
+      .select('*, student:student_profiles!student_id (id, first_name, last_name, email, source, status, passport_number)')
       .eq('id', id)
       .maybeSingle();
 

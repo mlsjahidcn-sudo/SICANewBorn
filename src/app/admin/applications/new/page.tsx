@@ -781,6 +781,12 @@ export default function AdminNewApplicationPage() {
                               </span>
                             </div>
                             <div>
+                              <span className="text-[#4B5563]">Passport Number:</span>{' '}
+                              <span className="font-medium text-[#1F2937]">
+                                {selectedStudent.passportNumber || 'Not provided'}
+                              </span>
+                            </div>
+                            <div>
                               <span className="text-[#4B5563]">Target Degree:</span>{' '}
                               <span className="font-medium text-[#1F2937]">
                                 {selectedStudent.targetDegree || 'Not specified'}
@@ -1267,6 +1273,12 @@ export default function AdminNewApplicationPage() {
                                 <span className="text-[#4B5563]">Nationality:</span>{' '}
                                 <span className="font-medium text-[#1F2937]">
                                   {selectedStudent.nationality || 'Not provided'}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[#4B5563]">Passport Number:</span>{' '}
+                                <span className="font-medium text-[#1F2937]">
+                                  {selectedStudent.passportNumber || 'Not provided'}
                                 </span>
                               </div>
                               <div>
