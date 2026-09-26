@@ -46,6 +46,10 @@ const ADMIN_AI_LIMITS = {
   // tokens (one image/PDF in, JSON out). 15/15min covers ~5 students
   // × 2 documents + retries without blocking admin work.
   'student-ocr': 15,
+  // Phase 127: free-text → program rows for the bulk import page.
+  // Output can be large (up to 120 rows × 12 fields ≈ 6-8K tokens),
+  // so keep it in generate-university territory: 10/15min.
+  'parse-programs': 10,
 } as const;
 
 export type AdminAIAction = keyof typeof ADMIN_AI_LIMITS;

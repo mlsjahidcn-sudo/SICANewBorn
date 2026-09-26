@@ -2,10 +2,11 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Upload, FileText, AlertCircle, CheckCircle2, X, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Upload, FileText, AlertCircle, CheckCircle2, X, Plus, Trash2, Sparkles, Info } from 'lucide-react';
 import { universities as staticUniversities } from '@/lib/data';
 import { ToastProvider, useToast } from '@/components/admin/toast';
 import { apiFetch } from '@/lib/api-client';
+import type { ParsedProgramRow } from '@/lib/ai/program-parse-sanitize';
 
 interface ParsedProgram {
   name: string;
@@ -46,7 +47,13 @@ function BulkImportContent() {
   const router = useRouter();
   const { addToast } = useToast();
   const [universitySlug, setUniversitySlug] = useState('');
+  // Phase 127: 'ai' = paste free-form text, the endpoint parses it.
+  // 'structured' = the original pipe/tab format, parsed client-side.
+  const [inputMode, setInputMode] = useState<'ai' | 'structured'>('ai');
   const [rawText, setRawText] = useState('');
+  const [aiText, setAiText] = useState('');
+  const [isParsingAI, setIsParsingAI] = useState(false);
+  const [parseWarnings, setParseWarnings] = useState<string[]>([]);
   const [parsedPrograms, setParsedPrograms] = useState<ParsedProgram[]>([]);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -151,6 +158,77 @@ function BulkImportContent() {
     setIsPreviewMode(true);
   }, [rawText, addToast]);
 
+  // Phase 127: send the free-form text to /api/programs/ai-parse and
+  // drop the returned rows straight into the same preview table the
+  // structured parser feeds. Nothing is written here — the admin
+  // still reviews + hits Import, which POSTs /api/programs/bulk.
+  const handleParseWithAI = async () => {
+    if (!aiText.trim()) {
+      addToast('Please paste the program text first', 'error');
+      return;
+    }
+    if (!universitySlug) {
+      addToast('Please select a university', 'error');
+      return;
+    }
+
+    setIsParsingAI(true);
+    try {
+      const res = await apiFetch('/api/programs/ai-parse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: aiText, universitySlug }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        addToast(data.error || 'AI parse failed', 'error');
+        return;
+      }
+
+      const rows = (Array.isArray(data.programs) ? data.programs : []) as ParsedProgramRow[];
+      const warnings = Array.isArray(data.warnings) ? data.warnings.filter(Boolean) : [];
+
+      if (rows.length === 0) {
+        setParseWarnings(warnings);
+        addToast("The AI couldn't find any programs in that text. Try rephrasing it.", 'error');
+        return;
+      }
+
+      // Import-time defaults mirror the structured parser: blank
+      // language was already coerced server-side; blank intake gets
+      // the September/9月 default so rows match the old flow.
+      const mapped: ParsedProgram[] = rows.map((r) => ({
+        name: r.name,
+        nameCn: r.nameCn || '',
+        degree: r.degree,
+        discipline: r.discipline,
+        disciplineCn: r.disciplineCn || '',
+        language: r.language || 'English',
+        duration: r.duration || '',
+        durationCn: r.durationCn || '',
+        tuition: r.tuition || '',
+        intake: r.intake || 'September',
+        intakeCn: r.intakeCn || '9月',
+        scholarshipAvailable: r.scholarshipAvailable === true,
+        _valid: true,
+      }));
+
+      setParsedPrograms(mapped);
+      setParseWarnings(warnings);
+      setIsPreviewMode(true);
+      addToast(
+        `AI parsed ${mapped.length} program${mapped.length === 1 ? '' : 's'} — review before importing`,
+        'success',
+      );
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'AI parse failed';
+      addToast(msg, 'error');
+    } finally {
+      setIsParsingAI(false);
+    }
+  };
+
   const removeProgram = (index: number) => {
     setParsedPrograms(prev => prev.filter((_, i) => i !== index));
   };
@@ -241,6 +319,8 @@ function BulkImportContent() {
 
   const resetForm = () => {
     setRawText('');
+    setAiText('');
+    setParseWarnings([]);
     setParsedPrograms([]);
     setIsPreviewMode(false);
     setImportResult(null);
@@ -321,52 +401,34 @@ function BulkImportContent() {
         ) : !isPreviewMode ? (
           /* Input Mode */
           <div className="space-y-6">
-            {/* Format Guide */}
-            <div className="bg-white border border-gray-200 rounded-none p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <FileText className="w-5 h-5 text-[#1B2A4A]" />
-                <h2 className="text-lg font-semibold text-[#1B2A4A]">Format Guide</h2>
-              </div>
-              <p className="text-sm text-[#4B5563] mb-3">
-                Paste one program per line. Separate fields with <code className="bg-gray-100 px-1.5 py-0.5 rounded-none text-[#1B2A4A] font-mono text-xs">|</code> (pipe) or <code className="bg-gray-100 px-1.5 py-0.5 rounded-none text-[#1B2A4A] font-mono text-xs">Tab</code>. Minimum required fields: name, nameCn, degree, discipline.
-              </p>
-              <div className="bg-[#1B2A4A] rounded-none p-4 text-sm font-mono text-gray-300 overflow-x-auto">
-                <div className="text-[#D4A853] mb-1">{'/* Column order */'}</div>
-                <div className="text-green-400 mb-3">{FORMAT_HEADER}</div>
-                <div className="text-[#D4A853] mb-1">{'/* Example */'}</div>
-                <div className="text-green-400">{FORMAT_EXAMPLE}</div>
-              </div>
-              <div className="mt-4 overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-2 pr-3 text-[#1B2A4A] font-semibold">#</th>
-                      <th className="text-left py-2 pr-3 text-[#1B2A4A] font-semibold">Field</th>
-                      <th className="text-left py-2 pr-3 text-[#1B2A4A] font-semibold">Required</th>
-                      <th className="text-left py-2 text-[#1B2A4A] font-semibold">Example</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {COLUMNS.map((col, i) => (
-                      <tr key={col.key} className="border-b border-gray-100">
-                        <td className="py-1.5 pr-3 text-[#4B5563]">{i + 1}</td>
-                        <td className="py-1.5 pr-3 font-mono text-[#1B2A4A]">{col.key}</td>
-                        <td className="py-1.5 pr-3">
-                          {i < 4 ? (
-                            <span className="text-red-600 font-medium">Yes</span>
-                          ) : (
-                            <span className="text-gray-400">No</span>
-                          )}
-                        </td>
-                        <td className="py-1.5 text-[#4B5563]">{col.example}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+            {/* Input mode toggle — Phase 127. AI mode is the default:
+                paste free-form notes, the endpoint formats them. */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setInputMode('ai')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-none text-sm font-semibold transition-colors ${
+                  inputMode === 'ai'
+                    ? 'bg-[#1B2A4A] text-white'
+                    : 'bg-white border border-gray-300 text-[#1B2A4A] hover:bg-gray-50'
+                }`}
+              >
+                <Sparkles className="w-4 h-4" />
+                AI Parse (free text)
+              </button>
+              <button
+                onClick={() => setInputMode('structured')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-none text-sm font-semibold transition-colors ${
+                  inputMode === 'structured'
+                    ? 'bg-[#1B2A4A] text-white'
+                    : 'bg-white border border-gray-300 text-[#1B2A4A] hover:bg-gray-50'
+                }`}
+              >
+                <FileText className="w-4 h-4" />
+                Structured rows (pipe format)
+              </button>
             </div>
 
-            {/* University Selector */}
+            {/* University Selector — shared by both modes */}
             <div className="bg-white border border-gray-200 rounded-none p-6">
               <label className="block text-sm font-semibold text-[#1B2A4A] mb-2">
                 Target University <span className="text-red-600">*</span>
@@ -383,36 +445,130 @@ function BulkImportContent() {
               </select>
             </div>
 
-            {/* Paste Area */}
-            <div className="bg-white border border-gray-200 rounded-none p-6">
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-semibold text-[#1B2A4A]">
-                  Program Data <span className="text-red-600">*</span>
-                </label>
-                <span className="text-xs text-[#4B5563]">
-                  {rawText.trim() ? `${rawText.trim().split('\n').filter(l => l.trim() && !l.trim().startsWith('name|')).length} lines detected` : 'Paste your data below'}
-                </span>
-              </div>
-              <textarea
-                value={rawText}
-                onChange={(e) => setRawText(e.target.value)}
-                placeholder={`${FORMAT_HEADER}\n${FORMAT_EXAMPLE}`}
-                rows={12}
-                className="w-full px-3 py-2 border border-gray-300 rounded-none font-mono text-sm text-[#1B2A4A] bg-white focus:outline-none focus:border-[#9B1B30] resize-y"
-              />
-            </div>
+            {inputMode === 'ai' ? (
+              <>
+                {/* AI free-text card */}
+                <div className="bg-white border border-gray-200 rounded-none p-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Sparkles className="w-5 h-5 text-[#9B1B30]" />
+                    <h2 className="text-lg font-semibold text-[#1B2A4A]">
+                      Paste the program list — AI does the formatting
+                    </h2>
+                  </div>
+                  <p className="text-sm text-[#4B5563] mb-3">
+                    Type or paste anything: degree headings with comma-separated majors, messy
+                    notes, English or 中文. The AI turns it into rows you review on the next step.
+                    Fields your text doesn't mention (tuition, duration…) stay blank — nothing is
+                    invented.
+                  </p>
+                  <textarea
+                    value={aiText}
+                    onChange={(e) => setAiText(e.target.value)}
+                    placeholder={`Bachelor: Computer Science, Civil Engineering, International Economics and Trade\nMaster: MBA (English-taught, 2 years), Software Engineering\nPhD: Mechanical Engineering\n\n本科：计算机科学与技术、土木工程\n硕士：工商管理（英文授课）`}
+                    rows={10}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-none font-mono text-sm text-[#1B2A4A] bg-white focus:outline-none focus:border-[#9B1B30] resize-y"
+                  />
+                  <div className="mt-3 flex items-start gap-2 bg-[#FAFAF8] border border-gray-200 rounded-none p-3">
+                    <Info className="w-4 h-4 text-[#D4A853] shrink-0 mt-0.5" />
+                    <p className="text-xs text-[#4B5563]">
+                      Tips: one degree level per line works best. Mention "English-taught" or a
+                      duration/tuition inline when you know it. Up to 120 programs per parse and
+                      ~30,000 characters of text — split bigger lists.
+                    </p>
+                  </div>
+                </div>
 
-            {/* Parse Button */}
-            <div className="flex justify-end">
-              <button
-                onClick={parseText}
-                disabled={!rawText.trim() || !universitySlug}
-                className="flex items-center gap-2 px-6 py-2.5 bg-[#9B1B30] text-white rounded-none font-semibold hover:bg-[#7A1526] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Upload className="w-4 h-4" />
-                Parse & Preview
-              </button>
-            </div>
+                {/* Parse with AI button */}
+                <div className="flex justify-end">
+                  <button
+                    onClick={handleParseWithAI}
+                    disabled={isParsingAI || !aiText.trim() || !universitySlug}
+                    className="flex items-center gap-2 px-6 py-2.5 bg-[#9B1B30] text-white rounded-none font-semibold hover:bg-[#7A1526] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    {isParsingAI ? 'AI is reading…' : 'Parse with AI'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Format Guide */}
+                <div className="bg-white border border-gray-200 rounded-none p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <FileText className="w-5 h-5 text-[#1B2A4A]" />
+                    <h2 className="text-lg font-semibold text-[#1B2A4A]">Format Guide</h2>
+                  </div>
+                  <p className="text-sm text-[#4B5563] mb-3">
+                    Paste one program per line. Separate fields with <code className="bg-gray-100 px-1.5 py-0.5 rounded-none text-[#1B2A4A] font-mono text-xs">|</code> (pipe) or <code className="bg-gray-100 px-1.5 py-0.5 rounded-none text-[#1B2A4A] font-mono text-xs">Tab</code>. Minimum required fields: name, nameCn, degree, discipline.
+                  </p>
+                  <div className="bg-[#1B2A4A] rounded-none p-4 text-sm font-mono text-gray-300 overflow-x-auto">
+                    <div className="text-[#D4A853] mb-1">{'/* Column order */'}</div>
+                    <div className="text-green-400 mb-3">{FORMAT_HEADER}</div>
+                    <div className="text-[#D4A853] mb-1">{'/* Example */'}</div>
+                    <div className="text-green-400">{FORMAT_EXAMPLE}</div>
+                  </div>
+                  <div className="mt-4 overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-gray-200">
+                          <th className="text-left py-2 pr-3 text-[#1B2A4A] font-semibold">#</th>
+                          <th className="text-left py-2 pr-3 text-[#1B2A4A] font-semibold">Field</th>
+                          <th className="text-left py-2 pr-3 text-[#1B2A4A] font-semibold">Required</th>
+                          <th className="text-left py-2 text-[#1B2A4A] font-semibold">Example</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {COLUMNS.map((col, i) => (
+                          <tr key={col.key} className="border-b border-gray-100">
+                            <td className="py-1.5 pr-3 text-[#4B5563]">{i + 1}</td>
+                            <td className="py-1.5 pr-3 font-mono text-[#1B2A4A]">{col.key}</td>
+                            <td className="py-1.5 pr-3">
+                              {i < 4 ? (
+                                <span className="text-red-600 font-medium">Yes</span>
+                              ) : (
+                                <span className="text-gray-400">No</span>
+                              )}
+                            </td>
+                            <td className="py-1.5 text-[#4B5563]">{col.example}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Paste Area */}
+                <div className="bg-white border border-gray-200 rounded-none p-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-semibold text-[#1B2A4A]">
+                      Program Data <span className="text-red-600">*</span>
+                    </label>
+                    <span className="text-xs text-[#4B5563]">
+                      {rawText.trim() ? `${rawText.trim().split('\n').filter(l => l.trim() && !l.trim().startsWith('name|')).length} lines detected` : 'Paste your data below'}
+                    </span>
+                  </div>
+                  <textarea
+                    value={rawText}
+                    onChange={(e) => setRawText(e.target.value)}
+                    placeholder={`${FORMAT_HEADER}\n${FORMAT_EXAMPLE}`}
+                    rows={12}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-none font-mono text-sm text-[#1B2A4A] bg-white focus:outline-none focus:border-[#9B1B30] resize-y"
+                  />
+                </div>
+
+                {/* Parse Button */}
+                <div className="flex justify-end">
+                  <button
+                    onClick={parseText}
+                    disabled={!rawText.trim() || !universitySlug}
+                    className="flex items-center gap-2 px-6 py-2.5 bg-[#9B1B30] text-white rounded-none font-semibold hover:bg-[#7A1526] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Parse & Preview
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         ) : (
           /* Preview Mode */
@@ -441,6 +597,20 @@ function BulkImportContent() {
                 Edit Data
               </button>
             </div>
+
+            {/* AI parse notes — Phase 127: fallbacks the normalizer
+                applied (defaulted degree/language, dropped dupes…).
+                Non-blocking; the rows below are already editable. */}
+            {parseWarnings.length > 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-none p-4">
+                <h3 className="text-sm font-semibold text-amber-800 mb-2">
+                  AI parse notes ({parseWarnings.length})
+                </h3>
+                {parseWarnings.map((w, i) => (
+                  <p key={i} className="text-xs text-amber-700">{w}</p>
+                ))}
+              </div>
+            )}
 
             {/* Preview Table */}
             <div className="bg-white border border-gray-200 rounded-none overflow-hidden">
