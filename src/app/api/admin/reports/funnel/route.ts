@@ -95,15 +95,25 @@ export async function GET(request: NextRequest) {
       enrolledTimeSeriesQuery,
     ]);
 
-    if (leadSourcesErr || appsErr || splitErr || tsErr || enrolledErr) {
+    if (leadSourcesErr || appsErr || splitErr || tsErr) {
       console.error('[admin/reports/funnel] rpc errors:', {
         leadSourcesErr,
         appsErr,
         splitErr,
         tsErr,
-        enrolledErr,
       });
       return NextResponse.json({ error: 'Failed to load report data' }, { status: 500 });
+    }
+
+    // Phase 128: the enrolled series is an optional enhancement — an
+    // unmigrated RPC (PGRST202) degrades to an empty series instead of
+    // 500-ing the whole report. The UI already renders 0 for the
+    // optional enrolled fields.
+    if (enrolledErr) {
+      console.warn(
+        '[admin/reports/funnel] enrolled RPC unavailable — returning empty enrolled series:',
+        enrolledErr instanceof Error ? enrolledErr.message : enrolledErr,
+      );
     }
 
     const online = (sourceSplit as { source: string; count: number }[] | null)?.find(
