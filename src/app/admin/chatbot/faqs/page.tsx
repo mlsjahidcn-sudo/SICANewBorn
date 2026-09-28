@@ -19,36 +19,7 @@ import { useAuth } from '@/lib/auth-context';
 import { apiFetch } from '@/lib/api-client';
 import { ToastProvider, useToast } from '@/components/admin/toast';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
-
-/**
- * Shared sub-nav for the /admin/chatbot section (Phase 121).
- * Lives in the faqs page and is imported by the automation page —
- * same pattern as NewsSubNav.
- */
-export function ChatbotSubNav({ active }: { active: 'faqs' | 'automation' }) {
-  const tabs = [
-    { key: 'faqs' as const, label: 'FAQs', href: '/admin/chatbot/faqs' },
-    { key: 'automation' as const, label: 'Automation', href: '/admin/chatbot/automation' },
-  ];
-  return (
-    <div className="flex items-center gap-6 border-b border-gray-200 mb-6">
-      {tabs.map((t) => (
-        <a
-          key={t.key}
-          href={t.href}
-          className={`inline-flex items-center gap-1.5 px-1 py-3 text-sm font-semibold border-b-2 -mb-px transition-colors ${
-            active === t.key
-              ? 'border-[#9B1B30] text-[#9B1B30]'
-              : 'border-transparent text-gray-500 hover:text-[#1B2A4A]'
-          }`}
-        >
-          <MessageSquare className="w-4 h-4" />
-          {t.label}
-        </a>
-      ))}
-    </div>
-  );
-}
+import { ChatbotSubNav } from '../_components/chatbot-sub-nav';
 
 interface FaqRow {
   id: string;

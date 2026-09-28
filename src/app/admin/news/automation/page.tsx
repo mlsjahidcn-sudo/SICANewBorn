@@ -21,7 +21,7 @@ import { useAuth } from '@/lib/auth-context';
 import { apiFetch } from '@/lib/api-client';
 import { ToastProvider, useToast } from '@/components/admin/toast';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
-import { NewsSubNav } from '../page';
+import { NewsSubNav } from '../_components/news-sub-nav';
 
 interface TopicRow {
   id: string;

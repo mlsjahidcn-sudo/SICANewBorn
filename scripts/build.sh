@@ -35,23 +35,31 @@ npm ci --no-audit --no-fund
 # useful for finding tree-shaking misses. Off by default because
 # the analyzer adds ~30s to the build and emits ~50MB of HTML.
 #
-# Phase 134: NEXT_TURBOPACK_USE_WORKER=0 forces Turbopack to run
-# its compilation in-process instead of forking a child Node worker
-# for each phase. Next 16.3.6 spawns that child worker to handle the
-# CSS pipeline (PostCSS via the PostCssTransformedAsset path), and
-# on sandboxed Linux build containers (Hostinger) the bundled Node
-# fork fails to start — exits 0 before Turbopack can connect to its
-# stdio, killing the build with "node process exited before we
-# could connect to it with exit status: 0". In-process compilation
-# bypasses the broken child fork entirely. Local builds work fine
-# either way; this is purely a deploy-time sandbox workaround.
-export NEXT_TURBOPACK_USE_WORKER=0
+# Phase 134 was NEXT_TURBOPACK_USE_WORKER=0 (no effect on the broken
+# child-Node spawn — Turbopack 16.3.6 always forks for the CSS
+# pipeline regardless of that flag).
+#
+# Phase 135: switch the build to the webpack bundler entirely
+# (`next build --webpack`). The webpack path does NOT spawn a child
+# Node worker for the CSS pipeline — PostCSS runs in-process via
+# the legacy webpack loader chain — so the Hostinger sandbox crash
+# that kills every Turbopack build is sidestepped completely.
+# Discovered the option in node_modules/next/dist/lib/bundler.js
+# (`parseBundlerArgs({ webpack: true })` returns Bundler.Webpack=1,
+# selected at runtime by the `--webpack` CLI flag or by a
+# `webpack:` config block).
+#
+# Tradeoff: webpack builds take longer than Turbopack (we observed
+# ~20s vs ~10s locally) and Next 16 ships fewer optimizations for
+# the webpack path. The Hostinger sandbox can't run Turbopack's
+# child Node fork, so the build is going through the legacy path
+# until a future Next patch closes the gap.
 if [ "${ANALYZE:-false}" = "true" ]; then
-  echo "Building with bundle analyzer..."
-  ANALYZE=true npx next build
+  echo "Building with bundle analyzer (webpack)..."
+  ANALYZE=true npx next build --webpack
 else
-  echo "Building the Next.js project..."
-  npx next build
+  echo "Building the Next.js project (webpack)..."
+  npx next build --webpack
 fi
 
 echo "Bundling server with tsup..."

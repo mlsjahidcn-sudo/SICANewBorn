@@ -20,7 +20,7 @@ import { useAuth } from '@/lib/auth-context';
 import { apiFetch } from '@/lib/api-client';
 import { ToastProvider, useToast } from '@/components/admin/toast';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
-import { ChatbotSubNav } from '../faqs/page';
+import { ChatbotSubNav } from '../_components/chatbot-sub-nav';
 
 interface QueueRow {
   id: string;
