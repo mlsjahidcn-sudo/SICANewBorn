@@ -241,41 +241,6 @@ export default async function GuidesHubPage({
         </div>
       </section>
 
-      {/* What's inside (GEO/AEO transparency note) */}
-      <section className="bg-white border-t-2 border-gray-200">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
-          <h2 className="text-2xl font-bold text-[#1B2A4A] mb-3">
-            {t('guides.insideTitle')}
-          </h2>
-          <p className="text-[#4B5563] mb-6 max-w-3xl">
-            {t('guides.insideSubtitle')}
-          </p>
-          <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {[
-              t('guides.inside.tldr'),
-              t('guides.inside.takeaways'),
-              t('guides.inside.toc'),
-              t('guides.inside.headings'),
-              t('guides.inside.tables'),
-              t('guides.inside.howTo'),
-              t('guides.inside.faq'),
-              t('guides.inside.schema'),
-              t('guides.inside.bilingual'),
-            ].map((item, i) => (
-              <li
-                key={i}
-                className="flex items-start gap-2 text-sm text-[#374151] leading-relaxed"
-              >
-                <span className="shrink-0 w-5 h-5 bg-[#9B1B30] text-white text-xs font-bold flex items-center justify-center mt-0.5">
-                  ✓
-                </span>
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
       {/* CTA */}
       <section className="bg-[#1B2A4A] text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
