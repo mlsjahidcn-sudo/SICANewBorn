@@ -3,14 +3,7 @@ import type { NextRequest } from 'next/server';
 import { corsPreflightHeaders } from '@/lib/v1-cors';
 
 /**
- * Proxy (formerly "middleware") for cookie-based i18n + CDN-friendly
- * Cache-Control + CORS preflight.
- *
- * Renamed from src/middleware.ts to src/proxy.ts in Phase 132 —
- * Next.js 16 deprecated the middleware file convention; the proxy
- * convention is byte-for-byte the same runtime behavior (same
- * NextRequest/NextResponse API, same config.matcher), just the
- * file name and exported function name changed.
+ * Middleware for cookie-based i18n + CDN-friendly Cache-Control + CORS preflight.
  *
  * Phase 67:
  *   1. When a visitor arrives with `?lang=en` or `?lang=zh`, we set the
@@ -30,8 +23,17 @@ import { corsPreflightHeaders } from '@/lib/v1-cors';
  *      Standard pattern: trust the Origin header alone, echo it back if
  *      it looks valid (https or localhost). The actual request will then
  *      enforce the per-key allowlist in src/lib/v1-cors.ts.
+ *
+ * Phase 133: file is back to `src/middleware.ts`. Next.js 16.3.6's
+ * Turbopack has a regression on the new proxy.ts file convention: when
+ * it bundles the renamed file as a Node-side chunk and tries to run
+ * PostCSS inside the child process, the child Node exits 0 before
+ * Turbopack can connect, killing the build. This only manifests on
+ * the Hostinger Linux build container — local macOS builds pass fine.
+ * The deprecation warning Next prints is cosmetic; we ride middleware.ts
+ * until Next ships a Turbopack patch that fixes the regression.
  */
-export function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const lang = request.nextUrl.searchParams.get('lang');
   const isApi = request.nextUrl.pathname.startsWith('/api/');
   const isNext = request.nextUrl.pathname.startsWith('/_next/');
@@ -71,6 +73,6 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   // Match everything except Next assets. /api/* + /v1/* both run
-  // through this proxy (the function body filters).
+  // through this middleware (the function body filters).
   matcher: ['/((?!_next|.*\\..*).*)'],
 };
