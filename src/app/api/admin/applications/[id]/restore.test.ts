@@ -18,6 +18,7 @@
  * without a real DB.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { NextRequest } from 'next/server';
 
 const mockCreateClient = vi.fn();
 vi.mock('@supabase/supabase-js', () => ({
@@ -41,8 +42,8 @@ vi.mock('@/lib/timeline', () => ({
 
 const { PATCH } = await import('./route');
 
-function makePatchRequest(body: unknown): Request {
-  return new Request('http://localhost/api/admin/applications/app-1', {
+function makePatchRequest(body: unknown): NextRequest {
+  return new NextRequest('http://localhost/api/admin/applications/app-1', {
     method: 'PATCH',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),

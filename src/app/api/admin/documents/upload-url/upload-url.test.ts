@@ -18,6 +18,7 @@
  * downstream).
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { NextRequest } from 'next/server';
 
 const mockCreateClient = vi.fn();
 vi.mock('@supabase/supabase-js', () => ({
@@ -52,8 +53,8 @@ vi.mock('@/lib/supabase-auth', () => ({
 // Import after mocks so the module picks them up.
 const { POST } = await import('./route');
 
-function makeRequest(body: unknown): Request {
-  return new Request('http://localhost/api/admin/documents/upload-url', {
+function makeRequest(body: unknown): NextRequest {
+  return new NextRequest('http://localhost/api/admin/documents/upload-url', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
