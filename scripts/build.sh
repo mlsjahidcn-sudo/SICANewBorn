@@ -5,6 +5,23 @@ COZE_WORKSPACE_PATH="${COZE_WORKSPACE_PATH:-$(pwd)}"
 
 cd "${COZE_WORKSPACE_PATH}"
 
+# Phase 131: fail fast with an actionable message when the build
+# machine runs an unsupported Node. Next.js 16 requires >= 20.9
+# (mirrors "engines" in package.json); on an older Node the build
+# doesn't fail cleanly — it dies deep inside Turbopack with a
+# cryptic child-process crash during PostCSS/CSS loading, which
+# looks like a CSS bug but is really the runtime. Print the
+# detected version on EVERY build so the deploy log always shows
+# what ran.
+NODE_MAJOR=$(node -p 'process.versions.node.split(".")[0]')
+NODE_MINOR=$(node -p 'process.versions.node.split(".")[1]')
+if [ "$NODE_MAJOR" -lt 20 ] || { [ "$NODE_MAJOR" -eq 20 ] && [ "$NODE_MINOR" -lt 9 ]; }; then
+  echo "ERROR: Node $(node --version) is not supported. This project requires Node >= 20.9.0 (Next.js 16 — see \"engines\" in package.json)."
+  echo "Hostinger fix: hPanel -> Website -> Node.js app settings -> Node version -> pick 22 LTS, then redeploy."
+  exit 1
+fi
+echo "Node $(node --version) detected (requirement: >= 20.9.0)"
+
 echo "Installing dependencies..."
 # S59: switched from pnpm to npm because the Hostinger Cloud build
 # env doesn't include pnpm in PATH. npm is bundled with Node.js
