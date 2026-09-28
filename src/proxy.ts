@@ -3,7 +3,14 @@ import type { NextRequest } from 'next/server';
 import { corsPreflightHeaders } from '@/lib/v1-cors';
 
 /**
- * Middleware for cookie-based i18n + CDN-friendly Cache-Control + CORS preflight.
+ * Proxy (formerly "middleware") for cookie-based i18n + CDN-friendly
+ * Cache-Control + CORS preflight.
+ *
+ * Renamed from src/middleware.ts to src/proxy.ts in Phase 132 —
+ * Next.js 16 deprecated the middleware file convention; the proxy
+ * convention is byte-for-byte the same runtime behavior (same
+ * NextRequest/NextResponse API, same config.matcher), just the
+ * file name and exported function name changed.
  *
  * Phase 67:
  *   1. When a visitor arrives with `?lang=en` or `?lang=zh`, we set the
@@ -24,7 +31,7 @@ import { corsPreflightHeaders } from '@/lib/v1-cors';
  *      it looks valid (https or localhost). The actual request will then
  *      enforce the per-key allowlist in src/lib/v1-cors.ts.
  */
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const lang = request.nextUrl.searchParams.get('lang');
   const isApi = request.nextUrl.pathname.startsWith('/api/');
   const isNext = request.nextUrl.pathname.startsWith('/_next/');
@@ -64,6 +71,6 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   // Match everything except Next assets. /api/* + /v1/* both run
-  // through this middleware (the function body filters).
+  // through this proxy (the function body filters).
   matcher: ['/((?!_next|.*\\..*).*)'],
 };

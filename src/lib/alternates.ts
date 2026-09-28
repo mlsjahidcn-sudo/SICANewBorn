@@ -7,7 +7,7 @@ import { SITE_URL } from './site-url';
  * SICA uses cookie-based i18n (single URL per page), so the language
  * variants are expressed with a `?lang=` query parameter. Google accepts
  * query parameters in hreflang URLs as long as they actually change the
- * rendered language — which the middleware in `src/middleware.ts` ensures
+ * rendered language — which the proxy in `src/proxy.ts` ensures
  * by reading `?lang=` and setting the `sica-locale` cookie.
  *
  * @param canonical - A relative path (e.g. `/about`) or absolute URL

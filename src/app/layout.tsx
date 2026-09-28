@@ -75,8 +75,8 @@ export async function generateMetadata(): Promise<Metadata> {
     // Note: alternates / hreflang are set per-page so the canonical URL
     // always matches the rendered route. The root page sets its own in
     // src/app/page.tsx. The helper in src/lib/alternates.ts uses a
-    // `?lang=` query parameter for the language variants; the middleware
-    // in src/middleware.ts turns that query parameter into the
+    // `?lang=` query parameter for the language variants; the proxy
+    // in src/proxy.ts turns that query parameter into the
     // `sica-locale` cookie so the alternate URLs render the right language.
     openGraph: {
       ...baseMetadata.openGraph,
