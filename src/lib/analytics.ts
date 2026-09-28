@@ -284,6 +284,27 @@ export interface AnalyticsEventMap {
     /** University slug when location='university', otherwise null. */
     universitySlug?: string | null;
   };
+  // -----------------------------------------------------------------
+  // CscaPrepBanner events (site-wide top promo bar → cscaprep.academy)
+  //
+  // `csca_banner_click` is the CTA link out; `csca_banner_dismiss`
+  // fires when the visitor closes the bar with the X. Comparing the
+  // two against impressions gives the banner's effective CTR.
+  // -----------------------------------------------------------------
+  /** User clicked the banner's cscaprep.academy CTA. */
+  csca_banner_click: {
+    /** Which surface fired the click (top_banner today). */
+    location: string;
+    /** Page locale. */
+    locale: 'en' | 'zh';
+  };
+  /** User dismissed the banner with the X (hidden for the session). */
+  csca_banner_dismiss: {
+    /** Which surface was dismissed (top_banner today). */
+    location: string;
+    /** Page locale. */
+    locale: 'en' | 'zh';
+  };
 }
 
 /** Convenience alias for the event-name union. */

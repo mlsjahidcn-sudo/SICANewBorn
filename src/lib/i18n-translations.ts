@@ -393,6 +393,12 @@ export const translations: Record<Locale, Record<string, string>> = {
      'stickyApply.applyingTo': 'Applying to',
      'stickyApply.whatsapp': 'WhatsApp',
      'stickyApply.apply': 'Apply',
+     // CSCA Prep site-wide promo banner (links out to cscaprep.academy)
+     'cscaBanner.label': 'Free CSCA Preparation',
+     'cscaBanner.description': 'Practice tests, study guides & exam dates',
+     'cscaBanner.cta': 'cscaprep.academy',
+     'cscaBanner.ariaLabel': 'Free CSCA preparation banner',
+     'cscaBanner.dismissLabel': 'Dismiss banner',
      // Programmatic SEO — city pages (/study-in-china/*)
      'seo.cities.eyebrow': 'Study in China',
      'seo.cities.hubTitle': 'Study in China — Choose Your City',
@@ -5017,6 +5023,12 @@ export const translations: Record<Locale, Record<string, string>> = {
     'stickyApply.applyingTo': '申请院校',
     'stickyApply.whatsapp': 'WhatsApp',
     'stickyApply.apply': '申请',
+    // CSCA Prep site-wide promo banner (links out to cscaprep.academy)
+    'cscaBanner.label': '免费 CSCA 备考',
+    'cscaBanner.description': '模拟测试、备考指南与考试时间',
+    'cscaBanner.cta': 'cscaprep.academy',
+    'cscaBanner.ariaLabel': '免费 CSCA 备考横幅',
+    'cscaBanner.dismissLabel': '关闭横幅',
     // Programmatic SEO — city pages (/study-in-china/*)
     'seo.cities.eyebrow': '在中国留学',
     'seo.cities.hubTitle': '在中国留学 — 选择你的城市',

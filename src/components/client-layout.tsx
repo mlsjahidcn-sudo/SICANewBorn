@@ -3,6 +3,7 @@
 import { I18nProvider } from '@/lib/i18n';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
+import { CscaPrepBanner } from '@/components/csca-prep-banner';
 import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import type { Locale } from '@/lib/i18n-translations';
@@ -61,6 +62,7 @@ export function ClientLayout({
   return (
     <I18nProvider initialLocale={initialLocale}>
       <div className="flex min-h-screen flex-col">
+        <CscaPrepBanner />
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
