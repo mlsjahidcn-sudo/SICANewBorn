@@ -73,6 +73,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/international-money-transfer-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/china-mobile-internet-for-international-students`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/student-health-care-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    // Phase 122: University profiles Batch 1 — 5 flagship university profiles
+    { url: `${SITE_URL}/peking-university`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/tsinghua-university`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/fudan-university`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/shanghai-jiao-tong-university`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/zhejiang-university`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/phd-in-china-international-students`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
     { url: `${SITE_URL}/china-university-admission-requirements`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
     { url: `${SITE_URL}/cost-of-living-china-by-city`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },

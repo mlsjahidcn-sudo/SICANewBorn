@@ -551,6 +551,61 @@ export const guideCards: LocalizedGuideCards = {
       readTime: '11 min read',
       highlight: '3 layers',
     },
+    {
+      slug: 'peking-university',
+      href: '/peking-university',
+      icon: 'landmark',
+      category: 'listicle',
+      title: 'Peking University — programs, admissions & international student guide',
+      subtitle:
+        'China\'s oldest modern national university: schools, signature programs, English-taught master\'s, CSCA combinations, scholarships, cost, and practical guidance.',
+      readTime: '12 min read',
+      highlight: 'Beijing flagship',
+    },
+    {
+      slug: 'tsinghua-university',
+      href: '/tsinghua-university',
+      icon: 'landmark',
+      category: 'listicle',
+      title: 'Tsinghua University — engineering powerhouse',
+      subtitle:
+        'Engineering and applied-science flagship: schools, signature programs, Schwarzman Scholars, English-taught master\'s, CSCA combinations, scholarships, cost.',
+      readTime: '12 min read',
+      highlight: 'Engineering flagship',
+    },
+    {
+      slug: 'fudan-university',
+      href: '/fudan-university',
+      icon: 'landmark',
+      category: 'listicle',
+      title: 'Fudan University — Shanghai\'s flagship',
+      subtitle:
+        'Comprehensive flagship in Shanghai: humanities, journalism, economics, basic sciences, medicine; English-taught options, CSCA combinations, scholarships.',
+      readTime: '12 min read',
+      highlight: 'Shanghai flagship',
+    },
+    {
+      slug: 'shanghai-jiao-tong-university',
+      href: '/shanghai-jiao-tong-university',
+      icon: 'landmark',
+      category: 'listicle',
+      title: 'Shanghai Jiao Tong University — engineering & medicine',
+      subtitle:
+        'Shanghai\'s engineering flagship with strong medicine and computer science; UM-SJTU joint institute, Antai College, English-taught options, CSCA combinations.',
+      readTime: '12 min read',
+      highlight: 'Shanghai tech',
+    },
+    {
+      slug: 'zhejiang-university',
+      href: '/zhejiang-university',
+      icon: 'landmark',
+      category: 'listicle',
+      title: 'Zhejiang University — Hangzhou\'s flagship',
+      subtitle:
+        'Comprehensive flagship in Hangzhou (Alibaba\'s home): engineering, sciences, medicine, business; English-taught options, CSCA combinations, scholarships.',
+      readTime: '12 min read',
+      highlight: 'Hangzhou tech',
+    },
   ],
   zh: [
     // ───── Process guides (Phase 39a) ─────
@@ -1083,6 +1138,61 @@ export const guideCards: LocalizedGuideCards = {
         '保险 / 校医院 / 公立医院三层体系、保与不保，以及多数校园都有的心理支持。',
       readTime: '11分钟阅读',
       highlight: '三层',
+    },
+    {
+      slug: 'peking-university',
+      href: '/peking-university',
+      icon: 'landmark',
+      category: 'listicle',
+      title: '北京大学——院系、申请与留学生指南',
+      subtitle:
+        '中国最古老的现代国立大学：院系、特色专业、英语授课硕士、CSCA 组合、奖学金、费用与实务指引。',
+      readTime: '12分钟阅读',
+      highlight: '北京旗舰',
+    },
+    {
+      slug: 'tsinghua-university',
+      href: '/tsinghua-university',
+      icon: 'landmark',
+      category: 'listicle',
+      title: '清华大学——工科强校',
+      subtitle:
+        '工科与应用科学旗舰：院系、特色专业、苏世民学者、英语授课硕士、CSCA 组合、奖学金、费用。',
+      readTime: '12分钟阅读',
+      highlight: '工科旗舰',
+    },
+    {
+      slug: 'fudan-university',
+      href: '/fudan-university',
+      icon: 'landmark',
+      category: 'listicle',
+      title: '复旦大学——上海旗舰',
+      subtitle:
+        '上海综合性旗舰：人文、新闻、经济、基础科学、医学；英语授课选项、CSCA 组合、奖学金。',
+      readTime: '12分钟阅读',
+      highlight: '上海旗舰',
+    },
+    {
+      slug: 'shanghai-jiao-tong-university',
+      href: '/shanghai-jiao-tong-university',
+      icon: 'landmark',
+      category: 'listicle',
+      title: '上海交通大学——工科与医学',
+      subtitle:
+        '上海工科旗舰，强势医学与计算机；UM-SJTU 联合学院、安泰学院、英语授课选项、CSCA 组合。',
+      readTime: '12分钟阅读',
+      highlight: '上海科技',
+    },
+    {
+      slug: 'zhejiang-university',
+      href: '/zhejiang-university',
+      icon: 'landmark',
+      category: 'listicle',
+      title: '浙江大学——杭州旗舰',
+      subtitle:
+        '杭州综合性旗舰（阿里巴巴故乡）：工科、理科、医学、商科；英语授课选项、CSCA 组合、奖学金。',
+      readTime: '12分钟阅读',
+      highlight: '杭州科技',
     },
   ],
 };
