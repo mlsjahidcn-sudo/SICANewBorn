@@ -68,6 +68,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Phase 120: CSCA cluster Batch 5 — FAQ mega-page + partner handbook (cluster complete: 20/20)
     { url: `${SITE_URL}/csca-faq`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/csca-partner-guide`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
+    // Phase 121: Study-in-China cluster Batch 1 — personal finance & daily life
+    { url: `${SITE_URL}/open-chinese-bank-account`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/international-money-transfer-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/china-mobile-internet-for-international-students`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/student-health-care-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/phd-in-china-international-students`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
     { url: `${SITE_URL}/china-university-admission-requirements`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
     { url: `${SITE_URL}/cost-of-living-china-by-city`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },

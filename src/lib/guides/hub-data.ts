@@ -507,6 +507,50 @@ export const guideCards: LocalizedGuideCards = {
       readTime: '10 min read',
       highlight: 'For partners',
     },
+    {
+      slug: 'open-chinese-bank-account',
+      href: '/open-chinese-bank-account',
+      icon: 'credit-card',
+      category: 'listicle',
+      title: 'Opening a Chinese bank account as an international student',
+      subtitle:
+        'Which bank, which documents, branch vs app paths, the fee traps, and the first-30-day reality — the most-searched banking gap for international students.',
+      readTime: '10 min read',
+      highlight: 'First-30-day',
+    },
+    {
+      slug: 'international-money-transfer-china',
+      href: '/international-money-transfer-china',
+      icon: 'tag',
+      category: 'listicle',
+      title: 'Sending money to and from China — international students',
+      subtitle:
+        'Cross-border channels, fees, Alipay/WeChat Pay setup for foreigners, and the three day-to-day traps that quietly drain budgets.',
+      readTime: '10 min read',
+      highlight: 'FX matters',
+    },
+    {
+      slug: 'china-mobile-internet-for-international-students',
+      href: '/china-mobile-internet-for-international-students',
+      icon: 'cog',
+      category: 'listicle',
+      title: 'China mobile internet for international students',
+      subtitle:
+        'Getting a Chinese SIM within 48 hours, data plans, the apps that fail without a Chinese number, and the practical VPN discussion.',
+      readTime: '9 min read',
+      highlight: '48-hour SIM',
+    },
+    {
+      slug: 'student-health-care-china',
+      href: '/student-health-care-china',
+      icon: 'heart-pulse',
+      category: 'listicle',
+      title: 'Student health care in China',
+      subtitle:
+        'The three-layer insurance / campus clinic / public hospital system, what is and is not covered, and the mental health support on most campuses.',
+      readTime: '11 min read',
+      highlight: '3 layers',
+    },
   ],
   zh: [
     // ───── Process guides (Phase 39a) ─────
@@ -995,6 +1039,50 @@ export const guideCards: LocalizedGuideCards = {
         '顾问侧打法：五问客户分诊、组合矩阵、日历模板、六错误话术、批量免考核验。',
       readTime: '10分钟阅读',
       highlight: '面向伙伴',
+    },
+    {
+      slug: 'open-chinese-bank-account',
+      href: '/open-chinese-bank-account',
+      icon: 'credit-card',
+      category: 'listicle',
+      title: '国际学生开中国银行账户',
+      subtitle:
+        '选哪家银行、带哪些材料、网点与 App 路径、费陷阱，以及前 30 天现实——国际学生搜索最多的银行缺口。',
+      readTime: '10分钟阅读',
+      highlight: '前 30 天',
+    },
+    {
+      slug: 'international-money-transfer-china',
+      href: '/international-money-transfer-china',
+      icon: 'tag',
+      category: 'listicle',
+      title: '向中国汇款与从中国汇出——国际学生',
+      subtitle:
+        '跨境通道、费用、外籍人士的支付宝/微信支付设置，以及三个悄悄吃掉预算的日常陷阱。',
+      readTime: '10分钟阅读',
+      highlight: '汇率差关键',
+    },
+    {
+      slug: 'china-mobile-internet-for-international-students',
+      href: '/china-mobile-internet-for-international-students',
+      icon: 'cog',
+      category: 'listicle',
+      title: '国际学生手机上网',
+      subtitle:
+        '48 小时内办到中国 SIM、流量套餐、没有中国号就废的 App，以及 VPN 实务讨论。',
+      readTime: '9分钟阅读',
+      highlight: '48 小时 SIM',
+    },
+    {
+      slug: 'student-health-care-china',
+      href: '/student-health-care-china',
+      icon: 'heart-pulse',
+      category: 'listicle',
+      title: '中国学生医疗',
+      subtitle:
+        '保险 / 校医院 / 公立医院三层体系、保与不保，以及多数校园都有的心理支持。',
+      readTime: '11分钟阅读',
+      highlight: '三层',
     },
   ],
 };

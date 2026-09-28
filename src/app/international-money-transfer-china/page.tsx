@@ -1,0 +1,34 @@
+import type { Metadata } from 'next';
+import { cookies } from 'next/headers';
+import type { Locale } from '@/lib/i18n-translations';
+import { internationalMoneyTransferGuide } from '@/lib/guides/international-money-transfer-china';
+import { GuidePage } from '@/components/guides/guide-page';
+import { buildLanguageAlternates } from '@/lib/alternates';
+import { SITE_URL } from '@/lib/site-url';
+
+export const dynamic = 'force-static';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const cookieStore = await cookies();
+  const locale: Locale = cookieStore.get('sica-locale')?.value === 'zh' ? 'zh' : 'en';
+  const guide = internationalMoneyTransferGuide[locale];
+  return {
+    title: guide.title,
+    description: guide.description,
+    alternates: buildLanguageAlternates('/international-money-transfer-china'),
+    openGraph: {
+      title: guide.title,
+      description: guide.description,
+      url: `${SITE_URL}/international-money-transfer-china`,
+      type: 'article',
+    },
+    twitter: { card: 'summary_large_image', title: guide.title, description: guide.description },
+  };
+}
+
+export default async function InternationalMoneyTransferPage() {
+  const cookieStore = await cookies();
+  const locale: Locale = cookieStore.get('sica-locale')?.value === 'zh' ? 'zh' : 'en';
+  const guide = internationalMoneyTransferGuide[locale];
+  return <GuidePage guide={guide} pathSegment="international-money-transfer-china" urlPath="/international-money-transfer-china" />;
+}
