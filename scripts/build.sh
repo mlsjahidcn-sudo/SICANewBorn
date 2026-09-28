@@ -34,6 +34,18 @@ npm ci --no-audit --no-fund
 # interactive treemaps + sunbursts of every chunk in the bundle —
 # useful for finding tree-shaking misses. Off by default because
 # the analyzer adds ~30s to the build and emits ~50MB of HTML.
+#
+# Phase 134: NEXT_TURBOPACK_USE_WORKER=0 forces Turbopack to run
+# its compilation in-process instead of forking a child Node worker
+# for each phase. Next 16.3.6 spawns that child worker to handle the
+# CSS pipeline (PostCSS via the PostCssTransformedAsset path), and
+# on sandboxed Linux build containers (Hostinger) the bundled Node
+# fork fails to start — exits 0 before Turbopack can connect to its
+# stdio, killing the build with "node process exited before we
+# could connect to it with exit status: 0". In-process compilation
+# bypasses the broken child fork entirely. Local builds work fine
+# either way; this is purely a deploy-time sandbox workaround.
+export NEXT_TURBOPACK_USE_WORKER=0
 if [ "${ANALYZE:-false}" = "true" ]; then
   echo "Building with bundle analyzer..."
   ANALYZE=true npx next build
