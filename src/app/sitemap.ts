@@ -86,6 +86,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Phase 124: University profiles Batch 3 — SYSU, HIT (cluster complete: 10/10)
     { url: `${SITE_URL}/sun-yat-sen-university`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/harbin-institute-of-technology`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    // Phase 136: Flagship admissions deep-dives Batch 1 — operational admissions guides
+    { url: `${SITE_URL}/peking-university-admissions-guide`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/tsinghua-university-admissions-guide`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/fudan-university-admissions-guide`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/shanghai-jiao-tong-university-admissions-guide`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/zhejiang-university-admissions-guide`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/phd-in-china-international-students`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
     { url: `${SITE_URL}/china-university-admission-requirements`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
     { url: `${SITE_URL}/cost-of-living-china-by-city`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },

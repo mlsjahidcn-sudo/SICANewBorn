@@ -661,6 +661,61 @@ export const guideCards: LocalizedGuideCards = {
       readTime: '12 min read',
       highlight: 'Northeast engineering',
     },
+    {
+      slug: 'peking-university-admissions-guide',
+      href: '/peking-university-admissions-guide',
+      icon: 'graduation-cap',
+      category: 'listicle',
+      title: 'Peking University admissions — step-by-step for international students',
+      subtitle:
+        'How to apply to PKU as an international student: routes, deadlines, document checklist, CSCA combinations by school, language thresholds, scholarship stack, and what makes a competitive applicant.',
+      readTime: '14 min read',
+      highlight: 'Operational deep-dive',
+    },
+    {
+      slug: 'tsinghua-university-admissions-guide',
+      href: '/tsinghua-university-admissions-guide',
+      icon: 'graduation-cap',
+      category: 'listicle',
+      title: 'Tsinghua University admissions — step-by-step for international students',
+      subtitle:
+        'How to apply to Tsinghua as an international student: routes, deadlines, documents, CSCA combinations by school, language thresholds, scholarship stack, and the separate Schwarzman Scholars pathway.',
+      readTime: '14 min read',
+      highlight: 'Schwarzman pathway',
+    },
+    {
+      slug: 'fudan-university-admissions-guide',
+      href: '/fudan-university-admissions-guide',
+      icon: 'graduation-cap',
+      category: 'listicle',
+      title: 'Fudan University admissions — step-by-step for international students',
+      subtitle:
+        'How to apply to Fudan as an international student: the early December–March calendar, documents, CSCA combinations by school, language thresholds, and the CSC + Fudan + Shanghai Government scholarship stack.',
+      readTime: '13 min read',
+      highlight: 'Earliest deadlines',
+    },
+    {
+      slug: 'shanghai-jiao-tong-university-admissions-guide',
+      href: '/shanghai-jiao-tong-university-admissions-guide',
+      icon: 'graduation-cap',
+      category: 'listicle',
+      title: 'Shanghai Jiao Tong University admissions — step-by-step for international students',
+      subtitle:
+        'How to apply to SJTU as an international student: routes, documents, CSCA combinations by school, language thresholds, the UM-SJTU Joint Institute English stream, and the scholarship stack.',
+      readTime: '13 min read',
+      highlight: 'UM-SJTU JI stream',
+    },
+    {
+      slug: 'zhejiang-university-admissions-guide',
+      href: '/zhejiang-university-admissions-guide',
+      icon: 'graduation-cap',
+      category: 'listicle',
+      title: 'Zhejiang University admissions — step-by-step for international students',
+      subtitle:
+        'How to apply to ZJU as an international student: the early November calendar, documents, CSCA combinations by school, the Haining International Campus joint institutes, and the Hangzhou tech-ecosystem advantage.',
+      readTime: '13 min read',
+      highlight: 'Hangzhou ecosystem',
+    },
   ],
   zh: [
     // ───── Process guides (Phase 39a) ─────
@@ -1303,6 +1358,61 @@ export const guideCards: LocalizedGuideCards = {
         '俄苏渊源工科传统：航天、机械、材料、计算机；三大校区（哈尔滨、威海、深圳）；强大的一带一路国际招生；奖学金。',
       readTime: '12分钟阅读',
       highlight: '东北工科',
+    },
+    {
+      slug: 'peking-university-admissions-guide',
+      href: '/peking-university-admissions-guide',
+      icon: 'graduation-cap',
+      category: 'listicle',
+      title: '北京大学申请——国际生逐步指南',
+      subtitle:
+        '如何以国际生身份申请北大：渠道、截止、材料清单、各院系 CSCA 组合、语言门槛、奖学金组合，以及申请者的竞争画像。',
+      readTime: '14分钟阅读',
+      highlight: '操作深度指南',
+    },
+    {
+      slug: 'tsinghua-university-admissions-guide',
+      href: '/tsinghua-university-admissions-guide',
+      icon: 'graduation-cap',
+      category: 'listicle',
+      title: '清华大学申请——国际生逐步指南',
+      subtitle:
+        '如何以国际生身份申请清华：渠道、截止、材料、各院系 CSCA 组合、语言门槛、奖学金组合，以及独立的苏世民学者路径。',
+      readTime: '14分钟阅读',
+      highlight: '苏世民路径',
+    },
+    {
+      slug: 'fudan-university-admissions-guide',
+      href: '/fudan-university-admissions-guide',
+      icon: 'graduation-cap',
+      category: 'listicle',
+      title: '复旦大学申请——国际生逐步指南',
+      subtitle:
+        '如何以国际生身份申请复旦：12 月-3 月的提前日历、材料、各院系 CSCA 组合、语言门槛，以及 CSC + 复旦 + 上海市政府奖学金组合。',
+      readTime: '13分钟阅读',
+      highlight: '截止最早',
+    },
+    {
+      slug: 'shanghai-jiao-tong-university-admissions-guide',
+      href: '/shanghai-jiao-tong-university-admissions-guide',
+      icon: 'graduation-cap',
+      category: 'listicle',
+      title: '上海交通大学申请——国际生逐步指南',
+      subtitle:
+        '如何以国际生身份申请上交：渠道、材料、各院系 CSCA 组合、语言门槛、密西根学院英文路径，以及奖学金组合。',
+      readTime: '13分钟阅读',
+      highlight: '密西根学院路径',
+    },
+    {
+      slug: 'zhejiang-university-admissions-guide',
+      href: '/zhejiang-university-admissions-guide',
+      icon: 'graduation-cap',
+      category: 'listicle',
+      title: '浙江大学申请——国际生逐步指南',
+      subtitle:
+        '如何以国际生身份申请浙大：11 月的提前日历、材料、各院系 CSCA 组合、海宁国际校区联合学院，以及杭州科技生态优势。',
+      readTime: '13分钟阅读',
+      highlight: '杭州生态',
     },
   ],
 };
