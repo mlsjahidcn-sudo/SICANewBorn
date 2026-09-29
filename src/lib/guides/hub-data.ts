@@ -606,6 +606,39 @@ export const guideCards: LocalizedGuideCards = {
       readTime: '12 min read',
       highlight: 'Hangzhou tech',
     },
+    {
+      slug: 'nanjing-university',
+      href: '/nanjing-university',
+      icon: 'landmark',
+      category: 'listicle',
+      title: 'Nanjing University — humanities + sciences flagship',
+      subtitle:
+        'NJU\'s 100+ year heritage in philosophy, mathematics, physics, chemistry, history; CSCA combinations, English-taught options, provincial + municipal scholarships.',
+      readTime: '12 min read',
+      highlight: 'Nanjing',
+    },
+    {
+      slug: 'university-of-science-and-technology-of-china',
+      href: '/university-of-science-and-technology-of-china',
+      icon: 'landmark',
+      category: 'listicle',
+      title: 'USTC — CAS-affiliated sciences powerhouse',
+      subtitle:
+        'The only CAS-affiliated university: physics, mathematics, computer science, chemistry; CAS-lab research positions; CAS-affiliated scholarships; Hefei is affordable.',
+      readTime: '12 min read',
+      highlight: 'CAS sciences',
+    },
+    {
+      slug: 'wuhan-university',
+      href: '/wuhan-university',
+      icon: 'landmark',
+      category: 'listicle',
+      title: 'Wuhan University — central China\'s flagship',
+      subtitle:
+        'Comprehensive flagship in Wuhan: sciences, engineering, humanities, medicine; the East Lake campus; English-taught options, CSCA combinations, scholarships.',
+      readTime: '12 min read',
+      highlight: 'Central China',
+    },
   ],
   zh: [
     // ───── Process guides (Phase 39a) ─────
@@ -1193,6 +1226,39 @@ export const guideCards: LocalizedGuideCards = {
         '杭州综合性旗舰（阿里巴巴故乡）：工科、理科、医学、商科；英语授课选项、CSCA 组合、奖学金。',
       readTime: '12分钟阅读',
       highlight: '杭州科技',
+    },
+    {
+      slug: 'nanjing-university',
+      href: '/nanjing-university',
+      icon: 'landmark',
+      category: 'listicle',
+      title: '南京大学——人文与理科旗舰',
+      subtitle:
+        '南大 100 多年传承，强势哲学、数学、物理、化学、历史；CSCA 组合、英语授课选项、省市奖学金。',
+      readTime: '12分钟阅读',
+      highlight: '南京',
+    },
+    {
+      slug: 'university-of-science-and-technology-of-china',
+      href: '/university-of-science-and-technology-of-china',
+      icon: 'landmark',
+      category: 'listicle',
+      title: '中科大——中科院直属理学强校',
+      subtitle:
+        '唯一直接隶属中科院的大学：物理、数学、计算机、化学；中科院实验室研究岗位；中科院相关奖学金；合肥便宜。',
+      readTime: '12分钟阅读',
+      highlight: '中科物理',
+    },
+    {
+      slug: 'wuhan-university',
+      href: '/wuhan-university',
+      icon: 'landmark',
+      category: 'listicle',
+      title: '武汉大学——中部中国旗舰',
+      subtitle:
+        '武汉综合性旗舰：理科、工科、人文、医学；东湖校园；英语授课选项、CSCA 组合、奖学金。',
+      readTime: '12分钟阅读',
+      highlight: '中部中国',
     },
   ],
 };
