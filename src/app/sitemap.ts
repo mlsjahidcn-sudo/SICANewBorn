@@ -83,6 +83,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/nanjing-university`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/university-of-science-and-technology-of-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/wuhan-university`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    // Phase 124: University profiles Batch 3 — SYSU, HIT (cluster complete: 10/10)
+    { url: `${SITE_URL}/sun-yat-sen-university`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/harbin-institute-of-technology`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/phd-in-china-international-students`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
     { url: `${SITE_URL}/china-university-admission-requirements`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
     { url: `${SITE_URL}/cost-of-living-china-by-city`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },

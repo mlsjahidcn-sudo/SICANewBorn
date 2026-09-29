@@ -639,6 +639,28 @@ export const guideCards: LocalizedGuideCards = {
       readTime: '12 min read',
       highlight: 'Central China',
     },
+    {
+      slug: 'sun-yat-sen-university',
+      href: '/sun-yat-sen-university',
+      icon: 'landmark',
+      category: 'listicle',
+      title: 'Sun Yat-sen University — Guangzhou flagship',
+      subtitle:
+        'Pearl River Delta flagship founded by Sun Yat-sen: medicine, business, sciences; Lingnan College + Sun Yat-sen Business School; CSCA combinations, scholarships.',
+      readTime: '12 min read',
+      highlight: 'Guangzhou medicine',
+    },
+    {
+      slug: 'harbin-institute-of-technology',
+      href: '/harbin-institute-of-technology',
+      icon: 'landmark',
+      category: 'listicle',
+      title: 'Harbin Institute of Technology — engineering powerhouse',
+      subtitle:
+        'Russian-influenced engineering tradition: aerospace, mechanical, materials, computer science; three campuses (Harbin, Weihai, Shenzhen); strong Belt-and-Road international intake; scholarships.',
+      readTime: '12 min read',
+      highlight: 'Northeast engineering',
+    },
   ],
   zh: [
     // ───── Process guides (Phase 39a) ─────
@@ -1259,6 +1281,28 @@ export const guideCards: LocalizedGuideCards = {
         '武汉综合性旗舰：理科、工科、人文、医学；东湖校园；英语授课选项、CSCA 组合、奖学金。',
       readTime: '12分钟阅读',
       highlight: '中部中国',
+    },
+    {
+      slug: 'sun-yat-sen-university',
+      href: '/sun-yat-sen-university',
+      icon: 'landmark',
+      category: 'listicle',
+      title: '中山大学——广州旗舰',
+      subtitle:
+        '孙中山创立的珠三角旗舰：医学、商科、理科；岭南学院 + 中山商学院；CSCA 组合、奖学金。',
+      readTime: '12分钟阅读',
+      highlight: '广州医学',
+    },
+    {
+      slug: 'harbin-institute-of-technology',
+      href: '/harbin-institute-of-technology',
+      icon: 'landmark',
+      category: 'listicle',
+      title: '哈尔滨工业大学——工科强校',
+      subtitle:
+        '俄苏渊源工科传统：航天、机械、材料、计算机；三大校区（哈尔滨、威海、深圳）；强大的一带一路国际招生；奖学金。',
+      readTime: '12分钟阅读',
+      highlight: '东北工科',
     },
   ],
 };
