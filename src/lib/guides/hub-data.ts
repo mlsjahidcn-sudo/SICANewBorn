@@ -716,6 +716,50 @@ export const guideCards: LocalizedGuideCards = {
       readTime: '13 min read',
       highlight: 'Hangzhou ecosystem',
     },
+    {
+      slug: 'peking-university-vs-tsinghua',
+      href: '/peking-university-vs-tsinghua',
+      icon: 'scale',
+      category: 'listicle',
+      title: 'Peking University vs Tsinghua — which should you apply to?',
+      subtitle:
+        'The classic rivalry compared for international students: subject strength, CSCA combinations, deadlines, cost, scholarships, and a decision framework that actually decides.',
+      readTime: '12 min read',
+      highlight: 'The classic rivalry',
+    },
+    {
+      slug: 'peking-university-vs-fudan',
+      href: '/peking-university-vs-fudan',
+      icon: 'scale',
+      category: 'listicle',
+      title: 'Peking University vs Fudan — Beijing flagship or Shanghai flagship?',
+      subtitle:
+        'PKU vs Fudan is a city decision as much as a university decision: subjects, the calendar asymmetry (Fudan closes Dec–Mar), costs, scholarships, and Beijing-vs-Shanghai career pipelines.',
+      readTime: '12 min read',
+      highlight: 'Fudan closes first',
+    },
+    {
+      slug: 'best-universities-in-hong-kong',
+      href: '/best-universities-in-hong-kong',
+      icon: 'building-2',
+      category: 'listicle',
+      title: 'Best universities in Hong Kong for international students',
+      subtitle:
+        'HKU, CUHK, HKUST, PolyU, CityU, HKBU ranked and profiled — plus how HK admissions differ from the mainland: no CSCA, direct application, Sep–Nov deadlines, and an honest mainland-vs-HK cost table.',
+      readTime: '12 min read',
+      highlight: 'No CSCA needed',
+    },
+    {
+      slug: 'best-universities-in-northeast-china',
+      href: '/best-universities-in-northeast-china',
+      icon: 'map-pin',
+      category: 'listicle',
+      title: 'Best universities in Northeast China — 985 quality at the lowest living costs',
+      subtitle:
+        'HIT, Jilin, Dalian UT, Northeastern U, NENU, and Harbin Engineering: the value region of Chinese higher education — four 985 universities at the cheapest cost tier, honestly cold winters included.',
+      readTime: '12 min read',
+      highlight: 'Best value region',
+    },
   ],
   zh: [
     // ───── Process guides (Phase 39a) ─────
@@ -1413,6 +1457,50 @@ export const guideCards: LocalizedGuideCards = {
         '如何以国际生身份申请浙大：11 月的提前日历、材料、各院系 CSCA 组合、海宁国际校区联合学院，以及杭州科技生态优势。',
       readTime: '13分钟阅读',
       highlight: '杭州生态',
+    },
+    {
+      slug: 'peking-university-vs-tsinghua',
+      href: '/peking-university-vs-tsinghua',
+      icon: 'scale',
+      category: 'listicle',
+      title: '北京大学 vs 清华大学——该申请哪一所？',
+      subtitle:
+        '面向国际学生的经典对比：学科实力、CSCA 组合、截止日期、费用、奖学金，以及一套真正能做出决定的决策框架。',
+      readTime: '12分钟阅读',
+      highlight: '经典对决',
+    },
+    {
+      slug: 'peking-university-vs-fudan',
+      href: '/peking-university-vs-fudan',
+      icon: 'scale',
+      category: 'listicle',
+      title: '北京大学 vs 复旦大学——选北京旗舰还是上海旗舰？',
+      subtitle:
+        '北大与复旦一半是选城市：学科、日历不对称（复旦 12–3 月截止）、费用、奖学金，以及北京与上海的职业管道。',
+      readTime: '12分钟阅读',
+      highlight: '复旦先截止',
+    },
+    {
+      slug: 'best-universities-in-hong-kong',
+      href: '/best-universities-in-hong-kong',
+      icon: 'building-2',
+      category: 'listicle',
+      title: '香港最好的大学——国际学生择校指南',
+      subtitle:
+        '港大、中大、科大、理大、城大、浸会的排名与速览——以及香港与内地招生的完整区别：免 CSCA、直接申请、9–11 月截止，和一张诚实的内地 vs 香港成本对照表。',
+      readTime: '12分钟阅读',
+      highlight: '免CSCA',
+    },
+    {
+      slug: 'best-universities-in-northeast-china',
+      href: '/best-universities-in-northeast-china',
+      icon: 'map-pin',
+      category: 'listicle',
+      title: '中国东北最好的大学——以最低生活成本读985',
+      subtitle:
+        '哈工大、吉大、大连理工、东北大学、东北师大、哈工程：中国高等教育的性价比高地——四所985落在生活成本最低的档位，冬天确实冷，也如实告诉你。',
+      readTime: '12分钟阅读',
+      highlight: '性价比之王',
     },
   ],
 };
