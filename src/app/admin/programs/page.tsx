@@ -7,7 +7,7 @@ import { programs as staticPrograms, universities as staticUniversities, type Pr
 import { ToastProvider, useToast } from '@/components/admin/toast';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
 import { useI18n } from '@/lib/i18n';
-import { apiFetchJson, ApiError } from '@/lib/api-client';
+import { apiFetchJson, ApiError, programsApiJson } from '@/lib/api-client';
 
 // Phase 56: page size for the admin programs table. 25 keeps
 // the table scannable, matches the universities page (admin is
@@ -168,14 +168,15 @@ function ProgramsPageInner() {
   const handleDelete = useCallback(
     async (prog: Program, force = false) => {
       try {
-        const url = force
-          ? `/api/programs/${prog.slug}?force=true`
-          : `/api/programs/${prog.slug}`;
-        await apiFetchJson<{
+        await programsApiJson<{
           success: true;
           counts: { partnerPromotions: number; partnerApplications: number };
           deleted: boolean;
-        }>(url, { method: 'DELETE' });
+        }>(
+          prog.slug,
+          { method: 'DELETE' },
+          force ? { force: 'true' } : undefined,
+        );
         setPrograms((prev) => prev.filter((p) => p.slug !== prog.slug));
         setCascadeCounts(null);
         addToast(t('adminPrograms.toastDeleted'), 'success');
@@ -226,8 +227,8 @@ function ProgramsPageInner() {
   const patchStatus = useCallback(
     async (prog: Program, patch: Partial<Pick<Program, 'isFeatured' | 'isPublished' | 'featuredRank'>>) => {
       try {
-        const res = await apiFetchJson<{ program: Program }>(
-          `/api/programs/${prog.slug}`,
+        const res = await programsApiJson<{ program: Program }>(
+          prog.slug,
           {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
@@ -256,8 +257,8 @@ function ProgramsPageInner() {
   const archiveProgram = useCallback(
     async (prog: Program) => {
       try {
-        await apiFetchJson<{ program: Program }>(
-          `/api/programs/${prog.slug}`,
+        await programsApiJson<{ program: Program }>(
+          prog.slug,
           {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
@@ -285,8 +286,8 @@ function ProgramsPageInner() {
   const restoreProgram = useCallback(
     async (prog: Program) => {
       try {
-        await apiFetchJson<{ program: Program }>(
-          `/api/programs/${prog.slug}`,
+        await programsApiJson<{ program: Program }>(
+          prog.slug,
           {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },

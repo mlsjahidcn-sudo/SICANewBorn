@@ -3569,6 +3569,15 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminPrograms.loadMoreCount': 'Showing {{shown}} of {{total}}',
     'adminPrograms.loadMoreEnd': '— end of list —',
     'adminPrograms.syncingLatest': 'Syncing latest…',
+    // Server-side pagination footer (Phase 128b-1): replaces the
+    // old "Load more" button on /admin/programs with prev/next +
+    // a numbered page strip. The placeholder shape mirrors the
+    // adminFees / adminStudents / adminPartners / adminPartnerStudents
+    // / partnerLeads pagination keys so all admin tables feel
+    // consistent.
+    'adminPrograms.paginationCount': 'Page {{page}} of {{totalPages}} — {{shown}} on this page, {{total}} total',
+    'adminPrograms.paginationPrev': 'Previous',
+    'adminPrograms.paginationNext': 'Next',
     'adminPrograms.toastDeleted': 'Program deleted successfully',
     'adminPrograms.toastDeleteFailed': 'Failed to delete program',
     'adminPrograms.deleteDialogTitle': 'Delete Program',
@@ -8138,6 +8147,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminPrograms.loadMoreCount': '显示 {{shown}} / {{total}}',
     'adminPrograms.loadMoreEnd': '— 已加载全部 —',
     'adminPrograms.syncingLatest': '正在同步最新数据…',
+    'adminPrograms.paginationCount': '第 {{page}} 页 / 共 {{totalPages}} 页 — 本页 {{shown}} 条,共 {{total}} 条',
+    'adminPrograms.paginationPrev': '上一页',
+    'adminPrograms.paginationNext': '下一页',
     'adminPrograms.toastDeleted': '项目已成功删除',
     'adminPrograms.toastDeleteFailed': '删除项目失败',
     'adminPrograms.deleteDialogTitle': '删除项目',
