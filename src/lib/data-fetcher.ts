@@ -160,6 +160,14 @@ function mapProgram(row: Record<string, unknown>, slug: string): Program {
     scholarshipAvailable: (row.scholarship_available as boolean) ?? false,
     intake: (row.intake as string) ?? '',
     intakeCn: (row.intake_cn as string) ?? staticRow?.intakeCn ?? '',
+    // Phase 128a: round-trip the status surface. Defaults match the
+    // DB column defaults (not featured, published, not archived,
+    // rank NULL) so old DB rows that pre-date the migration render
+    // identically to before.
+    isFeatured: (row.is_featured as boolean) ?? false,
+    isPublished: (row.is_published as boolean) ?? true,
+    archivedAt: (row.archived_at as string | null) ?? null,
+    featuredRank: (row.featured_rank as number | null) ?? null,
   };
 }
 
@@ -324,6 +332,65 @@ export const getAllPrograms = cache(
         }
       }
       return staticPrograms;
+    });
+  },
+);
+
+/**
+ * Phase 128a: featured-program fetcher for the home page "Popular
+ * programs" widget.
+ *
+ * Same shape as getFeaturedUniversities — light column SELECT, hard
+ * limit, server-side ordering by featured_rank NULLS LAST so the
+ * widget's order is stable across requests. The partial index
+ * `idx_programs_featured_live` (migration
+ * database/2026-09-26_programs_status.sql) keeps the query fast even
+ * as the programs table grows.
+ *
+ * Deploy safety: if the migration isn't applied yet, the
+ * is_featured / is_published / archived_at / featured_rank columns
+ * don't exist and the query 427s. We fall back to the static
+ * top-N so the widget renders cleanly even pre-migration. Once the
+ * migration runs, the next render fetches real featured rows.
+ *
+ * If no rows are featured in the DB AND there's no live data, fall
+ * back to the top-N static rows by name — keeps the widget visually
+ * populated during the early-build / dev phase before any admin has
+ * flipped a row featured.
+ */
+export const getFeaturedPrograms = cache(
+  async (limit = 4): Promise<Program[]> => {
+    return cachedProcess(`programs:featured:${limit}`, async () => {
+      if (isSupabaseServerConfigured() && supabaseServer) {
+        const { data, error } = await supabaseServer
+          .from('programs')
+          .select(
+            'slug, name, name_cn, university_slug, degree, discipline, discipline_cn, language, duration, duration_cn, tuition, scholarship_available, is_featured, is_published, archived_at, featured_rank',
+          )
+          .eq('is_featured', true)
+          .eq('is_published', true)
+          .is('archived_at', null)
+          .order('featured_rank', { ascending: true, nullsFirst: false })
+          .order('name', { ascending: true })
+          .limit(limit);
+        if (!error && data && data.length > 0) {
+          return data.map((row) => mapProgram(row, row.slug as string));
+        }
+        // PGRST / 427 = status columns missing (migration not yet
+        // applied). Fall through to the static-fallback block below
+        // — the home widget renders the top-N static rows until the
+        // admin applies the migration.
+        if (
+          error &&
+          (error.code === '42703' /* undefined_column */ ||
+            error.code === 'PGRST204' /* column not in schema cache */)
+        ) {
+          return staticPrograms.slice(0, limit);
+        }
+      }
+      // No featured rows yet — top-N static by name so the widget
+      // still renders something useful during pre-launch / dev.
+      return staticPrograms.slice(0, limit);
     });
   },
 );

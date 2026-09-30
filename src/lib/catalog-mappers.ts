@@ -195,6 +195,14 @@ export function mapProgramFromDb(row: Record<string, unknown>) {
     scholarshipAvailable: row.scholarship_available,
     intake: row.intake,
     intakeCn: row.intake_cn ?? cnFallback(slug, 'intakeCn'),
+    // Phase 128a: status surface — see migration
+    // database/2026-09-26_programs_status.sql. Defaults to false / true /
+    // null / null so existing rows round-trip identically until an admin
+    // explicitly toggles them.
+    isFeatured: row.is_featured ?? false,
+    isPublished: row.is_published ?? true,
+    archivedAt: row.archived_at ?? null,
+    featuredRank: row.featured_rank ?? null,
   };
 }
 
@@ -220,6 +228,11 @@ export function mapProgramToDb(p: Record<string, unknown>) {
     scholarship_available: p.scholarshipAvailable,
     intake: p.intake,
     intake_cn: p.intakeCn,
+    // Phase 128a: round-trip the status surface.
+    is_featured: p.isFeatured ?? false,
+    is_published: p.isPublished ?? true,
+    archived_at: p.archivedAt ?? null,
+    featured_rank: p.featuredRank ?? null,
   };
 }
 

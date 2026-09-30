@@ -447,6 +447,14 @@ export interface Program {
   scholarshipAvailable: boolean;
   intake: string;
   intakeCn: string;
+  // Phase 128a: status surface — see migration
+  // database/2026-09-26_programs_status.sql. Static rows implicitly
+  // match the DB defaults (not featured, published, not archived,
+  // rank NULL) so existing code keeps working without changes.
+  isFeatured?: boolean;
+  isPublished?: boolean;
+  archivedAt?: string | null;
+  featuredRank?: number | null;
 }
 
 export const programs: Program[] = [

@@ -30,7 +30,7 @@ import {
   Clock,
   Trophy,
 } from 'lucide-react';
-import { getFeaturedUniversities } from '@/lib/data-fetcher';
+import { getFeaturedUniversities, getFeaturedPrograms } from '@/lib/data-fetcher';
 import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
 import { VideoTestimonials } from '@/components/VideoTestimonials';
 import dynamic from 'next/dynamic';
@@ -62,13 +62,16 @@ export default async function HomePage() {
   // homepage RSC doesn't block on each sequential DB round-trip.
   // The translation function and structured data both need the
   // locale, so we fetch it once and build the helpers inline.
-  const [t, liveUnis, latestNews, latestAdmissions, serviceSchema] = await Promise.all([
+  const [t, liveUnis, featuredPrograms, latestNews, latestAdmissions, serviceSchema] = await Promise.all([
     getServerT(),
     // The home page only needs the top 8 ranked universities (3 for
     // the hero cards + 8 for the logo strip). The old code fetched
     // every column and every row via getAllUniversities(), which was
     // the main cause of the homepage loading bar.
     getFeaturedUniversities(8),
+    // Phase 128a: home "Popular programs" widget. Fetches only the
+    // ~14 columns the widget renders + hard-limits to 4 rows.
+    getFeaturedPrograms(4),
     fetchLatestNews(),
     fetchLatestAdmissions(),
     getServiceSchema(),
@@ -383,6 +386,96 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Phase 128a: Popular programs widget.
+          Sits between the partner-logo strip and the Popular Fields
+          block so it sits in the same scroll rhythm as the other
+          home-page proof-of-value sections. Mirrors the visual
+          language of the existing featured-universities + news +
+          success-stories blocks (eyebrow + heading + view-all link +
+          card grid). Hidden when no rows are featured AND the DB
+          is unconfigured (the static fallback above ensures the
+          widget always has at least 4 cards once data.ts is seeded,
+          but pre-Phase-127a the DB would be empty so this protects
+          against the empty-homepage edge case during a fresh
+          deploy). */}
+      {featuredPrograms.length > 0 && (
+        <section className="bg-white border-t border-gray-200 py-16 lg:py-20">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
+              <div>
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-[#9B1B30] mb-2">
+                  <GraduationCap className="h-4 w-4" />
+                  {t('home.programs.eyebrow')}
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-bold text-[#1B2A4A]">
+                  {t('home.programs.title')}
+                </h2>
+                <p className="mt-2 text-sm text-[#4B5563] max-w-2xl">
+                  {t('home.programs.subtitle')}
+                </p>
+              </div>
+              <Link
+                href="/programs"
+                className="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold text-[#9B1B30] hover:underline whitespace-nowrap"
+              >
+                {t('home.programs.viewAll')}
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {featuredPrograms.map((p) => (
+                <Link
+                  key={p.slug}
+                  href={`/programs/${p.slug}`}
+                  className="group block bg-white border-2 border-gray-200 hover:border-[#9B1B30] transition-colors p-5"
+                >
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border border-[#1B2A4A] text-[#1B2A4A]">
+                      {p.degree}
+                    </span>
+                    {p.scholarshipAvailable ? (
+                      <span
+                        title={t('home.programs.scholarshipBadge')}
+                        className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-[#D4A853]/15 text-[#8B6F35]"
+                      >
+                        <Award className="h-3 w-3 mr-0.5" />
+                        {t('home.programs.scholarshipBadge')}
+                      </span>
+                    ) : null}
+                  </div>
+                  <h3 className="font-bold text-[#1B2A4A] group-hover:text-[#9B1B30] transition-colors leading-snug line-clamp-2 min-h-[3rem]">
+                    {p.name}
+                  </h3>
+                  {p.discipline ? (
+                    <p className="mt-1 text-xs text-[#4B5563] line-clamp-1">
+                      {p.discipline}
+                    </p>
+                  ) : null}
+                  <div className="mt-3 flex items-center gap-1.5 text-xs text-[#4B5563]">
+                    <MapPin className="h-3 w-3 shrink-0" />
+                    <span className="line-clamp-1">
+                      {liveUnis.find((u) => u.slug === p.universitySlug)?.name ?? p.universitySlug}
+                    </span>
+                  </div>
+                  {p.duration ? (
+                    <div className="mt-1 text-xs text-gray-500">{p.duration}</div>
+                  ) : null}
+                </Link>
+              ))}
+            </div>
+            <div className="sm:hidden mt-6 text-center">
+              <Link
+                href="/programs"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#9B1B30] hover:underline"
+              >
+                {t('home.programs.viewAll')}
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Popular Fields */}
       <section className="bg-white py-16 lg:py-24">

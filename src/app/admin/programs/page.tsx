@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { Plus, Pencil, Trash2, ExternalLink, Upload, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, ExternalLink, Upload, Loader2, Star, StarOff, Archive, ArchiveRestore, Eye, EyeOff } from 'lucide-react';
 import { programs as staticPrograms, universities as staticUniversities, type Program } from '@/lib/data';
 import { ToastProvider, useToast } from '@/components/admin/toast';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
@@ -59,6 +59,17 @@ function ProgramsPageInner() {
     partnerPromotions: number;
     partnerApplications: number;
   } | null>(null);
+  // Phase 128a: archive-instead offer. Surfaced when the DELETE
+  // 409 response includes `archiveInstead` (the admin can then pick
+  // soft-delete over the destructive force-cascade path). Declared
+  // up here so handleDelete / patchStatus / archiveProgram can read
+  // the setter without a "variable accessed before declaration" lint
+  // error.
+  const [archiveOffer, setArchiveOffer] = useState<{
+    method: string;
+    url: string;
+    body: { archived_at: string };
+  } | null>(null);
 
   // Fetch live programs from the API and merge with the static
   // fallback by slug. DB wins on conflict (richer data, fresher
@@ -74,7 +85,13 @@ function ProgramsPageInner() {
         // pragmatic ceiling — the API caps at 100 per call by
         // default but accepts up to 500. Anything past that
         // would need a server-side search endpoint, not in scope.
-        const res = await fetch('/api/programs?limit=500');
+        //
+        // Phase 128a: pass `include_archived=true` so the admin
+        // sees archived rows too — the public /api/programs
+        // endpoint hides them by default. The merged list shows
+        // every row, then a UI badge (added below) tells the
+        // admin which ones are archived / unpublished.
+        const res = await fetch('/api/programs?limit=500&include_archived=true');
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         const dbPrograms: Program[] = data.programs || [];
@@ -110,6 +127,12 @@ function ProgramsPageInner() {
   // stable across re-renders that don't change inputs. Reset
   // shown-count to PAGE_SIZE on filter/search change so the
   // user lands on the first page of the new view.
+  //
+  // Phase 128a: extra "status" filter — defaults to "active"
+  // (hides archived rows from the default view) but the admin
+  // can flip to "archived" to see what they soft-deleted or
+  // "all" to see every row including unpublished.
+  const [filterStatus, setFilterStatus] = useState<'active' | 'archived' | 'all'>('active');
   const filtered = useMemo(() => {
     const s = debouncedSearch.toLowerCase();
     return programs.filter((p) => {
@@ -119,16 +142,20 @@ function ProgramsPageInner() {
         p.nameCn.includes(s) ||
         p.universitySlug.toLowerCase().includes(s);
       const matchDegree = !filterDegree || p.degree === filterDegree;
-      return matchSearch && matchDegree;
+      const isArchived = !!p.archivedAt;
+      const matchStatus =
+        filterStatus === 'all' ||
+        (filterStatus === 'archived' ? isArchived : !isArchived);
+      return matchSearch && matchDegree && matchStatus;
     });
-  }, [programs, debouncedSearch, filterDegree]);
+  }, [programs, debouncedSearch, filterDegree, filterStatus]);
 
   // Reset shown-count when the filtered list changes. We track
   // this via a useEffect on the filtered identity so the reset
   // happens once per filter change, not on every render.
   useEffect(() => {
     setShown(PAGE_SIZE);
-  }, [debouncedSearch, filterDegree]);
+  }, [debouncedSearch, filterDegree, filterStatus]);
 
   const visible = useMemo(() => filtered.slice(0, shown), [filtered, shown]);
   const hasMore = shown < filtered.length;
@@ -157,9 +184,23 @@ function ProgramsPageInner() {
           const body = err.body as {
             code?: string;
             counts?: { partnerPromotions: number; partnerApplications: number };
+            archiveInstead?: { method: string; url: string; body: { archived_at: string } };
           } | null;
           if (body && body.code === 'CASCADE_BLOCKED' && body.counts) {
             setCascadeCounts(body.counts);
+            // Phase 128a: surface the archive-instead offer so the
+            // admin can choose soft-delete (preserves the FK graph
+            // and is reversible) over a destructive force-cascade.
+            // Clone the nested object so React's immutability
+            // checker doesn't flag a shared reference (the error
+            // body is shared across hook renders otherwise).
+            if (body.archiveInstead) {
+              setArchiveOffer({
+                method: body.archiveInstead.method,
+                url: body.archiveInstead.url,
+                body: { archived_at: body.archiveInstead.body.archived_at },
+              });
+            }
             return;
           }
         }
@@ -167,6 +208,100 @@ function ProgramsPageInner() {
       }
       setDeleteTarget(null);
       setCascadeCounts(null);
+    },
+    [addToast, t],
+  );
+
+  // Phase 128a: per-row status toggles + archive/restore.
+  // The list is loaded with `include_archived=true` so archived rows
+  // render (with a status badge) instead of vanishing on next
+  // refresh. All three operations hit the new PATCH /api/programs/[slug]
+  // route and only update the affected row in local state — no full
+  // refetch, no flash.
+  // archiveOffer state is declared at the top of the component
+  // (alongside deleteTarget/cascadeCounts) so handleDelete can read
+  // its setter without a "variable accessed before declaration"
+  // lint error.
+
+  const patchStatus = useCallback(
+    async (prog: Program, patch: Partial<Pick<Program, 'isFeatured' | 'isPublished' | 'featuredRank'>>) => {
+      try {
+        const res = await apiFetchJson<{ program: Program }>(
+          `/api/programs/${prog.slug}`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              is_featured: patch.isFeatured ?? prog.isFeatured ?? false,
+              is_published: patch.isPublished ?? prog.isPublished ?? true,
+              featured_rank: patch.featuredRank ?? prog.featuredRank ?? null,
+            }),
+          },
+        );
+        setPrograms((prev) =>
+          prev.map((p) => (p.slug === prog.slug ? res.program : p)),
+        );
+        const changedFields = Object.keys(patch);
+        addToast(
+          t('adminPrograms.toastStatusUpdated', { fields: changedFields.join(', ') }),
+          'success',
+        );
+      } catch {
+        addToast(t('adminPrograms.toastStatusFailed'), 'error');
+      }
+    },
+    [addToast, t],
+  );
+
+  const archiveProgram = useCallback(
+    async (prog: Program) => {
+      try {
+        await apiFetchJson<{ program: Program }>(
+          `/api/programs/${prog.slug}`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'archive' }),
+          },
+        );
+        setPrograms((prev) =>
+          prev.map((p) =>
+            p.slug === prog.slug ? { ...p, archivedAt: new Date().toISOString() } : p,
+          ),
+        );
+        addToast(t('adminPrograms.toastArchived'), 'success');
+      } catch {
+        addToast(t('adminPrograms.toastArchiveFailed'), 'error');
+      }
+      setArchiveOffer(null);
+      setDeleteTarget(null);
+      setCascadeCounts(null);
+    },
+    // setArchiveOffer is a stable React setter; listing it here
+    // keeps the React Compiler memoization happy (no behavior change).
+    [addToast, t, setArchiveOffer],
+  );
+
+  const restoreProgram = useCallback(
+    async (prog: Program) => {
+      try {
+        await apiFetchJson<{ program: Program }>(
+          `/api/programs/${prog.slug}`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'restore' }),
+          },
+        );
+        setPrograms((prev) =>
+          prev.map((p) =>
+            p.slug === prog.slug ? { ...p, archivedAt: null } : p,
+          ),
+        );
+        addToast(t('adminPrograms.toastRestored'), 'success');
+      } catch {
+        addToast(t('adminPrograms.toastRestoreFailed'), 'error');
+      }
     },
     [addToast, t],
   );
@@ -228,6 +363,18 @@ function ProgramsPageInner() {
             <option value="Master">Master</option>
             <option value="PhD">PhD</option>
           </select>
+          {/* Phase 128a: status filter — Active (default, hides archived),
+              Archived (only archived, for restoring), All (every row). */}
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value as 'active' | 'archived' | 'all')}
+            className="px-3 py-2 border border-gray-300 text-sm focus:outline-none focus:border-[#9B1B30]"
+            aria-label={t('adminPrograms.filterStatusLabel')}
+          >
+            <option value="active">{t('adminPrograms.filterActive')}</option>
+            <option value="archived">{t('adminPrograms.filterArchived')}</option>
+            <option value="all">{t('adminPrograms.filterAllStatus')}</option>
+          </select>
         </div>
       </div>
 
@@ -248,11 +395,41 @@ function ProgramsPageInner() {
             </thead>
             <tbody>
               {visible.map((prog) => (
-                <tr key={prog.slug} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                <tr
+                  key={prog.slug}
+                  className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
+                    prog.archivedAt ? 'opacity-60' : ''
+                  }`}
+                >
                   <td className="px-4 py-3">
-                    <div>
-                      <div className="font-medium text-[#1F2937]">{prog.name}</div>
-                      <div className="text-xs text-[#4B5563]">{prog.nameCn}</div>
+                    <div className="flex items-start gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium text-[#1F2937]">{prog.name}</div>
+                        <div className="text-xs text-[#4B5563]">{prog.nameCn}</div>
+                      </div>
+                      {/* Phase 128a: status badges stacked next to the
+                          name so the admin can tell at a glance which
+                          rows are featured / archived / unpublished.
+                          Archived row is dimmed at the <tr> level above. */}
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        {prog.isFeatured && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-[#D4A853]/15 text-[#8B6F35]">
+                            <Star className="h-3 w-3" />
+                            {t('adminPrograms.featuredBadge')}
+                          </span>
+                        )}
+                        {prog.archivedAt ? (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-gray-200 text-gray-700">
+                            <Archive className="h-3 w-3" />
+                            {t('adminPrograms.archivedBadge')}
+                          </span>
+                        ) : prog.isPublished === false ? (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800">
+                            <EyeOff className="h-3 w-3" />
+                            {t('adminPrograms.unpublishedBadge')}
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-[#4B5563]">{getUniName(prog.universitySlug)}</td>
@@ -282,13 +459,50 @@ function ProgramsPageInner() {
                       >
                         <Pencil className="w-4 h-4" />
                       </Link>
+                      {/* Phase 128a: per-row status switches. Featured
+                          toggles is_featured; the eye icon toggles
+                          is_published (without unpublishing, the row
+                          stays hidden from /programs but the data is
+                          preserved). The archive button is the
+                          soft-delete path; once archived, the same
+                          slot becomes a "Restore" button. */}
                       <button
-                        onClick={() => setDeleteTarget(prog)}
-                        className="p-1.5 text-red-600 hover:bg-red-50 transition-colors"
-                        title={t('adminPrograms.delete')}
+                        onClick={() => patchStatus(prog, { isFeatured: !prog.isFeatured })}
+                        className={`p-1.5 hover:bg-gray-100 transition-colors ${
+                          prog.isFeatured ? 'text-[#D4A853]' : 'text-gray-400'
+                        }`}
+                        title={prog.isFeatured ? t('adminPrograms.unfeature') : t('adminPrograms.feature')}
                       >
-                        <Trash2 className="w-4 h-4" />
+                        {prog.isFeatured ? <Star className="w-4 h-4 fill-current" /> : <StarOff className="w-4 h-4" />}
                       </button>
+                      {!prog.archivedAt && (
+                        <button
+                          onClick={() => patchStatus(prog, { isPublished: !(prog.isPublished ?? true) })}
+                          className={`p-1.5 hover:bg-gray-100 transition-colors ${
+                            prog.isPublished === false ? 'text-amber-600' : 'text-gray-400'
+                          }`}
+                          title={prog.isPublished === false ? t('adminPrograms.publish') : t('adminPrograms.unpublish')}
+                        >
+                          {prog.isPublished === false ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      )}
+                      {prog.archivedAt ? (
+                        <button
+                          onClick={() => restoreProgram(prog)}
+                          className="p-1.5 text-green-600 hover:bg-green-50 transition-colors"
+                          title={t('adminPrograms.restore')}
+                        >
+                          <ArchiveRestore className="w-4 h-4" />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setDeleteTarget(prog)}
+                          className="p-1.5 text-red-600 hover:bg-red-50 transition-colors"
+                          title={t('adminPrograms.delete')}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -335,9 +549,18 @@ function ProgramsPageInner() {
         onCancel={() => {
           setDeleteTarget(null);
           setCascadeCounts(null);
+          setArchiveOffer(null);
         }}
+        // Phase 128a: when the API surfaces the archive-instead
+        // offer (CASCADE_BLOCKED + dependents), the dialog presents
+        // two buttons: archive (soft-delete, preserves FK history,
+        // reversible) + force-delete (the old destructive path).
         onConfirm={() => {
           if (!deleteTarget) return;
+          if (archiveOffer) {
+            void archiveProgram(deleteTarget);
+            return;
+          }
           if (cascadeCounts) {
             void handleDelete(deleteTarget, true);
             return;
@@ -345,7 +568,9 @@ function ProgramsPageInner() {
           void handleDelete(deleteTarget, false);
         }}
         title={
-          cascadeCounts
+          archiveOffer
+            ? t('adminPrograms.archiveOfferTitle', { name: deleteTarget?.name ?? '' })
+            : cascadeCounts
             ? t('adminPrograms.cascadeDialogTitle', {
                 name: deleteTarget?.name ?? '',
                 promotions: cascadeCounts.partnerPromotions,
@@ -354,7 +579,12 @@ function ProgramsPageInner() {
             : t('adminPrograms.deleteDialogTitle')
         }
         message={
-          cascadeCounts
+          archiveOffer
+            ? t('adminPrograms.archiveOfferMessage', {
+                promotions: cascadeCounts?.partnerPromotions ?? 0,
+                applications: cascadeCounts?.partnerApplications ?? 0,
+              })
+            : cascadeCounts
             ? t('adminPrograms.cascadeDialogMessage', {
                 promotions: cascadeCounts.partnerPromotions,
                 applications: cascadeCounts.partnerApplications,
@@ -364,11 +594,13 @@ function ProgramsPageInner() {
               })
         }
         confirmText={
-          cascadeCounts
+          archiveOffer
+            ? t('adminPrograms.archiveOfferConfirm')
+            : cascadeCounts
             ? t('adminPrograms.cascadeDialogForce')
             : t('adminPrograms.deleteDialogConfirm')
         }
-        variant={cascadeCounts ? 'warning' : 'danger'}
+        variant={archiveOffer ? 'info' : cascadeCounts ? 'warning' : 'danger'}
       />
     </div>
   );

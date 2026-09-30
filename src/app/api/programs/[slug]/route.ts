@@ -141,6 +141,12 @@ export async function DELETE(
   });
 
   if (!summary.ok) {
+    // Phase 128a: instead of forcing the admin to either follow the
+    // destructive force-cascade path OR give up entirely, surface a
+    // "archive instead?" offer: the row has dependents so a hard
+    // delete would lose their link history, but soft-deleting
+    // preserves the FKs and hides the program from public surfaces.
+    // The admin UI presents this as an extra button on the 409 dialog.
     return NextResponse.json(
       {
         error: summary.hint,
@@ -151,6 +157,14 @@ export async function DELETE(
           total: (promoCount ?? 0) + (appCount ?? 0),
         },
         requiresForce: true,
+        // New in 128a: opt-in soft-delete alternative. Lets the UI
+        // render "Archive instead?" without making the destructive
+        // choice the only path forward.
+        archiveInstead: {
+          method: 'PATCH',
+          url: `/api/programs/${slug}`,
+          body: { archived_at: new Date().toISOString() },
+        },
       },
       { status: 409 },
     );
@@ -186,17 +200,124 @@ export async function DELETE(
   }
 
   revalidateTag(CACHE_TAGS.programs, 'default');
-  revalidateTag(CACHE_TAGS.program(slug), 'default');
-  invalidateLiveCatalogCache();
-  // Phase 72: fire program.deleted webhook
-  void dispatchEvent('program.deleted', { slug });
-  return NextResponse.json({
-    success: true,
-    counts: {
-      partnerPromotions: promoCount ?? 0,
-      partnerApplications: appCount ?? 0,
-    },
-    deleted: (deletedCount ?? 0) > 0,
-  });
+    revalidateTag(CACHE_TAGS.program(slug), 'default');
+    invalidateLiveCatalogCache();
+    // Phase 72: fire program.deleted webhook
+    void dispatchEvent('program.deleted', { slug });
+    return NextResponse.json({
+      success: true,
+      counts: {
+        partnerPromotions: promoCount ?? 0,
+        partnerApplications: appCount ?? 0,
+      },
+      deleted: (deletedCount ?? 0) > 0,
+    });
+}
+
+/**
+ * Phase 128a: per-row status toggles + archive/restore.
+ *
+ * Two flavours of writes:
+ *   { action: "archive" }              -> stamp archived_at = now()
+ *   { action: "restore" }              -> clear archived_at (back to public)
+ *   { is_featured, is_published,
+ *     featured_rank } (any subset)      -> partial update of the status surface
+ *
+ * Archive is the soft-delete path used when the destructive DELETE
+ * would cascade into partner_promotions / partner_applications. The
+ * admin UI surfaces "Archive" instead of "Delete" when the row has
+ * dependents, and the underlying DELETE route points the UI at this
+ * PATCH via the `archiveInstead` block in its 409 response.
+ *
+ * Restore clears `archived_at` and (deliberately) leaves `is_published`
+ * at whatever it was — so an admin who archives a row, flips it
+ * unpublished, then restores gets back exactly that state.
+ */
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ slug: string }> }
+) {
+  const auth = await requireAdmin(request);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+  if (!isSupabaseServerConfigured() || !supabaseServer) {
+    return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
+  }
+
+  const { slug } = await params;
+  const raw = await request.json().catch(() => ({}));
+
+  // Archive — write a fresh timestamp. Idempotent: re-archiving an
+  // already-archived row updates the timestamp but returns 200.
+  if (raw && typeof raw === 'object' && 'action' in raw && raw.action === 'archive') {
+    const archivedAt = new Date().toISOString();
+    const { data, error } = await supabaseServer
+      .from('programs')
+      .update({ archived_at: archivedAt })
+      .eq('slug', slug)
+      .select()
+      .single();
+    if (error || !data) {
+      return NextResponse.json({ error: 'Program not found' }, { status: 404 });
+    }
+    revalidateTag(CACHE_TAGS.programs, 'default');
+    revalidateTag(CACHE_TAGS.program(slug), 'default');
+    invalidateLiveCatalogCache();
+    void dispatchEvent('program.updated', mapProgramFromDb(data));
+    return NextResponse.json({ program: mapProgramFromDb(data) });
+  }
+
+  // Restore — clear archived_at.
+  if (raw && typeof raw === 'object' && 'action' in raw && raw.action === 'restore') {
+    const { data, error } = await supabaseServer
+      .from('programs')
+      .update({ archived_at: null })
+      .eq('slug', slug)
+      .select()
+      .single();
+    if (error || !data) {
+      return NextResponse.json({ error: 'Program not found' }, { status: 404 });
+    }
+    revalidateTag(CACHE_TAGS.programs, 'default');
+    revalidateTag(CACHE_TAGS.program(slug), 'default');
+    invalidateLiveCatalogCache();
+    void dispatchEvent('program.updated', mapProgramFromDb(data));
+    return NextResponse.json({ program: mapProgramFromDb(data) });
+  }
+
+  // Toggle: partial update of is_featured / is_published / featured_rank.
+  // The dedicated edit page still uses PUT for full edits; this PATCH
+  // is the lightweight toggle surface for the admin list's per-row
+  // switches. Anything else is 400 — keeps the route's contract tight.
+  const allowedKeys = new Set(['is_featured', 'is_published', 'featured_rank']);
+  const patch: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(raw || {})) {
+    if (allowedKeys.has(k)) patch[k] = v;
+  }
+  if (Object.keys(patch).length === 0) {
+    return NextResponse.json(
+      {
+        error:
+          'PATCH requires {action:"archive"|"restore"} or one of is_featured/is_published/featured_rank',
+      },
+      { status: 400 },
+    );
+  }
+
+  const { data, error } = await supabaseServer
+    .from('programs')
+    .update(patch)
+    .eq('slug', slug)
+    .select()
+    .single();
+  if (error || !data) {
+    return NextResponse.json({ error: 'Program not found' }, { status: 404 });
+  }
+  revalidateTag(CACHE_TAGS.programs, 'default');
+    revalidateTag(CACHE_TAGS.program(slug), 'default');
+    invalidateLiveCatalogCache();
+    void dispatchEvent('program.updated', mapProgramFromDb(data));
+    return NextResponse.json({ program: mapProgramFromDb(data) });
 }
 
