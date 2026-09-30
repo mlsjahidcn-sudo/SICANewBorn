@@ -66,7 +66,7 @@ Output a top-level JSON ARRAY. Each element MUST be a flat object with EXACTLY t
 ]
 
 Rules:
-- "name": a clean, public-facing English program title. Translate Chinese major names (计算机科学与技术 → Computer Science and Technology). Prefix with the degree abbreviation when natural (BSc in ..., MSc in ..., PhD in ...) and stay consistent within the batch.
+- "name": the **bare major only** — no degree prefix, no "Bachelor in / MSc in / B.Eng in /  Bachelor of Science in" wrapper. The degree is its own column, so duplicating it in the name is noise. Translate Chinese major names (计算机科学与技术 → Computer Science and Technology) and use the conventional English title. Examples: "Computer Science and Technology", "Civil Engineering", "International Economics and Trade", "MBA", "Mechanical Engineering". Never wrap in "Bachelor of …" or "MSc in …".
 - "nameCn"/"disciplineCn": use the Chinese name from the notes when present; otherwise give the standard Chinese translation of the major — these are conventional, not guesses. Use "" only when genuinely unsure.
 - "degree": EXACTLY one of Bachelor, Master, PhD. Infer from the heading the program sits under (本科/Undergraduate → Bachelor, 硕士 → Master, 博士 → PhD).
 - "discipline": the broad field in English (e.g. Computer Science, Business Administration, Clinical Medicine, Civil Engineering) — not a copy of the program name unless nothing broader applies.

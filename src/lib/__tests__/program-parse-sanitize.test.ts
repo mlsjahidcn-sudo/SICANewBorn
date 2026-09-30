@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   extractProgramsJson,
   normalizeProgramRows,
+  stripDegreePrefix,
   MAX_PARSED_PROGRAMS,
 } from '@/lib/ai/program-parse-sanitize';
 
@@ -194,5 +195,71 @@ describe('normalizeProgramRows', () => {
     expect(programs[0].degree).toBe('Master');
     expect(programs[0].discipline).toBe('Business');
     expect(programs[0].tuition).toBe('¥30,000/year');
+  });
+
+  it('strips degree prefixes from the program name with a warning', () => {
+    const { programs, warnings } = normalizeProgramRows([
+      { name: 'Bachelor in Civil Engineering', degree: 'Bachelor', discipline: 'Engineering' },
+      { name: 'MSc in Software Engineering', degree: 'Master', discipline: 'Engineering' },
+      { name: 'Bachelor of Science in Chemistry', degree: 'Bachelor', discipline: 'Chemistry' },
+      { name: 'B.Eng in Mechanical Engineering', degree: 'Bachelor', discipline: 'Engineering' },
+      { name: 'PhD in Mechanical Engineering', degree: 'PhD', discipline: 'Engineering' },
+    ]);
+    expect(programs.map((p) => p.name)).toEqual([
+      'Civil Engineering',
+      'Software Engineering',
+      'Chemistry',
+      'Mechanical Engineering',
+      'Mechanical Engineering',
+    ]);
+    expect(warnings.filter((w) => w.includes('stripped degree prefix'))).toHaveLength(5);
+  });
+
+  it('leaves names without a prefix untouched (no warning)', () => {
+    const { programs, warnings } = normalizeProgramRows([
+      { name: 'Civil Engineering', degree: 'Bachelor', discipline: 'Engineering' },
+      { name: 'MBA', degree: 'Master', discipline: 'Business' },
+    ]);
+    expect(programs.map((p) => p.name)).toEqual(['Civil Engineering', 'MBA']);
+    expect(warnings).toHaveLength(0);
+  });
+});
+
+describe('stripDegreePrefix', () => {
+  it.each([
+    ['Bachelor in Civil Engineering', 'Civil Engineering'],
+    ['bachelor in Civil Engineering', 'Civil Engineering'],
+    ['BSc in Software Engineering', 'Software Engineering'],
+    ['B.Sc. in Software Engineering', 'Software Engineering'],
+    ['MSc in Data Science', 'Data Science'],
+    ['M.Sc. in Data Science', 'Data Science'],
+    ['B.Eng in Mechanical Engineering', 'Mechanical Engineering'],
+    ['Bachelor of Science in Chemistry', 'Chemistry'],
+    ['Bachelor of Arts in History', 'History'],
+    ['Master of Business Administration', 'Business Administration'],
+    ['Bachelor of Engineering', 'Engineering'],
+    ['Master of Public Administration', 'Public Administration'],
+    ['PhD in Mechanical Engineering', 'Mechanical Engineering'],
+    ['Ph.D. in Mechanical Engineering', 'Mechanical Engineering'],
+    ['Doctor of Philosophy in Physics', 'Physics'],
+    ['MBA in Finance', 'Finance'],
+  ])('strips %s → %s', (input, expected) => {
+    expect(stripDegreePrefix(input)).toBe(expected);
+  });
+
+  it.each([
+    ['Civil Engineering'],
+    ['MBA'],
+    ['Computer Science and Technology'],
+    ['International Economics and Trade'],
+  ])('leaves %s alone', (input) => {
+    expect(stripDegreePrefix(input)).toBe(input);
+  });
+
+  it('does not silently empty out a prefix-only string', () => {
+    // Defensive: if the model ever returns just "Bachelor" with no
+    // major after it, we leave the original string rather than
+    // turning it into an empty value.
+    expect(stripDegreePrefix('Bachelor')).toBe('Bachelor');
   });
 });

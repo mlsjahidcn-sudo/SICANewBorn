@@ -149,6 +149,68 @@ function normalizeString(value: unknown, cap: number): string {
   return value.trim().slice(0, cap);
 }
 
+/**
+ * Strip a leading degree prefix from a program name — e.g.
+ * "Bachelor in Civil Engineering" → "Civil Engineering",
+ * "MSc in Software Engineering" → "Software Engineering",
+ * "B.Eng in Computer Science" → "Computer Science",
+ * "Bachelor of Science in Chemistry" → "Chemistry".
+ *
+ * The prompt now forbids these prefixes, so this is defense in
+ * depth: even when the model sneaks one in, the user never sees
+ * it in the preview table. Case-insensitive on the prefix; the
+ * rest of the name is preserved with original capitalization.
+ *
+ * Only runs when the remainder after stripping is still a
+ * non-trivial major name (≥2 chars and contains at least one
+ * letter), so a stray "Bachelor" without a subject doesn't get
+ * silently turned into an empty string.
+ */
+export function stripDegreePrefix(name: string): string {
+  if (!name) return '';
+  // Anchored at the start; case-insensitive; alternation tries the
+  // longest match first so "Bachelor of Science in" wins over
+  // "Bachelor of" before falling back to "Bachelor in".
+  const prefixes = [
+    /^bachelor\s+of\s+science\s+in\s+/i,
+    /^bachelor\s+of\s+arts\s+in\s+/i,
+    /^bachelor\s+of\s+engineering\s+in\s+/i,
+    /^bachelor\s+of\s+business\s+administration\s+in\s+/i,
+    /^bachelor\s+of\s+medicine\s+in\s+/i,
+    /^bachelor\s+of\s+law\s+in\s+/i,
+    /^master\s+of\s+science\s+in\s+/i,
+    /^master\s+of\s+arts\s+in\s+/i,
+    /^master\s+of\s+engineering\s+in\s+/i,
+    /^master\s+of\s+business\s+administration\s*$/i,
+    /^doctor\s+of\s+philosophy\s+in\s+/i,
+    /^b\.sc\.\s+in\s+/i,
+    /^m\.sc\.\s+in\s+/i,
+    /^b\.a\.\s+in\s+/i,
+    /^m\.a\.\s+in\s+/i,
+    /^b\.eng\.?\s+in\s+/i,
+    /^m\.eng\.?\s+in\s+/i,
+    /^bsc\s+in\s+/i,
+    /^msc\s+in\s+/i,
+    /^ma\s+in\s+/i,
+    /^meng\s+in\s+/i,
+    /^bba\s+in\s+/i,
+    /^mba\s+in\s+/i,
+    /^phd\s+in\s+/i,
+    /^ph\.d\.\s+in\s+/i,
+    /^bachelor\s+in\s+/i,
+    /^master\s+in\s+/i,
+    /^bachelor\s+of\s+/i,
+    /^master\s+of\s+/i,
+  ];
+  for (const re of prefixes) {
+    const stripped = name.replace(re, '').trim();
+    if (stripped !== name.trim() && /[A-Za-z\u00C0-\u024F\u4E00-\u9FFF]/.test(stripped)) {
+      return stripped;
+    }
+  }
+  return name;
+}
+
 function normalizeBoolean(value: unknown): boolean {
   if (value === true) return true;
   if (typeof value === 'string') {
@@ -207,6 +269,17 @@ export function normalizeProgramRows(entries: unknown[]): NormalizedProgramResul
       warnings.push(`Row ${i + 1}: skipped — no program name.`);
       continue;
     }
+    // Defense in depth: the prompt forbids degree prefixes in `name`
+    // (the degree column carries that info), but if the model still
+    // returns "Bachelor in Civil Engineering" we strip it here so the
+    // admin's preview never shows duplicates of the Degree column.
+    const cleanedName = stripDegreePrefix(name);
+    if (cleanedName !== name) {
+      warnings.push(
+        `Row ${i + 1}: stripped degree prefix from program name — "${name}" → "${cleanedName}".`,
+      );
+    }
+    const finalName = cleanedName || name;
 
     const degree = normalizeDegree(e.degree, i + 1, warnings);
     const language = normalizeLanguage(e.language, i + 1, warnings);
@@ -220,7 +293,7 @@ export function normalizeProgramRows(entries: unknown[]): NormalizedProgramResul
       warnings.push(`Row ${i + 1}: no discipline given — using the program name.`);
     }
 
-    const dedupeKey = `${name.toLowerCase()}|${degree}`;
+    const dedupeKey = `${finalName.toLowerCase()}|${degree}`;
     if (seen.has(dedupeKey)) {
       warnings.push(`Row ${i + 1}: duplicate "${name}" (${degree}) — dropped.`);
       continue;
@@ -228,7 +301,7 @@ export function normalizeProgramRows(entries: unknown[]): NormalizedProgramResul
     seen.add(dedupeKey);
 
     programs.push({
-      name,
+      name: finalName,
       nameCn: normalizeString(e.nameCn, CAPS.nameCn),
       degree,
       discipline,
