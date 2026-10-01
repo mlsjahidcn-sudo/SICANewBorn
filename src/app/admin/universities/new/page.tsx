@@ -2,11 +2,13 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, Sparkles } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { universities as staticUniversities, type University } from '@/lib/data';
 import { ToastProvider, useToast } from '@/components/admin/toast';
 import { apiFetch } from '@/lib/api-client';
+import { useI18n } from '@/lib/i18n';
+import { AiRefineModal } from '@/components/admin/ai-refine-modal';
 
 interface UniversityFormData {
   slug: string;
@@ -130,9 +132,19 @@ function universityToForm(uni: University): UniversityFormData {
 function UniversityFormInner({ slug }: { slug?: string }) {
   const router = useRouter();
   const { addToast } = useToast();
+  const { t } = useI18n();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<UniversityFormData>(defaultFormData);
   const isEdit = !!slug;
+  // Phase 128+: AI Refine modal state for the scholarship_info
+  // fields. The endpoint is admin-gated + rate-limited; the
+  // button is disabled until the slug is known (i.e. on an
+  // existing university, not on the create form).
+  const [refineOpen, setRefineOpen] = useState(false);
+  const [refineBusy, setRefineBusy] = useState(false);
+  const [refineError, setRefineError] = useState<string | null>(null);
+  const [refinedEn, setRefinedEn] = useState('');
+  const [refinedZh, setRefinedZh] = useState('');
 
   useEffect(() => {
     if (slug) {
@@ -144,12 +156,12 @@ function UniversityFormInner({ slug }: { slug?: string }) {
             setForm(universityToForm(data.university));
           } else {
             // Fallback to static data
-            const uni = staticUniversities.find(u => u.slug === slug);
+            const uni = staticUniversities.find((u: University) => u.slug === slug);
             if (uni) setForm(universityToForm(uni));
           }
         })
         .catch(() => {
-          const uni = staticUniversities.find(u => u.slug === slug);
+          const uni = staticUniversities.find((u: University) => u.slug === slug);
           if (uni) setForm(universityToForm(uni));
         });
     }
@@ -162,6 +174,107 @@ function UniversityFormInner({ slug }: { slug?: string }) {
       [name]: name === 'ranking' || name === 'established' || name === 'qsWorldRanking' ? parseInt(value) || 0 : name === 'rating' ? parseFloat(value) || 0 : value,
     }));
   }, []);
+
+  // Phase 128+: open the modal + kick off the AI call. The
+  // button on the form calls this — the modal renders busy state
+  // until the response comes back. Errors surface inline in the
+  // modal; we don't addToast for them because the modal itself
+  // shows the message.
+  const handleOpenRefine = useCallback(() => {
+    setRefineError(null);
+    setRefinedEn('');
+    setRefinedZh('');
+    setRefineOpen(true);
+  }, []);
+
+  const handleRunRefine = useCallback(async () => {
+    // Need a slug to call the endpoint — gate on edit mode. The
+    // button is disabled in create mode (no DB row yet), but the
+    // check here is the safety net.
+    if (!slug) {
+      setRefineError(t('adminUniversities.aiRefine.error') + ': ' + 'create a row first');
+      return;
+    }
+    setRefineBusy(true);
+    setRefineError(null);
+    try {
+      // Use raw apiFetch so we can read the server's message on
+      // 4xx/5xx (apiFetchJson throws an ApiError on non-2xx with
+      // .message parsed from the body's `error` field, which is
+      // exactly what we want — but using the raw response lets
+      // us read it inline without exception unwrapping).
+      const res = await apiFetch(
+        '/api/admin/universities/refine-scholarship-info',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            slug,
+            scholarshipInfo: form.scholarshipInfo,
+            scholarshipInfoCn: form.scholarshipInfoCn,
+          }),
+        },
+      );
+      if (!res.ok) {
+        let msg: string | null = null;
+        try {
+          const body = (await res.json()) as { error?: string };
+          if (body && typeof body.error === 'string') msg = body.error;
+        } catch {
+          /* body ignored */
+        }
+        setRefineError(msg || t('adminUniversities.aiRefine.error'));
+        return;
+      }
+      const body = (await res.json()) as { en?: string; zh?: string };
+      setRefinedEn(typeof body.en === 'string' ? body.en : '');
+      setRefinedZh(typeof body.zh === 'string' ? body.zh : '');
+    } catch {
+      setRefineError(t('adminUniversities.aiRefine.error'));
+    } finally {
+      setRefineBusy(false);
+    }
+  }, [slug, form.scholarshipInfo, form.scholarshipInfoCn, t]);
+
+  // Phase 128+: accept callback — `fields` is which of {en, zh}
+  // the admin checked. Populate the underlying form fields only
+  // for the accepted ones; the existing onChange pipeline saves
+  // them on the next Save click. Returning a Promise<void> is
+  // overkill — the modal closes synchronously after this returns.
+  const handleAcceptRefine = useCallback(
+    (
+      fields: { en: boolean; zh: boolean },
+      refined: { en: string; zh: string },
+    ) => {
+      setForm(prev => ({
+        ...prev,
+        scholarshipInfo: fields.en ? refined.en : prev.scholarshipInfo,
+        scholarshipInfoCn: fields.zh ? refined.zh : prev.scholarshipInfoCn,
+      }));
+      setRefineOpen(false);
+      addToast(t('adminUniversities.aiRefine.bothAccepted'), 'success');
+    },
+    [addToast, t],
+  );
+
+  const handleCloseRefine = useCallback(() => {
+    setRefineOpen(false);
+    setRefineError(null);
+  }, []);
+
+  // Phase 128+: kick off the AI call automatically when the modal
+  // opens. We use a one-shot effect (state-driven, not on every
+  // render) so re-opening with a different source text always
+  // re-runs.
+  useEffect(() => {
+    if (refineOpen && !refineBusy && !refinedEn && !refinedZh && !refineError) {
+      void handleRunRefine();
+    }
+    // We intentionally exclude handleRunRefine from deps — its
+    // identity changes when the form fields change, which would
+    // re-trigger the effect every keystroke.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refineOpen]);
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -478,7 +591,32 @@ function UniversityFormInner({ slug }: { slug?: string }) {
 
         {/* Scholarship Information */}
         <div className="bg-white border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-[#1F2937] mb-1">Scholarship Information</h2>
+          <div className="flex items-start justify-between gap-4 mb-1">
+            <h2 className="text-lg font-semibold text-[#1F2937]">Scholarship Information</h2>
+            {/*
+              Phase 128+: AI Refine button. Disabled when:
+              - in create mode (no DB row yet, no slug)
+              - both textareas are empty (no source to refine)
+              - a refine is already in flight
+              The button opens the side-by-side modal; the form
+              state is mutated only when the admin clicks Accept +
+              Apply inside in the modal.
+            */}
+            <button
+              type="button"
+              onClick={handleOpenRefine}
+              disabled={!isEdit || (!form.scholarshipInfo && !form.scholarshipInfoCn)}
+              title={
+                !isEdit
+                  ? 'Save the university first, then come back to refine its scholarship text.'
+                  : 'Refine both English + Chinese scholarship narratives with AI. Review side-by-side before accepting.'
+              }
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-[#9B1B30] text-[#9B1B30] text-xs font-semibold hover:bg-[#9B1B30] hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-[#9B1B30]"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              {t('adminUniversities.aiRefine.button')}
+            </button>
+          </div>
           <p className="text-sm text-[#4B5563] mb-4">
             University-specific scholarship narrative. Shown on the Scholarships tab of the
             public university detail page between the per-program list and the general
@@ -531,6 +669,25 @@ function UniversityFormInner({ slug }: { slug?: string }) {
           </button>
         </div>
       </form>
+
+      {/*
+        Phase 128+: AI Refine modal for scholarship_info + _cn.
+        Kicked off on first open via handleOpenRefine's button
+        click; the modal sits idle until the parent re-renders
+        after the API response lands. Stays mounted until the
+        admin accepts, rejects, or cancels.
+      */}
+      <AiRefineModal
+        open={refineOpen}
+        busy={refineBusy}
+        error={refineError}
+        currentEn={form.scholarshipInfo}
+        currentZh={form.scholarshipInfoCn}
+        refinedEn={refinedEn}
+        refinedZh={refinedZh}
+        onCancel={handleCloseRefine}
+        onAccept={handleAcceptRefine}
+      />
     </div>
   );
 }

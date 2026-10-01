@@ -50,6 +50,11 @@ const ADMIN_AI_LIMITS = {
   // Output can be large (up to 120 rows × 12 fields ≈ 6-8K tokens),
   // so keep it in generate-university territory: 10/15min.
   'parse-programs': 10,
+  // Phase 128+: AI refine of university scholarship_info +
+  // scholarship_info_cn. Short in, short out (two paragraphs × 2
+  // languages ≈ 800-1500 tokens). 10/15min matches the
+  // generate-university budget.
+  'refine-scholarship-info': 10,
 } as const;
 
 export type AdminAIAction = keyof typeof ADMIN_AI_LIMITS;
