@@ -175,18 +175,9 @@ function UniversityFormInner({ slug }: { slug?: string }) {
     }));
   }, []);
 
-  // Phase 128+: open the modal + kick off the AI call. The
-  // button on the form calls this — the modal renders busy state
-  // until the response comes back. Errors surface inline in the
-  // modal; we don't addToast for them because the modal itself
-  // shows the message.
-  const handleOpenRefine = useCallback(() => {
-    setRefineError(null);
-    setRefinedEn('');
-    setRefinedZh('');
-    setRefineOpen(true);
-  }, []);
-
+  // Phase 128+: kick off the AI call. Declared before handleOpenRefine
+  // so the open handler can await it directly (replaces the old
+  // useEffect that raced with the async params resolve).
   const handleRunRefine = useCallback(async () => {
     // Need a slug to call the endpoint — gate on edit mode. The
     // button is disabled in create mode (no DB row yet), but the
@@ -236,6 +227,27 @@ function UniversityFormInner({ slug }: { slug?: string }) {
     }
   }, [slug, form.scholarshipInfo, form.scholarshipInfoCn, t]);
 
+  // Phase 128+: open the modal + kick off the AI call. The
+  // button on the form calls this — the modal renders busy state
+  // until the response comes back. Errors surface inline in the
+  // modal; we don't addToast for them because the modal itself
+  // shows the message. Direct call (no useEffect + dependency
+  // array) so we don't race the async params resolve — the slug
+  // at the moment of click is captured by handleRunRefine's
+  // closure directly.
+  const handleOpenRefine = useCallback(async () => {
+    setRefineError(null);
+    setRefinedEn('');
+    setRefinedZh('');
+    setRefineOpen(true);
+    // Fire-and-forget — the modal opens immediately, busy state
+    // appears, and handleRunRefine captures the LATEST slug from
+    // this render (so even if params is still resolving, the
+    // button-disabled gate already prevented the click from
+    // happening until isEdit=true).
+    await handleRunRefine();
+  }, [handleRunRefine]);
+
   // Phase 128+: accept callback — `fields` is which of {en, zh}
   // the admin checked. Populate the underlying form fields only
   // for the accepted ones; the existing onChange pipeline saves
@@ -261,20 +273,6 @@ function UniversityFormInner({ slug }: { slug?: string }) {
     setRefineOpen(false);
     setRefineError(null);
   }, []);
-
-  // Phase 128+: kick off the AI call automatically when the modal
-  // opens. We use a one-shot effect (state-driven, not on every
-  // render) so re-opening with a different source text always
-  // re-runs.
-  useEffect(() => {
-    if (refineOpen && !refineBusy && !refinedEn && !refinedZh && !refineError) {
-      void handleRunRefine();
-    }
-    // We intentionally exclude handleRunRefine from deps — its
-    // identity changes when the form fields change, which would
-    // re-trigger the effect every keystroke.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refineOpen]);
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
