@@ -15,7 +15,9 @@
  * to study in China" — never "study abroad from China" or any framing
  * that could be misread as China being the origin.
  */
-import { universities, scholarships, type University, type Scholarship } from './data';
+import { cache } from 'react';
+import { universities as staticUniversities, scholarships, type University, type Scholarship } from './data';
+import { getAllUniversitiesMerged } from './data-fetcher';
 
 // ---------------------------------------------------------------------------
 // Cities
@@ -71,14 +73,16 @@ const CITY_TAGLINES: Record<string, { en: string; zh: string }> = {
 };
 
 /**
- * Build the list of cities that have at least one universidade in
- * the data. Slugified lowercase city name; sorted alphabetically by
- * English name for stable URL ordering.
+ * Internal aggregator: build CityInfo[] from a university list. The
+ * slug is `u.city.toLowerCase()`; the per-city tagline falls back
+ * to "Study in {city}." when no curated line exists for the slug.
+ *
+ * Used by both `getCitiesAsync` (live data) and `getCitiesStatic`
+ * (module-load fallback for `generateStaticParams`).
  */
-export const cities: CityInfo[] = (() => {
+function buildCityList(unis: University[]): CityInfo[] {
   const byCity = new Map<string, { name: string; nameCn: string; unis: University[] }>();
-
-  for (const u of universities) {
+  for (const u of unis) {
     const key = u.city.toLowerCase();
     const existing = byCity.get(key);
     if (existing) {
@@ -90,9 +94,9 @@ export const cities: CityInfo[] = (() => {
 
   const list: CityInfo[] = [];
   for (const [slug, info] of byCity) {
-    // Count programas via the universitySlug link. Importing programs
+    // Count programs via the universitySlug link. Importing programs
     // would create a circular dep risk; we approximate program count
-    // by counting non-empty popularPrograms arrays on each universidade.
+    // by counting non-empty popularPrograms arrays on each university.
     const programCount = info.unis.reduce(
       (acc, u) => acc + (u.popularPrograms?.length || 0),
       0,
@@ -109,19 +113,69 @@ export const cities: CityInfo[] = (() => {
       taglineCn,
     });
   }
-
   return list.sort((a, b) => a.name.localeCompare(b.name));
-})();
+}
 
-/** Look up a city by slug. Returns null if not found. */
+/**
+ * Live cities list — fetched from Supabase (DB rows + static
+ * seed merge) at render time, with the same React cache + 60s
+ * process TTL as the other data fetchers. Replaces the old
+ * synchronous `cities` constant, which only saw the 9-row static
+ * seed and silently hid every admin-imported university.
+ *
+ * Replaces the old synchronous `cities` constant — city detail
+ * pages and the hub now `await` this helper instead of reading
+ * the module-level const.
+ */
+export const getCitiesAsync = cache(
+  async (): Promise<CityInfo[]> => {
+    const unis = await getAllUniversitiesMerged();
+    return buildCityList(unis);
+  },
+);
+
+/**
+ * Static fallback cities list — built at module-load time from
+ * the 9-row seed in `src/lib/data.ts`. Used only as the source for
+ * `generateStaticParams` (which can't await) so the build still
+ * enumerates the 6 default city slugs when Supabase is offline.
+ * At request time the page uses `getCitiesAsync` so admin-imported
+ * universities appear within ~60s of import.
+ */
+export const cities: CityInfo[] = buildCityList(staticUniversities);
+
+/** Look up a city by slug. Synchronous — uses the static fallback.
+ *  Async pages should use the `getCityBySlugAsync` helper below so
+ *  they pick up admin-imported cities. */
 export function getCityBySlug(slug: string): CityInfo | null {
   return cities.find((c) => c.slug === slug.toLowerCase()) ?? null;
 }
 
-/** Get universities for a given city slug. */
+/** Async city lookup that reads the live (DB + static merged) list.
+ *  Returns null when the slug isn't in either source. */
+export const getCityBySlugAsync = cache(
+  async (slug: string): Promise<CityInfo | null> => {
+    const list = await getCitiesAsync();
+    return list.find((c) => c.slug === slug.toLowerCase()) ?? null;
+  },
+);
+
+/** Get universities for a given city slug. Synchronous static
+ *  fallback — used by `generateStaticParams` only. */
 export function getUniversitiesByCity(citySlug: string): University[] {
-  return universities.filter((u: University) => u.city.toLowerCase() === citySlug.toLowerCase());
+  return staticUniversities.filter((u: University) => u.city.toLowerCase() === citySlug.toLowerCase());
 }
+
+/** Live universities-by-city helper. Reads from the merged DB+static
+ *  source so every admin-imported university appears on its city
+ *  page within ~60s of import. Cached at the React layer so the
+ *  hub + per-city page collapse to a single DB query per render. */
+export const getUniversitiesByCityAsync = cache(
+  async (citySlug: string): Promise<University[]> => {
+    const unis = await getAllUniversitiesMerged();
+    return unis.filter((u: University) => u.city.toLowerCase() === citySlug.toLowerCase());
+  },
+);
 
 // ---------------------------------------------------------------------------
 // Scholarships-for-country

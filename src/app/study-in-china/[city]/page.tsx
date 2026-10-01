@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { MapPin, GraduationCap, Star, Building, ArrowRight, Award, Globe } from 'lucide-react';
 import UniversityLogo from '@/components/university-logo';
-import { cities, getCityBySlug, getUniversitiesByCity } from '@/lib/seo-data';
+import { cities as citiesStatic, getCitiesAsync, getCityBySlugAsync, getUniversitiesByCityAsync } from '@/lib/seo-data';
 import { getServerT } from '@/lib/server-t';
 import { buildLanguageAlternates } from '@/lib/alternates';
 import { SITE_URL } from "@/lib/site-url";
@@ -17,11 +17,21 @@ import { SITE_URL } from "@/lib/site-url";
  * URL slugs: lowercased English city name (e.g. "beijing"). Chinese
  * search traffic is captured by the alternate URLs we publish in
  * the sitemap.
+ *
+ * Phase 128+ for live data: city + universities are fetched live
+ * from Supabase (merged with the static seed) so admin-imported
+ * universities appear on their city page within ~60s. Static
+ * `generateStaticParams` still enumerates the seeded city slugs
+ * so the build doesn't break when Supabase is offline.
  */
-export const dynamic = 'force-static';
+export const revalidate = 60;
 
 export async function generateStaticParams() {
-  return cities.map((c) => ({ city: c.slug }));
+  // Enumerate from the static seed so the build can pre-compute
+  // the page shells even when Supabase is offline. New cities
+  // created from admin imports are picked up at request time
+  // via Next's dynamic-params fallback.
+  return citiesStatic.map((c) => ({ city: c.slug }));
 }
 
 export async function generateMetadata({
@@ -30,7 +40,9 @@ export async function generateMetadata({
   params: Promise<{ city: string }>;
 }): Promise<Metadata> {
   const { city: citySlug } = await params;
-  const city = getCityBySlug(citySlug);
+  // Async lookup so admin-imported cities get correct OG titles.
+  // Falls back to the static slug for build-time metadata.
+  const city = await getCityBySlugAsync(citySlug);
   if (!city) return { title: 'Not Found' };
 
   const t = await getServerT();
@@ -59,11 +71,14 @@ export default async function CityPage({
   params: Promise<{ city: string }>;
 }) {
   const { city: citySlug } = await params;
-  const city = getCityBySlug(citySlug);
+  const [city, cities, cityUniversities] = await Promise.all([
+    getCityBySlugAsync(citySlug),
+    getCitiesAsync(),
+    getUniversitiesByCityAsync(citySlug),
+  ]);
   if (!city) notFound();
 
   const t = await getServerT();
-  const cityUniversities = getUniversitiesByCity(city.slug);
   // Other cities for cross-linking
   const otherCities = cities.filter((c) => c.slug !== city.slug).slice(0, 5);
 

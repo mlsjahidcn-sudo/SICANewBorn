@@ -247,6 +247,60 @@ export const getAllUniversities = cache(
 );
 
 /**
+ * Merged-static-plus-DB helper used by the SEO city pages
+ * (`/study-in-china` hub + `/study-in-china/[city]` details).
+ *
+ * The previous design read only from `staticUniversities` (the 9-row
+ * seed in `src/lib/data.ts`), which silently hid every
+ * admin-imported university from the city pages — Beijing showed
+ * the 1 static "Peking University" row while the DB actually
+ * contains dozens more universities with that city. This helper
+ * merges: DB rows take precedence on slug (richer data, fresher
+ * edits), static rows fill the gap in dev when Supabase is
+ * unconfigured.
+ *
+ * Returns DB-only when Supabase is reachable and returns rows; falls
+ * back to the static seed otherwise (so dev / offline still render).
+ *
+ * Cached at the React layer (`cache()`) + process layer
+ * (`cachedProcess` with 60s TTL) — same pattern as the rest of the
+ * data fetchers. Per-page revalidation on the city pages is what
+ * gives the SEO pages their freshness; the 60s TTL is the
+ * safety net against stampedes when many pages render in the same
+ * worker.
+ */
+export const getAllUniversitiesMerged = cache(
+  async (): Promise<University[]> => {
+    return cachedProcess('universities:all:merged', async () => {
+      const staticBySlug = new Map<string, University>(
+        staticUniversities.map((u: University) => [u.slug, u]),
+      );
+      // If Supabase is reachable, the DB is the authoritative source
+      // for the cities aggregation. Merge in any static rows whose
+      // slugs don't appear in the DB — preserves dev seed (which
+      // has rows like the original 9 founding universities) when the
+      // DB has been seeded with admin imports that don't overlap.
+      if (isSupabaseServerConfigured() && supabaseServer) {
+        const { data, error } = await supabaseServer
+          .from('universities')
+          .select('*')
+          .order('ranking', { ascending: true });
+        if (!error && data && data.length > 0) {
+          const merged: University[] = data.map(mapUniversity);
+          // Add static-only rows that the DB hasn't replaced.
+          const dbSlugs = new Set(merged.map((u) => u.slug));
+          for (const [slug, u] of staticBySlug) {
+            if (!dbSlugs.has(slug)) merged.push(u);
+          }
+          return merged;
+        }
+      }
+      return staticUniversities;
+    });
+  },
+);
+
+/**
  * Lightweight featured-university fetcher for the home page.
  *
  * The home page only renders the top-N ranked universities (hero

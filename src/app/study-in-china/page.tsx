@@ -1,8 +1,8 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { Building2, GraduationCap, ArrowRight, MapPin } from 'lucide-react';
-import { cities } from '@/lib/seo-data';
-import { universities } from '@/lib/data';
+import { getCitiesAsync } from '@/lib/seo-data';
+import { getAllUniversitiesMerged } from '@/lib/data-fetcher';
 import { getServerT } from '@/lib/server-t';
 import { buildLanguageAlternates } from '@/lib/alternates';
 import { SITE_URL } from "@/lib/site-url";
@@ -12,10 +12,13 @@ import { SITE_URL } from "@/lib/site-url";
  * SICA partner universities. Built for queries like "study in China"
  * and "[city] universities for international students".
  *
- * Page is server-rendered (RSC). City data is derived at module load
- * time from src/lib/data.ts via src/lib/seo-data.ts.
+ * Page is server-rendered (RSC). City data is fetched live at
+ * request time from Supabase (merged with the static seed) so
+ * every admin-imported university appears within ~60s of import.
+ * `revalidate` provides the SEO freshness — each city row is
+ * cached at the edge for one minute before Next re-renders.
  */
-export const dynamic = 'force-static';
+export const revalidate = 60;
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getServerT();
@@ -34,7 +37,15 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function StudyInChinaHub() {
   const t = await getServerT();
-  const totalUniversities = universities.length;
+  // Parallel fetches — `getCitiesAsync` already calls
+  // `getAllUniversitiesMerged` internally, so we issue both
+  // together and let React's cache() de-duplicate to a single DB
+  // query when they share the same process tick.
+  const [cities, merged] = await Promise.all([
+    getCitiesAsync(),
+    getAllUniversitiesMerged(),
+  ]);
+  const totalUniversities = merged.length;
   const totalCities = cities.length;
   const totalPrograms = cities.reduce((acc, c) => acc + c.programCount, 0);
 
