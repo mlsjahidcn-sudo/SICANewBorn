@@ -4,6 +4,7 @@ import { I18nProvider } from '@/lib/i18n';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { CscaPrepBanner } from '@/components/csca-prep-banner';
+import { WhatsAppGroupPopup } from '@/components/whatsapp-group-popup';
 import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import type { Locale } from '@/lib/i18n-translations';
@@ -70,6 +71,7 @@ export function ClientLayout({
         <WhatsAppFloat />
         <StickyContact />
         <ExitIntentPopup />
+        <WhatsAppGroupPopup />
       </div>
     </I18nProvider>
   );

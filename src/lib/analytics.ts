@@ -305,6 +305,26 @@ export interface AnalyticsEventMap {
     /** Page locale. */
     locale: 'en' | 'zh';
   };
+  // -----------------------------------------------------------------
+  // WhatsApp group join popup (home + universities only).
+  // -----------------------------------------------------------------
+  /** User clicked the WhatsApp group join CTA in the popup. */
+  whatsapp_popup_click: {
+    /** Page locale. */
+    locale: 'en' | 'zh';
+    /** Pathname at the moment of click — helps measure which
+     *  page drove the most group joins. */
+    path: string;
+  };
+  /** User dismissed the popup with the X (hidden for the session). */
+  whatsapp_popup_dismiss: {
+    /** What closed the popup. */
+    source: 'close_button' | 'cta_click';
+    /** Page locale. */
+    locale: 'en' | 'zh';
+    /** Pathname at the moment of dismiss. */
+    path: string;
+  };
 }
 
 /** Convenience alias for the event-name union. */
