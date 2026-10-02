@@ -49,6 +49,17 @@ export default function UniversityLogo({ src, variant = 'card', className = '' }
         alt="University logo"
         width={size}
         height={size}
+        // Phase 129++: drop `unoptimized` so Next/Image can resize the
+        // 1024px source PNG down to the actual display size (48-88px)
+        // and reformat to WebP/AVIF. The previous `unoptimized` made
+        // every <img> download the full 1024px asset — directly the
+        // PageSpeed "resource load > 10% LCP" warning, since the home
+        // hero strip + /universities listings + compare pages all
+        // show multiple logos above the fold.
+        // cdn.urongda.com is on the next.config.ts remotePatterns
+        // allowlist (Phase 91), so the optimizer can proxy it.
+        sizes={isCard || isSidebar ? '48px' : isDirectory ? '64px' : '88px'}
+        quality={75}
         className={
           isCard
             ? 'h-12 w-12 object-contain'
@@ -59,7 +70,6 @@ export default function UniversityLogo({ src, variant = 'card', className = '' }
                 : 'h-[64px] w-[64px] object-contain rounded-full'
         }
         onError={() => setHasError(true)}
-        unoptimized
       />
     </div>
   );
