@@ -28,11 +28,18 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const status = searchParams.get('status');
+  // parseInt's 2nd arg is the RADIX (not a minimum) — an earlier version
+  // passed 1 there, which is invalid and returns NaN for every input,
+  // turning the range into `0-NaN` → PostgREST returned 0 rows while
+  // the exact count still said 113. Parse with radix 10, then clamp:
+  // missing/garbage → DEFAULT_LIMIT, then cap at MAX_LIMIT.
+  const rawLimit = parseInt(searchParams.get('limit') || String(DEFAULT_LIMIT), 10);
   const limit = Math.min(
-    Math.max(parseInt(searchParams.get('limit') || String(DEFAULT_LIMIT), 1), MAX_LIMIT),
+    Number.isFinite(rawLimit) && rawLimit > 0 ? rawLimit : DEFAULT_LIMIT,
     MAX_LIMIT,
   );
-  const offset = Math.max(parseInt(searchParams.get('offset') || '0', 10), 0);
+  const rawOffset = parseInt(searchParams.get('offset') || '0', 10);
+  const offset = Number.isFinite(rawOffset) && rawOffset > 0 ? rawOffset : 0;
 
   const supabase = getSupabaseServer();
   if (!supabase) {
