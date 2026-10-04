@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Search, Filter, ClipboardList, Mail, MessageCircle, Calendar, GraduationCap, FileText, Loader2, AlertCircle, CheckCircle, ExternalLink, Download } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Search, Filter, ClipboardList, Mail, MessageCircle, Calendar, GraduationCap, FileText, Loader2, AlertCircle, CheckCircle, ExternalLink, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,9 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { apiFetchJson, ApiError } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
+import { useUrlState } from '@/hooks/use-url-state';
+
+const PAGE_SIZE = 20;
 
 interface Assessment {
   id: string;
@@ -34,6 +37,13 @@ interface Assessment {
   user_agent: string | null;
   created_at: string;
   updated_at: string | null;
+}
+
+interface AssessmentsResponse {
+  assessments: Assessment[];
+  total: number;
+  limit: number;
+  offset: number;
 }
 
 const STATUS_COLOR: Record<string, string> = {
@@ -78,13 +88,18 @@ function formatBytes(bytes: number | null) {
 export default function AssessmentsPage() {
   const { t } = useI18n();
   const [assessments, setAssessments] = useState<Assessment[]>([]);
+  const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useUrlState<string>('status', 'all');
+  const [page, setPage] = useUrlState<number>('page', 1, { coerce: (v) => Math.max(1, parseInt(v || '1', 10) || 1) });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  const offset = (page - 1) * PAGE_SIZE;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const load = async () => {
     setIsLoading(true);
@@ -92,11 +107,13 @@ export default function AssessmentsPage() {
     try {
       const params = new URLSearchParams();
       if (statusFilter !== 'all') params.set('status', statusFilter);
-      params.set('limit', '100');
-      const res = await apiFetchJson<{ assessments: Assessment[] }>(
+      params.set('limit', String(PAGE_SIZE));
+      params.set('offset', String(offset));
+      const res = await apiFetchJson<AssessmentsResponse>(
         `/api/admin/assessments?${params}`,
       );
       setAssessments(res.assessments || []);
+      setTotal(res.total ?? 0);
     } catch (err) {
       setLoadError(err instanceof ApiError ? err.message : t('adminAssessments.errorLoad'));
     } finally {
@@ -105,23 +122,38 @@ export default function AssessmentsPage() {
   };
 
   useEffect(() => {
-    load();
+    // Reset to page 1 whenever the status filter changes — we don't
+    // carry offset N+1 across filters (different totals).
+    setPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter]);
 
-  const filtered = assessments.filter((a) => {
-    if (!searchQuery) return true;
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter, page]);
+
+  const filtered = useMemo(() => {
+    if (!searchQuery) return assessments;
     const q = searchQuery.toLowerCase();
-    return (
-      a.first_name?.toLowerCase().includes(q) ||
-      a.last_name?.toLowerCase().includes(q) ||
-      a.email?.toLowerCase().includes(q) ||
-      a.whatsapp?.toLowerCase().includes(q) ||
-      a.country?.toLowerCase().includes(q)
+    return assessments.filter(
+      (a) =>
+        a.first_name?.toLowerCase().includes(q) ||
+        a.last_name?.toLowerCase().includes(q) ||
+        a.email?.toLowerCase().includes(q) ||
+        a.whatsapp?.toLowerCase().includes(q) ||
+        a.country?.toLowerCase().includes(q),
     );
-  });
+  }, [assessments, searchQuery]);
 
   const selected = assessments.find((a) => a.id === selectedId) || null;
+
+  const subtitle = (() => {
+    if (total === 0) return t('adminAssessments.subtitle', { count: 0 });
+    const from = offset + 1;
+    const to = Math.min(offset + PAGE_SIZE, total);
+    return t('adminAssessments.subtitlePaginated', { from, to, total });
+  })();
 
   const updateStatus = async (id: string, status: Assessment['status']) => {
     setUpdatingId(id);
@@ -166,9 +198,7 @@ export default function AssessmentsPage() {
             <ClipboardList className="h-6 w-6 text-[#1B2A4A]" />
             {t('adminAssessments.title')}
           </h1>
-          <p className="text-sm text-gray-600 mt-1">
-            {t('adminAssessments.subtitle', { count: assessments.length })}
-          </p>
+          <p className="text-sm text-gray-600 mt-1">{subtitle}</p>
         </div>
       </div>
 
@@ -423,6 +453,41 @@ export default function AssessmentsPage() {
           </Card>
         )}
       </div>
+
+      {total > 0 && (
+        <div className="flex items-center justify-between text-sm text-gray-600">
+          <div>
+            {t('adminAssessments.pagination', {
+              from: offset + 1,
+              to: Math.min(offset + PAGE_SIZE, total),
+              total,
+            })}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page <= 1}
+              onClick={() => setPage(page - 1)}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              {t('adminAssessments.prev')}
+            </Button>
+            <span className="text-xs text-gray-500 px-2">
+              {t('adminAssessments.pageXofY', { page, totalPages })}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= totalPages}
+              onClick={() => setPage(page + 1)}
+            >
+              {t('adminAssessments.next')}
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

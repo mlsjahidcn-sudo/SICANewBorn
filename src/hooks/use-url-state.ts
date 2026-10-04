@@ -18,25 +18,36 @@ import { useCallback, useEffect, useRef, useState } from 'react';
  * the empty string plus the valid filter values. The hook reads the
  * URL on mount, parses via `coerce` (or identity), and falls back
  * to `initial` if the URL has nothing for this key.
+ *
+ * `searchParams` is optional: omit it and the hook reads from
+ * `window.location.search` itself (client component shortcut that
+ * avoids the `useSearchParams()` Suspense boundary).
  */
-export function useUrlState<T extends string>(
+function readFromWindow(name: string): string | null {
+  if (typeof window === 'undefined') return null;
+  return new URL(window.location.href).searchParams.get(name);
+}
+
+type UrlStateValue = string | number | boolean;
+
+export function useUrlState<T extends UrlStateValue>(
   name: string,
   initial: T,
   opts: {
-    searchParams: URLSearchParams;
+    searchParams?: URLSearchParams;
     /** Parse the URL string into the typed value. Return undefined to fall back to `initial`. */
     coerce?: (raw: string) => T | undefined;
     /** Debounce writes back to the URL (useful for the search input). */
     debounceMs?: number;
     /** Don't write empty / "all" values back. Default: true. */
     skipEmpty?: boolean;
-  },
+  } = {},
 ): [T, (next: T) => void] {
   const { searchParams, coerce, debounceMs = 0, skipEmpty = true } = opts;
-  const fromUrl = searchParams.get(name);
+  const fromUrl = searchParams ? searchParams.get(name) : readFromWindow(name);
   let parsed: T | null = null;
   if (fromUrl != null && fromUrl !== '') {
-    parsed = coerce ? coerce(fromUrl) ?? null : (fromUrl as T);
+    parsed = coerce ? coerce(fromUrl) ?? null : (fromUrl as unknown as T);
   }
   const [value, setValue] = useState<T>(parsed ?? initial);
   const writeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -47,14 +58,16 @@ export function useUrlState<T extends string>(
       if (typeof window === 'undefined') return;
       const url = new URL(window.location.href);
       const str = String(next);
-      if (skipEmpty && (str === '' || str === 'all')) {
+      const isEmpty =
+        str === '' || str === 'all' || (typeof next === 'number' && Number.isNaN(next));
+      if (skipEmpty && isEmpty) {
         url.searchParams.delete(name);
       } else if (str !== lastWritten.current) {
         url.searchParams.set(name, str);
       } else {
         return; // no-op
       }
-      lastWritten.current = skipEmpty && (str === '' || str === 'all') ? null : str;
+      lastWritten.current = isEmpty ? null : str;
       // history.replaceState is what Next docs recommend for updating
       // the URL bar without re-running server components.
       window.history.replaceState({}, '', url.toString());
