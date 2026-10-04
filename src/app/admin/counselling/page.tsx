@@ -753,9 +753,9 @@ export default function AdminCounsellingPage() {
                 : ''}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1">
+              <label className="block text-sm font-medium text-[#1F2937] mb-2">
                 {t('adminCounselling.reschedulePickDate')}
               </label>
               {rescheduleLoading && rescheduleDates.length === 0 ? (
@@ -766,7 +766,7 @@ export default function AdminCounsellingPage() {
               ) : rescheduleDates.length === 0 ? (
                 <div className="text-sm text-gray-500 py-2">{t('adminCounselling.rescheduleNoSlots')}</div>
               ) : (
-                <div className="flex gap-2 overflow-x-auto pb-2">
+                <div className="flex flex-wrap gap-2 pb-1">
                   {rescheduleDates.map((date) => (
                     <button
                       key={date}
@@ -775,7 +775,7 @@ export default function AdminCounsellingPage() {
                         setRescheduleDate(date);
                         setReschedulePickedStart(null);
                       }}
-                      className={`flex-shrink-0 border px-4 py-2 text-sm font-medium transition-colors ${
+                      className={`border px-4 py-2 text-sm font-medium transition-colors ${
                         rescheduleDate === date
                           ? 'border-[#9B1B30] bg-[#9B1B30] text-white'
                           : 'border-gray-300 bg-white text-[#1F2937] hover:border-[#9B1B30] hover:text-[#9B1B30]'
@@ -788,7 +788,7 @@ export default function AdminCounsellingPage() {
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1">
+              <label className="block text-sm font-medium text-[#1F2937] mb-2">
                 {t('adminCounselling.reschedulePickSlot')}
               </label>
               {rescheduleLoading ? (
@@ -799,14 +799,14 @@ export default function AdminCounsellingPage() {
               ) : rescheduleSlots.length === 0 ? (
                 <div className="text-sm text-gray-500 py-2">{t('adminCounselling.rescheduleNoSlots')}</div>
               ) : (
-                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-7 gap-2">
                   {rescheduleSlots.map((s) => (
                     <button
                       key={s.start}
                       type="button"
                       disabled={!s.available}
                       onClick={() => setReschedulePickedStart(s.start)}
-                      className={`border px-2 py-2 text-sm font-medium transition-colors ${
+                      className={`border px-2 py-2.5 text-sm font-medium transition-colors ${
                         reschedulePickedStart === s.start
                           ? 'border-[#9B1B30] bg-[#9B1B30] text-white'
                           : s.available
@@ -841,10 +841,10 @@ export default function AdminCounsellingPage() {
       {/* Phase 125: Propose-time dialog (mirrors Reschedule UI but
           calls proposedSlotStartIso instead of slotStartIso) */}
       <Dialog open={!!proposeBooking} onOpenChange={(open) => !open && closePropose()}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader className="space-y-1.5">
             <DialogTitle>{t('adminCounselling.proposeTitle')}</DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-sm leading-relaxed">
               {proposeBooking
                 ? t('adminCounselling.proposeBody', {
                     name: proposeBooking.name,
@@ -853,20 +853,20 @@ export default function AdminCounsellingPage() {
                 : ''}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1">
+              <label className="block text-sm font-medium text-[#1F2937] mb-2">
                 {t('adminCounselling.reschedulePickDate')}
               </label>
               {proposeLoading && proposeDates.length === 0 ? (
-                <div className="flex items-center gap-2 text-sm text-gray-500 py-3">
+                <div className="flex items-center gap-2 text-sm text-gray-500 py-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   {t('adminCounselling.loading')}
                 </div>
               ) : proposeDates.length === 0 ? (
                 <div className="text-sm text-gray-500 py-2">{t('adminCounselling.rescheduleNoSlots')}</div>
               ) : (
-                <div className="flex gap-2 overflow-x-auto pb-2">
+                <div className="flex flex-wrap gap-2 pb-1">
                   {proposeDates.map((date) => (
                     <button
                       key={date}
@@ -875,7 +875,7 @@ export default function AdminCounsellingPage() {
                         setProposeDate(date);
                         setProposePickedStart(null);
                       }}
-                      className={`flex-shrink-0 border px-4 py-2 text-sm font-medium transition-colors ${
+                      className={`border px-4 py-2 text-sm font-medium transition-colors ${
                         proposeDate === date
                           ? 'border-[#9B1B30] bg-[#9B1B30] text-white'
                           : 'border-gray-300 bg-white text-[#1F2937] hover:border-[#9B1B30] hover:text-[#9B1B30]'
@@ -888,7 +888,7 @@ export default function AdminCounsellingPage() {
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1">
+              <label className="block text-sm font-medium text-[#1F2937] mb-2">
                 {t('adminCounselling.proposePickSlot')}
               </label>
               {proposeLoading ? (
@@ -899,14 +899,14 @@ export default function AdminCounsellingPage() {
               ) : proposeSlots.length === 0 ? (
                 <div className="text-sm text-gray-500 py-2">{t('adminCounselling.rescheduleNoSlots')}</div>
               ) : (
-                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-7 gap-2">
                   {proposeSlots.map((s) => (
                     <button
                       key={s.start}
                       type="button"
                       disabled={!s.available}
                       onClick={() => setProposePickedStart(s.start)}
-                      className={`border px-2 py-2 text-sm font-medium transition-colors ${
+                      className={`border px-2 py-2.5 text-sm font-medium transition-colors ${
                         proposePickedStart === s.start
                           ? 'border-[#9B1B30] bg-[#9B1B30] text-white'
                           : s.available
