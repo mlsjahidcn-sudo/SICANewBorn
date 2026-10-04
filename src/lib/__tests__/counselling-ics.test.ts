@@ -77,12 +77,32 @@ describe('buildCounsellingIcs', () => {
     expect(desc).toContain(`Meeting link: https://zoom.us/j/${'9'.repeat(160)}`);
   });
 
-  it('contains a 1-hour display alarm and STATUS:CONFIRMED', () => {
-    const ics = buildCounsellingIcs(BASE);
-    expect(ics).toContain('TRIGGER:-PT1H');
-    expect(ics).toContain('ACTION:DISPLAY');
-    expect(ics).toContain('STATUS:CONFIRMED');
-    expect(ics).toContain('BEGIN:VALARM');
-    expect(ics).toContain('END:VALARM');
+  it('uses a locale-aware PRODID and a 5-min VALARM with useful copy', () => {
+    const en = buildCounsellingIcs(BASE);
+    expect(line(en, 'PRODID:')).toBe('PRODID:-//SICA//Study in China Academy//Counselling//EN');
+    expect(en).toContain('TRIGGER:-PT5M');
+    expect(en).toContain('ACTION:DISPLAY');
+    expect(en).toContain('STATUS:CONFIRMED');
+    expect(en).toContain('BEGIN:VALARM');
+    expect(en).toContain('END:VALARM');
+    // VALARM description names the slot in Beijing time so the calendar
+    // pop-up is informative.
+    expect(en).toMatch(/DESCRIPTION:.*Beijing/);
+
+    const zh = buildCounsellingIcs({ ...BASE, locale: 'zh' });
+    expect(line(zh, 'PRODID:')).toBe('PRODID:-//SICA//Study in China Academy//Counselling//ZH');
+    // zh VALARM copy is bilingual (en + zh joined by ·).
+    expect(unfold(zh).join('\n')).toMatch(/DESCRIPTION:.*Beijing.*Beijing/);
+  });
+
+  it('adds a clickable URL line when meetingLink is provided', () => {
+    const linked = buildCounsellingIcs(BASE);
+    expect(line(linked, 'URL:')).toBe(`URL:${BASE.meetingLink}`);
+    const bare = buildCounsellingIcs({ ...BASE, meetingLink: null });
+    expect(line(bare, 'URL:')).toBeUndefined();
+  });
+
+  it('marks the event as TRANSP:OPAQUE so it doesn’t look like free time', () => {
+    expect(buildCounsellingIcs(BASE)).toContain('TRANSP:OPAQUE');
   });
 });

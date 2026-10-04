@@ -72,9 +72,36 @@ function icsTimestamp(instant: Date): string {
   );
 }
 
+function formatBeiHourMinute(instant: Date): string {
+  // "HH:mm, 09:00" in Beijing time, used for VALARM description so the
+  // calendar pop-up says something useful ("10:00 (Beijing)") instead
+  // of just "SICA Free Counselling Session — Wei Zhang".
+  const hhmm = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Shanghai',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(instant);
+  const day = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Shanghai',
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  }).format(instant);
+  return `${day} ${hhmm} (Beijing)`;
+}
+
 /**
  * Build the .ics file content for one confirmed counselling session.
  * The body uses CRLF line endings per RFC 5545.
+ *
+ * UTC-anchored (DTSTART ends in Z). Every major client renders Z as
+ * the viewer's local time, so an event stored at 01:00:00Z is shown
+ * at the right hour in Beijing (UTC+8), São Paulo (UTC-3), Tokyo
+ * (UTC+9), etc. The 24h + 2h email reminders (Phase 123) handle
+ * advance notice; the calendar client shows the event in the
+ * student's local time. No VTIMEZONE block needed for an international
+ * audience — Z is more correct than any fixed offset.
  */
 export function buildCounsellingIcs(input: CounsellingIcsInput): string {
   const start =
@@ -97,10 +124,19 @@ export function buildCounsellingIcs(input: CounsellingIcsInput): string {
         input.meetingLink ? `Meeting link: ${input.meetingLink}` : 'The meeting link will follow by email.',
         'To reschedule or cancel, reply to your confirmation email or write to info@studyinchina.academy.',
       ];
+  const localeTag = (zh ? 'zh' : 'en').toUpperCase();
+  // Calendar pop-up copy: zh gets a bilingual reminder so the student
+  // always sees both languages in the notification.
+  const alarmSummaryZh = `SICA 免费留学咨询 — ${formatBeiHourMinute(start)}`;
+  const alarmSummaryEn = `SICA counselling session — ${formatBeiHourMinute(start)}`;
+  const alarmDescription = zh
+    ? `${alarmSummaryZh} · ${alarmSummaryEn}`
+    : alarmSummaryEn;
+
   const rawLines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//SICA//Study in China Academy//Counselling//EN',
+    `PRODID:-//SICA//Study in China Academy//Counselling//${localeTag}`,
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     'BEGIN:VEVENT',
@@ -111,11 +147,18 @@ export function buildCounsellingIcs(input: CounsellingIcsInput): string {
     `SUMMARY:${escapeText(summary)}`,
     `DESCRIPTION:${escapeText(descriptionLines.join('\n'))}`,
     `LOCATION:${escapeText(input.meetingLink ?? 'Online')}`,
+    ...(input.meetingLink ? [`URL:${escapeText(input.meetingLink)}`] : []),
     'STATUS:CONFIRMED',
+    'TRANSP:OPAQUE',
+    // VALARM fires 5 minutes before the event — appropriate for a
+    // 10-minute session (the original -PT1H was 9:50am for a 10:00am
+    // session, which felt random; SICA's 24h + 2h email reminders
+    // already cover the "earlier that day" and "earlier that morning"
+    // windows).
     'BEGIN:VALARM',
-    'TRIGGER:-PT1H',
+    'TRIGGER:-PT5M',
     'ACTION:DISPLAY',
-    `DESCRIPTION:${escapeText(summary)}`,
+    `DESCRIPTION:${escapeText(alarmDescription)}`,
     'END:VALARM',
     'END:VEVENT',
     'END:VCALENDAR',
