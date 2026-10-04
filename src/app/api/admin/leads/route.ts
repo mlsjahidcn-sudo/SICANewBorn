@@ -122,6 +122,37 @@ export async function GET(request: NextRequest) {
     type === 'all' ? ['contact', 'chat', 'assessment'] : [type];
 
   // 3 parallel queries (or 1 if filtered by type)
+  // Per-source counts (cheap: head:true, no row bodies, just exact count).
+  // The earlier code derived counts from `rows.length`, which silently
+  // capped the displayed total at MAX_LIMIT and made counts.assessment
+  // stuck at 100 even when there were 350 actual rows. Now we always
+  // ask the DB for the real total.
+  const countTasks = callTables.map(async (t) => {
+    const builder = supabase
+      .from(tableFor(t))
+      .select('*', { count: 'exact', head: true });
+    if (status) builder.eq('status', status);
+    if (country) builder.ilike('country', `%${country}%`);
+    if (assigneeFilter === 'unassigned') {
+      builder.is('assigned_to', null);
+    } else if (assigneeFilter === 'me') {
+      builder.eq('assigned_to', auth.user.id);
+    } else if (assigneeFilter) {
+      builder.eq('assigned_to', assigneeFilter);
+    }
+    if (from) builder.gte('created_at', `${from}T00:00:00Z`);
+    if (to) builder.lte('created_at', `${to}T23:59:59Z`);
+    const { count, error } = await builder;
+    if (error) throw new Error(`[${t}] count ${error.message}`);
+    return { type: t, count: count ?? 0 };
+  });
+  const countResults = await Promise.all(countTasks);
+  const counts = { contact: 0, chat: 0, assessment: 0, total: 0 };
+  for (const { type: t, count } of countResults) {
+    counts[t] = count;
+  }
+  counts.total = counts.contact + counts.chat + counts.assessment;
+
   const tasks = callTables.map(async (t) => {
     const builder = supabase
       .from(tableFor(t))
@@ -159,15 +190,11 @@ export async function GET(request: NextRequest) {
 
   // Convert to unified shape
   const all: UnifiedLead[] = [];
-  const counts = { contact: 0, chat: 0, assessment: 0, total: 0 };
   for (const { type: t, rows } of results) {
-    counts[t] = rows.length;
     for (const r of rows as Array<Record<string, unknown>>) {
       all.push(toUnified(t, r));
     }
   }
-  counts.total = all.length;
-
   // Merge sort by created_at desc
   all.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
 
@@ -189,7 +216,11 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     leads: filtered,
-    total: filtered.length,
+    // Without the q filter, counts.total is the real DB total across
+    // all 3 sources. With the q filter, the JS-side post-merge slice
+    // is what the user is actually seeing — exact for the current page,
+    // a floor for the rest of the page.
+    total: q ? filtered.length : counts.total,
     counts,
     filters: { applied: { type, status, country, assignee, from, to, q } },
   });
