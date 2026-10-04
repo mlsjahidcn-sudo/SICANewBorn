@@ -26,6 +26,16 @@
 export const WHATSAPP_PHONE = '8617325764171';
 
 /**
+ * Canonical SICA student-community WhatsApp group invite link
+ * (base form, no UTMs). Single source of truth so the popup, the
+ * email composer, and any future surface never drift apart — same
+ * philosophy as WHATSAPP_PHONE above. Append campaign UTMs at the
+ * call site (`${WHATSAPP_GROUP_URL}&utm_source=...` — note the
+ * base already carries a query string, so join with `&`).
+ */
+export const WHATSAPP_GROUP_URL = 'https://chat.whatsapp.com/HCgeJ6Di9D20kpyiMUHfRO?s=cl&p=i&mlu=4';
+
+/**
  * Build a `wa.me/` URL with a pre-filled message. The message is
  * URL-encoded so newlines / emoji / non-ASCII characters survive
  * transit through TikTok/YouTube description fields.

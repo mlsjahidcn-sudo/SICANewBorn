@@ -3057,6 +3057,31 @@ export const translations: Record<Locale, Record<string, string>> = {
     // (list pages only — detail pages deferred to Phase 44b).
     // ────────────────────────────────────────────────────────────────
 
+    // Send email composer dialog (Phase 136) — shared by /admin/leads
+    // and /admin/students
+    'adminSendEmail.sendEmail': 'Send email',
+    'adminSendEmail.title': 'Compose email',
+    'adminSendEmail.to': 'To',
+    'adminSendEmail.themeLabel': 'What should this email do?',
+    'adminSendEmail.themeHint':
+      'Describe the theme — the AI drafts the subject and body with the right site links (WhatsApp group, 1:1 WhatsApp chat, free 10-minute consultation, scholarships…).',
+    'adminSendEmail.themePlaceholder': 'e.g. Invite them to book a free 10-minute consultation',
+    'adminSendEmail.generate': 'Generate with AI',
+    'adminSendEmail.generating': 'Generating…',
+    'adminSendEmail.subjectLabel': 'Subject',
+    'adminSendEmail.subjectPlaceholder': 'Email subject',
+    'adminSendEmail.bodyLabel': 'Body',
+    'adminSendEmail.bodyPlaceholder': 'Write the email body, or generate a draft with AI above.',
+    'adminSendEmail.editHint': 'You can edit the draft freely before sending.',
+    'adminSendEmail.sendTest': 'Send test to me',
+    'adminSendEmail.send': 'Send',
+    'adminSendEmail.sent': 'Email sent ✓',
+    'adminSendEmail.testSent': 'Test email sent to your inbox ✓',
+    'adminSendEmail.dryRunNotice':
+      'Logged as a dry-run — the outgoing mail connection is not configured on this server, nothing was delivered.',
+    'adminSendEmail.errorGenerate': 'AI generation failed — try again.',
+    'adminSendEmail.errorSend': 'Sending failed — try again.',
+
     // /admin/students — list page
     'adminStudents.title': 'Students',
     'adminStudents.subtitle': 'Manage all students (Offline and Online)',
@@ -7750,6 +7775,30 @@ export const translations: Record<Locale, Record<string, string>> = {
     // Phase 44: Admin Portal — students / leads / programs / scholarships
     // (list pages only — detail pages deferred to Phase 44b).
     // ────────────────────────────────────────────────────────────────
+
+    // Send email composer dialog (Phase 136) — shared by /admin/leads
+    // and /admin/students
+    'adminSendEmail.sendEmail': '发送邮件',
+    'adminSendEmail.title': '撰写邮件',
+    'adminSendEmail.to': '收件人',
+    'adminSendEmail.themeLabel': '这封邮件要做什么？',
+    'adminSendEmail.themeHint':
+      '描述主题 — AI 会自动起草标题和正文，并附上网站的相关链接（WhatsApp 群、一对一 WhatsApp 咨询、免费 10 分钟在线咨询、奖学金等）。',
+    'adminSendEmail.themePlaceholder': '例如：邀请学生预约免费 10 分钟在线咨询',
+    'adminSendEmail.generate': 'AI 生成',
+    'adminSendEmail.generating': '生成中…',
+    'adminSendEmail.subjectLabel': '标题',
+    'adminSendEmail.subjectPlaceholder': '邮件标题',
+    'adminSendEmail.bodyLabel': '正文',
+    'adminSendEmail.bodyPlaceholder': '编写邮件正文，或使用上方 AI 生成草稿。',
+    'adminSendEmail.editHint': '发送前可随意修改草稿。',
+    'adminSendEmail.sendTest': '先发测试邮件给自己',
+    'adminSendEmail.send': '发送',
+    'adminSendEmail.sent': '邮件已发送 ✓',
+    'adminSendEmail.testSent': '测试邮件已发送到您的邮箱 ✓',
+    'adminSendEmail.dryRunNotice': '已记录为试运行 — 本服务器未配置外发邮件服务，邮件未实际投递。',
+    'adminSendEmail.errorGenerate': 'AI 生成失败，请重试。',
+    'adminSendEmail.errorSend': '发送失败，请重试。',
 
     // /admin/students — list page
     'adminStudents.title': '学生',

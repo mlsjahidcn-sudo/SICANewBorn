@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { X, MessageCircle, GraduationCap, Newspaper, Calendar, FileText, ArrowRight } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { track } from '@/lib/analytics';
+import { WHATSAPP_GROUP_URL as WHATSAPP_GROUP_URL_BASE } from '@/lib/contact';
 
 /**
  * WhatsAppGroupPopup — site-wide join-our-WhatsApp-group popup.
@@ -16,8 +17,8 @@ import { track } from '@/lib/analytics';
  * server-rendered HTML reflects the user's previous choice and the
  * popup doesn't flash back in for users who already dismissed.
  *
- * CTA is a WhatsApp group invite link — currently hardcoded (per
- * the 2026-10-01 scope decision). UTMs are appended so SICA's own
+ * CTA is a WhatsApp group invite link — base imported from
+ * src/lib/contact.ts (single source of truth). UTMs are appended so SICA's own
  * analytics can attribute the click source.
  *
  * Lives in ClientLayout alongside the existing CSCA prep banner.
@@ -26,9 +27,11 @@ import { track } from '@/lib/analytics';
  * keeps the popup out of the auth portals automatically; this
  * filter narrows it further to "home + universities only".
  */
+// Base invite link lives in src/lib/contact.ts (single source of
+// truth, shared with the admin email composer). The popup appends
+// its own campaign UTMs.
 const WHATSAPP_GROUP_URL =
-  'https://chat.whatsapp.com/HCgeJ6Di9D20kpyiMUHfRO?s=cl&p=i&mlu=4' +
-  '&utm_source=sica&utm_medium=popup&utm_campaign=whatsapp_group';
+  WHATSAPP_GROUP_URL_BASE + '&utm_source=sica&utm_medium=popup&utm_campaign=whatsapp_group';
 
 const DISMISS_KEY = 'sica_whatsapp_popup_dismissed';
 const TRIGGER_DELAY_MS = 3000;

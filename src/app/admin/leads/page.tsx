@@ -48,6 +48,7 @@ import {
 import { apiFetch, apiFetchJson, ApiError } from '@/lib/api-client';
 import { downloadCsvViaApi } from '@/lib/download-csv';
 import { Badge } from '@/components/ui/badge';
+import { SendEmailDialog } from '@/components/admin/SendEmailDialog';
 import { useI18n } from '@/lib/i18n';
 import {
   AlertDialog,
@@ -156,6 +157,9 @@ export default function LeadsPage() {
   const [pendingDelete, setPendingDelete] = useState<UnifiedLead | null>(null);
   const [pendingBulkDelete, setPendingBulkDelete] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
+
+  // Phase 136 — send-email composer target
+  const [emailLead, setEmailLead] = useState<UnifiedLead | null>(null);
 
   const deleteSingle = async (lead: UnifiedLead) => {
     setDeleteBusy(true);
@@ -706,6 +710,20 @@ export default function LeadsPage() {
                         <p className="text-xs text-gray-400 mt-2">{formatDate(lead.created_at)}</p>
                       </div>
                       <ArrowRight className="h-4 w-4 text-gray-400 flex-shrink-0 mt-1" />
+                      {lead.email && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          aria-label={t('adminSendEmail.sendEmail')}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEmailLead(lead);
+                          }}
+                          className="text-gray-400 hover:text-[#1B2A4A] hover:bg-[#1B2A4A]/5"
+                        >
+                          <Mail className="h-4 w-4" />
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         variant="ghost"
@@ -782,6 +800,20 @@ export default function LeadsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {/* Phase 136 — AI-assisted email composer */}
+      <SendEmailDialog
+        open={!!emailLead}
+        onOpenChange={(o) => !o && setEmailLead(null)}
+        target={
+          emailLead
+            ? { kind: 'lead', leadId: emailLead.lead_id, leadType: emailLead.lead_type }
+            : null
+        }
+        toEmail={emailLead?.email ?? null}
+        toName={emailLead?.name ?? null}
+        country={emailLead?.country ?? null}
+        notes={emailLead?.message ?? null}
+      />
     </div>
   );
 }

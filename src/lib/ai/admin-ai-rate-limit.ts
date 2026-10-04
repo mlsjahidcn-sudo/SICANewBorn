@@ -55,6 +55,10 @@ const ADMIN_AI_LIMITS = {
   // languages ≈ 800-1500 tokens). 10/15min matches the
   // generate-university budget.
   'refine-scholarship-info': 10,
+  // Phase 136: AI email composer for the admin send-email dialog.
+  // Short output (~300-500 tokens). 20/15min — it's a per-lead
+  // action, so a busy outreach hour stays well under it.
+  'compose-email': 20,
 } as const;
 
 export type AdminAIAction = keyof typeof ADMIN_AI_LIMITS;

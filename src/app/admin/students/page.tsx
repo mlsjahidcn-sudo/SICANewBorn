@@ -19,6 +19,7 @@ import {
   ChevronsUpDown,
   AlertCircle,
   CheckSquare,
+  Mail,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,6 +41,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { apiFetch, apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 import type { AdminStudent } from '@/lib/student-mapper';
+import { SendEmailDialog } from '@/components/admin/SendEmailDialog';
 
 const PAGE_SIZE = 20;
 
@@ -58,6 +60,8 @@ export default function AdminStudentsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<AdminStudent | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  // Phase 136 — AI-assisted send-email composer target
+  const [emailStudent, setEmailStudent] = useState<AdminStudent | null>(null);
   // Phase 85 — student delete refactor. The single suspend dialog was
   // replaced with a 2-step "Manage student" flow:
   //   step=manage  → show Suspend + Delete-permanently buttons
@@ -672,6 +676,15 @@ export default function AdminStudentsPage() {
                               {t('adminStudents.actionEdit')}
                             </Link>
                           </DropdownMenuItem>
+                          {student.email && (
+                            <DropdownMenuItem
+                              className="cursor-pointer"
+                              onClick={() => setEmailStudent(student)}
+                            >
+                              <Mail className="w-4 h-4 mr-2" />
+                              {t('adminSendEmail.sendEmail')}
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem
                             className="text-red-600 cursor-pointer"
                             onClick={() => handleDeleteStudent(student)}
@@ -947,6 +960,23 @@ export default function AdminStudentsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Phase 136 — AI-assisted email composer */}
+      <SendEmailDialog
+        open={!!emailStudent}
+        onOpenChange={(o) => !o && setEmailStudent(null)}
+        target={
+          emailStudent ? { kind: 'student', studentId: emailStudent.id } : null
+        }
+        toEmail={emailStudent?.email ?? null}
+        toName={
+          emailStudent
+            ? [emailStudent.firstName, emailStudent.lastName].filter(Boolean).join(' ').trim() || null
+            : null
+        }
+        country={emailStudent?.nationality ?? null}
+        notes={emailStudent?.notes ?? null}
+      />
     </div>
   );
 }
