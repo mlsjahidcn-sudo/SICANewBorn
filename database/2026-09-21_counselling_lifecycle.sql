@@ -10,6 +10,13 @@
 --    without a code deploy — same pattern as notification.* / status.* /
 --    drip.* slugs. Idempotent via WHERE NOT EXISTS.
 --
+-- Phase 124b (2026-09-21): every body is now a single bilingual block
+-- (English on top, divider, 中文 below) — recipients always see both
+-- languages regardless of their detected locale. `body_text` and
+-- `body_text_zh` hold the same bilingual content; the sender still
+-- picks one or the other based on `counselling_bookings.locale` but
+-- each is readable end-to-end. Generated via scripts/counselling-bilingual-bodies.mjs.
+--
 -- Apply via Supabase dashboard SQL editor.
 -- ============================================================================
 
