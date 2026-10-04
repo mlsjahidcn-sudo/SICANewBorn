@@ -1,16 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServer } from '@/lib/supabase-server';
 import { requireAdmin } from '@/lib/supabase-auth';
+import { aggregateStrings, type BreakdownEntry } from '@/lib/assessment-stats';
 
 export const dynamic = 'force-dynamic';
 
 interface StatusBucket {
   status: string;
-  count: number;
-}
-
-interface BreakdownEntry {
-  label: string;
   count: number;
 }
 
@@ -20,8 +16,9 @@ interface AssessmentStats {
   last7Days: number;
   last30Days: number;
   byStatus: StatusBucket[];
-  topCountries: BreakdownEntry[];
-  topEducation: BreakdownEntry[];
+  /** Every distinct country in the sample, count-desc (not just top N). */
+  countries: BreakdownEntry[];
+  education: BreakdownEntry[];
   conversionRate: number; // 0..1, Completed / (Completed + Rejected); 0 if denominator is 0
   hasTranscriptRate: number; // 0..1
   avgTranscriptsSizeBytes: number; // 0 if no transcripts
@@ -99,20 +96,21 @@ export async function GET(_request: NextRequest) {
         return { status, count: count ?? 0 } satisfies StatusBucket;
       }),
     ),
-    // Top 5 countries
+    // All distinct countries (admin asked for the full list, not top N).
+    // Sample cap 10000 single-column rows; tally is server-side.
     supabase
       .from('student_assessments')
       .select('country')
       .not('country', 'is', null)
       .neq('country', '')
-      .limit(1000),
-    // Top 5 current_education values
+      .limit(10000),
+    // All distinct current_education values (closed set, ~6 entries)
     supabase
       .from('student_assessments')
       .select('current_education')
       .not('current_education', 'is', null)
       .neq('current_education', '')
-      .limit(1000),
+      .limit(10000),
     // Has-transcript rate
     supabase
       .from('student_assessments')
@@ -133,8 +131,8 @@ export async function GET(_request: NextRequest) {
 
   const byStatus = byStatusRes as StatusBucket[];
 
-  const topCountries = aggregateStrings(topCountriesRes.data ?? []);
-  const topEducation = aggregateStrings(topEducationRes.data ?? []);
+  const countries = aggregateStrings(topCountriesRes.data ?? []);
+  const education = aggregateStrings(topEducationRes.data ?? []);
 
   const totalCount = totalRes.count ?? 0;
   const transcriptSizeSum = (transcriptSizeRes.data ?? []).reduce<number>(
@@ -158,8 +156,8 @@ export async function GET(_request: NextRequest) {
     last7Days: last7dRes.count ?? 0,
     last30Days: last30dRes.count ?? 0,
     byStatus,
-    topCountries,
-    topEducation,
+    countries,
+    education,
     conversionRate,
     hasTranscriptRate: totalCount > 0 ? (hasTranscriptRes.count ?? 0) / totalCount : 0,
     avgTranscriptsSizeBytes: avgTranscriptSize,
@@ -167,26 +165,4 @@ export async function GET(_request: NextRequest) {
   };
 
   return NextResponse.json(stats);
-}
-
-/**
- * Tally a small set of string values and return the top 5 by count.
- * Cheaper than a server-side GROUP BY for the size we sample (1000
- * rows max); pulls the same payload to the client either way.
- */
-function aggregateStrings(
-  rows: ReadonlyArray<Record<string, unknown>>,
-  field: string = 'country',
-  limit: number = 5,
-): BreakdownEntry[] {
-  const counts = new Map<string, number>();
-  for (const row of rows) {
-    const v = row[field];
-    if (typeof v !== 'string' || !v.trim()) continue;
-    counts.set(v, (counts.get(v) ?? 0) + 1);
-  }
-  return Array.from(counts.entries())
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, limit)
-    .map(([label, count]) => ({ label, count }));
 }

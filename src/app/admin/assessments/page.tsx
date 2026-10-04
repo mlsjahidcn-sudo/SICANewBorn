@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Search, Filter, ClipboardList, Mail, MessageCircle, Calendar, GraduationCap, FileText, Loader2, AlertCircle, CheckCircle, ExternalLink, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Filter, ClipboardList, Mail, MessageCircle, Calendar, GraduationCap, FileText, AlertCircle, CheckCircle, ExternalLink, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
@@ -20,8 +20,8 @@ interface AssessmentStats {
   last7Days: number;
   last30Days: number;
   byStatus: { status: string; count: number }[];
-  topCountries: { label: string; count: number }[];
-  topEducation: { label: string; count: number }[];
+  countries: { label: string; count: number }[];
+  education: { label: string; count: number }[];
   conversionRate: number;
   hasTranscriptRate: number;
   avgTranscriptsSizeBytes: number;
@@ -295,55 +295,52 @@ export default function AssessmentsPage() {
         </div>
       )}
 
-      {stats && (stats.topCountries.length > 0 || stats.topEducation.length > 0) && (
-        <div className="grid sm:grid-cols-2 gap-4">
-          {stats.topCountries.length > 0 && (
-            <Card>
-              <div className="p-4">
-                <div className="text-sm font-semibold text-[#1B2A4A] mb-2">
-                  {t('adminAssessments.statTopCountries')}
+      {stats && stats.countries.length > 0 && (
+        <Card>
+          <div className="p-4">
+            <div className="text-sm font-semibold text-[#1B2A4A] mb-3">
+              {t('adminAssessments.statTopCountries')} · {stats.countries.length}
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-1.5">
+              {stats.countries.map((c) => (
+                <div key={c.label} className="flex items-center gap-2 text-sm">
+                  <span className="flex-1 truncate text-gray-700">{c.label}</span>
+                  <span className="text-gray-500">{c.count}</span>
+                  <div className="w-16 h-1.5 bg-gray-100 shrink-0">
+                    <div
+                      className="h-full bg-[#1B2A4A]"
+                      style={{ width: `${(c.count / stats.countries[0].count) * 100}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="space-y-1.5">
-                  {stats.topCountries.map((c) => (
-                    <div key={c.label} className="flex items-center gap-2 text-sm">
-                      <span className="flex-1 truncate text-gray-700">{c.label}</span>
-                      <span className="text-gray-500">{c.count}</span>
-                      <div className="w-20 h-1.5 bg-gray-100">
-                        <div
-                          className="h-full bg-[#1B2A4A]"
-                          style={{ width: `${(c.count / stats.topCountries[0].count) * 100}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
+              ))}
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {stats && stats.education.length > 0 && (
+        <Card>
+          <div className="p-4">
+            <div className="text-sm font-semibold text-[#1B2A4A] mb-3">
+              {t('adminAssessments.statTopEducation')} · {stats.education.length}
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-1.5">
+              {stats.education.map((c) => (
+                <div key={c.label} className="flex items-center gap-2 text-sm">
+                  <span className="flex-1 truncate text-gray-700">{c.label}</span>
+                  <span className="text-gray-500">{c.count}</span>
+                  <div className="w-16 h-1.5 bg-gray-100 shrink-0">
+                    <div
+                      className="h-full bg-[#9B1B30]"
+                      style={{ width: `${(c.count / stats.education[0].count) * 100}%` }}
+                    />
+                  </div>
                 </div>
-              </div>
-            </Card>
-          )}
-          {stats.topEducation.length > 0 && (
-            <Card>
-              <div className="p-4">
-                <div className="text-sm font-semibold text-[#1B2A4A] mb-2">
-                  {t('adminAssessments.statTopEducation')}
-                </div>
-                <div className="space-y-1.5">
-                  {stats.topEducation.map((c) => (
-                    <div key={c.label} className="flex items-center gap-2 text-sm">
-                      <span className="flex-1 truncate text-gray-700">{c.label}</span>
-                      <span className="text-gray-500">{c.count}</span>
-                      <div className="w-20 h-1.5 bg-gray-100">
-                        <div
-                          className="h-full bg-[#9B1B30]"
-                          style={{ width: `${(c.count / stats.topEducation[0].count) * 100}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </Card>
-          )}
-        </div>
+              ))}
+            </div>
+          </div>
+        </Card>
       )}
 
       <Card>
