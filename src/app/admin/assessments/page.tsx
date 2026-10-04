@@ -14,6 +14,20 @@ import { useUrlState } from '@/hooks/use-url-state';
 
 const PAGE_SIZE = 20;
 
+interface AssessmentStats {
+  total: number;
+  today: number;
+  last7Days: number;
+  last30Days: number;
+  byStatus: { status: string; count: number }[];
+  topCountries: { label: string; count: number }[];
+  topEducation: { label: string; count: number }[];
+  conversionRate: number;
+  hasTranscriptRate: number;
+  avgTranscriptsSizeBytes: number;
+  generatedAt: string;
+}
+
 interface Assessment {
   id: string;
   first_name: string;
@@ -97,6 +111,7 @@ export default function AssessmentsPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [stats, setStats] = useState<AssessmentStats | null>(null);
 
   const offset = (page - 1) * PAGE_SIZE;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -128,8 +143,33 @@ export default function AssessmentsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter]);
 
+  const loadStats = async () => {
+    try {
+      const res = await apiFetchJson<AssessmentStats>('/api/admin/assessments/stats');
+      setStats(res);
+    } catch {
+      // Stats are best-effort; if the endpoint fails (e.g. migration
+      // not yet applied) the cards just stay blank — the list still works.
+    }
+  };
+
+  useEffect(() => {
+    loadStats();
+    const id = setInterval(loadStats, 30_000);
+    return () => clearInterval(id);
+  }, []);
+
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter, page]);
+
+  // Phase 126 — 30s background polling for the list (same cadence as
+  // the stats endpoint). New assessments landing via /assessment appear
+  // without a manual refresh. Cheap: bounded by PAGE_SIZE (20) per call.
+  useEffect(() => {
+    const id = setInterval(load, 30_000);
+    return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, page]);
 
@@ -206,6 +246,103 @@ export default function AssessmentsPage() {
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm flex items-start gap-2">
           <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
           <span>{loadError}</span>
+        </div>
+      )}
+
+      {/* Phase 126 — submission analytics (30s-polled from /stats) */}
+      {stats && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <div className="p-4">
+              <div className="text-2xl font-bold text-[#1B2A4A]">{stats.total}</div>
+              <div className="text-xs text-gray-500 mt-1">{t('adminAssessments.statTotal')}</div>
+            </div>
+          </Card>
+          <Card>
+            <div className="p-4">
+              <div className="text-2xl font-bold text-[#9B1B30]">{stats.today}</div>
+              <div className="text-xs text-gray-500 mt-1">{t('adminAssessments.statToday')}</div>
+            </div>
+          </Card>
+          <Card>
+            <div className="p-4">
+              <div className="text-2xl font-bold text-[#1B2A4A]">{stats.last7Days}</div>
+              <div className="text-xs text-gray-500 mt-1">{t('adminAssessments.stat7d')}</div>
+            </div>
+          </Card>
+          <Card>
+            <div className="p-4">
+              <div className="text-2xl font-bold text-green-700">
+                {(stats.conversionRate * 100).toFixed(0)}%
+              </div>
+              <div className="text-xs text-gray-500 mt-1">{t('adminAssessments.statConversion')}</div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {stats && stats.byStatus.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          <span className="text-gray-500">{t('adminAssessments.statByStatus')}:</span>
+          {stats.byStatus.map((b) => (
+            <span
+              key={b.status}
+              className={`px-3 py-1 border ${STATUS_COLOR[b.status] ?? 'bg-gray-100 text-gray-700 border-gray-200'}`}
+            >
+              {b.status} · {b.count}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {stats && (stats.topCountries.length > 0 || stats.topEducation.length > 0) && (
+        <div className="grid sm:grid-cols-2 gap-4">
+          {stats.topCountries.length > 0 && (
+            <Card>
+              <div className="p-4">
+                <div className="text-sm font-semibold text-[#1B2A4A] mb-2">
+                  {t('adminAssessments.statTopCountries')}
+                </div>
+                <div className="space-y-1.5">
+                  {stats.topCountries.map((c) => (
+                    <div key={c.label} className="flex items-center gap-2 text-sm">
+                      <span className="flex-1 truncate text-gray-700">{c.label}</span>
+                      <span className="text-gray-500">{c.count}</span>
+                      <div className="w-20 h-1.5 bg-gray-100">
+                        <div
+                          className="h-full bg-[#1B2A4A]"
+                          style={{ width: `${(c.count / stats.topCountries[0].count) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Card>
+          )}
+          {stats.topEducation.length > 0 && (
+            <Card>
+              <div className="p-4">
+                <div className="text-sm font-semibold text-[#1B2A4A] mb-2">
+                  {t('adminAssessments.statTopEducation')}
+                </div>
+                <div className="space-y-1.5">
+                  {stats.topEducation.map((c) => (
+                    <div key={c.label} className="flex items-center gap-2 text-sm">
+                      <span className="flex-1 truncate text-gray-700">{c.label}</span>
+                      <span className="text-gray-500">{c.count}</span>
+                      <div className="w-20 h-1.5 bg-gray-100">
+                        <div
+                          className="h-full bg-[#9B1B30]"
+                          style={{ width: `${(c.count / stats.topEducation[0].count) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Card>
+          )}
         </div>
       )}
 
