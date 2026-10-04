@@ -125,6 +125,13 @@ export interface AnalyticsEventMap {
     /** Reference id of the booking that was completed. */
     reference: string;
   };
+  /** Phase 125: student responded to an admin proposal. */
+  counselling_proposal_response: {
+    /** Which button the student pressed. */
+    outcome: 'accept' | 'counter' | 'decline';
+    /** Reference id of the booking that was responded to. */
+    reference: string;
+  };
   /** User clicked a service-tier CTA on the /get-started sales page. */
   service_card_click: {
     /** Which tier the user clicked toward. */

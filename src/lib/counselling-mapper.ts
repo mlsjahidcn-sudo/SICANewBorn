@@ -7,6 +7,7 @@
 
 export const COUNSELLING_BOOKING_STATUSES = [
   'Pending',
+  'Proposed',
   'Confirmed',
   'Completed',
   'Cancelled',
@@ -41,6 +42,18 @@ export interface CounsellingBooking {
   gclid: string | null;
   fbclid: string | null;
   confirmedAt: string | null;
+  /** Phase 124: when the booking was rescheduled. */
+  rescheduledAt: string | null;
+  /** Phase 124: snapshot of the previous slot at reschedule time. */
+  originalSlotStart: string | null;
+  /** Phase 124: snapshot of the previous meeting link. */
+  previousMeetingLink: string | null;
+  /** Phase 124: when the meeting link was last updated. */
+  meetingLinkUpdatedAt: string | null;
+  /** Phase 125: slot the admin is proposing (null once accepted / declined). */
+  proposedSlotStart: string | null;
+  /** Phase 125: deadline for the current proposal (admin can re-propose). */
+  proposalExpiresAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -81,6 +94,16 @@ export function mapCounsellingBookingFromDb(row: Record<string, unknown>): Couns
     gclid: asString(row.gclid),
     fbclid: asString(row.fbclid),
     confirmedAt: row.confirmed_at ? asIso(row.confirmed_at, created) : null,
+    rescheduledAt: row.rescheduled_at ? asIso(row.rescheduled_at, created) : null,
+    originalSlotStart: row.original_slot_start ? asIso(row.original_slot_start, created) : null,
+    previousMeetingLink: asString(row.previous_meeting_link),
+    meetingLinkUpdatedAt: row.meeting_link_updated_at
+      ? asIso(row.meeting_link_updated_at, created)
+      : null,
+    proposedSlotStart: row.proposed_slot_start ? asIso(row.proposed_slot_start, created) : null,
+    proposalExpiresAt: row.proposal_expires_at
+      ? asIso(row.proposal_expires_at, created)
+      : null,
     createdAt: created,
     updatedAt: asIso(row.updated_at, created),
   };

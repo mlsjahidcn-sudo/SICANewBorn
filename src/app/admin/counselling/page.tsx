@@ -9,6 +9,7 @@ import {
   Loader2,
   MoreHorizontal,
   Search,
+  Send,
   UserX,
   XCircle,
 } from 'lucide-react';
@@ -102,6 +103,18 @@ export default function AdminCounsellingPage() {
   const [rescheduleLoading, setRescheduleLoading] = useState(false);
   const [reschedulePickedStart, setReschedulePickedStart] = useState<string | null>(null);
   const [rescheduleSaving, setRescheduleSaving] = useState(false);
+
+  // Phase 125: admin-proposes-a-time state. Same shape as the
+  // reschedule modal — picks a candidate slot from /api/counselling/slots.
+  const [proposeBooking, setProposeBooking] = useState<CounsellingBooking | null>(null);
+  const [proposeDates, setProposeDates] = useState<string[]>([]);
+  const [proposeDate, setProposeDate] = useState<string | null>(null);
+  const [proposeSlots, setProposeSlots] = useState<
+    { start: string; label: string; available: boolean }[]
+  >([]);
+  const [proposeLoading, setProposeLoading] = useState(false);
+  const [proposePickedStart, setProposePickedStart] = useState<string | null>(null);
+  const [proposeSaving, setProposeSaving] = useState(false);
 
   // Phase 124: per-row success/error toasts mirroring Phase 11's pattern.
   const [toast, setToast] = useState<{ kind: 'ok' | 'err'; slug: string } | null>(null);
@@ -215,43 +228,68 @@ export default function AdminCounsellingPage() {
     return () => clearTimeout(t);
   }, [toast]);
 
-  // Phase 124: reschedule modal helpers
-  const loadRescheduleDates = useCallback(async () => {
-    setRescheduleLoading(true);
-    try {
-      const res = await fetch('/api/counselling/slots');
-      const data = (await res.json()) as { dates?: string[] };
-      setRescheduleDates(data.dates ?? []);
-      setRescheduleDate((prev) => prev ?? data.dates?.[0] ?? null);
-    } catch {
-      setRescheduleDates([]);
-    } finally {
-      setRescheduleLoading(false);
-    }
-  }, []);
+  // Phase 124: reschedule modal helpers (also reused for Phase 125 propose).
+  const loadSlotDates = useCallback(
+    async (
+      setDatesState: (v: string[]) => void,
+      setDateState: (v: string | null | ((prev: string | null) => string | null)) => void,
+      setLoading: (v: boolean) => void,
+    ) => {
+      setLoading(true);
+      try {
+        const res = await fetch('/api/counselling/slots');
+        const data = (await res.json()) as { dates?: string[] };
+        setDatesState(data.dates ?? []);
+        setDateState((prev) => prev ?? data.dates?.[0] ?? null);
+      } catch {
+        setDatesState([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
 
-  const loadRescheduleSlots = useCallback(async (date: string) => {
-    setRescheduleLoading(true);
-    try {
-      const res = await fetch(`/api/counselling/slots?date=${encodeURIComponent(date)}`);
-      const data = (await res.json()) as { slots?: { start: string; label: string; available: boolean }[] };
-      setRescheduleSlots(data.slots ?? []);
-    } catch {
-      setRescheduleSlots([]);
-    } finally {
-      setRescheduleLoading(false);
-    }
-  }, []);
+  const loadSlotGrid = useCallback(
+    async (
+      date: string,
+      setSlotsState: (v: { start: string; label: string; available: boolean }[]) => void,
+      setLoading: (v: boolean) => void,
+    ) => {
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/counselling/slots?date=${encodeURIComponent(date)}`);
+        const data = (await res.json()) as { slots?: { start: string; label: string; available: boolean }[] };
+        setSlotsState(data.slots ?? []);
+      } catch {
+        setSlotsState([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!rescheduleBooking) return;
-    void loadRescheduleDates();
-  }, [rescheduleBooking, loadRescheduleDates]);
+    void loadSlotDates(setRescheduleDates, setRescheduleDate, setRescheduleLoading);
+  }, [rescheduleBooking, loadSlotDates]);
 
   useEffect(() => {
     if (!rescheduleDate) return;
-    void loadRescheduleSlots(rescheduleDate);
-  }, [rescheduleDate, loadRescheduleSlots]);
+    void loadSlotGrid(rescheduleDate, setRescheduleSlots, setRescheduleLoading);
+  }, [rescheduleDate, loadSlotGrid]);
+
+  // Phase 125: propose modal helpers
+  useEffect(() => {
+    if (!proposeBooking) return;
+    void loadSlotDates(setProposeDates, setProposeDate, setProposeLoading);
+  }, [proposeBooking, loadSlotDates]);
+
+  useEffect(() => {
+    if (!proposeDate) return;
+    void loadSlotGrid(proposeDate, setProposeSlots, setProposeLoading);
+  }, [proposeDate, loadSlotGrid]);
 
   const openReschedule = (booking: CounsellingBooking) => {
     setRescheduleBooking(booking);
@@ -263,6 +301,47 @@ export default function AdminCounsellingPage() {
     setRescheduleDate(null);
     setReschedulePickedStart(null);
     setRescheduleSlots([]);
+  };
+
+  const openPropose = (booking: CounsellingBooking) => {
+    setProposeBooking(booking);
+    setProposePickedStart(null);
+  };
+
+  const closePropose = () => {
+    setProposeBooking(null);
+    setProposeDate(null);
+    setProposePickedStart(null);
+    setProposeSlots([]);
+  };
+
+  const handleProposeSave = async () => {
+    if (!proposeBooking || !proposePickedStart) return;
+    setProposeSaving(true);
+    try {
+      const ok = await patchBooking(proposeBooking.id, {
+        proposedSlotStartIso: proposePickedStart,
+      });
+      if (ok) {
+        setToast({ kind: 'ok', slug: 'adminCounselling.toast_Proposed' });
+        closePropose();
+        void load();
+      } else {
+        setToast({ kind: 'err', slug: 'adminCounselling.toastError' });
+      }
+    } finally {
+      setProposeSaving(false);
+    }
+  };
+
+  const handleClearProposal = async (booking: CounsellingBooking) => {
+    const ok = await patchBooking(booking.id, { clearProposal: true });
+    if (ok) {
+      setToast({ kind: 'ok', slug: 'adminCounselling.toast_proposalCleared' });
+      void load();
+    } else {
+      setToast({ kind: 'err', slug: 'adminCounselling.toastError' });
+    }
   };
 
   const handleRescheduleSave = async () => {
@@ -305,6 +384,7 @@ export default function AdminCounsellingPage() {
   const statusBadge = (status: CounsellingBookingStatus) => {
     const key = `adminCounselling.status_${status.replace('-', '')}` as 'adminCounselling.status_Pending';
     if (status === 'Pending') return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">{t(key)}</Badge>;
+    if (status === 'Proposed') return <Badge className="bg-violet-100 text-violet-800 hover:bg-violet-100">{t(key)}</Badge>;
     if (status === 'Confirmed') return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">{t(key)}</Badge>;
     if (status === 'Completed') return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">{t(key)}</Badge>;
     if (status === 'Cancelled') return <Badge variant="secondary">{t(key)}</Badge>;
@@ -431,6 +511,12 @@ export default function AdminCounsellingPage() {
                     <TableCell>
                       <div className="font-medium text-[#1B2A4A] whitespace-nowrap">{formatSlot(b.slotStart)}</div>
                       <div className="text-xs text-gray-400 font-mono">{b.reference}</div>
+                      {b.proposedSlotStart && (
+                        <div className="mt-1 inline-flex items-center gap-1 bg-violet-50 border border-violet-200 text-violet-800 px-1.5 py-0.5 text-[10px] font-medium">
+                          <Send className="h-2.5 w-2.5" />
+                          {t('adminCounselling.proposingTo', { slot: formatSlot(b.proposedSlotStart) })}
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="font-medium text-[#1B2A4A]">{b.name}</div>
@@ -492,6 +578,18 @@ export default function AdminCounsellingPage() {
                             <DropdownMenuItem onClick={() => openReschedule(b)}>
                               <CalendarPlus className="h-4 w-4 mr-2" />
                               {t('adminCounselling.actionReschedule')}
+                            </DropdownMenuItem>
+                          )}
+                          {b.status !== 'Cancelled' && b.status !== 'Completed' && b.status !== 'No-show' && (
+                            <DropdownMenuItem onClick={() => openPropose(b)}>
+                              <Send className="h-4 w-4 mr-2" />
+                              {t('adminCounselling.actionPropose')}
+                            </DropdownMenuItem>
+                          )}
+                          {b.proposedSlotStart && (
+                            <DropdownMenuItem onClick={() => void handleClearProposal(b)}>
+                              <XCircle className="h-4 w-4 mr-2" />
+                              {t('adminCounselling.actionClearProposal')}
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuItem onClick={() => openEdit(b)}>
@@ -735,6 +833,106 @@ export default function AdminCounsellingPage() {
               {rescheduleSaving
                 ? t('adminCounselling.editSaving')
                 : t('adminCounselling.rescheduleSave')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Phase 125: Propose-time dialog (mirrors Reschedule UI but
+          calls proposedSlotStartIso instead of slotStartIso) */}
+      <Dialog open={!!proposeBooking} onOpenChange={(open) => !open && closePropose()}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t('adminCounselling.proposeTitle')}</DialogTitle>
+            <DialogDescription>
+              {proposeBooking
+                ? t('adminCounselling.proposeBody', {
+                    name: proposeBooking.name,
+                    slot: formatSlot(proposeBooking.slotStart),
+                  })
+                : ''}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-[#1F2937] mb-1">
+                {t('adminCounselling.reschedulePickDate')}
+              </label>
+              {proposeLoading && proposeDates.length === 0 ? (
+                <div className="flex items-center gap-2 text-sm text-gray-500 py-3">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {t('adminCounselling.loading')}
+                </div>
+              ) : proposeDates.length === 0 ? (
+                <div className="text-sm text-gray-500 py-2">{t('adminCounselling.rescheduleNoSlots')}</div>
+              ) : (
+                <div className="flex gap-2 overflow-x-auto pb-2">
+                  {proposeDates.map((date) => (
+                    <button
+                      key={date}
+                      type="button"
+                      onClick={() => {
+                        setProposeDate(date);
+                        setProposePickedStart(null);
+                      }}
+                      className={`flex-shrink-0 border px-4 py-2 text-sm font-medium transition-colors ${
+                        proposeDate === date
+                          ? 'border-[#9B1B30] bg-[#9B1B30] text-white'
+                          : 'border-gray-300 bg-white text-[#1F2937] hover:border-[#9B1B30] hover:text-[#9B1B30]'
+                      }`}
+                    >
+                      {formatRescheduleDateChip(date)}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#1F2937] mb-1">
+                {t('adminCounselling.proposePickSlot')}
+              </label>
+              {proposeLoading ? (
+                <div className="flex items-center gap-2 text-sm text-gray-500 py-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {t('adminCounselling.loading')}
+                </div>
+              ) : proposeSlots.length === 0 ? (
+                <div className="text-sm text-gray-500 py-2">{t('adminCounselling.rescheduleNoSlots')}</div>
+              ) : (
+                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                  {proposeSlots.map((s) => (
+                    <button
+                      key={s.start}
+                      type="button"
+                      disabled={!s.available}
+                      onClick={() => setProposePickedStart(s.start)}
+                      className={`border px-2 py-2 text-sm font-medium transition-colors ${
+                        proposePickedStart === s.start
+                          ? 'border-[#9B1B30] bg-[#9B1B30] text-white'
+                          : s.available
+                            ? 'border-gray-300 bg-white text-[#1F2937] hover:border-[#9B1B30] hover:text-[#9B1B30]'
+                            : 'border-gray-200 bg-gray-100 text-gray-300 cursor-not-allowed line-through'
+                      }`}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closePropose}>
+              {t('adminCounselling.cancelEdit')}
+            </Button>
+            <Button
+              className="bg-[#9B1B30] hover:bg-[#7A1625] text-white"
+              onClick={handleProposeSave}
+              disabled={!proposePickedStart || proposeSaving}
+            >
+              {proposeSaving
+                ? t('adminCounselling.editSaving')
+                : t('adminCounselling.proposeSave')}
             </Button>
           </DialogFooter>
         </DialogContent>

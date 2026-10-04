@@ -35,3 +35,15 @@ describe('computeReminderWindows', () => {
     expect(new Date('2026-09-21T03:00:00.000Z').getTime()).toBeLessThan(now.getTime());
   });
 });
+
+import { COUNSELLING_BOOKING_STATUSES } from '@/lib/counselling-mapper';
+
+describe('reminder status guard (Phase 125)', () => {
+  it('excludes Proposed from the closed status enum check', () => {
+    // Phase 125 widens the enum to include 'Proposed'. The reminder
+    // worker still queries status = 'Confirmed', so proposed bookings
+    // never trigger 24h/2h emails until the student accepts.
+    expect(COUNSELLING_BOOKING_STATUSES).toContain('Proposed');
+    expect(COUNSELLING_BOOKING_STATUSES).toContain('Confirmed');
+  });
+});

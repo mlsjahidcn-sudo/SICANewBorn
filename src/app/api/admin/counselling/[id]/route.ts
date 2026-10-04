@@ -10,6 +10,7 @@ import {
   sendCounsellingConfirmed,
   sendCounsellingMeetingLinkUpdated,
   sendCounsellingNoShow,
+  sendCounsellingProposed,
   sendCounsellingRescheduled,
   type LoggedSendTextResult,
 } from '@/lib/email';
@@ -18,6 +19,8 @@ import {
   isSlotWithinLeadWindow,
   parseSlotInstant,
 } from '@/lib/counselling-slots';
+import { mintProposalToken } from '@/lib/counselling-tokens';
+import { SITE_URL } from '@/lib/site-url';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,7 +28,9 @@ export const dynamic = 'force-dynamic';
  * Admin single-booking surface for counselling bookings.
  *
  * GET   /api/admin/counselling/[id]  — full row
- * PATCH /api/admin/counselling/[id]  — { status?, meetingLink?, adminNotes?, slotStartIso? }
+ * PATCH /api/admin/counselling/[id]  — { status?, meetingLink?, adminNotes?,
+ *                                      slotStartIso?, proposedSlotStartIso?,
+ *                                      proposalTtlHours?, clearProposal? }
  *
  * Phase 114: status moves re-check slot ownership when going to Confirmed.
  * Phase 123: status transitions email the student (Confirmed / Cancelled).
@@ -33,8 +38,12 @@ export const dynamic = 'force-dynamic';
  * full lifecycle (Rescheduled / Completed / No-show / meeting-link
  * updated) all email the student, audit-log to email_log, and the
  * reschedule also clears the reminder stamps so the new slot's
- * reminders fire fresh. All sends are fire-and-forget — failures land
- * in the server log; the API always returns the updated row.
+ * reminders fire fresh.
+ * Phase 125: proposedSlotStartIso transitions the booking to a new
+ * 'Proposed' status, mints a single-use token, and emails the student
+ * an accept / counter magic link. clearProposal drops the proposal.
+ * All sends are fire-and-forget — failures land in the server log;
+ * the API always returns the updated row.
  */
 interface ResolvedAdminContext {
   ok: false;
@@ -56,6 +65,9 @@ interface PreviousBookingSnapshot {
   slot_start: string;
   meeting_link: string | null;
   locale: string | null;
+  proposed_slot_start: string | null;
+  proposal_token: string | null;
+  proposal_expires_at: string | null;
 }
 
 async function resolveAdminContext(
@@ -93,6 +105,10 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
   return NextResponse.json({ booking: mapCounsellingBookingFromDb(data) });
 }
 
+const PROPOSAL_DEFAULT_TTL_HOURS = 24 * 7; // 7 days
+const PROPOSAL_MIN_TTL_HOURS = 1;
+const PROPOSAL_MAX_TTL_HOURS = 24 * 14;
+
 export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   if (!getServerEnv().serviceKey) {
     return NextResponse.json({ error: 'Supabase not configured' }, { status: 503 });
@@ -109,11 +125,12 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
 
   const update: Record<string, unknown> = {};
   let slotStartIso: string | null = null; // captured for reschedule checks
+  let proposedSlotStartIso: string | null = null; // captured for propose-time slot checks
 
   if (body.status !== undefined) {
     if (!isCounsellingBookingStatus(body.status)) {
       return NextResponse.json(
-        { error: `status must be one of: Pending, Confirmed, Completed, Cancelled, No-show` },
+        { error: `status must be one of: Pending, Proposed, Confirmed, Completed, Cancelled, No-show` },
         { status: 400 },
       );
     }
@@ -166,22 +183,90 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     update.slot_start = slotStartIso;
   }
 
+  // Phase 125: admin proposes a slot — same validation as a reschedule.
+  if (body.proposedSlotStartIso !== undefined) {
+    if (body.clearProposal === true) {
+      return NextResponse.json(
+        { error: 'proposedSlotStartIso and clearProposal are mutually exclusive' },
+        { status: 400 },
+      );
+    }
+    const raw = typeof body.proposedSlotStartIso === 'string' ? body.proposedSlotStartIso : '';
+    const parsed = parseSlotInstant(raw);
+    if (!parsed) {
+      return NextResponse.json(
+        { error: 'proposedSlotStartIso must be an ISO instant' },
+        { status: 400 },
+      );
+    }
+    if (!isCandidateSlot(parsed)) {
+      return NextResponse.json(
+        { error: 'proposedSlotStartIso must be a candidate slot on its own Beijing date' },
+        { status: 400 },
+      );
+    }
+    if (!isSlotWithinLeadWindow(new Date(), parsed)) {
+      return NextResponse.json(
+        { error: 'proposedSlotStartIso must start at least 2h from now' },
+        { status: 400 },
+      );
+    }
+    proposedSlotStartIso = parsed.toISOString();
+    update.proposed_slot_start = proposedSlotStartIso;
+    // Token + expiry
+    const ttlHours =
+      typeof body.proposalTtlHours === 'number' &&
+      Number.isFinite(body.proposalTtlHours) &&
+      body.proposalTtlHours >= PROPOSAL_MIN_TTL_HOURS &&
+      body.proposalTtlHours <= PROPOSAL_MAX_TTL_HOURS
+        ? body.proposalTtlHours
+        : PROPOSAL_DEFAULT_TTL_HOURS;
+    update.proposal_token = mintProposalToken();
+    update.proposal_expires_at = new Date(Date.now() + ttlHours * 60 * 60 * 1000).toISOString();
+    // Phase 125: transitioning to a proposal switches status to
+    // 'Proposed' UNLESS the admin is also explicitly setting status
+    // (rare — admin may have already flipped to Cancelled).
+    if (update.status === undefined) {
+      update.status = 'Proposed';
+    }
+  }
+
+  // Phase 125: drop the proposal.
+  if (body.clearProposal === true) {
+    update.proposed_slot_start = null;
+    update.proposal_token = null;
+    update.proposal_expires_at = null;
+    // Dropping a proposal reverts status: if the row was only at
+    // Proposed, send it back to Pending; if it was previously Confirmed
+    // (rare admin flow) leave that alone — the admin can re-set.
+    if (update.status === undefined && body.status === undefined) {
+      // we don't know the previous status here without snapshotting
+      // first; leave status untouched and let the caller re-PATCH if
+      // they want Pending. (The route does snapshot below.)
+    }
+  }
+
   if (Object.keys(update).length === 0) {
     return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
   }
 
-  // Phase 123/124: any meaningful change (status, slot, meetingLink)
-  // emails the student — so snapshot the current row (and 404 early)
-  // before mutating anything.
+  // Phase 123/124/125: any meaningful change (status, slot, meetingLink,
+  // proposal) emails the student — so snapshot the current row (and
+  // 404 early) before mutating anything.
   let previous: PreviousBookingSnapshot | null = null;
   if (
     update.status !== undefined ||
     update.slot_start !== undefined ||
-    update.meeting_link !== undefined
+    update.meeting_link !== undefined ||
+    update.proposed_slot_start !== undefined ||
+    update.proposal_token !== undefined ||
+    update.clearProposal !== undefined
   ) {
     const { data: row, error: rowErr } = await resolved.service
       .from('counselling_bookings')
-      .select('status, name, email, reference, slot_start, meeting_link, locale')
+      .select(
+        'status, name, email, reference, slot_start, meeting_link, locale, proposed_slot_start, proposal_token, proposal_expires_at',
+      )
       .eq('id', resolved.id)
       .maybeSingle();
     if (rowErr) {
@@ -190,14 +275,24 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     }
     if (!row) return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
     previous = row as PreviousBookingSnapshot;
+
+    // Dropping a proposal without an explicit status: send the row
+    // back to Pending if it was only at Proposed (no admin-confirmed
+    // booking underneath).
+    if (body.clearProposal === true && update.status === undefined && previous?.status === 'Proposed') {
+      update.status = 'Pending';
+    }
   }
 
-  // Moving to Confirmed OR rescheduling re-checks slot ownership: another
-  // live booking on the same instant wins. The DB partial unique index
-  // (counselling_bookings_slot_live_unique) is the final arbiter — we
-  // check here so we can return a friendly 409 before burning a write.
-  const targetSlotIso = slotStartIso ?? (previous?.slot_start ?? null);
-  if (targetSlotIso && (update.status === 'Confirmed' || update.slot_start !== undefined)) {
+  // Slot-ownership re-check: any update that targets a real slot
+  // (reschedule OR confirm OR propose-time) needs to see if another
+  // live booking already holds it. The partial unique index is the
+  // final arbiter; this check just lets us return a friendly 409.
+  const targetSlotIso = slotStartIso ?? proposedSlotStartIso ?? previous?.slot_start ?? null;
+  if (
+    targetSlotIso &&
+    (update.status === 'Confirmed' || update.slot_start !== undefined || update.proposed_slot_start !== undefined)
+  ) {
     const { data: clash } = await resolved.service
       .from('counselling_bookings')
       .select('id')
@@ -220,28 +315,21 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
   if (update.slot_start !== undefined && previous && update.slot_start !== previous.slot_start) {
     update.rescheduled_at = new Date().toISOString();
     update.original_slot_start = previous.slot_start;
-    // The new slot's reminders must fire fresh — clear the stamps so
-    // the next worker tick claims them.
     update.reminder_24h_at = null;
     update.reminder_2h_at = null;
   } else if (update.slot_start !== undefined && previous && update.slot_start === previous.slot_start) {
-    // Same→same slot is a no-op — keep whatever the admin typed but
-    // don't stamp rescheduled_at or clear reminders.
     delete update.rescheduled_at;
     delete update.original_slot_start;
     delete update.reminder_24h_at;
     delete update.reminder_2h_at;
   }
 
-  // Phase 124: meeting-link change audit. We capture the previous link
-  // for the email; the route fires the update-notification email only
-  // when the new link differs from the previous AND status isn't moving
-  // (status transitions handle their own emails).
+  // Phase 124: meeting-link change audit.
   const meetingLinkChanged =
     update.meeting_link !== undefined &&
     previous !== null &&
     (update.meeting_link || null) !== (previous.meeting_link || null) &&
-    !update.status; // skip if we're also moving status
+    !update.status;
 
   if (meetingLinkChanged) {
     update.previous_meeting_link = previous?.meeting_link ?? null;
@@ -267,7 +355,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
   }
   if (!data) return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
 
-  // Phase 123/124: fire the student email on a real transition.
+  // Phase 123/124/125: fire the student email on a real transition.
   // Fire-and-forget — failures land in the server log + email_log row.
   const bookingId = resolved.id;
   const adminUserId = resolved.userId;
@@ -277,8 +365,16 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     reference: data.reference as string,
     previousSlotStartIso: previous?.slot_start ?? null,
     newSlotStartIso: data.slot_start as string,
-    meetingLink: typeof data.meeting_link === 'string' && data.meeting_link ? data.meeting_link : null,
+    meetingLink:
+      typeof data.meeting_link === 'string' && data.meeting_link ? data.meeting_link : null,
     locale: data.locale === 'zh' ? 'zh' : 'en',
+    previousProposedSlotStartIso: previous?.proposed_slot_start ?? null,
+    newProposedSlotStartIso:
+      typeof data.proposed_slot_start === 'string' ? data.proposed_slot_start : null,
+    newProposalToken:
+      typeof data.proposal_token === 'string' ? data.proposal_token : null,
+    newProposalExpiresAt:
+      typeof data.proposal_expires_at === 'string' ? data.proposal_expires_at : null,
   };
 
   let slug: string | null = null;
@@ -288,9 +384,28 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     previous !== null && update.slot_start !== undefined && previous.slot_start !== data.slot_start;
   const statusChanged =
     previous !== null && update.status !== undefined && previous.status !== data.status;
+  // Phase 125: a fresh proposal = previous.proposed_slot_start is null
+  // OR the proposed slot changed.
+  const proposalJustSent =
+    !!snapshot.newProposalToken &&
+    (!previous ||
+      previous.proposed_slot_start !== data.proposed_slot_start ||
+      previous.proposal_token !== data.proposal_token);
 
-  if (slotMoved) {
-    // Reschedule takes priority over the status-transition email.
+  if (proposalJustSent) {
+    // A proposal email wins over the status-transition email when
+    // both fire on the same PATCH (admin proposed + status changed).
+    slug = 'counselling.proposed';
+    sendPromise = sendCounsellingProposed({
+      toEmail: snapshot.email,
+      name: snapshot.name,
+      reference: snapshot.reference,
+      proposedSlotStartIso: snapshot.newProposedSlotStartIso!,
+      proposalToken: snapshot.newProposalToken!,
+      proposalExpiresAtIso: snapshot.newProposalExpiresAt!,
+      locale: snapshot.locale,
+    });
+  } else if (slotMoved) {
     slug = 'counselling.rescheduled';
     sendPromise = sendCounsellingRescheduled({
       toEmail: snapshot.email,

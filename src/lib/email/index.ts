@@ -21,6 +21,7 @@ import { getSupabaseServer } from '@/lib/supabase-server';
 import { SITE_URL } from '@/lib/site-url';
 import { buildCounsellingIcs } from '@/lib/counselling-ics';
 import { WHATSAPP_PHONE } from '@/lib/contact';
+import { proposalRespondUrl } from '@/lib/counselling-tokens';
 
 // Must match a domain verified on the Resend account (sica.com.cn is not;
 // studyinchina.academy is — verified 2026-09-21, DKIM + primary SPF).
@@ -697,10 +698,9 @@ function notConfigured(): LoggedSendTextResult {
 
 /**
  * Phase 124: shared helper for the DB-templated counselling lifecycle
- * emails (confirmed / rescheduled / cancelled / completed / no_show /
- * meeting_link_updated / reminder_24h / reminder_2h). Loads the slug +
- * locale, renders variables, appends the standard signature, and ships.
- * When `ics` is provided, the .ics invite is attached to the email.
+ * emails. Loads the slug + locale, renders variables, appends the
+ * standard signature, and ships. When `ics` is provided, the .ics
+ * invite is attached.
  *
  * Returns a `LoggedSendTextResult` so callers can write an email_log
  * row with the rendered subject/body snapshot. Unconfigured pipeline
@@ -768,10 +768,6 @@ async function sendCounsellingTemplatedEmail(args: {
 
 /** Per-booking subscriber token — same scheme the drip scheduler uses. */
 function unsubTokenFor(email: string): string {
-  // Tiny deterministic-ish token: the real unsubscribe flow lives in
-  // src/lib/email/drip/scheduler.ts (makeUnsubToken + email_drips row);
-  // for one-shot lifecycle emails we just hand back the same secret
-  // tied to the email so the route's footer link still works.
   const secret = process.env.UNSUB_SECRET ?? 'sica-unsub-fallback';
   return Buffer.from(`${email}:${secret}`).toString('base64url');
 }
@@ -970,5 +966,97 @@ export async function sendCounsellingReminder(params: {
       unsubToken: unsubTokenFor(params.toEmail),
     },
     unsubscribeToken: unsubTokenFor(params.toEmail),
+  });
+}
+
+/**
+ * Phase 125: admin-proposed time — sends the magic-link accept/counter
+ * emails to the student. Token must be pre-minted by the admin route
+ * (so it's also stored on the booking row before this sender runs).
+ */
+export async function sendCounsellingProposed(params: {
+  toEmail: string;
+  name: string;
+  reference: string;
+  proposedSlotStartIso: string;
+  proposalToken: string;
+  proposalExpiresAtIso: string;
+  locale: string;
+}): Promise<LoggedSendTextResult> {
+  const proposedSlotLabel = formatCounsellingSlotBeijing(params.proposedSlotStartIso);
+  const acceptUrl = `${SITE_URL}${proposalRespondUrl({ token: params.proposalToken, action: 'accept' })}`;
+  const counterUrl = `${SITE_URL}${proposalRespondUrl({ token: params.proposalToken, action: 'counter' })}`;
+  const proposalExpiresAt = new Intl.DateTimeFormat('en-GB', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: 'Asia/Shanghai',
+  }).format(new Date(params.proposalExpiresAtIso));
+  return sendCounsellingTemplatedEmail({
+    toEmail: params.toEmail,
+    slug: 'counselling.proposed',
+    locale: params.locale,
+    variables: {
+      name: params.name,
+      reference: params.reference,
+      proposedSlotLabel,
+      acceptUrl,
+      counterUrl,
+      proposalExpiresAt,
+      siteUrl: SITE_URL,
+      unsubToken: unsubTokenFor(params.toEmail),
+    },
+    unsubscribeToken: unsubTokenFor(params.toEmail),
+  });
+}
+
+/**
+ * Phase 125: student accepted a proposal. Same shape as Confirmed
+ * (carries the .ics invite) but a distinct slug so admins can edit
+ * copy separately. Returns the existing Confirmed result.
+ */
+export async function sendCounsellingProposalAccepted(params: {
+  toEmail: string;
+  name: string;
+  reference: string;
+  slotStartIso: string;
+  meetingLink: string | null;
+  locale: string;
+}): Promise<LoggedSendTextResult> {
+  return sendCounsellingConfirmed({
+    toEmail: params.toEmail,
+    name: params.name,
+    reference: params.reference,
+    slotStartIso: params.slotStartIso,
+    meetingLink: params.meetingLink,
+    locale: params.locale,
+  });
+}
+
+/**
+ * Phase 125: student counter-proposed. Admin-only email — the new
+ * proposal email fires to the student from the same route after we
+ * update proposed_slot_start + token.
+ */
+export async function sendCounsellingProposalDeclined(params: {
+  reference: string;
+  name: string;
+  previousSlotStartIso: string;
+  newSlotStartIso: string;
+  adminUrl: string;
+}): Promise<LoggedSendTextResult> {
+  const previousSlotLabel = formatCounsellingSlotBeijing(params.previousSlotStartIso);
+  const slotLabel = formatCounsellingSlotBeijing(params.newSlotStartIso);
+  // Admin notification always reads 'en' — bilingual body lands either way.
+  return sendCounsellingTemplatedEmail({
+    toEmail: process.env.ADMIN_EMAIL ?? '',
+    slug: 'counselling.proposal_declined',
+    locale: 'en',
+    variables: {
+      name: params.name,
+      reference: params.reference,
+      previousSlotLabel,
+      slotLabel,
+      adminUrl: params.adminUrl,
+    },
   });
 }
