@@ -696,10 +696,87 @@ function notConfigured(): LoggedSendTextResult {
 }
 
 /**
- * Phase 123: sent when an admin moves a booking to Confirmed. The
- * Confirmed email carries an .ics invite; the caller writes the
- * email_log row from the returned snapshot.
+ * Phase 124: shared helper for the DB-templated counselling lifecycle
+ * emails (confirmed / rescheduled / cancelled / completed / no_show /
+ * meeting_link_updated / reminder_24h / reminder_2h). Loads the slug +
+ * locale, renders variables, appends the standard signature, and ships.
+ * When `ics` is provided, the .ics invite is attached to the email.
+ *
+ * Returns a `LoggedSendTextResult` so callers can write an email_log
+ * row with the rendered subject/body snapshot. Unconfigured pipeline
+ * returns { ok:false, error:'Resend not configured', subject:null, text:null }
+ * — the caller checks `subject === null` to know nothing was attempted.
  */
+async function sendCounsellingTemplatedEmail(args: {
+  toEmail: string;
+  slug: string;
+  locale: string;
+  variables: Record<string, string | number | boolean | null | undefined>;
+  ics?: { reference: string; name: string; slotStartIso: string; meetingLink: string | null } | null;
+  unsubscribeToken?: string | null;
+  supabase?: SupabaseClient;
+}): Promise<LoggedSendTextResult> {
+  if (!isEmailConfigured()) return notConfigured();
+  const locale: EmailLocale = args.locale === 'zh' ? 'zh' : 'en';
+  const tpl = await loadTemplate(args.slug, locale, args.supabase);
+  if (!tpl) {
+    console.warn('[email] counselling template missing', args.slug, locale);
+    return { ok: false, error: `template missing: ${args.slug}`, subject: null, text: null };
+  }
+  const subject = tpl.subject;
+  const body = renderTextTemplate(tpl.body_text, args.variables);
+  const rendered = formatWithSignature({
+    subject,
+    bodyText: body,
+    unsubscribeToken: args.unsubscribeToken,
+  });
+  const attachments = args.ics
+    ? [
+        {
+          filename: `sica-counselling-${args.ics.reference}.ics`,
+          content: Buffer.from(
+            buildCounsellingIcs({
+              reference: args.ics.reference,
+              studentName: args.ics.name,
+              slotStart: args.ics.slotStartIso,
+              meetingLink: args.ics.meetingLink,
+              locale: locale === 'zh' ? 'zh' : 'en',
+            }),
+            'utf8',
+          ).toString('base64'),
+        },
+      ]
+    : undefined;
+  try {
+    const result = await sendTextEmail({
+      to: args.toEmail,
+      subject: rendered.subject,
+      text: rendered.text,
+      attachments,
+    });
+    return toLogged(result, rendered.subject, rendered.text);
+  } catch (err) {
+    console.error(`[email] ${args.slug} failed:`, err);
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : 'send threw',
+      subject: rendered.subject,
+      text: rendered.text,
+    };
+  }
+}
+
+/** Per-booking subscriber token — same scheme the drip scheduler uses. */
+function unsubTokenFor(email: string): string {
+  // Tiny deterministic-ish token: the real unsubscribe flow lives in
+  // src/lib/email/drip/scheduler.ts (makeUnsubToken + email_drips row);
+  // for one-shot lifecycle emails we just hand back the same secret
+  // tied to the email so the route's footer link still works.
+  const secret = process.env.UNSUB_SECRET ?? 'sica-unsub-fallback';
+  return Buffer.from(`${email}:${secret}`).toString('base64url');
+}
+
+/** Phase 123: Confirmed — carries the .ics invite. */
 export async function sendCounsellingConfirmed(params: {
   toEmail: string;
   name: string;
@@ -708,73 +785,61 @@ export async function sendCounsellingConfirmed(params: {
   meetingLink: string | null;
   locale: string;
 }): Promise<LoggedSendTextResult> {
-  if (!isEmailConfigured()) return notConfigured();
-  const zh = params.locale === 'zh';
-  const formatted = formatCounsellingSlotBeijing(params.slotStartIso);
-  const bodyText = zh
-    ? [
-        `您好 ${params.name}，`,
-        '',
-        '您的 SICA 免费 10 分钟在线咨询已确认。',
-        '',
-        `预约编号：${params.reference}`,
-        `咨询时间：${formatted}`,
-        params.meetingLink
-          ? `会议链接：${params.meetingLink}`
-          : '会议链接将在咨询开始前通过邮件或 WhatsApp 发给您。',
-        '',
-        '日历邀请（.ics）已附在本邮件中，点击即可添加到您的日历。',
-        '如需改期或取消，请直接回复本邮件。',
-      ]
-    : [
-        `Hi ${params.name},`,
-        '',
-        'Your free 10-minute counselling session with SICA is confirmed.',
-        '',
-        `Reference: ${params.reference}`,
-        `Session time: ${formatted}`,
-        params.meetingLink
-          ? `Meeting link: ${params.meetingLink}`
-          : 'The meeting link will follow by email or WhatsApp shortly before your session.',
-        '',
-        'A calendar invite (.ics) is attached — open it to add the session to your calendar.',
-        'Need to reschedule or cancel? Just reply to this email.',
-      ];
-  const { subject, text } = formatWithSignature({
-    subject: zh
-      ? `咨询已确认 ${params.reference}`
-      : `Confirmed: your counselling session — ${params.reference}`,
-    bodyText: bodyText.join('\n'),
+  const slotLabel = formatCounsellingSlotBeijing(params.slotStartIso);
+  const meetingLine = params.meetingLink
+    ? `Meeting link: ${params.meetingLink}`
+    : `The meeting link will follow by email or WhatsApp shortly before your session.`;
+  return sendCounsellingTemplatedEmail({
+    toEmail: params.toEmail,
+    slug: 'counselling.confirmed',
+    locale: params.locale,
+    variables: {
+      name: params.name,
+      reference: params.reference,
+      slotLabel,
+      meetingLine,
+      siteUrl: SITE_URL,
+      unsubToken: unsubTokenFor(params.toEmail),
+    },
+    ics: { reference: params.reference, name: params.name, slotStartIso: params.slotStartIso, meetingLink: params.meetingLink },
+    unsubscribeToken: unsubTokenFor(params.toEmail),
   });
-  try {
-    const result = await sendTextEmail({
-      to: params.toEmail,
-      subject,
-      text,
-      attachments: [
-        {
-          filename: `sica-counselling-${params.reference}.ics`,
-          content: Buffer.from(
-            buildCounsellingIcs({
-              reference: params.reference,
-              studentName: params.name,
-              slotStart: params.slotStartIso,
-              meetingLink: params.meetingLink,
-              locale: zh ? 'zh' : 'en',
-            }),
-            'utf8',
-          ).toString('base64'),
-        },
-      ],
-    });
-    return toLogged(result, subject, text);
-  } catch (err) {
-    console.error('[email] counselling confirmed failed:', err);
-    return { ok: false, error: err instanceof Error ? err.message : 'send threw', subject, text };
-  }
 }
 
-/** Phase 123: sent when an admin cancels a booking. Points at /counselling to rebook. */
+/** Phase 124: Rescheduled — slot moved, fresh .ics attached. */
+export async function sendCounsellingRescheduled(params: {
+  toEmail: string;
+  name: string;
+  reference: string;
+  previousSlotStartIso: string;
+  newSlotStartIso: string;
+  meetingLink: string | null;
+  locale: string;
+}): Promise<LoggedSendTextResult> {
+  const slotLabel = formatCounsellingSlotBeijing(params.newSlotStartIso);
+  const previousSlotLabel = formatCounsellingSlotBeijing(params.previousSlotStartIso);
+  const meetingLine = params.meetingLink
+    ? `Meeting link: ${params.meetingLink}`
+    : `The meeting link will follow by email or WhatsApp shortly before your new session.`;
+  return sendCounsellingTemplatedEmail({
+    toEmail: params.toEmail,
+    slug: 'counselling.rescheduled',
+    locale: params.locale,
+    variables: {
+      name: params.name,
+      reference: params.reference,
+      previousSlotLabel,
+      slotLabel,
+      meetingLine,
+      siteUrl: SITE_URL,
+      unsubToken: unsubTokenFor(params.toEmail),
+    },
+    ics: { reference: params.reference, name: params.name, slotStartIso: params.newSlotStartIso, meetingLink: params.meetingLink },
+    unsubscribeToken: unsubTokenFor(params.toEmail),
+  });
+}
+
+/** Phase 123: Cancelled — no .ics. */
 export async function sendCounsellingCancelled(params: {
   toEmail: string;
   name: string;
@@ -782,51 +847,102 @@ export async function sendCounsellingCancelled(params: {
   slotStartIso: string;
   locale: string;
 }): Promise<LoggedSendTextResult> {
-  if (!isEmailConfigured()) return notConfigured();
-  const zh = params.locale === 'zh';
-  const formatted = formatCounsellingSlotBeijing(params.slotStartIso);
-  const bodyText = zh
-    ? [
-        `您好 ${params.name}，`,
-        '',
-        '很抱歉，您预约的 SICA 免费咨询已被取消。',
-        '',
-        `预约编号：${params.reference}`,
-        `原咨询时间：${formatted}`,
-        '',
-        `您可以随时重新预约：${SITE_URL}/counselling`,
-        '如有任何疑问，直接回复本邮件即可。',
-      ]
-    : [
-        `Hi ${params.name},`,
-        '',
-        'Your SICA free counselling session has been cancelled.',
-        '',
-        `Reference: ${params.reference}`,
-        `Original time: ${formatted}`,
-        '',
-        `You can book a new time any moment: ${SITE_URL}/counselling`,
-        'Any questions — just reply to this email.',
-      ];
-  const { subject, text } = formatWithSignature({
-    subject: zh
-      ? `咨询预约已取消 ${params.reference}`
-      : `Your counselling session was cancelled — ${params.reference}`,
-    bodyText: bodyText.join('\n'),
+  const slotLabel = formatCounsellingSlotBeijing(params.slotStartIso);
+  return sendCounsellingTemplatedEmail({
+    toEmail: params.toEmail,
+    slug: 'counselling.cancelled',
+    locale: params.locale,
+    variables: {
+      name: params.name,
+      reference: params.reference,
+      slotLabel,
+      siteUrl: SITE_URL,
+      unsubToken: unsubTokenFor(params.toEmail),
+    },
+    unsubscribeToken: unsubTokenFor(params.toEmail),
   });
-  try {
-    const result = await sendTextEmail({ to: params.toEmail, subject, text });
-    return toLogged(result, subject, text);
-  } catch (err) {
-    console.error('[email] counselling cancelled failed:', err);
-    return { ok: false, error: err instanceof Error ? err.message : 'send threw', subject, text };
-  }
+}
+
+/** Phase 124: Completed — positive close + rebook / assessment links. */
+export async function sendCounsellingCompleted(params: {
+  toEmail: string;
+  name: string;
+  reference: string;
+  slotStartIso: string;
+  locale: string;
+}): Promise<LoggedSendTextResult> {
+  const slotLabel = formatCounsellingSlotBeijing(params.slotStartIso);
+  return sendCounsellingTemplatedEmail({
+    toEmail: params.toEmail,
+    slug: 'counselling.completed',
+    locale: params.locale,
+    variables: {
+      name: params.name,
+      reference: params.reference,
+      slotLabel,
+      siteUrl: SITE_URL,
+      unsubToken: unsubTokenFor(params.toEmail),
+    },
+    unsubscribeToken: unsubTokenFor(params.toEmail),
+  });
+}
+
+/** Phase 124: No-show outreach — gentle + rebook. */
+export async function sendCounsellingNoShow(params: {
+  toEmail: string;
+  name: string;
+  reference: string;
+  slotStartIso: string;
+  locale: string;
+}): Promise<LoggedSendTextResult> {
+  const slotLabel = formatCounsellingSlotBeijing(params.slotStartIso);
+  return sendCounsellingTemplatedEmail({
+    toEmail: params.toEmail,
+    slug: 'counselling.no_show',
+    locale: params.locale,
+    variables: {
+      name: params.name,
+      reference: params.reference,
+      slotLabel,
+      siteUrl: SITE_URL,
+      unsubToken: unsubTokenFor(params.toEmail),
+    },
+    unsubscribeToken: unsubTokenFor(params.toEmail),
+  });
+}
+
+/** Phase 124: Meeting-link changed (no status change). Re-attaches the .ics. */
+export async function sendCounsellingMeetingLinkUpdated(params: {
+  toEmail: string;
+  name: string;
+  reference: string;
+  slotStartIso: string;
+  newMeetingLink: string;
+  locale: string;
+}): Promise<LoggedSendTextResult> {
+  const slotLabel = formatCounsellingSlotBeijing(params.slotStartIso);
+  const meetingLine = `Meeting link: ${params.newMeetingLink}`;
+  return sendCounsellingTemplatedEmail({
+    toEmail: params.toEmail,
+    slug: 'counselling.meeting_link_updated',
+    locale: params.locale,
+    variables: {
+      name: params.name,
+      reference: params.reference,
+      slotLabel,
+      meetingLine,
+      siteUrl: SITE_URL,
+      unsubToken: unsubTokenFor(params.toEmail),
+    },
+    ics: { reference: params.reference, name: params.name, slotStartIso: params.slotStartIso, meetingLink: params.newMeetingLink },
+    unsubscribeToken: unsubTokenFor(params.toEmail),
+  });
 }
 
 /**
- * Phase 123: reminder before a Confirmed session. kind selects the
- * 24h / 2h wording; the caller stamps the booking row so each fires
- * exactly once.
+ * Phase 124: reminder before a Confirmed session — template-backed,
+ * kind selects the 24h / 2h slug. No .ics (the booking confirmation
+ * already attached one).
  */
 export async function sendCounsellingReminder(params: {
   toEmail: string;
@@ -837,50 +953,22 @@ export async function sendCounsellingReminder(params: {
   locale: string;
   kind: '24h' | '2h';
 }): Promise<LoggedSendTextResult> {
-  if (!isEmailConfigured()) return notConfigured();
-  const zh = params.locale === 'zh';
-  const formatted = formatCounsellingSlotBeijing(params.slotStartIso);
-  const whenZh = params.kind === '24h' ? '24 小时后' : '即将开始';
-  const whenEn = params.kind === '24h' ? 'in 24 hours' : 'starting soon';
-  const waLink = `https://wa.me/${WHATSAPP_PHONE}`;
-  const bodyText = zh
-    ? [
-        `您好 ${params.name}，`,
-        '',
-        `温馨提示：您的 SICA 免费咨询${whenZh}开始。`,
-        '',
-        `预约编号：${params.reference}`,
-        `咨询时间：${formatted}`,
-        params.meetingLink
-          ? `会议链接：${params.meetingLink}`
-          : '会议链接将通过邮件或 WhatsApp 发送。',
-        '',
-        `如需帮助，随时 WhatsApp 联系我们：${waLink}`,
-      ]
-    : [
-        `Hi ${params.name},`,
-        '',
-        `A friendly reminder: your free SICA counselling session is ${whenEn}.`,
-        '',
-        `Reference: ${params.reference}`,
-        `Session time: ${formatted}`,
-        params.meetingLink
-          ? `Meeting link: ${params.meetingLink}`
-          : 'The meeting link will arrive by email or WhatsApp.',
-        '',
-        `Need help? WhatsApp us any time: ${waLink}`,
-      ];
-  const { subject, text } = formatWithSignature({
-    subject: zh
-      ? `咨询提醒 ${params.reference}`
-      : `Reminder: your counselling session ${whenEn} — ${params.reference}`,
-    bodyText: bodyText.join('\n'),
+  const slotLabel = formatCounsellingSlotBeijing(params.slotStartIso);
+  const meetingLine = params.meetingLink
+    ? `Meeting link: ${params.meetingLink}`
+    : `The meeting link will arrive by email or WhatsApp.`;
+  return sendCounsellingTemplatedEmail({
+    toEmail: params.toEmail,
+    slug: `counselling.reminder_${params.kind}`,
+    locale: params.locale,
+    variables: {
+      name: params.name,
+      reference: params.reference,
+      slotLabel,
+      meetingLine,
+      siteUrl: SITE_URL,
+      unsubToken: unsubTokenFor(params.toEmail),
+    },
+    unsubscribeToken: unsubTokenFor(params.toEmail),
   });
-  try {
-    const result = await sendTextEmail({ to: params.toEmail, subject, text });
-    return toLogged(result, subject, text);
-  } catch (err) {
-    console.error('[email] counselling reminder failed:', err);
-    return { ok: false, error: err instanceof Error ? err.message : 'send threw', subject, text };
-  }
 }

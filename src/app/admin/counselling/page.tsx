@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   CalendarClock,
+  CalendarPlus,
   CheckCircle2,
   ExternalLink,
+  Loader2,
   MoreHorizontal,
   Search,
   UserX,
@@ -39,6 +41,7 @@ import {
 } from '@/components/ui/dialog';
 import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
+import { track } from '@/lib/analytics';
 import {
   COUNSELLING_BOOKING_STATUSES,
   type CounsellingBooking,
@@ -87,6 +90,21 @@ export default function AdminCounsellingPage() {
   const [editSaving, setEditSaving] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{ booking: CounsellingBooking; action: ConfirmAction } | null>(null);
   const [acting, setActing] = useState(false);
+
+  // Phase 124: reschedule modal — reuses /api/counselling/slots to pick
+  // a fresh candidate slot for the same booking.
+  const [rescheduleBooking, setRescheduleBooking] = useState<CounsellingBooking | null>(null);
+  const [rescheduleDates, setRescheduleDates] = useState<string[]>([]);
+  const [rescheduleDate, setRescheduleDate] = useState<string | null>(null);
+  const [rescheduleSlots, setRescheduleSlots] = useState<
+    { start: string; label: string; available: boolean }[]
+  >([]);
+  const [rescheduleLoading, setRescheduleLoading] = useState(false);
+  const [reschedulePickedStart, setReschedulePickedStart] = useState<string | null>(null);
+  const [rescheduleSaving, setRescheduleSaving] = useState(false);
+
+  // Phase 124: per-row success/error toasts mirroring Phase 11's pattern.
+  const [toast, setToast] = useState<{ kind: 'ok' | 'err'; slug: string } | null>(null);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -157,19 +175,125 @@ export default function AdminCounsellingPage() {
 
   const handleStatusAction = async (booking: CounsellingBooking, status: CounsellingBookingStatus) => {
     const ok = await patchBooking(booking.id, { status });
-    if (ok) void load(); // stats + scope membership change on any status move
+    if (ok) {
+      setToast({ kind: 'ok', slug: `adminCounselling.toast_${status}` });
+      if (status === 'Completed') {
+        track('counselling_completed', { locale, reference: booking.reference });
+      }
+      void load(); // stats + scope membership change on any status move
+    } else {
+      setToast({ kind: 'err', slug: 'adminCounselling.toastError' });
+    }
   };
 
   const handleEditSave = async () => {
     if (!editBooking) return;
+    const meetingLinkChanged =
+      (editMeetingLink.trim() || null) !== (editBooking.meetingLink || null);
     const ok = await patchBooking(editBooking.id, {
       meetingLink: editMeetingLink,
       adminNotes: editNotes,
     });
     if (ok) {
+      setToast({
+        kind: 'ok',
+        slug: meetingLinkChanged
+          ? 'adminCounselling.toast_meetingLinkUpdated'
+          : 'adminCounselling.toast_saved',
+      });
       setEditBooking(null);
       void load();
+    } else {
+      setToast({ kind: 'err', slug: 'adminCounselling.toastError' });
     }
+  };
+
+  // Auto-dismiss toast after 4s
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 4000);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  // Phase 124: reschedule modal helpers
+  const loadRescheduleDates = useCallback(async () => {
+    setRescheduleLoading(true);
+    try {
+      const res = await fetch('/api/counselling/slots');
+      const data = (await res.json()) as { dates?: string[] };
+      setRescheduleDates(data.dates ?? []);
+      setRescheduleDate((prev) => prev ?? data.dates?.[0] ?? null);
+    } catch {
+      setRescheduleDates([]);
+    } finally {
+      setRescheduleLoading(false);
+    }
+  }, []);
+
+  const loadRescheduleSlots = useCallback(async (date: string) => {
+    setRescheduleLoading(true);
+    try {
+      const res = await fetch(`/api/counselling/slots?date=${encodeURIComponent(date)}`);
+      const data = (await res.json()) as { slots?: { start: string; label: string; available: boolean }[] };
+      setRescheduleSlots(data.slots ?? []);
+    } catch {
+      setRescheduleSlots([]);
+    } finally {
+      setRescheduleLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!rescheduleBooking) return;
+    void loadRescheduleDates();
+  }, [rescheduleBooking, loadRescheduleDates]);
+
+  useEffect(() => {
+    if (!rescheduleDate) return;
+    void loadRescheduleSlots(rescheduleDate);
+  }, [rescheduleDate, loadRescheduleSlots]);
+
+  const openReschedule = (booking: CounsellingBooking) => {
+    setRescheduleBooking(booking);
+    setReschedulePickedStart(null);
+  };
+
+  const closeReschedule = () => {
+    setRescheduleBooking(null);
+    setRescheduleDate(null);
+    setReschedulePickedStart(null);
+    setRescheduleSlots([]);
+  };
+
+  const handleRescheduleSave = async () => {
+    if (!rescheduleBooking || !reschedulePickedStart) return;
+    setRescheduleSaving(true);
+    try {
+      const ok = await patchBooking(rescheduleBooking.id, {
+        slotStartIso: reschedulePickedStart,
+        status: 'Confirmed',
+      });
+      if (ok) {
+        setToast({ kind: 'ok', slug: 'adminCounselling.toast_rescheduled' });
+        track('counselling_rescheduled', { locale, reference: rescheduleBooking.reference });
+        closeReschedule();
+        void load();
+      } else {
+        setToast({ kind: 'err', slug: 'adminCounselling.toastError' });
+      }
+    } finally {
+      setRescheduleSaving(false);
+    }
+  };
+
+  const formatRescheduleDateChip = (dateStr: string): string => {
+    const d = new Date(`${dateStr}T00:00:00+08:00`);
+    return new Intl.DateTimeFormat(localeTag, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      timeZone: 'Asia/Shanghai',
+    }).format(d);
   };
 
   const openEdit = (booking: CounsellingBooking) => {
@@ -364,6 +488,12 @@ export default function AdminCounsellingPage() {
                               {t('adminCounselling.actionComplete')}
                             </DropdownMenuItem>
                           )}
+                          {b.status !== 'Cancelled' && b.status !== 'Completed' && b.status !== 'No-show' && (
+                            <DropdownMenuItem onClick={() => openReschedule(b)}>
+                              <CalendarPlus className="h-4 w-4 mr-2" />
+                              {t('adminCounselling.actionReschedule')}
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem onClick={() => openEdit(b)}>
                             {t('adminCounselling.actionEdit')}
                           </DropdownMenuItem>
@@ -511,6 +641,117 @@ export default function AdminCounsellingPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Reschedule dialog */}
+      <Dialog open={!!rescheduleBooking} onOpenChange={(open) => !open && closeReschedule()}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t('adminCounselling.rescheduleTitle')}</DialogTitle>
+            <DialogDescription>
+              {rescheduleBooking
+                ? t('adminCounselling.rescheduleBody', {
+                    name: rescheduleBooking.name,
+                    slot: formatSlot(rescheduleBooking.slotStart),
+                  })
+                : ''}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-[#1F2937] mb-1">
+                {t('adminCounselling.reschedulePickDate')}
+              </label>
+              {rescheduleLoading && rescheduleDates.length === 0 ? (
+                <div className="flex items-center gap-2 text-sm text-gray-500 py-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {t('adminCounselling.loading')}
+                </div>
+              ) : rescheduleDates.length === 0 ? (
+                <div className="text-sm text-gray-500 py-2">{t('adminCounselling.rescheduleNoSlots')}</div>
+              ) : (
+                <div className="flex gap-2 overflow-x-auto pb-2">
+                  {rescheduleDates.map((date) => (
+                    <button
+                      key={date}
+                      type="button"
+                      onClick={() => {
+                        setRescheduleDate(date);
+                        setReschedulePickedStart(null);
+                      }}
+                      className={`flex-shrink-0 border px-4 py-2 text-sm font-medium transition-colors ${
+                        rescheduleDate === date
+                          ? 'border-[#9B1B30] bg-[#9B1B30] text-white'
+                          : 'border-gray-300 bg-white text-[#1F2937] hover:border-[#9B1B30] hover:text-[#9B1B30]'
+                      }`}
+                    >
+                      {formatRescheduleDateChip(date)}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#1F2937] mb-1">
+                {t('adminCounselling.reschedulePickSlot')}
+              </label>
+              {rescheduleLoading ? (
+                <div className="flex items-center gap-2 text-sm text-gray-500 py-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {t('adminCounselling.loading')}
+                </div>
+              ) : rescheduleSlots.length === 0 ? (
+                <div className="text-sm text-gray-500 py-2">{t('adminCounselling.rescheduleNoSlots')}</div>
+              ) : (
+                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                  {rescheduleSlots.map((s) => (
+                    <button
+                      key={s.start}
+                      type="button"
+                      disabled={!s.available}
+                      onClick={() => setReschedulePickedStart(s.start)}
+                      className={`border px-2 py-2 text-sm font-medium transition-colors ${
+                        reschedulePickedStart === s.start
+                          ? 'border-[#9B1B30] bg-[#9B1B30] text-white'
+                          : s.available
+                            ? 'border-gray-300 bg-white text-[#1F2937] hover:border-[#9B1B30] hover:text-[#9B1B30]'
+                            : 'border-gray-200 bg-gray-100 text-gray-300 cursor-not-allowed line-through'
+                      }`}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeReschedule}>
+              {t('adminCounselling.cancelEdit')}
+            </Button>
+            <Button
+              className="bg-[#9B1B30] hover:bg-[#7A1625] text-white"
+              onClick={handleRescheduleSave}
+              disabled={!reschedulePickedStart || rescheduleSaving}
+            >
+              {rescheduleSaving
+                ? t('adminCounselling.editSaving')
+                : t('adminCounselling.rescheduleSave')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Toast (Phase 124: send-status feedback) */}
+      {toast && (
+        <div
+          className={`fixed bottom-6 right-6 z-50 px-4 py-3 text-sm border ${
+            toast.kind === 'ok'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+              : 'bg-red-50 border-red-200 text-red-700'
+          }`}
+        >
+          {t(toast.slug)}
+        </div>
+      )}
     </div>
   );
 }

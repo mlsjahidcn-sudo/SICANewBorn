@@ -111,6 +111,20 @@ export interface AnalyticsEventMap {
     /** Page locale. */
     locale: 'en' | 'zh';
   };
+  /** Phase 124: admin moved a booking's slot to a new instant. */
+  counselling_rescheduled: {
+    /** Page locale. */
+    locale: 'en' | 'zh';
+    /** Reference id of the booking that was rescheduled. */
+    reference: string;
+  };
+  /** Phase 124: admin marked a session Completed. */
+  counselling_completed: {
+    /** Page locale. */
+    locale: 'en' | 'zh';
+    /** Reference id of the booking that was completed. */
+    reference: string;
+  };
   /** User clicked a service-tier CTA on the /get-started sales page. */
   service_card_click: {
     /** Which tier the user clicked toward. */
