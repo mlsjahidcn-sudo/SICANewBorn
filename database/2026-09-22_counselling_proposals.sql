@@ -29,21 +29,15 @@ COMMENT ON COLUMN public.counselling_bookings.proposal_expires_at IS
 
 -- 2. status CHECK extended to accept 'Proposed' ------------------------------
 -- The Phase 114 migration created the constraint as an inline unnamed
--- CHECK. Drop by matching the definition (the safe pattern from the
--- Phase 124 migration: probe, drop, re-create).
+-- CHECK, which Postgres auto-named `counselling_bookings_status_check`.
+-- The original `DO` block probed for `pg_get_constraintdef LIKE
+-- 'CHECK (status =%'` to find it; on a re-run the previous Phase 124
+-- migration already named the constraint so the loop drops nothing
+-- and the explicit ADD CONSTRAINT collides with the now-named one.
+-- Solution: drop by name up-front (it's a no-op if absent).
 
-DO $$
-DECLARE
-  constraint_record record;
-BEGIN
-  FOR constraint_record IN
-    SELECT conname FROM pg_constraint
-    WHERE conrelid = 'public.counselling_bookings'::regclass
-      AND pg_get_constraintdef(oid) LIKE 'CHECK (status =%'
-  LOOP
-    EXECUTE format('ALTER TABLE public.counselling_bookings DROP CONSTRAINT %I', constraint_record.conname);
-  END LOOP;
-END $$;
+ALTER TABLE public.counselling_bookings
+  DROP CONSTRAINT IF EXISTS counselling_bookings_status_check;
 
 ALTER TABLE public.counselling_bookings
   ADD CONSTRAINT counselling_bookings_status_check
