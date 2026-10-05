@@ -19,8 +19,8 @@ import {
   isSlotWithinLeadWindow,
   parseSlotInstant,
 } from '@/lib/counselling-slots';
+import { fetchOccupiedSlotInstants } from '@/lib/counselling/occupancy';
 import { mintProposalToken } from '@/lib/counselling-tokens';
-import { SITE_URL } from '@/lib/site-url';
 
 export const dynamic = 'force-dynamic';
 
@@ -286,8 +286,11 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
 
   // Slot-ownership re-check: any update that targets a real slot
   // (reschedule OR confirm OR propose-time) needs to see if another
-  // live booking already holds it. The partial unique index is the
-  // final arbiter; this check just lets us return a friendly 409.
+  // live booking — or another UNEXPIRED proposal (Phase 137) —
+  // already holds it. The partial unique index is the final arbiter
+  // for the booking half; the proposal half is app-side only (an
+  // expiry predicate can't live in an index). Both checks exclude
+  // this row so a booking never clashes with itself.
   const targetSlotIso = slotStartIso ?? proposedSlotStartIso ?? previous?.slot_start ?? null;
   if (
     targetSlotIso &&
@@ -303,6 +306,21 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     if (clash) {
       return NextResponse.json(
         { error: 'Another live booking already holds this slot' },
+        { status: 409 },
+      );
+    }
+    const targetInstant = new Date(targetSlotIso);
+    const occupied = await fetchOccupiedSlotInstants(
+      resolved.service,
+      [targetSlotIso],
+      { excludeBookingId: resolved.id },
+    );
+    if (occupied.has(targetInstant.getTime())) {
+      return NextResponse.json(
+        {
+          error:
+            'This slot is on hold for another student (pending proposal) — pick a different time or wait for that proposal to expire',
+        },
         { status: 409 },
       );
     }

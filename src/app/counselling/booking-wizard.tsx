@@ -300,7 +300,27 @@ export function BookingWizard() {
             </div>
           )}
 
-          <div className="mt-6 mb-2 text-sm font-medium text-[#1F2937]">{t('counselling.pickSlot')}</div>
+          <div className="mt-6 mb-2 flex flex-wrap items-center justify-between gap-2">
+            <div className="text-sm font-medium text-[#1F2937]">{t('counselling.pickSlot')}</div>
+            {slots.length > 0 && (
+              <div className="flex items-center gap-3 text-xs text-gray-500">
+                <span>
+                  {t('counselling.slotsFreeSummary', {
+                    free: slots.filter((s) => s.available).length,
+                    total: slots.length,
+                  })}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block w-3 h-3 border border-gray-300 bg-white" />
+                  {t('counselling.slotFree')}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block w-3 h-3 border border-gray-200 bg-gray-100" />
+                  {t('counselling.slotBooked')}
+                </span>
+              </div>
+            )}
+          </div>
           {slotsLoading ? (
             <div className="flex items-center gap-2 text-sm text-gray-500 py-3">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -315,6 +335,7 @@ export function BookingWizard() {
                   key={slot.start}
                   type="button"
                   disabled={!slot.available}
+                  title={slot.available ? undefined : t('counselling.slotBooked')}
                   onClick={() => {
                     setSelectedSlot(slot);
                     // Phase 123 funnel instrumentation.
@@ -331,10 +352,23 @@ export function BookingWizard() {
                       ? 'border-[#9B1B30] bg-[#9B1B30] text-white'
                       : slot.available
                         ? 'border-gray-300 bg-white text-[#1F2937] hover:border-[#9B1B30] hover:text-[#9B1B30]'
-                        : 'border-gray-200 bg-gray-100 text-gray-300 cursor-not-allowed line-through'
+                        : 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
                   }`}
                 >
-                  {slot.label}
+                  <span className={slot.available || selectedSlot?.start === slot.start ? '' : 'line-through'}>
+                    {slot.label}
+                  </span>
+                  <span
+                    className={`block text-[10px] font-normal mt-0.5 ${
+                      selectedSlot?.start === slot.start
+                        ? 'text-white/80'
+                        : slot.available
+                          ? 'text-emerald-700'
+                          : 'text-[#9B1B30]'
+                    }`}
+                  >
+                    {slot.available ? t('counselling.slotFree') : t('counselling.slotBooked')}
+                  </span>
                 </button>
               ))}
             </div>

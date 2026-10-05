@@ -13,6 +13,7 @@ import {
   isSlotWithinLeadWindow,
   parseSlotInstant,
 } from '@/lib/counselling-slots';
+import { fetchOccupiedSlotInstants } from '@/lib/counselling/occupancy';
 import {
   sendCounsellingAdminNotification,
   sendCounsellingConfirmation,
@@ -150,14 +151,11 @@ export async function POST(request: NextRequest) {
   const slotIso = slotStart.toISOString();
 
   // Pre-insert check for a friendlier error; the DB unique index is
-  // the real guard (see 23505 handling below).
-  const { data: existing } = await supabase
-    .from('counselling_bookings')
-    .select('id')
-    .eq('slot_start', slotIso)
-    .in('status', ['Pending', 'Confirmed'])
-    .maybeSingle();
-  if (existing) {
+  // the real guard (see 23505 handling below). Phase 137: the check
+  // also covers UNEXPIRED admin proposals (Phase 125) so a student
+  // can't take a slot that's on hold for another student.
+  const occupied = await fetchOccupiedSlotInstants(supabase, [slotIso]);
+  if (occupied.has(slotStart.getTime())) {
     return NextResponse.json(
       { error: 'That slot was just taken — please pick another time' },
       { status: 409 },

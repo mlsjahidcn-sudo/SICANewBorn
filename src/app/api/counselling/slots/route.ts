@@ -7,6 +7,7 @@ import {
   listBookableDates,
   listCandidateSlotsForDate,
 } from '@/lib/counselling-slots';
+import { fetchOccupiedSlotInstants } from '@/lib/counselling/occupancy';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,8 +19,10 @@ export const dynamic = 'force-dynamic';
  *   GET /api/counselling/slots?date=YYYY-MM-DD → that day's grid with availability
  *
  * Availability = candidate grid (src/lib/counselling-slots.ts) minus
- * live (Pending/Confirmed) bookings. Cancelled/Completed/No-show rows
- * don't hold a slot — the DB's partial unique index agrees.
+ * occupied instants: live (Pending/Confirmed) bookings PLUS unexpired
+ * admin proposals (Phase 137). Cancelled/Completed/No-show rows and
+ * expired/declined proposals don't hold a slot — the DB's partial
+ * unique index agrees for the booking half.
  *
  * Availability changes by the minute, so the response is no-store.
  */
@@ -71,19 +74,11 @@ export async function GET(request: NextRequest) {
 
   const candidateIsos = candidates.map((s) => s.toISOString());
 
-  // Live bookings already holding a candidate slot today.
-  const { data: taken, error } = await supabase
-    .from('counselling_bookings')
-    .select('slot_start')
-    .in('slot_start', candidateIsos)
-    .in('status', ['Pending', 'Confirmed']);
-
-  if (error) {
-    console.error('[GET /api/counselling/slots] supabase error:', error);
-    return NextResponse.json({ error: 'Failed to load availability' }, { status: 500 });
-  }
-
-  const takenSet = new Set((taken ?? []).map((row) => new Date(row.slot_start as string).getTime()));
+  // Phase 137: occupancy = live bookings (Pending/Confirmed on
+  // slot_start) PLUS unexpired admin proposals (Phase 125) on
+  // proposed_slot_start — a slot on hold for another student must not
+  // look free. Shared definition in lib/counselling/occupancy.
+  const takenSet = await fetchOccupiedSlotInstants(supabase, candidateIsos);
 
   const slots = candidates.map((slot) => ({
     start: slot.toISOString(),
