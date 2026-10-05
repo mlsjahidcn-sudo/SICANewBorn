@@ -3081,6 +3081,7 @@ export const translations: Record<Locale, Record<string, string>> = {
       'Logged as a dry-run — the outgoing mail connection is not configured on this server, nothing was delivered.',
     'adminSendEmail.errorGenerate': 'AI generation failed — try again.',
     'adminSendEmail.errorSend': 'Sending failed — try again.',
+    'adminSendEmail.sentLabel': 'Email sent',
 
     // /admin/students — list page
     'adminStudents.title': 'Students',
@@ -7799,6 +7800,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminSendEmail.dryRunNotice': '已记录为试运行 — 本服务器未配置外发邮件服务，邮件未实际投递。',
     'adminSendEmail.errorGenerate': 'AI 生成失败，请重试。',
     'adminSendEmail.errorSend': '发送失败，请重试。',
+    'adminSendEmail.sentLabel': '邮件已发送',
 
     // /admin/students — list page
     'adminStudents.title': '学生',

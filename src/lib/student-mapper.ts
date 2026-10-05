@@ -73,6 +73,10 @@ export interface AdminStudent {
   // by the list + export endpoints; undefined on single-student GETs
   // that don't need the count.
   applicationCount?: number | null;
+  // Phase 136b: newest successful email send (email_log, test sends
+  // excluded) — populated by the list endpoint for the
+  // "✓ Email sent <date>" chip. Undefined elsewhere.
+  lastEmailSentAt?: string | null;
 }
 
 export type AdminStudentStatus = AdminStudent['status'];

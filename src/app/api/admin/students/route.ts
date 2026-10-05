@@ -4,6 +4,7 @@ import { mapStudentFromDb, mapStudentToDb, parseSource, parseStatus } from '@/li
 import { sendStudentWelcome } from '@/lib/email';
 import { sanitizeOrTerm, parseIntParam } from '@/lib/postgrest';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { fetchLastEmailSentAt } from '@/lib/admin/last-email-lookup';
 
 /**
  * GET /api/admin/students
@@ -163,6 +164,20 @@ export async function GET(request: NextRequest) {
       }
       for (const s of students) {
         s.applicationCount = counts.get(s.id) || 0;
+      }
+    }
+
+    // Phase 136b — newest successful email send per student, for the
+    // "✓ Email sent <date>" chip on the list. Same best-effort
+    // contract as the application counts above.
+    if (studentIds.length > 0) {
+      const emailMap = await fetchLastEmailSentAt(service, {
+        leadType: 'student',
+        leadIds: studentIds,
+        adminEmail: process.env.ADMIN_EMAIL || null,
+      });
+      for (const s of students) {
+        s.lastEmailSentAt = emailMap.get(s.id) ?? null;
       }
     }
 

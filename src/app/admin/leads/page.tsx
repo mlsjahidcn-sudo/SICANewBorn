@@ -84,6 +84,7 @@ interface UnifiedLead {
   resolved_at: string | null;
   created_at: string;
   updated_at: string | null;
+  last_email_at: string | null;
   score: number;
   score_tier: 'cold' | 'warm' | 'hot';
   score_reasons: string[];
@@ -314,6 +315,19 @@ export default function LeadsPage() {
         year: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
+      });
+    } catch {
+      return iso;
+    }
+  };
+
+  // Compact date for the "✓ Email sent" chip (date only, no time).
+  const formatEmailChipDate = (iso: string) => {
+    try {
+      return new Date(iso).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
       });
     } catch {
       return iso;
@@ -659,6 +673,15 @@ export default function LeadsPage() {
                               {lead.status}
                             </Badge>
                           )}
+                          {lead.last_email_at && (
+                            <span
+                              title={formatDate(lead.last_email_at)}
+                              className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-800 font-semibold inline-flex items-center gap-1"
+                            >
+                              <Mail className="h-3 w-3" />
+                              {t('adminSendEmail.sentLabel')} {formatEmailChipDate(lead.last_email_at)}
+                            </span>
+                          )}
                           {lead.assigned_to ? (
                             <span className="text-xs text-gray-500">{t('adminLeads.assigned')}</span>
                           ) : (
@@ -813,6 +836,17 @@ export default function LeadsPage() {
         toName={emailLead?.name ?? null}
         country={emailLead?.country ?? null}
         notes={emailLead?.message ?? null}
+        onSent={() => {
+          // Stamp the chip optimistically; the next list load
+          // replaces it with the email_log truth.
+          setLeads((prev) =>
+            prev.map((l) =>
+              l.lead_id === emailLead?.lead_id
+                ? { ...l, last_email_at: new Date().toISOString() }
+                : l,
+            ),
+          );
+        }}
       />
     </div>
   );

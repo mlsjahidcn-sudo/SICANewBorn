@@ -46,6 +46,9 @@ interface SendEmailDialogProps {
   /** Extra recipient context for the AI (country, original message…). */
   country?: string | null;
   notes?: string | null;
+  /** Fired after a REAL send succeeds (not test sends) so the parent
+   * page can stamp the row's "✓ Email sent" chip optimistically. */
+  onSent?: () => void;
 }
 
 interface ComposeResponse {
@@ -67,6 +70,7 @@ export function SendEmailDialog({
   toName,
   country,
   notes,
+  onSent,
 }: SendEmailDialogProps) {
   const { t } = useI18n();
   const [theme, setTheme] = useState('');
@@ -144,6 +148,7 @@ export function SendEmailDialog({
         setSuccess(t('adminSendEmail.testSent'));
       } else {
         setSuccess(t('adminSendEmail.sent'));
+        onSent?.();
       }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('adminSendEmail.errorSend'));

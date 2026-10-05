@@ -46,6 +46,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServer } from '@/lib/supabase-server';
 import { requireAdmin } from '@/lib/supabase-auth';
+import { fetchLastEmailSentAt } from '@/lib/admin/last-email-lookup';
 
 export const dynamic = 'force-dynamic';
 
@@ -72,6 +73,9 @@ interface UnifiedLead {
   resolved_at: string | null;
   created_at: string;
   updated_at: string | null;
+  // Phase 136b — newest successful email_log send for this lead
+  // (test sends excluded). Null when the lead has never been emailed.
+  last_email_at: string | null;
   // Phase 2.4 — derived lead score (0-100). See scoreLead() for the
   // heuristic. Same row can have a different score in different
   // snapshots; we recompute every request so the latest fields
@@ -198,6 +202,32 @@ export async function GET(request: NextRequest) {
   // Merge sort by created_at desc
   all.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
 
+  // Phase 136b — batched last-email lookup per source type. Fills
+  // last_email_at so the list can show "✓ Email sent <date>".
+  // Best-effort: on failure the chips just don't render.
+  {
+    const byType: Record<LeadType, string[]> = { contact: [], chat: [], assessment: [] };
+    for (const lead of all) byType[lead.lead_type].push(lead.lead_id);
+    const adminEmail = process.env.ADMIN_EMAIL || null;
+    const lookups = await Promise.all(
+      (Object.keys(byType) as LeadType[])
+        .filter((t) => byType[t].length > 0)
+        .map(async (t) => ({
+          t,
+          map: await fetchLastEmailSentAt(supabase, {
+            leadType: t,
+            leadIds: byType[t],
+            adminEmail,
+          }),
+        })),
+    );
+    const merged = new Map<string, string>();
+    for (const { map } of lookups) {
+      for (const [id, at] of map) merged.set(id, at);
+    }
+    for (const lead of all) lead.last_email_at = merged.get(lead.lead_id) ?? null;
+  }
+
   // Apply unified text search client-side
   const filtered = q
     ? all.filter((l) => {
@@ -297,6 +327,7 @@ function toUnified(type: LeadType, row: Record<string, unknown>): UnifiedLead {
     resolved_at: pickString(row, ['resolved_at']),
     created_at: pickString(row, ['created_at']) || new Date().toISOString(),
     updated_at: pickString(row, ['updated_at']),
+    last_email_at: null, // filled by the batched lookup after the merge
     score,
     score_tier: scoreToTier(score),
     score_reasons: reasons,

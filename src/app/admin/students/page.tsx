@@ -627,6 +627,20 @@ export default function AdminStudentsPage() {
                               ? `${student.firstName} ${student.lastName}`.trim()
                               : student.email || '—'}
                           </div>
+                          {student.lastEmailSentAt && (
+                            <div
+                              title={new Date(student.lastEmailSentAt).toLocaleString('en-US')}
+                              className="mt-0.5 inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-emerald-100 text-emerald-800 font-semibold w-fit"
+                            >
+                              <Mail className="h-3 w-3" />
+                              {t('adminSendEmail.sentLabel')}{' '}
+                              {new Date(student.lastEmailSentAt).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                              })}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </TableCell>
@@ -976,6 +990,17 @@ export default function AdminStudentsPage() {
         }
         country={emailStudent?.nationality ?? null}
         notes={emailStudent?.notes ?? null}
+        onSent={() => {
+          // Stamp the chip optimistically; the next list load
+          // replaces it with the email_log truth.
+          setStudents((prev) =>
+            prev.map((s) =>
+              s.id === emailStudent?.id
+                ? { ...s, lastEmailSentAt: new Date().toISOString() }
+                : s,
+            ),
+          );
+        }}
       />
     </div>
   );
