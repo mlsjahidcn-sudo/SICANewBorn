@@ -21,8 +21,10 @@ interface Props {
 const PROGRAM_INTEREST_VALUES = [
   'chinese_language',
   'foundation',
+  'bachelor_march',
   'bachelor',
   'master',
+  'phd',
   'csc',
 ] as const;
 type ProgramInterestValue = (typeof PROGRAM_INTEREST_VALUES)[number];
@@ -30,8 +32,10 @@ type ProgramInterestValue = (typeof PROGRAM_INTEREST_VALUES)[number];
 const INTEREST_KEYS: Record<ProgramInterestValue, string> = {
   chinese_language: 'webinar.interests.chineseLanguage',
   foundation: 'webinar.interests.foundation',
+  bachelor_march: 'webinar.interests.bachelorMarch',
   bachelor: 'webinar.interests.bachelor',
   master: 'webinar.interests.master',
+  phd: 'webinar.interests.phd',
   csc: 'webinar.interests.csc',
 };
 

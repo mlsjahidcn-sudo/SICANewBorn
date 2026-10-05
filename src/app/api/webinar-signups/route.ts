@@ -3,26 +3,34 @@ import { createHash } from 'crypto';
 import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
 import { checkPublicRateLimit, isHoneypotFilled } from '@/lib/rate-limit';
 import { sendWebinarConfirmation } from '@/lib/email';
+import { getActiveSessionEmailFields, formatWebinarDate } from '@/lib/webinar-sessions';
 
 export const dynamic = 'force-dynamic';
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
 /**
- * Phase 139: public webinar signup endpoint for
+ * Phase 139 + 140: public webinar signup endpoint for
  * /webinar-2027-intake-csc. Persists the row, fires the
- * `webinar.confirmed` email instantly, and returns the row id
- * so the client can show a reference number on /thank-you.
+ * `webinar.confirmed` email with the live session's join
+ * link / date / time (Phase 140 — instead of the Phase 139
+ * "TBA" defaults), and returns the row id so the client can
+ * show a reference number on /thank-you.
  *
  * Anti-abuse: same 5/hr/IP + 200/hr/global + honeypot pattern
  * as /api/leads and /api/assessments.
+ *
+ * Phase 140 expanded the program_interests taxonomy to 7
+ * values — March bachelor + PhD were missing from Phase 139.
  */
 
 const VALID_PROGRAM_INTERESTS = [
   'chinese_language',
   'foundation',
+  'bachelor_march',
   'bachelor',
   'master',
+  'phd',
   'csc',
 ] as const;
 type ProgramInterest = (typeof VALID_PROGRAM_INTERESTS)[number];
@@ -144,12 +152,24 @@ export async function POST(request: NextRequest) {
     // never propagated — the signup row already exists, so a
     // 500 here would just confuse the user (their seat is
     // reserved, they just didn't get the auto-email).
+    //
+    // Phase 140: pull the active session's email-render fields
+    // so the email carries the real join link + date instead
+    // of the Phase 139 placeholders. The helper falls back to
+    // {null, null, null} when no session is active, and
+    // `sendWebinarConfirmation` already substitutes its own
+    // "TBA" defaults in that branch — so the API never breaks
+    // even before staff seed a session.
+    const sessionFields = await getActiveSessionEmailFields();
     const reference = `SICA-WEB-${data.id.slice(0, 8).toUpperCase()}`;
     sendWebinarConfirmation({
       toEmail: email,
       name: firstName,
       reference,
       locale: (body.locale as string) ?? 'en',
+      joinLink: sessionFields.joinUrl,
+      webinarDate: formatWebinarDate(sessionFields.webinarDateIso) || null,
+      webinarTime: sessionFields.webinarTime,
     }).catch((err) => console.error('[POST /api/webinar-signups] confirmation email failed:', err));
 
     return NextResponse.json({ success: true, id: data.id, reference });

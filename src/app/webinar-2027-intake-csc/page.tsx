@@ -1,25 +1,46 @@
 /**
- * Phase 139: public webinar landing page.
+ * Phase 139 + 140: public webinar landing page.
  *
  * One-session webinar covering March 2027 Intake (Chinese
- * Language + Foundation), September 2027 Intake (Bachelor +
- * Master's), and CSC Scholarship. Signup form posts to
- * /api/webinar-signups and redirects to
+ * Language + Foundation + select Bachelor programs),
+ * September 2027 Intake (Bachelor + Master's + PhD), and CSC
+ * Scholarship. Signup form posts to /api/webinar-signups
+ * and redirects to
  * /thank-you?source=webinar&interest=webinar-2027-intake-csc.
  *
- * Date copy is placeholder ("Date coming soon") until staff
- * confirm the real session date — staff then edits the
- * webinar.confirmed email template body to swap in the
- * actual join link. No code change needed at that point.
+ * Phase 140 swaps the hardcoded "Date coming soon" + 4
+ * hardcoded tracks for DB-backed values:
+ *   - Hero date pill: reads `active.session_date` +
+ *     `session_time` from `webinar_sessions where is_active=true`.
+ *     Falls back to the "Date coming soon" copy when no active
+ *     session is set up yet (preserves Phase 139 behavior
+ *     during the seed window).
+ *   - Agenda section: iterates `webinar_topics` ordered by
+ *     `display_order` for the active session. Falls back to
+ *     the 4 hardcoded i18n tracks when no topics are seeded
+ *     yet.
  *
  * RSC + client island. Static (revalidate = 3600) since the
  * copy and structure only change via code deployment.
  */
 import type { Metadata } from 'next';
-import { GraduationCap, Globe2, BookOpen, Award, Clock, Sparkles, ChevronDown, MessageCircle } from 'lucide-react';
+import {
+  GraduationCap,
+  Globe2,
+  BookOpen,
+  Award,
+  Clock,
+  Sparkles,
+  ChevronDown,
+  MessageCircle,
+  Microscope,
+  type LucideIcon,
+} from 'lucide-react';
 import { getServerT } from '@/lib/server-t';
 import { buildLanguageAlternates } from '@/lib/alternates';
 import { COUNTRIES } from '@/lib/seo-data';
+import { getActiveSessionWithTopics, formatWebinarDate } from '@/lib/webinar-sessions';
+import type { WebinarTopicDegree, WebinarTopicIntake } from '@/lib/webinar-sessions';
 import { WebinarSignupForm } from './webinar-signup-form';
 
 export const revalidate = 3600;
@@ -44,24 +65,69 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-const AGENDA_ICONS = [GraduationCap, BookOpen, Globe2, Award] as const;
-const BENEFIT_ICONS = [Sparkles, GraduationCap, MessageCircle, Clock] as const;
+// Map topic.degree → Lucide icon. Phase 139's hardcoded
+// AGENDA_ICONS array used index-by-position, which broke if
+// staff deleted a row; this lookup by the row's degree enum
+// is robust to ordering changes.
+const DEGREE_ICONS: Record<WebinarTopicDegree, LucideIcon> = {
+  chinese_language: GraduationCap,
+  foundation: BookOpen,
+  bachelor: Globe2,
+  master: Award,
+  phd: Microscope,
+  csc: Sparkles,
+};
+
+// Map topic.intake → i18n key for the badge text. Phase 139
+// hardcoded "March 2027" / "September 2027" inside the i18n
+// table; Phase 140 keeps those keys as the fallback for
+// unmapped intakes.
+const INTAKE_BADGE_KEYS: Record<WebinarTopicIntake, string> = {
+  march_2027: 'webinar.intakeBadge.march2027',
+  september_2027: 'webinar.intakeBadge.september2027',
+  csc: 'webinar.intakeBadge.csc',
+  other: 'webinar.intakeBadge.other',
+};
 
 export default async function WebinarPage() {
   const t = await getServerT();
+  const bundle = await getActiveSessionWithTopics();
+  const activeSession = bundle?.session ?? null;
+  const activeTopics = bundle?.topics ?? [];
+  const hasActiveTopics = activeTopics.length > 0;
 
-  const agendaTracks = [
+  // Format the hero date pill. When the session has a real
+  // date, render "Sat, 19 Sep 2026 · 10:00 AM Beijing Time".
+  // When the session exists but date is null, show a
+  // "scheduled but date TBA" state. When no session is set
+  // up, render the Phase 139 "Date coming soon" fallback.
+  const heroDateLabel = activeSession?.sessionDate
+    ? formatWebinarDate(activeSession.sessionDate)
+    : activeSession
+      ? t('webinar.hero.dateTba')
+      : t('webinar.hero.dateLabel');
+  const heroDateBody = activeSession?.sessionTime
+    ? activeSession.sessionTime
+    : t('webinar.hero.dateBody');
+
+  // If no topics are seeded, render the Phase 139 4-track
+  // fallback (the original en/zh i18n strings remain intact).
+  const fallbackTracks = [
     { badgeKey: 'webinar.agenda.t1Badge', titleKey: 'webinar.agenda.t1Title', bodyKey: 'webinar.agenda.t1Body' },
     { badgeKey: 'webinar.agenda.t2Badge', titleKey: 'webinar.agenda.t2Title', bodyKey: 'webinar.agenda.t2Body' },
     { badgeKey: 'webinar.agenda.t3Badge', titleKey: 'webinar.agenda.t3Title', bodyKey: 'webinar.agenda.t3Body' },
     { badgeKey: 'webinar.agenda.t4Badge', titleKey: 'webinar.agenda.t4Title', bodyKey: 'webinar.agenda.t4Body' },
   ];
+  const fallbackIcons: LucideIcon[] = [GraduationCap, BookOpen, Globe2, Award];
+
   const benefitItems = [
     { titleKey: 'webinar.benefits.b1Title', bodyKey: 'webinar.benefits.b1Body' },
     { titleKey: 'webinar.benefits.b2Title', bodyKey: 'webinar.benefits.b2Body' },
     { titleKey: 'webinar.benefits.b3Title', bodyKey: 'webinar.benefits.b3Body' },
     { titleKey: 'webinar.benefits.b4Title', bodyKey: 'webinar.benefits.b4Body' },
   ];
+  const benefitIcons: LucideIcon[] = [Sparkles, GraduationCap, MessageCircle, Clock];
+
   const faqItems = [
     { qKey: 'webinar.faq.q1', aKey: 'webinar.faq.a1' },
     { qKey: 'webinar.faq.q2', aKey: 'webinar.faq.a2' },
@@ -91,9 +157,13 @@ export default async function WebinarPage() {
           </p>
           <div className="mt-8 inline-flex items-center gap-2 bg-[#D4A853]/15 border border-[#D4A853]/40 px-4 py-2 text-sm text-[#D4A853] font-semibold">
             <Clock className="h-4 w-4" />
-            <span>{t('webinar.hero.dateLabel')}</span>
-            <span className="text-white/50">·</span>
-            <span className="text-white/80 font-normal">{t('webinar.hero.dateBody')}</span>
+            <span>{heroDateLabel}</span>
+            {heroDateBody && (
+              <>
+                <span className="text-white/50">·</span>
+                <span className="text-white/80 font-normal">{heroDateBody}</span>
+              </>
+            )}
           </div>
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
             <a
@@ -124,32 +194,64 @@ export default async function WebinarPage() {
               {t('webinar.agenda.title')}
             </h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {agendaTracks.map((track, i) => {
-              const Icon = AGENDA_ICONS[i];
-              return (
-                <div
-                  key={track.titleKey}
-                  className="bg-white border-2 border-[#D4A853]/40 p-6 flex gap-4"
-                >
-                  <div className="flex-shrink-0 h-12 w-12 bg-[#1B2A4A] text-white flex items-center justify-center">
-                    <Icon className="h-6 w-6" />
+          {hasActiveTopics ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {activeTopics.map((topic) => {
+                const Icon = DEGREE_ICONS[topic.degree] ?? GraduationCap;
+                const badgeKey = INTAKE_BADGE_KEYS[topic.intake];
+                const isZh = false; // RSC locale detection happens via getServerT; badge keys are pre-localized
+                const title = isZh ? topic.titleZh : topic.titleEn;
+                const body = isZh ? topic.bodyZh : topic.bodyEn;
+                return (
+                  <div
+                    key={topic.id}
+                    className="bg-white border-2 border-[#D4A853]/40 p-6 flex gap-4"
+                  >
+                    <div className="flex-shrink-0 h-12 w-12 bg-[#1B2A4A] text-white flex items-center justify-center">
+                      <Icon className="h-6 w-6" />
+                    </div>
+                    <div className="flex-1">
+                      <span className="inline-block bg-[#D4A853]/15 border border-[#D4A853]/40 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[#1B2A4A] mb-2">
+                        {t(badgeKey)}
+                      </span>
+                      <h3 className="text-lg font-bold text-[#1B2A4A] mb-2">{title}</h3>
+                      <p className="text-sm text-[#4B5563] leading-relaxed">{body}</p>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <span className="inline-block bg-[#D4A853]/15 border border-[#D4A853]/40 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[#1B2A4A] mb-2">
-                      {t(track.badgeKey)}
-                    </span>
-                    <h3 className="text-lg font-bold text-[#1B2A4A] mb-2">
-                      {t(track.titleKey)}
-                    </h3>
-                    <p className="text-sm text-[#4B5563] leading-relaxed">
-                      {t(track.bodyKey)}
-                    </p>
+                );
+              })}
+            </div>
+          ) : (
+            // No active topics seeded yet — Phase 139 fallback
+            // renders the original 4 hardcoded tracks so the
+            // page isn't a blank wall during the seed window.
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {fallbackTracks.map((track, i) => {
+                const Icon = fallbackIcons[i] ?? GraduationCap;
+                return (
+                  <div
+                    key={track.titleKey}
+                    className="bg-white border-2 border-[#D4A853]/40 p-6 flex gap-4"
+                  >
+                    <div className="flex-shrink-0 h-12 w-12 bg-[#1B2A4A] text-white flex items-center justify-center">
+                      <Icon className="h-6 w-6" />
+                    </div>
+                    <div className="flex-1">
+                      <span className="inline-block bg-[#D4A853]/15 border border-[#D4A853]/40 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[#1B2A4A] mb-2">
+                        {t(track.badgeKey)}
+                      </span>
+                      <h3 className="text-lg font-bold text-[#1B2A4A] mb-2">
+                        {t(track.titleKey)}
+                      </h3>
+                      <p className="text-sm text-[#4B5563] leading-relaxed">
+                        {t(track.bodyKey)}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </section>
 
@@ -161,7 +263,7 @@ export default async function WebinarPage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
             {benefitItems.map((item, i) => {
-              const Icon = BENEFIT_ICONS[i];
+              const Icon = benefitIcons[i] ?? Clock;
               return (
                 <div key={item.titleKey} className="bg-white/5 border border-white/10 p-5">
                   <Icon className="h-7 w-7 text-[#D4A853] mb-3" />
@@ -198,25 +300,25 @@ export default async function WebinarPage() {
               <div className="flex items-start gap-3">
                 <Clock className="h-5 w-5 text-[#D4A853] flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-semibold text-[#1B2A4A] text-sm">{t('webinar.hero.dateLabel')}</p>
-                  <p className="text-sm text-[#4B5563]">{t('webinar.hero.dateBody')}</p>
+                  <p className="font-semibold text-[#1B2A4A] text-sm">{heroDateLabel}</p>
+                  <p className="text-sm text-[#4B5563]">{heroDateBody}</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <GraduationCap className="h-5 w-5 text-[#D4A853] flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-semibold text-[#1B2A4A] text-sm">4 tracks in 60 minutes</p>
+                  <p className="font-semibold text-[#1B2A4A] text-sm">{t('webinar.agenda.tracksCount')}</p>
                   <p className="text-sm text-[#4B5563]">
-                    Chinese Language · Foundation · Bachelor + Master · CSC Scholarship
+                    {t('webinar.agenda.tracksList')}
                   </p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <Sparkles className="h-5 w-5 text-[#D4A853] flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-semibold text-[#1B2A4A] text-sm">Free 1:1 follow-up if you attend</p>
+                  <p className="font-semibold text-[#1B2A4A] text-sm">{t('webinar.benefits.b4Title')}</p>
                   <p className="text-sm text-[#4B5563]">
-                    Everyone who attends the live session gets a free 10-minute counselling slot.
+                    {t('webinar.benefits.b4Body')}
                   </p>
                 </div>
               </div>
