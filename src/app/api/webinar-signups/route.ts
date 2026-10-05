@@ -105,6 +105,11 @@ export async function POST(request: NextRequest) {
   const sourcePage = (body.sourcePage as string) ?? null;
   const referrer = request.headers.get('referer') ?? null;
   const userAgent = request.headers.get('user-agent') ?? null;
+  // Phase 141: extract country as a top-level variable so the
+  // email sender can render the per-recipient local time. The
+  // same trimmed string also flows into the webinar_signups
+  // row below.
+  const country = ((body.country as string)?.trim() ?? null) || null;
   const utmSource = (body.utmSource as string)?.trim() || null;
   const utmMedium = (body.utmMedium as string)?.trim() || null;
   const utmCampaign = (body.utmCampaign as string)?.trim() || null;
@@ -127,7 +132,7 @@ export async function POST(request: NextRequest) {
         last_name: lastName,
         email,
         whatsapp,
-        country: ((body.country as string)?.trim() ?? null) || null,
+        country,
         program_interests: programInterests,
         notes: ((body.notes as string)?.trim() ?? null) || null,
         source_page: sourcePage,
@@ -170,6 +175,12 @@ export async function POST(request: NextRequest) {
       joinLink: sessionFields.joinUrl,
       webinarDate: formatWebinarDate(sessionFields.webinarDateIso) || null,
       webinarTime: sessionFields.webinarTime,
+      // Phase 141: pass the captured country so the email
+      // can render the webinar time in the student's local
+      // timezone alongside China time. Unknown / null falls
+      // back to the China-time-only branch in
+      // sendWebinarConfirmation.
+      studentCountry: country || null,
     }).catch((err) => console.error('[POST /api/webinar-signups] confirmation email failed:', err));
 
     return NextResponse.json({ success: true, id: data.id, reference });

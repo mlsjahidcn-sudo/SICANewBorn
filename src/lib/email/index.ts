@@ -22,6 +22,11 @@ import { SITE_URL } from '@/lib/site-url';
 import { buildCounsellingIcs } from '@/lib/counselling-ics';
 import { WHATSAPP_PHONE } from '@/lib/contact';
 import { proposalRespondUrl } from '@/lib/counselling-tokens';
+import {
+  getTimezoneForCountry,
+  formatTimeInZone,
+  isMultiTimezoneCountry,
+} from '@/lib/country-timezone';
 
 // Must match a domain verified on the Resend account (sica.com.cn is not;
 // studyinchina.academy is — verified 2026-09-21, DKIM + primary SPF).
@@ -1076,6 +1081,12 @@ export async function sendCounsellingProposalDeclined(params: {
  * `email_log` row with the rendered snapshot (Phase 136
  * precedent). `null` subject/text means the pipeline was
  * not configured — caller treats it as no-op.
+ *
+ * Phase 141: also renders `webinarTimeLocal` from
+ * `params.studentCountry` (Phase 139 form already captures
+ * country via the COUNTRIES `<select>`). The local-time
+ * line falls back to a "we'll confirm the date" placeholder
+ * when the country is unknown / the session date is null.
  */
 export async function sendWebinarConfirmation(params: {
   toEmail: string;
@@ -1086,9 +1097,36 @@ export async function sendWebinarConfirmation(params: {
   joinLink?: string | null;
   webinarDate?: string | null;
   webinarTime?: string | null;
+  /** English country name from the signup form. Used to
+   *  compute the per-recipient local time. Unknown / null
+   *  falls back to China-time-only rendering. */
+  studentCountry?: string | null;
 }): Promise<LoggedSendTextResult> {
   if (!isEmailConfigured()) return notConfigured();
   const locale: EmailLocale = params.locale === 'zh' ? 'zh' : 'en';
+
+  // Phase 141: compute the per-recipient local time. Done
+  // before loadTemplate so an error here (invalid tz string)
+  // doesn't poison the rest of the pipeline — the try/catch
+  // lives inside formatTimeInZone + the helper returns null.
+  let webinarTimeLocal: string;
+  if (params.webinarDate && params.studentCountry) {
+    const tz = getTimezoneForCountry(params.studentCountry);
+    const localLine = tz ? formatTimeInZone(params.webinarDate, tz, locale) : null;
+    if (localLine && tz) {
+      const approxNote = isMultiTimezoneCountry(params.studentCountry)
+        ? ', approximate — confirm local time'
+        : '';
+      webinarTimeLocal = `${localLine} (${tz}${approxNote})`;
+    } else {
+      webinarTimeLocal =
+        'Time in your country will appear here once we confirm the date';
+    }
+  } else {
+    webinarTimeLocal =
+      'Time in your country will appear here once we confirm the date';
+  }
+
   const tpl = await loadTemplate('webinar.confirmed', locale);
   if (!tpl) {
     console.warn('[email] webinar template missing', 'webinar.confirmed', locale);
@@ -1100,6 +1138,7 @@ export async function sendWebinarConfirmation(params: {
     joinLink: params.joinLink ?? 'TBA — full link will be sent 48 hours before the session.',
     webinarDate: params.webinarDate ?? 'TBA — date coming soon',
     webinarTime: params.webinarTime ?? 'TBA',
+    webinarTimeLocal,
     reference: params.reference,
   });
   const rendered = formatWithSignature({
