@@ -22,6 +22,9 @@ function parseScope(value: string | null): Scope {
  * GET /api/admin/counselling?status=&search=&scope=&page=&limit=
  *   scope=upcoming (default) → slot_start >= start of Beijing today, asc
  *   scope=past              → slot_start <  start of Beijing today, desc
+ *   from=YYYY-MM-DD&to=YYYY-MM-DD (Phase 138) → absolute Beijing-date
+ *   range for the admin calendar views; ignores scope, one page up to
+ *   limit 500, ordered by slot_start asc.
  *   scope=all               → newest created first
  *
  * Also returns headline stats for the page's stat cards.
@@ -39,7 +42,15 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search')?.trim();
     const scope = parseScope(searchParams.get('scope'));
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20', 10)));
+    // Phase 138: from/to (Beijing YYYY-MM-DD) selects an absolute
+    // range for the admin calendar views. Range mode raises the limit
+    // cap to 500 — one calendar month is ≤ 26 working days × 18 grid
+    // slots, and every row is needed for chips to be complete.
+    const rangeFrom = searchParams.get('from')?.trim() || null;
+    const rangeTo = searchParams.get('to')?.trim() || null;
+    const hasRange = Boolean(rangeFrom && rangeTo);
+    const limitCap = hasRange ? 500 : 100;
+    const limit = Math.min(limitCap, Math.max(1, parseInt(searchParams.get('limit') || '20', 10)));
 
     if (status && status !== 'all' && !isCounsellingBookingStatus(status)) {
       return NextResponse.json({ error: 'Invalid status filter' }, { status: 400 });
@@ -54,7 +65,22 @@ export async function GET(request: NextRequest) {
       new Date().toISOString();
 
     let query = service.from('counselling_bookings').select('*', { count: 'exact' });
-    if (scope === 'upcoming') {
+    if (hasRange && rangeFrom && rangeTo) {
+      // Calendar range: [start of from-day, start of the day AFTER
+      // to-day) in Beijing wall time. Malformed dates 400 cleanly.
+      const rangeStart = beijingWallToUtc(rangeFrom, 0);
+      const rangeEnd = beijingWallToUtc(rangeTo, 24 * 60);
+      if (!rangeStart || !rangeEnd || rangeEnd <= rangeStart) {
+        return NextResponse.json(
+          { error: 'from/to must be valid YYYY-MM-DD with from <= to' },
+          { status: 400 },
+        );
+      }
+      query = query
+        .gte('slot_start', rangeStart.toISOString())
+        .lt('slot_start', rangeEnd.toISOString())
+        .order('slot_start', { ascending: true });
+    } else if (scope === 'upcoming') {
       query = query.gte('slot_start', todayIso).order('slot_start', { ascending: true });
     } else if (scope === 'past') {
       query = query.lt('slot_start', todayIso).order('slot_start', { ascending: false });
@@ -67,7 +93,9 @@ export async function GET(request: NextRequest) {
       query = query.or(`name.ilike.%${safe}%,email.ilike.%${safe}%,reference.ilike.%${safe}%`);
     }
 
-    const from = (page - 1) * limit;
+    // Range mode always returns everything it matched in one page (the
+    // calendar wants the full month) — .range caps at `limit`.
+    const from = hasRange ? 0 : (page - 1) * limit;
     const to = from + limit - 1;
     query = query.range(from, to);
 

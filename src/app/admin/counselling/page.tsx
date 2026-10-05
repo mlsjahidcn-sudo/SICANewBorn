@@ -48,6 +48,15 @@ import {
   type CounsellingBooking,
   type CounsellingBookingStatus,
 } from '@/lib/counselling-mapper';
+import { beijingTodayStr } from '@/lib/counselling-slots';
+import {
+  AdminCounsellingCalendar,
+  monthRangeFor,
+  weekRangeFor,
+  type CalendarViewMode,
+} from './calendar-view';
+
+type ListViewMode = 'list' | CalendarViewMode;
 
 interface AdminCounsellingResponse {
   bookings: CounsellingBooking[];
@@ -118,6 +127,42 @@ export default function AdminCounsellingPage() {
 
   // Phase 124: per-row success/error toasts mirroring Phase 11's pattern.
   const [toast, setToast] = useState<{ kind: 'ok' | 'err'; slug: string } | null>(null);
+
+  // Phase 138: calendar view state — view toggle + Beijing-date anchor
+  // for the week/month grids, plus its own range fetch (the list's
+  // scope/pagination query doesn't fit a calendar).
+  const [view, setView] = useState<ListViewMode>('list');
+  const [calAnchor, setCalAnchor] = useState(() => beijingTodayStr(new Date()));
+  const [calBookings, setCalBookings] = useState<CounsellingBooking[]>([]);
+  const [calLoading, setCalLoading] = useState(false);
+  const [calError, setCalError] = useState<string | null>(null);
+
+  const loadCalendar = useCallback(async () => {
+    if (view === 'list') return;
+    setCalLoading(true);
+    setCalError(null);
+    try {
+      const range = view === 'week' ? weekRangeFor(calAnchor) : monthRangeFor(calAnchor);
+      const params = new URLSearchParams({
+        from: range.from,
+        to: range.to,
+        limit: '500',
+        scope: 'all',
+      });
+      if (searchQuery.trim()) params.set('search', searchQuery.trim());
+      if (statusFilter !== 'all') params.set('status', statusFilter);
+      const res = await apiFetchJson<AdminCounsellingResponse>(`/api/admin/counselling?${params}`);
+      setCalBookings(res.bookings ?? []);
+    } catch (err) {
+      setCalError(err instanceof Error ? err.message : t('adminCounselling.errorLoad'));
+    } finally {
+      setCalLoading(false);
+    }
+  }, [view, calAnchor, searchQuery, statusFilter, t]);
+
+  useEffect(() => {
+    void loadCalendar();
+  }, [loadCalendar]);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -472,10 +517,31 @@ export default function AdminCounsellingPage() {
                 </option>
               ))}
             </select>
+            {/* Phase 138: list ↔ calendar view toggle */}
+            <div className="flex border border-gray-300 h-10" role="tablist" aria-label={t('adminCounselling.viewToggleLabel')}>
+              {(['list', 'week', 'month'] as const).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  role="tab"
+                  aria-selected={view === v}
+                  onClick={() => setView(v)}
+                  className={`px-3 text-sm font-medium transition-colors ${
+                    view === v
+                      ? 'bg-[#1B2A4A] text-white'
+                      : 'bg-white text-[#1B2A4A] hover:bg-gray-50'
+                  }`}
+                >
+                  {t(`adminCounselling.view_${v}`)}
+                </button>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>
 
+      {view === 'list' ? (
+        <>
       {/* List */}
       <Card>
         <CardContent className="p-0">
@@ -643,6 +709,35 @@ export default function AdminCounsellingPage() {
               {t('adminCounselling.next')}
             </Button>
           </div>
+        </div>
+      )}
+        </>
+      ) : (
+        <div className="space-y-4">
+          {calError && (
+            <div className="bg-red-50 border border-red-200 p-4 text-sm text-red-700">
+              {calError}
+              <button className="ml-2 underline" onClick={() => setCalError(null)}>
+                {t('adminCounselling.dismiss')}
+              </button>
+            </div>
+          )}
+          <AdminCounsellingCalendar
+            bookings={calBookings}
+            loading={calLoading}
+            view={view}
+            anchor={calAnchor}
+            onViewChange={setView}
+            onAnchorChange={setCalAnchor}
+            acting={acting}
+            localeTag={localeTag}
+            t={t}
+            formatSlot={formatSlot}
+            onStatusAction={(b, s) => {
+              void handleStatusAction(b, s);
+              void loadCalendar();
+            }}
+          />
         </div>
       )}
 
