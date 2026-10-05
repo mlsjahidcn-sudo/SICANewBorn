@@ -32,6 +32,7 @@ import {
   Key,
   Webhook,
   CalendarClock,
+  Megaphone,
 } from 'lucide-react';
 import Link from 'next/link';
 import { SicaLogo } from '@/components/sica-logo';
@@ -53,6 +54,11 @@ const navItems = [
   { href: '/admin/chatbot/faqs', key: 'chatbot', icon: MessageSquare },
   { href: '/admin/emails', key: 'emails', icon: Mail },
   { href: '/admin/leads', key: 'leads', icon: Users },
+  // Phase 139: webinar landing-page signups (March/Sept 2027
+  // Intake + CSC Scholarship). Read-only list page at
+  // /admin/webinar-signups; the form lives at the public
+  // /webinar-2027-intake-csc route.
+  { href: '/admin/webinar-signups', key: 'webinars', icon: Megaphone },
   // Phase 114: free counselling session bookings from /counselling.
   { href: '/admin/counselling', key: 'counselling', icon: CalendarClock },
   { href: '/admin/students', key: 'students', icon: UserCheck },

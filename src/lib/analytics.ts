@@ -346,6 +346,28 @@ export interface AnalyticsEventMap {
     /** Pathname at the moment of dismiss. */
     path: string;
   };
+  // -----------------------------------------------------------------
+  // Phase 139: webinar landing page funnel.
+  //
+  // `webinar_page_view` fires once on mount of
+  // /webinar-2027-intake-csc for funnel analytics (home → webinar
+  // → signup conversion). `webinar_signup_submit` fires after the
+  // API returns 200 so failed attempts don't inflate the count.
+  // -----------------------------------------------------------------
+  /** Visitor landed on /webinar-2027-intake-csc. */
+  webinar_page_view: {
+    /** Page locale. */
+    locale: 'en' | 'zh';
+  };
+  /** Visitor successfully submitted the webinar signup form. */
+  webinar_signup_submit: {
+    /** Page locale. */
+    locale: 'en' | 'zh';
+    /** Selected program-interest checkboxes (5-value closed enum). */
+    program_interests?: string[];
+    /** Country picked from the dropdown, if any. */
+    country?: string;
+  };
 }
 
 /** Convenience alias for the event-name union. */

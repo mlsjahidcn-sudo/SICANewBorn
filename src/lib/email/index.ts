@@ -1060,3 +1060,67 @@ export async function sendCounsellingProposalDeclined(params: {
     },
   });
 }
+
+// ============================================================================
+// Phase 139: webinar signup confirmation
+// ============================================================================
+
+/**
+ * Instant confirmation after a successful POST to
+ * /api/webinar-signups. Loads the `webinar.confirmed` template,
+ * renders the join-link + reference placeholders, ships via
+ * Resend. Locale resolution follows the same chain as the
+ * other public-form senders (cookie > Accept-Language > 'en').
+ *
+ * Returns `LoggedSendTextResult` so callers can write an
+ * `email_log` row with the rendered snapshot (Phase 136
+ * precedent). `null` subject/text means the pipeline was
+ * not configured — caller treats it as no-op.
+ */
+export async function sendWebinarConfirmation(params: {
+  toEmail: string;
+  name: string;
+  reference: string;
+  locale: string;
+  /** Join URL — falls back to placeholder until staff edits the template. */
+  joinLink?: string | null;
+  webinarDate?: string | null;
+  webinarTime?: string | null;
+}): Promise<LoggedSendTextResult> {
+  if (!isEmailConfigured()) return notConfigured();
+  const locale: EmailLocale = params.locale === 'zh' ? 'zh' : 'en';
+  const tpl = await loadTemplate('webinar.confirmed', locale);
+  if (!tpl) {
+    console.warn('[email] webinar template missing', 'webinar.confirmed', locale);
+    return { ok: false, error: 'template missing: webinar.confirmed', subject: null, text: null };
+  }
+  const subject = tpl.subject;
+  const body = renderTextTemplate(tpl.body_text, {
+    name: params.name,
+    joinLink: params.joinLink ?? 'TBA — full link will be sent 48 hours before the session.',
+    webinarDate: params.webinarDate ?? 'TBA — date coming soon',
+    webinarTime: params.webinarTime ?? 'TBA',
+    reference: params.reference,
+  });
+  const rendered = formatWithSignature({
+    subject,
+    bodyText: body,
+    unsubscribeToken: unsubTokenFor(params.toEmail),
+  });
+  try {
+    const result = await sendTextEmail({
+      to: params.toEmail,
+      subject: rendered.subject,
+      text: rendered.text,
+    });
+    return toLogged(result, rendered.subject, rendered.text);
+  } catch (err) {
+    console.error('[email] webinar.confirmed failed:', err);
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : 'send threw',
+      subject: rendered.subject,
+      text: rendered.text,
+    };
+  }
+}

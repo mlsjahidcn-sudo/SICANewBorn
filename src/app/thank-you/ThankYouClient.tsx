@@ -68,7 +68,11 @@ export default function ThankYouClient() {
   // Which form was just submitted. Defaults to 'contact' so a
   // direct visit to /thank-you (bookmark, share-link) still
   // shows useful copy instead of a blank page.
-  const source = searchParams.get('source') === 'assessment' ? 'assessment' : 'contact';
+  const source = searchParams.get('source') === 'assessment'
+    ? 'assessment'
+    : searchParams.get('source') === 'webinar'
+      ? 'webinar'
+      : 'contact';
   // University slug from the Apply CTA redirect chain (Phase
   // 24 wired ?interest=<slug> on /universities/[slug]). When
   // present, surface a "you were looking at this" personalisation
@@ -105,18 +109,32 @@ export default function ThankYouClient() {
     return () => clearTimeout(t);
   }, [copied]);
 
-  const heroTitle = source === 'assessment' ? t('thankYou.titleAssessment') : t('thankYou.titleContact');
-  const heroSubtitle = source === 'assessment' ? t('thankYou.subtitleAssessment') : t('thankYou.subtitleContact');
+  const heroTitle = source === 'assessment'
+    ? t('thankYou.titleAssessment')
+    : source === 'webinar'
+      ? t('thankYou.webinar.heroTitle')
+      : t('thankYou.titleContact');
+  const heroSubtitle = source === 'assessment'
+    ? t('thankYou.subtitleAssessment')
+    : source === 'webinar'
+      ? t('thankYou.webinar.heroBody')
+      : t('thankYou.subtitleContact');
 
   // Pre-fill the WhatsApp link with a context-aware message
   // so the counselor knows where the lead is coming from.
   // `reference` is null until the post-mount effect above runs —
   // the SSR'd href simply omits the ref suffix.
   const refSuffix = reference ? ` (ref: ${reference})` : '';
-  const whatsappContext = source === 'assessment'
-    ? `Hi SICA, I just submitted the assessment${refSuffix}. Following up.`
-    : `Hi SICA, I just sent a message through the contact form${refSuffix}. Following up.`;
-  const whatsappUrl = `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(whatsappContext)}`;
+  // The webinar message is a parameterized t() (with the {{reference}}
+  // placeholder) — we substitute the runtime value before
+  // encoding for the wa.me URL.
+  const rawWhatsappContext =
+    source === 'assessment'
+      ? `Hi SICA, I just submitted the assessment${refSuffix}. Following up.`
+      : source === 'webinar'
+        ? t('thankYou.webinar.whatsappContext', { reference: reference ?? '—' })
+        : `Hi SICA, I just sent a message through the contact form${refSuffix}. Following up.`;
+  const whatsappUrl = `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(rawWhatsappContext)}`;
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -184,7 +202,11 @@ export default function ThankYouClient() {
         <div className="space-y-4">
           {[
             { n: 1, title: t('thankYou.timelineStep1Title'), desc: t('thankYou.timelineStep1Desc') },
-            { n: 2, title: t('thankYou.timelineStep2Title'), desc: t('thankYou.timelineStep2Desc') },
+            {
+              n: 2,
+              title: t('thankYou.timelineStep2Title'),
+              desc: source === 'webinar' ? t('thankYou.webinar.timeline2Desc') : t('thankYou.timelineStep2Desc'),
+            },
             { n: 3, title: t('thankYou.timelineStep3Title'), desc: t('thankYou.timelineStep3Desc') },
           ].map((step) => (
             <div key={step.n} className="flex gap-4 bg-white border border-gray-200 p-5">

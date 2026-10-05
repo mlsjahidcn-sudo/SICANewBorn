@@ -29,6 +29,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Phase 114: free counselling session booking — the conversion
     // landing for "free counselling study in china" queries.
     { url: `${SITE_URL}/counselling`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
+    // Phase 139: webinar landing page for the March/Sept 2027
+    // intake + CSC Scholarship webinar. weekly change frequency
+    // because the date copy will update as the session is
+    // confirmed; priority 0.8 matches /counselling + /get-started.
+    { url: `${SITE_URL}/webinar-2027-intake-csc`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
   ];
 
   // Programmatic SEO landing pages (static, high-intent long-tail)
