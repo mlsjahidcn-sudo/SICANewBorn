@@ -368,6 +368,37 @@ export interface AnalyticsEventMap {
     /** Country picked from the dropdown, if any. */
     country?: string;
   };
+  // -----------------------------------------------------------------
+  // Phase 142: webinar promo popup funnel events.
+  //
+  // Same shape as Phase 129+ `whatsapp_popup_*` — `view` fires
+  // once when the popup actually mounts (after the 3s/scroll
+  // trigger fires), `click` fires on CTA, `dismiss` fires on
+  // either X-button close or CTA click.
+  // -----------------------------------------------------------------
+  /** Phase 142: webinar promo popup first became visible. */
+  webinar_popup_view: {
+    /** Page locale. */
+    locale: 'en' | 'zh';
+    /** Pathname at the moment the popup mounted. */
+    path: string;
+  };
+  /** Phase 142: user clicked the popup CTA. */
+  webinar_popup_click: {
+    /** Page locale. */
+    locale: 'en' | 'zh';
+    /** Pathname at the moment of click. */
+    path: string;
+  };
+  /** Phase 142: user dismissed the popup (X-button or CTA-click navigates away). */
+  webinar_popup_dismiss: {
+    /** What closed the popup. */
+    source: 'close_button' | 'cta_click';
+    /** Page locale. */
+    locale: 'en' | 'zh';
+    /** Pathname at the moment of dismiss. */
+    path: string;
+  };
 }
 
 /** Convenience alias for the event-name union. */

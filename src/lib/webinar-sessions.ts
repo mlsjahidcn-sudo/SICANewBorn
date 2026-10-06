@@ -190,3 +190,75 @@ export function formatWebinarDate(iso: string | null): string {
     return iso;
   }
 }
+
+// ============================================================================
+// Phase 142: capacity / waitlist helpers
+// ============================================================================
+
+export interface ActiveSessionCapacity {
+  maxAttendees: number;
+  /** Distinct signup rows with status IN ('Registered','Attended').
+   *  Cancelled + No-Show are explicitly excluded so a freed seat
+   *  frees immediately on status flip. */
+  seatHolders: number;
+  /** maxAttendees - seatHolders, clamped to ≥ 0. */
+  seatsRemaining: number;
+  /** Convenience boolean. */
+  isFull: boolean;
+  /** True when the active session row exists AND seats are free. */
+  acceptsSignups: boolean;
+}
+
+const EMPTY_CAPACITY: ActiveSessionCapacity = {
+  maxAttendees: 0,
+  seatHolders: 0,
+  seatsRemaining: 0,
+  isFull: true,
+  acceptsSignups: false,
+};
+
+/**
+ * Return `{maxAttendees, seatHolders, seatsRemaining, isFull,
+ * acceptsSignups}` for the active session. If no session is
+ * active, returns the empty-shape (acceptsSignups=false) so
+ * the caller can render the "no session" branch uniformly.
+ *
+ * Used by:
+ *   - `/api/webinar-signups` POST (returns 409 when full)
+ *   - `/api/webinar-sessions/capacity` GET (public live count)
+ *   - the public RSC for the cached initial capacity render
+ */
+export async function getActiveSessionCapacity(): Promise<ActiveSessionCapacity> {
+  if (!isSupabaseServerConfigured()) return EMPTY_CAPACITY;
+  const supabase = getSupabaseServer();
+  if (!supabase) return EMPTY_CAPACITY;
+
+  const { data: sessionRow, error: sessionErr } = await supabase
+    .from('webinar_sessions')
+    .select('id, max_attendees')
+    .eq('is_active', true)
+    .maybeSingle();
+  if (sessionErr || !sessionRow) return EMPTY_CAPACITY;
+
+  // count: 'exact' so the cap check is real, not an estimate.
+  // Cancelled + No-Show are excluded — see Phase 137 occupancy.
+  const { count, error: countErr } = await supabase
+    .from('webinar_signups')
+    .select('id', { count: 'exact', head: true })
+    .eq('webinar_session_id', sessionRow.id as string)
+    .in('status', ['Registered', 'Attended']);
+  if (countErr) {
+    console.error('[webinar-sessions] capacity count failed:', countErr);
+    return EMPTY_CAPACITY;
+  }
+  const maxAttendees = (sessionRow.max_attendees as number) ?? 50;
+  const seatHolders = count ?? 0;
+  const seatsRemaining = Math.max(0, maxAttendees - seatHolders);
+  return {
+    maxAttendees,
+    seatHolders,
+    seatsRemaining,
+    isFull: seatsRemaining <= 0,
+    acceptsSignups: seatsRemaining > 0,
+  };
+}

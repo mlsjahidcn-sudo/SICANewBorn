@@ -34,14 +34,21 @@ import {
   ChevronDown,
   MessageCircle,
   Microscope,
+  Users,
   type LucideIcon,
 } from 'lucide-react';
 import { getServerT } from '@/lib/server-t';
 import { buildLanguageAlternates } from '@/lib/alternates';
 import { COUNTRIES } from '@/lib/seo-data';
-import { getActiveSessionWithTopics, formatWebinarDate } from '@/lib/webinar-sessions';
+import {
+  getActiveSessionWithTopics,
+  getActiveSessionCapacity,
+  formatWebinarDate,
+} from '@/lib/webinar-sessions';
 import type { WebinarTopicDegree, WebinarTopicIntake } from '@/lib/webinar-sessions';
 import { WebinarSignupForm } from './webinar-signup-form';
+import { CapacityPill } from './CapacityPill';
+import { WaitlistForm } from './WaitlistForm';
 
 export const revalidate = 3600;
 
@@ -95,6 +102,22 @@ export default async function WebinarPage() {
   const activeSession = bundle?.session ?? null;
   const activeTopics = bundle?.topics ?? [];
   const hasActiveTopics = activeTopics.length > 0;
+
+  // Phase 142: cached capacity snapshot. The RSC stays
+  // statically cached (revalidate = 3600); the live CapacityPill
+  // client island refreshes every 30s on the client.
+  const capacity = await getActiveSessionCapacity();
+  const showFullForm = !!activeSession && capacity.acceptsSignups;
+  const showWaitlist = !!activeSession && !capacity.acceptsSignups;
+  const capacityInitial = activeSession
+    ? {
+        maxAttendees: capacity.maxAttendees,
+        seatHolders: capacity.seatHolders,
+        seatsRemaining: capacity.seatsRemaining,
+        isFull: capacity.isFull,
+        acceptsSignups: capacity.acceptsSignups,
+      }
+    : null;
 
   // Format the hero date pill. When the session has a real
   // date, render "Sat, 19 Sep 2026 · 10:00 AM Beijing Time".
@@ -165,6 +188,16 @@ export default async function WebinarPage() {
               </>
             )}
           </div>
+          {/* Phase 142: live seat count. White-on-dark-blue version
+              sits inside the hero pill so the FOMO is visible
+              before the user scrolls to the form. The component
+              itself is a client island that polls every 30s. */}
+          {activeSession && capacityInitial && (
+            <div className="mt-3 inline-flex items-center gap-2 bg-white/10 border border-white/30 px-4 py-2 text-sm text-white">
+              <Users className="h-4 w-4 text-[#D4A853]" />
+              <CapacityPill initial={capacityInitial} />
+            </div>
+          )}
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
             <a
               href="#signup"
@@ -325,9 +358,18 @@ export default async function WebinarPage() {
             </div>
           </div>
 
-          {/* Right rail — the form */}
+          {/* Right rail — the form (or waitlist form when full) */}
           <div>
-            <WebinarSignupForm countryOptions={countryOptions} />
+            {showFullForm ? (
+              <WebinarSignupForm countryOptions={countryOptions} />
+            ) : showWaitlist ? (
+              <WaitlistForm />
+            ) : (
+              // No active session at all — the empty-state fallback
+              // is rendered above. Render nothing here so the right
+              // rail doesn't show a stale form.
+              null
+            )}
           </div>
         </div>
       </section>

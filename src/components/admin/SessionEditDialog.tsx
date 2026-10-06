@@ -30,6 +30,9 @@ export interface SessionEditValue {
   status: 'Scheduled' | 'Live' | 'Completed' | 'Cancelled';
   isActive: boolean;
   displayOrder: number;
+  /** Phase 142: per-session attendee cap. Defaults to 50
+   *  in the DB. The signup POST returns 409 when full. */
+  maxAttendees: number;
 }
 
 interface Props {
@@ -74,6 +77,7 @@ export function SessionEditDialog({ open, onOpenChange, initial, onSaved }: Prop
     status: SessionEditValue['status'];
     isActive: boolean;
     displayOrder: number;
+    maxAttendees: number;
   }>(() => blankForm(initial));
 
   // Re-seed when the dialog opens for a different row
@@ -120,6 +124,7 @@ export function SessionEditDialog({ open, onOpenChange, initial, onSaved }: Prop
       status: form.status,
       isActive: form.isActive,
       displayOrder: Number(form.displayOrder) || 0,
+      maxAttendees: Math.max(1, Number(form.maxAttendees) || 50),
     };
 
     try {
@@ -285,7 +290,21 @@ export function SessionEditDialog({ open, onOpenChange, initial, onSaved }: Prop
             />
           </FormField>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormField
+              label={t('adminWebinars.sessionFieldCapacity')}
+              help={null}
+              error={null}
+            >
+              <Input
+                type="number"
+                min={1}
+                value={form.maxAttendees}
+                onChange={(e) =>
+                  update('maxAttendees', Math.max(1, parseInt(e.target.value || '50', 10)))
+                }
+              />
+            </FormField>
             <FormField label={t('adminWebinars.sessionFieldStatus')} help={null} error={null}>
               <select
                 value={form.status}
@@ -298,6 +317,8 @@ export function SessionEditDialog({ open, onOpenChange, initial, onSaved }: Prop
                 <option value="Cancelled">Cancelled</option>
               </select>
             </FormField>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <FormField
               label={t('adminWebinars.sessionFieldDisplayOrder')}
               help={null}
@@ -372,6 +393,7 @@ function blankForm(initial: SessionEditValue | null) {
     status: initial?.status ?? 'Scheduled',
     isActive: initial?.isActive ?? false,
     displayOrder: initial?.displayOrder ?? 0,
+    maxAttendees: initial?.maxAttendees ?? 50,
   };
 }
 

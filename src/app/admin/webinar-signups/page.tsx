@@ -19,6 +19,7 @@ import {
   Calendar,
   Link as LinkIcon,
   Video,
+  Users,
 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
@@ -55,7 +56,7 @@ import { TopicEditDialog, type TopicEditValue } from '@/components/admin/TopicEd
 // Shared types
 // ============================================================================
 
-type Tab = 'registrations' | 'sessions' | 'topics';
+type Tab = 'registrations' | 'sessions' | 'topics' | 'waitlist';
 
 interface WebinarSignup {
   id: string;
@@ -95,6 +96,8 @@ interface Session {
   status: 'Scheduled' | 'Live' | 'Completed' | 'Cancelled';
   isActive: boolean;
   displayOrder: number;
+  /** Phase 142: per-session attendee cap. DB DEFAULT 50. */
+  maxAttendees: number;
   createdAt: string;
   updatedAt: string | null;
 }
@@ -178,7 +181,7 @@ export default function WebinarSignupsPage() {
   const { t } = useI18n();
   const [tab, setTab] = useUrlState<Tab>('tab', 'registrations', {
     coerce: (raw) => {
-      if (raw === 'sessions' || raw === 'topics') return raw;
+      if (raw === 'sessions' || raw === 'topics' || raw === 'waitlist') return raw;
       return 'registrations';
     },
   });
@@ -197,11 +200,15 @@ export default function WebinarSignupsPage() {
         <TabButton current={tab} value="topics" onClick={setTab}>
           {t('adminWebinars.tabTopics')}
         </TabButton>
+        <TabButton current={tab} value="waitlist" onClick={setTab}>
+          {t('adminWebinars.tabWaitlist')}
+        </TabButton>
       </div>
 
       {tab === 'registrations' && <RegistrationsTab />}
       {tab === 'sessions' && <SessionsTab />}
       {tab === 'topics' && <TopicsTab />}
+      {tab === 'waitlist' && <WaitlistTab />}
     </div>
   );
 }
@@ -594,6 +601,8 @@ function SessionsTab() {
   const [editing, setEditing] = useState<SessionEditValue | null>(null);
   const [creating, setCreating] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Session | null>(null);
+  // Phase 142: which row is mid-toggle (button shows spinner)
+  const [pendingToggleId, setPendingToggleId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -612,21 +621,22 @@ function SessionsTab() {
     load();
   }, [load]);
 
-  const sessionToEditValue = (s: Session): SessionEditValue => ({
-    id: s.id,
-    slug: s.slug,
-    titleEn: s.titleEn,
-    titleZh: s.titleZh,
-    descriptionEn: s.descriptionEn,
-    descriptionZh: s.descriptionZh,
-    sessionDate: s.sessionDate,
-    sessionTime: s.sessionTime,
-    durationMinutes: s.durationMinutes,
-    joinUrl: s.joinUrl,
-    status: s.status,
-    isActive: s.isActive,
-    displayOrder: s.displayOrder,
-  });
+const sessionToEditValue = (s: Session): SessionEditValue => ({
+  id: s.id,
+  slug: s.slug,
+  titleEn: s.titleEn,
+  titleZh: s.titleZh,
+  descriptionEn: s.descriptionEn,
+  descriptionZh: s.descriptionZh,
+  sessionDate: s.sessionDate,
+  sessionTime: s.sessionTime,
+  durationMinutes: s.durationMinutes,
+  joinUrl: s.joinUrl,
+  status: s.status,
+  isActive: s.isActive,
+  displayOrder: s.displayOrder,
+  maxAttendees: s.maxAttendees ?? 50,
+});
 
   const handleSaved = (next: SessionEditValue) => {
     setSessions((prev) => {
@@ -647,6 +657,7 @@ function SessionsTab() {
           status: next.status,
           isActive: next.isActive,
           displayOrder: next.displayOrder,
+          maxAttendees: next.maxAttendees,
         };
         const copy = [...prev];
         copy[idx] = merged;
@@ -676,6 +687,33 @@ function SessionsTab() {
     });
     setEditing(null);
     setCreating(false);
+  };
+
+  // Phase 142: one-click isActive toggle. The PATCH endpoint
+  // already flips the previous active row off before setting
+  // the new (so the partial unique index doesn't 23505), so
+  // we just mirror that locally.
+  const quickToggle = async (s: Session, nextIsActive: boolean) => {
+    setPendingToggleId(s.id);
+    setLoadError(null);
+    try {
+      await apiFetchJson(`/api/admin/webinar-sessions/${s.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: nextIsActive }),
+      });
+      setSessions((prev) =>
+        prev.map((row) =>
+          row.id === s.id
+            ? { ...row, isActive: nextIsActive }
+            : { ...row, isActive: false },
+        ),
+      );
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : t('adminWebinars.errorSaveSession'));
+    } finally {
+      setPendingToggleId(null);
+    }
   };
 
   const handleDelete = async (s: Session) => {
@@ -752,6 +790,19 @@ function SessionsTab() {
                       <Clock className="h-3 w-3" />
                       {s.durationMinutes} min
                     </span>
+                    {/* Phase 142: capacity readout. The exact seat-holders
+                        count lives on webinar_signups; the admin can
+                        consult /admin/webinar-signups?tab=registrations
+                        for the live number. */}
+                    <span className="flex items-center gap-1">
+                      <Users className="h-3 w-3" />
+                      <span>
+                        {t('adminWebinars.sessionCapacity')}{' '}
+                        <span className="font-semibold text-[#1B2A4A]">
+                          {s.maxAttendees}
+                        </span>
+                      </span>
+                    </span>
                     {s.joinUrl && (
                       <a
                         href={s.joinUrl}
@@ -782,16 +833,38 @@ function SessionsTab() {
                     <Pencil className="h-3 w-3 mr-1" />
                     Edit
                   </Button>
-                  {!s.isActive && (
+                  {/* Phase 142: one-click active/inactive toggle.
+                      No dialog required for the most common action.
+                      The PATCH endpoint already flips the previous
+                      active row off before setting the new. */}
+                  {s.isActive ? (
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() =>
-                        setEditing(sessionToEditValue({ ...s, isActive: true }))
-                      }
+                      onClick={() => quickToggle(s, false)}
                       className="rounded-none"
+                      disabled={pendingToggleId === s.id}
                     >
-                      <Video className="h-3 w-3 mr-1" />
+                      {pendingToggleId === s.id ? (
+                        <Spinner size="xs" />
+                      ) : (
+                        <Video className="h-3 w-3 mr-1" />
+                      )}
+                      {t('adminWebinars.sessionMarkInactive')}
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => quickToggle(s, true)}
+                      className="rounded-none"
+                      disabled={pendingToggleId === s.id}
+                    >
+                      {pendingToggleId === s.id ? (
+                        <Spinner size="xs" />
+                      ) : (
+                        <Video className="h-3 w-3 mr-1" />
+                      )}
                       {t('adminWebinars.sessionMakeActive')}
                     </Button>
                   )}
@@ -1087,6 +1160,230 @@ function TopicsTab() {
               className="bg-[#9B1B30] hover:bg-[#7A1526] rounded-none"
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+// ============================================================================
+// Tab 4: Waitlist (Phase 142)
+// ============================================================================
+
+interface WaitlistEntry {
+  id: string;
+  sessionId: string;
+  email: string;
+  firstName: string;
+  whatsapp: string | null;
+  sourcePage: string | null;
+  utmSource: string | null;
+  utmCampaign: string | null;
+  notes: string | null;
+  createdAt: string;
+}
+
+interface WaitlistResponse {
+  entries: WaitlistEntry[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+function WaitlistTab() {
+  const { t } = useI18n();
+  const [entries, setEntries] = useState<WaitlistEntry[]>([]);
+  const [total, setTotal] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pendingDelete, setPendingDelete] = useState<WaitlistEntry | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const totalPages = Math.max(1, Math.ceil(total / 50));
+
+  const load = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError(null);
+    try {
+      const res = await apiFetchJson<WaitlistResponse>(
+        `/api/admin/webinar-waitlist?page=${page}&limit=50`,
+      );
+      setEntries(res.entries || []);
+      setTotal(res.total ?? 0);
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : t('adminWebinars.waitlistErrorLoad'));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [page, t]);
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
+
+  const deleteEntry = async (entry: WaitlistEntry) => {
+    setDeleting(true);
+    try {
+      await apiFetchJson(`/api/admin/webinar-waitlist/${entry.id}`, { method: 'DELETE' });
+      setEntries((prev) => prev.filter((e) => e.id !== entry.id));
+      setTotal((prev) => Math.max(0, prev - 1));
+      setPendingDelete(null);
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : t('adminWebinars.waitlistErrorLoad'));
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-bold text-[#1B2A4A]">{t('adminWebinars.waitlistTitle')}</h2>
+          <p className="text-sm text-gray-600">{t('adminWebinars.waitlistSubtitle')}</p>
+        </div>
+        <Badge variant="outline" className="text-xs">
+          {total}
+        </Badge>
+      </div>
+
+      {loadError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm flex items-start gap-2">
+          <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
+          <span>{loadError}</span>
+        </div>
+      )}
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Spinner size="md" className="text-[#1B2A4A]" />
+        </div>
+      ) : entries.length === 0 ? (
+        <div className="bg-white border border-gray-200 px-4 py-12 text-center text-gray-500">
+          {t('adminWebinars.waitlistEmptyAll')}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {entries.map((e) => (
+            <div
+              key={e.id}
+              className="bg-white border border-gray-200 p-4 hover:border-[#9B1B30]/50 transition-colors"
+            >
+              <div className="flex items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-[#1B2A4A]">{e.firstName}</h3>
+                    <a
+                      href={`mailto:${e.email}`}
+                      className="text-sm text-[#1B2A4A] hover:underline flex items-center gap-1"
+                    >
+                      <Mail className="h-3 w-3" />
+                      {e.email}
+                    </a>
+                  </div>
+                  {e.whatsapp && (
+                    <a
+                      href={`https://wa.me/${formatWhatsappNumber(e.whatsapp)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-[#1B2A4A] hover:underline mt-1 inline-flex items-center gap-1"
+                    >
+                      <MessageCircle className="h-3 w-3" />
+                      {e.whatsapp}
+                    </a>
+                  )}
+                  {e.notes && (
+                    <p className="mt-2 text-sm text-gray-700 bg-[#FAF6E8] border border-[#D4A853]/30 p-2 line-clamp-2">
+                      {e.notes}
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-400 mt-2">
+                    {formatDate(e.createdAt)}
+                    {e.utmSource && (
+                      <span className="ml-2 text-gray-500">
+                        · {e.utmSource}
+                        {e.utmCampaign ? `/${e.utmCampaign}` : ''}
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <div className="flex-shrink-0">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setPendingDelete(e)}
+                    className="text-gray-400 hover:text-[#9B1B30] hover:bg-red-50 rounded-none"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between text-sm text-gray-600">
+          <div>
+            {t('adminWebinars.pagination', {
+              from: (page - 1) * 50 + 1,
+              to: Math.min(page * 50, total),
+              total,
+            })}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={page <= 1}
+              onClick={() => setPage(page - 1)}
+              className="inline-flex items-center px-3 py-1.5 border border-gray-300 bg-white text-[#1B2A4A] text-sm font-medium hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              {t('adminWebinars.prev')}
+            </button>
+            <span className="text-xs text-gray-500 px-2">
+              {page} / {totalPages}
+            </span>
+            <button
+              type="button"
+              disabled={page >= totalPages}
+              onClick={() => setPage(page + 1)}
+              className="inline-flex items-center px-3 py-1.5 border border-gray-300 bg-white text-[#1B2A4A] text-sm font-medium hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {t('adminWebinars.next')}
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      <AlertDialog
+        open={!!pendingDelete}
+        onOpenChange={(open) => !open && setPendingDelete(null)}
+      >
+        <AlertDialogContent className="rounded-none">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('adminWebinars.waitlistDeleteTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('adminWebinars.waitlistDeleteBody')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting} className="rounded-none">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleting}
+              onClick={() => pendingDelete && deleteEntry(pendingDelete)}
+              className="bg-[#9B1B30] hover:bg-[#7A1526] rounded-none"
+            >
+              {deleting ? <Spinner size="xs" /> : t('adminWebinars.waitlistDeleteConfirm')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

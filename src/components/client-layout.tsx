@@ -5,6 +5,7 @@ import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { CscaPrepBanner } from '@/components/csca-prep-banner';
 import { WhatsAppGroupPopup } from '@/components/whatsapp-group-popup';
+import { WebinarPromoPopup } from '@/components/WebinarPromoPopup';
 import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import type { Locale } from '@/lib/i18n-translations';
@@ -72,6 +73,10 @@ export function ClientLayout({
         <StickyContact />
         <ExitIntentPopup />
         <WhatsAppGroupPopup />
+        {/* Phase 142: webinar promo popup. Self-suppressing when
+            no active session is set, so the layout doesn't ship
+            a teaser for nothing. */}
+        <WebinarPromoPopup />
       </div>
     </I18nProvider>
   );
