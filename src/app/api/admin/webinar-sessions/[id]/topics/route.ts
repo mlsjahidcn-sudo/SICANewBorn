@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/supabase-auth';
+import { trackServer } from '@/lib/analytics';
 
 export const dynamic = 'force-dynamic';
 
@@ -138,6 +139,14 @@ export async function POST(
     console.error('[POST /api/admin/webinar-sessions/[id]/topics] insert failed:', error);
     return NextResponse.json({ error: 'Failed to create topic' }, { status: 500 });
   }
+
+  // Phase 143: admin-action event so GA can segment by intake/
+  // degree what topics the staff is adding.
+  trackServer('webinar_topic_added', {
+    locale: 'en',
+    session_id: paramsId,
+    degree,
+  });
 
   return NextResponse.json({ id: data.id });
 }

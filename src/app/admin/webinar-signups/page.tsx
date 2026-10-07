@@ -42,6 +42,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { SessionEditDialog, type SessionEditValue } from '@/components/admin/SessionEditDialog';
 import { TopicEditDialog, type TopicEditValue } from '@/components/admin/TopicEditDialog';
+import { WebinarStatsCards } from '@/components/admin/WebinarStatsCards';
 
 // Phase 139 + 140 — admin surface.
 // Tab 1 (default) — Registrations: list of every signup with
@@ -372,6 +373,11 @@ function RegistrationsTab() {
           <span>{loadError}</span>
         </div>
       )}
+
+      {/* Phase 143: stats widget at the top — top-line numbers +
+          breakdowns by status / country / interest / source.
+          Polls every 30s, errors are best-effort. */}
+      <WebinarStatsCards />
 
       <Card>
         <div className="p-6">

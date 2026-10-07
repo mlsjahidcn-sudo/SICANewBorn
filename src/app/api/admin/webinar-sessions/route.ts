@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/supabase-auth';
+import { trackServer } from '@/lib/analytics';
 
 export const dynamic = 'force-dynamic';
 
@@ -69,6 +70,8 @@ interface CreateBody {
   status?: WebinarStatus;
   isActive?: boolean;
   displayOrder?: number;
+  /** Phase 142: per-session attendee cap (default 50 in DB). */
+  maxAttendees?: number;
 }
 
 export async function POST(request: NextRequest) {
@@ -124,6 +127,9 @@ export async function POST(request: NextRequest) {
       status: body.status ?? 'Scheduled',
       is_active: isActive,
       display_order: body.displayOrder ?? 0,
+      // Phase 142: DB DEFAULT 50 covers the omit case; explicit
+      // value here only fires when the client sends one.
+      max_attendees: body.maxAttendees ?? undefined,
     })
     .select('id, slug, is_active')
     .single();
@@ -132,6 +138,12 @@ export async function POST(request: NextRequest) {
     console.error('[POST /api/admin/webinar-sessions] insert failed:', error);
     return NextResponse.json({ error: 'Failed to create session' }, { status: 500 });
   }
+
+  // Phase 143: admin-action event.
+  trackServer('webinar_session_created', {
+    locale: 'en',
+    session_id: data.id,
+  });
 
   return NextResponse.json({
     id: data.id,

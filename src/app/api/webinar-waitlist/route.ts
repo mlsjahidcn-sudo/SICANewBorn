@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createHash } from 'crypto';
 import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
 import { checkPublicRateLimit, isHoneypotFilled } from '@/lib/rate-limit';
+import { trackServer } from '@/lib/analytics';
 
 export const dynamic = 'force-dynamic';
 
@@ -129,6 +130,14 @@ export async function POST(request: NextRequest) {
       console.error('[POST /api/webinar-waitlist] insert failed:', error);
       return NextResponse.json({ error: 'Failed to submit' }, { status: 500 });
     }
+
+    // Phase 143: admin-event for waitlist leads captured (the
+    // public full-session form submit). This is the "we filled
+    // the session, N people are waiting" metric.
+    trackServer('webinar_waitlist_added', {
+      locale: 'en',
+      session_id: sessionRow.id as string,
+    });
 
     return NextResponse.json({ success: true, id: data.id });
   } catch (err) {

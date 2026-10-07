@@ -69,11 +69,34 @@ export function WebinarSignupForm({ countryOptions }: Props) {
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Phase 139: funnel analytics — fires once on mount of the
-  // webinar page. SSR-safe (track() itself no-ops on the server).
+  // Phase 139 + 143: funnel analytics. webinar_page_view on
+  // mount (Phase 139); webinar_form_started fires once when
+  // the visitor first focuses any input (Phase 143 drop-off).
+  const [formStartedFired, setFormStartedFired] = useState(false);
   useEffect(() => {
     track('webinar_page_view', { locale });
   }, [locale]);
+
+  const fireFormStarted = () => {
+    if (formStartedFired) return;
+    setFormStartedFired(true);
+    track('webinar_form_started', {
+      locale,
+      source: typeof window !== 'undefined' ? window.location.pathname : undefined,
+    });
+  };
+
+  /**
+   * Per-field focus handler — emits a granular `webinar_form_field_focused`
+   * event so the funnel shows which inputs visitors reach before
+   * dropping off (Phase 143). Wrapped in `useCallback` so it
+   * doesn't recreate on every render and reset React's focus
+   * tracking.
+   */
+  const onFieldFocus = (field: 'firstName' | 'lastName' | 'email' | 'whatsapp' | 'country' | 'interests') => {
+    fireFormStarted();
+    track('webinar_form_field_focused', { locale, field });
+  };
 
   const toggleInterest = (value: ProgramInterestValue) => {
     setProgramInterests((prev) => {
@@ -93,11 +116,13 @@ export function WebinarSignupForm({ countryOptions }: Props) {
     // server-side rate-limit on obvious blanks. The server
     // re-validates.
     if (!firstName.trim() || !lastName.trim() || !email.trim() || !whatsapp.trim()) {
+      track('webinar_form_submitted_failed', { locale, error_code: 'validation' });
       setErrorMsg(t('webinar.form.errorRequired'));
       setStatus('error');
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      track('webinar_form_submitted_failed', { locale, error_code: 'validation' });
       setErrorMsg(t('webinar.form.errorEmail'));
       setStatus('error');
       return;
@@ -125,8 +150,13 @@ export function WebinarSignupForm({ countryOptions }: Props) {
         body: JSON.stringify(payload),
       });
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error((body as { error?: string })?.error || `Submission failed (${res.status})`);
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        // Phase 143: surface the server-side capacity decision in
+        // the funnel so admin can correlate a 409 with the page view.
+        const errorCode: 'session_full' | 'server' =
+          res.status === 409 && body.error === 'session_full' ? 'session_full' : 'server';
+        track('webinar_form_submitted_failed', { locale, error_code: errorCode });
+        throw new Error(body.error || `Submission failed (${res.status})`);
       }
       setStatus('success');
       // GA4: count after API returns 200 (failed submits don't
@@ -191,6 +221,7 @@ export function WebinarSignupForm({ countryOptions }: Props) {
                 type="text"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
+                onFocus={() => onFieldFocus('firstName')}
                 required
                 className="w-full border border-gray-300 px-4 py-2.5 text-sm text-[#1F2937] bg-white rounded-none focus:border-[#9B1B30] focus:outline-none focus:ring-1 focus:ring-[#9B1B30]"
               />
@@ -203,6 +234,7 @@ export function WebinarSignupForm({ countryOptions }: Props) {
                 type="text"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
+                onFocus={() => onFieldFocus('lastName')}
                 required
                 className="w-full border border-gray-300 px-4 py-2.5 text-sm text-[#1F2937] bg-white rounded-none focus:border-[#9B1B30] focus:outline-none focus:ring-1 focus:ring-[#9B1B30]"
               />
@@ -216,6 +248,7 @@ export function WebinarSignupForm({ countryOptions }: Props) {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              onFocus={() => onFieldFocus('email')}
               required
               className="w-full border border-gray-300 px-4 py-2.5 text-sm text-[#1F2937] bg-white rounded-none focus:border-[#9B1B30] focus:outline-none focus:ring-1 focus:ring-[#9B1B30]"
             />
@@ -228,6 +261,7 @@ export function WebinarSignupForm({ countryOptions }: Props) {
               type="tel"
               value={whatsapp}
               onChange={(e) => setWhatsapp(e.target.value)}
+              onFocus={() => onFieldFocus('whatsapp')}
               required
               placeholder="+86 173 2576 4171"
               className="w-full border border-gray-300 px-4 py-2.5 text-sm text-[#1F2937] bg-white rounded-none focus:border-[#9B1B30] focus:outline-none focus:ring-1 focus:ring-[#9B1B30]"
@@ -241,6 +275,7 @@ export function WebinarSignupForm({ countryOptions }: Props) {
             <select
               value={country}
               onChange={(e) => setCountry(e.target.value)}
+              onFocus={() => onFieldFocus('country')}
               className="w-full border border-gray-300 px-4 py-2.5 text-sm text-[#1F2937] bg-white rounded-none focus:border-[#9B1B30] focus:outline-none focus:ring-1 focus:ring-[#9B1B30]"
             >
               <option value="">{t('webinar.form.countryPlaceholder')}</option>

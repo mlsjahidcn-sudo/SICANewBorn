@@ -5011,6 +5011,20 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminWebinars.waitlistDeleteBody': 'The lead will lose their place in line. This cannot be undone.',
     'adminWebinars.waitlistDeleteConfirm': 'Remove',
     'adminWebinars.waitlistDeleteSuccess': '✓ Removed',
+    // Phase 143: admin stats widget
+    'adminWebinars.statTotal': 'Total registrations',
+    'adminWebinars.statToday': 'Today',
+    'adminWebinars.stat7d': 'Last 7 days',
+    'adminWebinars.stat30d': 'Last 30 days',
+    'adminWebinars.statByStatus': 'By status',
+    'adminWebinars.statByCountry': 'Top countries',
+    'adminWebinars.statByInterest': 'Top interests',
+    'adminWebinars.statBySource': 'Top sources',
+    'adminWebinars.errorStats': 'Failed to load stats',
+    // (adminWebinars.statusChanged already defined in Phase 140
+    //  block above; reuse the same key for the Phase 143 stats
+    //  widget so we don't shadow it.)
+    'adminWebinars.statusChangedFailed': 'Failed to update status',
     // Phase 140: intake + degree closed-enum labels (admin only)
     'adminWebinars.intake.march_2027': 'March 2027',
     'adminWebinars.intake.september_2027': 'September 2027',
@@ -5058,6 +5072,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'webinar.popupCta': 'Reserve my seat',
     'webinar.popupDismiss': 'No thanks',
     'webinar.popupAriaLabel': 'Webinar promo popup',
+    // Phase 143: public social-proof counter
+    'webinar.registeredCount': '{{count}} students have already registered',
   },
   zh: {
     // Nav
@@ -9907,6 +9923,18 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminWebinars.waitlistDeleteBody': '该线索将失去位置。此操作不可撤销。',
     'adminWebinars.waitlistDeleteConfirm': '移除',
     'adminWebinars.waitlistDeleteSuccess': '✓ 已移除',
+    // Phase 143: admin stats widget
+    'adminWebinars.statTotal': '总报名数',
+    'adminWebinars.statToday': '今日',
+    'adminWebinars.stat7d': '近 7 天',
+    'adminWebinars.stat30d': '近 30 天',
+    'adminWebinars.statByStatus': '按状态',
+    'adminWebinars.statByCountry': '主要国家',
+    'adminWebinars.statByInterest': '主要兴趣',
+    'adminWebinars.statBySource': '主要来源',
+    'adminWebinars.errorStats': '加载统计失败',
+    // 复用 Phase 140 已有的 statusChanged 翻译，避免重复声明同名 key。
+    'adminWebinars.statusChangedFailed': '状态更新失败',
     // Phase 140: intake + degree closed-enum labels (admin)
     'adminWebinars.intake.march_2027': '2027 年 3 月',
     'adminWebinars.intake.september_2027': '2027 年 9 月',
@@ -9952,6 +9980,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'webinar.popupCta': '立即报名',
     'webinar.popupDismiss': '不感兴趣',
     'webinar.popupAriaLabel': '讲座宣传弹窗',
+    // Phase 143: public social-proof counter
+    'webinar.registeredCount': '{{count}} 名学生已报名',
   },
 };
 

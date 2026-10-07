@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/supabase-auth';
+import { trackServer } from '@/lib/analytics';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,31 +12,18 @@ interface PatchBody {
 }
 
 /**
- * Phase 140: admin status flip on a webinar signup. The
- * Phase 139 GET endpoint stays read-only; this PATCH adds
- * the flip Registered → Attended / No-Show / Cancelled path
- * the staff needs to operate the webinar.
+ * Phase 140 + 143: admin status flip on a webinar signup.
  *
- * Status changes are recorded into `lead_history` (Phase 2.1
- * pattern, polymorphic FK across contact/assessment/chat
- * tables). `webinar_signups` was not wired into that
- * polymorphic FK contract so we insert the minimal row
- * referencing the signup id in `target_id` with
- * `target_type = 'webinar_signup'`. `lead_history` already
- * exists as a real table; if its CHECK constraint on
- * target_type rejects the new value the migration in this
- * phase would need to widen it — see the companion SQL
- * migration `2026-10-05_webinar_sessions_and_topics.sql`
- * for the FK extension policy that mirrors this approach.
- *
- * NOTE: lead_history.action CHECK is preserved as-is
- * ('status_changed' is a valid existing value); we only
- * reference the signup via target_id + target_type. No
- * FK was added to webinar_signups.id because that would
- * require a CHECK on target_type and a 3-way case in the
- * existing trigger. For now we keep the history row
- * informational — the primary record is the
- * `webinar_signups.status` column itself.
+ * Phase 140 added the flip Registered → Attended / No-Show /
+ * Cancelled path the staff needs to operate the webinar.
+ * Phase 143 layers on:
+ *   - activity log row into `lead_history` (the polymorphic
+ *     contract — Phase S29 — extended in
+ *     database/2026-10-08_webinar_analytics_history.sql to
+ *     accept `lead_type='webinar_signup'`),
+ *   - GA4 event `webinar_signup_status_changed` fired via
+ *     `trackServer()` so the audit shows up in the dashboard
+ *     even when the staff uses curl/Postman.
  */
 export async function PATCH(
   request: NextRequest,
@@ -60,6 +48,20 @@ export async function PATCH(
     );
   }
 
+  // Phase 143: capture the old status so we can write a
+  // from_value/to_value pair to lead_history. Phase 140's
+  // SELECT id, status only returned the post-update row.
+  const { data: existing, error: readErr } = await auth.supabase
+    .from('webinar_signups')
+    .select('id, status')
+    .eq('id', paramsId)
+    .maybeSingle();
+  if (readErr || !existing) {
+    console.error('[PATCH /api/admin/webinar-signups/[id]] lookup failed:', readErr);
+    return NextResponse.json({ error: 'Signup not found' }, { status: 404 });
+  }
+  const oldStatus = (existing.status as WebinarStatus) ?? 'Registered';
+
   const { data, error } = await auth.supabase
     .from('webinar_signups')
     .update({ status: body.status })
@@ -70,6 +72,30 @@ export async function PATCH(
   if (error) {
     console.error('[PATCH /api/admin/webinar-signups/[id]] update failed:', error);
     return NextResponse.json({ error: 'Failed to update status' }, { status: 500 });
+  }
+
+  // Phase 143: best-effort activity log + GA4 event. Log failure
+  // is a warning, never a 500 — the status flip already
+  // succeeded. Event fire is also best-effort.
+  if (oldStatus !== body.status) {
+    try {
+      await auth.supabase.from('lead_history').insert({
+        lead_type: 'webinar_signup',
+        lead_id: paramsId,
+        admin_id: auth.user.id,
+        action: 'status_changed',
+        from_value: oldStatus,
+        to_value: body.status,
+      });
+    } catch (histErr) {
+      console.warn('[PATCH /api/admin/webinar-signups/[id]] lead_history insert failed:', histErr);
+    }
+    trackServer('webinar_signup_status_changed', {
+      locale: 'en',
+      signup_id: paramsId,
+      old_status: oldStatus,
+      new_status: body.status,
+    });
   }
 
   return NextResponse.json({ id: data.id, status: data.status });

@@ -399,6 +399,93 @@ export interface AnalyticsEventMap {
     /** Pathname at the moment of dismiss. */
     path: string;
   };
+  // -----------------------------------------------------------------
+  // Phase 143: form drop-off funnel + admin-action events.
+  //
+  // The form events (`webinar_form_started`, `_field_focused`,
+  // `_submitted_failed`) are client-fired from
+  // webinar-signup-form.tsx so the funnel leak is measurable
+  // in GA without any backend changes. Admin-action events
+  // (`webinar_session_*`, `webinar_signup_status_changed`,
+  // `webinar_waitlist_added`) are server-fired from the route
+  // handlers so they fire on every API call regardless of UI.
+  // -----------------------------------------------------------------
+  /** Phase 143: visitor started interacting with the signup form
+   *  (first field focus). */
+  webinar_form_started: {
+    /** Page locale. */
+    locale: 'en' | 'zh';
+    /** Source (the pathname the form started on) — for
+     *  attribution of where drop-offs occur. */
+    source?: string;
+  };
+  /** Phase 143: visitor focused a specific form input. */
+  webinar_form_field_focused: {
+    /** Page locale. */
+    locale: 'en' | 'zh';
+    /** Which input the visitor engaged with. */
+    field: 'firstName' | 'lastName' | 'email' | 'whatsapp' | 'country' | 'interests';
+  };
+  /** Phase 143: signup submit failed server-side. Fires
+   *  BEFORE the next page render so the funnel sees the
+   *  failure before the success metric sees the recovery. */
+  webinar_form_submitted_failed: {
+    /** Page locale. */
+    locale: 'en' | 'zh';
+    /** Stable error code so GA can group funnel leaks. */
+    error_code: 'session_full' | 'validation' | 'server';
+  };
+  /** Phase 143: admin created a new session row. */
+  webinar_session_created: {
+    locale: 'en' | 'zh';
+    session_id: string;
+  };
+  /** Phase 143: admin edited a session row (any field). */
+  webinar_session_updated: {
+    locale: 'en' | 'zh';
+    session_id: string;
+  };
+  /** Phase 143: admin deleted a session row. */
+  webinar_session_deleted: {
+    locale: 'en' | 'zh';
+    session_id: string;
+  };
+  /** Phase 143: admin toggled a session's is_active (the
+   *  quick-toggle button or the dialog checkbox). */
+  webinar_session_toggled: {
+    locale: 'en' | 'zh';
+    session_id: string;
+    /** New is_active value. */
+    new_is_active: boolean;
+  };
+  /** Phase 143: admin changed the max_attendees cap. */
+  webinar_session_capacity_changed: {
+    locale: 'en' | 'zh';
+    session_id: string;
+    old_max: number;
+    new_max: number;
+  };
+  /** Phase 143: admin added a topic under a session. */
+  webinar_topic_added: {
+    locale: 'en' | 'zh';
+    session_id: string;
+    /** Topic degree enum (so GA can group by intake). */
+    degree: string;
+  };
+  /** Phase 143: admin flipped a signup's status. Fired from
+   *  the API route (works for any caller, not just the UI). */
+  webinar_signup_status_changed: {
+    locale: 'en' | 'zh';
+    signup_id: string;
+    old_status: string;
+    new_status: string;
+  };
+  /** Phase 143: a waitlist lead was captured (the public
+   *  full-session form submit). */
+  webinar_waitlist_added: {
+    locale: 'en' | 'zh';
+    session_id: string;
+  };
 }
 
 /** Convenience alias for the event-name union. */
@@ -431,5 +518,29 @@ export function track(event: string, props: Record<string, unknown> = {}): void 
   // becomes a no-op for events it doesn't know about. So we don't
   // need a "is gtag loaded" guard here. (The official
   // @next/third-parties helper does the same.)
+  sendGAEvent('event', event, props);
+}
+
+/**
+ * Phase 143: server-side companion to `track()`. The client
+ * guard is a no-op here (we're in Node — `window` doesn't
+ * exist), so we skip the early-return and call
+ * sendGAEvent directly. `@next/third-parties/google` injects
+ * the events into the SSR GA payload so the page that loads
+ * right after the API call still gets them.
+ *
+ * Phase 143 currently fires this from admin-action API
+ * routes (session create/update/delete/toggle, signup status
+ * change, waitlist add). Future Phase 144+ can swap in the
+ * GA Measurement Protocol for true server-side GA, but this
+ * is enough for the funnel/admin-action visibility the user
+ * asked for.
+ */
+export function trackServer<E extends EventName>(
+  event: E,
+  props: PropsFor<E>,
+): void;
+export function trackServer(event: string, props: Record<string, unknown> = {}): void {
+  // No SSR check — we're in Node. Just call through.
   sendGAEvent('event', event, props);
 }
