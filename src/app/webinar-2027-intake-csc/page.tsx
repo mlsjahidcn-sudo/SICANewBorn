@@ -34,7 +34,6 @@ import {
   ChevronDown,
   MessageCircle,
   Microscope,
-  Users,
   type LucideIcon,
 } from 'lucide-react';
 import { getServerT } from '@/lib/server-t';
@@ -178,26 +177,26 @@ export default async function WebinarPage() {
           <p className="mt-5 text-base sm:text-lg text-gray-300 max-w-3xl mx-auto leading-relaxed">
             {t('webinar.hero.subtitle')}
           </p>
-          <div className="mt-8 inline-flex items-center gap-2 bg-[#D4A853]/15 border border-[#D4A853]/40 px-4 py-2 text-sm text-[#D4A853] font-semibold">
-            <Clock className="h-4 w-4" />
-            <span>{heroDateLabel}</span>
-            {heroDateBody && (
-              <>
-                <span className="text-white/50">·</span>
-                <span className="text-white/80 font-normal">{heroDateBody}</span>
-              </>
+          <div className="mt-8 flex flex-col items-center gap-3">
+            <div className="inline-flex items-center gap-2 bg-[#D4A853]/15 border border-[#D4A853]/40 px-4 py-2 text-sm text-[#D4A853] font-semibold">
+              <Clock className="h-4 w-4" />
+              <span>{heroDateLabel}</span>
+              {heroDateBody && (
+                <>
+                  <span className="text-white/50">·</span>
+                  <span className="text-white/80 font-normal">{heroDateBody}</span>
+                </>
+              )}
+            </div>
+            {/* Phase 142: live seat count. CapacityPill renders its
+                own emerald-on-light styling so it sits below the
+                gold date pill as a visually distinct (but still
+                centred) row — not a "wrapped" half-inside-the-
+                hero-pill as the previous layout did. */}
+            {activeSession && capacityInitial && (
+              <CapacityPill initial={capacityInitial} />
             )}
           </div>
-          {/* Phase 142: live seat count. White-on-dark-blue version
-              sits inside the hero pill so the FOMO is visible
-              before the user scrolls to the form. The component
-              itself is a client island that polls every 30s. */}
-          {activeSession && capacityInitial && (
-            <div className="mt-3 inline-flex items-center gap-2 bg-white/10 border border-white/30 px-4 py-2 text-sm text-white">
-              <Users className="h-4 w-4 text-[#D4A853]" />
-              <CapacityPill initial={capacityInitial} />
-            </div>
-          )}
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
             <a
               href="#signup"
