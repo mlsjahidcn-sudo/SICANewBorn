@@ -4,6 +4,8 @@ import { buildServiceClient } from '@/lib/supabase-auth';
 import { setupV1Request } from '@/lib/v1-route-helpers';
 import { ALL_WEBHOOK_EVENTS, generateWebhookSecret } from '@/lib/webhook-delivery';
 import { v1ResponseHeaders } from '@/lib/v1-route-helpers';
+import { assertSafeWebhookUrl, shouldAllowLocalhost } from '@/lib/ssrf-guard';
+import { encryptWebhookSecret } from '@/lib/webhook-secret';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,10 +53,19 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /v1/webhooks
- * Create a new subscription. The `secret` is generated server-side
- * and returned ONCE in the response — same pattern as the API key
- * itself. The consumer stores the secret and uses it to verify
- * the X-SICA-Signature on every incoming delivery.
+ * Create a new subscription.
+ *
+ * The plaintext `secret` is generated server-side and returned ONCE
+ * in the response — same pattern as the API key itself. The consumer
+ * stores the secret and uses it to verify the X-SICA-Signature on
+ * every incoming delivery. The database row holds the ENCRYPTED
+ * ciphertext (AES-256-GCM keyed off the service role key); the
+ * delivery worker decrypts on demand to compute the HMAC.
+ *
+ * SSRF guard: the URL is rejected at subscription creation if it
+ * doesn't resolve to a public IP. The delivery worker re-checks the
+ * same way on every attempt so a hostname that flips public → private
+ * can't be used to bounce us back inside.
  */
 export async function POST(request: NextRequest) {
   const setup = await setupV1Request(request);
@@ -78,18 +89,32 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Reject http:// for non-localhost URLs. Webhooks over plaintext
-  // would leak signed payloads to anyone on the network. Localhost
-  // is allowed so consumers can test against a local dev server.
-  const u = new URL(parsed.data.url);
-  if (u.protocol === 'http:' && u.hostname !== 'localhost' && u.hostname !== '127.0.0.1') {
+  // SSRF guard. Reject any URL whose host is loopback / private /
+  // link-local / cloud-metadata — including DNS-resolved private
+  // IPs. In production, http:// is rejected outright; in dev we
+  // allow it only for localhost so webhook deliveries can be tested
+  // against a local tunnel.
+  const ssrf = await assertSafeWebhookUrl(parsed.data.url, shouldAllowLocalhost());
+  if (!ssrf.ok) {
     return NextResponse.json(
-      { error: 'Webhook URL must be https:// (http is only allowed for localhost during dev).' },
+      { error: `Webhook URL rejected: ${ssrf.reason}` },
       { status: 400, headers: v1ResponseHeaders(rate, cors) },
     );
   }
 
-  const secret = generateWebhookSecret();
+  const plaintextSecret = generateWebhookSecret();
+  // Store the secret encrypted; the delivery worker decrypts on demand.
+  let storedSecret: string;
+  try {
+    storedSecret = encryptWebhookSecret(plaintextSecret);
+  } catch (err) {
+    console.error('[v1/webhooks] encrypt secret failed:', err);
+    return NextResponse.json(
+      { error: 'Failed to secure signing secret' },
+      { status: 500, headers: v1ResponseHeaders(rate, cors) },
+    );
+  }
+
   const service = buildServiceClient();
   const { data, error } = await service
     .from('webhook_subscriptions')
@@ -97,7 +122,7 @@ export async function POST(request: NextRequest) {
       api_key_id: key.id,
       url: parsed.data.url,
       events: parsed.data.events,
-      secret,
+      secret: storedSecret,
       description: parsed.data.description ?? null,
     })
     .select('id, url, events, description, active, created_at')
@@ -114,8 +139,9 @@ export async function POST(request: NextRequest) {
   return NextResponse.json(
     {
       subscription: data,
-      secret,
-      secret_note: 'This is the only time the secret will be shown. Store it securely — we only keep a hash for verification.',
+      secret: plaintextSecret,
+      secret_note:
+        'This is the only time the plaintext secret will be shown. We store it encrypted at rest; the worker decrypts per delivery to sign.',
     },
     { status: 201, headers: v1ResponseHeaders(rate, cors) },
   );

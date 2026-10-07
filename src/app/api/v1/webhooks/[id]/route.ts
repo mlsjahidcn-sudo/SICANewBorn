@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { buildServiceClient } from '@/lib/supabase-auth';
 import { setupV1Request, v1ResponseHeaders } from '@/lib/v1-route-helpers';
+import { assertSafeWebhookUrl, shouldAllowLocalhost } from '@/lib/ssrf-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -69,12 +70,14 @@ export async function PATCH(
     );
   }
 
-  // Same https-only validation as create.
+  // SSRF guard (same as create): a PATCH that flips the URL to a
+  // loopback / private / metadata host is treated as a hostile
+  // edit and rejected before the row touches the DB.
   if (parsed.data.url) {
-    const u = new URL(parsed.data.url);
-    if (u.protocol === 'http:' && u.hostname !== 'localhost' && u.hostname !== '127.0.0.1') {
+    const ssrf = await assertSafeWebhookUrl(parsed.data.url, shouldAllowLocalhost());
+    if (!ssrf.ok) {
       return NextResponse.json(
-        { error: 'Webhook URL must be https://' },
+        { error: `Webhook URL rejected: ${ssrf.reason}` },
         { status: 400, headers: v1ResponseHeaders(rate, cors) },
       );
     }
