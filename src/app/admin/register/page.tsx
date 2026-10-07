@@ -28,13 +28,19 @@ function AdminRegisterForm() {
   const [redirecting, setRedirecting] = useState(false);
 
   // Validate the invite token on mount (and when token changes).
+  // S144: token moved from ?token=... query string to the POST body
+  // so it doesn't end up in proxy / CDN / Referer logs.
   useEffect(() => {
     if (!inviteToken) {
       setInviteValid(false);
       return;
     }
     let cancelled = false;
-    fetch(`/api/admin/check-invite?token=${encodeURIComponent(inviteToken)}`)
+    fetch('/api/admin/check-invite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: inviteToken }),
+    })
       .then((r) => (cancelled ? null : r.json().then((j) => ({ ok: r.ok, j }))))
       .then((result) => {
         if (cancelled || !result) return;
@@ -98,7 +104,7 @@ function AdminRegisterForm() {
       return;
     }
 
-    if (password.length < 6) {
+    if (password.length < 12) {
       setError(t('adminAuth.passwordTooShort'));
       return;
     }

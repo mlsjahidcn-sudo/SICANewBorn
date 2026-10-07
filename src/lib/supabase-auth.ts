@@ -36,13 +36,42 @@ export function buildServiceClient(): SupabaseClient {
   });
 }
 
+/** Read the admin role from admin_profiles. The user's role is
+ *  source-of-truth on the DB row — NEVER on user_metadata.role,
+ *  which the user can write to themselves via Supabase auth.update
+ *  and which used to let any visitor bypass suspension by claiming
+ *  `role=admin` in their signup metadata. */
+async function readAdminRole(
+  service: SupabaseClient,
+  userId: string,
+): Promise<'admin' | 'super_admin' | null> {
+  const { data } = await service
+    .from('admin_profiles')
+    .select('role')
+    .eq('user_id', userId)
+    .in('role', ['admin', 'super_admin'])
+    .maybeSingle();
+  if (!data) return null;
+  return data.role as 'admin' | 'super_admin';
+}
+
 /**
  * Build a session-bound client from the caller's Authorization header.
  * Use this for routes where any authenticated user can call (e.g. student routes
  * that filter by their own user.id). RLS still applies because we use the anon key.
+ *
+ * Suspension enforcement (Phase 71, hardened S144): admins can set
+ * student_profiles.status='Suspended'. The earlier implementation
+ * gated the lookup on user_metadata?.role — a user-editable field,
+ * so a suspended student could `updateUser({ data: { role: 'admin' } })`
+ * (or just put that string in their signup data) and bypass the
+ * suspension entirely. We now decide the user's role from the DB
+ * (`admin_profiles.role`), not from metadata. A user with NO
+ * admin_profiles row is treated as a student; if their
+ * student_profiles row is Suspended, they get 403.
  */
 export async function getRequestAuth(request: Request): Promise<AuthResult> {
-  const { url, anonKey } = getServerEnv();
+  const { url, anonKey, serviceKey } = getServerEnv();
   if (!url || !anonKey) {
     return { ok: false, status: 503, error: 'Database not configured' };
   }
@@ -59,22 +88,22 @@ export async function getRequestAuth(request: Request): Promise<AuthResult> {
   if (error || !data.user) {
     return { ok: false, status: 401, error: 'Invalid or expired session' };
   }
-  // Suspension enforcement (Phase 71): admins can set
-  // student_profiles.status='Suspended', but before this check nothing
-  // student-side honored it — suspended students kept full portal
-  // access. Enforced here (the chokepoint every student API uses)
-  // rather than per-route. Only applies to student-role users, so
-  // admin/partner requests pay no extra query; the lookup is a
-  // primary-key read (sub-ms).
-  const role = (data.user.user_metadata?.role as string | undefined) ?? 'student';
-  if (role === 'student') {
-    const { data: profile } = await supabase
-      .from('student_profiles')
-      .select('status')
-      .eq('id', data.user.id)
-      .maybeSingle();
-    if (profile?.status === 'Suspended') {
-      return { ok: false, status: 403, error: 'Account suspended' };
+  // Suspension check runs only when the service role key is
+  // configured (it's used by the admin lookup below).
+  if (serviceKey) {
+    const service = buildServiceClient();
+    const adminRole = await readAdminRole(service, data.user.id);
+    if (!adminRole) {
+      // Treat as a student-side caller; check student_profiles.status
+      // directly so user_metadata.role can't bypass it.
+      const { data: profile } = await supabase
+        .from('student_profiles')
+        .select('status')
+        .eq('id', data.user.id)
+        .maybeSingle();
+      if (profile?.status === 'Suspended') {
+        return { ok: false, status: 403, error: 'Account suspended' };
+      }
     }
   }
   return { ok: true, supabase, user: data.user };
@@ -93,13 +122,8 @@ export async function requireAdmin(request: Request): Promise<AuthResult> {
     return { ok: false, status: 503, error: 'Database not configured' };
   }
   const service = buildServiceClient();
-  const { data } = await service
-    .from('admin_profiles')
-    .select('role')
-    .eq('user_id', auth.user.id)
-    .in('role', ['admin', 'super_admin'])
-    .maybeSingle();
-  if (!data) {
+  const role = await readAdminRole(service, auth.user.id);
+  if (!role) {
     return { ok: false, status: 403, error: 'Admin access required' };
   }
   return auth;

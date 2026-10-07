@@ -113,21 +113,75 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // roleGate: 'unknown' while loading, 'admin' once /api/admin/me
+  // confirms the user is on the admin list, 'non-admin' when the API
+  // rejects the session as 401/403. The previous implementation
+  // trusted `useAuth().user` (which only proves the JWT is valid
+  // — it doesn't say what role the user is) and rendered the
+  // admin shell for every logged-in student/partner until the
+  // next render. We now hide admin children until the role check
+  // resolves, and force a logout when the API explicitly rejects
+  // a non-admin caller.
+  const [roleGate, setRoleGate] = useState<'unknown' | 'admin' | 'non-admin'>('unknown');
 
-  // Redirect to login if auth check completed and there's no user.
-  // We intentionally do NOT block render on `loading` — the sidebar and
-  // header render immediately, only the user-specific bits (avatar, sign-out)
-  // gate on `user`. The old behavior (full-screen spinner) made the page
-  // appear "not accessible" if the auth context was slow or the tab was
-  // backgrounded.
+  // While the auth context is resolving or the role check hasn't
+  // returned, keep the public auth pages (login + register)
+  // rendered so the user can sign in. For every other admin page
+  // we render a placeholder rather than the page content until
+  // the role check is complete — this prevents a logged-in
+  // student/partner from seeing the admin shell + children for a
+  // single frame while the redirect effect fires.
   useEffect(() => {
     if (!loading && !user) {
       const isAuthPage = pathname === '/admin/login' || pathname === '/admin/register';
       if (!isAuthPage) {
         router.push('/admin/login');
       }
+      setRoleGate('unknown');
+      return;
     }
-  }, [user, loading, pathname, router]);
+    if (loading || !user) {
+      setRoleGate('unknown');
+      return;
+    }
+    // User signed in — confirm they're an admin before rendering
+    // the shell. The auth context's `user` only proves a valid
+    // JWT; the role lives in admin_profiles.
+    let cancelled = false;
+    setRoleGate('unknown');
+    fetch('/api/admin/profile', { cache: 'no-store' })
+      .then((r) => {
+        if (cancelled) return;
+        if (r.ok) {
+          setRoleGate('admin');
+        } else if (r.status === 401 || r.status === 403) {
+          // 401 (no auth) shouldn't happen — auth context already
+          // resolved with a user. 403 (auth but not admin) is the
+          // interesting case: a student/partner that landed here
+          // somehow.
+          setRoleGate('non-admin');
+          // Force sign-out so they don't carry an entry-token session
+          // they can't use here. /admin/login is public so they can
+          // sign in with an admin account if they have one.
+          signOut().finally(() => router.push('/admin/login'));
+        } else {
+          // 5xx (DB outage, etc.) — keep the loading placeholder up
+          // so the user can retry. Don't sign out on a transient
+          // server error.
+          setRoleGate('unknown');
+        }
+      })
+      .catch(() => {
+        if (cancelled) return;
+        // Network blip — keep the loading placeholder up. The
+        // safety timeout in AuthProvider (5s) will resolve loading
+        // so we don't hang forever.
+        setRoleGate('unknown');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user, loading, pathname, router, signOut]);
 
   const isAuthPage = pathname === '/admin/login' || pathname === '/admin/register';
 
@@ -135,9 +189,13 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  // If still resolving auth, render the shell with a small inline
-  // indicator. User bits (avatar, sign-out) render as skeletons.
-  if (loading) {
+  // Don't render admin children while loading, while the auth
+  // context hasn't resolved, or while the role check is still in
+  // flight. A logged-in student/partner hitting /admin/dashboard
+  // directly used to see the sidebar + their (empty) children for
+  // one render before the redirect effect fired; now they see a
+  // loading placeholder instead.
+  if (loading || !user || roleGate === 'unknown') {
     return (
       <div className="min-h-screen bg-[#F3F4F6] flex">
         <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
@@ -169,17 +227,23 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
             </div>
           </header>
           <main className="flex-1 p-6 overflow-auto">
-            {children}
+            {/* Children are intentionally not rendered here — see
+                the comment at the top of the effect. We render
+                only a small inline status. */}
+            <div className="text-sm text-[#4B5563] flex items-center gap-2">
+              <Spinner size="xs" />
+              <span>{t('adminNav.loadingSession')}</span>
+            </div>
           </main>
         </div>
       </div>
     );
   }
 
-  if (!user) {
-    // Auth resolved with no user — the redirect effect above is about to
-    // push us to /admin/login. Render a minimal placeholder to avoid a
-    // flash of empty content during the navigation.
+  if (roleGate === 'non-admin') {
+    // The role check rejected this user. The effect above is about
+    // to sign them out + redirect; render a tiny placeholder in
+    // the meantime.
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F3F4F6]">
         <p className="text-sm text-[#4B5563]">{t('adminNav.redirectingToSignIn')}</p>
@@ -208,64 +272,64 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
-          <div className="flex flex-col h-full">
-            {/* Logo */}
-            <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-200">
-              <SicaLogo className="h-8 w-auto" />
-              <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold whitespace-nowrap shrink-0">{t('adminNav.brand')}</span>
-              <button
-                className="ml-auto lg:hidden text-gray-500 hover:text-[#1B2A4A]"
-                onClick={() => setSidebarOpen(false)}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* Navigation */}
-            <nav className="flex-1 px-3 py-4 space-y-1">
-              {navItems.map((item) => {
-                const isActive = pathname === item.href;
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.key}
-                    href={item.href}
-                    className={`flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors ${
-                      isActive
-                        ? 'bg-[#9B1B30]/10 text-[#9B1B30]'
-                        : 'text-gray-600 hover:text-[#1B2A4A] hover:bg-gray-100'
-                    }`}
-                  >
-                    <Icon size={18} />
-                    <span>{t(`adminNav.${item.key}`)}</span>
-                    {isActive && <ChevronRight size={14} className="ml-auto" />}
-                  </Link>
-                );
-              })}
-            </nav>
-
-            {/* User & Logout */}
-            <div className="px-3 py-4 border-t border-gray-200">
-              <div className="flex items-center gap-3 px-3 py-2 mb-2">
-                <div className="w-8 h-8 bg-[#9B1B30] flex items-center justify-center">
-                  <span className="text-white text-xs font-bold">
-                    {user.email?.[0]?.toUpperCase() || 'A'}
-                  </span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-[#1B2A4A] text-sm truncate">{user.email}</div>
-                  <div className="text-gray-500 text-xs">{t('adminNav.administrator')}</div>
-                </div>
-              </div>
-              <button
-                onClick={handleSignOut}
-                className="flex items-center gap-3 px-3 py-2.5 w-full text-sm text-gray-600 hover:text-[#1B2A4A] hover:bg-gray-100 transition-colors"
-              >
-                <LogOut size={18} />
-                <span>{t('adminNav.signOut')}</span>
-              </button>
-            </div>
+        <div className="flex flex-col h-full">
+          {/* Logo */}
+          <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-200">
+            <SicaLogo className="h-8 w-auto" />
+            <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold whitespace-nowrap shrink-0">{t('adminNav.brand')}</span>
+            <button
+              className="ml-auto lg:hidden text-gray-500 hover:text-[#1B2A4A]"
+              onClick={() => setSidebarOpen(false)}
+            >
+              <X size={20} />
+            </button>
           </div>
+
+          {/* Navigation */}
+          <nav className="flex-1 px-3 py-4 space-y-1">
+            {navItems.map((item) => {
+              const isActive = pathname === item.href;
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.key}
+                  href={item.href}
+                  className={`flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'bg-[#9B1B30]/10 text-[#9B1B30]'
+                      : 'text-gray-600 hover:text-[#1B2A4A] hover:bg-gray-100'
+                  }`}
+                >
+                  <Icon size={18} />
+                  <span>{t(`adminNav.${item.key}`)}</span>
+                  {isActive && <ChevronRight size={14} className="ml-auto" />}
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* User & Logout */}
+          <div className="px-3 py-4 border-t border-gray-200">
+            <div className="flex items-center gap-3 px-3 py-2 mb-2">
+              <div className="w-8 h-8 bg-[#9B1B30] flex items-center justify-center">
+                <span className="text-white text-xs font-bold">
+                  {user.email?.[0]?.toUpperCase() || 'A'}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[#1B2A4A] text-sm truncate">{user.email}</div>
+                <div className="text-gray-500 text-xs">{t('adminNav.administrator')}</div>
+              </div>
+            </div>
+            <button
+              onClick={handleSignOut}
+              className="flex items-center gap-3 px-3 py-2.5 w-full text-sm text-gray-600 hover:text-[#1B2A4A] hover:bg-gray-100 transition-colors"
+            >
+              <LogOut size={18} />
+              <span>{t('adminNav.signOut')}</span>
+            </button>
+          </div>
+        </div>
       </aside>
 
       {/* Main content — min-w-0 is load-bearing: without it this flex

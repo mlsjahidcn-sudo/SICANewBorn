@@ -9,9 +9,18 @@ const PatchPayload = z.object({
   rate_limit_per_minute: z.number().int().min(1).max(100_000).optional(),
   scope: z.array(z.string()).optional(),
   expires_at: z.string().datetime().nullable().optional(),
-  // Phase 73 (C-6): per-key CORS allowlist (editable).
+  // Phase 73 (C-6): per-key CORS allowlist (editable). S144
+  // hardening: '*' is rejected the same way it is on POST so an
+  // existing key can't be flipped to wildcard through the
+  // admin UI.
   cors_origins: z.array(z.string().min(1).max(500)).max(50).optional(),
-});
+}).refine(
+  (v) => !v.cors_origins || v.cors_origins.every((o) => o !== '*'),
+  {
+    message: 'cors_origins cannot contain "*" — name the origin explicitly',
+    path: ['cors_origins'],
+  },
+);
 
 const RevokePayload = z.object({
   revoke_reason: z.string().max(500).optional(),

@@ -12,10 +12,25 @@ const CreatePayload = z.object({
   scope: z.array(z.string()).optional(),
   rate_limit_per_minute: z.number().int().min(1).max(100_000).optional(),
   expires_at: z.string().datetime().optional().nullable(),
-  // Phase 73 (C-6): per-key CORS allowlist. Each entry is a full origin
-  // (https://acme.com) or '*' for wildcard. Cap 50, same as the DB.
-  cors_origins: z.array(z.string().min(1).max(500)).max(50).optional(),
-});
+  // Phase 73 (C-6): per-key CORS allowlist. Each entry is a full
+  // origin (https://acme.com). Wildcard '*' is rejected at the
+  // schema level — S144 audit found that the previous version
+  // accepted '*' as a single-element allowlist which meant a
+  // partner with that key could mount a CORS-permissive read
+  // surface against the catalog from any origin. The sandbox
+  // flow (Phase 73's intended future home for '*') isn't
+  // shipping today; for now, every key must name its origin.
+  cors_origins: z
+    .array(z.string().min(1).max(500))
+    .max(50)
+    .optional(),
+}).refine(
+  (v) => !v.cors_origins || v.cors_origins.every((o) => o !== '*'),
+  {
+    message: 'cors_origins cannot contain "*" — name the origin explicitly',
+    path: ['cors_origins'],
+  },
+);
 
 /**
  * GET /api/admin/api-keys

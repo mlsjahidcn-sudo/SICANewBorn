@@ -68,10 +68,31 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Validate file size (10MB max)
+  // Validate file size (10MB max). The previous version used
+  // `Number(body.size) || 0` — that silently coerced undefined /
+  // null / NaN to 0 and let missing-size requests mint an upload
+  // URL. Now we refuse anything that isn't a positive finite
+  // integer in [1, maxSize].
   const maxSize = 10 * 1024 * 1024;
-  const size = Number(body.size) || 0;
-  if (size > maxSize) {
+  const rawSize = body.size;
+  if (rawSize === undefined || rawSize === null) {
+    return NextResponse.json(
+      { error: 'size is required (positive integer bytes)' },
+      { status: 400 },
+    );
+  }
+  if (
+    typeof rawSize !== 'number' ||
+    !Number.isFinite(rawSize) ||
+    !Number.isInteger(rawSize) ||
+    rawSize <= 0
+  ) {
+    return NextResponse.json(
+      { error: 'size must be a positive integer (bytes)' },
+      { status: 400 },
+    );
+  }
+  if (rawSize > maxSize) {
     return NextResponse.json(
       { error: 'File too large. Maximum size is 10MB.' },
       { status: 400 },

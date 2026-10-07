@@ -11,6 +11,20 @@ import { requireAdmin, buildServiceClient, getServerEnv } from '@/lib/supabase-a
  *
  * If role === 'partner', the user is created and a `partners` row is also
  * inserted (so the new partner can immediately call partner APIs).
+ *
+ * S144 hardening:
+ *  - Password minimum raised from 6 → 12 characters. Brute-force
+ *    surface for a service-role admin is the user's account at the
+ *    Supabase GoTrue endpoint; 12 chars matches the OWASP minimum for
+ *    management-computing surfaces and forces any leaked password to
+ *    have some entropy.
+ *  - Only super_admin may create an 'admin' or 'super_admin' role.
+ *    The previous version let any admin mint another admin (only
+ *    super_admin → super_admin was gated). That meant any compromise
+ *    of a regular admin account let the attacker promote themselves.
+ *    A regular admin can still create 'partner' users, since the
+ *    partner path is a tenant boundary the admin already has
+ *    reach into.
  */
 export async function POST(request: NextRequest) {
   if (!getServerEnv().serviceKey) {
@@ -43,9 +57,9 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
-    if (password.length < 6) {
+    if (password.length < 12) {
       return NextResponse.json(
-        { error: 'Password must be at least 6 characters.' },
+        { error: 'Password must be at least 12 characters.' },
         { status: 400 },
       );
     }
@@ -58,9 +72,14 @@ export async function POST(request: NextRequest) {
 
     const service = buildServiceClient();
 
-    // Privilege check: only a super_admin may create another
-    // super_admin. Previously any admin could mint one.
-    if (role === 'super_admin') {
+    // Privilege check (S144). The previous version only blocked
+    // super_admin → super_admin; an admin could still mint another
+    // admin. Now any admin-role or super_admin-role target requires
+    // the caller to be a super_admin. Partner creation is unchanged
+    // — a regular admin has a legitimate need to onboard a partner
+    // org and partners live in their own tenant with no admin-shell
+    // access.
+    if (role === 'admin' || role === 'super_admin') {
       const { data: callerProfile } = await service
         .from('admin_profiles')
         .select('role')
@@ -68,7 +87,7 @@ export async function POST(request: NextRequest) {
         .maybeSingle();
       if (callerProfile?.role !== 'super_admin') {
         return NextResponse.json(
-          { error: 'Only super admins can create super admin users.' },
+          { error: 'Only super admins can create admin or super_admin users.' },
           { status: 403 },
         );
       }

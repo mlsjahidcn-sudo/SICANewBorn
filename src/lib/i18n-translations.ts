@@ -2805,7 +2805,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminAuth.inviteRequiredBody': 'Admin registration is by invitation only. Ask an existing administrator to send you an invite link.',
     'adminAuth.backToSignIn': 'Back to sign in',
     'adminAuth.passwordMismatch': 'Passwords do not match',
-    'adminAuth.passwordTooShort': 'Password must be at least 6 characters',
+    'adminAuth.passwordTooShort': 'Password must be at least 12 characters',
     // Phase 37: Admin Portal — dashboard
     'adminDashboard.welcomeFallback': 'Admin',
     'adminDashboard.welcomeBack': 'Welcome back, {{name}}',
@@ -7794,7 +7794,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminAuth.inviteRequiredBody': '管理员注册仅限邀请。请联系现有管理员获取邀请链接。',
     'adminAuth.backToSignIn': '返回登录',
     'adminAuth.passwordMismatch': '两次输入的密码不一致',
-    'adminAuth.passwordTooShort': '密码至少 6 个字符',
+    'adminAuth.passwordTooShort': '密码至少需要 12 个字符',
     // Phase 37: Admin Portal — dashboard
     'adminDashboard.welcomeFallback': '管理员',
     'adminDashboard.welcomeBack': '欢迎回来，{{name}}',

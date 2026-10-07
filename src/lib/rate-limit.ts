@@ -1,15 +1,19 @@
 /**
  * Tiny in-memory rate limiter (sliding window).
  *
- * Not a substitute for a real Redis-backed limiter at scale — this
- * lives in the Node process and resets on deploy/restart, so a
- * determined attacker hitting multiple replicas would still slip
- * through. But for abuse-from-inside (a logged-in owner hammering
- * the team invite endpoint to spam emails at the same address or
- * drain the Resend quota) it's plenty.
+ * Caveat: the in-memory limiter is **per process**. It resets on
+ * deploy/restart and does not coordinate across instances. A
+ * determined attacker hitting multiple replicas (or reloading the
+ * page from a CDN that strips our cookie set) would slip through.
+ * This is a deliberate trade-off — the realistic abuse vector is
+ * an already-authenticated owner (e.g. spamming the team invite
+ * endpoint to burn Resend quota), not a distributed botnet. If
+ * that ever changes, swap the Map for a Redis/Upstash adapter
+ * behind the same `check()` signature.
  *
  * Keyed by a caller-supplied identifier (typically the owner's
- * auth.uid() + the action name) so each owner has their own bucket.
+ * auth.uid() + the action name, or the platform client IP for
+ * anonymous endpoints) so each owner/IP has its own bucket.
  *
  * If you need cross-process limiting later, swap the Map for a
  * Redis/Upstash adapter behind the same `check()` signature.
@@ -94,7 +98,7 @@ export function _resetRateLimits(): void {
 // (Resend email, drip scheduling). Two buckets per
 // request:
 //
-//   per-IP  — the standard abuse guard (first x-forwarded-for hop)
+//   per-IP  — the standard abuse guard (platform client IP — see below)
 //   global  — one shared bucket per action, blunts rotating-IP
 //             floods that would otherwise sail past per-IP limits
 //
@@ -102,13 +106,50 @@ export function _resetRateLimits(): void {
 // exits); it exists to cap worst-case quota spend, not to shape
 // legit traffic.
 
-/**
- * Extract the originating client IP from common proxy headers.
- * First `x-forwarded-for` entry wins (every hop appends, so the
- * first is the original client). Headerless callers share the
- * 'unknown' bucket — almost certainly localhost / dev tooling.
+/** Provider-specific trusted headers, in priority order. The first
+ *  non-empty match wins. Order matters because we trust the
+ *  platform's outbound IP more than whatever the client put in
+ *  X-Forwarded-For (which the client controls on a direct connection
+ *  and which is appended-to, not overwritten, on a typical chain).
+ *
+ *  - Cloudflare: cf-connecting-ip
+ *  - Vercel: x-vercel-forwarded-for (also appends x-forwarded-for,
+ *    but the dedicated header is harder to spoof when the platform
+ *    proxies the request)
+ *  - Fly.io: fly-client-ip
+ *  - Generic proxies: x-forwarded-for (first hop) and x-real-ip
+ *
+ *  If you add a new platform, add its header here. NEVER trust the
+ *  raw first-hop XFF if a more specific platform header is present.
  */
+const TRUSTED_IP_HEADERS = [
+  'cf-connecting-ip',
+  'fly-client-ip',
+  'x-vercel-forwarded-for',
+  'true-client-ip',
+] as const;
+
+/** Resolve the client IP. Prefers platform-set headers (which
+ *  overwrite rather than append to x-forwarded-for), falls back to
+ *  the first x-forwarded-for hop, then x-real-ip. Headerless
+ *  callers share the 'unknown' bucket — almost certainly localhost
+ *  / dev tooling.
+ *
+ *  Spoofing note: x-forwarded-for is APPENDED to by each proxy in
+ *  the chain. If our platform is, say, Cloudflare, the raw XFF
+ *  starts with `1.2.3.4, 10.0.0.1` where 1.2.3.4 is the *real*
+ *  client. But if the client connects DIRECTLY (no proxy), they
+ *  can put any value they want in XFF — there's no proxy to
+ *  overwrite it. That's why the trusted-platform headers above
+ *  take priority when present. */
 export function extractClientIp(request: Request): string {
+  for (const name of TRUSTED_IP_HEADERS) {
+    const v = request.headers.get(name);
+    if (v) {
+      const first = v.split(',')[0]?.trim();
+      if (first) return first;
+    }
+  }
   const xff = request.headers.get('x-forwarded-for');
   if (xff) {
     const first = xff.split(',')[0]?.trim();

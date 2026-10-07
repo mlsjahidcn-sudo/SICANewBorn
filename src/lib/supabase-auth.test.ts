@@ -57,7 +57,10 @@ function makeFakeClient(opts: {
 
   // Build a chainable query builder that resolves to whatever
   // tableResponses[tableName] says. .from().select().eq().in().maybeSingle()
-  // is the only shape we need to mock.
+  // is the only shape we need to mock. Also handles the bare
+  // `.from(table).eq().maybeSingle()` chain (no .select() in
+  // between) used by admin_profiles role lookups in the S144
+  // auth suspension fix.
   const from = (table: string) => {
     const response = tableResponses[table] ?? { data: null, error: null };
     const terminal = {
@@ -70,6 +73,10 @@ function makeFakeClient(opts: {
           in: vi.fn().mockReturnValue(terminal),
           maybeSingle: vi.fn().mockResolvedValue(response),
         }),
+        maybeSingle: vi.fn().mockResolvedValue(response),
+      }),
+      eq: vi.fn().mockReturnValue({
+        in: vi.fn().mockReturnValue(terminal),
         maybeSingle: vi.fn().mockResolvedValue(response),
       }),
     };
@@ -100,6 +107,17 @@ beforeEach(() => {
   process.env.COZE_SUPABASE_URL = 'https://fake.supabase.co';
   process.env.COZE_SUPABASE_ANON_KEY = 'anon-fake';
   process.env.COZE_SUPABASE_SERVICE_ROLE_KEY = 'service-fake';
+  // Fallback: any createClient() call beyond the explicit
+  // mockReturnValueOnce() chain gets a fake client whose tables
+  // all return null. S144 added an internal buildServiceClient
+  // call inside getRequestAuth (the suspension check), so
+  // requireAdmin / requirePartner tests need to wire three
+  // clients now (anon, then service for the suspension check,
+  // then service again for the role check); rather than rewrite
+  // every test we let unconsumed calls use this null-fake.
+  mockCreateClient.mockImplementation(
+    () => makeFakeClient() as unknown as ReturnType<typeof mockCreateClient>,
+  );
 });
 
 afterEach(() => {
@@ -217,15 +235,20 @@ describe('requireAdmin', () => {
   });
 
   it('returns 403 when the user is authenticated but not in admin_profiles', async () => {
-    // First call (anon client) returns the user, second call (service client)
-    // returns null from admin_profiles.
+    // Three createClient invocations now:
+    //   1. getRequestAuth's anon client (resolves the user)
+    //   2. getRequestAuth's service client (S144 suspension check — admin_profiles)
+    //   3. requireAdmin's service client (admin_profiles role check)
+    // All three return null for admin_profiles so the user is treated
+    // as a non-admin and requireAdmin 403s.
     const anonClient = makeFakeClient({ user: validUser });
     const serviceClient = makeFakeClient({
       tableResponses: { admin_profiles: { data: null, error: null } },
     });
     mockCreateClient
-      .mockReturnValueOnce(anonClient) // getRequestAuth
-      .mockReturnValueOnce(serviceClient); // buildServiceClient
+      .mockReturnValueOnce(anonClient)
+      .mockReturnValueOnce(serviceClient)
+      .mockReturnValueOnce(serviceClient);
 
     const result = await requireAdmin(makeRequest(`Bearer ${validToken}`));
     expect(result).toEqual({ ok: false, status: 403, error: 'Admin access required' });
@@ -238,6 +261,7 @@ describe('requireAdmin', () => {
     });
     mockCreateClient
       .mockReturnValueOnce(anonClient)
+      .mockReturnValueOnce(serviceClient)
       .mockReturnValueOnce(serviceClient);
 
     const result = await requireAdmin(makeRequest(`Bearer ${validToken}`));
@@ -251,6 +275,7 @@ describe('requireAdmin', () => {
     });
     mockCreateClient
       .mockReturnValueOnce(anonClient)
+      .mockReturnValueOnce(serviceClient)
       .mockReturnValueOnce(serviceClient);
 
     const result = await requireAdmin(makeRequest(`Bearer ${validToken}`));
@@ -271,12 +296,16 @@ describe('requirePartner', () => {
 
   it('returns 403 when the user has no partner record', async () => {
     const anonClient = makeFakeClient({ user: validUser });
-    const serviceClient = makeFakeClient({
+    const adminCheckClient = makeFakeClient({
+      tableResponses: { admin_profiles: { data: null, error: null } },
+    });
+    const partnerCheckClient = makeFakeClient({
       tableResponses: { partners: { data: null, error: null } },
     });
     mockCreateClient
       .mockReturnValueOnce(anonClient)
-      .mockReturnValueOnce(serviceClient);
+      .mockReturnValueOnce(adminCheckClient)
+      .mockReturnValueOnce(partnerCheckClient);
 
     const result = await requirePartner(makeRequest(`Bearer ${validToken}`));
     expect(result).toEqual({ ok: false, status: 403, error: 'Partner access required' });
@@ -284,12 +313,16 @@ describe('requirePartner', () => {
 
   it('returns 500 with the underlying error message when the partners query fails', async () => {
     const anonClient = makeFakeClient({ user: validUser });
-    const serviceClient = makeFakeClient({
+    const adminCheckClient = makeFakeClient({
+      tableResponses: { admin_profiles: { data: null, error: null } },
+    });
+    const partnerCheckClient = makeFakeClient({
       tableResponses: { partners: { data: null, error: { message: 'connection refused' } } },
     });
     mockCreateClient
       .mockReturnValueOnce(anonClient)
-      .mockReturnValueOnce(serviceClient);
+      .mockReturnValueOnce(adminCheckClient)
+      .mockReturnValueOnce(partnerCheckClient);
 
     const result = await requirePartner(makeRequest(`Bearer ${validToken}`));
     expect(result).toEqual({ ok: false, status: 500, error: 'connection refused' });
@@ -297,12 +330,16 @@ describe('requirePartner', () => {
 
   it('returns ok:true with the derived partnerId when a partner record exists', async () => {
     const anonClient = makeFakeClient({ user: validUser });
-    const serviceClient = makeFakeClient({
+    const adminCheckClient = makeFakeClient({
+      tableResponses: { admin_profiles: { data: null, error: null } },
+    });
+    const partnerCheckClient = makeFakeClient({
       tableResponses: { partners: { data: partnerRecord, error: null } },
     });
     mockCreateClient
       .mockReturnValueOnce(anonClient)
-      .mockReturnValueOnce(serviceClient);
+      .mockReturnValueOnce(adminCheckClient)
+      .mockReturnValueOnce(partnerCheckClient);
 
     const result = await requirePartner(makeRequest(`Bearer ${validToken}`));
     expect(result.ok).toBe(true);

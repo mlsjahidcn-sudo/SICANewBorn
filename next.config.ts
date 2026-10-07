@@ -73,9 +73,38 @@ const baseConfig: NextConfig = {
       },
     ];
   },
-  // Phase 91: baseline security headers on every response. A strict CSP
-  // needs nonce infrastructure (GA + Next inline scripts), so it's
-  // deliberately left out here — these are the zero-risk headers.
+  // Phase 91: baseline security headers on every response. S144
+  // adds a Content-Security-Policy that still allows the current
+  // Next.js and Google Analytics scripts:
+  //
+  //   • script-src allows 'self' + inline ('unsafe-inline'+) +
+  //     googletagmanager.com (gtag.js loader). Next.js ships a
+  //     hydration bootstrap and a few Next-dev-only scripts that
+  //     are inlined; the next-script nonce machinery is opt-in
+  //     and we don't need it for the SICA pages because we have
+  //     no third-party widgets that require it. We add
+  //     'unsafe-eval' because Next.js' RSC streaming + the
+  //     development error overlay both rely on eval-shaped
+  //     string transforms at runtime — tightening this to
+  //     'unsafe-eval' off breaks production rendering. frame-src
+  //     is restricted to SICA's own origin + the GA host; the
+  //     WhatsApp / Resend / Supabase integrations never embed
+  //     cross-origin iframes.
+  //   • style-src allows 'self' + inline (Tailwind 4 ships CSS
+  //     custom properties through inline <style> at runtime).
+  //   • img-src / media-src allow the CDN hosts we proxy
+  //     (cdn.urongda.com, static-data.gaokao.cn, supabase storage
+  //      signed URLs, the static seed image host).
+  //   • connect-src allows SICA's API surface + GA + Supabase.
+  //   • frame-ancestors 'self' (paired with X-Frame-Options).
+  //   • base-uri 'self' so an injected <base> can't reframe
+  //     relative URLs.
+  //
+  // We do NOT use a per-response nonce here — adding one would
+  // require threading it through every server component. The
+  // 'unsafe-inline' on script-src is the practical trade-off;
+  // tighten with a documented nonce next tick if a way to add
+  // third-party widgets arrives.
   async headers() {
     return [
       {
@@ -86,6 +115,22 @@ const baseConfig: NextConfig = {
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
           { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains' },
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.googletagmanager.com",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: blob: https://cdn.urongda.com https://static-data.gaokao.cn https://images.unsplash.com https://studyinchina.csc.edu.cn https://i.imgur.com https://*.supabase.co",
+              "media-src 'self' https://*.supabase.co",
+              "font-src 'self' data:",
+              "connect-src 'self' https://*.supabase.co https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com",
+              "frame-src 'self' https://*.googletagmanager.com",
+              "frame-ancestors 'self'",
+              "base-uri 'self'",
+              "form-action 'self'",
+            ].join('; '),
+          },
         ],
       },
     ];
