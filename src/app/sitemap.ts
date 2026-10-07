@@ -163,18 +163,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   if (isSupabaseServerConfigured()) {
-    const supabase = getSupabaseServer();
-    if (supabase) {
-      const [u, p, s] = await Promise.all([
-        supabase.from('universities').select('slug, updated_at'),
-        supabase.from('programs').select('slug, updated_at'),
-        supabase.from('scholarships').select('slug, updated_at'),
-      ]);
-      // Type the dynamic fetches — they may return error objects in
-      // some Supabase SDK versions, but we only read .data.
-      if (u.data && u.data.length > 0) universities = u.data as SitemapEntry[];
-      if (p.data && p.data.length > 0) programs = p.data as SitemapEntry[];
-      if (s.data && s.data.length > 0) scholarships = s.data as SitemapEntry[];
+    try {
+      const supabase = getSupabaseServer();
+      if (supabase) {
+        const [u, p, s] = await Promise.all([
+          supabase.from('universities').select('slug, updated_at'),
+          supabase.from('programs').select('slug, updated_at'),
+          supabase.from('scholarships').select('slug, updated_at'),
+        ]);
+        // Type the dynamic fetches — they may return error objects in
+        // some Supabase SDK versions, but we only read .data.
+        if (u.data && u.data.length > 0) universities = u.data as SitemapEntry[];
+        if (p.data && p.data.length > 0) programs = p.data as SitemapEntry[];
+        if (s.data && s.data.length > 0) scholarships = s.data as SitemapEntry[];
+      }
+    } catch {
+      // Phase 145: an RLS / network / 5xx from any of the three
+      // Supabase fetches used to bubble out of `sitemap()` and turn
+      // /sitemap.xml into a 500. We swallow the error here so the
+      // fallback to the static seed lists still emits a valid
+      // sitemap. Failure is silent (no log) because /sitemap.xml is
+      // called by every crawler on every fetch — logging would
+      // drown the system. Real outages surface via the Supabase
+      // dashboard's monitoring.
     }
   }
 
@@ -278,24 +289,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
   let newsPostUrls: MetadataRoute.Sitemap = [];
   if (isSupabaseServerConfigured()) {
-    const supabase = getSupabaseServer();
-    if (supabase) {
-      const { data } = await supabase
-        .from('news_posts')
-        .select('slug, updated_at, published_at')
-        .eq('status', 'published')
-        .order('published_at', { ascending: false })
-        .limit(500);
-      if (data && data.length > 0) {
-        newsPostUrls = (data as Array<{ slug: string; updated_at: string; published_at: string }>).map(
-          (p) => ({
-            url: `${SITE_URL}/news/${p.slug}`,
-            lastModified: p.updated_at ? new Date(p.updated_at) : now,
-            changeFrequency: 'monthly' as const,
-            priority: 0.8,
-          }),
-        );
+    try {
+      const supabase = getSupabaseServer();
+      if (supabase) {
+        const { data } = await supabase
+          .from('news_posts')
+          .select('slug, updated_at, published_at')
+          .eq('status', 'published')
+          .order('published_at', { ascending: false })
+          .limit(500);
+        if (data && data.length > 0) {
+          newsPostUrls = (data as Array<{ slug: string; updated_at: string; published_at: string }>).map(
+            (p) => ({
+              url: `${SITE_URL}/news/${p.slug}`,
+              lastModified: p.updated_at ? new Date(p.updated_at) : now,
+              changeFrequency: 'monthly' as const,
+              priority: 0.8,
+            }),
+          );
+        }
       }
+    } catch {
+      // Phase 145: see the catch block above. Same rationale — keep
+      // /sitemap.xml alive even if Supabase is flaky.
     }
   }
 

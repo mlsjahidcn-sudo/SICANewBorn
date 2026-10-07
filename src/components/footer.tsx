@@ -7,10 +7,6 @@ import {
   Phone,
   MapPin,
   ArrowRight,
-  Instagram,
-  Facebook,
-  Youtube,
-  Linkedin,
   Send,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -178,14 +174,18 @@ export function Footer() {
 
             {/* Social icons */}
             <div className="mt-6">
+              {/* <!-- [verify] Jahid: provide real Instagram/Facebook/YouTube/LinkedIn profile URLs — the bare-homepage links below hurt E-E-A-T signals. Until then only WhatsApp is rendered. --> */}
               <p className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold mb-3">
                 {t('footer.connectTitle')}
               </p>
               <div className="flex items-center gap-2">
-                {/* Each social link is a real outbound href. WeChat doesn't
-                    have a good public URL — render an icon-only placeholder
-                    that opens the SICA WhatsApp (the de facto contact
-                    channel for the CN market). */}
+                {/* WhatsApp is the de facto contact channel for the CN
+                    market. Only social with a verified handle. The other
+                    icons (Instagram / Facebook / YouTube / LinkedIn) used
+                    to render here but linked to bare homepages
+                    (https://www.instagram.com/ etc.) which Google treats
+                    as a low-trust E-E-A-T signal. Removed in Phase 145;
+                    re-add once Jahid supplies real profile URLs. */}
                 <a
                   href="https://wa.me/8617325764171"
                   target="_blank"
@@ -194,42 +194,6 @@ export function Footer() {
                   className="h-9 w-9 flex items-center justify-center border border-gray-200 text-[#1B2A4A] hover:bg-[#9B1B30] hover:text-white hover:border-[#9B1B30] transition-colors"
                 >
                   <Phone className="h-4 w-4" />
-                </a>
-                <a
-                  href="https://www.instagram.com/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Instagram"
-                  className="h-9 w-9 flex items-center justify-center border border-gray-200 text-[#1B2A4A] hover:bg-[#9B1B30] hover:text-white hover:border-[#9B1B30] transition-colors"
-                >
-                  <Instagram className="h-4 w-4" />
-                </a>
-                <a
-                  href="https://www.facebook.com/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Facebook"
-                  className="h-9 w-9 flex items-center justify-center border border-gray-200 text-[#1B2A4A] hover:bg-[#9B1B30] hover:text-white hover:border-[#9B1B30] transition-colors"
-                >
-                  <Facebook className="h-4 w-4" />
-                </a>
-                <a
-                  href="https://www.youtube.com/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="YouTube"
-                  className="h-9 w-9 flex items-center justify-center border border-gray-200 text-[#1B2A4A] hover:bg-[#9B1B30] hover:text-white hover:border-[#9B1B30] transition-colors"
-                >
-                  <Youtube className="h-4 w-4" />
-                </a>
-                <a
-                  href="https://www.linkedin.com/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="LinkedIn"
-                  className="h-9 w-9 flex items-center justify-center border border-gray-200 text-[#1B2A4A] hover:bg-[#9B1B30] hover:text-white hover:border-[#9B1B30] transition-colors"
-                >
-                  <Linkedin className="h-4 w-4" />
                 </a>
               </div>
             </div>

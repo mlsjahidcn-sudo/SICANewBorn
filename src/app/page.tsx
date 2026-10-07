@@ -326,16 +326,42 @@ export default async function HomePage() {
       {/* By the Numbers — hard stats that LLMs and humans can cite.
           The number should be accurate to the data we have. Update
           when verified numbers change. */}
+      {/* Phase 145: stat counts are inconsistent across the site
+          (50+ / 55+ / 100+ / 27+ partner unis; 30+ / 40+ / 50+
+          countries; 90% / 95% success rates). Each value carries
+          a literal HTML comment marker that crawlers and editors
+          can grep for, until Jahid confirms the source of truth. */}
       <section className="bg-[#1B2A4A] text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 text-center">
             {[
-              { value: '50+', label: t('home.stats.partnerUniversities') },
-              { value: '200+', label: t('home.stats.programsAvailable') },
-              { value: '30+', label: t('home.stats.countriesRepresented') },
-              { value: '95%', label: t('home.stats.visaSuccessRate') },
+              {
+                value: '50+',
+                label: t('home.stats.partnerUniversities'),
+                verify: 'partnerUniversities count — site has 50+/55+/100+/27+ depending on source; pick one',
+              },
+              {
+                value: '200+',
+                label: t('home.stats.programsAvailable'),
+                verify: 'programs count — derived from live DB; flagged for parity check',
+              },
+              {
+                value: '30+',
+                label: t('home.stats.countriesRepresented'),
+                verify: 'countries count — site has 30+/40+/50+; pick one',
+              },
+              {
+                value: '95%',
+                label: t('home.stats.visaSuccessRate'),
+                verify: 'visa success rate — site has 90%/95%; pick one source',
+              },
             ].map((stat) => (
               <div key={stat.label}>
+                <div
+                  dangerouslySetInnerHTML={{
+                    __html: `<!-- [verify] Jahid: ${stat.verify} -->`,
+                  }}
+                />
                 <div className="text-4xl sm:text-5xl font-extrabold text-[#D4A853]">
                   {stat.value}
                 </div>

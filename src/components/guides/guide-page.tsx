@@ -30,6 +30,65 @@ import {
 } from 'lucide-react';
 import type { Guide, GuideBlock } from '@/lib/guides/types';
 import { SITE_URL } from '@/lib/site-url';
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
+
+const BREADCRUMB_ACRONYMS = new Set([
+  'csca',
+  'csc',
+  'mbbs',
+  'ielts',
+  'toefl',
+  'gmat',
+  'gre',
+  'mba',
+  'phd',
+  'x1',
+  'x2',
+  'cscaprep',
+]);
+
+/**
+ * Phase 145: humanize a URL path segment for the visible breadcrumb.
+ * "csca-exam-fees" → "CSCA Exam Fees"; "mbbs-in-china" → "MBBS in China".
+ * Recognised acronyms stay upper-case. Unknown words get title case.
+ */
+function humanizeBreadcrumbSegment(seg: string): string {
+  return seg
+    .split('-')
+    .map((w) => {
+      const lw = w.toLowerCase();
+      if (BREADCRUMB_ACRONYMS.has(lw)) return lw.toUpperCase();
+      // Preserve a small set of common short prepositions in lowercase
+      // so "in china" / "of china" reads naturally instead of "In China".
+      if (lw === 'in' || lw === 'of' || lw === 'and' || lw === 'or' || lw === 'to' || lw === 'for' || lw === 'vs') {
+        return lw;
+      }
+      return lw.charAt(0).toUpperCase() + lw.slice(1);
+    })
+    .join(' ');
+}
+
+/**
+ * Phase 145: build the path-segments for the visible + JSON-LD
+ * breadcrumb from the canonical `urlPath`. Strips leading/trailing
+ * slashes, splits, drops empty segments.
+ */
+function breadcrumbSegments(urlPath: string): { label: string; href: string }[] {
+  const cleaned = urlPath.replace(/^\/+|\/+$/g, '');
+  if (!cleaned) return [];
+  const parts = cleaned.split('/');
+  return parts.map((seg, i) => ({
+    label: humanizeBreadcrumbSegment(seg),
+    href: '/' + parts.slice(0, i + 1).join('/'),
+  }));
+}
 
 /**
  * Render a single guide block. Pure presentation — the page passes
@@ -154,6 +213,25 @@ export interface GuidePageProps {
    * Defaults to `/guides/${pathSegment}` when omitted.
    */
   urlPath?: string;
+  /**
+   * Phase 145: optional override for the "How to …" heading at the
+   * top of the step-by-step section. If omitted, the H2 is hidden
+   * (it used to be derived by lowercasing the page title, which
+   * produced broken headings like "How to csca exam …").
+   */
+  howToTitle?: string;
+  /**
+   * Phase 145: optional override for the breadcrumb page label. By
+   * default we humanize the last URL path segment; pass a string
+   * here if the auto-humanization reads awkwardly.
+   */
+  breadcrumbLabel?: string;
+  /**
+   * Phase 147: when true, render a `<ConsultationCta>` block just
+   * above the FAQ section (the component is created in Phase 147;
+   * for now this prop is reserved and the slot renders nothing).
+   */
+  showConsultationCta?: boolean;
 }
 
 /**
@@ -172,8 +250,21 @@ export interface GuidePageProps {
  * so search engines, ChatGPT, Perplexity, and Gemini can extract the
  * FAQ answers, step lists, and metadata in a single hop.
  */
-export function GuidePage({ guide, pathSegment, urlPath }: GuidePageProps) {
+export function GuidePage({
+  guide,
+  pathSegment,
+  urlPath,
+  howToTitle,
+  breadcrumbLabel,
+  showConsultationCta,
+}: GuidePageProps) {
   const url = `${SITE_URL}${urlPath ?? `/guides/${pathSegment}`}`;
+  const resolvedUrlPath = urlPath ?? `/guides/${pathSegment}`;
+
+  // Phase 145: breadcrumb segments. Always end with the current page.
+  const crumbs = breadcrumbSegments(resolvedUrlPath);
+  const lastCrumbLabel =
+    breadcrumbLabel ?? crumbs[crumbs.length - 1]?.label ?? guide.title;
 
   // Article schema for E-E-A-T signals
   const articleSchema = {
@@ -225,10 +316,33 @@ export function GuidePage({ guide, pathSegment, urlPath }: GuidePageProps) {
     })),
   };
 
+  // Phase 145: BreadcrumbList JSON-LD. Mirrors the visible breadcrumb
+  // (Home + intermediate segments + current page). Every page on the
+  // site benefits from this — improves GEO extraction and SERP UX.
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: SITE_URL,
+      },
+      ...crumbs.map((c, i) => ({
+        '@type': 'ListItem',
+        position: i + 2,
+        name: i === crumbs.length - 1 ? lastCrumbLabel : c.label,
+        item: `${SITE_URL}${c.href}`,
+      })),
+    ],
+  };
+
   return (
     <div className="min-h-screen bg-[#FAFAF8]">
-      {/* JSON-LD: Article + FAQPage + HowTo. Inlined so crawlers pick
-          them up in the initial HTML response, no JS required. */}
+      {/* JSON-LD: Article + FAQPage + HowTo + BreadcrumbList. Inlined
+          so crawlers pick them up in the initial HTML response, no
+          JS required. */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
@@ -241,6 +355,39 @@ export function GuidePage({ guide, pathSegment, urlPath }: GuidePageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
+
+      {/* Phase 145: visible breadcrumb above the hero. Same path the
+          JSON-LD uses; built from the canonical urlPath so editorial
+          pages and pillar guides land in the right place automatically. */}
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-6">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href="/">Home</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            {crumbs.slice(0, -1).map((c) => (
+              <span key={`crumb-sep-${c.href}`} className="contents">
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild>
+                    <Link href={c.href}>{c.label}</Link>
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+              </span>
+            ))}
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>{lastCrumbLabel}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      </div>
 
       {/* Hero — same bg-image + left-to-right navy gradient overlay
           as /about and /guides, so the visual treatment is
@@ -346,9 +493,16 @@ export function GuidePage({ guide, pathSegment, urlPath }: GuidePageProps) {
             <div className="text-xs font-bold uppercase tracking-wider text-[#D4A853] mb-2">
               Step-by-step
             </div>
-            <h2 className="text-2xl sm:text-3xl font-bold mb-6">
-              How to {guide.title.toLowerCase().replace(/\?.*$/, '').trim()}
-            </h2>
+            {/* Phase 145: replace the broken "How to {title.toLowerCase()}"
+                template (which rendered "How to csca exam (china scholastic
+                competency assessment) — complete guide …"). Pages now
+                pass an explicit `howToTitle` prop; if omitted the H2
+                is hidden to avoid the broken fallback. */}
+            {howToTitle && (
+              <h2 className="text-2xl sm:text-3xl font-bold mb-6">
+                {howToTitle}
+              </h2>
+            )}
             <ol className="space-y-4">
               {guide.howToSteps.map((step, i) => (
                 <li key={i} className="flex gap-4">
@@ -365,6 +519,10 @@ export function GuidePage({ guide, pathSegment, urlPath }: GuidePageProps) {
               ))}
             </ol>
           </section>
+
+          {/* Phase 147 (reserved slot): <ConsultationCta slug={pathSegment}
+              variant="inline" /> renders here when showConsultationCta is
+              true. Built in Phase 147; for now nothing renders. */}
 
           {/* FAQ */}
           <section id="faq" className="scroll-mt-24">
