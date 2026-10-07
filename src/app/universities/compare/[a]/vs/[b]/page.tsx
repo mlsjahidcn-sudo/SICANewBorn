@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { cache } from 'react';
 import {
   ArrowRight,
@@ -25,7 +25,7 @@ import { SITE_URL } from '@/lib/site-url';
 // both pull from this list, so the compare page never produces a 404
 // for a known pair. Reads the live DB at render time (with static
 // fallback) so newly-added AI-generated or admin-imported
-// universidades are picked up automatically.
+// universities are picked up automatically.
 //
 // S59: wrapped in React's `cache()` so the 3× calls in
 // generateStaticParams + generateMetadata + page body collapse to a
@@ -39,13 +39,15 @@ const getRankedUnis = cache(async () => {
     .sort((a, b) => a.ranking - b.ranking);
 });
 
-// Pre-render every valid pair. 8 ranked universidades → 28 unique
-// pairs; 9 → 36; etc. Reads the live list at build time so newly
-// added universidades (post-build) can be visited directly without
-// waiting for the next deploy.
+// Pre-render every valid pair in CANONICAL order. Phase 146: the
+// canonical order per pair is alphabetical by slug; the reverse
+// order permanentRedirects (308, SEO-equivalent to 301) to the
+// canonical URL from the page body — both directions resolve, only
+// one is indexable. Sorted slugs + i<j loop guarantees each pair
+// is emitted exactly once, alphabetically.
 export async function generateStaticParams() {
   const unis = await getRankedUnis();
-  const slugs = unis.map((u) => u.slug);
+  const slugs = unis.map((u) => u.slug).sort();
   const pairs: Array<{ a: string; b: string }> = [];
   for (let i = 0; i < slugs.length; i++) {
     for (let j = i + 1; j < slugs.length; j++) {
@@ -61,6 +63,12 @@ export async function generateMetadata({
   params: Promise<{ a: string; b: string }>;
 }): Promise<Metadata> {
   const { a, b } = await params;
+  // Canonical-order guard: the reverse order redirects in the page
+  // body; mirror it here so metadata never renders for the
+  // non-canonical URL.
+  if (a > b) {
+    permanentRedirect(`/universities/compare/${b}/vs/${a}`);
+  }
   const [unis, locale] = await Promise.all([
     getRankedUnis(),
     getServerLocale(),
@@ -94,6 +102,13 @@ export default async function ComparePage({
   params: Promise<{ a: string; b: string }>;
 }) {
   const { a, b } = await params;
+  // Phase 146: canonical-order guard. One URL per pair is indexable
+  // (alphabetical by slug); the reverse permanentRedirects (308 —
+  // SEO-equivalent to 301) so both directions resolve but only one
+  // is canonical.
+  if (a > b) {
+    permanentRedirect(`/universities/compare/${b}/vs/${a}`);
+  }
   const [unis, locale] = await Promise.all([
     getRankedUnis(),
     getServerLocale(),

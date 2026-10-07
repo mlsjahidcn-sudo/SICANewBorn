@@ -44,7 +44,7 @@ const baseConfig: NextConfig = {
   // S59: raise the per-page static-generation budget. The build
   // pre-renders 6,074 pages — most of them the N²
   // university-comparison route (5,460 pairs from 105
-  // universidades) and a long tail of `[slug]/programs`,
+  // universities) and a long tail of `[slug]/programs`,
   // `[slug]/scholarships`, and `[country]` SSG pages. Each page
   // does a full-table Supabase query at build time, and when 9
   // workers all hit the DB at once on Railway's tighter CPU,
@@ -70,6 +70,68 @@ const baseConfig: NextConfig = {
         has: [{ type: 'host', value: 'www.studyinchina.academy' }],
         destination: 'https://studyinchina.academy/:path*',
         permanent: true,
+      },
+      // Phase 146 (SEO Task 3): consolidate duplicate URLs. All of
+      // these use statusCode: 301 (true Moved Permanently) rather
+      // than `permanent: true` (which emits 308) — both work for
+      // Google, the spec asked for 301.
+      //
+      // (1) Top-level university profile pages → /universities/<slug>.
+      // The top-level GuidePage profiles duplicate the live
+      // /universities/<slug> detail pages; the /universities/ URL is
+      // the canonical (it is what the sitemap, the directory, and
+      // internal links use).
+      ...[
+        'peking-university',
+        'tsinghua-university',
+        'fudan-university',
+        'shanghai-jiao-tong-university',
+        'zhejiang-university',
+        'nanjing-university',
+        'university-of-science-and-technology-of-china',
+        'wuhan-university',
+        'sun-yat-sen-university',
+        'harbin-institute-of-technology',
+      ].map((slug) => ({
+        source: `/${slug}`,
+        destination: `/universities/${slug}`,
+        statusCode: 301,
+      })),
+      // (2) Legacy vs-pages → the /universities/compare/ routes.
+      {
+        source: '/peking-university-vs-tsinghua',
+        destination: '/universities/compare/peking-university/vs/tsinghua-university',
+        statusCode: 301,
+      },
+      {
+        source: '/peking-university-vs-fudan',
+        destination: '/universities/compare/peking-university/vs/fudan-university',
+        statusCode: 301,
+      },
+      // (3) Pure exam-prep CSCA pages → cscaprep.academy (Option C in
+      // docs/csca-overlap.md). SICA keeps the admissions-angle CSCA
+      // pages; syllabus / study-plan content lives on CSCA Prep.
+      // Next.js redirects support external destinations — the
+      // www→apex rule above already redirects cross-origin.
+      {
+        source: '/csca-mathematics-guide',
+        destination: 'https://cscaprep.academy/guides/mathematics',
+        statusCode: 301,
+      },
+      {
+        source: '/csca-physics-guide',
+        destination: 'https://cscaprep.academy/guides/physics',
+        statusCode: 301,
+      },
+      {
+        source: '/csca-chemistry-guide',
+        destination: 'https://cscaprep.academy/guides/chemistry',
+        statusCode: 301,
+      },
+      {
+        source: '/csca-exam-preparation',
+        destination: 'https://cscaprep.academy/csca/study-plan-12-week',
+        statusCode: 301,
       },
     ];
   },

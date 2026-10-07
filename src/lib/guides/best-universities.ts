@@ -14,11 +14,11 @@ export const bestUniversitiesGuide: LocalizedGuide = {
   en: {
     slug: 'best-universities-china',
     eyebrow: 'GUIDE · RANKINGS',
-    title: 'Best Universities in China for International Students (2026 Ranking)',
+    title: 'Best Universities in China for International Students 2027',
     description:
-      'Every Chinese university in the SICA catalog ranked by domestic ranking, with QS World Ranking, international student population, and city — the canonical 2026 ranking.',
+      'Chinese universities ranked for international students by domestic + QS standing, English-taught program options, and a free 10-minute consultation.',
     subtitle:
-      'How to read three independent ranking systems (domestic, QS, ARWU), how to match a university to your goals, and which schools have the strongest English-medium programs.',
+      'How to read three independent ranking systems (domestic, QS, ARWU), how to match a university to your goals, and which schools have the strongest English-taught programs.',
     stats: [
       { value: 'QS top 20', label: 'Tsinghua + Peking global rank' },
       { value: '~15', label: 'Chinese universities in QS top 200' },
@@ -26,14 +26,14 @@ export const bestUniversitiesGuide: LocalizedGuide = {
       { value: '5K+', label: 'Top intl. student populations' },
     ],
     quickAnswer:
-      'For international students, the "best" Chinese university depends on what you are optimizing for: Tsinghua and Peking lead on combined domestic + QS World ranking (both top 20 globally). Fudan, Shanghai Jiao Tong, Zhejiang, and Wuhan are excellent choices for English-medium master\'s programs and have 5,000+ international students each. For bachelor\'s English-medium programs, consider the joint-venture universities: University of Nottingham Ningbo China (UNNC), Xi\'an Jiaotong-Liverpool University (XJTLU), and Wenzhou-Kean. Always check that the university is MOE-listed and (for medicine) WHO-recognized — this page filters only those.',
+      'For international students, the "best" Chinese university depends on what you are optimizing for: Tsinghua and Peking lead on combined domestic + QS World ranking (both top 20 globally). Fudan, Shanghai Jiao Tong, Zhejiang, and Wuhan are excellent choices for English-taught master\'s programs and have 5,000+ international students each. For bachelor\'s English-taught programs, consider the joint-venture universities: University of Nottingham Ningbo China (UNNC), Xi\'an Jiaotong-Liverpool University (XJTLU), and Wenzhou-Kean. Always check that the university is MOE-listed and (for medicine) WHO-recognized — this page filters only those. Book a free 10-minute consultation to match a university to your profile.',
     keyTakeaways: [
       'Tsinghua + Peking are #1 and #2 by combined domestic + QS World ranking',
-      'Fudan, Shanghai Jiao Tong, Zhejiang, Wuhan are best for English-medium master\'s with 5K+ intl students each',
-      'Joint-venture universities (UNNC, XJTLU) are the safest picks for full-English-medium bachelor\'s',
+      'Fudan, Shanghai Jiao Tong, Zhejiang, Wuhan are best for English-taught master\'s with 5K+ intl students each',
+      'Joint-venture universities (UNNC, XJTLU) are the safest picks for full-English-taught bachelor\'s',
       '~15 Chinese universities rank in the QS World top 200 — all accept international students',
       'Domestic ranking drives employer perception in China; QS World drives global CV + immigration points',
-      'Top universities waive 50-100% of tuition for outstanding applicants via their own scholarship programs',
+      'Top universities waive a large share of tuition for outstanding applicants via their own scholarship programs',
     ],
     sections: [
       {
@@ -232,9 +232,9 @@ export const bestUniversitiesGuide: LocalizedGuide = {
   zh: {
     slug: 'best-universities-china',
     eyebrow: '指南 · 排名',
-    title: '2026 来华留学最好的大学（排名）',
+    title: '2027 来华留学最好的大学（国际生排名）',
     description:
-      'SICA 目录中所有中国大学按国内排名排序，含 QS 世界排名、国际学生人数、城市——2026 标准排名表。',
+      '按国内 + QS 排名为国际生整理的中国大学排名、英文授课项目选项，及免费 10 分钟选校咨询。',
     subtitle:
       '如何读懂三套独立排名体系（国内、QS、ARWU），如何根据目标匹配大学，哪些学校的英文授课项目最强。',
     stats: [

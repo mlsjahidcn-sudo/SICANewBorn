@@ -13,26 +13,26 @@ export const mbbsGuide: LocalizedGuide = {
   en: {
     slug: 'mbbs-in-china',
     eyebrow: 'GUIDE · MEDICINE',
-    title: 'MBBS in China for International Students (2026 Guide)',
+    title: 'MBBS in China 2027: English-Taught, MOE-Listed, CSCA',
     description:
-      'English-medium MBBS (Bachelor of Medicine, Bachelor of Surgery) programs at MOE-listed Chinese universities — duration, tuition, scholarships, eligibility, and full admissions path.',
+      'English-taught MBBS at MOE-listed Chinese universities for 2027: tuition, CSCA requirements, eligibility, scholarships, visa, and licensing back home.',
     subtitle:
-      'A 6-year WHO-recognized medical degree in English, taught at universities that accept thousands of international students each year — at a fraction of US/UK tuition.',
+      'A 6-year WHO-recognized medical degree in English at MOE-listed universities — with a CSCA score now required by many MBBS programs. Register for the November 2026 sitting (15-21 Oct) to stay on the September 2027 timeline.',
     stats: [
       { value: '¥30-45K', label: 'Annual tuition (USD 4.2-6.3K)' },
       { value: '6 years', label: 'Program length (incl. 1-yr internship)' },
-      { value: '170+', label: 'Countries with MBBS graduates' },
+      { value: '43 or 45', label: 'MOE-listed unis [verify]' },
       { value: 'LIVE', label: 'Programs in catalog (see table)' },
     ],
     quickAnswer:
-      'MBBS in China is a 6-year English-medium Bachelor of Medicine & Bachelor of Surgery program at MOE-listed universities recognized by the WHO World Directory (WDOMS) and most national medical councils (PMC, NMC, HPCSA). Tuition is typically ¥30,000-45,000/year (USD 4,200-6,300) — about one-fifth the cost of a US private medical school. Admission requires a high school diploma with strong biology + chemistry, IELTS 6.0+ or TOEFL 70+, and a clean criminal/medical record. No HSK Chinese is required for admission (you learn medical Chinese during the first 2 years). CSC and university-specific scholarships can cover 50-100% of tuition for top applicants.',
+      'MBBS in China is a 6-year English-taught Bachelor of Medicine & Bachelor of Surgery program at MOE-listed universities — the 2026-27 MOE list counts 43 or 45 universities depending on the source [verify]. Tuition is typically ¥30,000-45,000/year (USD 4,200-6,300). Admission requires a high school diploma with strong biology + chemistry and IELTS 6.0+ or equivalent; no HSK is required at admission. Many MBBS programs now also require the CSCA exam — Math plus, at many schools, Chemistry and/or Physics — so check each university\'s notice and sit the November or December 2026 sitting for the September 2027 intake. After graduation you sit your home country\'s licensing exam (USMLE, NMC FMGL criteria, PM&DC, BM&DC, etc.).',
     keyTakeaways: [
-      'Every MBBS program on this page is WHO-recognized (WDOMS listed) and taught in English for all 6 years',
-      'Tuition ranges ¥30,000-45,000/year — about one-fifth the cost of US/UK private medical school',
+      'Only MOE-listed universities may teach clinical medicine in English to international students — the 2026-27 list counts 43 or 45 depending on source [verify]',
+      'Tuition ranges ¥30,000-45,000/year — a fraction of US/UK private medical school',
+      'Many MBBS programs now require the CSCA (Math + Chemistry/Physics per university) — see /csca-mbbs-applicants; free practice at cscaprep.academy',
       'No HSK Chinese required at admission; you learn medical Chinese during the first 2 years',
       '1-year clinical internship at affiliated teaching hospitals is built into the program',
-      'CSC scholarship can cover full tuition + dorm + ¥2,500-3,500/month stipend',
-      'After graduation, you can sit USMLE (US), PLAB (UK), AMC (Australia), or your home-country licensing exam',
+      'After graduation, licensing depends on your home regulator: USMLE (US), PLAB (UK), AMC (Australia), NMC FMGL 2021 criteria (India) [verify], PM&DC (Pakistan) [verify], BM&DC (Bangladesh)',
     ],
     sections: [
       {
@@ -43,18 +43,41 @@ export const mbbsGuide: LocalizedGuide = {
         blocks: [
           {
             type: 'p',
-            text: 'China is one of the largest MBBS destinations in the world, hosting ~10,000 international medical students each year. The Chinese MBBS curriculum is broadly aligned with the GMC (UK) and ECFMG (US) standards: 5 years of classroom + lab + early clinical exposure (anatomy, physiology, biochemistry, pathology, pharmacology, internal medicine, surgery, pediatrics, OB-GYN, etc.), followed by a 1-year clinical internship at an affiliated teaching hospital.',
+            text: 'The Chinese MBBS curriculum is broadly aligned with international standards: 5 years of classroom + lab + early clinical exposure (anatomy, physiology, biochemistry, pathology, pharmacology, internal medicine, surgery, pediatrics, OB-GYN, etc.), followed by a 1-year clinical internship at an affiliated teaching hospital.',
           },
           {
             type: 'h3',
             text: 'Why study MBBS in China',
             body:
-              'Three reasons international students pick China for MBBS: (1) Cost — annual tuition ¥30,000-45,000 vs USD 50,000-80,000 at US private medical schools; (2) Recognition — every university on this page is on the WHO World Directory of Medical Schools (WDOMS), so graduates can sit licensing exams in 170+ countries; (3) Clinical volume — Chinese teaching hospitals handle tens of millions of patient visits per year, so you graduate with substantial hands-on experience.',
+              'Three reasons international students pick China for MBBS: (1) Cost — annual tuition ¥30,000-45,000 versus far higher fees at Western private medical schools; (2) Recognition — MOE-listed universities appear in the WHO World Directory of Medical Schools (WDOMS), so graduates can pursue licensing in many countries; (3) Clinical volume — Chinese teaching hospitals handle enormous patient loads, so you graduate with substantial hands-on experience.',
           },
           {
             type: 'callout',
             tone: 'info',
-            text: 'Important: only apply to MBBS programs at MOE-listed universities. There are ~50 such universities in China; the table below lists the ones in the SICA catalog with full English-medium 6-year tracks.',
+            text: 'Important: only MOE-listed universities may teach clinical medicine in English to international students. The 2026-27 list counts 43 or 45 universities depending on the source [verify] — always confirm a university is on the current list before applying. The table below lists the ones in the SICA catalog with English-medium 6-year tracks.',
+          },
+        ],
+      },
+      {
+        id: 'csca-requirement',
+        h2: 'CSCA requirement for MBBS applicants',
+        intro:
+          'Many MBBS programs — including many English-taught ones — now require a CSCA score. Treat it as part of the MBBS application checklist, not a separate concern.',
+        blocks: [
+          {
+            type: 'ul',
+            items: [
+              '**Who requires it** — the CSCA is required for Chinese Government Scholarship undergraduate applicants, and many universities (including many English-taught MBBS programs) require it for direct admission as well. Check each university\'s admission notice',
+              '**Subjects** — Math is required for everyone; Physics and/or Chemistry depend on the university and program. MBBS applicants commonly need Math + Chemistry and/or Physics — verify per university',
+              '**When to sit** — 6 sittings a year, mainly online at home with a live proctor. Next confirmed: 14-15 Nov 2026 (register 15-21 Oct, Beijing time), 19-20 Dec 2026, 23-24 Jan 2027. For September 2027 intake, sit November or December 2026',
+              '**MBBS-specific guidance** — see our dedicated guide at /csca-mbbs-applicants for subject combinations, timing, and licensing context',
+              '**Free practice** — CSCA Prep (https://cscaprep.academy) offers free practice tests, mocks, and study plans for every sitting',
+            ],
+          },
+          {
+            type: 'callout',
+            tone: 'warning',
+            text: 'MBBS deadlines for September 2027 cluster in spring 2027, and CSC scholarship deadlines even earlier (January-April). A CSCA score must exist before those deadlines — the November 2026 sitting is the safe choice.',
           },
         ],
       },
@@ -142,10 +165,10 @@ export const mbbsGuide: LocalizedGuide = {
           {
             type: 'ul',
             items: [
-              '**Chinese Government Scholarship (CSC)** — fully funded: tuition + dorm + ¥2,500/month stipend (bachelor\'s) + ¥1,500 settlement allowance + round-trip airfare. ~30 awards per year for MBBS across all Chinese universities. Highly competitive; apply by mid-April for September intake.',
-              '**University-specific MBBS scholarships** — most MOE-listed universities waive 50-100% of tuition for top applicants. Some also offer monthly stipends. Application is automatic when you apply for admission.',
-              '**Provincial government scholarships** — Beijing, Shanghai, Jiangsu, Zhejiang, Guangdong all offer ¥20,000-50,000/year for international students at local universities. Separate application; ask your target university\'s international student office.',
-              '**MBBS-specific partner-country scholarships** — Pakistan (PM\'s Youth Programme), Bangladesh, Indonesia, and several African countries have dedicated lines for MBBS study in China. Check your home-country\'s Ministry of Education.',
+              '**Chinese Government Scholarship (CSC)** — fully funded: tuition + dorm + monthly stipend + settlement allowance + round-trip airfare. The CSCA score is required for CSC undergraduate (MBBS) applicants. Highly competitive; apply by mid-April 2027 for September intake',
+              '**University-specific MBBS scholarships** — most MOE-listed universities waive a substantial share of tuition for top applicants. Some also offer monthly stipends. Application is often automatic when you apply for admission',
+              '**Provincial government scholarships** — Beijing, Shanghai, Jiangsu, Zhejiang, Guangdong all offer awards for international students at local universities. Separate application; ask your target university\'s international student office',
+              '**MBBS-specific partner-country scholarships** — Pakistan, Bangladesh, Indonesia, and several African countries have dedicated lines for medical study in China. Check your home-country\'s Ministry of Education',
             ],
           },
           {
@@ -168,15 +191,15 @@ export const mbbsGuide: LocalizedGuide = {
               '**United Kingdom** — sit PLAB 1 + PLAB 2; register with GMC; Foundation Year 1/2',
               '**Australia** — sit AMC MCQ + AMC Clinical; apply for internship via PMCV',
               '**Canada** — apply through MCC (Medical Council of Canada); NAC + MCCQE1 + MCCQE2',
-              '**India** — sit NEXT (replaced FMGE in 2024); register with NMC',
-              '**Pakistan** — sit NLE (National Licensing Exam); register with PMC',
-              '**Bangladesh** — sit BMDC registration exam',
-              '**Home country** — most countries accept WHO-recognized MBBS for local licensing without retraining',
+              '**India** — a China MBBS must meet the NMC FMGL 2021 criteria to qualify for the licensure pathway [verify current NMC rules]; the qualifying exam is NEXT/FMGE per current NMC policy [verify]',
+              '**Pakistan** — sit the licensing exam and register with the current regulator, PM&DC (Pakistan Medical & Dental Council) [verify current name and exam]',
+              '**Bangladesh** — sit the BMDC registration exam',
+              '**Home country** — check your regulator\'s requirements for foreign medical graduates before choosing a university',
             ],
           },
           {
             type: 'p',
-            text: 'Practical tip: if your target is the US or UK, look for universities with USMLE/PLAB coaching built into the curriculum. Several MOE-listed universities (e.g. Wuhan University, China Medical University, Jilin University) have dedicated prep modules and pass rates above 80%.',
+            text: 'Practical tip: if your target is the US or UK, look for universities with USMLE/PLAB coaching built into the curriculum. Several MOE-listed universities have dedicated prep modules — ask about current cohort outcomes when you shortlist.',
           },
         ],
       },
@@ -192,7 +215,7 @@ export const mbbsGuide: LocalizedGuide = {
       },
       {
         q: 'Is MBBS in China recognized internationally?',
-        a: 'MBBS degrees from MOE-listed Chinese universities are recognized by the WHO World Directory of Medical Schools (WDOMS), the Pakistan Medical Commission (PMC), the India National Medical Commission (NMC), the South African Health Professions Council (HPCSA), and most national medical councils in Asia and Africa. After graduation you can sit USMLE (US), PLAB (UK), AMC (Australia), or your home-country licensing exam.',
+        a: 'MBBS degrees from MOE-listed Chinese universities appear in the WHO World Directory of Medical Schools (WDOMS), which is the baseline for most licensing pathways. What each regulator requires varies: India applies the NMC FMGL 2021 criteria [verify]; Pakistan registers through PM&DC [verify]; the US/UK/Australia run their own licensing exams (USMLE/PLAB/AMC). Check your regulator\'s current rules for foreign medical graduates before choosing a university.',
       },
       {
         q: 'What is the tuition for MBBS in China?',
@@ -204,7 +227,11 @@ export const mbbsGuide: LocalizedGuide = {
       },
       {
         q: 'Can I get a scholarship for MBBS in China?',
-        a: 'Yes. Three main paths: (1) Chinese Government Scholarship (CSC) — fully funded, ~30 MBBS awards per year across all Chinese universities; (2) university-specific scholarships — most MBBS-hosting universities waive 50-100% of tuition for top applicants; (3) provincial government scholarships (Beijing, Shanghai, Jiangsu, etc.) — typically ¥20,000-50,000/year. SICA helps you apply for all three in parallel.',
+        a: 'Yes. Three main paths: (1) Chinese Government Scholarship (CSC) — fully funded, and the CSCA score is required for undergraduate applications; (2) university-specific scholarships — many MBBS-hosting universities waive a substantial share of tuition for top applicants; (3) provincial government scholarships (Beijing, Shanghai, Jiangsu, etc.). SICA helps you apply for all three in parallel.',
+      },
+      {
+        q: 'Do MBBS applicants need the CSCA?',
+        a: 'Many do. The CSCA is required for CSC scholarship undergraduate applicants, and many universities — including many English-taught MBBS programs — require it for direct admission. Math is required for everyone; Physics and/or Chemistry depend on the university, so check each notice. For September 2027, sit the November 2026 (register 15-21 Oct), December 2026, or January 2027 sitting. Details: /csca-mbbs-applicants — free practice at cscaprep.academy',
       },
       {
         q: 'Do I need to learn Chinese for MBBS in China?',
@@ -238,7 +265,7 @@ export const mbbsGuide: LocalizedGuide = {
       },
       {
         name: 'Apply for X1 student visa',
-        text: 'Take your admission notice + JW202 + passport to your local Chinese embassy/consulate. Processing takes 5-10 working days. The X1 visa is valid for the duration of your study program.',
+        text: 'Take your admission notice + JW202 + passport to your local Chinese embassy/consulate. Processing takes 5-10 working days. The X1 visa covers entry for study longer than 180 days — within 30 days of arriving in China you must convert it to a residence permit at the local entry-exit administration.',
       },
       {
         name: 'Arrive in China + register',
@@ -275,26 +302,26 @@ export const mbbsGuide: LocalizedGuide = {
   zh: {
     slug: 'mbbs-in-china',
     eyebrow: '指南 · 医学',
-    title: '来华攻读临床医学学士（MBBS）2026 完整指南',
+    title: '2027 来华 MBBS：英文授课、教育部认可、CSCA',
     description:
-      '教育部认可大学的英文授课临床医学学士（MBBS）项目——学制、学费、奖学金、申请条件、完整申请路径。',
+      '2027 年教育部认可中国大学的英文授课 MBBS：学费、CSCA 要求、申请条件、奖学金、签证与回国执业。',
     subtitle:
-      '6 年制 WHO 认证医学学位全英文教学，每年接收数千名国际生，学费仅为美英私立医学院的五分之一。',
+      '6 年制 WHO 认证医学学位，英文授课，教育部认可大学开设——许多 MBBS 项目现要求 CSCA 成绩。报名 2026 年 11 月场次（10 月 15-21 日）即可赶上 2027 年 9 月入学。',
     stats: [
       { value: '¥3-4.5 万', label: '年学费（4,200-6,300 美元）' },
       { value: '6 年', label: '学制（含 1 年实习）' },
-      { value: '170+', label: '已有 MBBS 毕业生的国家' },
+      { value: '43 或 45 所', label: '教育部认可大学 [待核实]' },
       { value: '实时', label: '目录项目数（见下表）' },
     ],
     quickAnswer:
-      '中国 MBBS 为 6 年制英文授课临床医学学士项目，由教育部认可大学开设，获 WHO 世界医学院名录（WDOMS）及多数国家医学会（PMC、NMC、HPCSA）认证。学费 ¥30,000-45,000/年（4,200-6,300 美元），约为美国私立医学院的五分之一。申请需高中毕业、生物化学成绩优秀、雅思 6.0+ 或托福 70+、无犯罪记录与传染病史。入学时无需 HSK 汉语成绩（前两年同步学习医学汉语）。CSC 与院校奖学金可减免 50-100% 学费。',
+      '中国 MBBS 为 6 年制英文授课临床医学学士项目，由教育部认可大学开设——2026-27 名单依来源为 43 或 45 所 [待核实]。学费 ¥30,000-45,000/年（4,200-6,300 美元）。申请需高中毕业、生物化学成绩优秀、雅思 6.0+ 或同等英语成绩；入学无需 HSK。许多 MBBS 项目现还要求 CSCA 成绩——数学必考，多数医学院另要求化学和/或物理，请逐校核对招生通知；2027 年 9 月入学应参加 2026 年 11 月或 12 月场次。毕业后参加本国执业考试（USMLE、NMC FMGL 2021 标准、PM&DC、BM&DC 等）。',
     keyTakeaways: [
-      '本页所有 MBBS 项目均获 WHO 认证（WDOMS 列名），全英文授课 6 年',
-      '学费 ¥30,000-45,000/年，约为美国私立医学院的五分之一',
+      '只有教育部认可大学可向国际生英文授课临床医学——2026-27 名单依来源为 43 或 45 所 [待核实]',
+      '学费 ¥30,000-45,000/年，远低于美英私立医学院',
+      '许多 MBBS 项目现要求 CSCA（数学 + 化学/物理，因校而异）——见 /csca-mbbs-applicants；免费练习 cscaprep.academy',
       '入学时无需 HSK 中文，前两年同步学习医学汉语',
       '课程包含 1 年附属教学医院临床实习',
-      'CSC 奖学金可覆盖全额学费 + 住宿 + ¥2,500-3,500/月生活补贴',
-      '毕业后可参加 USMLE（美）、PLAB（英）、AMC（澳）或本国执业医师考试',
+      '毕业后执业取决于本国监管：USMLE（美）、PLAB（英）、AMC（澳）、NMC FMGL 2021 标准（印度）[待核实]、PM&DC（巴基斯坦）[待核实]、BM&DC（孟加拉）',
     ],
     sections: [
       {
@@ -305,18 +332,41 @@ export const mbbsGuide: LocalizedGuide = {
         blocks: [
           {
             type: 'p',
-            text: '中国是全球最大的 MBBS 目的地之一，每年接收约 10,000 名国际医学学生。中国 MBBS 课程与英国 GMC 和美国 ECFMG 标准基本对齐：5 年课堂 + 实验 + 早期临床（解剖、生理、生化、病理、药理、内科、外科、儿科、妇产科等），随后 1 年在附属教学医院完成临床实习。',
+            text: '中国 MBBS 课程与国际标准基本对齐：5 年课堂 + 实验 + 早期临床（解剖、生理、生化、病理、药理、内科、外科、儿科、妇产科等），随后 1 年在附属教学医院完成临床实习。',
           },
           {
             type: 'h3',
             text: '为什么选择来华攻读 MBBS',
             body:
-              '国际生选择中国 MBBS 的三个原因：（1）学费低——年学费 ¥30,000-45,000 vs 美国私立医学院 50,000-80,000 美元；（2）认证广——本页所有大学均位列 WHO 世界医学院名录（WDOMS），毕业生可在 170+ 国家参加执业考试；（3）临床量大——中国教学医院年门诊量数千万，毕业生具备扎实临床经验。',
+              '国际生选择中国 MBBS 的三个原因：（1）学费低——年学费 ¥30,000-45,000，远低于西方私立医学院；（2）认证广——教育部认可大学均位列 WHO 世界医学院名录（WDOMS），毕业生可在多国申请执业；（3）临床量大——中国教学医院门诊量巨大，毕业生具备扎实临床经验。',
           },
           {
             type: 'callout',
             tone: 'info',
-            text: '重要：仅申请教育部认可大学的 MBBS 项目。中国共有约 50 所此类大学；下表列出 SICA 目录中提供完整英文授课 6 年制项目的院校。',
+            text: '重要：只有教育部认可大学可向国际生英文授课临床医学。2026-27 名单依来源为 43 或 45 所 [待核实]——申请前务必确认目标大学在现行名单上。下表列出 SICA 目录中提供英文授课 6 年制项目的院校。',
+          },
+        ],
+      },
+      {
+        id: 'csca-requirement',
+        h2: 'MBBS 申请者的 CSCA 要求',
+        intro:
+          '许多 MBBS 项目——包括许多英文授课项目——现要求 CSCA 成绩。请把它当作 MBBS 申请清单的一部分，而不是单独事项。',
+        blocks: [
+          {
+            type: 'ul',
+            items: [
+              '**谁要求**——CSC 奖学金本科申请者必须提交；许多大学（含许多英文授课 MBBS）对直接录取也要求。逐校核对招生通知',
+              '**科目**——数学全员必考；物理和/或化学取决于大学与项目。MBBS 申请者常见要求为数学 + 化学和/或物理——逐校核实',
+              '**何时考**——每年 6 场，以居家线上、真人监考为主。已确认：2026 年 11 月 14-15 日（报名 10 月 15-21 日北京时间）、12 月 19-20 日、2027 年 1 月 23-24 日。2027 年 9 月入学应参加 2026 年 11 或 12 月场次',
+              '**MBBS 专项指引**——科目组合、时间安排与执业背景见 /csca-mbbs-applicants',
+              '**免费练习**——CSCA Prep（https://cscaprep.academy）提供每场次的免费模拟题与学习计划',
+            ],
+          },
+          {
+            type: 'callout',
+            tone: 'warning',
+            text: '2027 年 9 月入学的 MBBS 截止集中在 2027 年春，CSC 奖学金更早（1-4 月）。CSCA 成绩必须赶在这些截止之前——2026 年 11 月场次是稳妥选择。',
           },
         ],
       },
@@ -400,10 +450,10 @@ export const mbbsGuide: LocalizedGuide = {
           {
             type: 'ul',
             items: [
-              '**中国政府奖学金（CSC）**——全额资助：学费 + 住宿 + ¥2,500/月生活补贴（本科）+ ¥1,500 安家费 + 往返机票。MBBS 全国每年约 30 个名额。竞争激烈；9 月入学请于 4 月中前申请。',
-              '**院校 MBBS 奖学金**——多数教育部认可大学为优秀申请者减免 50-100% 学费。部分提供月度补贴。随入学申请自动评审。',
-              '**省市奖学金**——北京、上海、江苏、浙江、广东均提供 ¥20,000-50,000/年的国际生奖学金。需单独申请；向目标学校国际学生办公室咨询。',
-              '**伙伴国专项 MBBS 奖学金**——巴基斯坦（青年项目）、孟加拉、印尼及多个非洲国家设有来华 MBBS 专项。请咨询本国教育部。',
+              '**中国政府奖学金（CSC）**——全额资助：学费 + 住宿 + 月度生活补贴 + 安家费 + 往返机票。CSC 本科（MBBS）申请者须提交 CSCA 成绩。竞争激烈；2027 年 9 月入学请于 2027 年 4 月中前申请。',
+              '**院校 MBBS 奖学金**——多数教育部认可大学为优秀申请者减免大比例学费。部分提供月度补贴。多随入学申请自动评审。',
+              '**省市奖学金**——北京、上海、江苏、浙江、广东均提供国际生奖学金。需单独申请；向目标学校国际学生办公室咨询。',
+              '**伙伴国专项 MBBS 奖学金**——巴基斯坦、孟加拉、印尼及多个非洲国家设有来华医学专项。请咨询本国教育部。',
             ],
           },
           {
@@ -417,7 +467,7 @@ export const mbbsGuide: LocalizedGuide = {
         id: 'recognition-after-graduation',
         h2: '毕业后的国际认证',
         intro:
-          'WHO 认证的中国 MBBS 解锁 170+ 国家的医师执业路径。具体考试视执业国家而定。',
+          'WHO 名录内的中国 MBBS 是多数国家医师执业路径的起点。具体考试视执业国家而定。',
         blocks: [
           {
             type: 'ul',
@@ -426,15 +476,15 @@ export const mbbsGuide: LocalizedGuide = {
               '**英国**——参加 PLAB 1 + PLAB 2；在 GMC 注册；Foundation Year 1/2',
               '**澳大利亚**——参加 AMC MCQ + AMC Clinical；通过 PMCV 申请实习',
               '**加拿大**——通过 MCC（加拿大医学会）申请；NAC + MCCQE1 + MCCQE2',
-              '**印度**——参加 NEXT（2024 年取代 FMGE）；在 NMC 注册',
-              '**巴基斯坦**——参加 NLE（国家执业考试）；在 PMC 注册',
+              '**印度**——中国 MBBS 须满足 NMC FMGL 2021 标准 [以现行 NMC 规则核实]；资格考试按 NMC 现行政策为 NEXT/FMGE [待核实]',
+              '**巴基斯坦**——参加执业考试并向现行监管机构 PM&DC（巴基斯坦医学与牙科委员会）注册 [机构名称与考试以现行规定核实]',
               '**孟加拉国**——参加 BMDC 注册考试',
-              '**本国**——多数国家认可 WHO 认证 MBBS，可直接参加本国执业考试',
+              '**本国**——择校前先核实本国监管机构对海外医学毕业生的现行要求',
             ],
           },
           {
             type: 'p',
-            text: '实用建议：若目标是美国或英国，请挑选将 USMLE/PLAB 备考纳入课程的大学。武汉大学、中国医科大学、吉林大学等教育部认可院校开设专项备考模块，通过率 80% 以上。',
+            text: '实用建议：若目标是美国或英国，请挑选将 USMLE/PLAB 备考纳入课程的大学。多所教育部认可院校开设专项备考模块——择校时直接询问近年毕业生的考试结果。',
           },
         ],
       },
@@ -450,11 +500,11 @@ export const mbbsGuide: LocalizedGuide = {
       },
       {
         q: '来华 MBBS 是否获得国际认证？',
-        a: '教育部认可的中国大学 MBBS 学位获 WHO 世界医学院名录（WDOMS）、巴基斯坦医学会（PMC）、印度国家医学会（NMC）、南非卫生职业委员会（HPCSA）及多数亚洲和非洲国家医学会认证。毕业后可参加 USMLE（美）、PLAB（英）、AMC（澳）或本国执业医师考试。',
+        a: '教育部认可的中国大学 MBBS 学位列于 WHO 世界医学院名录（WDOMS），这是多数执业路径的基础。各国监管要求不同：印度适用 NMC FMGL 2021 标准 [待核实]；巴基斯坦经 PM&DC 注册 [待核实]；美英澳各有执业考试（USMLE/PLAB/AMC）。择校前请核实本国监管机构对海外医学毕业生的现行规则。',
       },
       {
         q: '来华 MBBS 学费多少？',
-        a: '英文授课 MBBS 学费通常为 ¥30,000-45,000/年（约 4,200-6,300 美元）。含学费、住宿、保险、签证在内的 6 年总费用通常不超过 ¥250,000（约 3.5 万美元），约为美国私立医学院的五分之一。新疆、广西等地部分院校同类型项目学费低至 ¥22,000-28,000/年。',
+        a: '英文授课 MBBS 学费通常为 ¥30,000-45,000/年（约 4,200-6,300 美元）。含学费、住宿、保险、签证在内的 6 年总费用通常不超过 ¥250,000（约 3.5 万美元），远低于美国私立医学院。新疆、广西等地部分院校同类型项目学费低至 ¥22,000-28,000/年。',
       },
       {
         q: 'MBBS 入学条件有哪些？',
@@ -462,7 +512,11 @@ export const mbbsGuide: LocalizedGuide = {
       },
       {
         q: 'MBBS 是否可申请奖学金？',
-        a: '可以。三种主要路径：（1）中国政府奖学金（CSC）——全额资助，MBBS 全国每年约 30 个名额；（2）院校奖学金——多数 MBBS 招生院校为优秀申请者减免 50-100% 学费；（3）省市奖学金（北京、上海、江苏等）——通常 20,000-50,000 RMB/年。SICA 可协助并行申请。',
+        a: '可以。三种主要路径：（1）中国政府奖学金（CSC）——全额资助，本科申请者须提交 CSCA 成绩；（2）院校奖学金——多数 MBBS 招生院校为优秀申请者减免大比例学费；（3）省市奖学金（北京、上海、江苏等）。SICA 可协助并行申请。',
+      },
+      {
+        q: 'MBBS 申请者需要 CSCA 吗？',
+        a: '许多需要。CSC 奖学金本科申请者必须提交；许多大学（含许多英文授课 MBBS）对直接录取也要求。数学全员必考；物理和/或化学因校而异，请逐校核对通知。2027 年 9 月入学应参加 2026 年 11 月（报名 10 月 15-21 日）、12 月或 2027 年 1 月场次。详见 /csca-mbbs-applicants——免费练习 cscaprep.academy',
       },
       {
         q: '攻读 MBBS 是否需要学中文？',
@@ -470,13 +524,13 @@ export const mbbsGuide: LocalizedGuide = {
       },
       {
         q: '来华 MBBS 完整申请流程？',
-        a: '六步走：（1）挑选 2-3 所教育部认可大学；（2）通过学校官网或 CSC 系统提交在线申请。9 月入学通常截止于 4-7 月；（3）4-8 周内收到录取通知书 + JW202 签证表；（4）前往本国中国大使馆/领事馆申请 X1 学生签证；（5）抵华后完成强制体检与入学注册；（6）9 月初正式开课。SICA 可全程代办。',
+        a: '六步走：（1）挑选 2-3 所教育部认可大学；（2）通过学校官网或 CSC 系统提交在线申请。9 月入学通常截止于 4-7 月；（3）4-8 周内收到录取通知书 + JW202 签证表；（4）前往本国中国大使馆/领事馆申请 X1 学生签证；（5）抵华后完成强制体检与入学注册，并在入境 30 天内将 X1 签证换发为居留许可；（6）9 月初正式开课。SICA 可全程代办。',
       },
     ],
     howToSteps: [
       {
         name: '筛选教育部认可大学',
-        text: '通过本页表格挑选 2-3 所符合预算、排名与城市偏好的大学。所有项目均 WHO 认证、全英文授课 6 年。',
+        text: '通过本页表格挑选 2-3 所符合预算、排名与城市偏好的大学。所有项目均 WHO 名列、全英文授课 6 年。',
       },
       {
         name: '准备申请材料',
@@ -488,7 +542,7 @@ export const mbbsGuide: LocalizedGuide = {
       },
       {
         name: '并行申请 CSC 奖学金',
-        text: '如需全额资助，4 月中前通过 CSC 系统（campuschina.org）申请中国政府奖学金。申请截止日期与学校类似但走单独系统。院校奖学金自动评审。',
+        text: '如需全额资助，通过 CSC 系统（campuschina.org）申请中国政府奖学金。申请截止日期与学校类似但走单独系统。院校奖学金自动评审。',
       },
       {
         name: '收到录取通知书 + JW202',
@@ -496,7 +550,7 @@ export const mbbsGuide: LocalizedGuide = {
       },
       {
         name: '申请 X1 学生签证',
-        text: '携带录取通知书、JW202、护照前往本国中国大使馆/领事馆。处理时间 5-10 个工作日。X1 签证有效期覆盖整个学习阶段。',
+        text: '携带录取通知书、JW202、护照前往本国中国大使馆/领事馆。处理时间 5-10 个工作日。X1 签证用于超过 180 天的学习入境——抵华后须在 30 天内到当地出入境管理部门换发居留许可。',
       },
       {
         name: '抵华 + 注册',

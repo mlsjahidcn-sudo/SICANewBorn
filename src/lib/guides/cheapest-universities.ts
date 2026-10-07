@@ -14,9 +14,9 @@ export const cheapestUniversitiesGuide: LocalizedGuide = {
   en: {
     slug: 'cheapest-universities-china',
     eyebrow: 'GUIDE · BUDGET',
-    title: 'Cheapest Universities in China for International Students (2026)',
+    title: 'Cheapest Universities in China for Students (2027)',
     description:
-      'Every Chinese university in the SICA catalog ranked by undergraduate tuition — including dorm + insurance estimates, scholarship options, and the real all-in budget.',
+      'Cheapest Chinese universities for international students: tuition from ¥14,000/year, all-in budgets, scholarships, and a free consultation.',
     subtitle:
       'Studying in China is one of the most affordable paths to a globally-recognized degree. Here is exactly what it costs — by university, by program, by city.',
     stats: [
@@ -26,13 +26,13 @@ export const cheapestUniversitiesGuide: LocalizedGuide = {
       { value: '50-100%', label: 'Scholarships available' },
     ],
     quickAnswer:
-      'Studying in China costs ¥14,000-45,000/year for undergraduate tuition at English-medium programs. The cheapest bachelor programs in the SICA catalog start at ¥14,000-18,000/year (about USD 2,000-2,500). Add ¥4,000-8,000/year for an on-campus dorm, ~¥800/year for medical insurance, and ¥18,000-30,000/year for living costs (outside Tier 1 cities) — realistic all-in budget is ¥36,800-65,000/year (USD 5,200-9,200). Most universities waive 50-100% of tuition for top applicants via their own scholarship programs; the Chinese Government Scholarship (CSC) can fully fund tuition + dorm + ¥2,500/month stipend.',
+      'Studying in China costs ¥14,000-45,000/year for undergraduate tuition at English-taught programs. The cheapest bachelor programs in the SICA catalog start at ¥14,000-18,000/year (about USD 2,000-2,500). Add ¥4,000-8,000/year for an on-campus dorm, ~¥800/year for medical insurance, and ¥18,000-30,000/year for living costs (outside Tier 1 cities) — realistic all-in budget is ¥36,800-65,000/year (USD 5,200-9,200). Most universities waive a large share of tuition for top applicants via their own scholarship programs; the Chinese Government Scholarship (CSC) can fully fund the degree. Book a free 10-minute consultation for a budget plan by university.',
     keyTakeaways: [
-      'Bachelor tuition starts at ¥14,000/year (USD 2,000) — about 1/30 the cost of US private universities',
+      'Bachelor tuition starts at ¥14,000/year (USD 2,000) — a fraction of Western private universities',
       'All-in budget ¥36,800-65,000/year including tuition, dorm, insurance, and living costs',
-      'English-medium bachelor programs are available at the cheapest universities (China Jiliang, Zhejiang International Studies, several Guangxi/Hunan regional universities)',
-      'CSC scholarship covers full tuition + dorm + ¥2,500/month stipend for top applicants',
-      'Most universities waive 50-100% of tuition via their own scholarship programs — apply early',
+      'English-taught bachelor programs are available at the cheapest universities (China Jiliang, Zhejiang International Studies, several Guangxi/Hunan regional universities)',
+      'CSC scholarship covers full tuition + dorm + monthly stipend for top applicants',
+      'Most universities waive a large share of tuition via their own scholarship programs — apply early',
       'Tier 2/3 cities (Wuhan, Xi\'an, Changsha, Kunming, Hangzhou) offer flagship-university quality at lower living costs',
     ],
     sections: [
@@ -256,9 +256,9 @@ export const cheapestUniversitiesGuide: LocalizedGuide = {
   zh: {
     slug: 'cheapest-universities-china',
     eyebrow: '指南 · 预算',
-    title: '2026 来华留学最便宜的大学（国际生）',
+    title: '2027 来华留学最便宜的大学（国际生）',
     description:
-      'SICA 目录中所有中国大学按本科学费排名——含住宿与保险估算、奖学金选项、真实总预算。',
+      '国际生最省钱的中国大学：学费低至 ¥14,000/年、全包含预算、奖学金，及免费预算咨询。',
     subtitle:
       '来华留学是获得全球认证学位的最经济路径之一。下面按大学、按项目、按城市拆解实际费用。',
     stats: [

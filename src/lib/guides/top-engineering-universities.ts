@@ -14,9 +14,9 @@ export const topEngineeringGuide: LocalizedGuide = {
   en: {
     slug: 'top-engineering-universities-china',
     eyebrow: 'GUIDE · ENGINEERING',
-    title: 'Top Engineering Universities in China for International Students (2026)',
+    title: 'Top Engineering Universities in China (2027 Guide)',
     description:
-      'Every English-medium Engineering and Computer Science program at top Chinese universities — discipline, duration, tuition, scholarships.',
+      'Top Chinese engineering universities for international students: English-taught CS, EE, ME programs, tuition, scholarships, and a free consultation.',
     subtitle:
       'China produces more engineering graduates than any country in the world — and the top programs are now taught in English, ranked in QS top 100, and 1/5 the cost of US equivalents.',
     stats: [
@@ -26,13 +26,13 @@ export const topEngineeringGuide: LocalizedGuide = {
       { value: '50-100%', label: 'Scholarship coverage available' },
     ],
     quickAnswer:
-      'Top engineering universities in China for international students are Tsinghua, Zhejiang, Shanghai Jiao Tong, Harbin Institute of Technology, and Huazhong University of Science and Technology — all in the QS Engineering top 100. Engineering is the largest English-medium program category at Chinese universities, with bachelor\'s, master\'s, and PhD tracks in Computer Science, Electrical Engineering, Mechanical Engineering, Civil Engineering, Biomedical Engineering, Chemical Engineering, and Materials Science. Tuition runs ¥20,000-50,000/year for English-medium tracks — about 1/5 of US engineering tuition. CSC and university-specific scholarships cover 50-100% for top applicants. Apply 6-9 months in advance.',
+      'Top engineering universities in China for international students are Tsinghua, Zhejiang, Shanghai Jiao Tong, Harbin Institute of Technology, and Huazhong University of Science and Technology — all in the QS Engineering top 100. Engineering is the largest English-taught program category at Chinese universities, with bachelor\'s, master\'s, and PhD tracks in Computer Science, Electrical Engineering, Mechanical Engineering, Civil Engineering, Biomedical Engineering, Chemical Engineering, and Materials Science. Tuition runs ¥20,000-50,000/year for English-taught tracks. CSC and university-specific scholarships cover a large share for top applicants. Apply 6-9 months in advance — and book a free 10-minute consultation to shortlist by budget and field.',
     keyTakeaways: [
       'Tsinghua, Zhejiang, SJTU, HIT, Huazhong are the consensus top-5 engineering universities for international students',
-      'Computer Science is the largest English-medium engineering discipline; EE, ME, Civil, Biomedical, Chemical, Materials also widely available',
-      'Tuition ¥20,000-50,000/year for English-medium tracks — about 1/5 of US engineering tuition',
-      'Master\'s and PhD tracks dominate (most bachelor\'s engineering programs are Chinese-medium)',
-      'CSC scholarship can fund engineering fully — covers tuition + dorm + ¥2,500-3,500/month stipend',
+      'Computer Science is the largest English-taught engineering discipline; EE, ME, Civil, Biomedical, Chemical, Materials also widely available',
+      'Tuition ¥20,000-50,000/year for English-taught tracks — about 1/5 of US engineering tuition',
+      'Master\'s and PhD tracks dominate (most bachelor\'s engineering programs are Chinese-taught)',
+      'CSC scholarship can fund engineering fully — covers tuition + dorm + monthly stipend',
       'QS top 100 ranking + tuition affordability = best engineering ROI in the global market',
     ],
     sections: [
@@ -239,9 +239,9 @@ export const topEngineeringGuide: LocalizedGuide = {
   zh: {
     slug: 'top-engineering-universities-china',
     eyebrow: '指南 · 工程',
-    title: '2026 来华留学最好的工程大学',
+    title: '2027 来华留学最好的工程大学（指南）',
     description:
-      '中国顶尖大学的全英文授课工程与计算机科学项目——专业、学制、学费、奖学金。',
+      '国际生视角的中国顶尖工程大学：英文授课 CS、EE、ME 项目、学费、奖学金，及免费咨询。',
     subtitle:
       '中国每年培养的工程师数量超过任何国家——顶尖项目现英文授课、QS 前 100 排名、学费仅美国五分之一。',
     stats: [

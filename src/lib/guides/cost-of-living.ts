@@ -9,18 +9,19 @@ export const costOfLivingGuide: LocalizedGuide = {
   en: {
     slug: 'cost-of-living',
     eyebrow: 'GUIDE · BUDGET',
-    title: 'Cost of Living in China for International Students (2026)',
+    title: 'Cost of Living in China for Students (2027): Monthly Budget',
     description:
-      'Real monthly budgets for international students in China: housing, food, transport, phone, healthcare.',
-    subtitle: 'A 4-year China bachelor\'s costs $24,000-80,000. Here is where the money goes.',
+      'Monthly cost of living in China for international students: rent, food, transport and phone by city, plus tuition ranges and a free 10-minute budget check.',
+    subtitle:
+      'International students in China typically spend USD 800-1,500 per month all-in. The biggest variables are city (Beijing and Shanghai cost more than tier-2 cities), housing (an on-campus dorm is the single biggest saving), and lifestyle. Here is the full monthly breakdown by category and city.',
     stats: [
       { value: '$800-1,500', label: 'Monthly budget range' },
       { value: '$2-4', label: 'Average meal' },
-      { value: '70%', label: 'Cheaper than US tuition' },
+      { value: '60-80%', label: 'Dorm saving vs off-campus' },
       { value: '$200-600', label: 'Monthly dorm rent' },
     ],
     quickAnswer:
-      'International students in China typically spend $800-1,500 USD per month for everything. A 4-year bachelor\'s at a public Chinese university costs $24,000-80,000 total, vs. $160,000-260,000 at a US public school. The biggest variables are city (Beijing/Shanghai cost 30-50% more than tier-2 cities), housing (on-campus dorm cuts costs by 60-80%), and lifestyle (cooking vs eating out). With a CSC scholarship, out-of-pocket drops to $1,000-2,000 per year.',
+      'International students in China typically spend $800-1,500 USD per month for everything. The biggest variables are city (Beijing/Shanghai cost more than tier-2 cities), housing (on-campus dorm cuts costs by 60-80%), and lifestyle (cooking vs eating out). Tuition is separate — typically ¥20,000-60,000/year for English-taught programs depending on university and major. With a CSC scholarship, out-of-pocket drops dramatically because tuition, dorm, and a monthly stipend are covered.',
     keyTakeaways: [
       'Total monthly budget: $800-1,500',
       'On-campus dorm is 60-80% cheaper than off-campus',
@@ -224,23 +225,23 @@ export const costOfLivingGuide: LocalizedGuide = {
   zh: {
     slug: 'cost-of-living',
     eyebrow: '指南 · 生活成本',
-    title: '中国留学生活费完全攻略（2026）',
-    description: '国际生月度真实预算：住房、餐饮、交通、手机、医疗。',
-    subtitle: '中国本科4年总费用$24,000-80,000。下面告诉你钱花在哪。',
+    title: '中国留学生活费（2027）：月度预算指南',
+    description: '国际生在华每月生活费：分城市看房租、餐饮、交通与手机，附学费区间与免费 10 分钟预算咨询。',
+    subtitle: '国际生在华每月总开销约 800-1,500 美元。最大变量是城市（北京上海高于二线城市）、住房（校内宿舍是最大的省钱项）与生活方式。以下是按类别与城市的完整月度明细。',
     stats: [
       { value: '¥5,800-10,800', label: '月预算' },
       { value: '¥15-30', label: '平均餐费' },
-      { value: '70%', label: '比美国便宜' },
+      { value: '60-80%', label: '宿舍相对校外的节省' },
       { value: '¥1,500-4,500', label: '月住宿' },
     ],
     quickAnswer:
-      '国际生在中国每月总开销$800-1,500美元。中国公立大学4年本科总费用$24,000-80,000美元，相比美国公立$160,000-260,000。最大变量是城市、住房、生活方式。拿CSC奖学金后，自付部分降到$1,000-2,000/年。',
+      '国际生在中国每月总开销约 800-1,500 美元（全含）。最大变量是城市、住房（校内宿舍比校外省 60-80%）与生活方式（做饭 vs 外食）。学费另计——英文授课项目通常 ¥20,000-60,000/年，因大学与专业而异。拿 CSC 奖学金后自付部分大幅下降，因为学费、住宿与月度津贴都已覆盖。',
     keyTakeaways: [
       '月度总预算：$800-1,500',
       '校内宿舍比校外省60-80%',
-      '北京、上海比二线贵30-50%',
+      '北京、上海生活成本高于二线城市',
       '食堂一餐¥10-30',
-      '公立中国大学4年本科：$24,000-80,000',
+      '英文授课项目学费通常¥20,000-60,000/年（另计）',
     ],
     sections: [
       {

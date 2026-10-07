@@ -19,22 +19,22 @@ export const cscaTestDayGuide: LocalizedGuide = {
     description:
       'The complete CSCA test-day kit: what to bring, what stays outside, answer-sheet rules that protect your score, and the retake playbook — resit mechanics, session math, and how universities read your second report.',
     subtitle:
-      'Test day is where months of preparation either converts to points or leaks away on logistics: the wrong passport, a screen-only admission ticket, a mis-bubbled subject code. The rules follow the standard Chinese national-exam playbook — strict ID checks, no electronics, multiple-choice answer sheets only — and the retake system is forgiving in theory (5 sessions a year, no published attempt limit) but unforgiving in calendar terms. This guide covers the kit, the answer-sheet discipline that protects every point you earned, what happens after the exam, and the resit playbook for a second attempt.',
+      'Test day is where months of preparation either converts to points or leaks away on logistics: the wrong passport, a screen-only admission ticket, a mis-bubbled subject code. The rules follow the standard Chinese national-exam playbook — strict ID checks, no electronics, multiple-choice answer sheets only — and the retake system is forgiving in theory (6 sittings a year, no published attempt limit) but unforgiving in calendar terms. This guide covers the kit, the answer-sheet discipline that protects every point you earned, what happens after the exam, and the resit playbook for a second attempt.',
     stats: [
       { value: '30–45 min', label: 'Arrive before reporting time' },
       { value: '2 + 1', label: 'Passport + printed ticket + pencils' },
       { value: '0', label: 'Electronics in the room' },
-      { value: '5×/year', label: 'Retake opportunities' },
+      { value: '6×/year', label: 'Retake opportunities' },
     ],
     quickAnswer:
-      'Bring to the CSCA: your original passport (the exact one used at registration), the printed admission ticket, and pencils/eraser as instructed on the ticket. Phones, smartwatches, calculators (banned in all subjects), notes, and dictionaries stay outside the exam room. Each subject runs about 60 minutes of multiple choice on a bubble-sheet; double-check the subject code before bubbling, because a mis-bubbled code cannot be corrected after submission. Results release via the registration portal per session, and you download and submit the report to universities yourself. If your score disappoints, you can resit: the exam runs 5 sessions a year with no published attempt limit, you may re-register for only your weak subjects, and universities read the report you choose to submit — the binding constraint is calendar, since the retake must land before your still-open application deadlines.',
+      'Bring to the CSCA: your original passport (the exact one used at registration), the printed admission ticket, and pencils/eraser as instructed on the ticket. Phones, smartwatches, calculators (banned in all subjects), notes, and dictionaries stay outside the exam room. Each subject runs about 60 minutes of multiple choice on a bubble-sheet; double-check the subject code before bubbling, because a mis-bubbled code cannot be corrected after submission. Results release via the portal per sitting, and you download and submit the report to universities yourself. If your score disappoints, you can resit: the exam runs 6 sittings a year with no published attempt limit, you may re-register for only your weak subjects — the binding constraint is calendar, since the retake must land before your still-open application deadlines.',
     keyTakeaways: [
       'Kit: original passport (registration-exact), PRINTED admission ticket, pencils/eraser — arrive 30–45 minutes early',
       'Banned in the room: phones, smartwatches, calculators (all subjects), notes, dictionaries',
       'Answer-sheet discipline: verify the subject code, bubble fully, batch your bubbling every 8–10 questions',
       'Multiple subjects may share one exam day — your personal timetable is on the admission ticket',
-      'Results release per session on the portal; you download and forward the report to universities yourself',
-      'Retakes: 5 sessions/year, no published attempt limit, weak subjects only — the calendar, not the rules, is the constraint',
+      'Results release per sitting on the portal; you download and forward the report to universities yourself',
+      'Retakes: 6 sittings/year, no published attempt limit, weak subjects only — the calendar, not the rules, is the constraint',
     ],
     sections: [
       {
@@ -198,7 +198,7 @@ export const cscaTestDayGuide: LocalizedGuide = {
       },
       {
         q: 'How many times can I retake the CSCA?',
-        a: 'There is no published attempt limit — the exam runs 5 sessions a year and you may resit in later sessions, typically only your weak subjects. The real constraint is calendar: your retake must land before your still-open application deadlines.',
+        a: 'There is no published attempt limit — the exam runs 6 sittings a year and you may resit in later sittings, typically only your weak subjects. The real constraint is calendar: your retake must land before your still-open application deadlines.',
       },
       {
         q: 'Do universities see all my CSCA attempts?',
@@ -269,22 +269,22 @@ export const cscaTestDayGuide: LocalizedGuide = {
     description:
       '完整的 CSCA 考试日装备：带什么、禁什么、保护分数的答题卡规则，以及重考打法——重考机制、场次算术与大学如何读你的第二份成绩单。',
     subtitle:
-      '考试日是数月备考兑换成分数、或因后勤漏光的地方：错的护照、只存屏幕的准考证、涂错的科目代码。规则遵循中国国家级考试的标准打法——严格核验身份证件、禁电子设备、仅选择题答题卡；重考系统理论上宽容（一年 5 场、无公布的次数上限）但日历上毫不留情。本指南覆盖装备清单、保护你已赚到每一分的答题卡纪律、考试后发生什么，以及第二次尝试的重考打法。',
+      '考试日是数月备考兑换成分数、或因后勤漏光的地方：错的护照、只存屏幕的准考证、涂错的科目代码。规则遵循中国国家级考试的标准打法——严格核验身份证件、禁电子设备、仅选择题答题卡；重考系统理论上宽容（一年 6 场、无公布的次数上限）但日历上毫不留情。本指南覆盖装备清单、保护你已赚到每一分的答题卡纪律、考试后发生什么，以及第二次尝试的重考打法。',
     stats: [
       { value: '30-45 分钟', label: '提早于报到时间到场' },
       { value: '2 + 1', label: '护照 + 纸质准考证 + 铅笔' },
       { value: '0', label: '件电子设备入场' },
-      { value: '5 次/年', label: '重考机会' },
+      { value: '6 场/年', label: '重考机会' },
     ],
     quickAnswer:
-      'CSCA 携带：报名所用护照原件（逐字同一本）、打印的准考证、按准考证要求的铅笔与橡皮。手机、智能手表、计算器（全科禁用）、笔记与词典不得进入考场。每科约 60 分钟选择题、机读答题卡；涂卡前核对科目代码，涂错提交后无法更正。成绩按场次经报名门户发布，由你下载并自行提交给大学。分数不理想可以重考：一年 5 场、无公布的次数上限、可只重考弱科，大学以你选择提交的成绩单为准——真正的约束是日历，因为重考必须落在你仍开放的申请截止之前。',
+      'CSCA 携带：报名所用护照原件（逐字同一本）、打印的准考证、按准考证要求的铅笔与橡皮。手机、智能手表、计算器（全科禁用）、笔记与词典不得进入考场。每科约 60 分钟选择题、机读答题卡；涂卡前核对科目代码，涂错提交后无法更正。成绩按场次经门户发布，由你下载并自行提交给大学。分数不理想可以重考：一年 6 场、无公布的次数上限、可只重考弱科——真正的约束是日历，因为重考必须落在你仍开放的申请截止之前。',
     keyTakeaways: [
       '装备：护照原件（与报名逐字一致）、打印的准考证、铅笔与橡皮——提早 30-45 分钟到场',
       '考场禁带：手机、智能手表、计算器（全科）、笔记、词典',
       '答题卡纪律：核对科目代码、涂满、每 8-10 题批量涂卡',
       '多科可能同日进行——你的个人时间表在准考证上',
       '成绩按场次在门户发布；由你下载并把报告交给大学',
-      '重考：一年 5 场、无公布次数上限、只重考弱科——约束是日历不是规则',
+      '重考：一年 6 场、无公布次数上限、只重考弱科——约束是日历不是规则',
     ],
     sections: [
       {
@@ -407,7 +407,7 @@ export const cscaTestDayGuide: LocalizedGuide = {
         id: 'retake-playbook',
         h2: '重考打法',
         intro:
-          '一年五场且无公布次数上限让重考成为常规操作。打法核心是外科手术式地做。',
+          '一年六场且无公布次数上限让重考成为常规操作。打法核心是外科手术式地做。',
         blocks: [
           {
             type: 'ul',
@@ -448,7 +448,7 @@ export const cscaTestDayGuide: LocalizedGuide = {
       },
       {
         q: 'CSCA 可以重考几次？',
-        a: '没有公布的次数上限——考试一年 5 场，可在后续场次重考、通常只考弱科。真正的约束是日历：重考必须落在你仍开放的申请截止之前。',
+        a: '没有公布的次数上限——考试一年 6 场，可在后续场次重考、通常只考弱科。真正的约束是日历：重考必须落在你仍开放的申请截止之前。',
       },
       {
         q: '大学看得到我所有 CSCA 尝试吗？',

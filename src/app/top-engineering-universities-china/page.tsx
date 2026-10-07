@@ -14,7 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const locale: Locale = cookieStore.get('sica-locale')?.value === 'zh' ? 'zh' : 'en';
   const guide = topEngineeringGuide[locale];
   return {
-    title: guide.title,
+    title: { absolute: guide.title },
     description: guide.description,
     alternates: buildLanguageAlternates('/top-engineering-universities-china'),
     openGraph: {
@@ -87,5 +87,5 @@ export default async function TopEngineeringPage() {
     }),
   };
 
-  return <GuidePage guide={liveGuide} pathSegment="top-engineering-universities-china" urlPath="/top-engineering-universities-china" />;
+  return <GuidePage guide={liveGuide} pathSegment="top-engineering-universities-china" urlPath="/top-engineering-universities-china" howToTitle="How to choose your engineering university" />;
 }

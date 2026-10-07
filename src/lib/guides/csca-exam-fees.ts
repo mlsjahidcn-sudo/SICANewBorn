@@ -15,24 +15,24 @@ export const cscaFeesGuide: LocalizedGuide = {
   en: {
     slug: 'csca-exam-fees',
     eyebrow: 'GUIDE · CSCA FEES',
-    title: 'CSCA Exam Fees & Payment Guide — Costs, Payment Methods, and Paying from Abroad',
+    title: 'CSCA Exam Fee 2026-27: RMB 450 or 700 & How to Pay',
     description:
-      'CSCA registration costs ¥450 for one subject or ¥700 total for two or more, paid via Alipay, WeChat Pay, or bank transfer. Full fee breakdown, payment walkthroughs for overseas candidates, refund caveats, and how it compares to the SAT and IELTS.',
+      'CSCA exam fee: RMB 450 for one subject, RMB 700 for two or more (official, csca.cn). How to pay from abroad, refunds, and what else to budget.',
     subtitle:
-      'The CSCA is one of the cheapest standardized admissions exams in the world: ¥450 CNY for a single subject, or ¥700 total for two or more subjects in the same session — meaning the typical candidate sitting 3–4 subjects pays ¥700 flat. Payment runs through the official portal via Alipay, WeChat Pay, or bank transfer. The real cost traps are not the fees but payment-channel friction and refund assumptions.',
+      'The CSCA exam fee is RMB 450 for one subject or RMB 700 total for two or more subjects in the same sitting (official, csca.cn). Math is required for everyone; English-taught applicants usually add 1–2 more subjects, paying the RMB 700 band. Payment runs through the official portal — the real cost traps are payment-channel friction from abroad, not the fee itself.',
     stats: [
-      { value: '¥450', label: '1 subject' },
-      { value: '¥700', label: '2+ subjects (total)' },
-      { value: '3', label: 'Payment methods' },
-      { value: '~$100', label: 'Typical total, all subjects' },
+      { value: 'RMB 450', label: '1 subject' },
+      { value: 'RMB 700', label: '2+ subjects (total)' },
+      { value: '6/year', label: 'Sittings per year' },
+      { value: 'Online', label: 'Main mode — no travel needed' },
     ],
     quickAnswer:
-      'CSCA registration costs ¥450 CNY for one subject or ¥700 CNY total for two or more subjects in the same session — so a candidate sitting the typical 3–4 subject combination pays ¥700 flat (roughly US$100). Payment is made on the official portal via Alipay, WeChat Pay, or bank transfer, and must complete inside the registration window (which closes ~15 days before the test). Candidates outside China without Alipay or WeChat should start a bank transfer several business days early. There is no published automatic refund for no-shows, and the registration is only valid once payment is confirmed — an unpaid or failed order does not hold your seat.',
+      'The CSCA exam fee is RMB 450 for one subject or RMB 700 total for two or more subjects in the same sitting — official figures from csca.cn. Math is required for everyone; Physics and/or Chemistry depend on the university and program, and the four-subject Professional Chinese track applies only to Chinese-taught programs. Registration for the November 2026 sitting (14–15 Nov) runs 15–21 October, Beijing time, and the fee must be paid inside that window. There is no published automatic no-show refund — treat the fee as non-refundable when budgeting.',
     keyTakeaways: [
-      'Flat banding: ¥450 for one subject, ¥700 total for two or more — the per-subject cost falls sharply as you add subjects',
-      'Typical candidate (3–4 subjects) pays ¥700 (~US$100) — far below SAT, IELTS, or A-Level exam fees',
-      'Pay via Alipay, WeChat Pay, or bank transfer inside the registration window; the seat is held only by a confirmed payment',
-      'No Chinese payment account? Start a bank transfer 3–5 business days before the window closes, or register via a trusted person in China',
+      'Flat banding: RMB 450 for one subject, RMB 700 total for two or more — the per-subject cost falls sharply as you add subjects',
+      'Math is required for everyone; English-taught applicants usually sit Math plus 1–2 subjects (RMB 700). Four subjects apply only to Chinese-taught programs',
+      'Pay inside the registration window — for the November 2026 sitting that window is 15–21 October (Beijing time); the seat is held only by a confirmed payment',
+      'Payment channels reported by applicants: Alipay, WeChat Pay, and bank transfer [verify each on csca.cn before relying on one]',
       'Keep the payment confirmation until results are released — it is your evidence for any payment dispute',
       'No published automatic no-show refund; treat policy questions (refunds, subject changes) as per-session portal matters',
     ],
@@ -41,49 +41,50 @@ export const cscaFeesGuide: LocalizedGuide = {
         id: 'fee-structure',
         h2: 'The CSCA fee structure',
         intro:
-          'Fees are banded by subject count per session, not per subject — which makes the CSCA unusually cheap for candidates sitting the full combination.',
+          'Fees are banded by subject count per sitting, not per subject — and the subject count depends on your program, not a fixed package.',
         blocks: [
           {
             type: 'table',
-            caption: 'CSCA registration fees (per session)',
-            columns: ['Subjects registered', 'Fee (CNY)', '≈ USD', 'Per-subject equivalent'],
+            caption: 'CSCA registration fees (per sitting, official: csca.cn)',
+            columns: ['Subjects registered', 'Fee (CNY)', 'Who typically sits this'],
             rows: [
-              ['1 subject', '¥450', '~$63', '¥450'],
-              ['2 subjects', '¥700', '~$98', '¥350'],
-              ['3 subjects (typical minimum)', '¥700', '~$98', '~¥233'],
-              ['4 subjects (full combination)', '¥700', '~$98', '~¥175'],
+              ['1 subject (Math only)', 'RMB 450', 'Programs that require Math alone'],
+              ['2 subjects (Math + 1)', 'RMB 700', 'Common for English-taught applicants'],
+              ['3 subjects (Math + 2)', 'RMB 700', 'Many English-taught MBBS / science programs'],
+              ['4 subjects (incl. Professional Chinese)', 'RMB 700', 'Chinese-taught programs only'],
             ],
           },
           {
             type: 'ul',
             items: [
-              '**The band is the deal** — one subject costs ¥450, but the second, third, and fourth cost almost nothing extra. Sitting only the Chinese track to "save money" is almost always the wrong trade',
-              '**Per session, not per year** — each sitting is paid separately; a retake in the next session pays the band again (¥700 for a 3-subject retake)',
-              '**What is NOT charged** — no separate score-report fee is published at launch, no application fee to universities for receiving CSCA scores, no calculator rental (calculators are banned anyway)',
-              '**Fee currency** — all fees are denominated in CNY; your bank\'s FX rate and any transfer charges come on top for overseas candidates',
+              '**Math is required for everyone.** Physics and/or Chemistry depend on the university and program; Professional Chinese applies only to Chinese-taught programs',
+              '**English-taught applicants usually sit Math plus 1–2 subjects** — paying the RMB 700 band. The four-subject combination is a Chinese-taught-program requirement, not the default',
+              '**Per sitting, not per year** — each sitting is paid separately; a retake in a later sitting pays the band again',
+              '**What is NOT charged** — no separate score-report fee is published, and there is no application fee to universities for receiving CSCA scores',
+              '**Fee currency** — all fees are denominated in CNY (RMB); your bank\'s FX rate and any transfer charges come on top for overseas candidates',
             ],
           },
           {
             type: 'callout',
             tone: 'success',
-            text: 'Budget rule: every candidate should plan to pay ¥700 once per sitting. If your program only requires one subject, you pay ¥450; if it requires four, you pay the same ¥700 as the three-subject candidate.',
+            text: 'Budget rule: plan to pay RMB 700 once per sitting. If your program only requires one subject, you pay RMB 450; if it requires three or four, you pay the same RMB 700 band.',
           },
         ],
       },
       {
         id: 'payment-methods',
-        h2: 'Payment methods — Alipay, WeChat Pay, bank transfer',
+        h2: 'Payment methods — what the portal accepts',
         intro:
-          'The portal accepts three payment channels. Which one to use depends on whether you have a Chinese payment account.',
+          'Applicants report paying via Chinese payment channels; confirm the exact channels shown at checkout on csca.cn before relying on one.',
         blocks: [
           {
             type: 'table',
-            caption: 'Payment channels compared',
+            caption: 'Payment channels reported by applicants [verify each on csca.cn at checkout]',
             columns: ['Method', 'Speed', 'Best for', 'Watch out'],
             rows: [
-              ['Alipay', 'Instant', 'Candidates living in China or with a verified Alipay account', 'Foreign cards on Alipay can fail on merchant payments — test small first'],
-              ['WeChat Pay', 'Instant', 'Candidates living in China or with a verified WeChat Pay account', 'Same foreign-card caveat as Alipay'],
-              ['Bank transfer', '3–5 business days (international)', 'Candidates abroad without Chinese payment apps', 'Must start days before the window closes; keep the transfer receipt'],
+              ['Alipay [verify]', 'Instant', 'Candidates living in China or with a verified Alipay account', 'Foreign cards on Alipay can fail on merchant payments — test small first'],
+              ['WeChat Pay [verify]', 'Instant', 'Candidates living in China or with a verified WeChat Pay account', 'Same foreign-card caveat as Alipay'],
+              ['Bank transfer [verify]', 'Days (international)', 'Candidates abroad without Chinese payment apps', 'Must start well before the window closes; keep the transfer receipt'],
             ],
           },
           {
@@ -119,9 +120,9 @@ export const cscaFeesGuide: LocalizedGuide = {
           {
             type: 'ul',
             items: [
-              '**Exchange-rate reality** — ¥700 converts to roughly $98–105 at recent rates; your bank\'s rate plus fees may push it to $110–140 by the time it lands. Budget that, not the headline number',
+              '**Exchange-rate reality** — RMB 700 converts to roughly US$100 at recent rates; your bank\'s rate plus fees may push the landed cost higher. Budget that, not the headline number',
               '**Keep every receipt** — the transfer receipt plus the portal payment confirmation together resolve any "paid but not reflected" case',
-              '**No credit-card checkout is published** — unlike the SAT or IELTS, the CSCA portal does not advertise a direct Visa/Mastercard flow at launch; assume one of the three channels above',
+              '**No credit-card checkout is published** — the CSCA portal does not advertise a direct Visa/Mastercard flow [verify on csca.cn at checkout]; assume one of the channels above',
             ],
           },
           {
@@ -156,35 +157,20 @@ export const cscaFeesGuide: LocalizedGuide = {
       },
       {
         id: 'cost-comparison',
-        h2: 'How the CSCA compares to other admissions exams',
+        h2: 'How the CSCA fee compares to other admissions exams',
         intro:
-          'Price is one of the CSCA\'s quiet advantages: a full sitting costs less than most single-subject international exams.',
+          'The only figures we can state with a source are the CSCA\'s own: RMB 450 for one subject, RMB 700 for two or more, from csca.cn.',
         blocks: [
           {
-            type: 'table',
-            caption: 'Approximate exam costs (varies by country and level — check current local pricing)',
-            columns: ['Exam', 'Typical cost (≈USD)', 'What it covers'],
-            rows: [
-              ['CSCA (full 4-subject sitting)', '~$98 (¥700 flat)', 'Chinese track + Math + Physics + Chemistry, one session'],
-              ['SAT (international)', '~$70 + international fees, often $100–130 total', 'Reading/Writing + Math'],
-              ['IELTS (academic)', '~$200–260', 'English proficiency, one sitting'],
-              ['TOEFL iBT', '~$180–270', 'English proficiency, one sitting'],
-              ['A-Level (per subject, international)', '~$100–250 per subject', 'One subject, one sitting'],
-              ['HSK (per level, varies by country)', '~$30–100', 'One Chinese proficiency level'],
-            ],
+            type: 'p',
+            text: 'For context, international exams such as the SAT, IELTS, TOEFL, A-Levels, and the HSK each carry their own fees that vary by country, year, and testing partner — we deliberately do not quote them here because we cannot source current local pricing for every country. Check each exam\'s official registration page for the fee that applies to you. What is safe to say: the CSCA\'s banded structure means a full multi-subject sitting costs RMB 700 total, which is modest by international exam standards.',
           },
           {
             type: 'ul',
             items: [
-              '**Per subject, the CSCA is the cheapest** — ~$25/subject at the ¥700 band versus $100+ per A-Level subject',
-              '**English-taught applicants still pay twice** — CSCA + IELTS/TOEFL together is the real budget line for most international bachelor\'s applicants (~$300–400 total)',
-              '**But retakes multiply everything** — a second CSCA sitting adds another ¥700; budget two sittings, not one',
+              '**English-taught applicants usually pay twice** — CSCA (RMB 450–700) plus an English test if your program requires one; that combination is the real budget line for most international bachelor\'s applicants',
+              '**Retakes multiply everything** — a second CSCA sitting adds another band fee; budget two sittings, not one',
             ],
-          },
-          {
-            type: 'callout',
-            tone: 'info',
-            text: 'Figures above are planning approximations — exam fees move with exchange rates and local pricing. The CSCA\'s own numbers (¥450/¥700) are the only ones in the table that are official.',
           },
         ],
       },
@@ -199,19 +185,17 @@ export const cscaFeesGuide: LocalizedGuide = {
             caption: 'Budget planner — one CSCA attempt, overseas candidate',
             columns: ['Item', 'Cost', 'Notes'],
             rows: [
-              ['Registration (4 subjects)', '¥700 (~$100)', 'The official fee band'],
-              ['Payment transfer fees', '$0–40', '$0 with Alipay/WeChat; bank transfer adds fees'],
-              ['Travel to center (if not local)', '$0–200+', 'Embassy/consulate centers may be in another city'],
-              ['Passport (if not held)', '$30–150', 'Required — details must match registration'],
-              ['Photos/documents', '~$0–20', 'Per ticket/photo requirements'],
-              ['Prep materials', '$0–100', 'Syllabus is free; prep packs vary'],
-              ['Realistic planning total', '~$130–500', 'vs $100–130 for the exam fee alone'],
+              ['Registration (2+ subjects)', 'RMB 700', 'The official fee band (csca.cn)'],
+              ['Payment transfer fees', 'Varies by bank', 'Often 0 with Alipay/WeChat; international bank transfer adds fees'],
+              ['Travel to a test centre', 'Usually RMB 0', 'The exam is mainly online at home with a live proctor — offline centres only in some countries'],
+              ['Passport (if not held)', 'Varies by country', 'Required — details must match registration'],
+              ['Prep materials', 'Free options exist', 'Free practice tests and study plans: cscaprep.academy'],
             ],
           },
           {
             type: 'callout',
             tone: 'success',
-            text: 'Even at the top of the range, one CSCA attempt costs less than half of a single IELTS sitting in many countries — the exam fee itself is almost never the barrier; payment-channel setup is. SICA counselors walk applicants through payment setup before the registration window opens.',
+            text: 'Because the exam runs mainly online, most candidates\' total cost is the RMB fee plus payment-channel friction — not travel. SICA counselors walk applicants through payment setup before the registration window opens.',
           },
         ],
       },
@@ -219,31 +203,31 @@ export const cscaFeesGuide: LocalizedGuide = {
     faqs: [
       {
         q: 'How much does the CSCA exam cost?',
-        a: '¥450 CNY for one subject, or ¥700 CNY total for two or more subjects in the same session. The typical candidate sitting a 3–4 subject combination pays ¥700 flat — about US$100. Bank transfer fees and exchange-rate margins come on top for overseas candidates.',
+        a: 'RMB 450 for one subject, or RMB 700 total for two or more subjects in the same sitting (official figures, csca.cn). Math is required for everyone; English-taught applicants usually sit Math plus 1–2 subjects, paying the RMB 700 band. Bank transfer fees and exchange-rate margins come on top for overseas candidates.',
       },
       {
-        q: 'Do I pay per subject or per session?',
-        a: 'Per session, with a band: one subject costs ¥450, and two or more subjects cost a flat ¥700 total regardless of count. Adding your third or fourth subject at registration costs nothing extra — but a retake in a later session pays the band again.',
+        q: 'Do I pay per subject or per sitting?',
+        a: 'Per sitting, with a band: one subject costs RMB 450, and two or more subjects cost a flat RMB 700 total regardless of count. Adding a third or fourth subject at registration costs nothing extra — but a retake in a later sitting pays the band again.',
       },
       {
         q: 'How do I pay for the CSCA from outside China?',
-        a: 'Three options: (1) set up the international version of Alipay or WeChat Pay with a linked foreign card, (2) make an international bank transfer to the account shown on the portal (3–5 business days — start a week before the window closes), or (3) have a trusted person in China pay the order you created. Keep all receipts.',
+        a: 'Applicants report three routes [verify current channels on csca.cn]: (1) set up the international version of Alipay or WeChat Pay with a linked foreign card, (2) make an international bank transfer to the account shown on the portal — start well before the window closes, or (3) have a trusted person in China pay the order you created. Keep all receipts.',
       },
       {
         q: 'Can I pay with a credit card?',
-        a: 'No direct Visa/Mastercard checkout was published at launch — payment runs through Alipay, WeChat Pay, or bank transfer. Some candidates\' international cards do work when linked inside Alipay/WeChat Pay, but support varies by country, so test before relying on it.',
+        a: 'No direct Visa/Mastercard checkout has been published [verify on csca.cn at checkout] — payment is reported to run through Alipay, WeChat Pay, or bank transfer. Some candidates\' international cards work when linked inside Alipay/WeChat Pay, but support varies by country, so test before relying on it.',
       },
       {
         q: 'Is the CSCA fee refundable if I don\'t attend?',
-        a: 'There is no published automatic refund for no-shows — plan as if the fee is non-refundable. If a session or center is cancelled by the organizer, the portal announces refund or re-registration handling for affected candidates.',
+        a: 'There is no published automatic refund for no-shows — plan as if the fee is non-refundable. If a sitting is cancelled by the organizer, the portal announces refund or re-registration handling for affected candidates.',
       },
       {
         q: 'My payment failed but money left my account — what now?',
         a: 'Keep the bank/app receipt, check whether the portal now shows registered-and-paid (it sometimes lags), and contact portal support with the receipt if it does not. This is exactly why paying early in the window matters — resolution is routine but not instant.',
       },
       {
-        q: 'Is the CSCA cheaper than the SAT?',
-        a: 'For the full combination, yes: ¥700 (~$98) covers all four subjects in one sitting, while a domestic SAT is ~$70 before international fees that often push it to $100–130. Per subject, the CSCA (~$25) is far cheaper than any international alternative.',
+        q: 'Which subjects do I actually pay for?',
+        a: 'Math is required for everyone. Physics and/or Chemistry depend on the university and program. Professional Chinese (the four-subject combination) applies only to Chinese-taught programs. Check each target program\'s admission notice before registering — the band means adding subjects is free, but sitting subjects you don\'t need wastes prep time.',
       },
     ],
     howToSteps: [
@@ -298,24 +282,24 @@ export const cscaFeesGuide: LocalizedGuide = {
   zh: {
     slug: 'csca-exam-fees',
     eyebrow: '指南 · CSCA 费用',
-    title: 'CSCA 考试费用与支付指南——收费标准、支付方式与境外付款',
+    title: 'CSCA 考试费 2026-27：450 或 700 元及支付方法',
     description:
-      'CSCA 报名费单科 ¥450、两科及以上合计 ¥700，经支付宝、微信支付或银行转账支付。费用明细、境外考生支付方案、退款注意事项，以及与 SAT、雅思的费用对比。',
+      'CSCA 考试费：单科 450 元人民币，两科及以上 700 元（官方 csca.cn）。境外如何支付、退款政策以及其他预算项。',
     subtitle:
-      'CSCA 是全球最便宜的标准化入学考试之一：单科 ¥450，同场两科及以上合计 ¥700——典型考生（3-4 科）只付 ¥700。经官方门户以支付宝、微信支付或银行转账支付。真正的成本陷阱不在费用本身，而在支付通道摩擦与退款假设。',
+      'CSCA 考试费为单科 450 元人民币，或同场两科及以上合计 700 元（官方 csca.cn）。数学为全员必考；英文授课申请者通常加考 1-2 科，支付 700 元档。缴费经官方门户完成——真正的成本陷阱是境外支付通道的摩擦，不是费用本身。',
     stats: [
-      { value: '¥450', label: '1 科' },
-      { value: '¥700', label: '两科及以上（合计）' },
-      { value: '3 种', label: '支付方式' },
-      { value: '约 $100', label: '全科典型总价' },
+      { value: '450 元', label: '1 科' },
+      { value: '700 元', label: '两科及以上（合计）' },
+      { value: '6 场/年', label: '每年考试场次' },
+      { value: '线上', label: '主要模式——无需赶考' },
     ],
     quickAnswer:
-      'CSCA 报名费为单科 450 元人民币，同场两科及以上合计 700 元——即典型 3-4 科考生只付 ¥700（约合 100 美元）。经官方门户以支付宝、微信支付或银行转账支付，且必须在报名窗口内完成（窗口考前约 15 天截止）。无国内支付宝/微信的境外考生应提前数个工作日启动银行转账。缺考无公布的自动退款；支付确认后报名才生效——未支付或掉单的订单不保留考位。',
+      'CSCA 考试费为单科 450 元人民币，或同场两科及以上合计 700 元——官方 csca.cn 口径。数学为全员必考；物理和/或化学取决于大学与项目，四科组合（含专业中文）仅适用于中文授课项目。2026 年 11 月场次（11 月 14-15 日）报名窗口为 10 月 15-21 日（北京时间），费用须在窗口内付清。缺考无公布的自动退款——做预算时按不可退处理。',
     keyTakeaways: [
-      '按档收费：单科 ¥450，两科及以上合计 ¥700——科目越多单科成本越低',
-      '典型考生（3-4 科）付 ¥700（约 100 美元）——远低于 SAT、雅思或 A-Level 考试费',
-      '窗口内经支付宝、微信支付或银行转账支付；只有支付确认才锁定考位',
-      '没有国内支付账户？在窗口截止前 3-5 个工作日启动银行转账，或请国内的信任之人代付',
+      '按档收费：单科 450 元，两科及以上合计 700 元——科目越多单科成本越低',
+      '数学全员必考；英文授课申请者通常考数学加 1-2 科（700 元）。四科组合仅限中文授课项目',
+      '报名窗口内支付——2026 年 11 月场次窗口为 10 月 15-21 日（北京时间）；只有支付确认才锁定考位',
+      '考生报告的支付通道：支付宝、微信支付、银行转账 [结账时以 csca.cn 实际显示为准]',
       '成绩发布前保留支付凭证——它是任何支付争议的证据',
       '缺考无公布的自动退款；退款、改科等政策按场次由门户处理',
     ],
@@ -324,49 +308,50 @@ export const cscaFeesGuide: LocalizedGuide = {
         id: 'fee-structure',
         h2: 'CSCA 收费结构',
         intro:
-          '费用按每场科目数分档，而非逐科计价——这让全科报考的 CSCA 异常便宜。',
+          '费用按每场科目数分档，而非逐科计价——科目数取决于你的项目要求，不是固定套餐。',
         blocks: [
           {
             type: 'table',
-            caption: 'CSCA 报名费（每场）',
-            columns: ['报考科目数', '费用（人民币）', '≈ 美元', '折合单科'],
+            caption: 'CSCA 报名费（每场，官方：csca.cn）',
+            columns: ['报考科目数', '费用（人民币）', '典型适用人群'],
             rows: [
-              ['1 科', '¥450', '约 $63', '¥450'],
-              ['2 科', '¥700', '约 $98', '¥350'],
-              ['3 科（典型下限）', '¥700', '约 $98', '约 ¥233'],
-              ['4 科（完整组合）', '¥700', '约 $98', '约 ¥175'],
+              ['1 科（仅数学）', '450 元', '仅要求数学的项目'],
+              ['2 科（数学 + 1）', '700 元', '英文授课申请者常见'],
+              ['3 科（数学 + 2）', '700 元', '许多英文授课 MBBS / 理工科项目'],
+              ['4 科（含专业中文）', '700 元', '仅中文授课项目'],
             ],
           },
           {
             type: 'ul',
             items: [
-              '**分档即优惠**——单科 ¥450，第二、三、四科几乎不增加成本。为「省钱」只考中文轨几乎总是错误选择',
-              '**按场次而非按年**——每场单独缴费；下一场重考再付一次档位费（3 科重考 ¥700）',
-              '**不收取的费用**——启动时未公布单独的成绩单寄送费、大学接收 CSCA 成绩的申请费；计算器租赁费也不存在（本就禁用）',
+              '**数学全员必考。**物理和/或化学取决于大学与项目；专业中文仅适用于中文授课项目',
+              '**英文授课申请者通常考数学加 1-2 科**——付 700 元档。四科组合是中文授课项目的要求，不是默认',
+              '**按场次而非按年**——每场单独缴费；下一场重考再付一次档位费',
+              '**不收取的费用**——未公布单独的成绩单寄送费、大学接收 CSCA 成绩的申请费',
               '**计价货币**——全部以人民币计价；境外考生的银行汇率与转账手续费另计',
             ],
           },
           {
             type: 'callout',
             tone: 'success',
-            text: '预算法则：每位考生按「每场 ¥700」规划。项目只要求一科就付 ¥450；要求四科也和三科考生一样付 ¥700。',
+            text: '预算法则：每场按 700 元规划。项目只要求一科就付 450 元；要求三科或四科也付同样的 700 元档。',
           },
         ],
       },
       {
         id: 'payment-methods',
-        h2: '支付方式——支付宝、微信支付、银行转账',
+        h2: '支付方式——门户接受什么',
         intro:
-          '门户接受三种支付通道。选哪种取决于你是否有国内支付账户。',
+          '考生报告可通过国内支付通道缴费；依赖某一条通道前，先在 csca.cn 结账页确认实际显示的通道。',
         blocks: [
           {
             type: 'table',
-            caption: '支付通道对比',
+            caption: '考生报告的支付通道 [以 csca.cn 结账页实际显示为准]',
             columns: ['方式', '到账速度', '适合人群', '注意事项'],
             rows: [
-              ['支付宝', '即时', '在华考生或已实名支付宝用户', '支付宝绑外卡在商户支付时可能失败——先小额测试'],
-              ['微信支付', '即时', '在华考生或已实名微信支付用户', '与支付宝相同的外卡限制'],
-              ['银行转账', '跨境 3-5 个工作日', '无国内支付 App 的境外考生', '必须在窗口截止前数日启动；保留转账回执'],
+              ['支付宝 [待核实]', '即时', '在华考生或已实名支付宝用户', '支付宝绑外卡在商户支付时可能失败——先小额测试'],
+              ['微信支付 [待核实]', '即时', '在华考生或已实名微信支付用户', '与支付宝相同的外卡限制'],
+              ['银行转账 [待核实]', '数日（跨境）', '无国内支付 App 的境外考生', '须远早于窗口截止启动；保留转账回执'],
             ],
           },
           {
@@ -402,9 +387,9 @@ export const cscaFeesGuide: LocalizedGuide = {
           {
             type: 'ul',
             items: [
-              '**汇率现实**——¥700 按近期汇率约合 $98-105；加上银行汇率与手续费，到账成本可能到 $110-140。按这个数做预算，而非宣传数字',
+              '**汇率现实**——700 元按近期汇率约合 100 美元；加上银行汇率与手续费，到账成本可能更高。按这个数做预算，而非宣传数字',
               '**保留所有回执**——转账回执加门户支付确认，两者合起来能解决任何「已付未显示」的情况',
-              '**未公布银行卡直付**——与 SAT、雅思不同，CSCA 门户启动时未宣传 Visa/Mastercard 直付通道；按上面三条通道之一做预案',
+              '**未公布银行卡直付**——CSCA 门户未宣传 Visa/Mastercard 直付通道 [在 csca.cn 结账页核实]；按上述通道之一做预案',
             ],
           },
           {
@@ -439,35 +424,20 @@ export const cscaFeesGuide: LocalizedGuide = {
       },
       {
         id: 'cost-comparison',
-        h2: 'CSCA 与其他入学考试的费用对比',
+        h2: 'CSCA 费用与其他入学考试对比',
         intro:
-          '价格是 CSCA 的隐形优势：全科一场的花费低于多数国际考试的单科费用。',
+          '我们能给出出处的只有 CSCA 官方数字：单科 450 元、两科及以上 700 元（csca.cn）。',
         blocks: [
           {
-            type: 'table',
-            caption: '考试费用参考（各国各层级有差异——以当地现价为准）',
-            columns: ['考试', '典型费用（≈美元）', '覆盖内容'],
-            rows: [
-              ['CSCA（全科 4 科）', '约 $98（¥700）', '中文轨 + 数学 + 物理 + 化学，一场'],
-              ['SAT（国际场）', '约 $70 + 国际附加费，常达 $100-130', '阅读写作 + 数学'],
-              ['雅思（学术类）', '约 $200-260', '英语水平，一场'],
-              ['托福 iBT', '约 $180-270', '英语水平，一场'],
-              ['A-Level（国际场，每科）', '每科约 $100-250', '单科，一场'],
-              ['HSK（每级，各国不同）', '约 $30-100', '单一级别汉语水平'],
-            ],
+            type: 'p',
+            text: '作为参照，SAT、雅思、托福、A-Level、HSK 等国际考试各有收费，且因国家、年份与考试机构而异——本文不再逐项引用，因为我们无法为每个国家核实当前当地定价。请查各考试官方报名页获取适用于你的费用。可以放心说的是：CSCA 的分档结构意味着一场多科考试合计 700 元人民币，按国际考试标准属于温和水平。',
           },
           {
             type: 'ul',
             items: [
-              '**单科口径 CSCA 最便宜**——¥700 档约合每科 $25，而 A-Level 每科 $100+',
-              '**英文授课申请者仍要付两份**——CSCA + 雅思/托福才是多数国际本科申请者的真实预算线（合计约 $300-400）',
-              '**重考会让一切翻倍**——第二场 CSCA 再加 ¥700；按两场做预算，别按一场',
+              '**英文授课申请者通常要付两份**——CSCA（450-700 元）加上项目要求的英语考试；这才是多数国际本科申请者的真实预算线',
+              '**重考会让一切翻倍**——第二场 CSCA 再付一次档位费；按两场做预算，别按一场',
             ],
-          },
-          {
-            type: 'callout',
-            tone: 'info',
-            text: '上表为规划近似值——考试费用随汇率与当地定价浮动。表中唯一官方数字是 CSCA 自己的 ¥450/¥700。',
           },
         ],
       },
@@ -482,19 +452,17 @@ export const cscaFeesGuide: LocalizedGuide = {
             caption: '预算表——海外考生一次 CSCA 尝试',
             columns: ['项目', '费用', '说明'],
             rows: [
-              ['报名费（4 科）', '¥700（约 $100）', '官方档位费'],
-              ['支付转账手续费', '$0-40', '支付宝/微信为 $0；银行转账另计'],
-              ['赴考交通（非本地时）', '$0-200+', '使领馆考点可能在另一座城市'],
-              ['护照（如未持有）', '$30-150', '必备——信息须与报名一致'],
-              ['照片/材料', '约 $0-20', '按准考证/照片要求'],
-              ['备考资料', '$0-100', '大纲免费；备考包价格不一'],
-              ['实际规划总价', '约 $130-500', '对比仅考试费的 $100-130'],
+              ['报名费（两科及以上）', '700 元', '官方档位费（csca.cn）'],
+              ['支付转账手续费', '视银行而定', '支付宝/微信通常为 0；跨境银行转账另计'],
+              ['赴考交通', '通常 0 元', '考试以居家线上、真人监考为主——仅部分国家设线下考点'],
+              ['护照（如未持有）', '视国家而定', '必备——信息须与报名一致'],
+              ['备考资料', '有免费选项', '免费模拟题与学习计划：cscaprep.academy'],
             ],
           },
           {
             type: 'callout',
             tone: 'success',
-            text: '即便按区间上限，一次 CSCA 尝试也低于许多国家单场雅思的一半——考试费本身几乎从不构成障碍；构成障碍的是支付通道设置。SICA 顾问在报名窗口开启前协助申请者完成支付设置。',
+            text: '因为考试以线上为主，多数考生的总成本就是人民币报名费加支付通道摩擦——不含差旅。SICA 顾问在报名窗口开启前协助申请者完成支付设置。',
           },
         ],
       },
@@ -502,31 +470,31 @@ export const cscaFeesGuide: LocalizedGuide = {
     faqs: [
       {
         q: 'CSCA 考试多少钱？',
-        a: '单科 450 元人民币，同场两科及以上合计 700 元。典型 3-4 科考生只付 ¥700（约 100 美元）。境外考生的银行手续费与汇率差另计。',
+        a: '单科 450 元人民币，或同场两科及以上合计 700 元（官方口径，csca.cn）。数学全员必考；英文授课申请者通常考数学加 1-2 科，付 700 元档。境外考生的银行手续费与汇率差另计。',
       },
       {
         q: '费用按科收还是按场收？',
-        a: '按场次分档：单科 ¥450，两科及以上不论数量合计 ¥700。报名时加第三、四科不增加费用——但下一场重考要再付一次档位费。',
+        a: '按场次分档：单科 450 元，两科及以上不论数量合计 700 元。报名时加第三、四科不增加费用——但下一场重考要再付一次档位费。',
       },
       {
         q: '人在国外怎么付 CSCA 费用？',
-        a: '三条路：(1) 开通国际版支付宝或微信支付并绑定外卡；(2) 向门户展示的账户跨境银行转账（3-5 个工作日——窗口截止前一周启动）；(3) 请国内的信任之人为你创建的订单付款。所有回执都要保留。',
+        a: '考生报告三条路径 [以 csca.cn 结账页实际显示为准]：(1) 开通国际版支付宝或微信支付并绑定外卡；(2) 向门户展示的账户跨境银行转账——远早于窗口截止启动；(3) 请国内的信任之人为你创建的订单付款。所有回执都要保留。',
       },
       {
         q: '可以用信用卡支付吗？',
-        a: '启动时未公布 Visa/Mastercard 直付——支付经支付宝、微信支付或银行转账。部分考生的国际卡绑定在支付宝/微信内可用，但各国支持度不同，不要在没有测试前依赖它。',
+        a: '未公布 Visa/Mastercard 直付 [在 csca.cn 结账页核实]——考生报告的支付走支付宝、微信支付或银行转账。部分考生的国际卡绑定在支付宝/微信内可用，但各国支持度不同，不要在没有测试前依赖它。',
       },
       {
         q: '不参加考试可以退款吗？',
-        a: '缺考无公布的自动退款——按不可退做规划。若主办方取消场次或考点，门户会为受影响考生公告退款或重新报名安排。',
+        a: '缺考无公布的自动退款——按不可退做规划。若主办方取消场次，门户会为受影响考生公告退款或重新报名安排。',
       },
       {
         q: '支付失败但钱已扣了怎么办？',
         a: '保留银行/App 回执，先看门户是否已显示已报名已支付（有时滞后），未显示则携回执联系门户支持。这正是要提早支付的原因——处理是常规操作但不即时。',
       },
       {
-        q: 'CSCA 比 SAT 便宜吗？',
-        a: '全科口径是的：¥700（约 $98）覆盖一场四科，而 SAT 国际场约 $70 起加国际附加费常到 $100-130。单科口径 CSCA（约 $25）远低于任何国际替代考试。',
+        q: '我到底要为哪些科目付费？',
+        a: '数学全员必考。物理和/或化学取决于大学与项目。专业中文（四科组合）仅适用于中文授课项目。报名前查每个目标项目的招生通知——分档意味着加科免费，但考不需要的科目浪费备考时间。',
       },
     ],
     howToSteps: [

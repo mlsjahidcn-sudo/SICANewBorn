@@ -9,7 +9,7 @@ import { buildLanguageAlternates } from '@/lib/alternates';
 import { getServerLocale } from '@/lib/server-t';
 import { SITE_URL } from '@/lib/site-url';
 // Render on demand with ISR — reads the live DB so newly-added
-// universidades (post-build) show up automatically, and the
+// universities (post-build) show up automatically, and the
 // per-university program list stays current with admin edits.
 // Cached at the edge for 60s to keep response time fast.
 export const revalidate = 60;

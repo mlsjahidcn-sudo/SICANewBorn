@@ -21,7 +21,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const locale: Locale = cookieStore.get('sica-locale')?.value === 'zh' ? 'zh' : 'en';
   const guide = bestUniversitiesGuide[locale];
   return {
-    title: guide.title,
+    title: { absolute: guide.title },
     description: guide.description,
     alternates: buildLanguageAlternates('/best-universities-china'),
     openGraph: {
@@ -82,5 +82,5 @@ export default async function BestUniversitiesPage() {
     }),
   };
 
-  return <GuidePage guide={liveGuide} pathSegment="best-universities-china" urlPath="/best-universities-china" />;
+  return <GuidePage guide={liveGuide} pathSegment="best-universities-china" urlPath="/best-universities-china" howToTitle="How to choose your university" />;
 }

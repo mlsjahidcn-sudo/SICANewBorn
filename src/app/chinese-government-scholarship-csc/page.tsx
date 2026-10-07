@@ -22,7 +22,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const locale: Locale = cookieStore.get('sica-locale')?.value === 'zh' ? 'zh' : 'en';
   const guide = cscScholarshipGuide[locale];
   return {
-    title: guide.title,
+    title: { absolute: guide.title },
     description: guide.description,
     alternates: buildLanguageAlternates('/chinese-government-scholarship-csc'),
     openGraph: {
@@ -87,6 +87,7 @@ export default async function CscScholarshipPage() {
       guide={liveGuide}
       pathSegment="chinese-government-scholarship-csc"
       urlPath="/chinese-government-scholarship-csc"
+      howToTitle="How to apply for the CSC scholarship"
     />
   );
 }

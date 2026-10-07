@@ -13,7 +13,7 @@ import { getServerLocale } from '@/lib/server-t';
 import { SITE_URL } from '@/lib/site-url';
 
 // Render on demand with ISR — reads the live DB so newly-added
-// universidades and admin-curated programs show up automatically.
+// universities and admin-curated programs show up automatically.
 // Cached at the edge for 60s.
 export const revalidate = 60;
 

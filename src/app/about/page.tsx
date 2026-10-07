@@ -72,7 +72,7 @@ export default async function AboutPage() {
             <div className="bg-[#1B2A4A] p-8 text-white">
               <GraduationCap className="h-12 w-12 text-white/80 mb-4" />
               <blockquote className="text-lg font-medium leading-relaxed">
-                &ldquo;We believe every student deserves access to world-class education, regardless of where they come from. China&apos;s universidades offer incredible opportunities, and SICA is here to open that door.&rdquo;
+                &ldquo;We believe every student deserves access to world-class education, regardless of where they come from. China&apos;s universities offer incredible opportunities, and SICA is here to open that door.&rdquo;
               </blockquote>
               <p className="mt-4 text-gray-400">— Dr. Li Wei, Founder</p>
             </div>

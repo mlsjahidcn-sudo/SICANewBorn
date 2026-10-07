@@ -403,7 +403,7 @@ export default function PartnerNewApplicationPage() {
       <PartnerApplicationForm
         formData={formData}
         setFormData={setFormData}
-        universidades={universities}
+        universities={universities}
         programs={programs}
         dataLoading={dataLoading}
         isSaving={isSaving}

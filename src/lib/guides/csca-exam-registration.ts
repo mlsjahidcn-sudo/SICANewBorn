@@ -18,20 +18,21 @@ export const cscaRegistrationGuide: LocalizedGuide = {
     description:
       'The complete CSCA registration walkthrough: finding the official portal, the 8-step flow, choosing a test center at home or abroad, payment, admission tickets, and the 6 mistakes that cost candidates a session.',
     subtitle:
-      'CSCA registration runs through a single official portal: create an account with passport-exact details, pick a session and test center, select your subjects, pay ¥450 (1 subject) or ¥700 (2+ subjects) via Alipay, WeChat Pay, or bank transfer, then download your admission ticket. The window closes about 15 days before each test — and most registration failures come from preventable mistakes, not portal complexity.',
+      'CSCA registration runs through the official portal, csca.cn: create an account with passport-exact details, pick a sitting (mainly online at home with a live proctor), select your subjects, pay RMB 450 (1 subject) or RMB 700 (2+ subjects) inside the window, then download your admission ticket. Registration windows are announced per sitting — for the November 2026 sitting the window runs 15-21 October (Beijing time).',
     stats: [
       { value: '8 steps', label: 'Account → ticket' },
-      { value: '~15 days', label: 'Before test — window closes' },
-      { value: '¥450 / ¥700', label: '1 subject / 2+ subjects' },
-      { value: '3 channels', label: 'Alipay · WeChat · bank' },
+      { value: 'Per sitting', label: 'Registration window announced per sitting' },
+      { value: 'RMB 450 / 700', label: '1 subject / 2+ subjects' },
+      { value: 'Online', label: 'Main mode — live-proctored at home' },
     ],
     quickAnswer:
-      'To register for the CSCA: (1) confirm your required subject combination on your target university\'s program page, (2) find the official CSCA registration website — the .org.cn domain published in university and embassy notices, never a third-party agent, (3) create an account with your name exactly as printed in your passport, (4) choose the session and nearest test center with seats, (5) select your subjects, (6) pay ¥450 for one subject or ¥700 total for two or more via Alipay, WeChat Pay, or bank transfer, (7) download and print the admission ticket when it is released shortly before the test, and (8) bring the ticket plus your original passport on test day. Registration closes about 15 days before each session.',
+      'To register for the CSCA: (1) confirm your required subject combination on your target university\'s program page, (2) go to the official CSCA website — csca.cn, organized by the China Scholarship Council — never a third-party agent, (3) create an account with your name exactly as printed in your passport, (4) choose your sitting (the default mode is online at home with a live proctor; offline centres exist only in some countries), (5) select your subjects, (6) pay RMB 450 for one subject or RMB 700 total for two or more inside the registration window, (7) download and print the admission ticket when it is released shortly before the test, and (8) bring the ticket plus your original passport on test day. Windows are per-sitting: the November 2026 window runs 15-21 October (Beijing time).',
     keyTakeaways: [
-      'Register only on the official CSCA portal (.org.cn) — agents charge inflated fees and cannot get you extra seats',
+      'Register only on the official CSCA portal, csca.cn — agents charge inflated fees and cannot get you extra seats',
       'Name must match your passport character-for-character — mismatches are the #1 test-day problem',
-      'Choose your subject combination BEFORE registering: ¥450 for 1 subject, ¥700 covers 2+ in the same session',
-      'Center seats are the real bottleneck — register in the first days of the window, not the last',
+      'Choose your subject combination BEFORE registering: RMB 450 for 1 subject, RMB 700 covers 2+ in the same sitting',
+      'Registration windows are short and per-sitting — for Nov 2026 it is 15-21 October; register in the first days, not the last',
+      'The exam is mainly online at home with a live proctor — most candidates do not need to travel to a centre',
       'Admission tickets are released shortly before the test — print a physical copy, screen-only tickets cause check-in problems',
       'Keep the payment confirmation until results are out — it is your receipt for any support dispute',
     ],
@@ -66,16 +67,16 @@ export const cscaRegistrationGuide: LocalizedGuide = {
           {
             type: 'ul',
             items: [
-              '**The domain pattern** — official Chinese government exam portals use .org.cn domains. The link in your university\'s admissions notice or your embassy\'s CSCA announcement is authoritative — use it directly.',
-              '**Agent red flags** — anyone charging a "registration service fee", promising "guaranteed seats" at a closed center, or asking for your passport to "register on your behalf" is a third party. They cannot create seats that the portal does not have, and errors they make are on your record, not theirs.',
-              '**Lookalike sites** — some aggregator sites mirror official announcements and link to their own (paid) "registration help". Check the domain every time; bookmark the official portal after your first visit.',
-              '**Where the links appear** — university international-college admission pages (BLCU, CUMT, GDUFS and others published step-by-step instructions at launch), Chinese embassy/consulate education notices, and the portal itself.',
+              '**The official site** — the CSCA is organized by the China Scholarship Council and the official portal is csca.cn. The link in your university\'s admissions notice or your country\'s CSC dispatch announcement is authoritative — use it directly.',
+              '**Agent red flags** — anyone charging a "registration service fee", promising "guaranteed seats", or asking for your passport to "register on your behalf" is a third party. They cannot create seats that the portal does not have, and errors they make are on your record, not theirs.',
+              '**Lookalike sites** — some aggregator sites mirror official announcements and link to their own (paid) "registration help". Check the domain every time; bookmark csca.cn after your first visit.',
+              '**Where the links appear** — university international-college admission pages, your country\'s CSC dispatch authority (e.g. HEC in Pakistan), and the portal itself.',
             ],
           },
           {
             type: 'callout',
             tone: 'warning',
-            text: 'If a site asks for a fee different from ¥450/¥700, it is not the official portal. The only published CSCA fees are ¥450 for one subject and ¥700 total for two or more, paid on the portal itself.',
+            text: 'If a site asks for a fee different from RMB 450/700, it is not the official portal. The only published CSCA fees are RMB 450 for one subject and RMB 700 total for two or more, paid on the portal itself.',
           },
         ],
       },
@@ -178,11 +179,11 @@ export const cscaRegistrationGuide: LocalizedGuide = {
     faqs: [
       {
         q: 'Where do I register for the CSCA exam?',
-        a: 'On the official CSCA registration website — the .org.cn domain linked from university admissions notices and Chinese embassy announcements. Register only there: third-party agents charge inflated fees, cannot create extra seats, and any errors they make go on your record.',
+        a: 'On the official CSCA website — csca.cn, organized by the China Scholarship Council. Register only there: third-party agents charge inflated fees, cannot create extra seats, and any errors they make go on your record.',
       },
       {
         q: 'What do I need before starting registration?',
-        a: 'Three things: your confirmed subject combination from the target program page, a valid passport (details entered exactly as printed), and a working payment channel — Alipay or WeChat Pay if you have Chinese accounts, otherwise a bank that can transfer CNY (which takes 3–5 business days, so start early).',
+        a: 'Three things: your confirmed subject combination from the target program page, a valid passport (details entered exactly as printed), and a working payment channel — check what the portal offers at checkout [verify on csca.cn]; bank transfers can take days, so start early in the window.',
       },
       {
         q: 'Can an agent register for the CSCA on my behalf?',
@@ -212,7 +213,7 @@ export const cscaRegistrationGuide: LocalizedGuide = {
       },
       {
         name: 'Locate the official portal from an authoritative notice',
-        text: 'Use the link in your university\'s admissions page or your embassy\'s CSCA announcement (official domains end .org.cn). Bookmark it. Ignore agents and lookalike aggregator sites.',
+        text: 'The official site is csca.cn — cross-check it against the link in your university\'s admissions page or your country\'s CSC dispatch announcement. Bookmark it. Ignore agents and lookalike aggregator sites.',
       },
       {
         name: 'Create the account with passport-exact details',
@@ -269,20 +270,20 @@ export const cscaRegistrationGuide: LocalizedGuide = {
     description:
       'CSCA 报名完整 walkthrough：找到官方门户、8 步流程、境内外考点选择、缴费、准考证，以及让考生损失一场考试的 6 个错误。',
     subtitle:
-      'CSCA 经唯一官方门户报名：用与护照逐字一致的姓名注册账号，选场次与考点，选科目，经支付宝、微信支付或银行转账支付 ¥450（1 科）或 ¥700（两科及以上），再下载准考证。报名考前约 15 天截止——多数报名失败源于可预防的细节错误，而非门户复杂。',
+      'CSCA 经官方门户 csca.cn 报名：用与护照逐字一致的姓名注册账号，选场次（以居家线上、真人监考为主），选科目，在窗口内支付 450 元（1 科）或 700 元（两科及以上），再下载准考证。报名窗口逐场公布——2026 年 11 月场次为 10 月 15-21 日（北京时间）。',
     stats: [
       { value: '8 步', label: '注册 → 准考证' },
-      { value: '约 15 天', label: '考前——窗口截止' },
-      { value: '¥450 / ¥700', label: '1 科 / 两科及以上' },
-      { value: '3 通道', label: '支付宝 · 微信 · 银行' },
+      { value: '逐场公布', label: '报名窗口以每场公告为准' },
+      { value: '450 / 700 元', label: '1 科 / 两科及以上' },
+      { value: '线上', label: '主要模式——居家真人监考' },
     ],
     quickAnswer:
-      'CSCA 报名流程：(1) 在目标大学项目页确认要求的科目组合；(2) 找到官方 CSCA 报名网站——大学与使馆通知中公布的 .org.cn 域名，绝不通过第三方中介；(3) 用与护照逐字一致的姓名注册账号；(4) 选场次与最近的有位考点；(5) 选科目；(6) 经支付宝、微信支付或银行转账支付单科 ¥450、两科及以上合计 ¥700；(7) 考前准考证发布后下载并打印；(8) 考试日携带纸质准考证与护照原件入场。报名在每场考试前约 15 天截止。',
+      'CSCA 报名流程：(1) 在目标大学项目页确认要求的科目组合；(2) 打开官方 CSCA 网站 csca.cn（国家留学基金委组织），绝不通过第三方中介；(3) 用与护照逐字一致的姓名注册账号；(4) 选场次（默认居家线上模式；仅部分国家设线下考点）；(5) 选科目；(6) 在报名窗口内支付单科 450 元、两科及以上合计 700 元；(7) 考前准考证发布后下载并打印；(8) 考试日携带纸质准考证与护照原件入场。窗口逐场公布：2026 年 11 月场次为 10 月 15-21 日（北京时间）。',
     keyTakeaways: [
-      '只在官方 CSCA 门户（.org.cn）报名——中介收费虚高，也变不出额外考位',
+      '只在官方 CSCA 门户（csca.cn）报名——中介收费虚高，也变不出额外考位',
       '姓名必须与护照逐字一致——信息不一致是考试日头号问题',
-      '报名前先定科目组合：单科 ¥450，¥700 覆盖同场两科及以上',
-      '考位才是真正瓶颈——窗口开放头几天报，别拖到最后',
+      '报名前先定科目组合：单科 450 元，700 元覆盖同场两科及以上',
+      '报名窗口短且逐场公布——2026 年 11 月场为 10 月 15-21 日；窗口开放头几天就报',
       '准考证考前不久发布——打印纸质版，仅凭屏幕入场容易出问题',
       '成绩发布前保留支付凭证——发生争议时它就是你的凭证',
     ],
@@ -317,7 +318,7 @@ export const cscaRegistrationGuide: LocalizedGuide = {
           {
             type: 'ul',
             items: [
-              '**域名特征**——中国官方考试门户使用 .org.cn 域名。大学招生通知或使馆 CSCA 公告里的链接即权威来源——直接使用。',
+              '**官方网站**——CSCA 由国家留学基金委组织，官方门户为 csca.cn。大学招生通知或本国 CSC 派出机构公告里的链接即权威来源——直接使用。',
               '**中介红旗**——任何收「代报名服务费」、承诺「保证考位」、或要你护照「代你报名」的都是第三方。门户没有的考位他们变不出来，他们犯的错记在你的档案上。',
               '**仿冒站点**——部分聚合站镜像官方公告并导向自己的（收费）「报名协助」。每次都核对域名；首次访问后收藏官方门户。',
               '**链接出现在哪**——大学国际学院招生页（北语、矿大、广外等启动期均发布过逐步指引）、中国使领馆教育通知、以及门户本身。',
@@ -429,7 +430,7 @@ export const cscaRegistrationGuide: LocalizedGuide = {
     faqs: [
       {
         q: 'CSCA 在哪里报名？',
-        a: '在官方 CSCA 报名网站——大学招生通知与中国使馆公告中链接的 .org.cn 域名。只在那里报名：第三方中介收费远高于官方 ¥450/¥700，无法保证考位，且他们犯的姓名或科目错误要在入场时由你自己承担。',
+        a: '在官方 CSCA 网站——csca.cn（国家留学基金委组织）。只在那里报名：第三方中介收费远高于官方 450/700 元，无法保证考位，且他们犯的姓名或科目错误要在入场时由你自己承担。',
       },
       {
         q: '报名前需要准备什么？',
@@ -463,7 +464,7 @@ export const cscaRegistrationGuide: LocalizedGuide = {
       },
       {
         name: '从权威通知定位官方门户',
-        text: '使用大学招生页或使馆 CSCA 公告中的链接（官方域名为 .org.cn）。收藏之。无视中介与仿冒聚合站。',
+        text: '官方网站为 csca.cn——与大学招生页或本国 CSC 派出机构公告中的链接交叉核对。收藏之。无视中介与仿冒聚合站。',
       },
       {
         name: '用护照逐字一致的信息注册账号',

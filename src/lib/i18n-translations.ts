@@ -81,7 +81,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     // Hero
     'hero.title': 'Study in China',
     'hero.tagline': 'Shape Your Future',
-    'hero.subtitle': 'Discover world-class universidades, find perfect programs, and get expert guidance throughout your application journey.',
+    'hero.subtitle': 'Discover world-class universities, find perfect programs, and get expert guidance throughout your application journey.',
     'hero.explore': 'Explore Universities',
     'hero.howToApply': 'How to Apply',
     'hero.featured': 'Featured Top Universities',

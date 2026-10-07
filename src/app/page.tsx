@@ -52,7 +52,7 @@ export const metadata: Metadata = {
 
 // Home page is server-rendered. We re-fetch the live list on every
 // request (with a 60s edge cache via `revalidate`) so newly-added
-// AI-generated or admin-imported universidades automatically appear
+// AI-generated or admin-imported universities automatically appear
 // in the hero, partner logo strip, and any other university-driven
 // section. Cached for 60s — same trade-off as the other RSC pages.
 export const revalidate = 60;

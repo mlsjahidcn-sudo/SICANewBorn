@@ -22,7 +22,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const locale: Locale = cookieStore.get('sica-locale')?.value === 'zh' ? 'zh' : 'en';
   const guide = mbbsGuide[locale];
   return {
-    title: guide.title,
+    title: { absolute: guide.title },
     description: guide.description,
     alternates: buildLanguageAlternates('/mbbs-in-china'),
     openGraph: {
@@ -47,12 +47,17 @@ export default async function MbbsInChinaPage() {
   // MBBS filter — discipline = Medicine AND program name contains
   // the canonical MBBS marker. Excludes plain Chinese-medium
   // "Clinical Medicine" tracks (those live on /programs).
+  // Phase 146: also gate on the `language` field — a Chinese-taught
+  // Clinical Medicine row (e.g. Yangzhou) can carry "Chinese" in
+  // language but not in the program name, which previously slipped
+  // into the "English-medium" table.
   const mbbsPrograms = programs
     .filter(
       (p) =>
         p.discipline === 'Medicine' &&
         /(mbbs|clinical medicine)/i.test(p.name) &&
-        !/(chinese medium|chinese-taught|中文)/i.test(p.name),
+        !/(chinese medium|chinese-taught|中文)/i.test(p.name) &&
+        /english/i.test(p.language),
     )
     .map((p) => ({
       ...p,
@@ -101,5 +106,5 @@ export default async function MbbsInChinaPage() {
     }),
   };
 
-  return <GuidePage guide={liveGuide} pathSegment="mbbs-in-china" urlPath="/mbbs-in-china" />;
+  return <GuidePage guide={liveGuide} pathSegment="mbbs-in-china" urlPath="/mbbs-in-china" howToTitle="How to apply for MBBS in China" />;
 }

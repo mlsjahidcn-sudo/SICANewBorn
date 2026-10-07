@@ -48,7 +48,7 @@ export const partTimeWorkGuide: LocalizedGuide = {
         id: 'x1-basics',
         h2: 'What your X1 visa lets you do (and not do)',
         intro:
-          "The X1 visa is a long-term student visa (valid for the duration of study, >180 days). It explicitly allows part-time work and internships under conditions, but the conditions are not the same as for tourists or short-term students. Get them wrong and you risk fines, deportation, or future-visa refusal.",
+          "The X1 visa is the entry visa for study longer than 180 days; after arrival you convert it to a residence permit (within 30 days) which covers the duration of your program. Study-related part-time work and internships are allowed under conditions, but the conditions are not the same as for tourists or short-term students. Get them wrong and you risk fines, deportation, or future-visa refusal.",
         blocks: [
           {
             type: 'table',

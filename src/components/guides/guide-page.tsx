@@ -227,6 +227,13 @@ export interface GuidePageProps {
    */
   breadcrumbLabel?: string;
   /**
+   * Phase 146 (Task 4): render a "Practise free on CSCA Prep" box
+   * (linking cscaprep.academy/signup) above the FAQ. Defaults to
+   * true for any /csca-* urlPath (auto-derived); pass explicitly to
+   * override in either direction.
+   */
+  showCscaPrepCallout?: boolean;
+  /**
    * Phase 147: when true, render a `<ConsultationCta>` block just
    * above the FAQ section (the component is created in Phase 147;
    * for now this prop is reserved and the slot renders nothing).
@@ -256,15 +263,22 @@ export function GuidePage({
   urlPath,
   howToTitle,
   breadcrumbLabel,
+  showCscaPrepCallout,
   showConsultationCta,
 }: GuidePageProps) {
   const url = `${SITE_URL}${urlPath ?? `/guides/${pathSegment}`}`;
   const resolvedUrlPath = urlPath ?? `/guides/${pathSegment}`;
 
-  // Phase 145: breadcrumb segments. Always end with the current page.
+  // Phase 146: breadcrumb segments. Always end with the current page.
   const crumbs = breadcrumbSegments(resolvedUrlPath);
   const lastCrumbLabel =
     breadcrumbLabel ?? crumbs[crumbs.length - 1]?.label ?? guide.title;
+
+  // Phase 146 (Task 4): the CSCA Prep cross-link box shows on every
+  // /csca-* page by default (SICA = admissions decisions; cscaprep
+  // .academy = exam content & practice). The explicit prop overrides
+  // the path-derived default in either direction.
+  const showCscaPrep = showCscaPrepCallout ?? resolvedUrlPath.startsWith('/csca-');
 
   // Article schema for E-E-A-T signals
   const articleSchema = {
@@ -519,6 +533,30 @@ export function GuidePage({
               ))}
             </ol>
           </section>
+
+          {/* Phase 146 (Task 4): CSCA Prep cross-link box on SICA's
+              /csca-* pages (auto-derived from urlPath; see the
+              showCscaPrep derivation above). */}
+          {showCscaPrep && (
+            <section className="border-2 border-[#1B2A4A] bg-white p-6 flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="flex-1">
+                <div className="text-xs font-bold uppercase tracking-wider text-[#9B1B30] mb-1">
+                  Free CSCA practice
+                </div>
+                <p className="text-[#1B2A4A] text-sm leading-relaxed">
+                  Practice tests, mocks, and study plans for every CSCA sitting — on CSCA Prep, SICA&apos;s dedicated exam-prep site.
+                </p>
+              </div>
+              <a
+                href="https://cscaprep.academy/signup?utm_source=sica&utm_medium=csca_page"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 inline-flex items-center gap-2 px-5 py-2.5 bg-[#9B1B30] text-white text-sm font-semibold uppercase tracking-wider hover:bg-[#7A1526] transition-colors"
+              >
+                Practise free on CSCA Prep <ArrowRight className="w-4 h-4" />
+              </a>
+            </section>
+          )}
 
           {/* Phase 147 (reserved slot): <ConsultationCta slug={pathSegment}
               variant="inline" /> renders here when showConsultationCta is

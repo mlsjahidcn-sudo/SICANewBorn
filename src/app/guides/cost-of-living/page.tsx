@@ -12,7 +12,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const locale: Locale = cookieStore.get('sica-locale')?.value === 'zh' ? 'zh' : 'en';
   const guide = costOfLivingGuide[locale];
   return {
-    title: guide.title,
+    title: { absolute: guide.title },
     description: guide.description,
     alternates: buildLanguageAlternates('/guides/cost-of-living'),
     openGraph: {
@@ -29,5 +29,5 @@ export default async function CostOfLivingGuidePage() {
   const cookieStore = await cookies();
   const locale: Locale = cookieStore.get('sica-locale')?.value === 'zh' ? 'zh' : 'en';
   const guide = costOfLivingGuide[locale];
-  return <GuidePage guide={guide} pathSegment="cost-of-living" />;
+  return <GuidePage guide={guide} pathSegment="cost-of-living" urlPath="/guides/cost-of-living" howToTitle="How to build your China student budget" />;
 }

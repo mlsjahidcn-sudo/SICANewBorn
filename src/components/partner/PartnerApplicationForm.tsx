@@ -226,7 +226,7 @@ const NONE = '__none__';
 export interface PartnerApplicationFormProps {
   formData: PartnerApplicationFormData;
   setFormData: React.Dispatch<React.SetStateAction<PartnerApplicationFormData>>;
-  universidades: University[];
+  universities: University[];
   programs: Program[];
   dataLoading: boolean;
   isSaving: boolean;
@@ -258,7 +258,7 @@ export interface PartnerApplicationFormProps {
 export function PartnerApplicationForm({
   formData,
   setFormData,
-  universidades,
+  universities,
   programs,
   dataLoading,
   isSaving,
@@ -313,7 +313,7 @@ export function PartnerApplicationForm({
   const programOptions = useMemo(
     () =>
       programs.slice(0, 500).map((program) => {
-        const uni = universidades.find((u) => u.slug === program.universitySlug);
+        const uni = universities.find((u) => u.slug === program.universitySlug);
         return {
           value: program.slug,
           label: program.name,
@@ -323,7 +323,7 @@ export function PartnerApplicationForm({
           logo: uni?.logo || undefined,
         };
       }),
-    [programs, universidades, t],
+    [programs, universities, t],
   );
 
   const formContent = (
@@ -843,7 +843,7 @@ export function PartnerApplicationForm({
                   onChange={(value) => {
                     const picked = programs.find((p) => p.slug === value);
                     if (!picked) return;
-                    const uni = universidades.find(
+                    const uni = universities.find(
                       (u) => u.slug === picked.universitySlug,
                     );
                     setFormData((prev) => ({

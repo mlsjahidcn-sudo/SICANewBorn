@@ -21,7 +21,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const locale: Locale = cookieStore.get('sica-locale')?.value === 'zh' ? 'zh' : 'en';
   const guide = cheapestUniversitiesGuide[locale];
   return {
-    title: guide.title,
+    title: { absolute: guide.title },
     description: guide.description,
     alternates: buildLanguageAlternates('/cheapest-universities-china'),
     openGraph: {
@@ -87,5 +87,5 @@ export default async function CheapestUniversitiesPage() {
     }),
   };
 
-  return <GuidePage guide={liveGuide} pathSegment="cheapest-universities-china" urlPath="/cheapest-universities-china" />;
+  return <GuidePage guide={liveGuide} pathSegment="cheapest-universities-china" urlPath="/cheapest-universities-china" howToTitle="How to pick a university on a budget" />;
 }

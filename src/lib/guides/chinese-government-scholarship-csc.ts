@@ -15,25 +15,26 @@ export const cscScholarshipGuide: LocalizedGuide = {
   en: {
     slug: 'chinese-government-scholarship-csc',
     eyebrow: 'GUIDE · CSC SCHOLARSHIP',
-    title: 'Chinese Government Scholarship (CSC) — Full Funding for International Students (2026)',
+    title: 'CSC Scholarship 2027: Chinese Government Scholarship Guide',
     description:
-      'The most prestigious fully-funded scholarship for international students in China — tuition, dorm, monthly stipend, and airfare. Eligibility, categories, application channels, deadline timeline.',
+      'CSC (Chinese Government Scholarship) for 2027: what it covers, stipend, eligibility, the 4 application channels, deadlines by country, and the CSCA requirement for bachelor\'s applicants.',
     subtitle:
-      'A CSC scholarship fully funds your degree at any participating Chinese university — covering tuition, dorm, health insurance, a monthly stipend, and (for most categories) round-trip airfare. ~3,000 awards per year across all degree levels.',
+      'A CSC scholarship fully funds your degree at a participating Chinese university — covering tuition, dorm, health insurance, a monthly stipend, and (for most categories) round-trip airfare. Applications for the September 2027 intake run roughly January–April 2027, earlier via some country channels.',
     stats: [
-      { value: '~3,000', label: 'CSC awards per year (all levels)' },
-      { value: '¥2,500-3,500/mo', label: 'Monthly stipend' },
+      { value: 'Full ride', label: 'Tuition + dorm + stipend + insurance' },
+      { value: 'Jan-Apr 2027', label: 'Main application window (varies)' },
       { value: '4 channels', label: 'Application routes' },
-      { value: 'June-start intake', label: 'For most universities' },
+      { value: 'CSCA', label: 'Required for bachelor\'s applicants' },
     ],
     quickAnswer:
-      'The Chinese Government Scholarship (CSC), administered by the China Scholarship Council, is the most prestigious fully-funded scholarship for international students in China. It covers tuition, on-campus dorm, monthly stipend (¥2,500 undergrad / ¥3,000 master / ¥3,500 PhD), health insurance, and (for most categories) round-trip airfare. Apply 9-12 months before your target intake via one of four channels: (1) your home country\'s dispatching authority (embassy/consulate), (2) the host Chinese university\'s international student office, (3) a CSC overseas partner institution in your country, or (4) the China-Africa Friendship / ASEAN programs. Strong applicants have 70-90% acceptance at mid-tier universities; top-5 universities are more competitive.',
+      'The Chinese Government Scholarship (CSC), administered by the China Scholarship Council, is the most prestigious fully-funded scholarship for international students in China. It covers tuition, on-campus dorm, a monthly stipend, health insurance, and (for most categories) round-trip airfare — check the current CSC notice for exact stipend figures [verify]. Apply 9-12 months before your target intake via one of four channels: your home country\'s dispatching authority, the host university (Type B), a CSC partner institution, or a special program. For the September 2027 intake, deadlines cluster in January–April 2027; the Pakistan HEC route closes earlier (December–January) [verify]. Bachelor\'s applicants: a CSCA score is now required for CSC scholarship undergraduate applications.',
     keyTakeaways: [
-      'CSC fully funds tuition + dorm + ¥2,500-3,500/month stipend + airfare',
-      '~3,000 awards per year across all degree levels + disciplines',
-      'Four application channels: embassy, university, partner institution, special programs',
-      'Application deadline is typically January-April for September intake',
-      'Strong applicants have 70-90% acceptance at mid-tier universities',
+      'CSC covers tuition + dorm + monthly stipend + insurance; airfare for most categories (stipend amounts: verify against the current CSC notice)',
+      'Four application channels: dispatching authority (embassy), university (Type B), partner institution, special programs',
+      'For September 2027: Type B (university route) deadlines fall roughly January-April 2027 and vary by university [verify each target]; some country channels close earlier',
+      'Pakistan: the HEC route (agency no. 5861) has a reported December-January deadline [verify] — sit the CSCA in November 2026 if you need a score',
+      'Bachelor\'s applicants need a CSCA score for CSC scholarship applications (2026 and 2027 intakes); next sittings Nov/Dec 2026, Jan 2027',
+      'A pre-admission letter from the host university is expected for 2026/27 onward [verify] — apply to universities in parallel, not after CSC',
       'CSC can be combined with university-funded top-ups but not stacked with other full scholarships',
     ],
     sections: [
@@ -41,7 +42,7 @@ export const cscScholarshipGuide: LocalizedGuide = {
         id: 'what-is-csc',
         h2: 'What is the Chinese Government Scholarship (CSC)?',
         intro:
-          'The CSC scholarship program is administered by the China Scholarship Council (Ministry of Education) and has funded international students at Chinese universities since 1950. Today it is the largest single scholarship program for international students in China with ~3,000 awards per year.',
+          'The CSC scholarship program is administered by the China Scholarship Council (Ministry of Education) and has funded international students at Chinese universities since 1950. It is the largest single scholarship program for international students in China.',
         blocks: [
           {
             type: 'p',
@@ -50,20 +51,64 @@ export const cscScholarshipGuide: LocalizedGuide = {
           {
             type: 'ul',
             items: [
-              '**Tuition** — fully waived (¥30,000-80,000/year depending on program and university)',
-              '**On-campus dorm** — provided (¥4,000-12,000/year value)',
-              '**Monthly stipend** — ¥2,500 (bachelor), ¥3,000 (master), ¥3,500 (PhD), paid for the duration of your program',
-              '**Health insurance** — comprehensive coverage provided (¥800/year value)',
-              '**Settlement allowance** — one-time ¥1,500-3,000 upon arrival',
+              '**Tuition** — fully waived',
+              '**On-campus dorm** — provided',
+              '**Monthly stipend** — paid for the duration of your program; exact amounts vary by degree level [verify against the current CSC notice]',
+              '**Health insurance** — comprehensive coverage provided',
+              '**Settlement allowance** — one-time payment upon arrival [verify amount against the current notice]',
               '**Round-trip airfare** — provided for most categories (Bilateral Program, EU/US special programs)',
-              '**Annual inter-city travel** — provided for select programs',
             ],
           },
           {
             type: 'h3',
             text: 'Why CSC is the most popular choice for international students',
             body:
-              'Three reasons CSC dominates the China-scholarship conversation: (1) full funding across all degree levels — bachelor\'s, master\'s, PhD, and one-year training programs; (2) it can be used at any of the 290+ participating Chinese universities (from C9 League to regional universities); (3) it is portable — your scholarship travels with you if you change universities, though this requires CSC approval. Compare to university-specific scholarships (which lock you to one university) and provincial government scholarships (which lock you to one province).',
+              'Three reasons CSC dominates the China-scholarship conversation: (1) full funding across degree levels — bachelor\'s, master\'s, PhD, and one-year training programs; (2) it can be used at participating Chinese universities across tiers (the exact count of participating universities changes each cycle [verify against the current notice]); (3) it is portable — your scholarship travels with you if you change universities, though this requires CSC approval. Compare to university-specific scholarships (which lock you to one university) and provincial government scholarships (which lock you to one province).',
+          },
+        ],
+      },
+      {
+        id: 'csca-requirement',
+        h2: 'CSCA requirement for bachelor\'s applicants',
+        intro:
+          'Since the 2026 intake, CSC scholarship undergraduate applicants must submit a CSCA score — this is now a hard requirement, not a nice-to-have.',
+        blocks: [
+          {
+            type: 'ul',
+            items: [
+              '**Who** — bachelor\'s (undergraduate) applicants to the Chinese Government Scholarship, for the 2026 and 2027 intakes',
+              '**What** — the CSCA (China Scholastic Competency Assessment), organized by the China Scholarship Council: Math is required for everyone; Physics and/or Chemistry depend on the university and program',
+              '**When** — the exam runs 6 sittings a year, mainly online at home with a live proctor. Next confirmed: 14–15 Nov 2026 (register 15–21 Oct, Beijing time), 19–20 Dec 2026, 23–24 Jan 2027',
+              '**Planning rule** — because CSC deadlines cluster in January–April 2027, sit the November or December 2026 sitting at the latest; see our CSCA exam dates guide',
+              '**Beyond CSC** — many universities, including many English-taught MBBS programs, require the CSCA even for self-funded applicants; universal adoption by 2028 is reported [verify]',
+            ],
+          },
+          {
+            type: 'callout',
+            tone: 'warning',
+            text: 'A CSC scholarship file without a CSCA score is incomplete for bachelor\'s applicants — no score, no consideration. Free practice tests and study plans for every sitting: https://cscaprep.academy',
+          },
+        ],
+      },
+      {
+        id: 'pre-admission-letter',
+        h2: 'The pre-admission letter',
+        intro:
+          'For 2026/27 onward, CSC applications are expected to include a pre-admission letter from the host university [verify against the current CSC notice and your channel\'s requirements].',
+        blocks: [
+          {
+            type: 'ul',
+            items: [
+              '**What it is** — a document from the host university\'s international student office stating you are pre-admitted (or under review) for the program you listed on the CSC application',
+              '**Why it matters** — the Type B (university) route has always effectively required it; the expectation now extends to other channels [verify]',
+              '**How to get one** — apply to the university\'s international admission portal in parallel with (not after) your CSC preparation; universities issue pre-admission letters on rolling review from late in the prior year',
+              '**Timing** — start university applications by November–December 2026 for the September 2027 intake so the letter exists before CSC deadlines in January–April 2027',
+            ],
+          },
+          {
+            type: 'callout',
+            tone: 'info',
+            text: 'Run the university application and the CSC application as parallel tracks. Waiting for one before starting the other is the most common way applicants miss the January-April window.',
           },
         ],
       },
@@ -91,7 +136,7 @@ export const cscScholarshipGuide: LocalizedGuide = {
           {
             type: 'callout',
             tone: 'info',
-            text: 'Most international students apply through the Chinese University Program (administered by their target university\'s international student office) or the Bilateral Program (administered through their home country\'s Chinese embassy). These two channels handle ~90% of CSC applications.',
+            text: 'Most international students apply through the Chinese University Program (administered by their target university\'s international student office) or the Bilateral Program (administered through their home country\'s Chinese embassy). These two channels handle the majority of CSC applications [verify exact share against current CSC data].',
           },
         ],
       },
@@ -99,27 +144,25 @@ export const cscScholarshipGuide: LocalizedGuide = {
         id: 'csc-coverage',
         h2: 'What CSC covers — the full breakdown',
         intro:
-          'CSC is fully-funded, but what does "fully-funded" mean in practice? Here is the dollar value of each component and the realistic total annual package.',
+          'CSC is fully-funded, but what does "fully-funded" mean in practice? Here is each component. Exact figures change by cycle — verify against the current CSC notice before budgeting.',
         blocks: [
           {
             type: 'table',
-            caption: 'CSC scholarship coverage breakdown (annual, USD)',
+            caption: 'CSC scholarship coverage breakdown [verify amounts against the current CSC notice]',
             columns: ['Component', 'Bachelor', 'Master', 'PhD', 'Notes'],
             rows: [
-              ['Tuition waiver', '$4,200-7,000', '$4,200-7,000', '$4,200-7,000', 'Varies by program + university'],
-              ['On-campus dorm', '$560-1,700', '$560-1,700', '$560-1,700', 'Double room standard; single available'],
-              ['Monthly stipend (¥/mo)', '¥2,500 ($350/mo)', '¥3,000 ($420/mo)', '¥3,500 ($490/mo)', 'Paid for 12 months/year'],
-              ['Annual stipend total', '$4,200', '$5,000', '$5,900', '12 × monthly'],
-              ['Health insurance', '$115', '$115', '$115', 'Comprehensive, China-wide coverage'],
-              ['Settlement allowance (one-time)', '$210-420', '$210-420', '$210-420', 'Paid on arrival'],
-              ['Round-trip airfare (Bilateral)', '$500-2,000', '$500-2,000', '$500-2,000', 'Reimbursed or booked by CSC'],
-              ['TOTAL package (USD/yr)', '$9,800-12,000', '$10,600-13,000', '$11,500-13,500', 'Excludes airfare'],
+              ['Tuition waiver', 'Full', 'Full', 'Full', 'Varies by program + university'],
+              ['On-campus dorm', 'Provided', 'Provided', 'Provided', 'Double room standard; single available'],
+              ['Monthly stipend (CNY/mo)', '2,500 [verify]', '3,000 [verify]', '3,500 [verify]', 'Paid 12 months/year'],
+              ['Health insurance', 'Provided', 'Provided', 'Provided', 'Comprehensive, China-wide coverage'],
+              ['Settlement allowance (one-time)', 'Provided [verify]', 'Provided [verify]', 'Provided [verify]', 'Paid on arrival'],
+              ['Round-trip airfare (Bilateral)', 'Most categories', 'Most categories', 'Most categories', 'Reimbursed or booked by CSC'],
             ],
           },
           {
             type: 'callout',
             tone: 'success',
-            text: 'CSC + university top-up is a common stacking strategy. Many universities add their own scholarship on top of CSC (typically ¥1,000-3,000/month extra + research grants). Total monthly stipend after stacking: ¥5,000-7,000 — comparable to Western PhD stipends.',
+            text: 'CSC + university top-up is a common stacking strategy. Many universities add their own scholarship on top of CSC (extra monthly stipend + research grants — amounts vary by university). CSC cannot be held simultaneously with other Chinese government scholarships (Confucius Institute, MOFCOM).',
           },
         ],
       },
@@ -152,27 +195,28 @@ export const cscScholarshipGuide: LocalizedGuide = {
         id: 'csc-timeline',
         h2: 'CSC application timeline (12 months before intake)',
         intro:
-          'CSC follows a strict annual cycle. The application portal opens in January-April for September intake; spring intake (March) deadlines are typically August-October of the prior year.',
+          'CSC follows a strict annual cycle. Applications for the September 2027 intake open in January 2027 and close January–April 2027 depending on the channel — the deadline, not the opening, is what you plan around.',
         blocks: [
           {
             type: 'table',
-            caption: 'CSC application timeline — September intake',
-            columns: ['Month', 'Action', 'Output'],
+            caption: 'CSC application timeline — September 2027 intake',
+            columns: ['When', 'Action', 'Output'],
             rows: [
-              ['Aug-Oct (year -1)', 'Shortlist target universities + programs', '3-5 target schools'],
-              ['Sep-Nov', 'Take language test (IELTS/TOEFL/HSK)', 'Test scores ready'],
-              ['Sep-Dec', 'Draft study plan + gather documents', 'Application package ready'],
-              ['Nov-Jan', 'Submit university admission (parallel path)', 'University pre-admission'],
-              ['Jan-Apr', 'CSC application portal opens', 'CSC application submitted'],
-              ['Feb-May', 'Review by CSC + universities', 'Waiting period'],
-              ['May-Jun', 'CSC results announced', 'Acceptance / rejection'],
-              ['Jun-Jul', 'Receive admission notice + airfare booking', 'Pre-departure prep'],
-              ['Aug-Sep', 'Arrive in China, begin program', 'Start of funded program'],
+              ['Aug-Oct 2026', 'Shortlist target universities + programs', '3-5 target schools'],
+              ['Sep-Nov 2026', 'Take language test (IELTS/TOEFL/HSK); bachelor\'s applicants sit the CSCA (Nov 14-15 or Dec 19-20)', 'Test scores ready'],
+              ['Sep-Dec 2026', 'Draft study plan + gather documents; start university applications', 'Application package + pre-admission in progress'],
+              ['Nov 2026-Jan 2027', 'University applications under review (parallel path)', 'Pre-admission letter [expected for 2026/27 onward — verify]'],
+              ['Jan 2027', 'CSC application window opens (portal + channels)', 'CSC application submitted'],
+              ['Jan-Apr 2027', 'Channel deadlines close (varies by channel + country)', 'All submissions done'],
+              ['Feb-May 2027', 'Review by CSC + universities', 'Waiting period'],
+              ['May-Jun 2027', 'CSC results announced', 'Acceptance / rejection'],
+              ['Jun-Jul 2027', 'Receive admission notice + JW201 + airfare booking', 'Pre-departure prep'],
+              ['Aug-Sep 2027', 'Arrive in China, begin program', 'Start of funded program'],
             ],
           },
           {
             type: 'p',
-            text: 'Practical advice: apply for admission to the target university FIRST (you need a pre-admission letter to attach to your CSC application in some channels), then submit CSC once admission is in hand. CSC deadlines are tight — submitting by mid-March is typical for the September intake.',
+            text: 'Practical advice: apply for admission to the target university FIRST (a pre-admission letter is expected for 2026/27 CSC applications [verify]), then submit CSC once the letter is in hand. Deadlines are tight — submitting by mid-March 2027 is typical for the September intake.',
           },
         ],
       },
@@ -185,8 +229,8 @@ export const cscScholarshipGuide: LocalizedGuide = {
           {
             type: 'ol',
             items: [
-              '**Home country\'s dispatching authority (Bilateral Program)** — Apply through your home country\'s Chinese embassy, consulate, or relevant ministry (Ministry of Education, scholarship agency). Best channel for: students from countries with active CSC bilateral agreements (most of Asia, Africa, Latin America). Application deadline: typically January-March for September intake. Apply early.',
-              '**Host Chinese university (Chinese University Program)** — Apply through your target Chinese university\'s international student office. University nominates you to CSC for funding. Best channel for: students applying to specific universities with strong programs. Many universities have quotas; apply to 3-5 universities in parallel.',
+              '**Home country\'s dispatching authority (Bilateral Program)** — Apply through your home country\'s Chinese embassy, consulate, or relevant ministry. Best channel for: students from countries with active CSC bilateral agreements (most of Asia, Africa, Latin America). Deadlines: often the earliest, sometimes January-March for September intake. **Pakistan**: the HEC route (agency no. 5861) is reported to close as early as December-January [verify on HEC.gov.pk] — sit the CSCA in November 2026 if you need a score.',
+              '**Host Chinese university (Type B / Chinese University Program)** — Apply through your target Chinese university\'s international student office. University nominates you to CSC for funding. Best channel for: students applying to specific universities with strong programs. Deadlines: roughly January-April 2027 and vary by university [verify each target]; apply to 3-5 universities in parallel.',
               '**CSC overseas partner institution in your country** — Some Confucius Institutes, UNESCO national commissions, and partner universities nominate students to CSC. Best channel for: students with existing institutional connections.',
               '**Special programs (CAFP, ASEAN, MOFCOM, EU/US programs)** — Country-specific programs with separate application channels. Best channel for: students from targeted regions or professional programs. Each has its own deadline + eligibility.',
             ],
@@ -194,7 +238,7 @@ export const cscScholarshipGuide: LocalizedGuide = {
           {
             type: 'callout',
             tone: 'info',
-            text: 'Most international students apply through Channels 1 (Bilateral) or 2 (Chinese University). They are not mutually exclusive — many students apply through both to maximize chances. You can hold multiple CSC acceptances but must ultimately pick one.',
+            text: 'Channels 1 (Bilateral) and 2 (Chinese University) are not mutually exclusive — many students apply through both to maximize chances. You can hold multiple CSC acceptances but must ultimately pick one.',
           },
         ],
       },
@@ -221,35 +265,35 @@ export const cscScholarshipGuide: LocalizedGuide = {
     faqs: [
       {
         q: 'Is the Chinese Government Scholarship fully funded?',
-        a: 'Yes. CSC covers tuition (full waiver), on-campus dorm, monthly stipend (¥2,500-3,500 depending on degree level), health insurance, settlement allowance (one-time ¥1,500-3,000), and (for most channels) round-trip airfare. Total package value: ¥50,000-90,000/year (USD 7,000-13,000).',
+        a: 'Yes. CSC covers tuition (full waiver), on-campus dorm, a monthly stipend by degree level, health insurance, a settlement allowance, and (for most channels) round-trip airfare. Exact stipend and allowance figures change by cycle — verify against the current CSC notice.',
       },
       {
         q: 'How much is the CSC monthly stipend?',
-        a: 'CSC monthly stipends: ¥2,500 for bachelor\'s, ¥3,000 for master\'s, ¥3,500 for PhD. Most universities pay this in cash each month; a few pay quarterly. Top-up funding from universities can add ¥1,000-3,000/month extra to the base CSC stipend.',
+        a: 'Stipends are tiered by degree level — commonly cited as RMB 2,500 (bachelor\'s), RMB 3,000 (master\'s), RMB 3,500 (PhD) [verify against the current CSC notice]. Most universities pay monthly; a few pay quarterly. University top-up funding can add extra on top of the base CSC stipend.',
       },
       {
-        q: 'How competitive is CSC scholarship?',
-        a: 'CSC acceptance rates vary by destination university. Mid-tier universities (ranked 100-300 in China): 70-90% acceptance for qualified applicants. Top-5 universities (Tsinghua, Peking, Fudan, Shanghai Jiao Tong, USTC): 10-25% acceptance. Top-20 universities: 25-50%. Strong academic record + clear study plan + supervisor pre-match (for PhD) typically yields 1-3 admits.',
+        q: 'How competitive is the CSC scholarship?',
+        a: 'Competitiveness varies sharply by destination university and channel — mid-tier universities are materially less competitive than C9 schools, but we do not quote acceptance-rate percentages because no official per-university figures are published. What reliably moves outcomes: a strong academic record, a specific study plan referencing faculty and labs, and (for PhD) a supervisor pre-match.',
       },
       {
         q: 'Can I apply for CSC after being admitted to a university?',
-        a: 'Yes — apply for university admission first (rolling admissions start in November for September intake), then submit CSC application via the university (Chinese University Program channel) or via your embassy (Bilateral Program). Many students get admitted in March-April and submit CSC by mid-April deadline.',
+        a: 'Yes — apply for university admission first (rolling admissions start in late 2026 for the September 2027 intake), then submit the CSC application via the university (Type B) or your dispatching authority (Bilateral). A pre-admission letter is expected for 2026/27 applications onward [verify].',
       },
       {
-        q: 'When does CSC open for fall intake?',
-        a: 'CSC applications for September intake typically open in January and close by mid-April. The deadline varies slightly by channel: embassies often have January-March deadlines; universities often have February-April deadlines. Plan to submit by mid-March to be safe.',
+        q: 'When does CSC open for the September 2027 intake?',
+        a: 'The application window opens in January 2027; deadlines run January-April 2027 and vary by channel. Dispatching-authority routes often close earliest (January-March); university (Type B) deadlines are roughly February-April and vary by university [verify each target]. The Pakistan HEC route may close as early as December-January [verify on HEC.gov.pk].',
       },
       {
-        q: 'How many CSC scholarships are available per year?',
-        a: 'Approximately 3,000 CSC awards per year across all degree levels, sub-programs, and countries. Per country allocations vary widely: large countries (India, Pakistan, Bangladesh, Russia, Thailand) get 100-300 awards; small countries get 5-20 awards. The Africa Friendship Program adds another 1,000+ awards per year across the 54 AU countries.',
+        q: 'Do bachelor\'s applicants need the CSCA for CSC?',
+        a: 'Yes — a CSCA score is required for Chinese Government Scholarship undergraduate applicants (2026 and 2027 intakes). Math is required for everyone; Physics and/or Chemistry depend on the university. Next sittings: 14-15 Nov 2026 (register 15-21 Oct, Beijing time), 19-20 Dec 2026, and 23-24 Jan 2027 — see our CSCA exam dates guide. Free practice: https://cscaprep.academy',
       },
       {
         q: 'Do I need to apply through my home country\'s embassy?',
-        a: 'Not necessarily. You can apply through your target Chinese university\'s international student office (Channel 2: Chinese University Program) instead of (or in addition to) your home embassy (Channel 1: Bilateral Program). Embassies have country quotas that may limit slots; universities have separate quotas. Applying through both maximizes your chances.',
+        a: 'Not necessarily. You can apply through your target Chinese university\'s international student office (Type B) instead of (or in addition to) your dispatching authority (Bilateral). Embassies have country allocations; universities have separate quotas. Applying through both maximizes your chances.',
       },
       {
         q: 'What if I fail to get CSC? Are there alternatives?',
-        a: 'Three strong alternatives: (1) university-specific scholarships — most Chinese universities waive 50-100% of tuition for top applicants; (2) provincial government scholarships (Beijing, Shanghai, Jiangsu, Zhejiang, Guangdong) — typically ¥20,000-50,000/year; (3) external scholarships from your home country (Fulbright, DAAD, Commonwealth) or international foundations (Gates, Rotary). Apply for all in parallel — they don\'t auto-apply.',
+        a: 'Three strong alternatives: (1) university-specific scholarships — most Chinese universities waive a large share of tuition for strong applicants; (2) provincial government scholarships (Beijing, Shanghai, Jiangsu, Zhejiang, Guangdong); (3) external scholarships from your home country or international foundations. Apply for all in parallel — they don\'t auto-apply.',
       },
     ],
     howToSteps: [
@@ -312,25 +356,26 @@ export const cscScholarshipGuide: LocalizedGuide = {
   zh: {
     slug: 'chinese-government-scholarship-csc',
     eyebrow: '指南 · CSC 奖学金',
-    title: '2026 中国政府奖学金（CSC）—— 国际生全额资助',
+    title: 'CSC 奖学金 2027：中国政府奖学金指南',
     description:
-      '面向国际生最负盛名的全额资助奖学金——学费、住宿、月津贴、机票。资格、类别、申请渠道、截止时间线。',
+      '2027 年中国政府奖学金（CSC）：覆盖内容、津贴、资格、四大申请渠道、各国截止时间，以及本科申请者的 CSCA 要求。',
     subtitle:
-      'CSC 奖学金全额资助你在任何参与中国大学的学位——学费、住宿、医疗保险、月津贴、（多数类别）含往返机票。每年约 3,000 个名额覆盖所有学位层级。',
+      'CSC 奖学金全额资助你在参与中国大学的学位——学费、住宿、医疗保险、月津贴、（多数类别）往返机票。2027 年 9 月入学的申请窗口约为 2027 年 1-4 月，部分国家渠道更早。',
     stats: [
-      { value: '~3,000', label: '每年 CSC 名额（所有层级）' },
-      { value: '¥2,500-3,500/月', label: '月津贴' },
+      { value: '全额', label: '学费 + 住宿 + 津贴 + 保险' },
+      { value: '2027 年 1-4 月', label: '主要申请窗口（因渠道而异）' },
       { value: '4 渠道', label: '申请路径' },
-      { value: '9 月入学', label: '对应截止日 4 月' },
+      { value: 'CSCA', label: '本科申请者必考' },
     ],
     quickAnswer:
-      '中国政府奖学金（CSC）由国家留学基金管理委管理，是国际生最负盛名的全额资助奖学金。覆盖学费、校内住宿、月津贴（本科 ¥2,500 / 硕士 ¥3,000 / 博士 ¥3,500）、医疗保险、（多数类别）往返机票。在目标入学前 9-12 个月通过四个渠道之一申请：（1）本国派遣单位（使领馆），（2）接收中国大学国际学生办公室，（3）本国 CSC 海外合作机构，（4）中国-非洲友谊 / 东盟项目。强申请者在中档大学录取率 70-90%；前 5 大学更具竞争。',
+      '中国政府奖学金（CSC）由国家留学基金管理委员会管理，是国际生最负盛名的全额资助奖学金，覆盖学费、校内住宿、月津贴、医疗保险与（多数类别）往返机票——具体津贴数额以当期 CSC 通知为准 [待核实]。在目标入学前 9-12 个月通过四大渠道之一申请：本国派遣单位、接收大学（Type B）、CSC 合作机构或专项项目。2027 年 9 月入学的截止集中在 2027 年 1-4 月；巴基斯坦 HEC 渠道据报 12-1 月即截止 [待核实]。本科申请者：CSC 奖学金本科申请须提交 CSCA 成绩。',
     keyTakeaways: [
-      'CSC 全额资助学费 + 住宿 + ¥2,500-3,500/月津贴 + 机票',
-      '每年约 3,000 个名额覆盖所有学位层级 + 学科',
-      '四个申请渠道：使馆、大学、合作机构、特殊项目',
-      '申请截止日通常 1-4 月对应 9 月入学',
-      '强申请者中档大学录取率 70-90%',
+      'CSC 覆盖学费 + 住宿 + 月津贴 + 保险；多数类别含机票（津贴数额以当期 CSC 通知核实）',
+      '四大申请渠道：派遣单位（使馆）、大学（Type B）、合作机构、专项项目',
+      '2027 年 9 月入学：Type B（大学渠道）截止约在 2027 年 1-4 月，因校而异 [逐校核实]；部分国家渠道更早',
+      '巴基斯坦：HEC 渠道（机构号 5861）据报 12-1 月截止 [在 HEC.gov.pk 核实]——需要 CSCA 成绩者应参加 2026 年 11 月场次',
+      '本科申请者申请 CSC 奖学金须提交 CSCA 成绩（2026、2027 入学）；下一批场次：2026 年 11/12 月、2027 年 1 月',
+      '2026/27 起预计需要接收大学的预录取函 [待核实]——大学申请与 CSC 并行推进，不要先后等',
       'CSC 可与院校资助叠加，但不可与其他全额奖学金叠加',
     ],
     sections: [
@@ -338,7 +383,7 @@ export const cscScholarshipGuide: LocalizedGuide = {
         id: 'what-is-csc',
         h2: '什么是中国政府奖学金（CSC）？',
         intro:
-          'CSC 奖学金项目由国家留学基金管理委员会（教育部）管理，自 1950 年起资助国际生来华学习。如今是中国规模最大的国际生单一奖学金项目，每年约 3,000 个名额。',
+          'CSC 奖学金项目由国家留学基金管理委员会（教育部）管理，自 1950 年起资助国际生来华学习，是中国规模最大的国际生单一奖学金项目。',
         blocks: [
           {
             type: 'p',
@@ -347,20 +392,64 @@ export const cscScholarshipGuide: LocalizedGuide = {
           {
             type: 'ul',
             items: [
-              '**学费**——全免（依项目与大学 ¥30,000-80,000/年）',
-              '**校内住宿**——提供（¥4,000-12,000/年价值）',
-              '**月津贴**——本科 ¥2,500、硕士 ¥3,000、博士 ¥3,500，覆盖整个项目期间',
-              '**医疗保险**——综合保障（¥800/年价值）',
-              '**安置费**——一次性 ¥1,500-3,000，抵华后发放',
+              '**学费**——全免',
+              '**校内住宿**——提供',
+              '**月津贴**——覆盖整个项目期间，按学位层级分档 [数额以当期 CSC 通知核实]',
+              '**医疗保险**——综合保障',
+              '**安置费**——抵华后一次性发放 [金额以当期通知核实]',
               '**往返机票**——多数类别提供（双边项目、欧美特殊项目）',
-              '**年度城际差旅**——部分项目提供',
             ],
           },
           {
             type: 'h3',
             text: '为什么 CSC 是国际生最热门选择',
             body:
-            '三个理由：（1）所有学位层级全额资助——本科、硕士、博士、一年培训项目；（2）可用于 290+ 所参与中国大学的任何一所（C9 联盟至地方高校）；（3）可携带——奖学金随你转校（需 CSC 批准）。比较院校专属奖学金（锁在一所大学）与省市奖学金（锁在一个省）。',
+            '三个理由：（1）各学位层级全额资助——本科、硕士、博士、一年培训项目；（2）可用于参与项目的各层次中国大学（参与校数量逐期变化 [以当期通知核实]）；（3）可携带——奖学金随你转校（需 CSC 批准）。比较院校专属奖学金（锁在一所大学）与省市奖学金（锁在一个省）。',
+          },
+        ],
+      },
+      {
+        id: 'csca-requirement',
+        h2: '本科申请者的 CSCA 要求',
+        intro:
+          '自 2026 级起，中国政府奖学金本科申请者必须提交 CSCA 成绩——这是硬性要求，不是加分项。',
+        blocks: [
+          {
+            type: 'ul',
+            items: [
+              '**适用对象**——中国政府奖学金本科（undergraduate）申请者，2026 与 2027 入学',
+              '**考什么**——CSCA（中国学业水平评估），由国家留学基金委组织：数学全员必考；物理和/或化学取决于大学与项目',
+              '**什么时候考**——每年 6 场，以居家线上、真人监考为主。已确认：2026 年 11 月 14-15 日（报名 10 月 15-21 日北京时间）、12 月 19-20 日、2027 年 1 月 23-24 日',
+              '**规划法则**——CSC 截止集中在 2027 年 1-4 月，最迟应参加 2026 年 11 或 12 月场次；详见 CSCA 考试时间指南',
+              '**超出 CSC 范围**——许多大学（含许多英文授课 MBBS）对自费申请者也要求 CSCA；据报 2028 年全面铺开 [待核实]',
+            ],
+          },
+          {
+            type: 'callout',
+            tone: 'warning',
+            text: '本科申请者缺 CSCA 成绩的 CSC 材料即不完整——没有成绩就没有资格。每场免费模拟题与学习计划：https://cscaprep.academy',
+          },
+        ],
+      },
+      {
+        id: 'pre-admission-letter',
+        h2: '预录取函',
+        intro:
+          '2026/27 起，CSC 申请预计需附接收大学的预录取函 [以当期 CSC 通知及你所在渠道要求为准]。',
+        blocks: [
+          {
+            type: 'ul',
+            items: [
+              '**是什么**——接收大学国际学生办公室出具的文件，说明你在 CSC 申请中填报的项目已获预录取（或审核中）',
+              '**为何重要**——Type B（大学渠道）实际一直需要它；据报此要求现扩展到其他渠道 [待核实]',
+              '**如何获得**——与 CSC 准备并行（而非之后）向大学国际生申请门户提交申请；大学自前一年年底滚动审核发放',
+              '**时间点**——2027 年 9 月入学应在 2026 年 11-12 月前启动大学申请，确保预录取函赶在 2027 年 1-4 月 CSC 截止前到位',
+            ],
+          },
+          {
+            type: 'callout',
+            tone: 'info',
+            text: '大学申请与 CSC 申请按双轨并行。等一个做完再启动另一个，是错过 1-4 月窗口最常见的方式。',
           },
         ],
       },
@@ -388,7 +477,7 @@ export const cscScholarshipGuide: LocalizedGuide = {
           {
             type: 'callout',
             tone: 'info',
-            text: '多数国际生通过中国大学项目（由目标大学国际学生办公室管理）或双边项目（由本国中国大使馆管理）申请。这两个渠道处理约 90% 的 CSC 申请。',
+            text: '多数国际生通过中国大学项目（由目标大学国际学生办公室管理）或双边项目（由本国中国大使馆管理）申请。这两个渠道处理大多数 CSC 申请 [确切占比以当期 CSC 数据核实]。',
           },
         ],
       },
@@ -396,27 +485,25 @@ export const cscScholarshipGuide: LocalizedGuide = {
         id: 'csc-coverage',
         h2: 'CSC 覆盖——完整明细',
         intro:
-          'CSC 全额资助，但"全额"实际意味着什么？下面列出每项的美元价值与实际年度总价值。',
+          'CSC 全额资助，但"全额"实际意味着什么？下面逐项列出。具体数额逐期变化——做预算前以当期 CSC 通知核实。',
         blocks: [
           {
             type: 'table',
-            caption: 'CSC 奖学金覆盖明细（年度，美元）',
+            caption: 'CSC 奖学金覆盖明细 [数额以当期 CSC 通知核实]',
             columns: ['项目', '本科', '硕士', '博士', '备注'],
             rows: [
-              ['学费全免', '$4,200-7,000', '$4,200-7,000', '$4,200-7,000', '因项目 + 大学而异'],
-              ['校内住宿', '$560-1,700', '$560-1,700', '$560-1,700', '标准双人间；可申请单人间'],
-              ['月津贴（¥/月）', '¥2,500（$350/月）', '¥3,000（$420/月）', '¥3,500（$490/月）', '每年支付 12 个月'],
-              ['年度津贴合计', '$4,200', '$5,000', '$5,900', '12 × 月津贴'],
-              ['医疗保险', '$115', '$115', '$115', '综合、全国覆盖'],
-              ['安置费（一次性）', '$210-420', '$210-420', '$210-420', '抵华后发放'],
-              ['往返机票（双边）', '$500-2,000', '$500-2,000', '$500-2,000', '报销或 CSC 代订'],
-              ['总包价值（美元/年）', '$9,800-12,000', '$10,600-13,000', '$11,500-13,500', '不含机票'],
+              ['学费全免', '全额', '全额', '全额', '因项目 + 大学而异'],
+              ['校内住宿', '提供', '提供', '提供', '标准双人间；可申请单人间'],
+              ['月津贴（元/月）', '2,500 [待核实]', '3,000 [待核实]', '3,500 [待核实]', '每年支付 12 个月'],
+              ['医疗保险', '提供', '提供', '提供', '综合、全国覆盖'],
+              ['安置费（一次性）', '提供 [待核实]', '提供 [待核实]', '提供 [待核实]', '抵华后发放'],
+              ['往返机票（双边）', '多数类别', '多数类别', '多数类别', '报销或 CSC 代订'],
             ],
           },
           {
             type: 'callout',
             tone: 'success',
-            text: 'CSC + 院校追加是常见叠加策略。许多大学在 CSC 基础上再加自有奖学金（通常 ¥1,000-3,000/月额外 + 科研经费）。叠加后月津贴合计 ¥5,000-7,000——与西方博士津贴持平。',
+            text: 'CSC + 院校追加是常见叠加策略。许多大学在 CSC 基础上再加自有奖学金（额外月津贴 + 科研经费，因校而异）。CSC 不可与孔子学院、MOFCOM 等其他中国政府奖学金同时持有。',
           },
         ],
       },
@@ -449,27 +536,28 @@ export const cscScholarshipGuide: LocalizedGuide = {
         id: 'csc-timeline',
         h2: 'CSC 申请时间线（入学前 12 个月）',
         intro:
-          'CSC 遵循严格年度周期。申请门户每年 1-4 月开放对应 9 月入学；春季入学（3 月）的截止日通常在前一年的 8-10 月。',
+          'CSC 遵循严格年度周期。2027 年 9 月入学的申请于 2027 年 1 月开放，截止因渠道分布在 1-4 月——需要围绕截止（而非开放）规划。',
         blocks: [
           {
             type: 'table',
-            caption: 'CSC 申请时间线——9 月入学',
-            columns: ['月份', '动作', '产出'],
+            caption: 'CSC 申请时间线——2027 年 9 月入学',
+            columns: ['时间', '动作', '产出'],
             rows: [
-              ['8-10 月（前一年）', '筛选目标大学 + 项目', '3-5 所目标校'],
-              ['9-11 月', '备考语言（雅思/托福/HSK）', '语言成绩就绪'],
-              ['9-12 月', '起草学习计划 + 收集材料', '申请包就绪'],
-              ['11-1 月', '提交大学入学（并行路径）', '大学预录取'],
-              ['1-4 月', 'CSC 申请门户开放', 'CSC 申请提交'],
-              ['2-5 月', 'CSC + 大学评审', '等待期'],
-              ['5-6 月', 'CSC 结果公布', '录取 / 拒录'],
-              ['6-7 月', '收到录取通知 + 机票', '出发前准备'],
-              ['8-9 月', '抵华，开课', '资助项目开始'],
+              ['2026 年 8-10 月', '筛选目标大学 + 项目', '3-5 所目标校'],
+              ['2026 年 9-11 月', '备考语言（雅思/托福/HSK）；本科申请者参加 CSCA（11 月 14-15 或 12 月 19-20）', '语言/CSCA 成绩就绪'],
+              ['2026 年 9-12 月', '起草学习计划 + 收集材料；启动大学申请', '申请包就绪 + 预录取推进中'],
+              ['2026 年 11 月-2027 年 1 月', '大学申请并行审核', '预录取函 [2026/27 起预计需要——待核实]'],
+              ['2027 年 1 月', 'CSC 申请窗口开启（门户 + 各渠道）', 'CSC 申请提交'],
+              ['2027 年 1-4 月', '各渠道截止（因渠道 + 国家而异）', '全部提交完成'],
+              ['2027 年 2-5 月', 'CSC + 大学评审', '等待期'],
+              ['2027 年 5-6 月', 'CSC 结果公布', '录取 / 拒录'],
+              ['2027 年 6-7 月', '收到录取通知 + JW201 + 机票', '出发前准备'],
+              ['2027 年 8-9 月', '抵华，开课', '资助项目开始'],
             ],
           },
           {
             type: 'p',
-            text: '实用建议：先申请目标大学入学（部分 CSC 渠道需附预录取函），获得录取后再提交 CSC。3 月中旬提交是 9 月入学的典型时间。',
+            text: '实用建议：先申请目标大学入学（2026/27 起 CSC 申请预计需附预录取函 [待核实]），函到手后再提交 CSC。截止很紧——2027 年 9 月入学通常应在 2027 年 3 月中旬前提交。',
           },
         ],
       },
@@ -482,16 +570,16 @@ export const cscScholarshipGuide: LocalizedGuide = {
           {
             type: 'ol',
             items: [
-              '**本国派遣单位（双边项目）**——通过本国中国大使馆、领事馆或相关部委（教育部、奖学金机构）申请。最适合：与中国签有活跃 CSC 双边协定的国家（多数亚洲、非洲、拉美）。截止日通常 1-3 月对应 9 月入学。尽早申请。',
-              '**接收中国大学（中国大学项目）**——通过目标中国大学国际学生办公室申请。大学提名你给 CSC 资助。最适合：申请特定大学强项目的学生。许多大学有名额限制；并行申请 3-5 所。',
+              '**本国派遣单位（双边项目）**——通过本国中国大使馆、领事馆或相关部委申请。最适合：与中国签有活跃 CSC 双边协定的国家（多数亚洲、非洲、拉美）。截止往往最早，常在 1-3 月。**巴基斯坦**：HEC 渠道（机构号 5861）据报 12-1 月即截止 [在 HEC.gov.pk 核实]——需要 CSCA 成绩者应参加 2026 年 11 月场次。',
+              '**接收中国大学（Type B / 中国大学项目）**——通过目标中国大学国际学生办公室申请。大学提名你给 CSC 资助。最适合：申请特定大学强项目的学生。截止约在 2027 年 1-4 月，因校而异 [逐校核实]；并行申请 3-5 所。',
               '**本国 CSC 海外合作机构**——部分孔子学院、UNESCO 国家委员会、合作大学提名学生给 CSC。最适合：有现成机构联系的学生。',
-              '**特殊项目（CAFP、ASEAN、MOFCOM、欧美项目）**——针对特定地区或专业项目的国别项目，各有截止日 + 资格。最适合：目标地区或专业项目学生。',
+              '**特殊项目（CAFP、东盟、MOFCOM、欧美项目）**——针对特定地区或专业项目的国别项目，各有截止日 + 资格。最适合：目标地区或专业项目学生。',
             ],
           },
           {
             type: 'callout',
             tone: 'info',
-            text: '多数国际生申请渠道 1（双边）或渠道 2（中国大学）。两者不互斥——许多学生同时申请以最大化机会。可持有多个 CSC 录取，但最终只能选其一。',
+            text: '渠道 1（双边）与渠道 2（中国大学）不互斥——许多学生同时申请以最大化机会。可持有多个 CSC 录取，但最终只能选其一。',
           },
         ],
       },
@@ -518,35 +606,35 @@ export const cscScholarshipGuide: LocalizedGuide = {
     faqs: [
       {
         q: '中国政府奖学金全额资助吗？',
-        a: '是。CSC 覆盖学费（全免）、校内住宿、月津贴（¥2,500-3,500 视学位而定）、医疗保险、安置费（一次性 ¥1,500-3,000）、（多数渠道）往返机票。总包价值：¥50,000-90,000/年（7,000-13,000 美元）。',
+        a: '是。CSC 覆盖学费（全免）、校内住宿、按学位分档的月津贴、医疗保险、安置费、（多数渠道）往返机票。具体津贴与安置费数额逐期变化——以当期 CSC 通知核实。',
       },
       {
         q: 'CSC 月津贴多少？',
-        a: 'CSC 月津贴：本科 ¥2,500、硕士 ¥3,000、博士 ¥3,500。多数大学按月现金发放；少数按季发放。大学追加资助可再加 ¥1,000-3,000/月。',
+        a: '按学位层级分档——常见口径为本科 2,500 元、硕士 3,000 元、博士 3,500 元人民币 [以当期 CSC 通知核实]。多数大学按月发放；少数按季。大学追加资助可在 CSC 基础上再叠加。',
       },
       {
         q: 'CSC 奖学金多大竞争？',
-        a: 'CSC 录取率随目标大学变化。中档大学（中国排名 100-300）：合格申请者录取率 70-90%。前 5 大学（清华、北大、复旦、上海交大、中科大）：录取率 10-25%。前 20 大学：25-50%。强学术记录 + 清晰学习计划 + 导师预匹配（博士）通常带来 1-3 个录取。',
+        a: '竞争程度因目标大学与渠道差异很大——中档大学的竞争明显低于 C9，但我们不引用录取率百分比，因为没有官方的分校录取率数据。真正起作用的因素：强学术记录、具体提及教师与实验室的学习计划、（博士）导师预匹配。',
       },
       {
         q: '可以录取后申请 CSC 吗？',
-        a: '可以——先申请大学入学（11 月起滚动录取对应 9 月入学），再通过大学（中国大学项目渠道）或本国大使馆（双边项目）提交 CSC。多数学生 3-4 月获录取，4 月中前提交 CSC。',
+        a: '可以——先申请大学入学（2026 年底起滚动录取对应 2027 年 9 月入学），再通过大学（Type B）或本国派遣单位（双边）提交 CSC。2026/27 起预计需附预录取函 [待核实]。',
       },
       {
-        q: 'CSC 秋季入学何时开放？',
-        a: '9 月入学的 CSC 申请通常 1 月开放，4 月中前截止。截止日因渠道略有差异：使馆通常 1-3 月截止；大学通常 2-4 月截止。建议 3 月中旬前提交以确保安全。',
+        q: '2027 年 9 月入学的 CSC 何时开放？',
+        a: '申请窗口 2027 年 1 月开放；截止分布在 1-4 月，因渠道而异。派遣单位渠道往往最早（1-3 月）；大学（Type B）截止约 2-4 月且因校而异 [逐校核实]。巴基斯坦 HEC 渠道可能 12-1 月即截止 [在 HEC.gov.pk 核实]。',
       },
       {
-        q: '每年 CSC 奖学金多少名额？',
-        a: '每年约 3,000 个 CSC 名额覆盖所有学位层级、子项目与国家。各国配额差异大：大国（印度、巴基斯坦、孟加拉、俄罗斯、泰国）获 100-300 名；小国 5-20 名。中非友谊项目在 54 个非成员国之间再加 1,000+ 名。',
+        q: '本科申请者需要 CSCA 吗？',
+        a: '需要——中国政府奖学金本科申请者（2026、2027 入学）必须提交 CSCA 成绩。数学全员必考；物理和/或化学取决于大学。下一批场次：2026 年 11 月 14-15 日（报名 10 月 15-21 日北京时间）、12 月 19-20 日、2027 年 1 月 23-24 日——详见 CSCA 考试时间指南。免费练习：https://cscaprep.academy',
       },
       {
         q: '需要通过本国大使馆申请吗？',
-        a: '不一定。可通过目标中国大学国际学生办公室（渠道 2：中国大学项目）而非（或加上）本国大使馆（渠道 1：双边项目）申请。使馆有国家配额可能限制名额；大学有单独配额。两者并行申请可最大化机会。',
+        a: '不一定。可通过目标中国大学国际学生办公室（Type B）而非（或加上）本国派遣单位（双边项目）申请。使馆有国家配额；大学有单独配额。两者并行申请可最大化机会。',
       },
       {
         q: '如果 CSC 失败，有替代方案吗？',
-        a: '三个强替代：（1）院校奖学金——多数中国大学为顶尖申请者减免 50-100% 学费；（2）省市奖学金（北京、上海、江苏、浙江、广东）——通常 ¥20,000-50,000/年；（3）本国奖学金（Fulbright、DAAD、Commonwealth）或国际基金会（盖茨、扶轮）。并行申请——不会自动申请。',
+        a: '三个强替代：（1）院校奖学金——多数中国大学为强申请者减免大比例学费；（2）省市奖学金（北京、上海、江苏、浙江、广东）；（3）本国奖学金（Fulbright、DAAD、Commonwealth）或国际基金会。并行申请——不会自动申请。',
       },
     ],
     howToSteps: [

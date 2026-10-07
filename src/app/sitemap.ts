@@ -54,13 +54,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/csca-exam-registration`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/csca-exam-fees`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/csca-exam-exemptions`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    // Phase 117: CSCA cluster Batch 2 — subject deep-dives + prep system
-    { url: `${SITE_URL}/csca-mathematics-guide`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/csca-physics-guide`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/csca-chemistry-guide`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    // Phase 121: Study-in-China cluster Batch 1 — personal finance & daily life
+    { url: `${SITE_URL}/open-chinese-bank-account`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/international-money-transfer-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/china-mobile-internet-for-international-students`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/student-health-care-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    // Phase 117: Professional Chinese tracks stay on SICA (admissions
+    // angle). The 3 subject deep-dives + the 12-week prep plan were
+    // removed — they 301 to cscaprep.academy (Phase 146 / Option C in
+    // docs/csca-overlap.md).
     { url: `${SITE_URL}/csca-humanities-chinese-guide`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/csca-stem-chinese-guide`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/csca-exam-preparation`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    // Phase 146: the 10 top-level /<slug>-university profile pages
+    // were removed from the sitemap — they now 301 to
+    // /universities/<slug> (next.config.ts redirects), which is the
+    // canonical URL already emitted by the universityUrls bucket
+    // below. Same for /peking-university-vs-* and the 4 pure-prep
+    // CSCA pages (→ cscaprep.academy).
     // Phase 118: CSCA cluster Batch 3 — comparisons & scores
     { url: `${SITE_URL}/csca-vs-hsk`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/csca-vs-sat-a-level-ib`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
@@ -78,28 +88,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/international-money-transfer-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/china-mobile-internet-for-international-students`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/student-health-care-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    // Phase 122: University profiles Batch 1 — 5 flagship university profiles
-    { url: `${SITE_URL}/peking-university`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/tsinghua-university`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/fudan-university`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/shanghai-jiao-tong-university`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/zhejiang-university`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    // Phase 123: University profiles Batch 2 — NJU, USTC, WHU
-    { url: `${SITE_URL}/nanjing-university`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/university-of-science-and-technology-of-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/wuhan-university`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    // Phase 124: University profiles Batch 3 — SYSU, HIT (cluster complete: 10/10)
-    { url: `${SITE_URL}/sun-yat-sen-university`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/harbin-institute-of-technology`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    // Phase 122-124: the 10 top-level university profile pages were
+    // here — removed in Phase 146 (they 301 to /universities/<slug>,
+    // see the comment in the CSCA block above).
     // Phase 136: Flagship admissions deep-dives Batch 1 — operational admissions guides
     { url: `${SITE_URL}/peking-university-admissions-guide`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/tsinghua-university-admissions-guide`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/fudan-university-admissions-guide`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/shanghai-jiao-tong-university-admissions-guide`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/zhejiang-university-admissions-guide`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    // Phase 137: Regional listicles + flagship comparisons
-    { url: `${SITE_URL}/peking-university-vs-tsinghua`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/peking-university-vs-fudan`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    // Phase 137: /peking-university-vs-* removed in Phase 146 —
+    // they 301 to /universities/compare/... (the compareUrls bucket
+    // below emits the canonical pairs).
     { url: `${SITE_URL}/best-universities-in-hong-kong`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/best-universities-in-northeast-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/phd-in-china-international-students`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
@@ -213,11 +213,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // University comparison pages — high-intent "X vs Y" search
   // queries. Pre-rendered at /universities/compare/[a]/vs/[b].
-  // 8 ranked universities → 28 unique pairs. Captures
-  // comparison-intent traffic (ChatGPT, Perplexity, Google).
+  // Phase 146: the canonical order per pair is ALPHABETICAL by slug
+  // (the compare page permanentRedirects the reverse order to it),
+  // so each emitted pair is sorted before inclusion — the sitemap
+  // never lists a URL that redirects.
   const rankedSlugs = universities
     .map((u) => u.slug)
-    .filter(Boolean);
+    .filter(Boolean)
+    .sort();
   const comparePairs: Array<{ a: string; b: string }> = [];
   for (let i = 0; i < rankedSlugs.length; i++) {
     for (let j = i + 1; j < rankedSlugs.length; j++) {

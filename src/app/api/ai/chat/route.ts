@@ -287,9 +287,9 @@ function generateUniversityResponse(uni: University, userMessage: string): strin
   }
   
   const followUp = [
-    `\n\n${uni.name} has so much to offer! Would you like to know more about their specific programs, application deadlines, scholarships, or student life there? I can also tell you about similar universidades if you'd like to compare options! 😊`,
+    `\n\n${uni.name} has so much to offer! Would you like to know more about their specific programs, application deadlines, scholarships, or student life there? I can also tell you about similar universities if you'd like to compare options! 😊`,
     `\n\nI hope that gives you a good overview of ${uni.name}! Is there something specific you'd like to dive deeper into - their English-taught programs, application requirements, campus facilities, or something else? I'm here to help! 🎓`,
-    `\n\n${uni.name} would be an excellent choice! What's your field of interest? I can help you explore the specific programs they offer in that area, and also suggest similar universidades that might be a good fit! 😊`
+    `\n\n${uni.name} would be an excellent choice! What's your field of interest? I can help you explore the specific programs they offer in that area, and also suggest similar universities that might be a good fit! 😊`
   ][Math.floor(Math.random() * 3)];
 
   // Append an inline card tag so the chat UI can render a

@@ -15,54 +15,55 @@ export const cscaDatesGuide: LocalizedGuide = {
   en: {
     slug: 'csca-exam-dates',
     eyebrow: 'GUIDE · CSCA DATES',
-    title: 'CSCA Exam Dates & Registration Windows (2026–2027) — When to Sit the Exam',
+    title: 'CSCA Exam Dates 2026-27 & When to Sit for Your Intake',
     description:
-      'The CSCA runs 5 sessions a year. Session calendar so far, registration windows (~15 days before each test), and how to plan backwards from your intake so scores land before deadlines.',
+      'Next CSCA exam: 14-15 Nov 2026 (register 15-21 Oct, Beijing time), then 19-20 Dec 2026 and 23-24 Jan 2027. Which sitting fits your 2027 application.',
     subtitle:
-      'The CSCA runs 5 sessions a year. The inaugural global test was December 21, 2025, and the 2026 calendar included January 25 and March 15 with further sittings through the year. Registration typically opens 3–4 weeks and closes about 15 days before each test — plan backwards from your intake so your score exists before your application deadline.',
+      'The CSCA exam runs mainly online at home with a live proctor. The next sitting is 14–15 November 2026 (registration 15–21 October, Beijing time), then 19–20 December 2026 and 23–24 January 2027. Pick the sitting that lands your score before your 2027 application deadline — especially CSC scholarship deadlines in January–April.',
     stats: [
-      { value: '5×/year', label: 'Sessions per year' },
-      { value: '~15 days', label: 'Before test — registration closes' },
-      { value: '4–6 months', label: 'Before intake — ideal session' },
-      { value: 'Jan–Apr', label: 'CSC scholarship deadline crunch' },
+      { value: '6/year', label: 'Sittings per year' },
+      { value: '14–15 Nov 2026', label: 'Next sitting' },
+      { value: '15–21 Oct', label: 'Registration (Beijing time)' },
+      { value: 'Online', label: 'Main mode — live-proctored at home' },
     ],
     quickAnswer:
-      'The CSCA is held 5 times a year. The inaugural global session was December 21, 2025; the 2026 calendar included January 25 and March 15 sessions with more sittings through the year. Registration windows are short — they typically open a few weeks ahead and close about 15 days before each test (the January 25, 2026 session, for example, registered from December 23, 2025 to January 10, 2026). For a September intake, sit the winter or early-spring session of that calendar year at the latest; CSC scholarship applicants must sit even earlier because scholarship deadlines cluster in January–April. The confirmed calendar for each session is published on the official CSCA registration portal — never assume last year\'s pattern repeats exactly.',
+      'The CSCA runs 6 sittings per year, mainly online at home with a live proctor. The next confirmed dates are 14–15 November 2026 (register 15–21 October 2026, Beijing time), 19–20 December 2026, and 23–24 January 2027, with further sittings in March, April, and June 2027. For a September 2027 intake, sit the November–January window so your score exists before CSC scholarship deadlines cluster in January–April. The confirmed calendar lives on the official portal, csca.cn.',
     keyTakeaways: [
-      '5 sessions per year; recent announced sittings: Dec 21, 2025 (inaugural), Jan 25, 2026, Mar 15, 2026',
-      'Registration closes ~15 days before each test — windows are short, so register the week they open',
-      'For a September intake: latest viable session is the winter/early-spring sitting of the same year',
-      'CSC scholarship applicants effectively must sit the earliest session of the year (deadlines Jan–Apr)',
-      'Results are released via the registration portal per session — download and forward to universities yourself',
-      'Never build a plan on rumored future dates — the official portal\'s per-session announcement is the only source',
+      '6 sittings per year; next confirmed: Nov 14–15 2026 (register Oct 15–21 Beijing time), Dec 19–20 2026, Jan 23–24 2027',
+      'The exam is mainly online at home with a live proctor — offline centres are only being added in some countries',
+      'Registration for the November sitting runs 15–21 October 2026 (Beijing time) — there is no general closing rule of thumb; each window is announced per session',
+      'For a September 2027 intake: sit Nov 2026 – Jan 2027 at the latest; CSC scholarship applicants should sit the earliest viable date',
+      'The official site is csca.cn — score reports are released via the portal and you attach them to each application yourself',
+      'Full session calendar, reminders, and free practice tests: cscaprep.academy/exam-dates',
     ],
     sections: [
       {
         id: 'how-often',
-        h2: 'How often is the CSCA held?',
+        h2: 'How often is the CSCA held, and where do you sit it?',
         intro:
-          'The CSCA runs 5 sessions per year — a cadence designed so applicants can sit (or re-sit) the exam within any application cycle without waiting a full year.',
+          'The CSCA runs 6 sittings per year, mainly online at home with a live proctor — you do not need to travel to a test centre in most countries.',
         blocks: [
           {
             type: 'p',
-            text: 'The inaugural global session was held December 21, 2025. The 2026 calendar included January 25 and March 15 sessions, with further sittings through the year — the launch notices described a schedule of roughly one session every two to three months across January, March, April, and beyond. Five sessions a year means a candidate who misses one, or wants to improve a score, waits at most a few months for the next sitting.',
+            text: 'The exam is organized by the China Scholarship Council (CSC) and developed with Chinese university experts. It runs mainly online: you sit at home with a live proctor watching via webcam. Offline centres (computer-based or paper) are being added in some countries, but online is the default path for most international applicants. Six sittings a year means a candidate who misses one, or wants to improve a score, waits at most a couple of months for the next.',
           },
           {
             type: 'table',
-            caption: 'Sessions announced so far (as published at launch — confirm each on the official portal)',
-            columns: ['Session', 'Test date', 'Registration window', 'Status'],
+            caption: 'CSCA sittings for the 2026-27 application cycle (official calendar: csca.cn)',
+            columns: ['Sitting', 'Test date', 'Registration window', 'Status'],
             rows: [
-              ['Inaugural global test', 'December 21, 2025', 'Opened Nov 2025', 'Held'],
-              ['2026 Session 2', 'January 25, 2026', 'Dec 23, 2025 – Jan 10, 2026', 'Held'],
-              ['2026 Session 3', 'March 15, 2026', 'Closed ~Mar 1, 2026', 'Held'],
-              ['2026 Sessions 4–5', 'Through 2026', 'Per-session announcements', 'See official portal'],
-              ['2027 sessions', 'TBA', 'TBA', 'Announced per session'],
+              ['November 2026', '14–15 Nov 2026', '15–21 Oct 2026 (Beijing time)', 'Confirmed'],
+              ['December 2026', '19–20 Dec 2026', 'Announced per session', 'Confirmed'],
+              ['January 2027', '23–24 Jan 2027', 'Announced per session', 'Confirmed'],
+              ['March 2027', 'Exact dates TBA', 'Announced per session', 'Pending official notice'],
+              ['April 2027', 'Exact dates TBA', 'Announced per session', 'Pending official notice'],
+              ['June 2027', 'Exact dates TBA', 'Announced per session', 'Pending official notice'],
             ],
           },
           {
             type: 'callout',
-            tone: 'warning',
-            text: 'The table above lists only dates that were officially announced at launch. Later 2026 and all 2027 dates follow a per-session announcement rhythm — check the official CSCA registration portal (or your target university\'s admissions notice) rather than extrapolating.',
+            tone: 'info',
+            text: 'For the full session calendar, registration walkthroughs, and free practice tests for every sitting, see CSCA Prep: https://cscaprep.academy/exam-dates. SICA covers the admissions side — which universities require the CSCA and when your score must exist. CSCA Prep covers the exam itself.',
           },
         ],
       },
@@ -70,16 +71,15 @@ export const cscaDatesGuide: LocalizedGuide = {
         id: 'registration-windows',
         h2: 'When does CSCA registration open and close?',
         intro:
-          'Registration windows are short — typically opening 3–4 weeks before the test and closing about 15 days before the exam date.',
+          'Each sitting has its own announced registration window — there is no general rule of thumb. The November 2026 window runs 15–21 October, Beijing time.',
         blocks: [
           {
             type: 'ul',
             items: [
-              '**Close date** — roughly 15 days before each test, consistently across announced sessions',
-              '**Open date** — varies per session; the January 25, 2026 session opened December 23, 2025 (about 4–5 weeks ahead)',
-              '**Center capacity** — domestic and overseas centers fill up; late registrants may find their nearest center full even while the window is technically open',
-              '**Payment inside the window** — the registration is only complete once the fee is paid (¥450 for 1 subject / ¥700 for 2+); bank transfers that take 3–5 business days can run past the deadline if started late',
-              '**No late window** — there is no published late-registration or walk-in option; a missed window means the next session',
+              '**November 2026 sitting** — registration runs 15–21 October 2026, Beijing time. That is a one-week window; there is no general rule of thumb for when windows close — check each announcement',
+              '**Later sittings** — each window is announced per session on the official portal; check csca.cn rather than extrapolating from the November window',
+              '**Payment inside the window** — registration is only complete once the fee is paid (RMB 450 for 1 subject / RMB 700 for 2 or more); payment methods that take days to clear can run past the deadline if started late',
+              '**No late window** — there is no published late-registration or walk-in option; a missed window means the next sitting',
             ],
           },
           {
@@ -91,27 +91,28 @@ export const cscaDatesGuide: LocalizedGuide = {
       },
       {
         id: 'planning-backwards',
-        h2: 'When should you sit the CSCA? Plan backwards from your intake',
+        h2: 'When should you sit the CSCA? Plan backwards from your 2027 intake',
         intro:
-          'Your session choice is determined by one constraint: your score must exist before your application deadline. Work backwards.',
+          'Your sitting choice is determined by one constraint: your score must exist before your application deadline. The live cycle is now the March 2027 and September 2027 intakes.',
         blocks: [
           {
             type: 'table',
-            caption: 'Backwards planning by target intake',
-            columns: ['Target intake', 'Application window', 'Latest viable CSCA session', 'Recommended session'],
+            caption: 'Backwards planning by target intake (2027 cycle)',
+            columns: ['Target intake', 'Application window', 'Latest viable CSCA sitting', 'Recommended sitting'],
             rows: [
-              ['September (Fall)', '~Nov – June (rolling; top schools close Jan–Feb)', 'Winter/early-spring of the same year', 'Winter session — leaves one backup before CSC deadlines'],
-              ['March (Spring)', '~Jul – Dec of prior year', 'Mid-year session of the prior year', 'Autumn session of the prior year'],
-              ['CSC scholarship + September', 'Jan – Apr', 'Winter session of the same year', 'Earliest available session of the year (retake room before April)'],
+              ['September 2027 (Fall)', 'Roughly Nov 2026 – June 2027 (top schools close earlier)', 'January 2027 (23–24 Jan)', 'November or December 2026 — leaves a retake before CSC deadlines'],
+              ['March 2027 (Spring)', 'Roughly Jul – Dec 2026', 'December 2026 (19–20 Dec)', 'November 2026 (14–15 Nov)'],
+
+              ['CSC scholarship + Sept 2027', 'Jan – Apr 2027 (varies; Pakistan HEC route can close Dec–Jan [verify])', 'December 2026 at the latest', 'November 2026 — the earliest viable sitting'],
             ],
           },
           {
             type: 'ol',
             items: [
-              '**Write down your application deadlines** — for each target university. Note that top-tier (C9/985) schools often close in January–February, months before mid-tier rolling deadlines.',
+              '**Write down your application deadlines** — for each target university. Top-tier (C9/985) schools often close months before mid-tier rolling deadlines.',
               '**Count back 6–8 weeks from the earliest deadline** — that is the last date you need your score in hand, so the test itself must be even earlier.',
-              '**Pick the session 4–6 months before your intake** — early enough to retake, late enough that your prep is complete.',
-              '**Register the week the window opens** — center availability, not the deadline, is the real constraint.',
+              '**Pick the sitting that leaves retake room** — for September 2027, that means Nov 2026 (first attempt) with Dec 2026 or Jan 2027 as the backup.',
+              '**Register the week the window opens** — the November window (15–21 Oct 2026) is only one week long.',
             ],
           },
           {
@@ -125,45 +126,40 @@ export const cscaDatesGuide: LocalizedGuide = {
         id: 'deadline-crunch',
         h2: 'The CSC scholarship deadline crunch',
         intro:
-          'CSC (Chinese Government Scholarship) deadlines cluster in January–April, which effectively forces scholarship applicants into the earliest CSCA session of each year.',
+          'CSC (Chinese Government Scholarship) deadlines cluster in January–April 2027, which effectively forces scholarship applicants into the November–December 2026 sittings.',
         blocks: [
           {
             type: 'ul',
             items: [
-              '**Hard constraint** — CSC applications require a CSCA score from the 2026 intake onward; a missing score disqualifies the application regardless of other strengths',
-              '**Embassy (Bilateral) channel** — deadlines often the earliest, sometimes January–March',
-              '**University (Chinese University Program) channel** — typically February–April, but top universities close earlier',
-              '**Practical rule** — sit the first session of the calendar year. If your score disappoints, the second session (~2 months later) still lands before most April deadlines — barely; the third usually does not',
+              '**Hard constraint** — CSC scholarship undergraduate applications require a CSCA score; a missing score disqualifies the application regardless of other strengths',
+              '**Pakistan HEC route (agency no. 5861)** — an earlier December–January deadline is reported [verify]; HEC applicants should sit November 2026',
+              '**University (Type B) channel** — deadlines roughly January–April 2027 and vary by university [verify]; top universities close earlier',
+              '**Practical rule** — sit November 2026. If the score disappoints, the December sitting still lands before most deadlines — barely; January usually does not',
               '**Self-funded fallback** — if the retake misses the CSC cutoff, you can still apply self-funded with the new score and re-attempt CSC next cycle',
             ],
           },
           {
             type: 'callout',
             tone: 'warning',
-            text: 'CSC deadlines do not move. Unlike university deadlines — where admissions offices sometimes grant extensions — a scholarship file without a CSCA score is simply incomplete. Build your entire exam calendar around the January–April window.',
+            text: 'CSC deadlines do not move. Unlike university deadlines — where admissions offices sometimes grant extensions — a scholarship file without a CSCA score is simply incomplete. Build your entire exam calendar around the November sitting.',
           },
         ],
       },
       {
         id: 'missed-session',
-        h2: 'Missed a session or a deadline?',
+        h2: 'Missed a sitting or a registration window?',
         intro:
-          'Missing a session is recoverable if you understand which universities can still use a later score.',
+          'Missing a sitting is recoverable if you understand which universities can still use a later score.',
         blocks: [
           {
             type: 'ul',
             items: [
-              '**Top-tier schools (Jan–Feb deadlines)** — a later session\'s score arrives too late this cycle; target the next cycle or shift to mid-tier targets',
-              '**Mid-tier and regional universities (rolling to June)** — a spring session score still fits; ask the admissions office explicitly whether applications remain open',
-              '**Scholarship applicants** — a missed early session usually means the CSC cycle is gone; self-funded applications can continue, and you can re-attempt CSC next cycle with a stronger score',
-              '**Registration closed but test not yet held** — no published late-registration path; your realistic option is the next session',
-              '**Score weaker than hoped** — do not wait a full year; the 2-month session gap is exactly why the exam runs 5 times a year',
+              '**Top-tier schools (early deadlines)** — a later sitting\'s score arrives too late this cycle; target the next cycle or shift to mid-tier targets',
+              '**Mid-tier and regional universities (rolling into mid-2027)** — a January 2027 score still fits; ask the admissions office explicitly whether applications remain open',
+              '**Scholarship applicants** — a missed November sitting usually means the CSC cycle is gone; self-funded applications can continue, and you can re-attempt CSC next cycle with a stronger score',
+              '**Registration closed but test not yet held** — no published late-registration path; your realistic option is the next sitting',
+              '**Score weaker than hoped** — do not wait a full year; the roughly 2-month sitting gap is exactly why the exam runs 6 times a year',
             ],
-          },
-          {
-            type: 'callout',
-            tone: 'info',
-            text: 'Universities see the score report you choose to submit — so a retake in the next session can replace a weak first attempt for any deadline that is still open. SICA counselors track which of your target schools remain viable after each session.',
           },
         ],
       },
@@ -171,20 +167,20 @@ export const cscaDatesGuide: LocalizedGuide = {
         id: 'where-to-check',
         h2: 'Where to find the confirmed calendar',
         intro:
-          'Session dates, registration windows, and center lists are announced per session. Three sources are authoritative; everything else is rumor.',
+          'Sitting dates, registration windows, and subject availability are announced per session. The official sources are few; everything else is rumor.',
         blocks: [
           {
             type: 'ol',
             items: [
-              '**The official CSCA registration portal** — the .org.cn domain linked from government notices. It carries each session\'s announcement: test date, registration window, center list, and subject availability.',
-              '**Your target university\'s international admissions page** — universities email current applicants the session announcements relevant to their programs; BLCU, CUMT, GDUFS and others published launch-period instructions this way.',
-              '**The Chinese embassy/consulate in your country** — the Bilateral (scholarship) channel publishes CSCA notices for applicants in your country, including local center arrangements.',
+              '**The official CSCA portal — csca.cn** — it carries each sitting\'s announcement: test date, registration window, mode, and subject availability.',
+              '**Your target university\'s international admissions page** — universities publish CSCA requirements in their admission notices for international students.',
+              '**Your country\'s CSC dispatch authority** — for scholarship applicants, the agency running the CSC channel in your country (e.g. HEC in Pakistan) publishes CSCA notices for applicants there.',
             ],
           },
           {
             type: 'callout',
             tone: 'warning',
-            text: 'Third-party blogs and agencies republish dates with errors and stale fee amounts — and some invent dates to push registrations. If a date does not trace to the official portal, an embassy notice, or a university admissions page, do not plan around it.',
+            text: 'Third-party blogs and agencies republish dates with errors and stale fee amounts — and some invent dates to push registrations. If a date does not trace to csca.cn, an official dispatch authority, or a university admissions page, do not plan around it.',
           },
         ],
       },
@@ -192,31 +188,31 @@ export const cscaDatesGuide: LocalizedGuide = {
     faqs: [
       {
         q: 'When is the next CSCA exam?',
-        a: 'The CSCA runs 5 sessions per year. Dates announced so far: the inaugural global test on December 21, 2025, then January 25 and March 15, 2026, with further sessions through the year. Each new session is announced on the official CSCA registration portal — that announcement, not last year\'s pattern, is the confirmed source for the next date.',
+        a: 'The next confirmed sitting is 14–15 November 2026, with registration open 15–21 October 2026 (Beijing time). After that: 19–20 December 2026 and 23–24 January 2027, with further sittings in March, April, and June 2027. Each sitting is announced on the official portal, csca.cn — that announcement, not any pattern, is the confirmed source.',
       },
       {
         q: 'How far in advance should I register?',
-        a: 'Registration windows open roughly 3–5 weeks before each test and close about 15 days before the exam date. Register in the first days of the window: overseas center seats are limited and bank-transfer payments can take 3–5 business days to clear.',
+        a: 'Each sitting has its own announced window — there is no general rule. The November 2026 window runs just one week, 15–21 October (Beijing time). Register in the first days of the window and have your payment channel ready, because the fee (RMB 450 for one subject, RMB 700 for two or more) must clear before the window closes.',
       },
       {
         q: 'What happens if I miss the registration deadline?',
-        a: 'There is no published late-registration or walk-in option — the window closes about 15 days before the test. Your options are the next session (typically 2–3 months later) or, if your target university\'s deadline still allows, contacting the admissions office about the following sitting.',
+        a: 'There is no published late-registration or walk-in option. Your options are the next sitting (typically 1–2 months later) or, if your target university\'s deadline still allows, contacting the admissions office about the following sitting.',
       },
       {
-        q: 'Which CSCA session should I take for September intake?',
-        a: 'Sit the winter or early-spring session of the same calendar year at the latest. The recommended choice is 4–6 months before intake — early enough that a retake in the next session still lands before your deadlines, especially top universities that close applications in January–February.',
+        q: 'Which CSCA sitting should I take for the September 2027 intake?',
+        a: 'Sit November or December 2026 at the latest. The recommended first attempt is November 2026 (14–15 Nov) — early enough that a December or January retake still lands before application deadlines, especially CSC scholarship deadlines that cluster in January–April 2027.',
       },
       {
         q: 'When do CSCA results come out?',
-        a: 'Results are released through the official registration portal after each session; the portal publishes the expected release window when the session opens. You download the score report yourself and attach it to each university application — universities do not receive it automatically.',
+        a: 'Results are released through the official portal after each sitting — within 10 working days for online and computer-based tests is the published guidance [verify]. You download the score report yourself and attach it to each university application — universities do not receive it automatically.',
       },
       {
         q: 'Can I take the CSCA twice in one year?',
-        a: 'Yes — with 5 sessions a year, sitting two sessions (typically ~2–3 months apart) is normal and often planned: first attempt for the real deadline, second as a score improvement. Universities consider the score report you choose to submit.',
+        a: 'Yes — with 6 sittings a year, sitting twice (typically 1–2 months apart) is normal and often planned: first attempt for the real deadline, second as a score improvement. Check your target universities\' policy on multiple score reports [verify].',
       },
       {
-        q: 'Do all test centers operate in every session?',
-        a: 'No — center availability varies by session and country. The official portal publishes the center list per session during registration, and popular overseas centers can fill up before the window closes, which is why registering early matters even when the deadline looks far away.',
+        q: 'Do I have to go to a test centre to sit the CSCA?',
+        a: 'No — the exam is mainly online at home with a live proctor. Offline centres (computer-based or paper) are being added in some countries, but online is the default path for most international applicants. The per-sitting announcement on csca.cn lists the modes available.',
       },
     ],
     howToSteps: [
@@ -271,54 +267,55 @@ export const cscaDatesGuide: LocalizedGuide = {
   zh: {
     slug: 'csca-exam-dates',
     eyebrow: '指南 · CSCA 时间',
-    title: 'CSCA 考试时间与报名窗口（2026–2027）——什么时候考最合适',
+    title: 'CSCA 考试时间 2026-27：下一场 11 月 14-15 日',
     description:
-      'CSCA 每年 5 次考试。已公布场次日历、报名窗口（考前约 15 天截止）、以及如何从入学时间倒推规划，确保成绩赶在申请截止前拿到。',
+      '下一场 CSCA 考试：2026 年 11 月 14-15 日（报名 10 月 15-21 日，北京时间），随后 12 月 19-20 日、2027 年 1 月 23-24 日。哪一场适合你的 2027 年申请。',
     subtitle:
-      'CSCA 每年举行 5 次。全球首考为 2025 年 12 月 21 日，2026 年含 1 月 25 日与 3 月 15 日场次，年内另有后续场次。报名窗口很短——通常提前 3-4 周开放、考前约 15 天截止（如 2026 年 1 月 25 日场次报名期为 2025 年 12 月 23 日至 1 月 10 日）。从入学时间倒推规划，确保成绩在申请截止前到位。',
+      'CSCA 考试以居家线上为主，真人监考。下一场为 2026 年 11 月 14-15 日（报名 10 月 15-21 日，北京时间），随后是 12 月 19-20 日与 2027 年 1 月 23-24 日。选择能让成绩赶在 2027 年申请截止前到位的那一场——尤其是截止集中在 1-4 月的 CSC 奖学金。',
     stats: [
-      { value: '5 次/年', label: '每年场次' },
-      { value: '约 15 天', label: '考前——报名截止' },
-      { value: '4-6 个月', label: '入学前——理想场次' },
-      { value: '1-4 月', label: 'CSC 奖学金截止窗口' },
+      { value: '6 次/年', label: '每年场次' },
+      { value: '2026-11-14/15', label: '下一场' },
+      { value: '10 月 15-21 日', label: '报名窗口（北京时间）' },
+      { value: '线上', label: '主要模式——居家真人监考' },
     ],
     quickAnswer:
-      'CSCA 每年举行 5 次。全球首考为 2025 年 12 月 21 日；2026 年含 1 月 25 日与 3 月 15 日场次，年内另有更多场次。报名窗口很短——通常提前数周开放、考前约 15 天截止（如 2026 年 1 月 25 日场次报名期为 2025 年 12 月 23 日至 2026 年 1 月 10 日）。对应 9 月入学，最迟参加同年冬季或早春场次；CSC 奖学金申请者须更早，因为奖学金截止集中在 1-4 月。每场次的确认日历以官方 CSCA 报名门户公布为准——不要假设去年节奏完全复刻。',
+      'CSCA 每年举行 6 场，以居家线上、真人监考为主。已确认的最近日期为 2026 年 11 月 14-15 日（报名 2026 年 10 月 15-21 日，北京时间）、12 月 19-20 日、2027 年 1 月 23-24 日，其后 2027 年 3 月、4 月、6 月还有场次。2027 年 9 月入学的申请者应在 2026 年 11 月至 2027 年 1 月之间完成考试，确保成绩赶在集中在 1-4 月的 CSC 奖学金截止之前。确认日历以官方 csca.cn 为准。',
     keyTakeaways: [
-      '每年 5 场；已公布场次：2025 年 12 月 21 日（首考）、2026 年 1 月 25 日、3 月 15 日',
-      '报名考前约 15 天截止——窗口短，窗口一开就报',
-      '对应 9 月入学：最迟参加同年冬季/早春场次',
-      'CSC 奖学金申请者事实上必须参加年内最早场次（截止 1-4 月）',
-      '成绩按场次在报名门户发布——自行下载并寄送各大学',
-      '不要按传闻中的未来日期做规划——官方门户的场次公告是唯一可靠来源',
+      '每年 6 场；已确认：2026 年 11 月 14-15 日（报名 10 月 15-21 日北京时间）、12 月 19-20 日、2027 年 1 月 23-24 日',
+      '考试以居家线上、真人监考为主——线下考点仅在部分国家逐步增设',
+      '11 月场次报名窗口为 2026 年 10 月 15-21 日（北京时间）——不存在统一的截止规律，逐场以公告为准',
+      '2027 年 9 月入学：最迟 2027 年 1 月考完；CSC 奖学金申请者应尽早参加',
+      '官方网站是 csca.cn——成绩从门户自行下载后随申请提交',
+      '完整场次日历与免费练习：cscaprep.academy/exam-dates',
     ],
     sections: [
       {
         id: 'how-often',
-        h2: 'CSCA 多久考一次？',
+        h2: 'CSCA 多久考一次？在哪里考？',
         intro:
-          'CSCA 每年举行 5 次——这个节奏让申请者在任何申请周期内都能完成首考或重考，无需等待一整年。',
+          'CSCA 每年举行 6 场，以居家线上、真人监考为主——大多数国家的考生无需前往考点。',
         blocks: [
           {
             type: 'p',
-            text: '全球首考为 2025 年 12 月 21 日。2026 年日历含 1 月 25 日与 3 月 15 日场次，年内另有后续场次——启动通知描述的节奏约为每两到三个月一场，覆盖 1 月、3 月、4 月等。每年 5 场意味着错过或想刷分的考生最多等几个月就有下一场。',
+            text: 'CSCA 由中国国家留学基金委（CSC）组织、联合中国高校专家开发。考试以线上为主：考生在家作答，监考人员通过摄像头实时监督。部分国家正在增设线下考点（机考或纸笔），但对多数国际考生而言，线上是默认路径。每年 6 场意味着错过或想刷分的考生最多等一两个月就有下一场。',
           },
           {
             type: 'table',
-            caption: '已公布场次（启动时口径——逐场以官方门户为准）',
+            caption: '2026-27 申请周期的 CSCA 场次（官方日历：csca.cn）',
             columns: ['场次', '考试日期', '报名窗口', '状态'],
             rows: [
-              ['全球首考', '2025 年 12 月 21 日', '2025 年 11 月起', '已举行'],
-              ['2026 年第 2 场', '2026 年 1 月 25 日', '2025 年 12 月 23 日 – 2026 年 1 月 10 日', '已举行'],
-              ['2026 年第 3 场', '2026 年 3 月 15 日', '约 2026 年 3 月 1 日截止', '已举行'],
-              ['2026 年第 4-5 场', '2026 年内', '逐场公告', '见官方门户'],
-              ['2027 年场次', '待公布', '待公布', '逐场公布'],
+              ['2026 年 11 月', '2026 年 11 月 14-15 日', '2026 年 10 月 15-21 日（北京时间）', '已确认'],
+              ['2026 年 12 月', '2026 年 12 月 19-20 日', '逐场公告', '已确认'],
+              ['2027 年 1 月', '2027 年 1 月 23-24 日', '逐场公告', '已确认'],
+              ['2027 年 3 月', '具体日期待定', '逐场公告', '待官方通知'],
+              ['2027 年 4 月', '具体日期待定', '逐场公告', '待官方通知'],
+              ['2027 年 6 月', '具体日期待定', '逐场公告', '待官方通知'],
             ],
           },
           {
             type: 'callout',
-            tone: 'warning',
-            text: '上表仅列启动时官方公布的日期。其后的 2026 年及全部 2027 年日期按场次逐次公告——请查官方 CSCA 报名门户或目标大学招生通知，不要外推。',
+            tone: 'info',
+            text: '完整场次日历、报名操作指引与每场免费模拟题见 CSCA Prep：https://cscaprep.academy/exam-dates。SICA 负责招生侧——哪些大学要求 CSCA、成绩何时必须到位；考试本身的内容与练习在 CSCA Prep。',
           },
         ],
       },
@@ -326,15 +323,14 @@ export const cscaDatesGuide: LocalizedGuide = {
         id: 'registration-windows',
         h2: 'CSCA 报名何时开放、何时截止？',
         intro:
-          '报名窗口很短——通常提前 3-4 周开放，考前约 15 天截止。',
+          '每场考试的报名窗口单独公告——没有可套用的一般规律。2026 年 11 月场次的窗口为 10 月 15-21 日（北京时间）。',
         blocks: [
           {
             type: 'ul',
             items: [
-              '**截止时间**——各场次一致：考前约 15 天',
-              '**开放时间**——逐场不同；2026 年 1 月 25 日场次自 2025 年 12 月 23 日开放（提前约 4-5 周）',
-              '**考点容量**——境内外考位有限；窗口名义上未关、最近考点却已满员是常事',
-              '**窗口内完成支付**——缴费完成报名才算生效（单科 ¥450 / 两科及以上 ¥700）；银行转账 3-5 个工作日，拖到最后才启动会过期',
+              '**2026 年 11 月场次**——报名窗口为 2026 年 10 月 15-21 日（北京时间），仅一周；不存在统一的截止规律，逐场以公告为准',
+              '**后续场次**——每场窗口由官方门户单独公告；请查 csca.cn，不要从 11 月窗口外推',
+              '**窗口内完成支付**——缴费完成报名才算生效（单科 450 元 / 两科及以上 700 元人民币）；到账需数日的支付方式拖到最后会过期',
               '**无补报通道**——没有公布的逾期报名或现场报名选项；错过窗口即等下一场',
             ],
           },
@@ -347,27 +343,27 @@ export const cscaDatesGuide: LocalizedGuide = {
       },
       {
         id: 'planning-backwards',
-        h2: '什么时候考？从入学时间倒推',
+        h2: '什么时候考？从 2027 年入学倒推',
         intro:
-          '场次选择只有一个硬约束：成绩必须在申请截止前存在。倒推即可。',
+          '场次选择只有一个硬约束：成绩必须在申请截止前存在。当前申请周期为 2027 年 3 月与 9 月入学。',
         blocks: [
           {
             type: 'table',
-            caption: '按目标入学倒推',
+            caption: '按目标入学倒推（2027 周期）',
             columns: ['目标入学', '申请窗口', '最迟可行场次', '推荐场次'],
             rows: [
-              ['9 月（秋季）', '约 11 月 – 次年 6 月（滚动；顶尖校 1-2 月截止）', '同年冬季/早春', '冬季场次——CSC 截止前还留有一场备份'],
-              ['3 月（春季）', '前一年约 7 – 12 月', '前一年年中场次', '前一年秋季场次'],
-              ['CSC 奖学金 + 9 月入学', '1 – 4 月', '同年冬季场次', '年内最早场次（4 月前留一次重考空间）'],
+              ['2027 年 9 月（秋季）', '约 2026 年 11 月 – 2027 年 6 月（顶尖校更早截止）', '2027 年 1 月（23-24 日）', '2026 年 11 月或 12 月——CSC 截止前留有重考空间'],
+              ['2027 年 3 月（春季）', '约 2026 年 7 – 12 月', '2026 年 12 月（19-20 日）', '2026 年 11 月（14-15 日）'],
+              ['CSC 奖学金 + 2027 年 9 月', '2027 年 1 – 4 月（各国渠道不同；巴基斯坦 HEC 渠道据报 12-1 月截止 [待核实]）', '最迟 2026 年 12 月', '2026 年 11 月——最早可行场次'],
             ],
           },
           {
             type: 'ol',
             items: [
-              '**列下所有申请截止日**——按日期排序。决定场次的是最早的那个，不是平均数。顶尖（C9/985）常在 1-2 月就截止。',
+              '**列下所有申请截止日**——按日期排序。决定场次的是最早的那个，不是平均数。顶尖（C9/985）校的截止远早于滚动录取的中游校。',
               '**从最早截止日往前推 6-8 周**——这是成绩必须到手的最后日期，考试本身还要更早。',
-              '**选入学前 4-6 个月的场次**——早到可重考，晚到备考充分。',
-              '**窗口开放首周报名**——真正的约束是考位，不是截止日。',
+              '**选留有重考空间的场次**——2027 年 9 月入学的理想安排：11 月首考，12 月或 1 月作为备份。',
+              '**窗口开放首周报名**——11 月窗口（2026 年 10 月 15-21 日）只有一周。',
             ],
           },
           {
@@ -381,45 +377,40 @@ export const cscaDatesGuide: LocalizedGuide = {
         id: 'deadline-crunch',
         h2: 'CSC 奖学金的截止挤压',
         intro:
-          'CSC（中国政府奖学金）截止集中在 1-4 月，这事实上把奖学金申请者锁定在每年最早的 CSCA 场次。',
+          'CSC（中国政府奖学金）截止集中在 2027 年 1-4 月，这事实上把奖学金申请者锁定在 2026 年 11-12 月的场次。',
         blocks: [
           {
             type: 'ul',
             items: [
-              '**硬约束**——自 2026 级起 CSC 申请必须附 CSCA 成绩；缺成绩即不合格，其他条件再强也不行',
-              '**使馆（双边）渠道**——截止往往最早，常在 1-3 月',
-              '**大学（中国大学项目）渠道**——通常 2-4 月，但顶尖大学更早关闸',
-              '**实操法则**——参加年内第一场。若成绩不理想，第二场（约 2 个月后）勉强赶得上多数 4 月截止；第三场通常赶不上',
+              '**硬约束**——CSC 奖学金本科申请必须附 CSCA 成绩；缺成绩即不合格，其他条件再强也不行',
+              '**巴基斯坦 HEC 渠道（机构号 5861）**——据报截止更早，在 12-1 月 [待核实]；HEC 申请者应参加 2026 年 11 月场次',
+              '**大学（Type B）渠道**——截止约在 2027 年 1-4 月，因校而异 [待核实]；顶尖大学更早关闸',
+              '**实操法则**——参加 2026 年 11 月场次。若成绩不理想，12 月场次勉强赶得上多数截止；1 月通常来不及',
               '**自费兜底**——重考错过 CSC 截止，仍可用新成绩走自费申请，并在下一周期再战 CSC',
             ],
           },
           {
             type: 'callout',
             tone: 'warning',
-            text: 'CSC 截止日不会动。大学截止有时可协商延期，但缺 CSCA 成绩的奖学金材料就是材料不齐。整个考试日历必须围绕 1-4 月窗口排布。',
+            text: 'CSC 截止日不会动。大学截止有时可协商延期，但缺 CSCA 成绩的奖学金材料就是材料不齐。整个考试日历必须围绕 11 月场次排布。',
           },
         ],
       },
       {
         id: 'missed-session',
-        h2: '错过场次或截止怎么办？',
+        h2: '错过场次或报名截止怎么办？',
         intro:
           '错过场次可以补救，前提是清楚哪些大学还能用更晚的成绩。',
         blocks: [
           {
             type: 'ul',
             items: [
-              '**顶尖院校（1-2 月截止）**——更晚场次的成绩本周期赶不上；瞄准下一周期，或转向中游目标',
-              '**中游与地方院校（滚动至 6 月）**——春季场成绩仍然可行；直接询问招生办申请是否仍开放',
-              '**奖学金申请者**——错过早期场次通常意味着本轮 CSC 结束；自费申请可继续，下周期携更强成绩再战 CSC',
+              '**顶尖院校（早截止）**——更晚场次的成绩本周期赶不上；瞄准下一周期，或转向中游目标',
+              '**中游与地方院校（滚动至 2027 年年中）**——2027 年 1 月场成绩仍然可行；直接询问招生办申请是否仍开放',
+              '**奖学金申请者**——错过 11 月场次通常意味着本轮 CSC 结束；自费申请可继续，下周期携更强成绩再战 CSC',
               '**报名已关、考试未考**——无公布的补报通道；现实选项是下一场',
-              '**成绩不理想**——不要等一年；一年 5 场、2-3 个月一场的节奏正是为此设计的',
+              '**成绩不理想**——不要等一年；一年 6 场、约 1-2 个月一场的节奏正是为此设计的',
             ],
-          },
-          {
-            type: 'callout',
-            tone: 'info',
-            text: '大学只看你选择提交的成绩单——所以下一场重考可以替换首次弱分，只要目标院校截止仍开放。SICA 顾问逐场追踪哪些目标院校仍然可行。',
           },
         ],
       },
@@ -427,20 +418,20 @@ export const cscaDatesGuide: LocalizedGuide = {
         id: 'where-to-check',
         h2: '到哪里查确认日历',
         intro:
-          '场次日期、报名窗口与考点清单逐场公布。三个来源是权威的；其余都是传闻。',
+          '场次日期、报名窗口与科目可用性逐场公布。官方来源很少；其余都是传闻。',
         blocks: [
           {
             type: 'ol',
             items: [
-              '**官方 CSCA 报名门户**——政府通知中链接的 .org.cn 域名。承载每场公告：考试日期、报名窗口、考点清单、科目可用性。',
-              '**目标大学国际招生页**——大学会把与项目相关的场次公告推给在读申请者；北语、矿大、广外等在启动期均如此发布。',
-              '**所在国的中国使领馆**——双边（奖学金）渠道面向本国申请者发布 CSCA 通知，含当地考点安排。',
+              '**官方 CSCA 门户——csca.cn**——承载每场公告：考试日期、报名窗口、考试模式与科目可用性。',
+              '**目标大学国际招生页**——大学在国际学生招生通知中公布 CSCA 要求。',
+              '**所在国的 CSC 派出机构**——奖学金申请者所在国负责 CSC 渠道的机构（如巴基斯坦 HEC）会面向本国申请者发布 CSCA 通知。',
             ],
           },
           {
             type: 'callout',
             tone: 'warning',
-            text: '第三方博客与中介转载日期常带错误与过期费用——有的甚至编造日期催促报名。任何无法追溯到官方门户、使馆通知或大学招生页的日期，都不要据此规划。',
+            text: '第三方博客与中介转载日期常带错误与过期费用——有的甚至编造日期催促报名。任何无法追溯到 csca.cn、官方派出机构或大学招生页的日期，都不要据此规划。',
           },
         ],
       },
@@ -448,31 +439,31 @@ export const cscaDatesGuide: LocalizedGuide = {
     faqs: [
       {
         q: '下一场 CSCA 什么时候考？',
-        a: 'CSCA 每年 5 场。已公布日期：2025 年 12 月 21 日全球首考，随后 2026 年 1 月 25 日与 3 月 15 日，年内另有后续场次。每一新场次都在官方 CSCA 报名门户公告——该公告（而非去年规律）是下一场日期的确认来源。',
+        a: '下一场已确认为 2026 年 11 月 14-15 日，报名窗口 10 月 15-21 日（北京时间）。随后：12 月 19-20 日、2027 年 1 月 23-24 日，2027 年 3 月、4 月、6 月另有场次。每场均以官方 csca.cn 公告为准——不是任何"规律"。',
       },
       {
         q: '应提前多久报名？',
-        a: '报名窗口通常考前 3-5 周开放、考前约 15 天截止。窗口开放头几天就报：境外考位有限，银行转账到账可能需 3-5 个工作日。',
+        a: '每场报名窗口单独公告——没有一般规律。2026 年 11 月场次的窗口只有一周：10 月 15-21 日（北京时间）。窗口开放头几天就报，并备好支付通道——费用（单科 450 元、两科及以上 700 元人民币）必须在窗口内到账。',
       },
       {
         q: '错过报名截止怎么办？',
-        a: '没有公布的补报或现场报名通道——窗口考前约 15 天关闭。选项是下一场（通常 2-3 个月后），或若目标院校截止仍允许，联系招生办确认下一场次是否可行。',
+        a: '没有公布的补报或现场报名通道。选项是下一场（通常 1-2 个月后），或若目标院校截止仍允许，联系招生办确认下一场次是否可行。',
       },
       {
-        q: '对应 9 月入学应参加哪场 CSCA？',
-        a: '最迟参加同年冬季或早春场次。推荐选择入学前 4-6 个月的那场——早到可在下一场重考并仍赶在截止前，尤其是 1-2 月就关闸的顶尖大学。',
+        q: '2027 年 9 月入学应参加哪场 CSCA？',
+        a: '最迟 2027 年 1 月考完。推荐首考选 2026 年 11 月（14-15 日）——早到 12 月或 1 月还有一次重考空间，尤其 CSC 奖学金截止集中在 2027 年 1-4 月。',
       },
       {
         q: 'CSCA 成绩什么时候出？',
-        a: '成绩在每场考试后经官方报名门户发布；门户在报名开放时公布预计发布时间。成绩单需自行下载并附到各大学申请中——大学不会自动收到。',
+        a: '每场考试后经官方门户发布——线上与机考的公布口径为 10 个工作日内 [待核实]。成绩单需自行下载并附到各大学申请中——大学不会自动收到。',
       },
       {
         q: '一年可以考两次 CSCA 吗？',
-        a: '可以——一年 5 场，间隔约 2-3 个月，连考两场很常见且有规划价值：首考冲真实截止，次考刷分。大学以你选择提交的成绩单为准。',
+        a: '可以——一年 6 场，间隔约 1-2 个月，连考两场很常见且有规划价值：首考冲真实截止，次考刷分。多次成绩单如何提交请核对目标大学的要求 [待核实]。',
       },
       {
-        q: '所有考点每场都开吗？',
-        a: '不是——考点可用性逐场次、逐国家而变。官方门户在报名时公布当次考点清单；热门境外考点常在窗口截止前就满员，所以即便截止日看似尚远也要尽早报名。',
+        q: '必须去考点参加 CSCA 吗？',
+        a: '不需要——考试以居家线上、真人监考为主。部分国家正在增设线下考点（机考或纸笔），但线上是多数国际考生的默认路径。csca.cn 的逐场公告列出当次可用的模式。',
       },
     ],
     howToSteps: [

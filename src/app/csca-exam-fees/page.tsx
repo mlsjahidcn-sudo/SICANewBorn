@@ -13,7 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const locale: Locale = cookieStore.get('sica-locale')?.value === 'zh' ? 'zh' : 'en';
   const guide = cscaFeesGuide[locale];
   return {
-    title: guide.title,
+    title: { absolute: guide.title },
     description: guide.description,
     alternates: buildLanguageAlternates('/csca-exam-fees'),
     openGraph: {
@@ -30,5 +30,5 @@ export default async function CscaFeesPage() {
   const cookieStore = await cookies();
   const locale: Locale = cookieStore.get('sica-locale')?.value === 'zh' ? 'zh' : 'en';
   const guide = cscaFeesGuide[locale];
-  return <GuidePage guide={guide} pathSegment="csca-exam-fees" urlPath="/csca-exam-fees" />;
+  return <GuidePage guide={guide} pathSegment="csca-exam-fees" urlPath="/csca-exam-fees" showCscaPrepCallout howToTitle="How to pay the CSCA fee, step by step" />;
 }

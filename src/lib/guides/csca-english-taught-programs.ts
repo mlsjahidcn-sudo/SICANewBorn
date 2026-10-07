@@ -228,7 +228,7 @@ export const cscaEnglishTaughtGuide: LocalizedGuide = {
       },
       {
         name: 'Sequence CSCA first, language test second',
-        text: 'Bank the scarce exam (5 sessions/year) before the flexible one (year-round IELTS/TOEFL). Map both on one calendar against your program deadlines, with a language retest window held back.',
+        text: 'Bank the scarce exam (6 sittings/year) before the flexible one (year-round IELTS/TOEFL). Map both on one calendar against your program deadlines, with a language retest window held back.',
       },
     ],
     ctaTitle: 'Applying to English-taught programs in China?',
@@ -469,7 +469,7 @@ export const cscaEnglishTaughtGuide: LocalizedGuide = {
       },
       {
         name: '先 CSCA 后语言考试排序',
-        text: '先存稀缺的考试（一年 5 场），再排灵活的（全年可考的雅思/托福）。把两者画在同一本日历上对着项目截止，语言重考窗口留到最后。',
+        text: '先存稀缺的考试（一年 6 场），再排灵活的（全年可考的雅思/托福）。把两者画在同一本日历上对着项目截止，语言重考窗口留到最后。',
       },
     ],
     ctaTitle: '正在申请中国的英文授课项目？',

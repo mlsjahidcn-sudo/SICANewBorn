@@ -305,7 +305,7 @@ export const guideCards: LocalizedGuideCards = {
       category: 'listicle',
       title: 'CSCA exam dates & registration windows',
       subtitle:
-        '5 sessions a year, windows close ~15 days before each test, and how to plan backwards from your intake.',
+        '6 sittings a year (next: Nov 14-15 2026, register Oct 15-21), and how to plan backwards from your intake.',
       readTime: '9 min read',
       highlight: 'Plan backwards',
     },
@@ -1047,7 +1047,7 @@ export const guideCards: LocalizedGuideCards = {
       category: 'listicle',
       title: 'CSCA 考试时间与报名窗口',
       subtitle:
-        '每年 5 场、报名考前约 15 天截止，以及如何从入学时间倒推规划。',
+        '每年 6 场（下一场 2026 年 11 月 14-15 日，报名 10 月 15-21 日），以及如何从入学时间倒推规划。',
       readTime: '9分钟阅读',
       highlight: '倒推规划',
     },

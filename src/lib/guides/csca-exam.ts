@@ -23,21 +23,22 @@ export const cscaExamGuide: LocalizedGuide = {
     description:
       'China\'s new standardized admissions exam for international bachelor\'s applicants. Subjects, format, scoring, fees, dates, exemptions, CSC scholarship requirement — and how it differs from HSK.',
     subtitle:
-      'From the 2026 intake, most international applicants to Chinese bachelor\'s degrees must sit the CSCA — a centrally-administered multiple-choice exam in Professional Chinese (Humanities or STEM track) plus fundamental subjects (Mathematics, Physics, Chemistry). Held 5 times a year; ¥450 for one subject, ¥700 for two or more.',
+      'From the 2026 intake, most international applicants to Chinese bachelor\'s degrees must sit the CSCA — a centrally-administered multiple-choice exam organized by the China Scholarship Council, held mainly online at home with a live proctor. RMB 450 for one subject, RMB 700 for two or more.',
     stats: [
-      { value: '5×/year', label: 'Exam sessions' },
+      { value: '6×/year', label: 'Exam sittings' },
       { value: '5 subjects', label: '2 Chinese tracks + 3 fundamentals' },
       { value: '100 pts', label: 'Per subject — no national pass mark' },
-      { value: '¥450 / ¥700', label: '1 subject / 2+ subjects' },
+      { value: 'RMB 450 / 700', label: '1 subject / 2+ subjects' },
     ],
     quickAnswer:
-      'The CSCA (China Scholastic Competency Assessment) is China\'s new standardized, centrally-administered exam for international students applying to undergraduate (bachelor\'s) programs, effective from the 2026 intake. It tests Professional Chinese (choose the Humanities Chinese or STEM Chinese track) plus fundamental subjects — Mathematics (required for everyone), Physics, and Chemistry. Every question is multiple choice, calculators are not allowed, each subject is scored out of 100, and each university sets its own score cutoffs (there is no national pass mark). The exam runs 5 sessions a year, costs ¥450 for one subject or ¥700 total for two or more, and CSC (Chinese Government Scholarship) applicants must submit CSCA scores from the 2026 intake onward.',
+      'The CSCA (China Scholastic Competency Assessment) is China\'s standardized, centrally-administered exam for international students applying to undergraduate (bachelor\'s) programs, effective from the 2026 intake. It is organized by the China Scholarship Council (CSC) and developed with Chinese university experts. Math is required for everyone; Physics and/or Chemistry depend on the university and program; Professional Chinese applies only to Chinese-taught programs. Every question is multiple choice, each subject is scored out of 100, and each university sets its own score cutoffs (there is no national pass mark). The exam runs 6 sittings a year, mainly online at home with a live proctor — next confirmed: 14-15 Nov 2026 (register 15-21 Oct, Beijing time), 19-20 Dec 2026, 23-24 Jan 2027. Fees: RMB 450 for one subject, RMB 700 for two or more (official site: csca.cn). CSC scholarship undergraduate applicants must submit a score.',
     keyTakeaways: [
       'CSCA is mandatory for most international bachelor\'s applicants from the 2026 intake — including CSC scholarship applicants',
-      '5 subjects: Professional Chinese (Humanities or STEM track) + Mathematics (required for all) + Physics + Chemistry',
-      'All multiple choice; no calculators; ~60 minutes per subject; each subject scored out of 100',
+      'Math is required for everyone; Physics and/or Chemistry depend on the university; Professional Chinese only for Chinese-taught programs',
+      'All multiple choice; no calculators; each subject scored out of 100',
       'No national pass mark — each university sets its own cutoffs, so your target school defines your target score',
-      'Held 5 times a year; registration typically closes ~15 days before each session; ¥450 (1 subject) / ¥700 (2+ subjects)',
+      '6 sittings a year, mainly online at home with a live proctor; next: Nov 14-15 2026 (register Oct 15-21), Dec 19-20 2026, Jan 23-24 2027',
+      'Fees: RMB 450 (1 subject) / RMB 700 (2+ subjects); official site is csca.cn',
       'Applicants to Chinese-taught language programs may be exempt with a valid HSK 4; a qualifying HSK score can also waive the Professional Chinese subject',
     ],
     sections: [
@@ -54,10 +55,10 @@ export const cscaExamGuide: LocalizedGuide = {
           {
             type: 'ul',
             items: [
-              '**Who runs it** — administered centrally under the Ministry of Education framework; universities and Chinese embassies publish the notices for their applicants',
+              '**Who runs it** — organized by the China Scholarship Council (CSC), developed with Chinese university experts; official site csca.cn',
               '**Who it targets** — international applicants (non-Chinese citizens) applying for undergraduate (bachelor\'s) degrees in China',
               '**Since when** — inaugural global session December 21, 2025; mandatory for most applicants from the 2026 intake',
-              '**Where** — at designated test centers in China and at Chinese embassies/consulates and partner institutions abroad',
+              '**Where** — mainly online at home with a live proctor; offline centres (computer or paper) are being added in some countries',
               '**Format** — computer-based multiple choice only; no essays, no calculators',
             ],
           },
@@ -155,26 +156,26 @@ export const cscaExamGuide: LocalizedGuide = {
         id: 'csca-dates',
         h2: 'CSCA exam dates and registration windows',
         intro:
-          'The CSCA runs 5 sessions per year. The inaugural global session was held December 21, 2025; the 2026 calendar included January 25 and March 15 sessions with further sittings through the year. Registration typically closes about 15 days before each test.',
+          'The CSCA runs 6 sittings per year, mainly online at home with a live proctor. Next confirmed: 14-15 November 2026 (register 15-21 October, Beijing time), then 19-20 December 2026 and 23-24 January 2027, with further sittings in March, April, and June 2027.',
         blocks: [
           {
             type: 'table',
-            caption: 'Session timeline (as announced at launch — confirm current dates on the official portal)',
+            caption: 'Sitting timeline (confirmed dates per the official portal, csca.cn)',
             columns: ['Milestone', 'Timing'],
             rows: [
-              ['Inaugural global test', 'December 21, 2025'],
-              ['2026 sessions', 'January 25, 2026; March 15, 2026; + further sessions (5 per year, typically Jan / Mar / Apr and beyond)'],
-              ['Registration window (Jan 25 session)', 'December 23, 2025 – January 10, 2026'],
-              ['Registration closes', '~15 days before each test date'],
-              ['For a September intake', 'Sit the winter or early-spring session of the same calendar year at the latest'],
+              ['November 2026 sitting', '14-15 Nov 2026 — register 15-21 Oct 2026 (Beijing time)'],
+              ['December 2026 sitting', '19-20 Dec 2026'],
+              ['January 2027 sitting', '23-24 Jan 2027'],
+              ['Mar / Apr / Jun 2027 sittings', 'Exact dates TBA — announced per sitting on csca.cn'],
+              ['For a September 2027 intake', 'Sit November 2026 – January 2027 at the latest (CSC scholarship applicants: November 2026)'],
             ],
           },
           {
             type: 'ul',
             items: [
-              '**Plan backwards from your intake** — university applications for September intake run roughly November–June; your CSCA score must exist before your application deadline, so sit the earliest session that works for you',
-              '**Late registrations** — windows are short and centers fill up; register as soon as the window opens rather than in the final days',
-              '**2027 dates** — published on the official CSCA registration portal per session; do not assume the 2026 pattern repeats exactly',
+              '**Plan backwards from your intake** — university applications for September 2027 intake run roughly November 2026–June 2027; your CSCA score must exist before your application deadline, so sit the earliest sitting that works for you',
+              '**Registration windows are per-sitting** — the November window is just one week (15-21 Oct); there is no general closing rule, so check each announcement',
+              '**Full calendar + reminders** — the per-sitting calendar with free practice tests lives on CSCA Prep: https://cscaprep.academy/exam-dates',
             ],
           },
           {
@@ -231,7 +232,7 @@ export const cscaExamGuide: LocalizedGuide = {
               ['What it measures', 'Academic competency: Professional Chinese (Humanities/STEM) + Math, Physics, Chemistry', 'General Chinese language proficiency only'],
               ['Who requires it', 'Chinese universities — mandatory for most international bachelor\'s applicants from 2026', 'Chinese-taught programs; also used for scholarship language requirements'],
               ['Format', 'Multiple choice only, ~60 min per subject, no calculators', 'Listening + reading + writing sections (paper or iBT)'],
-              ['Frequency', '5 sessions per year', 'Multiple sessions year-round worldwide'],
+              ['Frequency', '6 sittings per year, mainly online with a live proctor', 'Multiple sessions year-round worldwide'],
               ['Scoring', '100 points per subject; university-set cutoffs', 'Levels 1–6; HSK 4–6 is the common program threshold'],
               ['Can one replace the other?', 'No — but a valid HSK 4 can exempt Chinese-language program applicants, and a qualifying HSK can waive the Professional Chinese subject', 'No — HSK alone does not satisfy the CSCA requirement for degree admission'],
             ],
@@ -275,10 +276,10 @@ export const cscaExamGuide: LocalizedGuide = {
             type: 'ol',
             items: [
               '**Confirm your subject combination** — open your target university\'s program page and note the required CSCA subjects (e.g. STEM Chinese + Math + Physics). Do this before registering so you pay the right band once.',
-              '**Find the official portal** — register only through the official CSCA registration website (the domain published in your university\'s or embassy\'s notice — Chinese official domains end in .org.cn). Beware third-party "agents" charging inflated registration fees.',
+              '**Find the official portal** — register only through the official CSCA website, csca.cn (organized by the China Scholarship Council). Beware third-party "agents" charging inflated registration fees.',
               '**Create an account** — register with your passport details exactly as printed; name mismatches between passport and admission ticket are the #1 test-day problem.',
-              '**Choose session + test center** — pick the session at least 4–6 months before your intake, and the center nearest you (domestic centers in China; embassy/consulate and partner-institution centers abroad).',
-              '**Select subjects + pay** — add your subjects (¥450 for one, ¥700 for 2+) and pay via Alipay, WeChat Pay, or bank transfer. Save the payment confirmation.',
+              '**Choose your sitting + mode** — pick the sitting at least 4–6 months before your intake. The default mode is online at home with a live proctor; offline centres exist only in some countries.',
+              '**Select subjects + pay** — add your subjects (RMB 450 for one, RMB 700 for 2+) and pay during the registration window. Save the payment confirmation.',
               '**Download your admission ticket** — typically available shortly before the test; check it for date, time, venue, and allowed items. Print it — screens-only tickets cause problems at check-in.',
               '**Sit the exam** — bring passport + printed admission ticket + pencils/eraser as instructed. No calculators, no phones in the room. Arrive 30–45 minutes early.',
               '**Send scores to universities** — when results release, attach the score report to each university application (and the CSC scholarship application if applicable).',
@@ -340,11 +341,11 @@ export const cscaExamGuide: LocalizedGuide = {
       },
       {
         q: 'How much does the CSCA exam cost?',
-        a: '¥450 CNY for one subject, or ¥700 CNY total for two or more subjects in the same session. Payment is via Alipay, WeChat Pay, or bank transfer during registration. Most candidates sit 3–4 subjects, so the typical total is ¥700.',
+        a: 'RMB 450 for one subject, or RMB 700 total for two or more subjects in the same sitting. Math is required for everyone; English-taught applicants usually add 1-2 subjects, paying the RMB 700 band — the four-subject combination applies only to Chinese-taught programs.',
       },
       {
         q: 'When is the CSCA exam held?',
-        a: 'Five sessions per year. The inaugural global test was December 21, 2025; 2026 sessions included January 25 and March 15 with further sittings through the year. Registration typically closes about 15 days before each test. For a September intake, sit the winter or early-spring session of that year at the latest — check the official portal for the current calendar.',
+        a: 'Six sittings a year, mainly online at home with a live proctor. Next confirmed dates: 14-15 November 2026 (register 15-21 October, Beijing time), 19-20 December 2026, and 23-24 January 2027, with further sittings in March, April, and June 2027. For a September 2027 intake, sit November 2026 – January 2027 at the latest — check csca.cn for the current calendar.',
       },
       {
         q: 'Is there a pass mark for the CSCA?',
@@ -378,11 +379,11 @@ export const cscaExamGuide: LocalizedGuide = {
       },
       {
         name: 'Pick your session 4–6 months before intake',
-        text: 'Work backwards from your intake: September-intake applicants should sit the winter or early-spring session. CSC scholarship applicants must sit even earlier — CSC deadlines cluster January–April and do not move.',
+        text: 'Work backwards from your intake: September 2027-intake applicants should sit November 2026 – January 2027. CSC scholarship applicants must sit even earlier — CSC deadlines cluster January–April 2027 and do not move.',
       },
       {
         name: 'Register on the official portal',
-        text: 'Use only the official CSCA registration website (the .org.cn domain published in university/embassy notices). Create an account with passport-exact details, choose session + nearest center, select subjects, and pay ¥450 (1 subject) or ¥700 (2+ subjects) via Alipay, WeChat Pay, or bank transfer.',
+        text: 'Use only the official CSCA website, csca.cn. Create an account with passport-exact details, choose your sitting (online at home is the default mode), select subjects, and pay RMB 450 (1 subject) or RMB 700 (2+ subjects) inside the registration window.',
       },
       {
         name: 'Prepare on an 8-week plan',
@@ -450,21 +451,22 @@ export const cscaExamGuide: LocalizedGuide = {
     description:
       '中国面向国际本科申请者的统一入学考试。科目、形式、计分、费用、时间、豁免、CSC 奖学金强制要求——以及与 HSK 的区别。',
     subtitle:
-      '自 2026 级起，多数申请中国本科的国际学生须参加 CSCA——统一组织的选择题考试，含专业中文（人文/理工两轨）与基础科目（数学、物理、化学）。每年 5 次考试；单科 ¥450，两科及以上合计 ¥700。',
+      '自 2026 级起，多数申请中国本科的国际学生须参加 CSCA——由国家留学基金委（CSC）统一组织的选择题考试，以居家线上、真人监考为主。单科 450 元，两科及以上合计 700 元。',
     stats: [
-      { value: '5 次/年', label: '考试场次' },
+      { value: '6 场/年', label: '考试场次' },
       { value: '5 科', label: '2 条中文轨 + 3 门基础科' },
       { value: '100 分', label: '单科满分——无全国及格线' },
-      { value: '¥450 / ¥700', label: '1 科 / 2 科及以上' },
+      { value: '450 / 700 元', label: '1 科 / 2 科及以上' },
     ],
     quickAnswer:
-      'CSCA（中国国际学生学业能力评估）是中国自 2026 级起面向本科（学士）国际申请者实施的统一标准化入学考试。考试含专业中文（人文中文或理工中文二选一）加基础科目——数学（人人必考）、物理、化学。全部为选择题、禁用计算器；单科满分 100 分，各大学自行划定录取分数线（无全国统一及格线）。考试每年举行 5 次，单科报名费 ¥450、两科及以上合计 ¥700；自 2026 级起，中国政府奖学金（CSC）申请者必须提交 CSCA 成绩。',
+      'CSCA（中国国际学生学业能力评估）是中国自 2026 级起面向本科（学士）国际申请者实施的统一标准化入学考试，由国家留学基金委（CSC）组织、联合中国高校专家开发。数学全员必考；物理和/或化学取决于大学与项目；专业中文仅适用于中文授课项目。全部为选择题，单科满分 100 分，各大学自行划定录取分数线（无全国统一及格线）。考试每年举行 6 场，以居家线上、真人监考为主——已确认：2026 年 11 月 14-15 日（报名 10 月 15-21 日北京时间）、12 月 19-20 日、2027 年 1 月 23-24 日。费用：单科 450 元、两科及以上 700 元（官方网站 csca.cn）。CSC 奖学金本科申请者必须提交成绩。',
     keyTakeaways: [
       '自 2026 级起，多数国际本科申请者必须参加 CSCA——含 CSC 奖学金申请者',
-      '5 个科目：专业中文（人文/理工轨）+ 数学（全员必考）+ 物理 + 化学',
-      '全选择题；禁用计算器；每科约 60 分钟；单科满分 100',
+      '数学全员必考；物理和/或化学取决于大学；专业中文仅限中文授课项目',
+      '全选择题；禁用计算器；单科满分 100',
       '无全国及格线——各大学自划分数线，目标分数取决于目标院校',
-      '每年 5 次考试；报名通常在考前约 15 天截止；¥450（1 科）/ ¥700（2 科及以上）',
+      '每年 6 场，居家线上、真人监考为主；下一批：2026 年 11 月 14-15 日（报名 10 月 15-21 日）、12 月 19-20 日、2027 年 1 月 23-24 日',
+      '费用：450 元（1 科）/ 700 元（2 科及以上）；官方网站 csca.cn',
       '中文授课语言项目申请者凭有效 HSK 4 可豁免；合格 HSK 成绩可免专业中文科目',
     ],
     sections: [
@@ -481,10 +483,10 @@ export const cscaExamGuide: LocalizedGuide = {
           {
             type: 'ul',
             items: [
-              '**主办方**——教育部框架下统一组织；各大学与中国驻外使领馆面向各自申请者发布通知',
+              '**主办方**——国家留学基金委（CSC）组织，联合中国高校专家开发；官方网站 csca.cn',
               '**面向人群**——申请中国本科（学士）学位的国际学生（非中国籍）',
               '**起始时间**——2025 年 12 月 21 日全球首考；自 2026 级起对多数申请者为必考',
-              '**地点**——中国境内指定考点，及中国驻外使领馆与海外合作机构考点',
+              '**地点**——以居家线上、真人监考为主；部分国家正增设线下考点（机考或纸笔）',
               '**形式**——机考/统一组织的选择题；无作文、无口试、禁用计算器',
             ],
           },
@@ -582,26 +584,26 @@ export const cscaExamGuide: LocalizedGuide = {
         id: 'csca-dates',
         h2: 'CSCA 考试时间与报名窗口',
         intro:
-          'CSCA 每年举行 5 次。全球首考为 2025 年 12 月 21 日；2026 年日历含 1 月 25 日与 3 月 15 日场次，年内另有后续场次。报名通常在考前约 15 天截止。',
+          'CSCA 每年举行 6 场，以居家线上、真人监考为主。已确认：2026 年 11 月 14-15 日（报名 10 月 15-21 日北京时间）、12 月 19-20 日、2027 年 1 月 23-24 日，其后 2027 年 3 月、4 月、6 月另有场次。',
         blocks: [
           {
             type: 'table',
-            caption: '场次时间线（启动时公布口径——最新日期以官方门户为准）',
+            caption: '场次时间线（已确认日期以官方门户 csca.cn 为准）',
             columns: ['节点', '时间'],
             rows: [
-              ['全球首考', '2025 年 12 月 21 日'],
-              ['2026 年场次', '2026 年 1 月 25 日；3 月 15 日；及后续场次（每年 5 次，通常 1 月/3 月/4 月等）'],
-              ['报名窗口（1 月 25 日场）', '2025 年 12 月 23 日 – 2026 年 1 月 10 日'],
-              ['报名截止', '考前约 15 天'],
-              ['对应 9 月入学', '最迟参加同年冬季或早春场次'],
+              ['2026 年 11 月场', '11 月 14-15 日——报名 10 月 15-21 日（北京时间）'],
+              ['2026 年 12 月场', '12 月 19-20 日'],
+              ['2027 年 1 月场', '1 月 23-24 日'],
+              ['2027 年 3 / 4 / 6 月场', '具体日期待定——逐场在 csca.cn 公布'],
+              ['对应 2027 年 9 月入学', '最迟 2027 年 1 月考完（CSC 奖学金申请者：2026 年 11 月）'],
             ],
           },
           {
             type: 'ul',
             items: [
-              '**从入学时间倒推**——9 月入学的大学申请约为 11 月至次年 6 月滚动进行；成绩须在申请截止前拿到，所以尽早选场',
-              '**报名节奏**——窗口短、考位有限；窗口一开就报，别拖到最后几天',
-              '**2027 年日期**——按场次在官方报名门户公布；不要假设 2026 年节奏完全复刻',
+              '**从入学时间倒推**——2027 年 9 月入学的大学申请约为 2026 年 11 月至 2027 年 6 月滚动进行；成绩须在申请截止前拿到，所以尽早选场',
+              '**报名窗口逐场公布**——11 月窗口只有一周（10 月 15-21 日）；不存在统一截止规律，以每场公告为准',
+              '**完整日历与提醒**——逐场日历与免费模拟题见 CSCA Prep：https://cscaprep.academy/exam-dates',
             ],
           },
           {
@@ -658,7 +660,7 @@ export const cscaExamGuide: LocalizedGuide = {
               ['考什么', '学术能力：专业中文（人文/理工）+ 数学、物理、化学', '仅通用汉语水平'],
               ['谁要求', '中国大学——自 2026 级起多数国际本科申请者必考', '中文授课项目；也用于奖学金语言要求'],
               ['形式', '仅选择题，每科约 60 分钟，禁计算器', '听力 + 阅读 + 书写（纸质或 iBT）'],
-              ['频次', '每年 5 次', '全球全年多场次'],
+              ['频次', '每年 6 场，以居家线上、真人监考为主', '全球全年多场次'],
               ['计分', '单科 100 分；大学自划线', '1-6 级；项目门槛常见 HSK 4-6'],
               ['能否互相替代？', '不能——但有效 HSK 4 可豁免语言类项目申请者，合格 HSK 可免专业中文科目', '不能——仅 HSK 不满足学位入学的 CSCA 要求'],
             ],
@@ -702,7 +704,7 @@ export const cscaExamGuide: LocalizedGuide = {
             type: 'ol',
             items: [
               '**确认科目组合**——打开目标大学项目页，记下要求的 CSCA 科目（如理工中文 + 数学 + 物理）。报名前确认，一次付对费用档。',
-              '**找到官方门户**——只通过官方 CSCA 报名网站报名（以大学或使馆通知中公布的域名为准——中国官方域名为 .org.cn）。警惕收取高额「代办费」的第三方中介。',
+              '**找到官方门户**——只通过官方 CSCA 网站（csca.cn，国家留学基金委组织）报名。警惕收取高额「代办费」的第三方中介。',
               '**注册账号**——用护照信息逐字注册；护照与准考证姓名不一致是考日头号问题。',
               '**选场次与考点**——选距离入学 4-6 个月以上的场次，选最近的考点（境内考点；境外为使领馆及合作机构考点）。',
               '**选科目并支付**——加选科目（单科 ¥450，两科及以上 ¥700），用支付宝、微信支付或银行转账付款。保存支付凭证。',
@@ -771,7 +773,7 @@ export const cscaExamGuide: LocalizedGuide = {
       },
       {
         q: 'CSCA 什么时候考？',
-        a: '每年 5 次。全球首考为 2025 年 12 月 21 日；2026 年含 1 月 25 日与 3 月 15 日场次，年内另有后续场次。报名通常考前约 15 天截止。对应 9 月入学最迟参加同年冬季或早春场次——最新日历以官方门户为准。',
+        a: '每年 6 场，以居家线上、真人监考为主。已确认：2026 年 11 月 14-15 日（报名 10 月 15-21 日北京时间）、12 月 19-20 日、2027 年 1 月 23-24 日，其后 3 月、4 月、6 月另有场次。对应 2027 年 9 月入学最迟 2027 年 1 月考完——最新日历以 csca.cn 为准。',
       },
       {
         q: 'CSCA 有及格线吗？',
@@ -787,7 +789,7 @@ export const cscaExamGuide: LocalizedGuide = {
       },
       {
         q: '分数不理想可以重考吗？',
-        a: '可以——考试每年 5 次，可参加后续场次并提交更好的成绩单。官方未公布次数上限，但实操规划很重要：CSC 奖学金截止集中在 1-4 月，重考空间极小，所以首考应选最早可行场次。',
+        a: '可以——考试每年 6 场，可参加后续场次并提交更好的成绩单。官方未公布次数上限，但实操规划很重要：CSC 奖学金截止集中在 2027 年 1-4 月，重考空间极小，所以首考应选最早可行场次。',
       },
       {
         q: 'CSCA 难吗？',
@@ -809,7 +811,7 @@ export const cscaExamGuide: LocalizedGuide = {
       },
       {
         name: '在官方门户报名',
-        text: '只使用官方 CSCA 报名网站（大学/使馆通知公布的 .org.cn 域名）。用与护照完全一致的信息注册，选场次与最近考点，选科目并用支付宝、微信支付或银行转账支付 ¥450（1 科）或 ¥700（两科及以上）。',
+        text: '只使用官方 CSCA 网站（csca.cn）。用与护照完全一致的信息注册，选场次（默认居家线上模式），选科目并在报名窗口内支付 450 元（1 科）或 700 元（两科及以上）。',
       },
       {
         name: '按 8 周计划备考',
@@ -841,7 +843,7 @@ export const cscaExamGuide: LocalizedGuide = {
       {
         href: '/csca-exam-dates',
         label: 'CSCA 考试时间与报名窗口',
-        description: '每年 5 场该选哪场，以及如何从入学时间倒推规划。',
+        description: '每年 6 场该选哪场，以及如何从入学时间倒推规划。',
       },
       {
         href: '/csca-exam-registration',

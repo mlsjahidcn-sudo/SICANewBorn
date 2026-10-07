@@ -21,7 +21,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const locale: Locale = cookieStore.get('sica-locale')?.value === 'zh' ? 'zh' : 'en';
   const guide = chinaApplicationDeadlinesGuide[locale];
   return {
-    title: guide.title,
+    title: { absolute: guide.title },
     description: guide.description,
     alternates: buildLanguageAlternates('/china-university-application-deadlines'),
     openGraph: {
@@ -103,6 +103,7 @@ export default async function ChinaApplicationDeadlinesPage() {
       guide={liveGuide}
       pathSegment="china-university-application-deadlines"
       urlPath="/china-university-application-deadlines"
+      howToTitle="How to plan your application timeline"
     />
   );
 }
