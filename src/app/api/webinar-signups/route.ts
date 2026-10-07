@@ -6,6 +6,7 @@ import { sendWebinarConfirmation } from '@/lib/email';
 import {
   getActiveSessionEmailFields,
   getActiveSessionCapacity,
+  getActiveSessionId,
   formatWebinarDate,
 } from '@/lib/webinar-sessions';
 
@@ -152,6 +153,15 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Phase 144b: lookup the active session id once so the FK
+  // gets populated on insert. Without this, every signup row
+  // had webinar_session_id = null and the capacity count query
+  // returned 0 forever — which is why the public counter was
+  // stuck at 50/50 even after signups landed. The capacity
+  // check above already verified the session exists, so this
+  // cheap SELECT is a near-cache hit in practice.
+  const activeSessionId = await getActiveSessionId();
+
   try {
     const { data, error } = await supabase
       .from('webinar_signups')
@@ -172,6 +182,13 @@ export async function POST(request: NextRequest) {
         gclid,
         fbclid,
         ip_hash: ipHash,
+        // Phase 144b: populate the FK so the capacity count query
+        // (eq('webinar_session_id', id).in('Registered','Attended'))
+        // finds the row. Nullable for backfill (the ON DELETE
+        // SET NULL preserves historical signups if a session is
+        // ever deleted), but every new signup since this commit
+        // gets the FK populated.
+        webinar_session_id: activeSessionId,
       })
       .select('id, created_at')
       .single();

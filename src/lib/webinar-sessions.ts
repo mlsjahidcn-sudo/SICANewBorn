@@ -262,3 +262,25 @@ export async function getActiveSessionCapacity(): Promise<ActiveSessionCapacity>
     acceptsSignups: seatsRemaining > 0,
   };
 }
+
+/**
+ * Phase 144b: return just the active session's UUID (or null).
+ * Cheap — used by the signup handler to set the FK on insert
+ * so the capacity count query (`eq('webinar_session_id', id)`)
+ * actually finds the rows. Historical Phase 139/140/142 signups
+ * were inserted with `webinar_session_id = null`, so without
+ * this backfill the public counter stays at 50/50 even after
+ * signups land.
+ */
+export async function getActiveSessionId(): Promise<string | null> {
+  if (!isSupabaseServerConfigured()) return null;
+  const supabase = getSupabaseServer();
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from('webinar_sessions')
+    .select('id')
+    .eq('is_active', true)
+    .maybeSingle();
+  if (error || !data) return null;
+  return (data.id as string) ?? null;
+}
