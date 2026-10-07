@@ -390,6 +390,29 @@ export interface AnalyticsEventMap {
     /** Pathname at the moment of click. */
     path: string;
   };
+  // -----------------------------------------------------------------
+  // Phase 144: fallback-teaser branch.
+  //
+  // The active-session path (above) only fires when the public
+  // page has an active webinar_sessions row. When no session
+  // exists (or the fetch errors silently), we now render a
+  // "Webinar coming — register your interest" teaser instead of
+  // staying silent. These two events distinguish the two
+  // branches in GA so the funnel doesn't conflate them.
+  // -----------------------------------------------------------------
+  /** Phase 144: popup mounted under the no-active-session
+   *  fallback branch. */
+  webinar_popup_view_teaser: {
+    locale: 'en' | 'zh';
+    path: string;
+  };
+  /** Phase 144: visitor clicked the "Notify me" CTA from the
+   *  fallback branch (vs webinar_popup_click for the
+   *  active-session branch). */
+  webinar_popup_click_register: {
+    locale: 'en' | 'zh';
+    path: string;
+  };
   /** Phase 142: user dismissed the popup (X-button or CTA-click navigates away). */
   webinar_popup_dismiss: {
     /** What closed the popup. */

@@ -5072,6 +5072,13 @@ export const translations: Record<Locale, Record<string, string>> = {
     'webinar.popupCta': 'Reserve my seat',
     'webinar.popupDismiss': 'No thanks',
     'webinar.popupAriaLabel': 'Webinar promo popup',
+    // Phase 144: fallback teaser copy when no active session exists.
+    // CTA points at the signup page (which renders its own
+    // "Date coming soon" empty state for that audience).
+    'webinar.popupTeaserEyebrow': 'Live online session',
+    'webinar.popupTeaserTitle': 'Webinar coming — register your interest',
+    'webinar.popupTeaserBody': 'Sign up to get notified when we open registration for the next 2027 intake + CSC Scholarship webinar.',
+    'webinar.popupTeaserCta': 'Notify me',
     // Phase 143: public social-proof counter
     'webinar.registeredCount': '{{count}} students have already registered',
   },
@@ -9980,6 +9987,11 @@ export const translations: Record<Locale, Record<string, string>> = {
     'webinar.popupCta': '立即报名',
     'webinar.popupDismiss': '不感兴趣',
     'webinar.popupAriaLabel': '讲座宣传弹窗',
+    // Phase 144: 没有场次时的兜底提示文案。
+    'webinar.popupTeaserEyebrow': '线上直播讲座',
+    'webinar.popupTeaserTitle': '讲座即将开放 — 留下您的邮箱',
+    'webinar.popupTeaserBody': '下一场 2027 入学 + CSC 奖学金讲座开放报名时，我们会第一时间通知您。',
+    'webinar.popupTeaserCta': '通知我',
     // Phase 143: public social-proof counter
     'webinar.registeredCount': '{{count}} 名学生已报名',
   },
