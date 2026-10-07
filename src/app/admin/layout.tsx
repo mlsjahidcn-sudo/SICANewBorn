@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Spinner } from '@/components/ui/spinner';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
+import { apiFetch } from '@/lib/api-client';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
@@ -114,8 +115,8 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   // roleGate: 'unknown' while loading, 'admin' once /api/admin/me
-  // confirms the user is on the admin list, 'non-admin' when the API
-  // rejects the session as 401/403. The previous implementation
+  // confirms the user is on the admin list, 'non-admin' when the
+  // API rejects the session as 401/403. The previous implementation
   // trusted `useAuth().user` (which only proves the JWT is valid
   // — it doesn't say what role the user is) and rendered the
   // admin shell for every logged-in student/partner until the
@@ -146,10 +147,15 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
     }
     // User signed in — confirm they're an admin before rendering
     // the shell. The auth context's `user` only proves a valid
-    // JWT; the role lives in admin_profiles.
+    // JWT; the role lives in admin_profiles. We use apiFetch
+    // (NOT bare fetch) so the Supabase session's access_token is
+    // attached as `Authorization: Bearer ...` — without it the
+    // route 401s on "Not authenticated", which the S144 role gate
+    // interprets as "non-admin" and signs the user out, locking
+    // every legitimate admin out of the portal. S144 follow-up.
     let cancelled = false;
     setRoleGate('unknown');
-    fetch('/api/admin/profile', { cache: 'no-store' })
+    apiFetch('/api/admin/profile', { cache: 'no-store' })
       .then((r) => {
         if (cancelled) return;
         if (r.ok) {
