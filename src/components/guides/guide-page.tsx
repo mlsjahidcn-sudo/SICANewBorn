@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import type { Guide, GuideBlock } from '@/lib/guides/types';
 import { SITE_URL } from '@/lib/site-url';
+import { ConsultationCta } from '@/components/ConsultationCta';
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -279,6 +280,11 @@ export function GuidePage({
   // .academy = exam content & practice). The explicit prop overrides
   // the path-derived default in either direction.
   const showCscaPrep = showCscaPrepCallout ?? resolvedUrlPath.startsWith('/csca-');
+
+  // Phase 147 (Task 7): the free-10-minute-consultation CTA renders
+  // on every GuidePage by default (the site's single conversion
+  // goal). The explicit prop can turn it off for a specific page.
+  const showConsult = showConsultationCta ?? true;
 
   // Article schema for E-E-A-T signals
   const articleSchema = {
@@ -558,9 +564,9 @@ export function GuidePage({
             </section>
           )}
 
-          {/* Phase 147 (reserved slot): <ConsultationCta slug={pathSegment}
-              variant="inline" /> renders here when showConsultationCta is
-              true. Built in Phase 147; for now nothing renders. */}
+          {/* Phase 147 (Task 7): the free-consultation conversion
+              block — renders on every GuidePage by default. */}
+          {showConsult && <ConsultationCta slug={pathSegment} />}
 
           {/* FAQ */}
           <section id="faq" className="scroll-mt-24">

@@ -101,16 +101,16 @@ export function StickyApplyBar({ universityName, universitySlug }: StickyApplyBa
 
   const whatsappContext = `Hi SICA, I'd like to apply to ${universityName}. Can you help me?`;
   const whatsappUrl = `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(whatsappContext)}`;
-  // Apply — the deep-commit CTA. Routes to /assessment (the
-  // structured 4-step intake) with ?interest=<slug> so the
-  // assessment form's thank-you redirect can still surface the
-  // "you were looking at this" personalized card. ?interestName
-  // is the human-readable university name (Phase 1 fix) so the
-  // thank-you page can show "Tsinghua University" instead of
-  // the raw "tsinghua-university" slug. The softer /contact path
-  // lives in the right-rail "Or talk to a counselor" link on
-  // the university detail page.
-  const applyUrl = `/assessment?interest=${encodeURIComponent(universitySlug)}&interestName=${encodeURIComponent(universityName)}`;
+  // Apply — the deep-commit CTA. Phase 147: routes to /counselling
+  // (the free 10-minute consultation — the site's single conversion
+  // goal per the 2026-10-08 SEO brief; /get-started is noindexed and
+  // /assessment stays as the structured intake on other paths).
+  // ?interest=<slug> so the consultation + thank-you pages can still
+  // surface the "you were looking at this" personalized card.
+  // ?interestName is the human-readable university name (Phase 1
+  // fix). The softer /contact path lives in the right-rail "Or talk
+  // to a counselor" link on the university detail page.
+  const applyUrl = `/counselling?interest=${encodeURIComponent(universitySlug)}&interestName=${encodeURIComponent(universityName)}`;
 
   // If the user already dismissed, render nothing. The slide
   // animation is driven by the `visible` class — when false,

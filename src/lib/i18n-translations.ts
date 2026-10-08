@@ -4614,6 +4614,25 @@ export const translations: Record<Locale, Record<string, string>> = {
     'footer.news': 'News',
     'footer.freeAssessment': 'Free Assessment',
     'footer.freeCounselling': 'Free 10-min Counselling',
+    'consultationCta.eyebrow': 'Free 10-minute consultation',
+    'consultationCta.title': 'Book a free 10-minute consultation',
+    'consultationCta.subtitle':
+      'Talk to a SICA admissions counsellor on Zoom, WhatsApp, or WeChat (Beijing time) — get a straight answer on your universities, scholarships, and the CSCA before you commit to anything.',
+    'consultationCta.ctaPrimary': 'Book a free consultation',
+    'consultationCta.ctaSecondary': 'Chat on WhatsApp',
+    'counsellingFaq.title': 'Consultation FAQ',
+    'counsellingFaq.q1': 'What happens in the 10 minutes?',
+    'counsellingFaq.a1':
+      'A SICA counsellor reviews your background and goals, tells you which universities and scholarships realistically fit, and lays out the next concrete steps. You leave with a plan, not a sales pitch.',
+    'counsellingFaq.q2': 'Is it really free?',
+    'counsellingFaq.a2':
+      'Yes — the 10-minute session is completely free with no obligation. If you later want hands-on application support, that is a separate paid service you can decide on afterwards.',
+    'counsellingFaq.q3': 'Which languages can I consult in?',
+    'counsellingFaq.a3':
+      'English and Chinese. Pick a slot and tell us your preference in the topic field — we will match you with a counsellor who speaks it.',
+    'counsellingFaq.q4': 'Where does the session happen?',
+    'counsellingFaq.a4':
+      'Zoom, WhatsApp call, or WeChat — whatever works for you. The booking confirmation includes the meeting link.',
     'footer.accommodation': 'Accommodation',
     'footer.allGuides': 'All guides',
     'footer.headquarters': 'Headquarters',
@@ -9534,6 +9553,25 @@ export const translations: Record<Locale, Record<string, string>> = {
     'footer.news': '新闻',
     'footer.freeAssessment': '免费评估',
     'footer.freeCounselling': '免费 10 分钟咨询',
+    'consultationCta.eyebrow': '免费 10 分钟咨询',
+    'consultationCta.title': '预约免费 10 分钟咨询',
+    'consultationCta.subtitle':
+      '通过 Zoom、WhatsApp 或微信（北京时间）与 SICA 招生顾问一对一沟通——在做出任何决定之前，先弄清你的大学、奖学金与 CSCA 规划。',
+    'consultationCta.ctaPrimary': '预约免费咨询',
+    'consultationCta.ctaSecondary': 'WhatsApp 咨询',
+    'counsellingFaq.title': '咨询常见问题',
+    'counsellingFaq.q1': '10 分钟里会发生什么？',
+    'counsellingFaq.a1':
+      'SICA 顾问会了解你的背景与目标，告诉你哪些大学与奖学金现实可行，并给出具体的下一步。你带走的是一份规划，不是一次推销。',
+    'counsellingFaq.q2': '真的免费吗？',
+    'counsellingFaq.a2':
+      '是的——10 分钟咨询完全免费、无任何义务。如果之后你需要全程申请协助，那是另一项付费服务，可自行决定。',
+    'counsellingFaq.q3': '可以用哪些语言咨询？',
+    'counsellingFaq.a3':
+      '英语和中文。预约时在话题栏注明你的偏好，我们会匹配相应的顾问。',
+    'counsellingFaq.q4': '咨询在哪里进行？',
+    'counsellingFaq.a4':
+      'Zoom、WhatsApp 通话或微信——哪种方便用哪种。预约确认中包含会议链接。',
     'footer.accommodation': '住宿',
     'footer.allGuides': '全部指南',
     'footer.headquarters': '总部',

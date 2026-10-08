@@ -23,9 +23,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/assessment`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${SITE_URL}/success-stories`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
     // Phase 57: /get-started is the influencer-traffic sales
-    // landing page. Higher priority than /contact (0.5) because
-    // it's the conversion page for paid-traffic channels.
-    { url: `${SITE_URL}/get-started`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
+    // landing page. Phase 147: removed from the sitemap + noindexed
+    // (it shows paid package prices); paid traffic reaches it via
+    // direct links. [verify] Jahid decision.
     // Phase 114: free counselling session booking — the conversion
     // landing for "free counselling study in china" queries.
     { url: `${SITE_URL}/counselling`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
@@ -83,6 +83,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Phase 120: CSCA cluster Batch 5 — FAQ mega-page + partner handbook (cluster complete: 20/20)
     { url: `${SITE_URL}/csca-faq`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/csca-partner-guide`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
+    // Phase 147 (SEO Task 5): 5 country/process pages added to address
+    // unserved long-tail queries. All have en+zh via the standard
+    // GuidePage shell + auto-rendered CSCA Prep callout on the /csca-*
+    // sibling pages.
+    { url: `${SITE_URL}/csc-scholarship-pakistan`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/csc-scholarship-nigeria`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/moe-listed-mbbs-universities-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/x1-vs-x2-student-visa-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/study-in-china-without-ielts`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     // Phase 121: Study-in-China cluster Batch 1 — personal finance & daily life
     { url: `${SITE_URL}/open-chinese-bank-account`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/international-money-transfer-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },

@@ -138,6 +138,37 @@ export const accommodationGuide: LocalizedGuide = {
         ],
       },
       {
+        // Phase 147 (SEO Task 5 #6 — dorm H2 added to /guides/accommodation).
+        // Phase 146 redirects drained pure-prep CSCA pages; this is the
+        // non-redirect surface that addresses the "25 dorm queries at pos ~54"
+        // the spec flagged. Adds the canonical sub-section students search for.
+        id: 'dorms',
+        h2: 'Chinese university dorms: rooms, cost, rules',
+        intro:
+          'Practical answer to the questions we hear every week — room types, what is and is not allowed, and what life is actually like inside.',
+        blocks: [
+          {
+            type: 'ul',
+            items: [
+              '**Room types** — single (¥10-20k/year), double (¥4-10k/year), and 4-6 person shared rooms (¥1-3k/year) at most universities; the cheaper the room the more rules (curfews, guests, kitchen access)',
+              '**What is provided** — bed, mattress cover, desk, chair, wardrobe, and (in many cases) a small refrigerator and a private bathroom with hot water; air conditioning is common in the south and dorm rooms in the north typically heat only the public areas via shared utilities',
+              '**What to bring** — towels, a fitted sheet for you (mattress sizes vary by room type), a sturdy padlock for your wardrobe, a power strip with surge protection, slippers, an umbrella, and a small first-aid kit',
+              '**What is usually NOT allowed** — electric stoves and hot plates in rooms (fire code), smoking in buildings, pets, and (in shared rooms) overnight guests — every dorm publishes its own rulebook',
+              '**Internet** — most dorms have wired and Wi-Fi; speeds of 100-300 Mbps are common; many Western sites are blocked, so you need a VPN (universities often run a separate network for international students)',
+              '**Common areas** — laundry (washing machines ¥3-5/load, dryers ¥3-5/load), study rooms, basic gyms (some campuses), shared kitchens (most buildings)',
+              '**Safety** — 24/7 guards at building entrances (key card or face recognition), CCTV in hallways, smoke detectors in every room; theft is rare',
+              '**Quiet hours** — most dorms enforce 23:00-06:00 (11pm-6am) — rules on opposite-gender guests, alcohol, and noise vary by university',
+              '**International student offices** — coordinate early if you have specific accommodation needs (medical, family, dietary); most universities reserve a small pool of rooms with adjusted rules',
+            ],
+          },
+          {
+            type: 'callout',
+            tone: 'info',
+            text: 'Apply for housing as soon as the university portal opens — popular room types (single with bath, on-campus boundary rooms) sell out in the first weeks, particularly at Beijing/Shanghai universities.',
+          },
+        ],
+      },
+      {
         id: 'homestay',
         h2: 'Homestay and other options',
         intro: 'Dorms and apartments aren\'t the only choice. A few alternatives worth knowing about.',
@@ -341,6 +372,34 @@ export const accommodationGuide: LocalizedGuide = {
             type: 'h3',
             text: '网络和Wi-Fi',
             body: '多数宿舍免费。速度100-300Mbps，视频课和视频通话够用。问题：很多西方网站（Google、YouTube、Facebook）被封，要VPN。高校常为国际生另开独立网络。',
+          },
+        ],
+      },
+      {
+        // Phase 147: 中文版宿舍子标题。
+        id: 'dorms',
+        h2: '中国大学宿舍：房型、价格、规则',
+        intro:
+          '对每周常见问题的实用回答——房型、哪些可以哪些不可以，以及宿舍内真实生活是什么样的。',
+        blocks: [
+          {
+            type: 'ul',
+            items: [
+              '**房型**——单人间（¥1-2 万/年）、双人间（¥4,000-1 万/年）、4-6 人间（¥1-3,000/年），多数大学都有；越便宜规则越多（宵禁、访客、厨房使用）',
+              '**宿舍提供**——床、床垫、书桌、衣柜；很多房间有小型冰箱与带热水的独立卫浴；南方普遍有空调，北方供暖一般覆盖公共区',
+              '**自备物品**——毛巾、贴合床垫的床单（不同房型尺寸不同）、衣柜锁、防电涌排插、拖鞋、雨伞、小型急救包',
+              '**一般禁止**——房间内电磁炉与电热壶（消防规范）、楼内吸烟、宠物、（多人间）留宿外人；每栋宿舍都有公开规则',
+              '**网络**——多数宿舍有线 + Wi-Fi；速度 100-300 Mbps 常见；很多西方网站被封，需要 VPN（高校常为国际生另开独立网络）',
+              '**公共区**——洗衣房（洗衣机 ¥3-5/次，烘干机 ¥3-5/次）、自习室、基础健身房（部分校区）、公用厨房（多数楼栋）',
+              '**安全**——24 小时门卫（刷卡或人脸识别）、楼道 CCTV、每间房间烟感器；盗窃罕见',
+              '**安静时间**——多数宿舍 23:00-06:00 为安静时间；异性访客、酒精、噪音规则因校而异',
+              '**国际学生办公室**——若有特殊住宿需求（医疗、家属、饮食）请尽早协调；多数大学保留少量带调整规则的宿舍',
+            ],
+          },
+          {
+            type: 'callout',
+            tone: 'info',
+            text: '大学门户开放后立即申请住宿——热门房型（带卫浴单人间、校园边界的房间）在前几周就售罄，特别是北京/上海的大学。',
           },
         ],
       },

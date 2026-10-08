@@ -471,7 +471,7 @@ export default function UniversityDetailClient({
                   {t('uni.sicaSupportDesc')}
                 </p>
                 <Link
-                  href={`/assessment?interest=${encodeURIComponent(slug)}&interestName=${encodeURIComponent(locale === 'en' ? uni.name : uni.nameCn || uni.name)}`}
+                  href={`/counselling?interest=${encodeURIComponent(slug)}&interestName=${encodeURIComponent(locale === 'en' ? uni.name : uni.nameCn || uni.name)}`}
                   onClick={() => {
                     track('apply_click', {
                       location: 'support_card',

@@ -36,14 +36,13 @@ import { VideoTestimonials } from '@/components/VideoTestimonials';
 import dynamic from 'next/dynamic';
 import { getServiceSchema } from '@/lib/structured-data';
 
-// Phase 67: dynamic-import GetStartedCta to keep its JS out of the
-// initial bundle. Lives in the hero (visible above the fold) but
-// the CTA only renders once per page so deferred hydration is
-// fine. No `ssr: false` here because page.tsx is a Server Component
-// — the dynamic import still creates a separate JS chunk that
-// loads after hydration, which is the perf win we want.
-const GetStartedCta = dynamic(
-  () => import('@/components/GetStartedCta').then((m) => m.GetStartedCta),
+// Phase 147 (Task 7): the hero's mid-commit CTA now points at the
+// free 10-minute consultation (/counselling) instead of the
+// /get-started sales page — the latter showed paid package prices
+// and is now noindexed. Dynamic-imported so its JS stays out of the
+// initial bundle (same pattern as the old hero CTA).
+const ConsultationCtaHero = dynamic(
+  () => import('@/components/ConsultationCta').then((m) => m.ConsultationCta),
 );
 
 export const metadata: Metadata = {
@@ -164,16 +163,12 @@ export default async function HomePage() {
                     {t('hero.howToApply')}
                   </Button>
                 </Link>
-                {/* Phase 58: explicit "Get started" CTA pointing
-                    at the /get-started sales page (Phase 57).
-                    Distinct from /assessment (the 4-step
-                    commit-level intake). This is the
-                    mid-commit slot — visitor is interested
-                    enough to want a quote, not ready for a
-                    4-step form yet. Sparkles icon + crimson
-                    hero button makes it visually distinct
-                    from the existing 2 buttons. */}
-                <GetStartedCta variant="hero" location="home_hero" />
+                {/* Phase 147 (Task 7): the hero's primary conversion
+                    CTA is now the free 10-minute consultation
+                    (/counselling) — /get-started showed paid package
+                    prices and is noindexed. Keep ?from= attribution
+                    for the funnel. */}
+                <ConsultationCtaHero variant="hero" slug="home_hero" />
               </div>
             </div>
 

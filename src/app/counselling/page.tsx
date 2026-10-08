@@ -48,11 +48,37 @@ const STEPS = [
   { icon: ClipboardList, titleKey: 'counselling.step3Title', bodyKey: 'counselling.step3Body' },
 ] as const;
 
+// Phase 147: FAQ keys — the JSON-LD FAQPage below reads the SAME
+// keys via getServerT so the visible answers and the schema can
+// never drift apart.
+const FAQ_ITEMS = [
+  { q: 'counsellingFaq.q1', a: 'counsellingFaq.a1' },
+  { q: 'counsellingFaq.q2', a: 'counsellingFaq.a2' },
+  { q: 'counsellingFaq.q3', a: 'counsellingFaq.a3' },
+  { q: 'counsellingFaq.q4', a: 'counsellingFaq.a4' },
+] as const;
+
 export default async function CounsellingPage() {
   const t = await getServerT();
 
+  // Phase 147: FAQPage JSON-LD — reads the same i18n keys as the
+  // visible FAQ above, so the schema matches the copy word for word.
+  const faqSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: FAQ_ITEMS.map((item) => ({
+      '@type': 'Question',
+      name: t(item.q),
+      acceptedAnswer: { '@type': 'Answer', text: t(item.a) },
+    })),
+  };
+
   return (
     <div className="min-h-screen bg-[#FAFAF8]">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div
@@ -141,6 +167,33 @@ export default async function CounsellingPage() {
       {/* Booking wizard */}
       <section className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-16">
         <BookingWizard />
+      </section>
+
+      {/* Phase 147 (Task 7): FAQ about the session itself. The
+          answers render word-for-word in the FAQPage JSON-LD below
+          so the visible copy and the schema stay in sync. */}
+      <section className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 pb-16">
+        <h2 className="text-2xl sm:text-3xl font-bold text-[#1B2A4A] text-center">
+          {t('counsellingFaq.title')}
+        </h2>
+        <div className="mt-8 space-y-3">
+          {FAQ_ITEMS.map((item) => (
+            <details
+              key={item.q}
+              className="group bg-white border-2 border-gray-200 hover:border-[#1B2A4A] transition-colors"
+            >
+              <summary className="cursor-pointer p-4 sm:p-5 font-semibold text-[#1B2A4A] flex items-start gap-3 list-none">
+                <span className="flex-1">{t(item.q)}</span>
+                <span className="text-[#9B1B30] text-xl group-open:rotate-45 transition-transform shrink-0">
+                  +
+                </span>
+              </summary>
+              <div className="px-4 sm:px-5 pb-5 pt-1 text-[#374151] leading-relaxed text-sm">
+                {t(item.a)}
+              </div>
+            </details>
+          ))}
+        </div>
       </section>
 
       {/* Deeper-commitment cross-link */}

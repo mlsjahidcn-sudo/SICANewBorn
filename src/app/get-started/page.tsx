@@ -27,8 +27,13 @@ import { SITE_URL } from '@/lib/site-url';
 export const dynamic = 'force-dynamic';
 
 const PAGE_TITLE = 'Get into a top Chinese university — SICA admission services';
+// Phase 147: the old meta description quoted package prices
+// ($50/$700) and a refund percentage — ground rule 2 bans paid
+// package prices from public pages, and the meta is public even on
+// a noindexed page (link previews). Prices now live only in the
+// sales conversation after the free consultation.
 const PAGE_DESCRIPTION =
-  "Real students. Real offer letters. 90% success rate with our partner universities, or 30% of your fee back. DIY guidance from $50, full-service from $700. Chat with SICA on WhatsApp.";
+  'SICA admission services for international students: real students, real offer letters, end-to-end support from application to arrival. Start with a free 10-minute consultation.';
 
 export const metadata: Metadata = {
   title: PAGE_TITLE,
@@ -45,9 +50,15 @@ export const metadata: Metadata = {
     title: PAGE_TITLE,
     description: PAGE_DESCRIPTION,
   },
+  // Phase 147 (Task 7): noindex — this page shows paid package
+  // prices and refund terms, which must not appear in public search
+  // results (SEO brief ground rule 2). The page stays reachable via
+  // direct links for paid influencer traffic; removed from the
+  // sitemap in the same phase. [verify] Jahid: revisit if the page
+  // is ever rewritten price-free.
   robots: {
-    index: true,
-    follow: true,
+    index: false,
+    follow: false,
   },
 };
 
