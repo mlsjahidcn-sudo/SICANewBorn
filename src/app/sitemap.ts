@@ -50,7 +50,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Phase 115: CSCA exam flagship — new mandatory exam for intl bachelor's applicants (2026 intake)
     { url: `${SITE_URL}/csca-exam`, lastModified: now, changeFrequency: 'monthly', priority: 0.85 },
     // Phase 116: CSCA cluster Batch 1 — logistics pillars
-    { url: `${SITE_URL}/csca-exam-dates`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    // Phase 149: /csca-exam-dates removed (dates now live on
+    // cscaprep.academy/exam-dates per the spec's CSCA-overlap split;
+    // see next.config.ts for the 301 + docs/csca-overlap.md for the
+    // keep-vs-explanation table).
     { url: `${SITE_URL}/csca-exam-registration`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/csca-exam-fees`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/csca-exam-exemptions`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },

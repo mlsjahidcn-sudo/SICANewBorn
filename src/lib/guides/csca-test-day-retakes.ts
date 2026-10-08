@@ -251,7 +251,7 @@ export const cscaTestDayGuide: LocalizedGuide = {
         description: 'The portal walkthrough that produces the ticket you\'ll bring on test day.',
       },
       {
-        href: '/csca-exam-dates',
+        href: 'https://cscaprep.academy/exam-dates',
         label: 'CSCA exam dates & registration windows',
         description: 'The session lattice your retake decision depends on.',
       },
@@ -501,7 +501,7 @@ export const cscaTestDayGuide: LocalizedGuide = {
         description: '产出你要带进考场的准考证的门户 walkthrough。',
       },
       {
-        href: '/csca-exam-dates',
+        href: 'https://cscaprep.academy/exam-dates',
         label: 'CSCA 考试时间与报名窗口',
         description: '重考决策依赖的场次格子。',
       },

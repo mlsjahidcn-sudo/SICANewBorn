@@ -249,7 +249,7 @@ export const cscaCscScholarshipGuide: LocalizedGuide = {
         description: 'Coverage, categories, channels, and the full application process.',
       },
       {
-        href: '/csca-exam-dates',
+        href: 'https://cscaprep.academy/exam-dates',
         label: 'CSCA exam dates & registration windows',
         description: 'The session lattice behind the January–April crunch.',
       },
@@ -497,7 +497,7 @@ export const cscaCscScholarshipGuide: LocalizedGuide = {
         description: '覆盖、类别、渠道与完整申请流程。',
       },
       {
-        href: '/csca-exam-dates',
+        href: 'https://cscaprep.academy/exam-dates',
         label: 'CSCA 考试时间与报名窗口',
         description: '1-4 月挤压背后的场次格子。',
       },

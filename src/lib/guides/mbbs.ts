@@ -69,6 +69,7 @@ export const mbbsGuide: LocalizedGuide = {
             items: [
               '**Who requires it** — the CSCA is required for Chinese Government Scholarship undergraduate applicants, and many universities (including many English-taught MBBS programs) require it for direct admission as well. Check each university\'s admission notice',
               '**Subjects** — Math is required for everyone; Physics and/or Chemistry depend on the university and program. MBBS applicants commonly need Math + Chemistry and/or Physics — verify per university',
+              '**Format** — 48 multiple-choice questions per subject, 60 minutes per subject. Sit Math first, then Physics or Chemistry in the same booking. Multiple-choice only; no short-answer or essay sections',
               '**When to sit** — 6 sittings a year, mainly online at home with a live proctor. Next confirmed: 14-15 Nov 2026 (register 15-21 Oct, Beijing time), 19-20 Dec 2026, 23-24 Jan 2027. For September 2027 intake, sit November or December 2026',
               '**MBBS-specific guidance** — see our dedicated guide at /csca-mbbs-applicants for subject combinations, timing, and licensing context',
               '**Free practice** — CSCA Prep (https://cscaprep.academy) offers free practice tests, mocks, and study plans for every sitting',
@@ -358,6 +359,7 @@ export const mbbsGuide: LocalizedGuide = {
             items: [
               '**谁要求**——CSC 奖学金本科申请者必须提交；许多大学（含许多英文授课 MBBS）对直接录取也要求。逐校核对招生通知',
               '**科目**——数学全员必考；物理和/或化学取决于大学与项目。MBBS 申请者常见要求为数学 + 化学和/或物理——逐校核实',
+              '**形式**——每科 48 道选择题，每科 60 分钟。先考数学，再在同一预约中考物理或化学。纯选择题，无简答或作文',
               '**何时考**——每年 6 场，以居家线上、真人监考为主。已确认：2026 年 11 月 14-15 日（报名 10 月 15-21 日北京时间）、12 月 19-20 日、2027 年 1 月 23-24 日。2027 年 9 月入学应参加 2026 年 11 或 12 月场次',
               '**MBBS 专项指引**——科目组合、时间安排与执业背景见 /csca-mbbs-applicants',
               '**免费练习**——CSCA Prep（https://cscaprep.academy）提供每场次的免费模拟题与学习计划',

@@ -191,7 +191,7 @@ export const cscNigeriaGuide: LocalizedGuide = {
         description: 'What CSC covers, the application channels, and the general timeline.',
       },
       {
-        href: '/csca-exam-dates',
+        href: 'https://cscaprep.academy/exam-dates',
         label: 'CSCA exam dates 2026-27',
         description: 'Next sittings and registration windows for bachelor\'s applicants.',
       },
@@ -380,7 +380,7 @@ export const cscNigeriaGuide: LocalizedGuide = {
         description: 'CSC 覆盖内容、申请渠道与通用时间线。',
       },
       {
-        href: '/csca-exam-dates',
+        href: 'https://cscaprep.academy/exam-dates',
         label: 'CSCA 考试时间 2026-27',
         description: '本科申请者的下一批场次与报名窗口。',
       },

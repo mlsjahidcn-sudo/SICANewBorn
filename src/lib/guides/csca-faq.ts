@@ -66,7 +66,7 @@ export const cscaFaqGuide: LocalizedGuide = {
             columns: ['If your question is about…', 'Read'],
             rows: [
               ['What the exam is, subjects, scoring, fees at a glance', '/csca-exam (flagship guide)'],
-              ['Session dates and choosing when to sit', '/csca-exam-dates'],
+              ['Session dates and choosing when to sit', 'https://cscaprep.academy/exam-dates'],
               ['Registering, centers, the portal, avoiding agents', '/csca-exam-registration'],
               ['Fees, payment methods, paying from abroad', '/csca-exam-fees'],
               ['Exemptions, HSK routes, waivers', '/csca-exam-exemptions'],
@@ -299,7 +299,7 @@ export const cscaFaqGuide: LocalizedGuide = {
             columns: ['如果你的问题是关于…', '阅读'],
             rows: [
               ['考试是什么、科目、计分、费用速览', '/csca-exam（旗舰指南）'],
-              ['场次日期与何时考', '/csca-exam-dates'],
+              ['场次日期与何时考', 'https://cscaprep.academy/exam-dates'],
               ['报名、考点、门户、避开中介', '/csca-exam-registration'],
               ['费用、支付方式、境外付款', '/csca-exam-fees'],
               ['豁免、HSK 通道、免考', '/csca-exam-exemptions'],

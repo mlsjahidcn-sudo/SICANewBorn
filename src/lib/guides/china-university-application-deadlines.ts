@@ -32,7 +32,7 @@ export const chinaApplicationDeadlinesGuide: LocalizedGuide = {
       'Two annual intakes: September (primary) + March (secondary)',
       'For September 2027: rolling applications from Nov 2026; competitive programs close by Mar-Apr 2027',
       'CSC scholarship deadlines cluster in January-April 2027 (varies by channel and university)',
-      'Bachelor\'s applicants: CSCA score needed for CSC and many universities — next sittings Nov/Dec 2026, Jan 2027 (see /csca-exam-dates)',
+      'Bachelor\'s applicants: CSCA score needed for CSC and many universities — next sittings Nov/Dec 2026, Jan 2027 (see https://cscaprep.academy/exam-dates)',
       'March 2027 intake deadlines typically September-December 2026',
       'Plan 9-12 months ahead: research + language test + documents + supervisor match',
     ],
@@ -48,7 +48,7 @@ export const chinaApplicationDeadlinesGuide: LocalizedGuide = {
             items: [
               '**September (Fall) intake** — the primary intake at all Chinese universities: the widest program selection and most scholarship money (CSC, provincial). Applications run from November of the prior year (rolling) through summer (late apps at less-selective universities). Plan 9-12 months ahead for the smoothest path.',
               '**March (Spring) intake** — the secondary intake, offered by many but not all universities. Most Spring-start places are master\'s, Chinese language, and short-term programs. Application deadlines typically September-December. Fewer scholarships are available for Spring intake (some university-specific waivers still apply).',
-              '**Bachelor\'s intake** — predominantly September. Some programs (especially Chinese-medium) accept March intake. Verify with each program. **Bachelor\'s applicants: a CSCA score is required for CSC scholarship applications and by many universities — see /csca-exam-dates for the next sittings.**',
+              '**Bachelor\'s intake** — predominantly September. Some programs (especially Chinese-medium) accept March intake. Verify with each program. **Bachelor\'s applicants: a CSCA score is required for CSC scholarship applications and by many universities — see https://cscaprep.academy/exam-dates for the next sittings.**',
               '**Master\'s intake** — September at the large majority of universities; a subset also accepts March. Master\'s programs are more flexible on intake timing.',
               '**PhD intake** — September-only at most universities. Some offer Spring PhD intake if a supervisor has funding available. Email potential supervisors 6-9 months ahead to confirm.',
               '**Chinese language program intake** — March + summer + September (most flexible). Many universities offer rolling admissions for language programs with start dates every few months.',
@@ -92,7 +92,7 @@ export const chinaApplicationDeadlinesGuide: LocalizedGuide = {
           {
             type: 'callout',
             tone: 'warning',
-            text: 'Bachelor\'s applicants targeting CSC or universities that require the CSCA: registration for the 14-15 November 2026 sitting runs 15-21 October (Beijing time). Sit November 2026 or December 2026 so the score exists before January-April 2027 scholarship deadlines. Full calendar: /csca-exam-dates',
+            text: 'Bachelor\'s applicants targeting CSC or universities that require the CSCA: registration for the 14-15 November 2026 sitting runs 15-21 October (Beijing time). Sit November 2026 or December 2026 so the score exists before January-April 2027 scholarship deadlines. Full calendar: https://cscaprep.academy/exam-dates',
           },
         ],
       },
@@ -244,7 +244,7 @@ export const chinaApplicationDeadlinesGuide: LocalizedGuide = {
       },
       {
         q: 'Do bachelor\'s applicants need the CSCA for September 2027?',
-        a: 'Yes for CSC scholarship applications — and many universities require it for direct admission too. Math is required for everyone; Physics and/or Chemistry depend on the university. For September 2027, sit the CSCA in November 2026 (register 15-21 Oct), December 2026, or January 2027 so the score exists before deadlines. Full calendar: /csca-exam-dates',
+        a: 'Yes for CSC scholarship applications — and many universities require it for direct admission too. Math is required for everyone; Physics and/or Chemistry depend on the university. For September 2027, sit the CSCA in November 2026 (register 15-21 Oct), December 2026, or January 2027 so the score exists before deadlines. Full calendar: https://cscaprep.academy/exam-dates',
       },
       {
         q: 'How long does admission take after applying?',
@@ -340,7 +340,7 @@ export const chinaApplicationDeadlinesGuide: LocalizedGuide = {
       '每年两次入学：9 月（主）+ 3 月（次）',
       '2027 年 9 月入学：2026 年 11 月起滚动申请；竞争项目 2027 年 3-4 月截止',
       'CSC 奖学金截止集中在 2027 年 1-4 月（因渠道与大学而异）',
-      '本科申请者：CSC 及许多大学需要 CSCA 成绩——下一批场次 2026 年 11/12 月、2027 年 1 月（见 /csca-exam-dates）',
+      '本科申请者：CSC 及许多大学需要 CSCA 成绩——下一批场次 2026 年 11/12 月、2027 年 1 月（见 https://cscaprep.academy/exam-dates）',
       '2027 年 3 月入学截止通常在 2026 年 9-12 月',
       '提前 9-12 个月规划：调研 + 语言考试 + 文件 + 导师匹配',
     ],
@@ -356,7 +356,7 @@ export const chinaApplicationDeadlinesGuide: LocalizedGuide = {
             items: [
               '**9 月（秋季）入学**——所有中国大学的主入学：项目最全、奖学金最多（CSC、省市）。申请自前一年 11 月（滚动）持续到夏季（次选大学的晚申）。提前 9-12 个月规划最稳妥。',
               '**3 月（春季）入学**——次入学，许多（但非全部）大学提供。春季名额多为硕士、中文与短期项目。截止日通常 9-12 月。春季可申请的奖学金较少（部分院校自费减免仍可用）。',
-              '**本科入学**——以 9 月为主。部分项目（尤其中文授课）接受 3 月入学，逐项目核实。**本科申请者：CSC 奖学金及许多大学要求 CSCA 成绩——下场场次见 /csca-exam-dates。**',
+              '**本科入学**——以 9 月为主。部分项目（尤其中文授课）接受 3 月入学，逐项目核实。**本科申请者：CSC 奖学金及许多大学要求 CSCA 成绩——下场场次见 https://cscaprep.academy/exam-dates。**',
               '**硕士入学**——绝大多数大学以 9 月为主；部分也接受 3 月。硕士项目对入学时间更灵活。',
               '**博士入学**——多数大学仅 9 月。部分在导师有经费时提供春季博士入学。提前 6-9 个月邮件确认。',
               '**中文项目入学**——3 月 + 夏季 + 9 月（最灵活）。多数大学提供滚动录取，每隔数月开课。',
@@ -400,7 +400,7 @@ export const chinaApplicationDeadlinesGuide: LocalizedGuide = {
           {
             type: 'callout',
             tone: 'warning',
-            text: '以 CSC 或要求 CSCA 的大学为目标的本科申请者：2026 年 11 月 14-15 日场次的报名窗口为 10 月 15-21 日（北京时间）。请在 2026 年 11 月或 12 月完成考试，确保成绩赶在 2027 年 1-4 月奖学金截止之前。完整日历：/csca-exam-dates',
+            text: '以 CSC 或要求 CSCA 的大学为目标的本科申请者：2026 年 11 月 14-15 日场次的报名窗口为 10 月 15-21 日（北京时间）。请在 2026 年 11 月或 12 月完成考试，确保成绩赶在 2027 年 1-4 月奖学金截止之前。完整日历：https://cscaprep.academy/exam-dates',
           },
         ],
       },
@@ -552,7 +552,7 @@ export const chinaApplicationDeadlinesGuide: LocalizedGuide = {
       },
       {
         q: '2027 年 9 月入学的本科申请者需要 CSCA 吗？',
-        a: 'CSC 奖学金申请需要——许多大学直接录取也要求。数学全员必考；物理和/或化学取决于大学。2027 年 9 月入学应在 2026 年 11 月（报名 10 月 15-21 日）、12 月或 2027 年 1 月场次完成考试，确保成绩赶在截止前。完整日历：/csca-exam-dates',
+        a: 'CSC 奖学金申请需要——许多大学直接录取也要求。数学全员必考；物理和/或化学取决于大学。2027 年 9 月入学应在 2026 年 11 月（报名 10 月 15-21 日）、12 月或 2027 年 1 月场次完成考试，确保成绩赶在截止前。完整日历：https://cscaprep.academy/exam-dates',
       },
       {
         q: '申请后多久拿到录取？',

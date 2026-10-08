@@ -16,6 +16,10 @@ export const translations: Record<Locale, Record<string, string>> = {
     'nav.home': 'Home',
     'nav.universities': 'Universities',
     'nav.programs': 'Programs',
+    // Phase 149: dedicated MBBS guide promoted to mobile nav so the
+    // medical cohort finds the English-taught MOE-listed pillar in 1 tap.
+    'nav.mbbsInChina': 'MBBS in China',
+    'nav.mbbsInChinaDesc': 'English-taught, MOE-listed, CSCA + visa guide',
     'nav.scholarships': 'Scholarships',
     'nav.admissions': 'Admissions',
     'nav.guides': 'Guides',
@@ -5122,6 +5126,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'nav.home': '首页',
     'nav.universities': '大学',
     'nav.programs': '项目',
+    'nav.mbbsInChina': '来华 MBBS',
+    'nav.mbbsInChinaDesc': '英文授课，教育部认可，CSCA + 签证指南',
     'nav.scholarships': '奖学金',
     'nav.admissions': '招生',
     'nav.guides': '指南',

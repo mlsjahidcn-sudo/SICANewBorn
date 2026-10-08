@@ -252,7 +252,7 @@ export const cscaRegistrationGuide: LocalizedGuide = {
         description: 'The flagship overview: subjects, format, scoring, fees, exemptions, and the CSC requirement.',
       },
       {
-        href: '/csca-exam-dates',
+        href: 'https://cscaprep.academy/exam-dates',
         label: 'CSCA exam dates & registration windows',
         description: 'Which session to pick and how to plan backwards from your intake.',
       },
@@ -503,7 +503,7 @@ export const cscaRegistrationGuide: LocalizedGuide = {
         description: '旗舰总览：科目、形式、计分、费用、豁免与 CSC 要求。',
       },
       {
-        href: '/csca-exam-dates',
+        href: 'https://cscaprep.academy/exam-dates',
         label: 'CSCA 考试时间与报名窗口',
         description: '该选哪一场，以及如何从入学时间倒推规划。',
       },

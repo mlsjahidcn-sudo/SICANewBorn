@@ -496,16 +496,22 @@ export default async function HomePage() {
           </h2>
           <div className="mt-10 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
             {[
-              { icon: Cpu, label: t('fields.cs') },
-              { icon: Wrench, label: t('fields.engineering') },
-              { icon: TrendingUp, label: t('fields.business') },
-              { icon: Heart, label: t('fields.medicine') },
-              { icon: BrainCircuit, label: t('fields.ai') },
-              { icon: Languages, label: t('fields.languages') },
+              // Phase 149: Medicine is the only field that has a dedicated
+              // SEO guide page on SICA (the English-taught MBBS track is
+              // its own pillar); other fields keep the broad /universities
+              // destination. The MBBS guide handles MOE-listed universities,
+              // tuition, X1-visa, CSCA requirement, and NMC/PMDC context
+              // for the medical cohort specifically.
+              { icon: Cpu, label: t('fields.cs'), href: '/universities' },
+              { icon: Wrench, label: t('fields.engineering'), href: '/universities' },
+              { icon: TrendingUp, label: t('fields.business'), href: '/universities' },
+              { icon: Heart, label: t('fields.medicine'), href: '/mbbs-in-china' },
+              { icon: BrainCircuit, label: t('fields.ai'), href: '/universities' },
+              { icon: Languages, label: t('fields.languages'), href: '/universities' },
             ].map((item) => (
               <Link
                 key={item.label}
-                href="/universities"
+                href={item.href}
                 className="group flex flex-col items-center gap-3 rounded-none border border-gray-200 bg-white p-6 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5"
               >
                 <div

@@ -201,7 +201,7 @@ export const cscPakistanGuide: LocalizedGuide = {
         description: 'What CSC covers, the four application channels, and the general timeline.',
       },
       {
-        href: '/csca-exam-dates',
+        href: 'https://cscaprep.academy/exam-dates',
         label: 'CSCA exam dates 2026-27',
         description: 'Next sittings, registration windows, and which sitting fits your deadline.',
       },
@@ -400,7 +400,7 @@ export const cscPakistanGuide: LocalizedGuide = {
         description: 'CSC 覆盖内容、四大申请渠道与通用时间线。',
       },
       {
-        href: '/csca-exam-dates',
+        href: 'https://cscaprep.academy/exam-dates',
         label: 'CSCA 考试时间 2026-27',
         description: '下一批场次、报名窗口与适合你截止的选择。',
       },

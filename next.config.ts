@@ -133,6 +133,19 @@ const baseConfig: NextConfig = {
         destination: 'https://cscaprep.academy/csca/study-plan-12-week',
         statusCode: 301,
       },
+      // Phase 149: the dates themselves are CSCA Prep's home turf
+      // (the exam organizer publishes the live calendar there).
+      // SICA's keep+fix pages focus on admissions decisions (who
+      // must sit, MBBS links, exemptions, scores) — anything time-
+      // sensitive about *upcoming* sittings routes to CSCA Prep.
+      // /csca-exam-dates itself is deleted from the codebase; this
+      // 301 is the safety net for any external link still pointing
+      // at the old URL.
+      {
+        source: '/csca-exam-dates',
+        destination: 'https://cscaprep.academy/exam-dates',
+        statusCode: 301,
+      },
     ];
   },
   // Phase 91: baseline security headers on every response. S144

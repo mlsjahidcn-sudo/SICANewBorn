@@ -26,6 +26,10 @@ export function Header() {
     { href: '/universities', label: t('nav.universities') },
     { href: '/study-in-china', label: t('nav.universities.byCity') },
     { href: '/programs', label: t('nav.programs') },
+    // Phase 149: MBBS in China promoted from "buried SEO guide" to
+    // mobile nav so the medical cohort finds the pillar page in 1 tap.
+    // Other English-medium tracks are covered by /programs.
+    { href: '/mbbs-in-china', label: t('nav.mbbsInChina') },
     { href: '/scholarships', label: t('nav.scholarships') },
     { href: '/scholarships-for', label: t('nav.scholarships.byCountry') },
     { href: '/guides', label: t('nav.guides') },

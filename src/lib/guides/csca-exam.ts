@@ -413,7 +413,7 @@ export const cscaExamGuide: LocalizedGuide = {
     ctaContactLabel: 'Talk to a counselor',
     related: [
       {
-        href: '/csca-exam-dates',
+        href: 'https://cscaprep.academy/exam-dates',
         label: 'CSCA exam dates & registration windows',
         description: 'Which of the 5 yearly sessions to sit, and how to plan backwards from your intake.',
       },
@@ -841,7 +841,7 @@ export const cscaExamGuide: LocalizedGuide = {
     ctaContactLabel: '联系顾问',
     related: [
       {
-        href: '/csca-exam-dates',
+        href: 'https://cscaprep.academy/exam-dates',
         label: 'CSCA 考试时间与报名窗口',
         description: '每年 6 场该选哪场，以及如何从入学时间倒推规划。',
       },

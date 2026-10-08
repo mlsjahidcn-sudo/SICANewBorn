@@ -50,7 +50,7 @@ per-session and evolve:
 | # | Slug (/prefix) | Working title (EN) | Target queries | Angle / key blocks | Batch |
 |---|---|---|---|---|---|
 | 1 | `csca-exam` | CSCA exam — complete guide | csca exam, china scholastic competency assessment | **SHIPPED (Phase 115)** flagship: what/who/subjects/scoring/dates/fees/HSK-diff/CSC requirement/register/prep/test-day | 115 |
-| 2 | `csca-exam-dates` | CSCA exam dates & registration windows 2026–2027 | csca exam dates, csca registration deadline | 5-session calendar table, intake-backwards planner, session-choice decision table | ✅ 116 |
+| 2 | `csca-exam-dates` | CSCA exam dates & registration windows 2026–2027 | csca exam dates, csca registration deadline | 5-session calendar table, intake-backwards planner, session-choice decision table | ✅ 116 (Phase 149: 301 to https://cscaprep.academy/exam-dates — live calendar is the organizer's job; SICA keeps the admissions angle elsewhere) |
 | 3 | `csca-exam-registration` | How to register for the CSCA — step-by-step | csca registration, csca sign up, csca portal | Portal walkthrough (8 steps), passport-name pitfalls, test-center selection, scam-agent warning | ✅ 116 |
 | 4 | `csca-exam-fees` | CSCA exam fees & payment guide | csca exam fee, csca cost | ¥450/¥700 banding table, Alipay/WeChat/bank-transfer how-to for non-Chinese residents, refund policy caveats | ✅ 116 |
 | 5 | `csca-exam-exemptions` | Who must take the CSCA — and who is exempt | csca exemption, csca hsk waiver | Mandatory-vs-exempt matrix, HSK 4 route, Professional-Chinese waiver, "get it in writing" checklist | ✅ 116 |

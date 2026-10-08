@@ -238,7 +238,7 @@ export const cscaScoresGuide: LocalizedGuide = {
         description: 'The tier landscape your score bands map onto, with live university data.',
       },
       {
-        href: '/csca-exam-dates',
+        href: 'https://cscaprep.academy/exam-dates',
         label: 'CSCA exam dates & registration windows',
         description: 'The session math behind retake decisions and score-to-deadline timing.',
       },
@@ -469,7 +469,7 @@ export const cscaScoresGuide: LocalizedGuide = {
         description: '分数带所映射的层次版图，附实时大学数据。',
       },
       {
-        href: '/csca-exam-dates',
+        href: 'https://cscaprep.academy/exam-dates',
         label: 'CSCA 考试时间与报名窗口',
         description: '重考决策与成绩到截止日时序背后的场次算术。',
       },

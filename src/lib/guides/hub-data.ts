@@ -300,7 +300,7 @@ export const guideCards: LocalizedGuideCards = {
     },
     {
       slug: 'csca-exam-dates',
-      href: '/csca-exam-dates',
+      href: 'https://cscaprep.academy/exam-dates',
       icon: 'calendar-clock',
       category: 'listicle',
       title: 'CSCA exam dates & registration windows',
@@ -1042,7 +1042,7 @@ export const guideCards: LocalizedGuideCards = {
     },
     {
       slug: 'csca-exam-dates',
-      href: '/csca-exam-dates',
+      href: 'https://cscaprep.academy/exam-dates',
       icon: 'calendar-clock',
       category: 'listicle',
       title: 'CSCA 考试时间与报名窗口',

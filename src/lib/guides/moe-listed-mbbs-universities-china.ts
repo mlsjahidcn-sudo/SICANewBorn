@@ -159,7 +159,7 @@ export const moeMbbsGuide: LocalizedGuide = {
         description: 'Subject combinations, timing, and licensing context for medicine.',
       },
       {
-        href: '/csca-exam-dates',
+        href: 'https://cscaprep.academy/exam-dates',
         label: 'CSCA exam dates 2026-27',
         description: 'Next sittings and registration windows.',
       },
@@ -311,7 +311,7 @@ export const moeMbbsGuide: LocalizedGuide = {
         description: '科目组合、时间安排与执业背景。',
       },
       {
-        href: '/csca-exam-dates',
+        href: 'https://cscaprep.academy/exam-dates',
         label: 'CSCA 考试时间 2026-27',
         description: '下一批场次与报名窗口。',
       },
