@@ -1,18 +1,22 @@
 'use client';
 
 /**
- * GetStartedCta — a small, reusable link/button that points at
- * /get-started (the Phase 57 sales landing page).
+ * GetStartedCta — small CTA component used on list/detail pages.
+ *
+ * Phase 148: the destination is now `/counselling` (free 10-minute
+ * consultation) instead of `/get-started`. `/get-started` is the
+ * Phase 57 paid-package landing page; the Phase 148 spec removed all
+ * public links to it (it remains noindexed for paid traffic that
+ * reaches it via direct URL).
  *
  * 3 visual variants for different surfaces:
- *  - 'hero'        : big primary button (for hero CTAs)
- *  - 'banner'      : inline banner for list-page top bars
- *  - 'inline'      : text link for "or compare our packages" links
+ *  - 'hero'   : big primary button (homepage / hero slots)
+ *  - 'banner' : inline banner for list-page top bars
+ *  - 'inline' : quiet text link
  *
- * All variants accept an optional `university` / `program` prop
- * for future per-context deep-linking. For now the link just
- * points at /get-started (the GA event on the sales page picks
- * up the UTM + sets the tier in the WhatsApp pre-fill).
+ * The component name + API stayed the same so the 4 call sites
+ * (universities list + detail, programs list + detail) need zero
+ * diff — only the underlying href changed.
  */
 
 import Link from 'next/link';
@@ -21,11 +25,11 @@ import { useI18n } from '@/lib/i18n';
 
 export interface GetStartedCtaProps {
   variant?: 'hero' | 'banner' | 'inline';
-  /** Where the user came from — used in the click target's analytics. */
+  /** Where the user came from — used in the click target's analytics
+   *  and forwarded as `?from=` to the counselling wizard. */
   location: string;
   /** Optional university / program context. Forwarded as `?interest=`
-   *  / `?program=` query params so the sales page can show
-   *  personalized copy. No-op until the sales page reads them. */
+   *  / `?program=` query params. */
   university?: string;
   program?: string;
   /** Optional className passthrough so callers can position it
@@ -45,7 +49,10 @@ export function GetStartedCta({
   if (university) params.set('interest', university);
   if (program) params.set('program', program);
   params.set('from', location);
-  const href = `/get-started${params.toString() ? `?${params}` : ''}`;
+  // Phase 148: was /get-started; /get-started is the paid-package
+  // landing page and the spec requires no public surface links to
+  // it. The free 10-minute consultation is the new conversion.
+  const href = `/counselling${params.toString() ? `?${params}` : ''}`;
 
   const labelKey =
     variant === 'hero'
@@ -59,7 +66,7 @@ export function GetStartedCta({
     return (
       <Link
         href={href}
-        data-get-started={location}
+        data-counselling-from={location}
         className={`inline-flex items-center justify-center gap-2 bg-[#9B1B30] hover:bg-[#7A1526] text-white font-semibold px-7 py-3 text-base transition-colors ${className}`}
       >
         <Sparkles className="h-5 w-5" />
@@ -73,7 +80,7 @@ export function GetStartedCta({
     return (
       <Link
         href={href}
-        data-get-started={location}
+        data-counselling-from={location}
         className={`inline-flex items-center gap-2 border-2 border-[#9B1B30] text-[#9B1B30] hover:bg-[#9B1B30] hover:text-white px-4 py-2 text-sm font-semibold transition-colors ${className}`}
       >
         <Sparkles className="h-4 w-4" />
@@ -87,7 +94,7 @@ export function GetStartedCta({
   return (
     <Link
       href={href}
-      data-get-started={location}
+      data-counselling-from={location}
       className={`inline-flex items-center gap-1 text-sm font-semibold text-[#9B1B30] hover:underline ${className}`}
     >
       <Sparkles className="h-3.5 w-3.5" />

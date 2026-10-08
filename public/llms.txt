@@ -1,8 +1,8 @@
 # SICA — Study in China Agency
 
-> SICA is a professional study-abroad consultancy headquartered in Guangzhou, China. We help international students from 30+ countries gain admission to 50+ top Chinese universities (including Tsinghua, Peking, Fudan, Shanghai Jiao Tong, Zhejiang, Nanjing, Wuhan, Sun Yat-sen), secure scholarships (CSC, Confucius Institute, provincial and university-specific), and navigate the application, visa, and arrival process end-to-end.
+> SICA is a professional study-abroad consultancy headquartered in Guangzhou, China. We help international students gain admission to top Chinese universities (including Tsinghua, Peking, Fudan, Shanghai Jiao Tong, Zhejiang, Nanjing, Wuhan, Sun Yat-sen), secure scholarships (CSC, Confucius Institute, provincial and university-specific), and navigate the application, visa, and arrival process end-to-end.
 >
-> <!-- [verify] Jahid: 30+ countries vs 40+ vs 50+ across the site; 50+ universities vs 55+ vs 100+ vs 27+ — pick one source of truth. -->
+> <!-- Phase 148: site stats are now pulled from src/lib/site-stats.ts. Until Jahid fills the 5 spec fields (partnerUniversities / countriesServed / studentsHelped / admissionRate / visaRate), every stat tile in the UI is hidden rather than showing a guess. This file follows the same rule: no "+xxx  xx+" numbers in the brand-summary line. -->
 
 ## Conversion
 
@@ -10,13 +10,13 @@
 
 ## High-value pages
 
-- [Universities directory](https://studyinchina.academy/universities): 50+ partner Chinese universities with programs, rankings, tuition, scholarships, and application deadlines.
+- [Universities directory](https://studyinchina.academy/universities): partner Chinese universities with programs, rankings, tuition, scholarships, and application deadlines.
 - [Programs catalog](https://studyinchina.academy/programs): Bachelor's, Master's, PhD, and Chinese Language programs at top Chinese universities.
 - [Scholarships](https://studyinchina.academy/scholarships): Chinese Government Scholarship (CSC), Confucius Institute, Belt and Road, provincial and university-specific scholarships.
 - [Free academic assessment](https://studyinchina.academy/assessment): Submit your transcript, get a free eligibility review within 48 hours.
 - [Compare universities](https://studyinchina.academy/universities/compare): Pick any two Chinese universities to see them side by side — rankings, tuition, scholarships, programs.
 - [Study in China — by city](https://studyinchina.academy/study-in-china): Beijing, Shanghai, Hangzhou, Nanjing, Wuhan, Guangzhou university guides.
-- [Scholarships for [country] students](https://studyinchina.academy/scholarships-for): 40 country-specific scholarship landing pages (Nigeria, India, Pakistan, Bangladesh, Brazil, Kenya, Ghana, Indonesia, etc.).
+- [Scholarships for [country] students](https://studyinchina.academy/scholarships-for): country-specific scholarship landing pages (Nigeria, India, Pakistan, Bangladesh, Brazil, Kenya, Ghana, Indonesia, etc.).
 - [News](https://studyinchina.academy/news): weekly editorial on admissions, scholarships, visa, and the CSCA exam.
 
 ## Flagship admissions guides

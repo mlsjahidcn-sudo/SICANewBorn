@@ -8,6 +8,15 @@
  * 30-second scan: hook → trust strip → services → proof
  * (videos + admission notices) → pricing → final CTA.
  *
+ * Phase 148: page is noindexed AND removed from public nav /
+ * footer / internal CTAs (see src/components/GetStartedCta.tsx
+ * which now routes to /counselling). It still renders for paid
+ * direct traffic, but the trust strip + pricing copy have been
+ * scrubbed of the "90% / your money back" claim. Hard-coded
+ * trust numbers (10,000+, 100+, 90%) replaced with the empty
+ * placeholders in src/lib/site-stats.ts so the tile hides when
+ * Jahid has not confirmed a verified figure.
+ *
  * Why a single client island wrapping all sections:
  * - One i18n context for the whole page (no prop-drilling
  *   `t` through every section).
@@ -24,6 +33,7 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { getStat } from '@/lib/site-stats';
 import {
   MessageCircle,
   Check,
@@ -161,21 +171,31 @@ export function GetStartedClient({ initialNotices }: GetStartedClientProps) {
       <section className="bg-white border-b border-gray-200">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-4">
-            <TrustStat
-              icon={<Users className="w-5 h-5" />}
-              value="10,000+"
-              label={t('sales.trustLabelStudents')}
-            />
-            <TrustStat
-              icon={<Building2 className="w-5 h-5" />}
-              value="100+"
-              label={t('sales.trustLabelUniversities')}
-            />
-            <TrustStat
-              icon={<Award className="w-5 h-5" />}
-              value="90%"
-              label={t('sales.trustLabelSuccess')}
-            />
+            {/* Phase 148: trust-strip values come from src/lib/site-stats.ts.
+                Hard-coded "10,000+ / 100+ / 90%" removed. Each TrustStat
+                is hidden when its value is empty — the spec rule "Hide any
+                stat whose value is empty instead of showing a guess". */}
+            {getStat('studentsHelped') && (
+              <TrustStat
+                icon={<Users className="w-5 h-5" />}
+                value={getStat('studentsHelped')}
+                label={t('sales.trustLabelStudents')}
+              />
+            )}
+            {getStat('partnerUniversities') && (
+              <TrustStat
+                icon={<Building2 className="w-5 h-5" />}
+                value={getStat('partnerUniversities')}
+                label={t('sales.trustLabelUniversities')}
+              />
+            )}
+            {getStat('admissionRate') && (
+              <TrustStat
+                icon={<Award className="w-5 h-5" />}
+                value={getStat('admissionRate')}
+                label={t('sales.trustLabelSuccess')}
+              />
+            )}
             <TrustStat
               icon={<Clock className="w-5 h-5" />}
               value="24h"

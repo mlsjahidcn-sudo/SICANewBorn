@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useI18n } from '@/lib/i18n';
+import { getStat } from '@/lib/site-stats';
 import {
   Mail,
   Phone,
@@ -150,26 +151,42 @@ export function Footer() {
               {t('footer.mission')}
             </p>
 
-            {/* Trust micro-stats — quick social proof */}
+            {/* Trust micro-stats — pulled from src/lib/site-stats.ts (single source
+                of truth). Each tile is hidden when its value is empty so we
+                don't show a guessed number. The 3 slots here mirror the spec's
+                partnerUniversities / countriesServed / admissionRate fields —
+                visaRate + studentsHelped live only on the homepage hero strip. */}
             <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-xs">
-              <div>
-                <div className="text-xl font-bold text-[#1B2A4A] leading-none">30+</div>
-                <div className="text-[10px] uppercase tracking-wider text-gray-500 mt-1">
-                  {t('footer.trustCountries')}
+              {getStat('partnerUniversities') && (
+                <div>
+                  <div className="text-xl font-bold text-[#1B2A4A] leading-none">
+                    {getStat('partnerUniversities')}
+                  </div>
+                  <div className="text-[10px] uppercase tracking-wider text-gray-500 mt-1">
+                    {t('footer.trustUniversities')}
+                  </div>
                 </div>
-              </div>
-              <div>
-                <div className="text-xl font-bold text-[#1B2A4A] leading-none">50+</div>
-                <div className="text-[10px] uppercase tracking-wider text-gray-500 mt-1">
-                  {t('footer.trustUniversities')}
+              )}
+              {getStat('countriesServed') && (
+                <div>
+                  <div className="text-xl font-bold text-[#1B2A4A] leading-none">
+                    {getStat('countriesServed')}
+                  </div>
+                  <div className="text-[10px] uppercase tracking-wider text-gray-500 mt-1">
+                    {t('footer.trustCountries')}
+                  </div>
                 </div>
-              </div>
-              <div>
-                <div className="text-xl font-bold text-[#9B1B30] leading-none">95%</div>
-                <div className="text-[10px] uppercase tracking-wider text-gray-500 mt-1">
-                  {t('footer.trustPlacement')}
+              )}
+              {getStat('admissionRate') && (
+                <div>
+                  <div className="text-xl font-bold text-[#9B1B30] leading-none">
+                    {getStat('admissionRate')}
+                  </div>
+                  <div className="text-[10px] uppercase tracking-wider text-gray-500 mt-1">
+                    {t('footer.trustPlacement')}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Social icons */}
@@ -314,7 +331,9 @@ export function Footer() {
               {t('footer.apiDocs')}
             </Link>
             <span className="text-gray-300">·</span>
-            <span>{t('footer.trustCountries')} 30+</span>
+            {getStat('countriesServed') && (
+              <span>{t('footer.trustCountries')} {getStat('countriesServed')}</span>
+            )}
           </div>
         </div>
       </div>

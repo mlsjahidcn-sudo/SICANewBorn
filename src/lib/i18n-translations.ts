@@ -4305,16 +4305,25 @@ export const translations: Record<Locale, Record<string, string>> = {
     // across home, university list, university detail, program
     // list, program detail. The single source of truth lives
     // here so a wording change rolls out to all 5 surfaces.
-    'getStarted.heroCta': 'Get started — pick your package',
-    'getStarted.bannerCta': 'Get started — pick your package',
-    'getStarted.inlineCta': 'Get started — pick your package',
+    // Phase 148: copy no longer mentions "packages" or "pick your
+    // package" — the destination is /counselling (free 10-minute
+    // consultation), not /get-started (paid packages).
+    'getStarted.heroCta': 'Book a free 10-minute consultation',
+    'getStarted.bannerCta': 'Book a free 10-minute consultation',
+    'getStarted.inlineCta': 'Book a free 10-minute consultation',
     'sales.heroTitle': 'Get into a top Chinese university — without the chaos',
-    'sales.heroSubtitle': 'Real students. Real offer letters. 90% success rate with our partner universities, or your money back.',
+    // Phase 148: removed the "90% / or your money back" guarantee claim.
+    // Stats live in src/lib/site-stats.ts and are hidden from URLs.
+    'sales.heroSubtitle': 'Real students. Real offer letters. Talk to a SICA admissions counsellor for free first.',
     'sales.heroCtaWhatsapp': 'Chat with SICA on WhatsApp',
     'sales.heroCtaFree': 'Or get a free consultation first',
-    'sales.trustCount1': '10,000+ students admitted',
-    'sales.trustCount2': '100+ partner universities',
-    'sales.trustCount3': '90% admission success rate',
+    // Phase 148: trust strip values are now driven by src/lib/site-stats.ts;
+    // the i18n values here are kept as fallback copy for any surface that
+    // doesn't read site-stats (the i18n parity test forbids empty values).
+    // GetStartedClient uses site-stats and hides the tile when empty.
+    'sales.trustCount1': 'students admitted',
+    'sales.trustCount2': 'partner universities',
+    'sales.trustCount3': 'admission success rate',
     'sales.trustCount4': '24h response time',
     // Phase 57 hotfix: split the trust strip into number + label
     // so the new iconified TrustStat cell can render them on
@@ -4329,13 +4338,12 @@ export const translations: Record<Locale, Record<string, string>> = {
     'sales.tierDiyBadge': 'Do it yourself',
     'sales.tierFullBadge': 'We do it for you',
     'sales.tierFullRecommended': 'Recommended',
-    'sales.tierDiyPrice': '$50',
+    'sales.tierDiyPrice': 'Contact us',
     'sales.tierDiyPriceUnit': 'one-time',
-    'sales.tierFullPrice': '$700',
-    'sales.tierFullDeposit': '$150 deposit + $550 on admission',
-    // FX note: the zh block translates these to ¥360 / ¥3,600 at
-    // 7.2 CNY/USD (current mid-market). If the rate moves more
-    // than ±5%, re-derive the zh values. See AGENTS.md "FX rates".
+    'sales.tierFullPrice': 'Contact us',
+    'sales.tierFullDeposit': 'Deposit + balance on admission',
+    // FX note: phase 148 removed the public price numbers; no FX
+    // rounding needed. If prices return, see AGENTS.md "FX rates".
     'sales.tierDiyFeature1': 'University matching based on your academic background',
     'sales.tierDiyFeature2': 'Complete application materials & document checklist',
     'sales.tierDiyFeature3': 'CSCA exam preparation questions & study resources',
@@ -4347,17 +4355,21 @@ export const translations: Record<Locale, Record<string, string>> = {
     'sales.tierFullFeature2': 'We apply to 4–5 universities on your behalf',
     'sales.tierFullFeature3': 'Complete application management from start to finish',
     'sales.tierFullFeature4': 'Admission offer follow-up & negotiation',
-    'sales.tierFullFeature5': '90% success rate with our partner universities',
-    'sales.tierFullRefund': '💰 Refund policy: if we fail to secure your admission, we refund 30% of the total fee. The remaining amount covers our processing & service costs.',
+    // Phase 148: removed the "90% success rate" claim from the full-
+    // service tier's "what you get" copy. Numbers come from src/lib/site-stats.
+    'sales.tierFullFeature5': 'Dedicated admissions team handling your application end-to-end',
+    'sales.tierFullRefund': 'Refund terms: ask your recruiter for the current policy before you pay.',
     'sales.tierFullCta': 'Get the full-service package',
     'sales.whyTitle': 'Why SICA is different',
     'sales.whySubtitle': "We're not a mega-agency. We're a focused team that handles every student ourselves.",
     'sales.why1Title': 'CSC scholarship help',
     'sales.why1Body': 'Full support for Chinese Government Scholarship (CSC) applications — the most generous scholarship route to studying in China.',
-    'sales.why2Title': '90% success with our partners',
-    'sales.why2Body': 'Direct admission relationships with 27+ partner universities. Priority consideration, faster processing.',
-    'sales.why3Title': 'Real refund policy',
-    'sales.why3Body': "If we don't get you an admission, you get 30% back. Most agencies don't offer anything close.",
+    // Phase 148: removed the "90% success" claim from the headline.
+    // Partner-university count comes from src/lib/site-stats.
+    'sales.why2Title': 'Direct partner relationships',
+    'sales.why2Body': 'Direct admission relationships with our partner universities. Priority consideration, faster processing.',
+    'sales.why3Title': 'Bilingual support',
+    'sales.why3Body': 'WhatsApp + email in English and Chinese. We reply in under 24 hours, every working day.',
     'sales.why4Title': 'Bilingual support',
     'sales.why4Body': 'WhatsApp + email in English and Chinese. We reply in under 24 hours, every working day.',
     'sales.videosTitle': 'Real students, real results',
@@ -4369,8 +4381,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'sales.compareTitle': 'Which package is right for you?',
     'sales.compareSubtitle': 'Both include WhatsApp support throughout the process. Pick the level of help you need.',
     'sales.compareFeature': 'Feature',
-    'sales.compareDiy': 'DIY ($50)',
-    'sales.compareFull': 'Full-service ($700)',
+    'sales.compareDiy': 'DIY (Contact us)',
+    'sales.compareFull': 'Full-service (Contact us)',
     'sales.compare1': 'University matching',
     'sales.compare2': 'Document checklist & templates',
     'sales.compare3': 'CSCA exam prep resources',
@@ -4380,29 +4392,33 @@ export const translations: Record<Locale, Record<string, string>> = {
     'sales.compare7': 'Apply to 4–5 universities for you',
     'sales.compare8': 'Application management',
     'sales.compare9': 'Offer follow-up & negotiation',
-    'sales.compareRefund': 'Refund if no admission',
+    'sales.compareRefund': 'Refund terms on request',
     'sales.compareYes': '✓',
     'sales.compareNo': '—',
-    'sales.comparePartial': '30%',
+    'sales.comparePartial': 'Partial',
     'sales.finalTitle': 'Ready to start?',
-    'sales.finalSubtitle': 'Pick a package above or just message us — we reply within 24 hours, in English or Chinese.',
+    'sales.finalSubtitle': 'Book a free 10-minute consultation, or just message us — we reply within 24 hours, in English or Chinese.',
     'sales.finalCta': 'Chat with SICA on WhatsApp',
     'sales.finalOr': 'Or call us at',
     'sales.faqTitle': 'Quick answers',
     'sales.faq1Q': 'How long does the full process take?',
-    'sales.faq1A': 'From first chat to admission offer: typically 4–8 weeks. If you need to start in the next intake, message us now — the sooner you start, the more universities you can apply to.',
+    'sales.faq1A': 'From first chat to admission offer: typically 4–8 weeks. If you need to start in the next intake, book a free consultation now — the sooner you start, the more universities you can apply to.',
     'sales.faq2Q': "What if I don't qualify for any scholarship?",
-    'sales.faq2A': "You don't need a scholarship to work with us. The DIY package ($50) is built for students who self-fund. The full-service package covers you either way — our refund policy only triggers if you get zero admissions.",
+    'sales.faq2A': "You don't need a scholarship to work with us. The DIY package is built for students who self-fund. The full-service package covers you either way — refund terms are shared on request.",
     'sales.faq3Q': 'Can I upgrade from DIY to full-service later?',
-    'sales.faq3A': "Yes. If you buy the DIY package and decide partway through you'd rather have us handle the applications, we'll credit the $50 toward the full-service package.",
+    'sales.faq3A': "Yes. If you buy the DIY package and decide partway through you'd rather have us handle the applications, we'll credit the DIY fee toward the full-service package.",
     'sales.faq4Q': "Do you support students from my country?",
-    'sales.faq4A': "We work with students from 50+ countries across Africa, South Asia, the Middle East, and Central Asia. If you have a passport, we can probably help. Ask on WhatsApp to confirm.",
+    // Phase 148: removed the "50+ countries" hard-coded number — studentsHelped + countriesServed
+    // live in src/lib/site-stats.ts. If the value is empty, the tile is hidden.
+    'sales.faq4A': "We work with students from many countries across Africa, South Asia, the Middle East, and Central Asia. If you have a passport, we can probably help. Ask on WhatsApp to confirm.",
     // Phase 6E: public-page i18n sweep
     // Home page additional strings
     'common.china': 'China',
     'home.stats.partnerUniversities': 'Partner Universities',
     'home.stats.programsAvailable': 'Programs Available',
     'home.stats.countriesRepresented': 'Countries Represented',
+    'home.stats.studentsHelped': 'Students Helped',
+    'home.stats.admissionRate': 'Admission Rate',
     'home.stats.visaSuccessRate': 'Visa Success Rate',
     'home.trustBadge': 'Trusted by students at China\'s top universities',
     'home.news.eyebrow': 'Newsroom',
@@ -9253,17 +9269,22 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminWebhooks.deliveryNoRows': '该订阅暂无投递记录。',
     // Phase 57: /get-started sales landing page (zh)
     'sales.eyebrow': '为 YouTube 与 TikTok 观众准备',
-    // Phase 58: cross-page "Get started" CTA (zh)
-    'getStarted.heroCta': '立即开始 — 选择你的套餐',
-    'getStarted.bannerCta': '立即开始 — 选择你的套餐',
-    'getStarted.inlineCta': '立即开始 — 选择你的套餐',
+    // Phase 148: copy no longer mentions "packages" — destination is
+    // /counselling (free 10-minute consultation), not /get-started.
+    'getStarted.heroCta': '预约一次 10 分钟免费咨询',
+    'getStarted.bannerCta': '预约一次 10 分钟免费咨询',
+    'getStarted.inlineCta': '预约一次 10 分钟免费咨询',
     'sales.heroTitle': '进入中国顶尖大学 — 不再手忙脚乱',
-    'sales.heroSubtitle': '真实学生。真实录取通知书。合作大学录取率 90%，不成功按比例退款。',
+    // Phase 148: removed the "90% / 不成功按比例退款" claim.
+    'sales.heroSubtitle': '真实学生。真实录取通知书。先免费和 SICA 招生顾问聊聊。',
     'sales.heroCtaWhatsapp': '在 WhatsApp 上联系 SICA',
     'sales.heroCtaFree': '或先预约一次免费咨询',
-    'sales.trustCount1': '10,000+ 名学生成功入学',
-    'sales.trustCount2': '100+ 所合作大学',
-    'sales.trustCount3': '90% 录取成功率',
+    // Phase 148: trust strip values driven by src/lib/site-stats.ts (the
+    // single source of truth). i18n kept as fallback strings; GetStartedClient
+    // reads site-stats and hides the tile when empty.
+    'sales.trustCount1': '名学生成功入学',
+    'sales.trustCount2': '所合作大学',
+    'sales.trustCount3': '录取成功率',
     'sales.trustCount4': '24 小时内回复',
     'sales.trustLabelStudents': '名学生成功入学',
     'sales.trustLabelUniversities': '所合作大学',
@@ -9274,10 +9295,10 @@ export const translations: Record<Locale, Record<string, string>> = {
     'sales.tierDiyBadge': 'DIY 自助',
     'sales.tierFullBadge': '全包服务',
     'sales.tierFullRecommended': '推荐',
-    'sales.tierDiyPrice': '¥360',
+    'sales.tierDiyPrice': '联系我们',
     'sales.tierDiyPriceUnit': '一次性',
-    'sales.tierFullPrice': '¥5,040',
-    'sales.tierFullDeposit': '¥1,080 预付 + ¥3,960 录取后付',
+    'sales.tierFullPrice': '联系我们',
+    'sales.tierFullDeposit': '预付 + 录取后付余款',
     'sales.tierDiyFeature1': '根据你的学术背景匹配大学',
     'sales.tierDiyFeature2': '完整申请材料与文件清单',
     'sales.tierDiyFeature3': 'CSCA 考试备考题库与学习资料',
@@ -9289,17 +9310,19 @@ export const translations: Record<Locale, Record<string, string>> = {
     'sales.tierFullFeature2': '我们替你申请 4–5 所大学',
     'sales.tierFullFeature3': '从开始到结束的全程申请管理',
     'sales.tierFullFeature4': '录取通知跟进与谈判',
-    'sales.tierFullFeature5': '合作大学 90% 录取成功率',
-    'sales.tierFullRefund': '💰 退款政策：若我们未帮你拿到录取，返还 30% 费用。剩余部分用于覆盖我们的处理与服务成本。',
+    // Phase 148: removed the "90% 录取率" claim from full-service copy.
+    'sales.tierFullFeature5': '专属招生团队全程跟进',
+    'sales.tierFullRefund': '退款条款：付款前请向你的顾问索取最新政策。',
     'sales.tierFullCta': '获取全包服务',
     'sales.whyTitle': 'SICA 与众不同',
     'sales.whySubtitle': '我们不是大型中介。是一支专注的团队，每个学生都亲手跟进。',
     'sales.why1Title': 'CSC 奖学金协助',
     'sales.why1Body': '全面支持中国政府奖学金 (CSC) 申请 — 留学中国最高额的奖学金通道。',
-    'sales.why2Title': '合作大学 90% 成功率',
-    'sales.why2Body': '与 27+ 所合作大学保持直接录取关系。优先考虑、更快处理。',
-    'sales.why3Title': '真正的退款政策',
-    'sales.why3Body': '如果我们没帮你拿到录取，返还 30%。大多数机构不提供任何类似保障。',
+    // Phase 148: removed the "90% 成功率" claim from the headline.
+    'sales.why2Title': '直接合作大学关系',
+    'sales.why2Body': '与合作大学保持直接录取关系。优先考虑、更快处理。',
+    'sales.why3Title': '中英文支持',
+    'sales.why3Body': 'WhatsApp + 邮件支持中英文。我们每个工作日都在 24 小时内回复。',
     'sales.why4Title': '中英文支持',
     'sales.why4Body': 'WhatsApp + 邮件支持中英文。我们每个工作日都在 24 小时内回复。',
     'sales.videosTitle': '真实学生，真实成果',
@@ -9311,8 +9334,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'sales.compareTitle': '哪个套餐适合你？',
     'sales.compareSubtitle': '两种都包含全程 WhatsApp 支持。按你需要的帮助程度选择。',
     'sales.compareFeature': '功能',
-    'sales.compareDiy': 'DIY 自助 (¥360)',
-    'sales.compareFull': '全包服务 (¥5,040)',
+    'sales.compareDiy': 'DIY 自助（联系我们）',
+    'sales.compareFull': '全包服务（联系我们）',
     'sales.compare1': '大学匹配',
     'sales.compare2': '文件清单与模板',
     'sales.compare3': 'CSCA 备考资料',
@@ -9322,29 +9345,32 @@ export const translations: Record<Locale, Record<string, string>> = {
     'sales.compare7': '替你申请 4–5 所大学',
     'sales.compare8': '全程申请管理',
     'sales.compare9': '录取跟进与谈判',
-    'sales.compareRefund': '未录取退款',
+    'sales.compareRefund': '退款条款可索取',
     'sales.compareYes': '✓',
     'sales.compareNo': '—',
-    'sales.comparePartial': '30%',
+    'sales.comparePartial': '部分',
     'sales.finalTitle': '准备好了吗？',
-    'sales.finalSubtitle': '选一个套餐或直接留言 — 我们 24 小时内回复，中英文都可以。',
+    'sales.finalSubtitle': '预约一次 10 分钟免费咨询，或直接留言 — 我们 24 小时内回复，中英文都可以。',
     'sales.finalCta': '在 WhatsApp 上联系 SICA',
     'sales.finalOr': '或致电',
     'sales.faqTitle': '快速解答',
     'sales.faq1Q': '整个流程要多久？',
-    'sales.faq1A': '从第一次咨询到拿到录取：通常 4–8 周。如果你要赶下一个入学季，现在就联系我们 — 越早开始，能申请的学校越多。',
+    'sales.faq1A': '从第一次咨询到拿到录取：通常 4–8 周。如果你要赶下一个入学季，现在就预约免费咨询 — 越早开始，能申请的学校越多。',
     'sales.faq2Q': '如果我拿不到任何奖学金怎么办？',
-    'sales.faq2A': '拿到奖学金不是与我们合作的必要条件。DIY 自助包 (¥360) 就是为自费学生设计的。全包服务也一样适用 — 我们的退款政策只在零录取时触发。',
+    'sales.faq2A': '拿到奖学金不是与我们合作的必要条件。DIY 自助包就是为自费学生设计的。全包服务也一样适用 — 退款条款可向我们索取。',
     'sales.faq3Q': '可以从 DIY 升级到全包服务吗？',
-    'sales.faq3A': '可以。如果你买了 DIY 包中途想让我们接手申请，¥360 会全额抵扣到全包服务的费用里。',
+    'sales.faq3A': '可以。如果你买了 DIY 包中途想让我们接手申请，DIY 费用会全额抵扣到全包服务的费用里。',
     'sales.faq4Q': '你们支持我所在的国家吗？',
-    'sales.faq4A': '我们已经帮助过来自 50+ 个国家的学生，覆盖非洲、南亚、中东和中亚。只要你有护照，我们大概率能帮上忙。在 WhatsApp 上问一句确认即可。',
+    // Phase 148: removed the "50+ 个国家" hard-coded number.
+    'sales.faq4A': '我们已经帮助过来自很多国家的学生，覆盖非洲、南亚、中东和中亚。只要你有护照，我们大概率能帮上忙。在 WhatsApp 上问一句确认即可。',
     // Phase 6E: 公共页面 i18n sweep
     // 首页额外字符串
     'common.china': '中国',
     'home.stats.partnerUniversities': '合作大学',
     'home.stats.programsAvailable': '可选项目',
     'home.stats.countriesRepresented': '覆盖国家',
+    'home.stats.studentsHelped': '帮助学生',
+    'home.stats.admissionRate': '录取率',
     'home.stats.visaSuccessRate': '签证通过率',
     'home.trustBadge': '中国顶尖大学的学生信赖之选',
     'home.news.eyebrow': '新闻中心',
