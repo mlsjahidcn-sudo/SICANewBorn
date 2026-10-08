@@ -1041,19 +1041,29 @@ export async function sendCounsellingProposalAccepted(params: {
  * Phase 125: student counter-proposed. Admin-only email — the new
  * proposal email fires to the student from the same route after we
  * update proposed_slot_start + token.
+ *
+ * Phase 151 (#18): the admin-notification email_log row was
+ * recording the student's email as the recipient even though the
+ * mail actually went to `ADMIN_EMAIL`. The caller now needs the
+ * resolved recipient back to write a truthful audit row. Returns
+ * `{ ...LoggedSendTextResult, to: string | null }` so the route
+ * stores `mail.to` rather than guessing.
  */
-export async function sendCounsellingProposalDeclined(params: {
-  reference: string;
-  name: string;
-  previousSlotStartIso: string;
-  newSlotStartIso: string;
-  adminUrl: string;
-}): Promise<LoggedSendTextResult> {
+export async function sendCounsellingProposalDeclined(
+  params: {
+    reference: string;
+    name: string;
+    previousSlotStartIso: string;
+    newSlotStartIso: string;
+    adminUrl: string;
+  },
+): Promise<LoggedSendTextResult & { to: string | null }> {
   const previousSlotLabel = formatCounsellingSlotBeijing(params.previousSlotStartIso);
   const slotLabel = formatCounsellingSlotBeijing(params.newSlotStartIso);
+  const toEmail = process.env.ADMIN_EMAIL ?? '';
   // Admin notification always reads 'en' — bilingual body lands either way.
-  return sendCounsellingTemplatedEmail({
-    toEmail: process.env.ADMIN_EMAIL ?? '',
+  const result = await sendCounsellingTemplatedEmail({
+    toEmail,
     slug: 'counselling.proposal_declined',
     locale: 'en',
     variables: {
@@ -1064,6 +1074,7 @@ export async function sendCounsellingProposalDeclined(params: {
       adminUrl: params.adminUrl,
     },
   });
+  return { ...result, to: toEmail || null };
 }
 
 // ============================================================================

@@ -232,18 +232,14 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
   }
 
   // Phase 125: drop the proposal.
+  // Phase 151 (#4): removed the empty `if (update.status === undefined &&
+  // body.status === undefined) { /* comment only */ }` block — the
+  // revert-to-Pending logic actually runs AFTER the snapshot read
+  // below (the next block), where the previous status is known.
   if (body.clearProposal === true) {
     update.proposed_slot_start = null;
     update.proposal_token = null;
     update.proposal_expires_at = null;
-    // Dropping a proposal reverts status: if the row was only at
-    // Proposed, send it back to Pending; if it was previously Confirmed
-    // (rare admin flow) leave that alone — the admin can re-set.
-    if (update.status === undefined && body.status === undefined) {
-      // we don't know the previous status here without snapshotting
-      // first; leave status untouched and let the caller re-PATCH if
-      // they want Pending. (The route does snapshot below.)
-    }
   }
 
   if (Object.keys(update).length === 0) {

@@ -7,6 +7,7 @@ import {
 import { checkPublicRateLimit, isHoneypotFilled } from '@/lib/rate-limit';
 import { buildServiceClient } from '@/lib/supabase-auth';
 import { mintProposalToken } from '@/lib/counselling-tokens';
+import { fetchOccupiedSlotInstants } from '@/lib/counselling/occupancy';
 import { SITE_URL } from '@/lib/site-url';
 
 export const dynamic = 'force-dynamic';
@@ -120,15 +121,37 @@ export async function POST(request: NextRequest) {
   if (action === 'decline') {
     // Drop the proposal columns — status stays 'Proposed' so the admin
     // sees the decline in their list (admin re-proposes or cancels).
+    // #3 (Phase 151): .eq('proposal_token', token) guards against a
+    // parallel-decline race; matches zero rows if the token was already
+    // consumed. We don't error — decline is idempotent.
     await supabase
       .from('counselling_bookings')
       .update({ proposal_token: null, proposal_expires_at: null })
-      .eq('id', row.id);
+      .eq('id', row.id)
+      .eq('proposal_token', token);
     return NextResponse.json({ ok: true, action: 'decline', reference: row.reference });
   }
 
   if (action === 'accept') {
+    // #2 (Phase 151): the partial unique index only covers
+    // (Pending|Confirmed) bookings at slot_start. If another
+    // unexpired admin proposal holds proposed_slot_start right
+    // now, accepting this one would silently steal the slot from
+    // that other student. Check via the shared Phase 137 occupancy
+    // lib before mutating.
+    const acceptOccupied = await fetchOccupiedSlotInstants(supabase, [row.proposed_slot_start!], {
+      excludeBookingId: row.id,
+    });
+    if (acceptOccupied.size > 0) {
+      return NextResponse.json(
+        { error: 'This slot was just reserved for someone else. Please book a new time at /counselling.' },
+        { status: 409 },
+      );
+    }
     // Move slot_start to the proposed slot, confirm, clear proposal cols.
+    // #3 (Phase 151): .eq('proposal_token', token) makes the magic link
+    // truly single-use — two parallel POSTs with the same token can't
+    // both succeed (the second UPDATE matches zero rows and 23505s).
     const { data: updated, error: updErr } = await supabase
       .from('counselling_bookings')
       .update({
@@ -141,12 +164,22 @@ export async function POST(request: NextRequest) {
         reminder_2h_at: null,
       })
       .eq('id', row.id)
+      .eq('proposal_token', token)
       .select('*')
       .single();
     if (updErr) {
       if (updErr.code === '23505') {
         return NextResponse.json(
           { error: 'Another booking already holds this slot.' },
+          { status: 409 },
+        );
+      }
+      // PGRST116 = .single() matched 0 rows (the token-conditional guard
+      // already won, or the row moved out from under us). Treat as the
+      // link-already-used case so the student gets a clear 409.
+      if (updErr.code === 'PGRST116') {
+        return NextResponse.json(
+          { error: 'This link has already been used.' },
           { status: 409 },
         );
       }
@@ -169,7 +202,11 @@ export async function POST(request: NextRequest) {
         await supabase.from('email_log').insert({
           lead_type: 'counselling',
           lead_id: row.id,
-          template_slug: 'counselling.proposal_accepted',
+          // #8 (Phase 151): `sendCounsellingProposalAccepted` delegates
+          // to `sendCounsellingConfirmed` which renders the
+          // `counselling.confirmed` template — log that slug so the
+          // audit row matches what was actually rendered.
+          template_slug: 'counselling.confirmed',
           to_email: updated.email,
           to_name: updated.name,
           subject: result.subject,
@@ -205,16 +242,15 @@ export async function POST(request: NextRequest) {
     );
   }
   // Slot-ownership re-check on the proposed new slot — another
-  // booking might have grabbed it since the original proposal.
+  // booking OR another unexpired admin proposal might have grabbed
+  // it since the original proposal. #1 (Phase 151): use the shared
+  // Phase 137 occupancy lib so proposals count too (the inline
+  // slot_start-only check was the double-booking hole).
   const newSlotIso = parsed.toISOString();
-  const { data: clash } = await supabase
-    .from('counselling_bookings')
-    .select('id')
-    .eq('slot_start', newSlotIso)
-    .in('status', ['Pending', 'Confirmed'])
-    .neq('id', row.id)
-    .maybeSingle();
-  if (clash) {
+  const counterOccupied = await fetchOccupiedSlotInstants(supabase, [newSlotIso], {
+    excludeBookingId: row.id,
+  });
+  if (counterOccupied.size > 0) {
     return NextResponse.json(
       { error: 'That slot was just taken. Please pick another.' },
       { status: 409 },
@@ -232,9 +268,17 @@ export async function POST(request: NextRequest) {
       status: 'Proposed',
     })
     .eq('id', row.id)
+    // #3 (Phase 151): same single-use token guard as the accept path.
+    .eq('proposal_token', token)
     .select('*')
     .single();
   if (updErr) {
+    if (updErr.code === 'PGRST116') {
+      return NextResponse.json(
+        { error: 'This link has already been used.' },
+        { status: 409 },
+      );
+    }
     console.error('[counselling/respond] counter update failed:', updErr);
     return NextResponse.json({ error: 'Could not record counter-proposal.' }, { status: 500 });
   }
@@ -278,8 +322,11 @@ export async function POST(request: NextRequest) {
           lead_type: 'counselling',
           lead_id: row.id,
           template_slug: 'counselling.proposal_declined',
-          to_email: adminMail.error ? 'admin-error' : (updated.email as string),
-          to_name: updated.name as string,
+          // #18 (Phase 151): log the actual recipient (ADMIN_EMAIL) —
+          // previously this row recorded the student's email, which
+          // made audit searches misleading.
+          to_email: adminMail.to ?? (adminMail.error ? 'admin-error' : 'unknown'),
+          to_name: 'SICA Admissions',
           subject: adminMail.subject,
           body_text: adminMail.text,
           resend_message_id: adminMail.id ?? null,
