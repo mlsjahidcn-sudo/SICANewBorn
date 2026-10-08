@@ -569,8 +569,11 @@ export async function notifyPartnerOnStatusChange(
  * Render an absolute slot instant as a Beijing wall-clock line, e.g.
  * "Sat, 19 Sep 2026, 09:30-09:40 (GMT+8)". Server Node has full ICU,
  * so the fixed timeZone is honored.
+ *
+ * Phase 152 (#14): exported so the proposal-expiry worker can render
+ * the same label without duplicating the Beijing math.
  */
-function formatCounsellingSlotBeijing(slotStartIso: string): string {
+export function formatCounsellingSlotBeijing(slotStartIso: string): string {
   const start = new Date(slotStartIso);
   const day = new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Asia/Shanghai',
@@ -1072,6 +1075,44 @@ export async function sendCounsellingProposalDeclined(
       previousSlotLabel,
       slotLabel,
       adminUrl: params.adminUrl,
+    },
+  });
+  return { ...result, to: toEmail || null };
+}
+
+/**
+ * Phase 152 (#14): admin notification when a proposal expires
+ * without a student response. Renders the `counselling.proposal_
+ * expired_admin` template. Used by the proposal-expiry worker.
+ */
+export async function sendCounsellingProposalExpiredAdmin(
+  params: {
+    name: string;
+    reference: string;
+    proposedSlotLabel: string;
+    proposalExpiresAtIso: string;
+  },
+): Promise<LoggedSendTextResult & { to: string | null }> {
+  const toEmail = process.env.ADMIN_EMAIL ?? '';
+  // Format proposal_expires_at as a Beijing wall-clock label so the
+  // admin sees the deadline in the same timezone the slot lives in.
+  const proposalExpiresLabel = new Intl.DateTimeFormat('en-GB', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: 'Asia/Shanghai',
+  }).format(new Date(params.proposalExpiresAtIso));
+  const result = await sendCounsellingTemplatedEmail({
+    toEmail,
+    slug: 'counselling.proposal_expired_admin',
+    locale: 'en',
+    variables: {
+      name: params.name,
+      reference: params.reference,
+      proposedSlotLabel: params.proposedSlotLabel,
+      proposalExpiresAt: proposalExpiresLabel,
+      // Inline import avoided here to keep the email module's import
+      // graph stable; the admin URL is the only env-dependent string.
+      adminUrl: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://studyinchina.academy'}/admin/counselling`,
     },
   });
   return { ...result, to: toEmail || null };
