@@ -21,6 +21,11 @@
 /** Beijing is UTC+8 fixed. */
 const BEIJING_OFFSET_MS = 8 * 60 * 60 * 1000;
 
+/** Beijing is a fixed UTC+8 offset. Exported so callers (Phase 152
+ *  /counselling/lookup) can format ISO instants into Beijing wall
+ *  time without re-implementing the offset math. */
+export { BEIJING_OFFSET_MS };
+
 /** Length of the counselling conversation itself. */
 export const SESSION_MINUTES = 10;
 
