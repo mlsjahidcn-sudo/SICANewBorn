@@ -475,6 +475,17 @@ export const guideCards: LocalizedGuideCards = {
       highlight: 'Myth busted',
     },
     {
+      slug: 'english-taught-programs-china',
+      href: '/english-taught-programs-china',
+      icon: 'book-open',
+      category: 'listicle',
+      title: 'English-taught programs in China — 2027 guide for non-Chinese speakers',
+      subtitle:
+        'The MOE ETP landscape across 300+ universities — top schools by ETP depth, subjects with the biggest catalogs, the English-track admissions pathway, CSC scholarships, and what the English campus experience actually looks like.',
+      readTime: '12 min read',
+      highlight: 'No Chinese needed',
+    },
+    {
       slug: 'csca-test-day-retakes',
       href: '/csca-test-day-retakes',
       icon: 'clipboard-list',
@@ -1215,6 +1226,17 @@ export const guideCards: LocalizedGuideCards = {
         '要——雅思/托福不能豁免。英文授课考生考什么、考试如何叠加与核验清单。',
       readTime: '9分钟阅读',
       highlight: '破除误解',
+    },
+    {
+      slug: 'english-taught-programs-china',
+      href: '/english-taught-programs-china',
+      icon: 'book-open',
+      category: 'listicle',
+      title: '中国英文授课项目——2027 非母语者全指南',
+      subtitle:
+        '300+ 所大学的教育部 ETP 全图——按 ETP 深度的名校排名、英文项目最多学科、英语轨申请路径、CSC 奖学金、英语校园真实体验。',
+      readTime: '12分钟阅读',
+      highlight: '无需汉语',
     },
     {
       slug: 'csca-test-day-retakes',

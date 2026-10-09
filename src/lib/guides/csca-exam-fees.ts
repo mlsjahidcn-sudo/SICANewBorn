@@ -15,11 +15,11 @@ export const cscaFeesGuide: LocalizedGuide = {
   en: {
     slug: 'csca-exam-fees',
     eyebrow: 'GUIDE · CSCA FEES',
-    title: 'CSCA Exam Fee 2026-27: RMB 450 or 700 & How to Pay',
+    title: 'CSCA Exam Fee 2027: RMB 450 or 700 & How to Pay',
     description:
-      'CSCA exam fee: RMB 450 for one subject, RMB 700 for two or more (official, csca.cn). How to pay from abroad, refunds, and what else to budget.',
+      'CSCA exam fee for the 2027 cycle: RMB 450 for one subject, RMB 700 for two or more (official, csca.cn). How to pay from abroad, refunds, and what else to budget.',
     subtitle:
-      'The CSCA exam fee is RMB 450 for one subject or RMB 700 total for two or more subjects in the same sitting (official, csca.cn). Math is required for everyone; English-taught applicants usually add 1–2 more subjects, paying the RMB 700 band. Payment runs through the official portal — the real cost traps are payment-channel friction from abroad, not the fee itself.',
+      'The CSCA exam fee is RMB 450 for one subject or RMB 700 total for two or more subjects in the same sitting (official, csca.cn) — the same band has applied since launch and continues into the 2027 cycle. Math is required for everyone; English-taught applicants usually add 1–2 more subjects, paying the RMB 700 band. Payment runs through the official portal — the real cost traps are payment-channel friction from abroad, not the fee itself.',
     stats: [
       { value: 'RMB 450', label: '1 subject' },
       { value: 'RMB 700', label: '2+ subjects (total)' },
@@ -27,11 +27,11 @@ export const cscaFeesGuide: LocalizedGuide = {
       { value: 'Online', label: 'Main mode — no travel needed' },
     ],
     quickAnswer:
-      'The CSCA exam fee is RMB 450 for one subject or RMB 700 total for two or more subjects in the same sitting — official figures from csca.cn. Math is required for everyone; Physics and/or Chemistry depend on the university and program, and the four-subject Professional Chinese track applies only to Chinese-taught programs. Registration for the November 2026 sitting (14–15 Nov) runs 15–21 October, Beijing time, and the fee must be paid inside that window. There is no published automatic no-show refund — treat the fee as non-refundable when budgeting.',
+      'The CSCA exam fee for the 2027 cycle is RMB 450 for one subject or RMB 700 total for two or more subjects in the same sitting — the same band has applied since launch (official figures from csca.cn). Math is required for everyone; Physics and/or Chemistry depend on the university and program, and the four-subject Professional Chinese track applies only to Chinese-taught programs. For the 2027 intake, the relevant November 2026 (14–15 Nov — register 15–21 Oct Beijing time), December 2026, and January 2027 sittings all charge the same band. There is no published automatic no-show refund — treat the fee as non-refundable when budgeting.',
     keyTakeaways: [
-      'Flat banding: RMB 450 for one subject, RMB 700 total for two or more — the per-subject cost falls sharply as you add subjects',
+      'Flat banding: RMB 450 for one subject, RMB 700 total for two or more — the per-subject cost falls sharply as you add subjects (same band carried into the 2027 cycle)',
       'Math is required for everyone; English-taught applicants usually sit Math plus 1–2 subjects (RMB 700). Four subjects apply only to Chinese-taught programs',
-      'Pay inside the registration window — for the November 2026 sitting that window is 15–21 October (Beijing time); the seat is held only by a confirmed payment',
+      'Pay inside the registration window — for the November 2026 sitting (relevant for 2027 scholarships), that window is 15–21 October (Beijing time); the seat is held only by a confirmed payment',
       'Payment channels reported by applicants: Alipay, WeChat Pay, and bank transfer [verify each on csca.cn before relying on one]',
       'Keep the payment confirmation until results are released — it is your evidence for any payment dispute',
       'No published automatic no-show refund; treat policy questions (refunds, subject changes) as per-session portal matters',
@@ -294,11 +294,11 @@ export const cscaFeesGuide: LocalizedGuide = {
       { value: '线上', label: '主要模式——无需赶考' },
     ],
     quickAnswer:
-      'CSCA 考试费为单科 450 元人民币，或同场两科及以上合计 700 元——官方 csca.cn 口径。数学为全员必考；物理和/或化学取决于大学与项目，四科组合（含专业中文）仅适用于中文授课项目。2026 年 11 月场次（11 月 14-15 日）报名窗口为 10 月 15-21 日（北京时间），费用须在窗口内付清。缺考无公布的自动退款——做预算时按不可退处理。',
+      '2027 周期的 CSCA 考试费为单科 450 元人民币，或同场两科及以上合计 700 元——自开考以来执行同一分档（官方 csca.cn 口径）。数学为全员必考；物理和/或化学取决于大学与项目，四科组合（含专业中文）仅适用于中文授课项目。2027 入学相关场次：2026 年 11 月（14-15 日，10 月 15-21 日报名北京时间）、12 月、2027 年 1 月，费用均按同一分档。缺考无公布的自动退款——做预算时按不可退处理。',
     keyTakeaways: [
-      '按档收费：单科 450 元，两科及以上合计 700 元——科目越多单科成本越低',
+      '按档收费：单科 450 元，两科及以上合计 700 元——科目越多单科成本越低（同一分档延续至 2027 周期）',
       '数学全员必考；英文授课申请者通常考数学加 1-2 科（700 元）。四科组合仅限中文授课项目',
-      '报名窗口内支付——2026 年 11 月场次窗口为 10 月 15-21 日（北京时间）；只有支付确认才锁定考位',
+      '报名窗口内支付——2026 年 11 月场次（用于 2027 入学）窗口为 10 月 15-21 日（北京时间）；只有支付确认才锁定考位',
       '考生报告的支付通道：支付宝、微信支付、银行转账 [结账时以 csca.cn 实际显示为准]',
       '成绩发布前保留支付凭证——它是任何支付争议的证据',
       '缺考无公布的自动退款；退款、改科等政策按场次由门户处理',

@@ -95,6 +95,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/moe-listed-mbbs-universities-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/x1-vs-x2-student-visa-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/study-in-china-without-ielts`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    // Phase 150: English-track ETP landscape article — the broad
+    // 300+ university MOE ETP catalog for non-Chinese speakers, the
+    // C9 + 30 strong-research-university cluster, subject coverage,
+    // the English-track admissions pathway (IELTS + CSCA), CSC for
+    // ETP candidates, and the realistic English-campus experience.
+    // Complements /csca-english-taught-programs (the narrow CSCA
+    // angle) and /study-in-china-without-ielts (the IELTS exemption
+    // angle).
+    { url: `${SITE_URL}/english-taught-programs-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     // Phase 121: Study-in-China cluster Batch 1 — personal finance & daily life
     { url: `${SITE_URL}/open-chinese-bank-account`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/international-money-transfer-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },

@@ -17,11 +17,11 @@ export const costOfLivingByCityGuide: LocalizedGuide = {
   en: {
     slug: 'cost-of-living-china-by-city',
     eyebrow: 'GUIDE · COST',
-    title: 'Cost of Living in China by City: 2026 Comparison',
+    title: 'Cost of Living in China by City: 2027 Comparison',
     description:
-      'City-by-city cost of living comparison for international students in China — Beijing, Shanghai, Hangzhou, Wuhan, Xi\'an, Chengdu + more.',
+      '2027 city-by-city cost of living comparison for international students in China — Beijing, Shanghai, Hangzhou, Wuhan, Xi\'an, Chengdu + more.',
     subtitle:
-      'The same monthly budget buys dramatically different lifestyles in different Chinese cities. Here is the data, ranked.',
+      'The same monthly budget buys dramatically different lifestyles in different Chinese cities. Here is the 2027 data, ranked.',
     stats: [
       { value: '¥1,500-5,000', label: 'Monthly living cost range' },
       { value: '3x', label: 'Cost difference (Tier 1 vs Tier 3)' },
@@ -234,11 +234,11 @@ export const costOfLivingByCityGuide: LocalizedGuide = {
   zh: {
     slug: 'cost-of-living-china-by-city',
     eyebrow: '指南 · 成本',
-    title: '2026 中国各城市生活费对比',
+    title: '2027 中国各城市生活费对比',
     description:
-      '中国国际生各城市生活成本对比——北京、上海、杭州、武汉、西安、成都等。',
+      '2027 年中国国际生各城市生活成本对比——北京、上海、杭州、武汉、西安、成都等。',
     subtitle:
-      '同样月预算在不同中国城市能买到的生活方式差异巨大。数据、排名如下。',
+      '同样月预算在不同中国城市能买到的生活方式差异巨大。下面是 2027 的数据与排名。',
     stats: [
       { value: '¥1,500-5,000', label: '月生活费范围' },
       { value: '3 倍', label: '成本差异（一线 vs 三线）' },

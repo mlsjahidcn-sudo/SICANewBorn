@@ -50,7 +50,7 @@ const CITY_LIVING: Record<string, number> = {
   'Zhengzhou': 2600,
 };
 
-const USD_RATE = 7.25; // approximate for 2026 budgeting
+const USD_RATE = 7.25; // approximate for 2027 budgeting
 
 export default async function CostOfLivingByCityPage() {
   const cookieStore = await cookies();
