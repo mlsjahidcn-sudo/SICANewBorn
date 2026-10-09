@@ -132,6 +132,29 @@ export interface AnalyticsEventMap {
     /** Reference id of the booking that was responded to. */
     reference: string;
   };
+  /**
+   * Phase 153 (#17): student tried to respond but the API rejected
+   * the request. Fires only on the failure path so the success
+   * `counselling_proposal_response` event isn't double-counted.
+   */
+  counselling_proposal_rejected: {
+    /**
+     * Coarse reason for the rejection — bucketed so the dashboard
+     * doesn't explode into a per-message-string dimension. The
+     * `classifyRespondError` helper in RespondClient maps the HTTP
+     * status + the server's error string into one of these.
+     */
+    reason:
+      | 'expired'
+      | 'already-used'
+      | 'slot-taken'
+      | 'validation'
+      | 'server';
+    /** Which button the student pressed. */
+    action: 'accept' | 'counter' | 'decline';
+    /** Reference id of the booking that was responded to. */
+    reference: string;
+  };
   /** User clicked a service-tier CTA on the /get-started sales page. */
   service_card_click: {
     /** Which tier the user clicked toward. */

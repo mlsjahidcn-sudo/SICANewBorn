@@ -21,6 +21,7 @@ import {
 } from '@/lib/counselling-slots';
 import { fetchOccupiedSlotInstants } from '@/lib/counselling/occupancy';
 import { mintProposalToken } from '@/lib/counselling-tokens';
+import { normalizeMeetingLink } from '@/lib/counselling/meeting-link';
 
 export const dynamic = 'force-dynamic';
 
@@ -138,6 +139,9 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
   }
 
   if (body.meetingLink !== undefined) {
+    // Phase 153 (#24): normalize before the change-detection comparison
+    // so `HTTP://x` vs `http://x` and `http://x  ` vs `http://x` don't
+    // register as a change.
     const raw = typeof body.meetingLink === 'string' ? body.meetingLink.trim() : '';
     if (raw) {
       if (raw.length > 500) {
@@ -150,7 +154,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
         );
       }
     }
-    update.meeting_link = raw || null;
+    update.meeting_link = normalizeMeetingLink(raw) || null;
   }
 
   if (body.adminNotes !== undefined) {

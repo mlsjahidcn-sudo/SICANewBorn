@@ -6,6 +6,24 @@ import { CheckCircle2, Loader2, MessageCircle, XCircle, CalendarClock, AlertCirc
 import { useI18n } from '@/lib/i18n';
 import { track } from '@/lib/analytics';
 
+/**
+ * Phase 153 (#17): map an /api/counselling/respond failure to a
+ * coarse analytics bucket. The route's error strings are user-facing
+ * and may change — we want a stable enum for the dashboard.
+ */
+function classifyRespondError(
+  status: number,
+  errorMsg: string | undefined,
+): 'expired' | 'already-used' | 'slot-taken' | 'validation' | 'server' {
+  if (status === 410) return 'expired';
+  if (status === 409) {
+    if (/already been used/i.test(errorMsg ?? '')) return 'already-used';
+    return 'slot-taken';
+  }
+  if (status === 400) return 'validation';
+  return 'server';
+}
+
 interface RespondClientProps {
   token: string;
   reference: string;
@@ -46,6 +64,12 @@ export function RespondClient(props: RespondClientProps) {
       });
       const data = (await res.json()) as { ok?: boolean; error?: string };
       if (!res.ok || !data.ok) {
+        // Phase 153 (#17): record the failure mode so analytics sees
+        // the friction. The error string carries the server's reason
+        // (e.g. "This slot was just taken", "This link has already been
+        // used") which is more useful than a generic bucket.
+        const reason = classifyRespondError(res.status, data.error);
+        track('counselling_proposal_rejected', { reason, action, reference: props.reference });
         throw new Error(data.error || t('counselling.errorGeneric'));
       }
       setResult(action);
