@@ -99,6 +99,10 @@ export default function AdminCounsellingPage() {
   const [editNotes, setEditNotes] = useState('');
   const [editSaving, setEditSaving] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{ booking: CounsellingBooking; action: ConfirmAction } | null>(null);
+  // Phase 152 (#19): when cancelling inside the 2h lead window, the
+  // admin must leave a note ≥ 20 chars (forwarded into the cancel
+  // email so the student knows why). Reset on every dialog close.
+  const [confirmActionNotes, setConfirmActionNotes] = useState('');
   const [acting, setActing] = useState(false);
 
   // Phase 124: reschedule modal — reuses /api/counselling/slots to pick
@@ -207,6 +211,15 @@ export default function AdminCounsellingPage() {
       hour12: false,
       timeZone: 'Asia/Shanghai',
     }).format(new Date(iso));
+  };
+
+  // Phase 152 (#19): a Confirmed or Proposed slot within 2h of now
+  // gets a "student may already be waiting" warning when the admin
+  // hits Cancel. The same threshold the Phase 137 occupancy lib
+  // uses for the "starting soon" 2h reminder window.
+  const isWithinLeadWindow = (slotStartIso: string): boolean => {
+    const ms = new Date(slotStartIso).getTime() - Date.now();
+    return Number.isFinite(ms) && ms > 0 && ms <= 2 * 60 * 60 * 1000;
   };
 
   const patchBooking = async (id: string, body: Record<string, unknown>): Promise<boolean> => {
@@ -811,19 +824,62 @@ export default function AdminCounsellingPage() {
                 : ''}
             </DialogDescription>
           </DialogHeader>
+          {confirmAction?.action === 'Cancelled' && isWithinLeadWindow(confirmAction.booking.slotStart) && (
+            <div className="space-y-3">
+              <div className="bg-amber-50 border border-amber-300 text-amber-900 px-3 py-2 text-sm">
+                {t('adminCounselling.cancelLeadWindowWarning')}
+              </div>
+              <label className="block">
+                <span className="block text-xs font-semibold text-[#1B2A4A] uppercase tracking-wider mb-1">
+                  {t('adminCounselling.cancelNotesLabel')}
+                </span>
+                <textarea
+                  rows={3}
+                  maxLength={500}
+                  value={confirmActionNotes}
+                  onChange={(e) => setConfirmActionNotes(e.target.value)}
+                  placeholder={t('adminCounselling.cancelNotesPlaceholder')}
+                  className="w-full border border-gray-300 px-3 py-2 text-sm focus:border-[#1B2A4A] focus:outline-none"
+                />
+                <span className="text-[10px] text-gray-500 mt-1 block">
+                  {t('adminCounselling.cancelNotesHint', { count: confirmActionNotes.trim().length })}
+                </span>
+              </label>
+            </div>
+          )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmAction(null)}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setConfirmAction(null);
+                setConfirmActionNotes('');
+              }}
+            >
               {t('adminCounselling.cancelEdit')}
             </Button>
             <Button
               className="bg-red-600 hover:bg-red-700 text-white"
-              disabled={acting}
+              disabled={
+                acting ||
+                (confirmAction?.action === 'Cancelled' &&
+                  isWithinLeadWindow(confirmAction.booking.slotStart) &&
+                  confirmActionNotes.trim().length < 20)
+              }
               onClick={async () => {
                 if (!confirmAction) return;
-                const ok = await patchBooking(confirmAction.booking.id, {
-                  status: confirmAction.action,
-                });
+                // Phase 152 (#19): when cancelling inside the 2h lead
+                // window, the admin must leave a note ≥ 20 chars. The
+                // note is forwarded into the cancel email body via the
+                // PATCH payload (admin_notes) so the student knows why.
+                const isLead = isWithinLeadWindow(confirmAction.booking.slotStart);
+                const trimmedNote = confirmActionNotes.trim();
+                const payload: Record<string, unknown> = { status: confirmAction.action };
+                if (isLead && trimmedNote.length >= 20) {
+                  payload.admin_notes = trimmedNote;
+                }
+                const ok = await patchBooking(confirmAction.booking.id, payload);
                 setConfirmAction(null);
+                setConfirmActionNotes('');
                 if (ok) void load();
               }}
             >

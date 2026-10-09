@@ -4883,6 +4883,12 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminCounselling.cancelTitle': 'Cancel this booking?',
     'adminCounselling.cancelBody': 'The slot will be freed for other students. You can re-confirm later if the slot is still open.',
     'adminCounselling.cancelConfirm': 'Yes, cancel it',
+    // Phase 152 (#19): cancel-in-lead-window guard. Shown only when
+    // the booking's slot_start is within the 2h lead window.
+    'adminCounselling.cancelLeadWindowWarning': 'The student may already be on the way — please add a short note explaining why you’re cancelling. The note will be included in the cancellation email.',
+    'adminCounselling.cancelNotesLabel': 'Note to the student (required, ≥ 20 chars)',
+    'adminCounselling.cancelNotesPlaceholder': 'e.g. Running 15 min late, please rebook.',
+    'adminCounselling.cancelNotesHint': '{{count}}/20 characters minimum.',
     'adminCounselling.noShowTitle': 'Mark as no-show?',
     'adminCounselling.noShowBody': 'Records that the student did not attend the session.',
     'adminCounselling.noShowConfirm': 'Yes, mark no-show',
@@ -9855,6 +9861,11 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminCounselling.cancelTitle': '取消这个预约？',
     'adminCounselling.cancelBody': '该时段将释放给其他学生。若时段仍空闲，之后可以重新确认。',
     'adminCounselling.cancelConfirm': '确认取消',
+    // Phase 152 (#19): cancel-in-lead-window guard (zh).
+    'adminCounselling.cancelLeadWindowWarning': '学生可能已经在路上 — 请添加简短说明为何取消，该说明会随取消邮件一起发送给学生。',
+    'adminCounselling.cancelNotesLabel': '给学生的留言（必填，≥ 20 字）',
+    'adminCounselling.cancelNotesPlaceholder': '例如：已迟到 15 分钟，请重新预约。',
+    'adminCounselling.cancelNotesHint': '{{count}}/20 字最低要求。',
     'adminCounselling.noShowTitle': '标记为未出席？',
     'adminCounselling.noShowBody': '记录该学生未出席本次咨询。',
     'adminCounselling.noShowConfirm': '确认未出席',
