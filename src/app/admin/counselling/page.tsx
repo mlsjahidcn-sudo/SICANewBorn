@@ -1,6 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useUrlState } from '@/hooks/use-url-state';
 import {
   CalendarClock,
   CalendarPlus,
@@ -85,14 +87,35 @@ type ConfirmAction = 'Cancelled' | 'No-show';
 export default function AdminCounsellingPage() {
   const { t, locale } = useI18n();
   const localeTag = locale === 'zh' ? 'zh-CN' : 'en-US';
+  // Phase 153 (#11): pull the URL search params once so the
+  // URL-synced filters (status, q) below can bind to the same
+  // hook instances. The two `useUrlState` calls pass this same
+  // reference in.
+  const searchParams = useSearchParams();
 
   const [bookings, setBookings] = useState<CounsellingBooking[]>([]);
   const [stats, setStats] = useState<AdminCounsellingResponse['stats'] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  // Phase 153 (#11): the search box is also URL-synced so a
+  // filtered list survives reload + is shareable. `useUrlState`
+  // debounces the URL write so we don't push 5 history entries per
+  // keystroke; the actual fetch uses `searchQuery` (debounced via
+  // the existing 300ms effect below).
+  const [searchQuery, setSearchQuery] = useUrlState<string>(
+    'q',
+    '',
+    { searchParams, debounceMs: 600 },
+  );
+  // Phase 153 (#11): URL-sync the status filter so a filtered list
+  // is shareable + reload-safe. `useUrlState` skips the "all" value
+  // by default so the URL stays clean.
+  const [statusFilter, setStatusFilter] = useUrlState<string>(
+    'status',
+    'all',
+    { searchParams },
+  );
   const [scope, setScope] = useState<Scope>('upcoming');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
