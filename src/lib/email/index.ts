@@ -596,6 +596,11 @@ export function formatCounsellingSlotBeijing(slotStartIso: string): string {
 /**
  * Admin notification for a new /counselling booking. Fire-and-forget
  * from the API route — failures are logged, never thrown.
+ *
+ * Phase 153 (#5): ported to `sendCounsellingTemplatedEmail` so the
+ * body lives in the `email_templates` table (one source of truth)
+ * and the audit `template_slug` line in `email_log` is now the real
+ * one the route actually rendered (`counselling.booking_received_admin`).
  */
 export async function sendCounsellingAdminNotification(params: {
   reference: string;
@@ -612,37 +617,35 @@ export async function sendCounsellingAdminNotification(params: {
   const adminEmail = process.env.ADMIN_EMAIL;
   if (!adminEmail) return false;
   const formatted = formatCounsellingSlotBeijing(params.slotStartIso);
-  const { subject, text } = formatWithSignature({
-    subject: `New counselling booking ${params.reference} — ${formatted}`,
-    bodyText: [
-      'A new free 10-minute counselling session has been booked.',
-      '',
-      `Reference: ${params.reference}`,
-      `Slot: ${formatted}`,
-      `Name: ${params.name}`,
-      `Email: ${params.email}`,
-      `Phone: ${params.phone}`,
-      `Country: ${params.country ?? '—'}`,
-      `Education level: ${params.educationLevel ?? '—'}`,
-      `Topic: ${params.topic ?? '—'}`,
-      `Page locale: ${params.locale}`,
-      '',
-      `Manage it in the admin portal: ${SITE_URL}/admin/counselling`,
-    ].join('\n'),
+  const result = await sendCounsellingTemplatedEmail({
+    toEmail: adminEmail,
+    slug: 'counselling.booking_received_admin',
+    locale: 'en',
+    variables: {
+      reference: params.reference,
+      slotLabel: formatted,
+      name: params.name,
+      email: params.email,
+      phone: params.phone,
+      country: params.country ?? '—',
+      educationLevel: params.educationLevel ?? '—',
+      topic: params.topic ?? '—',
+      locale: params.locale,
+      adminUrl: `${SITE_URL}/admin/counselling`,
+    },
   });
-  try {
-    const result = await sendTextEmail({ to: adminEmail, subject, text });
-    return result.ok;
-  } catch (err) {
-    console.error('[email] counselling admin notification failed:', err);
-    return false;
-  }
+  return result.ok;
 }
 
 /**
  * Confirmation to the student after a successful /counselling booking.
  * Status stays Pending until an admin confirms; the email says the
  * advisor will send the meeting link.
+ *
+ * Phase 153 (#5): same template-port as the admin notification.
+ * Student locale is still passed so the bilingual body picks the
+ * right headline; the new template's body_text already contains
+ * BOTH languages in one block (Phase 124b convention).
  */
 export async function sendCounsellingConfirmation(params: {
   toEmail: string;
@@ -653,44 +656,17 @@ export async function sendCounsellingConfirmation(params: {
 }): Promise<boolean> {
   if (!isEmailConfigured()) return false;
   const formatted = formatCounsellingSlotBeijing(params.slotStartIso);
-  const bodyText =
-    params.locale === 'zh'
-      ? [
-          `您好 ${params.name}，`,
-          '',
-          '您已成功预约 SICA 的免费 10 分钟在线咨询。',
-          '',
-          `预约编号：${params.reference}`,
-          `咨询时间：${formatted}`,
-          '',
-          '招生顾问会通过邮件或 WhatsApp 与您确认，并把会议链接发给您。',
-          '如需改期，直接回复本邮件即可。',
-        ]
-      : [
-          `Hi ${params.name},`,
-          '',
-          'Your free 10-minute online counselling session with SICA is booked.',
-          '',
-          `Reference: ${params.reference}`,
-          `Session time: ${formatted}`,
-          '',
-          'A SICA advisor will confirm shortly and send you the meeting link by email or WhatsApp.',
-          'Need a different time? Just reply to this email.',
-        ];
-  const { subject, text } = formatWithSignature({
-    subject:
-      params.locale === 'zh'
-        ? `咨询预约确认 ${params.reference}`
-        : `Your counselling session is booked — ${params.reference}`,
-    bodyText: bodyText.join('\n'),
+  const result = await sendCounsellingTemplatedEmail({
+    toEmail: params.toEmail,
+    slug: 'counselling.booking_received_student',
+    locale: params.locale === 'zh' ? 'zh' : 'en',
+    variables: {
+      name: params.name,
+      reference: params.reference,
+      slotLabel: formatted,
+    },
   });
-  try {
-    const result = await sendTextEmail({ to: params.toEmail, subject, text });
-    return result.ok;
-  } catch (err) {
-    console.error('[email] counselling confirmation failed:', err);
-    return false;
-  }
+  return result.ok;
 }
 
 /** Result plus the rendered subject/text so callers can snapshot email_log. */
