@@ -43,6 +43,7 @@ import {
   utcToBeijingDateStr,
 } from '@/lib/counselling-slots';
 import type { CounsellingBooking, CounsellingBookingStatus } from '@/lib/counselling-mapper';
+import { STATUS_CHIP_CLASS as CHIP_CLASS } from '@/lib/counselling-status';
 
 // ── Pure date helpers (exported for tests + the page's fetch) ─────────────
 
@@ -93,16 +94,27 @@ export function beijingMinutesOfDay(iso: string): number {
   return shifted.getUTCHours() * 60 + shifted.getUTCMinutes();
 }
 
-// ── Chip palette (matches the list's statusBadge colors) ──────────────────
+// ── Chip palette ─────────────────────────────────────────────────────────
+//
+// Phase 153 (#6): the chip class map now lives in @/lib/counselling-status
+// so the admin list + calendar + (eventual) timeline all share the same
+// source of truth. The calendar adds two local modifiers on top of the
+// shared base classes: the Proposed chip is rendered `border-dashed`
+// (visually signals "tentative") and Cancelled / No-show get `opacity-60`
+// (signals "terminal, not actionable"). The `chipClass()` helper below
+// composes the shared base + the calendar-specific modifiers in one
+// place so both call sites get the same treatment.
+//
+// The chip class is `STATUS_CHIP_CLASS[status]`, imported above as
+// `CHIP_CLASS` so the existing JSX keeps working without renaming.
 
-const CHIP_CLASS: Record<CounsellingBookingStatus, string> = {
-  Pending: 'bg-amber-100 text-amber-800 border-amber-200',
-  Proposed: 'bg-violet-100 text-violet-800 border-violet-200 border-dashed',
-  Confirmed: 'bg-blue-100 text-blue-800 border-blue-200',
-  Completed: 'bg-green-100 text-green-800 border-green-200',
-  Cancelled: 'bg-gray-100 text-gray-400 border-gray-200 opacity-60',
-  'No-show': 'bg-red-50 text-red-500 border-red-200 opacity-60',
-};
+/** Chip class for the calendar grid — shared base + calendar modifiers. */
+function chipClass(status: CounsellingBookingStatus): string {
+  const base = CHIP_CLASS[status];
+  if (status === 'Proposed') return `${base} border-dashed`;
+  if (status === 'Cancelled' || status === 'No-show') return `${base} opacity-60`;
+  return base;
+}
 
 /** The instant the calendar places the chip at (see file doc). */
 export function chipInstant(
@@ -271,7 +283,7 @@ export function AdminCounsellingCalendar({
                                 key={b.id}
                                 type="button"
                                 onClick={() => setSelected(b)}
-                                className={`w-full h-full text-left text-[10px] leading-tight px-1 truncate border ${CHIP_CLASS[b.status]}`}
+                                className={`w-full h-full text-left text-[10px] leading-tight px-1 truncate border ${chipClass(b.status)}`}
                                 title={`${formatBeijingLabel(new Date(chipInstant(b)))} · ${b.name} · ${b.status}`}
                               >
                                 {b.status === 'Proposed' && b.proposedSlotStart ? (
@@ -336,7 +348,7 @@ export function AdminCounsellingCalendar({
                         key={b.id}
                         type="button"
                         onClick={() => setSelected(b)}
-                        className={`w-full text-left text-[10px] leading-tight px-1 py-0.5 truncate border ${CHIP_CLASS[b.status]}`}
+                        className={`w-full text-left text-[10px] leading-tight px-1 py-0.5 truncate border ${chipClass(b.status)}`}
                         title={`${b.name} · ${b.status}`}
                       >
                         {formatBeijingLabel(new Date(chipInstant(b)))} {b.name}

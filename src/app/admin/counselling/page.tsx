@@ -48,6 +48,10 @@ import {
   type CounsellingBooking,
   type CounsellingBookingStatus,
 } from '@/lib/counselling-mapper';
+import {
+  STATUS_BADGE_CLASS,
+  STATUS_LABEL_KEY,
+} from '@/lib/counselling-status';
 import { beijingTodayStr } from '@/lib/counselling-slots';
 import {
   AdminCounsellingCalendar,
@@ -440,13 +444,11 @@ export default function AdminCounsellingPage() {
   };
 
   const statusBadge = (status: CounsellingBookingStatus) => {
-    const key = `adminCounselling.status_${status.replace('-', '')}` as 'adminCounselling.status_Pending';
-    if (status === 'Pending') return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">{t(key)}</Badge>;
-    if (status === 'Proposed') return <Badge className="bg-violet-100 text-violet-800 hover:bg-violet-100">{t(key)}</Badge>;
-    if (status === 'Confirmed') return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">{t(key)}</Badge>;
-    if (status === 'Completed') return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">{t(key)}</Badge>;
-    if (status === 'Cancelled') return <Badge variant="secondary">{t(key)}</Badge>;
-    return <Badge variant="outline" className="text-red-600 border-red-300">{t(key)}</Badge>;
+    // Phase 153 (#6): drive the badge class + label from the
+    // typed lookup tables in @/lib/counselling-status so a new
+    // status fails the build everywhere it's rendered.
+    const key = STATUS_LABEL_KEY[status];
+    return <Badge className={STATUS_BADGE_CLASS[status]}>{t(key)}</Badge>;
   };
 
   const statCards = stats
