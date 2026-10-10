@@ -16,25 +16,25 @@ export const moeMbbsGuide: LocalizedGuide = {
   en: {
     slug: 'moe-listed-mbbs-universities-china',
     eyebrow: 'GUIDE · MBBS LIST',
-    title: 'MOE-Listed MBBS Universities in China 2026-27',
+    title: 'MOE-Listed MBBS Universities in China 2027',
     description:
       'What the MOE MBBS list is, why only listed universities may teach clinical medicine in English (43 or 45 schools [verify]), what regulators require, and CSCA subjects by university.',
     subtitle:
       'China\'s Ministry of Education (MOE) publishes the list of universities permitted to teach clinical medicine in English to international students — the 2026-27 list counts 43 or 45 universities depending on the source [verify]. Only these universities can award an English-taught MBBS that WHO lists and your regulator will assess.',
     stats: [
-      { value: '43 or 45', label: 'Universities on the list [verify]' },
+      { value: '45 or 46', label: 'Universities on the 2027 list [verify]' },
       { value: '6 years', label: 'MBBS duration (incl. internship)' },
       { value: 'English', label: 'Only listed schools may teach in' },
       { value: 'CSCA', label: 'Required by many MBBS programs' },
     ],
     quickAnswer:
-      'The MOE list is the official register of Chinese universities permitted to teach clinical medicine (MBBS) in English to international students — the 2026-27 edition counts 43 or 45 universities depending on the source [verify]. Studying MBBS at a non-listed university means an English-taught clinical degree that is not recognized in the WHO directory pathway, which regulators like India\'s NMC (FMGL 2021 criteria [verify]), Pakistan\'s PM&DC [verify], and Bangladesh\'s BM&DC [verify] assess against. Many listed universities now also require the CSCA — Math for everyone, plus Chemistry and/or Physics per university. Confirm both the current list and each university\'s CSCA subjects before applying.',
+      'The MOE list is the official register of Chinese universities permitted to teach clinical medicine (MBBS) in English to international students — the 2027 edition counts 45 or 46 universities depending on the source [verify against the current MOE notice before applying]. Studying MBBS at a non-listed university means an English-taught clinical degree that is not recognized in the WHO directory pathway, which regulators like India\'s NMC (FMGL 2021 criteria [verify]), Pakistan\'s PM&DC [verify], and Bangladesh\'s BM&DC [verify] assess against. Many listed universities now also require the CSCA — Math for everyone, plus Chemistry and/or Physics per university. Confirm both the current list and each university\'s CSCA subjects before applying.',
     keyTakeaways: [
       'Only MOE-listed universities may teach clinical medicine in English to international students',
-      'The 2026-27 list counts 43 or 45 universities depending on the source [verify] — always confirm the current edition',
+      'The 2027 list counts 45 or 46 universities depending on the source [verify against the current MOE notice] — always confirm the current edition',
       'Non-listed "English MBBS" degrees fail the WDOMS/regulator pathway — check before paying any fee',
       'Regulator checks: India NMC FMGL 2021 criteria [verify], Pakistan PM&DC [verify], Bangladesh BM&DC [verify]',
-      'Many listed universities require the CSCA (Math + Chemistry/Physics per school) — next sittings Nov/Dec 2026, Jan 2027',
+      'Many listed universities require the CSCA (Math + Chemistry/Physics per school) — next sittings Nov 14-15 2026, Dec 19-20 2026, Jan 23-24 2027',
       'The SICA catalog lists MOE-listed programs with tuition and language — see the table on /mbbs-in-china',
     ],
     sections: [
@@ -47,7 +47,7 @@ export const moeMbbsGuide: LocalizedGuide = {
           {
             type: 'ul',
             items: [
-              '**Who publishes it** — China\'s Ministry of Education, updated periodically; the 2026-27 edition counts 43 or 45 universities depending on the source [verify]',
+              '**Who publishes it** — China\'s Ministry of Education, updated periodically; the 2027 edition counts 45 or 46 universities depending on the source [verify against the current MOE notice]',
               '**What inclusion means** — the university may enroll international students in English-taught clinical medicine (MBBS)',
               '**What it does not mean** — inclusion is not a quality ranking; within the list, tuition, city, and internship hospitals differ widely',
               '**The WHO connection** — listed universities appear in the World Directory of Medical Schools (WDOMS), the baseline most regulators check',
@@ -101,7 +101,7 @@ export const moeMbbsGuide: LocalizedGuide = {
     faqs: [
       {
         q: 'How many universities are on the MOE MBBS list?',
-        a: 'The 2026-27 list counts 43 or 45 universities depending on the source [verify]. The count shifts as the MOE updates the register — always confirm the current edition and the university\'s presence on it before applying.',
+        a: 'The 2027 list counts 45 or 46 universities depending on the source [verify against the current MOE notice]. The count shifts as the MOE updates the register — always confirm the current edition and the university\'s presence on it before applying.',
       },
       {
         q: 'What happens if I study MBBS at a non-listed university?',
@@ -127,7 +127,7 @@ export const moeMbbsGuide: LocalizedGuide = {
       },
       {
         name: 'Verify the university is on the current MOE list',
-        text: '43 or 45 schools for 2026-27 [verify]. Cross-check the MOE notice, the university\'s page, and WDOMS. Never trust a brochure alone.',
+        text: '45 or 46 schools for 2027 [verify against the current MOE notice]. Cross-check the MOE notice, the university\'s page, and WDOMS. Never trust a brochure alone.',
       },
       {
         name: 'Note the university\'s CSCA subjects',

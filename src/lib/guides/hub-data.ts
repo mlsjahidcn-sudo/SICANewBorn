@@ -486,6 +486,39 @@ export const guideCards: LocalizedGuideCards = {
       highlight: 'No Chinese needed',
     },
     {
+      slug: 'china-university-dorms-cost',
+      href: '/china-university-dorms-cost',
+      icon: 'bed',
+      category: 'listicle',
+      title: 'China university dorms — what to expect and what it costs',
+      subtitle:
+        'On-campus dorms for international students: the four room types (single, double, quad, suite), the international-dorm vs local-dorm distinction, in-room amenities and what is NOT provided, the full cost table by city tier, and when to move off campus.',
+      readTime: '12 min read',
+      highlight: 'Room + budget',
+    },
+    {
+      slug: 'peking-vs-tsinghua-international-students',
+      href: '/peking-vs-tsinghua-international-students',
+      icon: 'landmark',
+      category: 'listicle',
+      title: 'Peking vs Tsinghua for international students — 2027 decision guide',
+      subtitle:
+        'The two top-20 global universities 3 km apart in Beijing Haidian: subject-fit differences, language of instruction, CSCA + English-test thresholds, campus life, scholarship competitiveness, and a decision framework that actually decides.',
+      readTime: '14 min read',
+      highlight: 'PKU × THU',
+    },
+    {
+      slug: 'china-student-visa-jw202-residence-permit',
+      href: '/china-student-visa-jw202-residence-permit',
+      icon: 'passport',
+      category: 'listicle',
+      title: 'China student visa: X1 vs X2, the JW202 form, and the residence permit',
+      subtitle:
+        'The 180-day rule that decides X1 vs X2, what the JW202 form is and who issues it, the 30-day residence permit conversion after arrival, biometrics at the PSB, extensions, dependents (S1 / S2), and the most common rejection reasons.',
+      readTime: '13 min read',
+      highlight: 'Visa deep-dive',
+    },
+    {
       slug: 'csca-test-day-retakes',
       href: '/csca-test-day-retakes',
       icon: 'clipboard-list',
@@ -1237,6 +1270,39 @@ export const guideCards: LocalizedGuideCards = {
         '300+ 所大学的教育部 ETP 全图——按 ETP 深度的名校排名、英文项目最多学科、英语轨申请路径、CSC 奖学金、英语校园真实体验。',
       readTime: '12分钟阅读',
       highlight: '无需汉语',
+    },
+    {
+      slug: 'china-university-dorms-cost',
+      href: '/china-university-dorms-cost',
+      icon: 'bed',
+      category: 'listicle',
+      title: '中国大学宿舍——实际什么样、多少钱、怎么选',
+      subtitle:
+        '国际生校内宿舍：四种房型（单/双/四/套间）、留学生楼与本土楼的差异、房内配置与不配置、按城市分级的完整费用表，以及什么时候搬出校外租房。',
+      readTime: '12分钟阅读',
+      highlight: '房型 + 预算',
+    },
+    {
+      slug: 'peking-vs-tsinghua-international-students',
+      href: '/peking-vs-tsinghua-international-students',
+      icon: 'landmark',
+      category: 'listicle',
+      title: '2027 北大 vs 清华——国际生决策指南',
+      subtitle:
+        '北京海淀相距 3 公里的两所全球前 20：学科匹配差异、授课语言、CSCA + 英语成绩门槛、校园生活、奖学金竞争、以及能拍板的决策框架。',
+      readTime: '14分钟阅读',
+      highlight: '北大 × 清华',
+    },
+    {
+      slug: 'china-student-visa-jw202-residence-permit',
+      href: '/china-student-visa-jw202-residence-permit',
+      icon: 'passport',
+      category: 'listicle',
+      title: '中国学生签证：X1 vs X2、JW202 表、居留许可全指南',
+      subtitle:
+        'X1 与 X2 的 180 天判断规则、JW202 表（是什么、谁发、何时到）、抵华后 30 天居留许可转换、公安出入境生物信息采集、续签、家属（S1 / S2）规则，以及最常见的拒签原因。',
+      readTime: '13分钟阅读',
+      highlight: '签证深潜',
     },
     {
       slug: 'csca-test-day-retakes',

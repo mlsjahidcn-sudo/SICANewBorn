@@ -104,6 +104,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // angle) and /study-in-china-without-ielts (the IELTS exemption
     // angle).
     { url: `${SITE_URL}/english-taught-programs-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    // Phase 155: 3 new long-form listicles closing the 2027 application
+    // cycle + life-in-China content gaps. (a) Dorms deep-dive: the
+    // four room types + international-dorm vs local-dorm distinction
+    // + cost table by city tier. Complements /guides/accommodation
+    // (the general on-vs-off-campus guide). (b) Peking vs Tsinghua
+    // for international students: subject-fit + decision framework
+    // (deeper than the /peking-university-vs-tsinghua metrics
+    // compare). (c) X1 vs X2 + JW202 + residence permit: the
+    // operational deep-dive on the visa, the 30-day conversion, the
+    // residence permit, and the most common rejection reasons
+    // (deeper than /x1-vs-x2-student-visa-china summary).
+    { url: `${SITE_URL}/china-university-dorms-cost`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/peking-vs-tsinghua-international-students`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/china-student-visa-jw202-residence-permit`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     // Phase 121: Study-in-China cluster Batch 1 — personal finance & daily life
     { url: `${SITE_URL}/open-chinese-bank-account`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/international-money-transfer-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },

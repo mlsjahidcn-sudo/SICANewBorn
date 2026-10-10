@@ -30,10 +30,10 @@ export const cscPakistanGuide: LocalizedGuide = {
     quickAnswer:
       'Pakistani students apply for the Chinese Government Scholarship (CSC) through two routes. Route 1 — the HEC route (Pakistan\'s Higher Education Commission, CSC agency no. 5861 [verify]): deadlines are reported to fall earlier, around December-January [verify on HEC.gov.pk]. Route 2 — the university route (Type B): apply directly to your target Chinese university; deadlines fall roughly January-April 2027 and vary by university [verify each target]. Bachelor\'s applicants must submit a CSCA score for CSC — sit the November 2026 (register 15-21 October, Beijing time), December 2026, or January 2027 sitting. A pre-admission letter from the host university is expected for 2026/27 applications onward [verify].',
     keyTakeaways: [
-      'Two application routes: HEC (agency no. 5861, earlier deadline) and university Type B (Jan-Apr 2027, varies)',
-      'HEC route deadline reported as December-January [verify on HEC.gov.pk] — the entire timeline moves earlier than most countries',
+      'Two application routes: HEC route (Step 1 HEC online nomination, agency no. 5861) and university Type B (Step 1 university pre-admission, Step 2 CSC application)',
+      'HEC route deadline is reported as December-January [verify on HEC.gov.pk] — the entire timeline moves earlier than most countries',
       'Bachelor\'s applicants: CSCA score required for CSC — next sittings Nov 14-15 2026 (register Oct 15-21), Dec 19-20 2026, Jan 23-24 2027',
-      'A pre-admission letter from the host university is expected for 2026/27 onward [verify] — apply to universities in parallel',
+      'A pre-admission letter from the host university is expected for 2026/27 onward [verify] — apply to universities in parallel with the HEC route',
       'Documents follow the standard CSC list: passport, transcripts, study plan, recommendation letters, physical exam, police clearance',
       'Apply through both routes if eligible — they are not mutually exclusive, and you pick one if both come through',
     ],
