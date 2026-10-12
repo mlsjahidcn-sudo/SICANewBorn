@@ -20,6 +20,7 @@ import {
   AlertCircle,
   CheckSquare,
   Mail,
+  DollarSign,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,6 +42,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { apiFetch, apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 import type { AdminStudent } from '@/lib/student-mapper';
+import { APPLICATION_PAYMENT_STATUS_DISPLAY, type ApplicationPaymentStatus } from '@/lib/payment-aggregate';
 import { SendEmailDialog } from '@/components/admin/SendEmailDialog';
 
 const PAGE_SIZE = 20;
@@ -590,6 +592,10 @@ export default function AdminStudentsPage() {
                   <TableHead className="whitespace-nowrap">{t('adminStudents.colTargetField')}</TableHead>
                   <TableHead className="whitespace-nowrap">{t('adminStudents.colSource')}</TableHead>
                   <TableHead className="whitespace-nowrap">{t('adminStudents.colStatus')}</TableHead>
+                  {/* Phase 145: per-student payment aggregate. Badge
+                      + outstanding/paid totals per currency.
+                      Hover surfaces the breakdown tooltip. */}
+                  <TableHead className="whitespace-nowrap">{t('adminStudents.colPayment')}</TableHead>
                   <TableHead className="whitespace-nowrap">{t('adminStudents.colApps')}</TableHead>
                   <SortableHeader
                     label={t('adminStudents.colCreated')}
@@ -651,6 +657,52 @@ export default function AdminStudentsPage() {
                     <TableCell className="text-[#4B5563] whitespace-nowrap">{student.targetField || '—'}</TableCell>
                     <TableCell>{getSourceBadge(student)}</TableCell>
                     <TableCell>{getStatusBadge(student.status)}</TableCell>
+                    {/* Phase 145: payment column — colored badge +
+                        a one-line per-currency outstanding/paid
+                        summary. Hover title surfaces the full
+                        breakdown for power users. Empty cells
+                        default to a grey "No fee" badge so the
+                        column doesn't go silent for students
+                        who haven't been billed yet. */}
+                    <TableCell className="whitespace-nowrap">
+                      {student.payment && student.payment.status !== 'none' ? (
+                        <div
+                          className="flex flex-col gap-1"
+                          title={Object.entries(student.payment.outstandingByCurrency)
+                            .filter(([, v]) => v > 0)
+                            .map(([c, v]) => `${v.toFixed(2)} ${c} outstanding`)
+                            .join('\n') || 'All fees paid'}
+                        >
+                          <Badge
+                            className={`${
+                              APPLICATION_PAYMENT_STATUS_DISPLAY[
+                                student.payment.status as ApplicationPaymentStatus
+                              ]?.color ?? 'bg-gray-100 text-gray-600'
+                            } rounded-none border w-fit`}
+                          >
+                            {APPLICATION_PAYMENT_STATUS_DISPLAY[
+                              student.payment.status as ApplicationPaymentStatus
+                            ]?.label ?? 'No fee set'}
+                          </Badge>
+                          {student.payment.feeCount > 0 && (
+                            <span className="text-[10px] text-[#4B5563] leading-tight">
+                              {Object.keys(student.payment.totalByCurrency)
+                                .slice(0, 2)
+                                .map((c) => {
+                                  const total = student.payment!.totalByCurrency[c] ?? 0;
+                                  const paid = student.payment!.paidByCurrency[c] ?? 0;
+                                  return `${c} ${paid.toFixed(0)}/${total.toFixed(0)}`;
+                                })
+                                .join(' · ')}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <Badge className="bg-gray-100 text-gray-600 rounded-none border w-fit">
+                          No fee
+                        </Badge>
+                      )}
+                    </TableCell>
                     <TableCell>
                       {/* Phase 122a: application count across both
                           surfaces (student + partner CRM via the Phase A

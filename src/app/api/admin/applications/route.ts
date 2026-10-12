@@ -7,6 +7,13 @@ import {
   PARTNER_APPLICATION_DEGREES,
   PARTNER_APPLICATION_PRIORITIES,
 } from '@/lib/partner-application-mapper';
+import {
+  computePaymentAggregatesByAppId,
+  emptyPaymentAggregate,
+  APPLICATION_PAYMENT_STATUSES,
+  type ApplicationPaymentStatus,
+  type PaymentAggregate,
+} from '@/lib/payment-aggregate';
 
 /**
  * GET  /api/admin/applications  — list all applications
@@ -29,6 +36,11 @@ import {
  *   - search    : free-text on program_name / university_name / application_number
  *   - page      : 1-indexed (default 1)
  *   - limit     : 1..100 (default 20)
+ *   - paymentStatus (Phase 145): 'paid' | 'partial' | 'unpaid' | 'overdue'.
+ *     Apps with no student_fees row ('none') are EXCLUDED from every value
+ *     of this filter — they appear in the unfiltered list with a grey
+ *     "No fee set" badge but don't pollute the cohort counts. Partner
+ *     surface rows always pass through (no fee rows yet for partners).
  *
  * S28: the response is a *unified* list across `student_applications` AND
  * `partner_applications`. Each row carries a `surface` field
@@ -116,6 +128,23 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Phase 145: payment status filter. We accept the same names as
+    // APPLICATION_PAYMENT_STATUSES. Validation against the closed
+    // set happens here — unknown values become 400 below.
+    const paymentStatusParam = searchParams.get('paymentStatus');
+    const paymentStatusFilter: ApplicationPaymentStatus | null =
+      paymentStatusParam && (APPLICATION_PAYMENT_STATUSES as readonly string[]).includes(
+        paymentStatusParam,
+      )
+        ? (paymentStatusParam as ApplicationPaymentStatus)
+        : null;
+    if (paymentStatusParam && !paymentStatusFilter) {
+      return NextResponse.json(
+        { error: `paymentStatus must be one of: ${APPLICATION_PAYMENT_STATUSES.filter((s) => s !== 'none').join(', ')}` },
+        { status: 400 },
+      );
+    }
+
     const service = buildServiceClient();
 
     // S28: run the two queries in parallel.
@@ -175,15 +204,34 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: partnerRes.error.message }, { status: 500 });
     }
 
+    // Phase 145: fetch the payment aggregate for every student
+    // application row in scope. Partner rows always get an empty
+    // aggregate (no student_fees link for partner CRM yet). One
+    // round-trip keyed on application_id IN (...) so we never pay
+    // the per-row cost. The new partial index
+    // idx_student_fees_application_partial makes this an index
+    // scan even when fees grow into the thousands.
+    const studentIds = (studentRes.data || []).map((r) => r.id);
+    const paymentMap = studentIds.length > 0
+      ? await fetchPaymentAggregates(service, studentIds)
+      : new Map<string, PaymentAggregate>();
+
     // Map student rows to the unified shape.
     const studentApps = (studentRes.data || [])
       .map(mapApplicationFromDb)
-      .map((a) => ({ ...a, surface: 'student' as const }));
+      .map((a) => ({
+        ...a,
+        surface: 'student' as const,
+        // Phase 145: payment aggregate. Either computed from the
+        // round-trip we just did, or 'none' if the id wasn't in
+        // the fees result set (genuinely no fee rows).
+        payment: paymentMap.get(a.id) ?? emptyPaymentAggregate(),
+      }));
 
     // Map partner rows to a similar shape.
     const partnerApps = (partnerRes.rows || [])
       .map(mapPartnerAppForUnifiedList)
-      .map((a) => ({ ...a, surface: 'partner' as const }));
+      .map((a) => ({ ...a, surface: 'partner' as const, payment: emptyPaymentAggregate() }));
 
     // S28: when filtering by source=Partner, the student query
     // also returned source=Partner rows; the partner query
@@ -212,6 +260,18 @@ export async function GET(request: NextRequest) {
           return norm === null; // raw value was null/empty/unparseable
         }
         return norm !== null && norm.cohort === intakeFilter.cohort;
+      });
+    }
+
+    // Phase 145: payment status filter. Apps with no fee rows
+    // ('none') are EXCLUDED from every value of this filter — the
+    // admin hasn't set up billing yet and we don't want them to
+    // pollute the "Unpaid" count. Partner rows always pass
+    // through because they don't have a fee link yet.
+    if (paymentStatusFilter) {
+      combined = combined.filter((a) => {
+        if (a.surface === 'partner') return true;
+        return a.payment?.status === paymentStatusFilter;
       });
     }
 
@@ -520,6 +580,9 @@ interface UnifiedAppRow {
   personalStatement?: string | null;
   additionalNotes?: string | null;
   adminNotes?: string | null;
+  // Phase 145: payment aggregate for student surface rows.
+  // Partner rows always get an empty aggregate (no fee link yet).
+  payment?: PaymentAggregate;
 }
 
 /**
@@ -821,6 +884,51 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+/**
+ * Phase 145: one round-trip to fetch every fee row for the visible
+ * student application ids, then group by application_id via the
+ * pure helper. Indexed by application_id IN (...) so we never do a
+ * full table scan. Fee rows that aren't tied to any application
+ * (free-standing fees, admin-created without a link) are ignored —
+ * they belong on the /admin/fees surface, not the applications list.
+ *
+ * Returns an empty map if the input list is empty (early-out so we
+ * don't fire a no-op query). On query error, returns an empty map
+ * and logs — the page will render every row as 'none' instead of
+ * crashing. Failing open is the right call here: the admin still
+ * needs to see the list; missing payment badges are recoverable.
+ */
+async function fetchPaymentAggregates(
+  service: ReturnType<typeof buildServiceClient>,
+  applicationIds: string[],
+): Promise<Map<string, PaymentAggregate>> {
+  if (applicationIds.length === 0) {
+    return new Map();
+  }
+  try {
+    const { data, error } = await service
+      .from('student_fees')
+      .select('application_id, status, amount, amount_paid, currency, paid_date, created_at')
+      .in('application_id', applicationIds);
+    if (error) {
+      console.error('[admin/applications GET] payment aggregate fetch failed:', error);
+      return new Map();
+    }
+    return computePaymentAggregatesByAppId((data || []) as Array<{
+      application_id: string | null;
+      status: string | null;
+      amount: number | string | null;
+      amount_paid: number | string | null;
+      currency: string | null;
+      paid_date: string | null;
+      created_at: string | null;
+    }>);
+  } catch (err) {
+    console.error('[admin/applications GET] payment aggregate unhandled:', err);
+    return new Map();
   }
 }
 

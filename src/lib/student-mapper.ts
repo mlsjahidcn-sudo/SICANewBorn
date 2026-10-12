@@ -77,6 +77,18 @@ export interface AdminStudent {
   // excluded) — populated by the list endpoint for the
   // "✓ Email sent <date>" chip. Undefined elsewhere.
   lastEmailSentAt?: string | null;
+  // Phase 145: payment aggregate across every student_fees row
+  // where student_id is this student. The list endpoint fills this
+  // in one round-trip; the single-student GET doesn't. The page
+  // renders "Outstanding ¥X · Paid ¥Y" in the new Payment column.
+  payment?: {
+    status: 'paid' | 'partial' | 'unpaid' | 'overdue' | 'none';
+    totalByCurrency: Record<string, number>;
+    paidByCurrency: Record<string, number>;
+    outstandingByCurrency: Record<string, number>;
+    feeCount: number;
+    lastPaidAt: string | null;
+  };
 }
 
 export type AdminStudentStatus = AdminStudent['status'];

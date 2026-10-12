@@ -3113,6 +3113,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminStudents.colTargetField': 'Interested Program',
     'adminStudents.colSource': 'Source',
     'adminStudents.colStatus': 'Status',
+    // Phase 145: payment column header on the students list.
+    'adminStudents.colPayment': 'Payment',
     'adminStudents.colCreated': 'Created',
     'adminStudents.colActions': 'Actions',
     'adminStudents.actionView': 'View',
@@ -8170,6 +8172,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminStudents.colTargetField': '意向专业',
     'adminStudents.colSource': '来源',
     'adminStudents.colStatus': '状态',
+    // Phase 145: payment column header on the students list.
+    'adminStudents.colPayment': '缴费',
     'adminStudents.colCreated': '创建时间',
     'adminStudents.colActions': '操作',
     'adminStudents.actionView': '查看',

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft, CheckCircle, XCircle, Mail, FileText, Calendar,
@@ -75,6 +76,17 @@ export default function AdminApplicationDetailPage() {
 
   const [app, setApp] = useState<AdminApplication | null>(null);
   const [enrollment, setEnrollment] = useState<ApplicationEnrollment | null>(null);
+  // Phase 145: payment aggregate surfaced by the detail API. The
+  // sidebar Payment card reads this; null while loading or if the
+  // request failed (we still render the card with a fallback).
+  const [payment, setPayment] = useState<{
+    status: 'paid' | 'partial' | 'unpaid' | 'overdue' | 'none';
+    totalByCurrency: Record<string, number>;
+    paidByCurrency: Record<string, number>;
+    outstandingByCurrency: Record<string, number>;
+    feeCount: number;
+    lastPaidAt: string | null;
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
@@ -88,10 +100,23 @@ export default function AdminApplicationDetailPage() {
     setError(null);
     setNotFound(false);
     try {
-      const { application } = await apiFetchJson<{ application: AdminApplication }>(
-        `/api/admin/applications/${id}`,
-      );
+      const { application, payment: paymentAggregate } = await apiFetchJson<{
+        application: AdminApplication;
+        // Phase 145: payment aggregate. Shape mirrors the
+        // /api/admin/applications GET row's `payment` field —
+        // see src/lib/payment-aggregate.ts. The endpoint fills a
+        // 'none' default on error so we always get a value.
+        payment: {
+          status: 'paid' | 'partial' | 'unpaid' | 'overdue' | 'none';
+          totalByCurrency: Record<string, number>;
+          paidByCurrency: Record<string, number>;
+          outstandingByCurrency: Record<string, number>;
+          feeCount: number;
+          lastPaidAt: string | null;
+        };
+      }>(`/api/admin/applications/${id}`);
       setApp(application);
+      setPayment(paymentAggregate);
 
       // Phase 107 — fetch the enrollment row in parallel; the timeline
       // tab is lazy-loaded on first activation so we don't pay for it on
@@ -445,6 +470,106 @@ export default function AdminApplicationDetailPage() {
             enrollment={enrollment}
             onChanged={load}
           />
+
+          {/* Phase 145: payment summary card. Reads the
+              `payment` aggregate the detail API now returns and
+              shows outstanding + paid totals per currency + a
+              link to /admin/fees?applicationId=<id> for the
+              full fee history. The card stays visible when
+              payment.status === 'none' so the admin sees "No
+              fee set up yet" + a one-click "Create fee" link
+              to /admin/fees/new?applicationId=<id>. */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Payment</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {payment ? (
+                <div className="space-y-3">
+                  <Badge
+                    className={`${
+                      payment.status === 'paid'
+                        ? 'bg-green-100 text-green-800'
+                        : payment.status === 'partial'
+                          ? 'bg-amber-100 text-amber-800'
+                          : payment.status === 'overdue'
+                            ? 'bg-red-200 text-red-900'
+                            : payment.status === 'unpaid'
+                              ? 'bg-red-100 text-red-800'
+                              : 'bg-gray-100 text-gray-600'
+                    } rounded-none border`}
+                  >
+                    {payment.status === 'paid'
+                      ? 'Paid'
+                      : payment.status === 'partial'
+                        ? 'Partial'
+                        : payment.status === 'overdue'
+                          ? 'Overdue'
+                          : payment.status === 'unpaid'
+                            ? 'Unpaid'
+                            : 'No fee set'}
+                  </Badge>
+                  {payment.feeCount > 0 ? (
+                    <>
+                      <div className="space-y-1 text-sm">
+                        {Object.keys(payment.totalByCurrency).map((currency) => (
+                          <div
+                            key={currency}
+                            className="flex items-center justify-between gap-3"
+                          >
+                            <span className="text-[#4B5563]">{currency}</span>
+                            <span className="font-mono text-[#1B2A4A]">
+                              Paid {payment.paidByCurrency[currency]?.toFixed(2) ?? '0.00'} /{' '}
+                              {payment.totalByCurrency[currency]?.toFixed(2) ?? '0.00'}
+                            </span>
+                          </div>
+                        ))}
+                        {Object.keys(payment.outstandingByCurrency).filter(
+                          (c) => (payment.outstandingByCurrency[c] ?? 0) > 0,
+                        ).length > 0 && (
+                          <div className="pt-2 border-t border-gray-100">
+                            {Object.entries(payment.outstandingByCurrency)
+                              .filter(([, v]) => v > 0)
+                              .map(([currency, amount]) => (
+                                <div
+                                  key={`out-${currency}`}
+                                  className="flex items-center justify-between gap-3 text-xs"
+                                >
+                                  <span className="text-[#6B7280]">Outstanding</span>
+                                  <span className="font-mono text-red-700">
+                                    {amount.toFixed(2)} {currency}
+                                  </span>
+                                </div>
+                              ))}
+                          </div>
+                        )}
+                      </div>
+                      <Link
+                        href={`/admin/fees?applicationId=${app.id}`}
+                        className="block text-xs text-[#1B2A4A] hover:underline pt-1"
+                      >
+                        View fee history →
+                      </Link>
+                    </>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-xs text-[#4B5563]">
+                        No fee rows are attached to this application yet.
+                      </p>
+                      <Link
+                        href={`/admin/fees/new?applicationId=${app.id}`}
+                        className="block text-xs text-[#1B2A4A] hover:underline"
+                      >
+                        Create first fee →
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-xs text-[#4B5563]">Loading payment summary…</div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
 

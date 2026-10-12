@@ -3,6 +3,7 @@ import { requireAdmin, buildServiceClient, getServerEnv } from '@/lib/supabase-a
 import { insertTimelineEvent } from '@/lib/timeline';
 import { mapApplicationFromDb } from '@/lib/application-mapper';
 import { notifyApplicantOnStatusChange } from '@/lib/email';
+import { computePaymentAggregateForApp } from '@/lib/payment-aggregate';
 
 const ALLOWED_STATUSES = [
   'Draft', 'Submitted', 'Under Review', 'Documents Requested',
@@ -80,8 +81,33 @@ export async function GET(
     if (!data) {
       return NextResponse.json({ error: 'Application not found' }, { status: 404 });
     }
+
+    // Phase 145: surface the payment aggregate on the detail page
+    // so the sidebar can render "Outstanding: ¥X / Paid: ¥Y" +
+    // a "Record payment" link to /admin/fees/new?applicationId=.
+    // Same one round-trip pattern as the list endpoint (re-uses
+    // the new partial index). On error we fall back to 'none' —
+    // the page still loads, the badge just reads "No fee set".
+    let paymentAggregate;
+    try {
+      const { data: feeRows, error: feeErr } = await service
+        .from('student_fees')
+        .select('application_id, status, amount, amount_paid, currency, paid_date, created_at')
+        .eq('application_id', id);
+      if (feeErr) {
+        console.error('[admin/applications/[id] GET] fee fetch failed:', feeErr);
+      }
+      paymentAggregate = computePaymentAggregateForApp(feeRows || []);
+    } catch (feeCatchErr) {
+      console.error('[admin/applications/[id] GET] payment aggregate unhandled:', feeCatchErr);
+      paymentAggregate = computePaymentAggregateForApp([]);
+    }
+
     // Normalize to the same shape the list endpoint returns
-    return NextResponse.json({ application: mapApplicationFromDb(data) });
+    return NextResponse.json({
+      application: mapApplicationFromDb(data),
+      payment: paymentAggregate,
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     return NextResponse.json({ error: message }, { status: 500 });

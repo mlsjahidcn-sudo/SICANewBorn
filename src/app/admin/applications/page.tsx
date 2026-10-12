@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Plus, Eye, Trash2, MoreHorizontal, ArrowUpRight, ArrowDownRight, Minus, RefreshCw, AlertCircle, Search, Users, Building2, UserPlus, CheckSquare, Square, X, StickyNote, Flag, Download, CalendarClock, Loader2, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { Plus, Eye, Trash2, MoreHorizontal, ArrowUpRight, ArrowDownRight, Minus, RefreshCw, AlertCircle, Search, Users, Building2, UserPlus, CheckSquare, Square, X, StickyNote, Flag, Download, CalendarClock, Loader2, ChevronUp, ChevronDown, ChevronsUpDown, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -21,6 +21,8 @@ import { apiFetch, apiFetchJson } from '@/lib/api-client';
 import { downloadCsvViaApi } from '@/lib/download-csv';
 import { APPLICATION_STATUSES, ApplicationStatus } from '@/lib/application-mapper';
 import { parseIntakeFilter, getCanonicalCohorts } from '@/lib/intake-normalize';
+import { APPLICATION_PAYMENT_STATUSES, APPLICATION_PAYMENT_STATUS_DISPLAY, type ApplicationPaymentStatus } from '@/lib/payment-aggregate';
+import { useI18n } from '@/lib/i18n';
 
 interface Application {
   id: string;
@@ -59,6 +61,18 @@ interface Application {
   // rows and partner_applications.decision for surface='partner' rows.
   // The list API already returns partnerDecision on the unified row.
   decision?: string | null;
+  // Phase 145: payment aggregate. Always present (API fills empty
+  // aggregate for partner rows + any student row with no fee). The
+  // Payment column + filter chip both consume this; partner rows
+  // always have status='none' (no fee link yet).
+  payment?: {
+    status: ApplicationPaymentStatus;
+    totalByCurrency: Record<string, number>;
+    paidByCurrency: Record<string, number>;
+    outstandingByCurrency: Record<string, number>;
+    feeCount: number;
+    lastPaidAt: string | null;
+  };
 }
 
 const PAGE_SIZE = 20;
@@ -119,6 +133,7 @@ export default function AdminApplicationsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { students } = useStudentList();
+  const { t } = useI18n();
 
   // S34: cohort filter, sourced from the URL on mount. The
   // cohort dashboard's "View applications" link is
@@ -191,6 +206,11 @@ export default function AdminApplicationsPage() {
   // Partner rows are unaffected by either filter.
   const [decisionFilter, setDecisionFilter] = useState<'all' | 'with' | 'without'>('all');
   const [enrolledFilter, setEnrolledFilter] = useState<'all' | 'enrolled' | 'not-enrolled'>('all');
+  // Phase 145: payment filter chip. 'all' = no filter. Apps with
+  // 'none' payment status (no fee rows) are EXCLUDED from every
+  // value so they don't pollute the cohort counts. Partner rows
+  // always pass through (no fee link yet).
+  const [paymentFilter, setPaymentFilter] = useState<'all' | ApplicationPaymentStatus>('all');
 
   // Phase 122b: server-side sort. Defaults mirror the API's original
   // fixed behavior (created_at desc). Clicking a sortable header
@@ -262,6 +282,20 @@ export default function AdminApplicationsPage() {
   // moved to "Under Review" in one click.
   const [bulkStatusDialogOpen, setBulkStatusDialogOpen] = useState(false);
   const [bulkStatus, setBulkStatus] = useState<string>('Under Review');
+  // Phase 145: bulk mark-paid dialog state. The dialog asks for
+  // fee type + amount + currency + payment method + paid date,
+  // then POSTs the unified bulk endpoint with action='markPaid'.
+  // Partner rows are excluded from the dialog's effective
+  // selection (the API returns 400 per row, surfaced in the
+  // result dialog).
+  const [bulkMarkPaidDialogOpen, setBulkMarkPaidDialogOpen] = useState(false);
+  const [bulkMarkPaidFeeType, setBulkMarkPaidFeeType] = useState<string>('Application');
+  const [bulkMarkPaidAmount, setBulkMarkPaidAmount] = useState<string>('');
+  const [bulkMarkPaidCurrency, setBulkMarkPaidCurrency] = useState<string>('CNY');
+  const [bulkMarkPaidMethod, setBulkMarkPaidMethod] = useState<string>('');
+  const [bulkMarkPaidDate, setBulkMarkPaidDate] = useState<string>(
+    new Date().toISOString().slice(0, 10),
+  );
   // Phase 32: when the result dialog has failures, the admin
   // can sort the failure list by "Errors" vs "All IDs" via a
   // small inline toggle. The dialog already only renders the
@@ -352,6 +386,9 @@ export default function AdminApplicationsPage() {
     if (decisionFilter === 'without') params.set('hasDecision', 'false');
     if (enrolledFilter === 'enrolled') params.set('enrolled', 'true');
     if (enrolledFilter === 'not-enrolled') params.set('enrolled', 'false');
+    // Phase 145: payment status filter. Only sent when not 'all'
+    // so the API behaves identically for the unfiltered case.
+    if (paymentFilter !== 'all') params.set('paymentStatus', paymentFilter);
     // Phase 122b: server-side sort.
     params.set('sort', sortBy);
     params.set('order', sortOrder);
@@ -387,7 +424,7 @@ export default function AdminApplicationsPage() {
       controller.abort();
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [page, searchQuery, statusFilter, studentFilter, activeTab, intakeFilter, partnerOnly, retryNonce, decisionFilter, enrolledFilter, sortBy, sortOrder]);
+  }, [page, searchQuery, statusFilter, studentFilter, activeTab, intakeFilter, partnerOnly, retryNonce, decisionFilter, enrolledFilter, paymentFilter, sortBy, sortOrder]);
 
   // Debounce search — wait 300ms after the user stops typing before firing
   useEffect(() => {
@@ -401,7 +438,7 @@ export default function AdminApplicationsPage() {
   // which could render empty because the partner surface has few pages.
   useEffect(() => {
     setPage(1);
-  }, [activeTab, statusFilter, studentFilter, searchQuery, intakeFilter, partnerOnly]);
+  }, [activeTab, statusFilter, studentFilter, searchQuery, intakeFilter, partnerOnly, paymentFilter]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -561,7 +598,10 @@ export default function AdminApplicationsPage() {
   }, [filteredApplications]);
 
   const runBulk = useCallback(
-    async (action: 'status' | 'priority' | 'note' | 'delete', value?: string) => {
+    async (
+      action: 'status' | 'priority' | 'note' | 'delete' | 'markPaid',
+      value?: string | Record<string, unknown>,
+    ) => {
       if (selectedIds.size === 0) return;
       setBulkRunning(true);
       try {
@@ -938,13 +978,35 @@ export default function AdminApplicationsPage() {
                     <SelectItem value="not-enrolled">Not enrolled</SelectItem>
                   </SelectContent>
                 </Select>
+                {/* Phase 145: payment status filter. Apps with
+                    'none' payment status (no fee row) are EXCLUDED
+                    from every value of this filter — they don't
+                    pollute the cohort counts. */}
+                <Select
+                  value={paymentFilter}
+                  onValueChange={(v) =>
+                    setPaymentFilter(v as 'all' | ApplicationPaymentStatus)
+                  }
+                >
+                  <SelectTrigger className="w-[160px] rounded-none">
+                    <SelectValue placeholder="All Payments" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Payments</SelectItem>
+                    {(['paid', 'partial', 'unpaid', 'overdue'] as ApplicationPaymentStatus[]).map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {APPLICATION_PAYMENT_STATUS_DISPLAY[s].label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             {/* Phase 107 Batch 4: decision + enrollment filter chips.
                 Each chip is a toggle button; clicking the active
                 chip resets to 'all'. The chips mirror the existing
                 cohort pill UX (visible when non-default). */}
-            {(decisionFilter !== 'all' || enrolledFilter !== 'all') && (
+            {(decisionFilter !== 'all' || enrolledFilter !== 'all' || paymentFilter !== 'all') && (
               <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-gray-100">
                 {decisionFilter !== 'all' && (
                   <span className="inline-flex items-center gap-1 bg-blue-50 border border-blue-200 px-2.5 py-1 text-xs text-blue-800">
@@ -965,6 +1027,22 @@ export default function AdminApplicationsPage() {
                       onClick={() => setEnrolledFilter('all')}
                       className="ml-1 text-green-700 hover:text-green-900"
                       aria-label="Clear enrollment filter"
+                    >
+                      <X size={12} />
+                    </button>
+                  </span>
+                )}
+                {paymentFilter !== 'all' && (
+                  <span
+                    className={`inline-flex items-center gap-1 ${
+                      APPLICATION_PAYMENT_STATUS_DISPLAY[paymentFilter].chipColor
+                    } px-2.5 py-1 text-xs`}
+                  >
+                    Payment: {APPLICATION_PAYMENT_STATUS_DISPLAY[paymentFilter].label}
+                    <button
+                      onClick={() => setPaymentFilter('all')}
+                      className="ml-1 opacity-70 hover:opacity-100"
+                      aria-label="Clear payment filter"
                     >
                       <X size={12} />
                     </button>
@@ -1014,6 +1092,12 @@ export default function AdminApplicationsPage() {
                         <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">Decision</th>
                         <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">App #</th>
                         <AppSortHeader label="Status" column="status" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+                        {/* Phase 145: payment column on partner surface.
+                            Partner rows always render as 'No fee set'
+                            (no fee link yet). The column header stays
+                            so the layout doesn't shift when admins
+                            navigate between student + partner tabs. */}
+                        <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">Payment</th>
                         <AppSortHeader label="Created" column="createdAt" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                         <th className="text-right px-6 py-3 font-semibold text-[#1B2A4A]">Actions</th>
                       </>
@@ -1029,6 +1113,15 @@ export default function AdminApplicationsPage() {
                             the row was marked enrolled. */}
                         <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">Decision</th>
                         <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">Enrolled</th>
+                        {/* Phase 145: payment column. Carries the
+                            paymentStatus filter chip's visual
+                            weight — colored badge per row (Paid =
+                            green, Partial = amber, Unpaid = red,
+                            Overdue = dark red, No fee set = grey).
+                            Partner rows never appear in the
+                            non-partnerOnly view but the badge
+                            helper still tolerates them. */}
+                        <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">Payment</th>
                         <th className="text-left px-6 py-3 font-semibold text-[#1B2A4A]">Source</th>
                         <AppSortHeader label="Created" column="createdAt" sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                         <th className="text-right px-6 py-3 font-semibold text-[#1B2A4A]">Actions</th>
@@ -1039,13 +1132,13 @@ export default function AdminApplicationsPage() {
                 <tbody>
                   {isLoading && applications.length === 0 ? (
                     <tr>
-                      <td colSpan={partnerOnly ? 9 : 8} className="px-6 py-12 text-center">
+                      <td colSpan={partnerOnly ? 10 : 9} className="px-6 py-12 text-center">
                         <Spinner size="md" className="text-[#1B2A4A] mx-auto" />
                       </td>
                     </tr>
                   ) : filteredApplications.length === 0 ? (
                     <tr>
-                      <td colSpan={partnerOnly ? 9 : 8} className="px-6 py-12 text-center text-[#4B5563]">
+                      <td colSpan={partnerOnly ? 10 : 9} className="px-6 py-12 text-center text-[#4B5563]">
                         {applications.length === 0 ? (
                           <>
                             <p>
@@ -1185,6 +1278,15 @@ export default function AdminApplicationsPage() {
                               <td className="px-6 py-4 font-mono text-xs text-gray-600">
                                 {application.applicationNumber || '—'}
                               </td>
+                              {/* Phase 145: Payment column (partner
+                                  surface — always 'No fee set'). */}
+                              <td className="px-6 py-4">
+                                <Badge
+                                  className={`${APPLICATION_PAYMENT_STATUS_DISPLAY.none.color} rounded-none border`}
+                                >
+                                  {APPLICATION_PAYMENT_STATUS_DISPLAY.none.label}
+                                </Badge>
+                              </td>
                             </>
                           ) : (
                             <td className="px-6 py-4">
@@ -1271,6 +1373,31 @@ export default function AdminApplicationsPage() {
                                 ) : (
                                   <span className="text-xs text-gray-400">—</span>
                                 )}
+                              </td>
+                            </>
+                          )}
+                          {!partnerOnly && (
+                            <>
+                              {/* Phase 145: Payment column (student
+                                  surface). Renders the badge from
+                                  APPLICATION_PAYMENT_STATUS_DISPLAY
+                                  keyed off the row's payment.status.
+                                  The helper falls back to 'none' if
+                                  the API didn't include the field
+                                  (defensive — shouldn't happen but
+                                  keeps the row from crashing). */}
+                              <td className="px-6 py-4">
+                                <Badge
+                                  className={`${
+                                    APPLICATION_PAYMENT_STATUS_DISPLAY[
+                                      application.payment?.status ?? 'none'
+                                    ]?.color ?? APPLICATION_PAYMENT_STATUS_DISPLAY.none.color
+                                  } rounded-none border`}
+                                >
+                                  {APPLICATION_PAYMENT_STATUS_DISPLAY[
+                                    application.payment?.status ?? 'none'
+                                  ]?.label ?? 'No fee set'}
+                                </Badge>
                               </td>
                             </>
                           )}
@@ -1451,6 +1578,28 @@ export default function AdminApplicationsPage() {
                 disabled={bulkRunning}
               >
                 <StickyNote size={14} className="mr-1.5" /> Add note
+              </Button>
+              {/* Phase 145: bulk mark-paid action. Opens a
+                  dialog asking for fee type + amount + currency +
+                  payment method + paid date. Partner rows in the
+                  selection are rejected per-row by the API and
+                  surfaced in the result dialog. */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-none text-emerald-700 border-emerald-200 hover:bg-emerald-50"
+                onClick={() => {
+                  setBulkMarkPaidAmount('');
+                  setBulkMarkPaidFeeType('Application');
+                  setBulkMarkPaidCurrency('CNY');
+                  setBulkMarkPaidMethod('');
+                  setBulkMarkPaidDate(new Date().toISOString().slice(0, 10));
+                  setBulkMarkPaidDialogOpen(true);
+                }}
+                disabled={bulkRunning}
+                title="Record payment for the selected applications"
+              >
+                <DollarSign size={14} className="mr-1.5" /> Mark paid
               </Button>
               <Button
                 variant="outline"
@@ -1741,6 +1890,124 @@ export default function AdminApplicationsPage() {
               }}
             >
               {bulkRunning ? <><Spinner size="sm" className="text-white mr-2" /> Updating…</> : 'Update priority'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Phase 145: bulk mark-paid dialog. Asks for the fee
+          metadata (type / amount / currency / method / date) and
+          fires the unified bulk endpoint with action='markPaid'.
+          Partner rows in the selection are rejected per-row by
+          the API — surfaced in the result dialog. */}
+      <Dialog
+        open={bulkMarkPaidDialogOpen}
+        onOpenChange={(open) => {
+          setBulkMarkPaidDialogOpen(open);
+        }}
+      >
+        <DialogContent className="rounded-none max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[#1B2A4A]">
+              Record payment on {selectedIds.size} application{selectedIds.size === 1 ? '' : 's'}
+            </DialogTitle>
+            <DialogDescription>
+              SICA will create or update a student_fees row for each selected
+              application. Existing Pending/Partial rows transition to Paid;
+              applications without a fee get a new row. Partner CRM rows in
+              the selection will be rejected per-row.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-[#1B2A4A] mb-1">Fee type</label>
+              <Select value={bulkMarkPaidFeeType} onValueChange={setBulkMarkPaidFeeType}>
+                <SelectTrigger className="rounded-none">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-none">
+                  <SelectItem value="Application">Application fee</SelectItem>
+                  <SelectItem value="Tuition">Tuition</SelectItem>
+                  <SelectItem value="Service">Service fee</SelectItem>
+                  <SelectItem value="Visa">Visa fee</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-[#1B2A4A] mb-1">Amount</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={bulkMarkPaidAmount}
+                  onChange={(e) => setBulkMarkPaidAmount(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-none text-sm focus:outline-none focus:border-[#1B2A4A]"
+                  placeholder="0.00"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#1B2A4A] mb-1">Currency</label>
+                <Select value={bulkMarkPaidCurrency} onValueChange={setBulkMarkPaidCurrency}>
+                  <SelectTrigger className="rounded-none">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-none">
+                    <SelectItem value="CNY">CNY</SelectItem>
+                    <SelectItem value="USD">USD</SelectItem>
+                    <SelectItem value="EUR">EUR</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-[#1B2A4A] mb-1">Payment method</label>
+                <input
+                  type="text"
+                  value={bulkMarkPaidMethod}
+                  onChange={(e) => setBulkMarkPaidMethod(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-none text-sm focus:outline-none focus:border-[#1B2A4A]"
+                  placeholder="Bank transfer / Stripe / ..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#1B2A4A] mb-1">Paid date</label>
+                <input
+                  type="date"
+                  value={bulkMarkPaidDate}
+                  onChange={(e) => setBulkMarkPaidDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-none text-sm focus:outline-none focus:border-[#1B2A4A]"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              className="rounded-none"
+              onClick={() => setBulkMarkPaidDialogOpen(false)}
+              disabled={bulkRunning}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="rounded-none bg-emerald-700 hover:bg-emerald-800 text-white"
+              disabled={bulkRunning || !bulkMarkPaidAmount || parseFloat(bulkMarkPaidAmount) <= 0}
+              onClick={async () => {
+                const payload = {
+                  feeType: bulkMarkPaidFeeType,
+                  amount: parseFloat(bulkMarkPaidAmount),
+                  currency: bulkMarkPaidCurrency,
+                  paymentMethod: bulkMarkPaidMethod.trim() || undefined,
+                  paidDate: bulkMarkPaidDate,
+                };
+                setBulkMarkPaidDialogOpen(false);
+                await runBulk('markPaid', payload);
+              }}
+            >
+              {bulkRunning ? 'Recording...' : `Mark ${selectedIds.size} paid`}
             </Button>
           </DialogFooter>
         </DialogContent>

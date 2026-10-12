@@ -5,6 +5,7 @@ import { sendStudentWelcome } from '@/lib/email';
 import { sanitizeOrTerm, parseIntParam } from '@/lib/postgrest';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { fetchLastEmailSentAt } from '@/lib/admin/last-email-lookup';
+import { computePaymentAggregateForApp } from '@/lib/payment-aggregate';
 
 /**
  * GET /api/admin/students
@@ -178,6 +179,49 @@ export async function GET(request: NextRequest) {
       });
       for (const s of students) {
         s.lastEmailSentAt = emailMap.get(s.id) ?? null;
+      }
+    }
+
+    // Phase 145: per-student payment aggregate (sum across every
+    // student_fees row where student_id is this student). The page
+    // renders "Outstanding ¥X · Paid ¥Y" in the new Payment column.
+    // Same best-effort contract: a failure here doesn't break the
+    // list, the student just renders with no payment aggregate.
+    if (studentIds.length > 0) {
+      try {
+        const { data: feeRows, error: feeErr } = await service
+          .from('student_fees')
+          .select('student_id, application_id, status, amount, amount_paid, currency, paid_date, created_at')
+          .in('student_id', studentIds);
+        if (feeErr) {
+          console.error('[admin/students GET] fee fetch error:', feeErr);
+        } else if (feeRows) {
+          // Group fees by student_id, then compute the aggregate per
+          // student. Multiple currencies stay separate (same shape
+          // as the per-application aggregate).
+          const byStudent = new Map<string, Array<{
+            application_id: string | null;
+            status: string | null;
+            amount: number | string | null;
+            amount_paid: number | string | null;
+            currency: string | null;
+            paid_date: string | null;
+            created_at: string | null;
+          }>>();
+          for (const row of feeRows) {
+            const sid = (row as { student_id: string | null }).student_id;
+            if (!sid) continue;
+            const list = byStudent.get(sid) || [];
+            list.push(row as never);
+            byStudent.set(sid, list);
+          }
+          for (const s of students) {
+            const fees = byStudent.get(s.id) || [];
+            s.payment = computePaymentAggregateForApp(fees);
+          }
+        }
+      } catch (feeCatchErr) {
+        console.error('[admin/students GET] payment aggregate unhandled:', feeCatchErr);
       }
     }
 

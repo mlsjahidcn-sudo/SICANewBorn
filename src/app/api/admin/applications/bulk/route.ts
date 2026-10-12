@@ -6,6 +6,12 @@ import {
   notifyPartnerOnStatusChange,
 } from '@/lib/email';
 import { mapPartnerApplicationToDb, parsePartnerApplicationStatus } from '@/lib/partner-application-mapper';
+import {
+  STUDENT_FEE_TYPES,
+  STUDENT_FEE_CURRENCIES,
+  parseStudentFeeType,
+  parseStudentFeeCurrency,
+} from '@/lib/student-fee-mapper';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,7 +26,7 @@ export const dynamic = 'force-dynamic';
  * Body:
  *   {
  *     ids: string[],                              // row ids (UUIDs)
- *     action: 'status' | 'priority' | 'note' | 'delete',
+ *     action: 'status' | 'priority' | 'note' | 'delete' | 'markPaid',
  *     value: string                               // action-specific
  *   }
  *
@@ -32,6 +38,20 @@ export const dynamic = 'force-dynamic';
  *   priority value: 'Low' | 'Normal' | 'High' | 'Urgent'
  *   note     value: free text, appended to existing notes
  *   delete   value: ignored
+ *   markPaid value: JSON-encoded payload describing the fee row to
+ *                   create or update:
+ *                     { feeType: StudentFeeType,
+ *                       amount: number,
+ *                       currency: StudentFeeCurrency,
+ *                       paymentMethod?: string,
+ *                       paidDate?: 'YYYY-MM-DD' (defaults to today) }
+ *                   If a Pending/Partial student_fees row already
+ *                   exists for this application, it is UPDATED to
+ *                   Paid (so the admin doesn't end up with two rows
+ *                   for the same fee). If no row exists, a new one
+ *                   is INSERTED. Partner surface rows are not
+ *                   supported yet — the admin uses /admin/fees for
+ *                   partner payment tracking (Phase 145b follow-up).
  *
  * Response: { updated: number, failed: Array<{id, error}> }
  *
@@ -66,7 +86,7 @@ const ALLOWED_PARTNER_STATUSES = [
 
 const ALLOWED_PRIORITIES = ['Low', 'Normal', 'High', 'Urgent'] as const;
 
-const ALLOWED_ACTIONS = ['status', 'priority', 'note', 'delete'] as const;
+const ALLOWED_ACTIONS = ['status', 'priority', 'note', 'delete', 'markPaid'] as const;
 type BulkAction = (typeof ALLOWED_ACTIONS)[number];
 
 export async function POST(request: NextRequest) {
@@ -100,7 +120,17 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
-    if (action !== 'delete' && (typeof value !== 'string' || value.trim() === '')) {
+    // Phase 145: markPaid takes a JSON object as `value` (every
+    // other action takes a string). Validate up-front so the
+    // action handlers below can assume a valid shape.
+    if (action === 'markPaid') {
+      if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+        return NextResponse.json(
+          { error: 'markPaid value must be an object {feeType, amount, currency, ...}' },
+          { status: 400 },
+        );
+      }
+    } else if (action !== 'delete' && (typeof value !== 'string' || value.trim() === '')) {
       return NextResponse.json(
         { error: 'value is required and must be a non-empty string' },
         { status: 400 },
@@ -360,6 +390,120 @@ export async function POST(request: NextRequest) {
               .eq('id', id);
             if (updErr) throw new Error(updErr.message);
           }
+          updated++;
+          continue;
+        }
+
+        if (action === 'markPaid') {
+          // Phase 145: bulk-create or bulk-update the student_fees
+          // row attached to this application. The flow:
+          //   1. Find an existing Pending/Partial fee row for this
+          //      application (most recent). If found, UPDATE it to
+          //      Paid (so the admin doesn't end up with two rows).
+          //   2. If no fee row exists, INSERT a new one.
+          //   3. If multiple fee rows exist, only the most-recent
+          //      one transitions — the others are left alone so we
+          //      don't silently erase billing history.
+          //
+          // Partner surface rows are skipped with a 400-style
+          // failure — partner CRM doesn't link to student_fees yet.
+          if (surface === 'partner') {
+            failed.push({ id, error: 'Mark-paid is not supported on partner CRM rows yet' });
+            continue;
+          }
+          const payload = value as Record<string, unknown>;
+          const feeTypeRaw = typeof payload.feeType === 'string' ? payload.feeType : null;
+          const amountRaw = typeof payload.amount === 'number' ? payload.amount : parseFloat(String(payload.amount ?? ''));
+          const currencyRaw = typeof payload.currency === 'string' ? payload.currency : null;
+          const paymentMethod = typeof payload.paymentMethod === 'string' && payload.paymentMethod.trim() ? payload.paymentMethod.trim() : null;
+          const paidDate = typeof payload.paidDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(payload.paidDate)
+            ? payload.paidDate
+            : new Date().toISOString().slice(0, 10);
+          if (!feeTypeRaw || !parseStudentFeeType(feeTypeRaw)) {
+            failed.push({ id, error: `feeType must be one of: ${STUDENT_FEE_TYPES.join(', ')}` });
+            continue;
+          }
+          if (!currencyRaw || !parseStudentFeeCurrency(currencyRaw)) {
+            failed.push({ id, error: `currency must be one of: ${STUDENT_FEE_CURRENCIES.join(', ')}` });
+            continue;
+          }
+          if (!Number.isFinite(amountRaw) || (amountRaw as number) <= 0) {
+            failed.push({ id, error: 'amount must be a positive number' });
+            continue;
+          }
+          const amount = amountRaw as number;
+          const feeType = feeTypeRaw; // already validated against the closed set
+          const currency = currencyRaw;
+
+          // Look for an existing non-terminal fee row. The most
+          // recent (created_at desc, limit 1) is what we update —
+          // older rows stay untouched so we preserve the audit
+          // trail. If none exists, we INSERT a new row.
+          const { data: existingFee, error: feeLookupErr } = await service
+            .from('student_fees')
+            .select('id, status')
+            .eq('application_id', id)
+            .in('status', ['Pending', 'Partial', 'Overdue'])
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (feeLookupErr) throw new Error(feeLookupErr.message);
+
+          if (existingFee) {
+            const { error: updErr } = await service
+              .from('student_fees')
+              .update({
+                fee_type: feeType,
+                amount,
+                currency,
+                amount_paid: amount,
+                paid_date: paidDate,
+                status: 'Paid',
+                payment_method: paymentMethod,
+              })
+              .eq('id', (existingFee as { id: string }).id);
+            if (updErr) throw new Error(updErr.message);
+          } else {
+            // No prior fee for this application — we need
+            // student_id to satisfy the NOT NULL FK on
+            // student_fees.student_id. Fetch the app row first.
+            const { data: appRow, error: appErr } = await service
+              .from('student_applications')
+              .select('student_id, applicant_email')
+              .eq('id', id)
+              .maybeSingle();
+            if (appErr) throw new Error(appErr.message);
+            const sr = appRow as { student_id: string | null; applicant_email: string | null } | null;
+            if (!sr?.student_id) {
+              failed.push({
+                id,
+                error: 'Application has no linked student — cannot create fee row (admins should link via the detail page first)',
+              });
+              continue;
+            }
+            const { error: insErr } = await service
+              .from('student_fees')
+              .insert({
+                application_id: id,
+                student_id: sr.student_id,
+                fee_type: feeType,
+                amount,
+                currency,
+                amount_paid: amount,
+                paid_date: paidDate,
+                status: 'Paid',
+                payment_method: paymentMethod,
+              });
+            if (insErr) throw new Error(insErr.message);
+          }
+
+          // No timeline event / no email on a payment flip —
+          // student_fees is its own audit surface (timestamps +
+          // paid_date + payment_method), and the user didn't ask
+          // for a notification. Adding one is a Phase 145+
+          // follow-up; the per-row student_notifications row is
+          // already wired when the admin creates a fee via
+          // /admin/fees (Phase 2) — we mirror that intent here.
           updated++;
           continue;
         }
