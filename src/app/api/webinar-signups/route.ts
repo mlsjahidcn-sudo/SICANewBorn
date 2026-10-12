@@ -128,16 +128,14 @@ export async function POST(request: NextRequest) {
   const ip = (xff ? xff.split(',')[0]?.trim() : null) ?? 'unknown';
   const ipHash = createHash('sha256').update(ip).digest('hex');
 
-  // Phase 157: capacity check removed — registration is
-  // uncapped. Only an "active session exists" gate remains
-  // so signups don't silently land against a null FK.
+  // Phase 158: capacity + active-session gate removed. The form
+  // is the page's primary conversion, so when no active session
+  // exists we still capture the signup — `webinar_session_id`
+  // is nullable, so the row lands as a "register your interest"
+  // lead. Staff can later link them via the admin signups page
+  // when a session is published. Active session is still
+  // resolved when present so the email + FK are wired.
   const activeSessionId = await getActiveSessionId();
-  if (!activeSessionId) {
-    return NextResponse.json(
-      { error: 'No active webinar session — please check back later.' },
-      { status: 409 },
-    );
-  }
 
   try {
     const { data, error } = await supabase
@@ -159,12 +157,12 @@ export async function POST(request: NextRequest) {
         gclid,
         fbclid,
         ip_hash: ipHash,
-        // Phase 144b: populate the FK so the capacity count query
-        // (eq('webinar_session_id', id).in('Registered','Attended'))
-        // finds the row. Nullable for backfill (the ON DELETE
-        // SET NULL preserves historical signups if a session is
-        // ever deleted), but every new signup since this commit
-        // gets the FK populated.
+        // Phase 144b: populate the FK when an active session
+        // exists so the admin signups list can join back.
+        // Phase 158: nullable — signups captured before staff
+        // publishes a session land with null FK and act as a
+        // "register your interest" lead. Staff can link them
+        // later via /admin/webinar-signups.
         webinar_session_id: activeSessionId,
       })
       .select('id, created_at')

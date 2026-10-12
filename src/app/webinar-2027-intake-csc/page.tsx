@@ -99,10 +99,15 @@ export default async function WebinarPage() {
   const activeTopics = bundle?.topics ?? [];
   const hasActiveTopics = activeTopics.length > 0;
 
-  // Phase 157: registration is uncapped — no capacity / waitlist
-  // gating. The signup form is shown whenever an active session
-  // exists with at least one topic.
-  const showFullForm = !!activeSession && hasActiveTopics;
+  // Phase 158: the form is the page's primary conversion —
+  // always render it. When no active session is published,
+  // the form acts as a "register your interest" capture (the
+  // API accepts signups with a null webinar_session_id FK,
+  // staff links them when the session is published). The TBA
+  // variant shows when the session exists but date/time is
+  // unconfirmed.
+  const showFullForm = true;
+  const noActiveSession = !activeSession;
 
   // Format the hero date pill. When the session has a real
   // date, render "Sat, 19 Sep 2026 · 10:00 AM Beijing Time".
@@ -158,10 +163,19 @@ export default async function WebinarPage() {
             {t('webinar.hero.eyebrow')}
           </span>
           <h1 className="mt-6 text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white leading-tight">
-            {t('webinar.hero.title')}
+            {/* Phase 158: swap the headline when no session is
+                published yet — "Schedule coming soon — register
+                your interest" so the visitor knows the form is
+                a real capture even before staff has confirmed
+                the date. */}
+            {noActiveSession
+              ? t('webinar.hero.titleNoSession')
+              : t('webinar.hero.title')}
           </h1>
           <p className="mt-5 text-base sm:text-lg text-gray-300 max-w-3xl mx-auto leading-relaxed">
-            {t('webinar.hero.subtitle')}
+            {noActiveSession
+              ? t('webinar.hero.subtitleNoSession')
+              : t('webinar.hero.subtitle')}
           </p>
           <div className="mt-8 flex flex-col items-center gap-3">
             <div className="inline-flex items-center gap-2 bg-[#D4A853]/15 border border-[#D4A853]/40 px-4 py-2 text-sm text-[#D4A853] font-semibold">
@@ -335,16 +349,13 @@ export default async function WebinarPage() {
             </div>
           </div>
 
-          {/* Right rail — the form (or waitlist form when full) */}
+          {/* Right rail — the form is the page's primary
+              conversion. Phase 158: always render. When no
+              active session exists, the form acts as a "register
+              your interest" capture (the API accepts signups
+              with null webinar_session_id FK). */}
           <div>
-            {showFullForm ? (
-              <WebinarSignupForm countryOptions={countryOptions} />
-            ) : (
-              // No active session at all — the empty-state fallback
-              // is rendered above. Render nothing here so the right
-              // rail doesn't show a stale form.
-              null
-            )}
+            <WebinarSignupForm countryOptions={countryOptions} />
           </div>
         </div>
       </section>

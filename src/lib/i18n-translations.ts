@@ -4901,7 +4901,11 @@ export const translations: Record<Locale, Record<string, string>> = {
     // Phase 139: public webinar landing page (March/Sept 2027 Intake + CSC)
     'webinar.hero.eyebrow': 'Live online session · Free',
     'webinar.hero.title': '2027 Intake + CSC Scholarship webinar',
+    // Phase 158: TBA copy used when no active session is published —
+    // the form still acts as a register-your-interest capture.
+    'webinar.hero.titleNoSession': '2027 Intake + CSC Scholarship webinar — register your interest',
     'webinar.hero.subtitle': 'Free 60-minute live session covering March 2027 Chinese Language + Foundation, September 2027 Bachelor + Master, and CSC Scholarship strategy.',
+    'webinar.hero.subtitleNoSession': 'SICA is finalising the next live session. Drop your details below and we will email + WhatsApp you the moment the date and join link are confirmed.',
     'webinar.hero.dateLabel': 'Date coming soon',
     'webinar.hero.dateBody': 'Register now and we will email + WhatsApp you the moment the date and join link are confirmed.',
     'webinar.hero.ctaPrimary': 'Register below',
@@ -9846,7 +9850,11 @@ export const translations: Record<Locale, Record<string, string>> = {
     // Phase 139: 公开讲座报名页面（2027 年 3 月 / 9 月入学 + CSC 奖学金）
     'webinar.hero.eyebrow': '线上直播讲座 · 免费',
     'webinar.hero.title': '2027 入学 + CSC 奖学金线上讲座',
+    // Phase 158: TBA copy used when no active session is published —
+    // the form still acts as a register-your-interest capture.
+    'webinar.hero.titleNoSession': '2027 入学 + CSC 奖学金线上讲座 — 留下您的兴趣',
     'webinar.hero.subtitle': '免费 60 分钟直播，覆盖 2027 年 3 月中文语言 + 预科入学、2027 年 9 月本科 + 硕士入学，以及 CSC 奖学金申请策略。',
+    'webinar.hero.subtitleNoSession': 'SICA 正在确认下一场直播时间。请在下方留下您的信息，一旦确定日期和参会链接，我们将通过邮件 + WhatsApp 第一时间通知您。',
     'webinar.hero.dateLabel': '日期即将公布',
     'webinar.hero.dateBody': '现在注册，日期和会议链接确定后我们将通过邮件 + WhatsApp 第一时间通知您。',
     'webinar.hero.ctaPrimary': '立即报名',
