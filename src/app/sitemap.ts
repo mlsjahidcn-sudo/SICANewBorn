@@ -118,11 +118,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/china-university-dorms-cost`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/peking-vs-tsinghua-international-students`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/china-student-visa-jw202-residence-permit`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    // Phase 121: Study-in-China cluster Batch 1 — personal finance & daily life
-    { url: `${SITE_URL}/open-chinese-bank-account`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/international-money-transfer-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/china-mobile-internet-for-international-students`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/student-health-care-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     // Phase 122-124: the 10 top-level university profile pages were
     // here — removed in Phase 146 (they 301 to /universities/<slug>,
     // see the comment in the CSCA block above).
@@ -256,10 +251,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     .map((u) => u.slug)
     .filter(Boolean)
     .sort();
+  // Phase 159: cap the compare pair sitemap entries to the top
+  // COMPARE_TOP_N universities. With 132+ live rows the full
+  // combinatorial C(132, 2) ≈ 8,646 pair URLs were dominating
+  // 93% of the sitemap, soaking Google's crawl budget on thin
+  // "A vs B" pages instead of the high-conversion article URLs.
+  // Limiting to the top 20 → 190 pair URLs (still covers the
+  // Tsinghua/Peking/Fudan/Zhejiang/SJTU/etc. cluster that
+  // actually drives clicks). The /compare hub + internal links
+  // still cover the long tail; the sitemap just doesn't scream
+  // "low-value permutational content" to Google.
+  const COMPARE_TOP_N = 20;
+  const compareScopeSlugs = rankedSlugs.slice(0, COMPARE_TOP_N);
   const comparePairs: Array<{ a: string; b: string }> = [];
-  for (let i = 0; i < rankedSlugs.length; i++) {
-    for (let j = i + 1; j < rankedSlugs.length; j++) {
-      comparePairs.push({ a: rankedSlugs[i], b: rankedSlugs[j] });
+  for (let i = 0; i < compareScopeSlugs.length; i++) {
+    for (let j = i + 1; j < compareScopeSlugs.length; j++) {
+      comparePairs.push({ a: compareScopeSlugs[i], b: compareScopeSlugs[j] });
     }
   }
   const compareUrls: MetadataRoute.Sitemap = comparePairs.map((p) => ({
@@ -269,10 +276,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.75,
   }));
 
-  // Per-university subpages — scholarships and programs subroutes.
-  // 8 ranked universities × 2 subroutes = 16 pages. High-intent
-  // "[University] scholarships" / "[University] programs" queries.
-  const rankedUniSubUrls: MetadataRoute.Sitemap = rankedSlugs.flatMap((s) => [
+  // Per-university subpages — scholarships and programs
+  // subroutes. Phase 159: capped to the top COMPARE_TOP_N so the
+  // 132-university bulk doesn't flood the sitemap with 264 thin
+  // subpages. The hub still links to every per-uni subpage via
+  // the per-uni detail (the per-uni URL itself is in the sitemap
+  // — see universityUrls above — so crawlers can discover the
+  // subpages through internal links).
+  const rankedUniSubUrls: MetadataRoute.Sitemap = compareScopeSlugs.flatMap((s) => [
     {
       url: `${SITE_URL}/universities/${s}/scholarships`,
       lastModified: now,
