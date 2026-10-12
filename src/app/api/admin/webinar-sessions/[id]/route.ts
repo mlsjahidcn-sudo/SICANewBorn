@@ -20,9 +20,6 @@ interface UpdateBody {
   status?: WebinarStatus;
   isActive?: boolean;
   displayOrder?: number;
-  /** Phase 142: per-session attendee cap. Server-side
-   *  guard rejects values < 1 to match the DB CHECK. */
-  maxAttendees?: number;
 }
 
 /**
@@ -90,27 +87,17 @@ export async function PATCH(
   if (body.status !== undefined) update.status = body.status;
   if (body.isActive !== undefined) update.is_active = body.isActive;
   if (body.displayOrder !== undefined) update.display_order = body.displayOrder;
-  if (body.maxAttendees !== undefined) {
-    // Mirror the DB CHECK constraint so a negative value never
-    // reaches PostgREST.
-    if (body.maxAttendees < 1) {
-      return NextResponse.json(
-        { error: 'maxAttendees must be >= 1' },
-        { status: 400 },
-      );
-    }
-    update.max_attendees = body.maxAttendees;
-  }
 
   if (Object.keys(update).length === 0) {
     return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
   }
 
-  // Phase 143: capture old is_active + max_attendees before the
-  // update so the admin-action events have the before/after pair.
+  // Phase 157: capacity check removed — registration is uncapped.
+  // Capture old is_active before the update so the admin-toggle
+  // event has the before/after pair.
   const { data: existing, error: readErr } = await auth.supabase
     .from('webinar_sessions')
-    .select('is_active, max_attendees')
+    .select('is_active')
     .eq('id', paramsId)
     .maybeSingle();
   if (readErr || !existing) {
@@ -118,7 +105,6 @@ export async function PATCH(
     return NextResponse.json({ error: 'Session not found' }, { status: 404 });
   }
   const oldIsActive = Boolean(existing.is_active);
-  const oldMax = (existing.max_attendees as number) ?? 50;
 
   const { data, error } = await auth.supabase
     .from('webinar_sessions')
@@ -132,8 +118,8 @@ export async function PATCH(
     return NextResponse.json({ error: 'Failed to update session' }, { status: 500 });
   }
 
-  // Phase 143: best-effort admin events. The status flip + toggle
-  // + capacity events give GA a single source of truth for admin
+  // Phase 143: best-effort admin events. The status flip +
+  // toggle events give GA a single source of truth for admin
   // activity.
   trackServer('webinar_session_updated', { locale: 'en', session_id: paramsId });
   const newIsActive = Boolean(data.is_active);
@@ -142,14 +128,6 @@ export async function PATCH(
       locale: 'en',
       session_id: paramsId,
       new_is_active: newIsActive,
-    });
-  }
-  if (body.maxAttendees !== undefined && body.maxAttendees !== oldMax) {
-    trackServer('webinar_session_capacity_changed', {
-      locale: 'en',
-      session_id: paramsId,
-      old_max: oldMax,
-      new_max: body.maxAttendees,
     });
   }
 

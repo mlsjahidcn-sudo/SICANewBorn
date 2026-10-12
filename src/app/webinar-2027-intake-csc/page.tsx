@@ -41,13 +41,10 @@ import { buildLanguageAlternates } from '@/lib/alternates';
 import { COUNTRIES } from '@/lib/seo-data';
 import {
   getActiveSessionWithTopics,
-  getActiveSessionCapacity,
   formatWebinarDate,
 } from '@/lib/webinar-sessions';
 import type { WebinarTopicDegree, WebinarTopicIntake } from '@/lib/webinar-sessions';
 import { WebinarSignupForm } from './webinar-signup-form';
-import { CapacityPill } from './CapacityPill';
-import { WaitlistForm } from './WaitlistForm';
 
 export const revalidate = 3600;
 
@@ -102,21 +99,10 @@ export default async function WebinarPage() {
   const activeTopics = bundle?.topics ?? [];
   const hasActiveTopics = activeTopics.length > 0;
 
-  // Phase 142: cached capacity snapshot. The RSC stays
-  // statically cached (revalidate = 3600); the live CapacityPill
-  // client island refreshes every 30s on the client.
-  const capacity = await getActiveSessionCapacity();
-  const showFullForm = !!activeSession && capacity.acceptsSignups;
-  const showWaitlist = !!activeSession && !capacity.acceptsSignups;
-  const capacityInitial = activeSession
-    ? {
-        maxAttendees: capacity.maxAttendees,
-        seatHolders: capacity.seatHolders,
-        seatsRemaining: capacity.seatsRemaining,
-        isFull: capacity.isFull,
-        acceptsSignups: capacity.acceptsSignups,
-      }
-    : null;
+  // Phase 157: registration is uncapped — no capacity / waitlist
+  // gating. The signup form is shown whenever an active session
+  // exists with at least one topic.
+  const showFullForm = !!activeSession && hasActiveTopics;
 
   // Format the hero date pill. When the session has a real
   // date, render "Sat, 19 Sep 2026 · 10:00 AM Beijing Time".
@@ -188,14 +174,6 @@ export default async function WebinarPage() {
                 </>
               )}
             </div>
-            {/* Phase 142: live seat count. CapacityPill renders its
-                own emerald-on-light styling so it sits below the
-                gold date pill as a visually distinct (but still
-                centred) row — not a "wrapped" half-inside-the-
-                hero-pill as the previous layout did. */}
-            {activeSession && capacityInitial && (
-              <CapacityPill initial={capacityInitial} />
-            )}
           </div>
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
             <a
@@ -361,8 +339,6 @@ export default async function WebinarPage() {
           <div>
             {showFullForm ? (
               <WebinarSignupForm countryOptions={countryOptions} />
-            ) : showWaitlist ? (
-              <WaitlistForm />
             ) : (
               // No active session at all — the empty-state fallback
               // is rendered above. Render nothing here so the right

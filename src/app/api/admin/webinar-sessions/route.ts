@@ -70,8 +70,6 @@ interface CreateBody {
   status?: WebinarStatus;
   isActive?: boolean;
   displayOrder?: number;
-  /** Phase 142: per-session attendee cap (default 50 in DB). */
-  maxAttendees?: number;
 }
 
 export async function POST(request: NextRequest) {
@@ -127,9 +125,6 @@ export async function POST(request: NextRequest) {
       status: body.status ?? 'Scheduled',
       is_active: isActive,
       display_order: body.displayOrder ?? 0,
-      // Phase 142: DB DEFAULT 50 covers the omit case; explicit
-      // value here only fires when the client sends one.
-      max_attendees: body.maxAttendees ?? undefined,
     })
     .select('id, slug, is_active')
     .single();

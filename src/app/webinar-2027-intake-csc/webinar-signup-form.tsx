@@ -151,11 +151,11 @@ export function WebinarSignupForm({ countryOptions }: Props) {
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
-        // Phase 143: surface the server-side capacity decision in
-        // the funnel so admin can correlate a 409 with the page view.
-        const errorCode: 'session_full' | 'server' =
-          res.status === 409 && body.error === 'session_full' ? 'session_full' : 'server';
-        track('webinar_form_submitted_failed', { locale, error_code: errorCode });
+        // Phase 157: registration is uncapped, so all 4xx/5xx map
+        // to a single 'server' bucket for funnel analytics. The
+        // 'validation' bucket stays for client-side failures that
+        // never reach the server (handled separately below).
+        track('webinar_form_submitted_failed', { locale, error_code: 'server' });
         throw new Error(body.error || `Submission failed (${res.status})`);
       }
       setStatus('success');

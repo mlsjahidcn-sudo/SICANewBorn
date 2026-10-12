@@ -453,8 +453,8 @@ export interface AnalyticsEventMap {
   // webinar-signup-form.tsx so the funnel leak is measurable
   // in GA without any backend changes. Admin-action events
   // (`webinar_session_*`, `webinar_signup_status_changed`,
-  // `webinar_waitlist_added`) are server-fired from the route
-  // handlers so they fire on every API call regardless of UI.
+  // `webinar_signup_status_changed`) are server-fired from the
+  // route handlers so they fire on every API call regardless of UI.
   // -----------------------------------------------------------------
   /** Phase 143: visitor started interacting with the signup form
    *  (first field focus). */
@@ -478,8 +478,9 @@ export interface AnalyticsEventMap {
   webinar_form_submitted_failed: {
     /** Page locale. */
     locale: 'en' | 'zh';
-    /** Stable error code so GA can group funnel leaks. */
-    error_code: 'session_full' | 'validation' | 'server';
+    /** Stable error code so GA can group funnel leaks.
+     *  Phase 157: 'session_full' removed — registration is uncapped. */
+    error_code: 'validation' | 'server';
   };
   /** Phase 143: admin created a new session row. */
   webinar_session_created: {
@@ -504,13 +505,6 @@ export interface AnalyticsEventMap {
     /** New is_active value. */
     new_is_active: boolean;
   };
-  /** Phase 143: admin changed the max_attendees cap. */
-  webinar_session_capacity_changed: {
-    locale: 'en' | 'zh';
-    session_id: string;
-    old_max: number;
-    new_max: number;
-  };
   /** Phase 143: admin added a topic under a session. */
   webinar_topic_added: {
     locale: 'en' | 'zh';
@@ -525,12 +519,6 @@ export interface AnalyticsEventMap {
     signup_id: string;
     old_status: string;
     new_status: string;
-  };
-  /** Phase 143: a waitlist lead was captured (the public
-   *  full-session form submit). */
-  webinar_waitlist_added: {
-    locale: 'en' | 'zh';
-    session_id: string;
   };
 }
 

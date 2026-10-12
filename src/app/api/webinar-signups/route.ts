@@ -5,7 +5,6 @@ import { checkPublicRateLimit, isHoneypotFilled } from '@/lib/rate-limit';
 import { sendWebinarConfirmation } from '@/lib/email';
 import {
   getActiveSessionEmailFields,
-  getActiveSessionCapacity,
   getActiveSessionId,
   formatWebinarDate,
 } from '@/lib/webinar-sessions';
@@ -129,38 +128,16 @@ export async function POST(request: NextRequest) {
   const ip = (xff ? xff.split(',')[0]?.trim() : null) ?? 'unknown';
   const ipHash = createHash('sha256').update(ip).digest('hex');
 
-  // Phase 142: capacity check. Reject with a stable
-  // `error: 'session_full'` so the client form can branch
-  // to the waitlist panel. Seat-holders are `status IN
-  // ('Registered', 'Attended')` — Cancelled + No-Show free
-  // the seat immediately. count: 'exact' so the cap is
-  // real, not an estimate.
-  const capacity = await getActiveSessionCapacity();
-  if (!capacity.acceptsSignups) {
-    if (capacity.maxAttendees === 0) {
-      // No active session — staff hasn't set one up yet.
-      return NextResponse.json(
-        { error: 'No active webinar session — please check back later.' },
-        { status: 409 },
-      );
-    }
+  // Phase 157: capacity check removed — registration is
+  // uncapped. Only an "active session exists" gate remains
+  // so signups don't silently land against a null FK.
+  const activeSessionId = await getActiveSessionId();
+  if (!activeSessionId) {
     return NextResponse.json(
-      {
-        error: 'session_full',
-        maxAttendees: capacity.maxAttendees,
-      },
+      { error: 'No active webinar session — please check back later.' },
       { status: 409 },
     );
   }
-
-  // Phase 144b: lookup the active session id once so the FK
-  // gets populated on insert. Without this, every signup row
-  // had webinar_session_id = null and the capacity count query
-  // returned 0 forever — which is why the public counter was
-  // stuck at 50/50 even after signups landed. The capacity
-  // check above already verified the session exists, so this
-  // cheap SELECT is a near-cache hit in practice.
-  const activeSessionId = await getActiveSessionId();
 
   try {
     const { data, error } = await supabase

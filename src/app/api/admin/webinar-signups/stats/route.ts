@@ -133,8 +133,8 @@ export async function GET(request: Request) {
 
     // Interest aggregation — `program_interests` is text[], so
     // we fetch the rows + unnest client-side. Same JS-group
-    // pattern. Cheap because the signup count is bounded by
-    // max_attendees × num_sessions.
+    // pattern. Phase 157 removed the max_attendees cap, so the
+    // signup count is bounded only by real demand.
     const interestsRes = await auth.supabase
       .from('webinar_signups')
       .select('program_interests');
