@@ -52,13 +52,6 @@ export async function GET(request: Request) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
-  // Phase 161: optional per-webinar scoping (the admin page's webinar
-  // selector). Every aggregate below threads this through.
-  const url = new URL(request.url);
-  const rawWebinarId = url.searchParams.get('webinarId')?.trim() || null;
-  const webinarId =
-    rawWebinarId && /^[0-9a-f-]{36}$/i.test(rawWebinarId) ? rawWebinarId : null;
-
   const now = new Date();
   // Start of "today" in UTC. Same convention as assessments/stats.
   const startOfToday = new Date(
@@ -68,43 +61,43 @@ export async function GET(request: Request) {
   const thirtyDaysAgo = new Date(now.getTime() - 30 * ONE_DAY_MS);
 
   try {
-    // Phase 161 scope factories — each starts a fresh builder and
-    // applies the optional webinar filter. `.eq()` returns the same
-    // builder type, so the declared return types hold.
-    const scopedHead = () => {
-      const q = auth.supabase.from('webinar_signups').select('id', { count: 'exact', head: true });
-      return webinarId ? q.eq('webinar_session_id', webinarId) : q;
-    };
-    const scopedCountry = () => {
-      const q = auth.supabase.from('webinar_signups').select('country').not('country', 'is', null);
-      return webinarId ? q.eq('webinar_session_id', webinarId) : q;
-    };
-    const scopedSource = () => {
-      const q = auth.supabase.from('webinar_signups').select('utm_source').not('utm_source', 'is', null);
-      return webinarId ? q.eq('webinar_session_id', webinarId) : q;
-    };
-    const scopedInterests = () => {
-      const q = auth.supabase.from('webinar_signups').select('program_interests');
-      return webinarId ? q.eq('webinar_session_id', webinarId) : q;
-    };
-
-    // Run the base aggregates in parallel — each is a cheap
+    // Run all 9 aggregates in parallel — each is a cheap
     // `head: true, count: 'exact'` query against the indexed
     // created_at column.
     const [totalRes, todayRes, weekRes, monthRes, countryRes, sourceRes] = await Promise.all([
-      scopedHead(),
-      scopedHead().gte('created_at', startOfToday.toISOString()),
-      scopedHead().gte('created_at', sevenDaysAgo.toISOString()),
-      scopedHead().gte('created_at', thirtyDaysAgo.toISOString()),
-      scopedCountry(),
-      scopedSource(),
+      auth.supabase
+        .from('webinar_signups')
+        .select('id', { count: 'exact', head: true }),
+      auth.supabase
+        .from('webinar_signups')
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', startOfToday.toISOString()),
+      auth.supabase
+        .from('webinar_signups')
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', sevenDaysAgo.toISOString()),
+      auth.supabase
+        .from('webinar_signups')
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', thirtyDaysAgo.toISOString()),
+      auth.supabase
+        .from('webinar_signups')
+        .select('country')
+        .not('country', 'is', null),
+      auth.supabase
+        .from('webinar_signups')
+        .select('utm_source')
+        .not('utm_source', 'is', null),
     ]);
 
     // byStatus — counts per closed enum value, IN-clause so the
     // server doesn't need to know the open set.
     const statusRows = await Promise.all(
       VALID_STATUSES.map(async (status) => {
-        const { count } = await scopedHead().eq('status', status);
+        const { count } = await auth.supabase
+          .from('webinar_signups')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', status);
         return { status, count: count ?? 0 };
       }),
     );
@@ -140,8 +133,11 @@ export async function GET(request: Request) {
 
     // Interest aggregation — `program_interests` is text[], so
     // we fetch the rows + unnest client-side. Same JS-group
-    // pattern.
-    const interestsRes = await scopedInterests();
+    // pattern. Phase 157 removed the max_attendees cap, so the
+    // signup count is bounded only by real demand.
+    const interestsRes = await auth.supabase
+      .from('webinar_signups')
+      .select('program_interests');
     const interestMap = new Map<string, number>();
     for (const row of interestsRes.data ?? []) {
       const arr = (row.program_interests as string[] | null) ?? [];

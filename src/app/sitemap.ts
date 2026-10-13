@@ -9,30 +9,6 @@ interface SitemapEntry {
   updated_at?: string;
 }
 
-/**
- * Phase 161: slugs for the /webinar/[slug] routes. DB-driven (all
- * non-draft webinar_sessions rows); falls back to the two seeded
- * slugs when Supabase is unreachable so the sitemap never goes
- * empty (CI builds without secrets rely on this).
- */
-async function listWebinarSlugs(): Promise<string[]> {
-  const fallback = ['study-in-china-2027-top-universities', 'webinar-2027-intake-csc'];
-  if (!isSupabaseServerConfigured()) return fallback;
-  try {
-    const supabase = getSupabaseServer();
-    if (!supabase) return fallback;
-    const { data, error } = await supabase
-      .from('webinar_sessions')
-      .select('slug')
-      .neq('registration_status', 'draft')
-      .limit(50);
-    if (error || !data || data.length === 0) return fallback;
-    return data.map((row) => row.slug as string);
-  } catch {
-    return fallback;
-  }
-}
-
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
 
@@ -53,21 +29,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Phase 114: free counselling session booking — the conversion
     // landing for "free counselling study in china" queries.
     { url: `${SITE_URL}/counselling`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
+    // Phase 139: webinar landing page for the March/Sept 2027
+    // intake + CSC Scholarship webinar. weekly change frequency
+    // because the date copy will update as the session is
+    // confirmed; priority 0.8 matches /counselling + /get-started.
+    { url: `${SITE_URL}/webinar-2027-intake-csc`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
   ];
-
-  // Phase 161: webinar landing pages moved from the hardcoded
-  // /webinar-2027-intake-csc URL (which now 307s to /webinar/[slug])
-  // to DB-driven /webinar/[slug] routes. Listed from
-  // webinar_sessions so staff-created webinars appear automatically;
-  // falls back to the two seeded slugs when Supabase is unreachable
-  // (CI builds without secrets must still produce a sitemap).
-  const webinarSlugs = await listWebinarSlugs();
-  const webinarPages: MetadataRoute.Sitemap = webinarSlugs.map((slug) => ({
-    url: `${SITE_URL}/webinar/${slug}`,
-    lastModified: now,
-    changeFrequency: 'weekly',
-    priority: slug === 'study-in-china-2027-top-universities' ? 0.9 : 0.7,
-  }));
 
   // Programmatic SEO landing pages (static, high-intent long-tail)
   const landingPages: MetadataRoute.Sitemap = [
@@ -407,7 +374,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   return [
     ...staticPages,
-    ...webinarPages,
     ...landingPages,
     ...seoHubPages,
     ...guidePages,

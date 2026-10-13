@@ -10,13 +10,6 @@ import { useI18n } from '@/lib/i18n';
 const DISMISS_KEY = 'sica_webinar_promo_dismissed';
 
 /**
- * Phase 161: default CTA target when the active-session probe is
- * unavailable — the seeded Oct 20 webinar (5 top universities +
- * eligibility check + CSCA prep).
- */
-export const DEFAULT_WEBINAR_PATH = '/webinar/study-in-china-2027-top-universities';
-
-/**
  * Phase 142 + 144: visitor-facing promo popup for the active
  * webinar session (Phase 142) + a no-active-session fallback
  * teaser (Phase 144).
@@ -48,10 +41,6 @@ export function WebinarPromoPopup() {
   const [mounted, setMounted] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [hasActiveSession, setHasActiveSession] = useState<boolean | null>(null);
-  // Phase 161: the popup deep-links to the ACTIVE webinar's slug from
-  // the API (falls back to the seeded Oct 20 webinar when the probe
-  // errors or the row predates slugs being used in links).
-  const [activePath, setActivePath] = useState<string>(DEFAULT_WEBINAR_PATH);
   // Phase 144: useRef guard so the one-time view event fires
   // exactly once even if the effect re-runs (e.g. on dismissed
   // re-render when user clicks the X button).
@@ -79,13 +68,8 @@ export function WebinarPromoPopup() {
           if (!cancelled) setHasActiveSession(false);
           return;
         }
-        const json = (await res.json()) as { session?: { slug?: string } | null };
-        if (!cancelled) {
-          setHasActiveSession(json.session != null);
-          if (json.session?.slug) {
-            setActivePath(`/webinar/${json.session.slug}`);
-          }
-        }
+        const json = (await res.json()) as { session?: unknown };
+        if (!cancelled) setHasActiveSession(json.session != null);
       } catch {
         if (!cancelled) setHasActiveSession(false);
       }
@@ -158,7 +142,7 @@ export function WebinarPromoPopup() {
             <p className="text-xs text-[#4B5563] mt-1 line-clamp-3">{t('webinar.popupBody')}</p>
             <div className="flex items-center gap-2 mt-3">
               <Link
-                href={`${activePath}#signup`}
+                href="/webinar-2027-intake-csc#signup"
                 onClick={handleCta}
                 className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#9B1B30] text-white text-xs font-semibold uppercase tracking-wider hover:bg-[#7A1526] transition-colors"
               >
@@ -186,7 +170,7 @@ export function WebinarPromoPopup() {
             <p className="text-xs text-[#4B5563] mt-1 line-clamp-3">{t('webinar.popupTeaserBody')}</p>
             <div className="flex items-center gap-2 mt-3">
               <Link
-                href={activePath}
+                href="/webinar-2027-intake-csc"
                 onClick={handleCta}
                 className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#9B1B30] text-white text-xs font-semibold uppercase tracking-wider hover:bg-[#7A1526] transition-colors"
               >
@@ -234,10 +218,7 @@ export function isOnPublicPath(pathname: string | null): boolean {
   if (pathname.startsWith('/admin')) return false;
   if (pathname.startsWith('/partner')) return false;
   if (pathname.startsWith('/student')) return false;
-  // Phase 161: any webinar landing page (old URL redirects there) —
-  // don't distract on the conversion page itself.
   if (pathname.startsWith('/webinar-2027-intake-csc')) return false;
-  if (pathname.startsWith('/webinar/')) return false;
   if (pathname.startsWith('/thank-you')) return false;
   if (pathname.startsWith('/api/')) return false;
   return true;

@@ -84,20 +84,6 @@ const STATUS_FILTERS = ['all', ...COUNSELLING_BOOKING_STATUSES] as const;
 
 type ConfirmAction = 'Cancelled' | 'No-show';
 
-// Phase 152 (#19): a Confirmed or Proposed slot within 2h of now
-// gets a "student may already be waiting" warning when the admin
-// hits Cancel. The same threshold the Phase 137 occupancy lib
-// uses for the "starting soon" 2h reminder window.
-//
-// Module-scope on purpose: calling Date.now() inside a function
-// defined in the component body trips react-hooks/purity ("Cannot
-// call impure function during render") — the CI gate has failed
-// on every push since Phase 156 because of it.
-function isWithinLeadWindow(slotStartIso: string, nowMs: number = Date.now()): boolean {
-  const ms = new Date(slotStartIso).getTime() - nowMs;
-  return Number.isFinite(ms) && ms > 0 && ms <= 2 * 60 * 60 * 1000;
-}
-
 export default function AdminCounsellingPage() {
   const { t, locale } = useI18n();
   const localeTag = locale === 'zh' ? 'zh-CN' : 'en-US';
@@ -252,6 +238,15 @@ export default function AdminCounsellingPage() {
       hour12: false,
       timeZone: 'Asia/Shanghai',
     }).format(new Date(iso));
+  };
+
+  // Phase 152 (#19): a Confirmed or Proposed slot within 2h of now
+  // gets a "student may already be waiting" warning when the admin
+  // hits Cancel. The same threshold the Phase 137 occupancy lib
+  // uses for the "starting soon" 2h reminder window.
+  const isWithinLeadWindow = (slotStartIso: string): boolean => {
+    const ms = new Date(slotStartIso).getTime() - Date.now();
+    return Number.isFinite(ms) && ms > 0 && ms <= 2 * 60 * 60 * 1000;
   };
 
   const patchBooking = async (id: string, body: Record<string, unknown>): Promise<boolean> => {

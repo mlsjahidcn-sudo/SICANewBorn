@@ -33,12 +33,6 @@ export async function GET(request: NextRequest) {
     rawStatus && (VALID_STATUSES as readonly string[]).includes(rawStatus)
       ? (rawStatus as WebinarStatus)
       : null;
-  // Phase 161: scope the list to one webinar (the admin page's
-  // webinar selector). UUID-shaped guard so a junk value can't
-  // become a PostgREST filter error.
-  const rawWebinarId = searchParams.get('webinarId')?.trim() || null;
-  const webinarId =
-    rawWebinarId && /^[0-9a-f-]{36}$/i.test(rawWebinarId) ? rawWebinarId : null;
   const search = searchParams.get('q')?.trim() || null;
   const pageRaw = searchParams.get('page');
   const limitRaw = searchParams.get('limit');
@@ -52,22 +46,14 @@ export async function GET(request: NextRequest) {
   let query = auth.supabase
     .from('webinar_signups')
     .select(
-      'id, first_name, last_name, email, whatsapp, country, program_interests, notes, source_page, utm_source, utm_campaign, status, webinar_session_id, created_at',
+      'id, first_name, last_name, email, whatsapp, country, program_interests, notes, source_page, utm_source, utm_campaign, status, created_at',
       { count: 'exact' },
     )
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
 
-  // Phase 161: ?group=attended — the Attended tab (Attended + No-Show,
-  // the post-webinar follow-up audience) without a second status param.
-  const group = searchParams.get('group');
-  if (group === 'attended') {
-    query = query.in('status', ['Attended', 'No-Show']);
-  } else if (status) {
+  if (status) {
     query = query.eq('status', status);
-  }
-  if (webinarId) {
-    query = query.eq('webinar_session_id', webinarId);
   }
   if (search) {
     // ilike against the 4 most-searchable columns. Supabase
@@ -102,7 +88,6 @@ export async function GET(request: NextRequest) {
     utmSource: (row.utm_source as string | null) ?? null,
     utmCampaign: (row.utm_campaign as string | null) ?? null,
     status: (row.status as WebinarStatus) ?? 'Registered',
-    webinarSessionId: (row.webinar_session_id as string | null) ?? null,
     createdAt: row.created_at as string,
   }));
 

@@ -16,16 +16,6 @@
  * for the page).
  */
 import { getSupabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-server';
-import {
-  parseWebinarContent,
-  type WebinarContent,
-} from '@/lib/webinar-content';
-import {
-  computeSeatInfo,
-  SEAT_HOLDER_STATUSES,
-  type SeatInfo,
-  type WebinarRegistrationStatus,
-} from '@/lib/webinar-capacity';
 
 export type WebinarSessionStatus = 'Scheduled' | 'Live' | 'Completed' | 'Cancelled';
 export type WebinarTopicIntake = 'march_2027' | 'september_2027' | 'csc' | 'other';
@@ -51,12 +41,6 @@ export interface WebinarSession {
   status: WebinarSessionStatus;
   isActive: boolean;
   displayOrder: number;
-  /** Phase 161: NULL = uncapped (Phase 157 semantics). */
-  seatCap: number | null;
-  /** Phase 161: draft | open | full | closed (stored value). */
-  registrationStatus: WebinarRegistrationStatus;
-  /** Phase 161: canonical IANA zone for wall-clock rendering. */
-  timezoneLabel: string;
   createdAt: string;
   updatedAt: string | null;
 }
@@ -80,18 +64,6 @@ export interface ActiveWebinarBundle {
   topics: WebinarTopic[];
 }
 
-/**
- * Column list shared by every webinar_sessions SELECT in this module.
- * Columns added by the Phase 161 migration degrade to defaults in
- * mapSession when the migration hasn't been applied yet (deploy-safe
- * probe pattern from Phase 128a — a missing column makes PostgREST
- * return 0 rows, so callers that need pre-migration resilience pass
- * the LEGACY list below).
- */
-const SESSION_COLUMNS = 'id, slug, title_en, title_zh, description_en, description_zh, session_date, session_time, duration_minutes, join_url, status, is_active, display_order, seat_cap, registration_status, timezone_label, created_at, updated_at';
-const SESSION_COLUMNS_LEGACY = 'id, slug, title_en, title_zh, description_en, description_zh, session_date, session_time, duration_minutes, join_url, status, is_active, display_order, created_at, updated_at';
-const CONTENT_COLUMNS = 'agenda, featured_universities, faq';
-
 function mapSession(row: Record<string, unknown>): WebinarSession {
   return {
     id: row.id as string,
@@ -107,9 +79,6 @@ function mapSession(row: Record<string, unknown>): WebinarSession {
     status: (row.status as WebinarSessionStatus) ?? 'Scheduled',
     isActive: Boolean(row.is_active),
     displayOrder: (row.display_order as number) ?? 0,
-    seatCap: (row.seat_cap as number | null) ?? null,
-    registrationStatus: (row.registration_status as WebinarRegistrationStatus) ?? 'open',
-    timezoneLabel: (row.timezone_label as string) ?? 'Asia/Shanghai',
     createdAt: row.created_at as string,
     updatedAt: (row.updated_at as string | null) ?? null,
   };
@@ -144,7 +113,9 @@ export async function getActiveSessionWithTopics(): Promise<ActiveWebinarBundle 
 
   const { data: sessionRow, error: sessionErr } = await supabase
     .from('webinar_sessions')
-    .select(SESSION_COLUMNS)
+    .select(
+      'id, slug, title_en, title_zh, description_en, description_zh, session_date, session_time, duration_minutes, join_url, status, is_active, display_order, created_at, updated_at',
+    )
     .eq('is_active', true)
     .maybeSingle();
   if (sessionErr) {
@@ -247,143 +218,4 @@ export async function getActiveSessionId(): Promise<string | null> {
     .maybeSingle();
   if (error || !data) return null;
   return (data.id as string) ?? null;
-}
-
-// ============================================================================
-// Phase 161: per-slug public lookups + seat accounting.
-// ============================================================================
-
-export interface WebinarPageBundle {
-  session: WebinarSession;
-  content: WebinarContent;
-  seatInfo: SeatInfo;
-}
-
-/**
- * Fetch one webinar by slug for the /webinar/[slug] landing page:
- * the session row + parsed jsonb content + live seat info.
- *
- * Uses the service-role client, so the lookup works for every slug
- * (public RLS only exposes is_active rows — an old-but-resolvable
- * webinar page must still render after staff demote it).
- *
- * Pre-migration safety: if the Phase 161 columns are missing,
- * PostgREST returns an error for the wider SELECT — the function
- * retries once with the legacy column list so the page degrades to
- * "content coming soon" instead of 500ing (Phase 128a probe
- * pattern).
- */
-export async function getWebinarBySlug(slug: string): Promise<WebinarPageBundle | null> {
-  if (!isSupabaseServerConfigured()) return null;
-  const supabase = getSupabaseServer();
-  if (!supabase) return null;
-
-  let row: Record<string, unknown> | null = null;
-
-  const { data, error } = await supabase
-    .from('webinar_sessions')
-    .select(`${SESSION_COLUMNS}, ${CONTENT_COLUMNS}`)
-    .eq('slug', slug)
-    .maybeSingle();
-  if (error) {
-    // Columns from the Phase 161 migration not applied yet.
-    const legacy = await supabase
-      .from('webinar_sessions')
-      .select(SESSION_COLUMNS_LEGACY)
-      .eq('slug', slug)
-      .maybeSingle();
-    if (legacy.error || !legacy.data) {
-      console.error('[webinar-sessions] by-slug query failed:', legacy.error ?? 'not found');
-      return null;
-    }
-    row = legacy.data as Record<string, unknown>;
-  } else if (data) {
-    row = data as Record<string, unknown>;
-  }
-  if (!row) return null;
-
-  const session = mapSession(row);
-  const content = parseWebinarContent(row.agenda, row.featured_universities, row.faq);
-  const seatInfo = await getSeatInfo(session);
-  return { session, content, seatInfo };
-}
-
-/**
- * Count current seat holders for a session and fold them into a
- * SeatInfo decision. Count query uses `head: true` so no rows
- * travel. Any count error degrades to "uncapped" so a flaky count
- * can never block a registration.
- */
-export async function getSeatInfo(session: WebinarSession): Promise<SeatInfo> {
-  const fallback = computeSeatInfo({
-    seatCap: null,
-    seatsTaken: 0,
-    storedStatus: session.registrationStatus,
-  });
-  if (!isSupabaseServerConfigured()) return fallback;
-  const supabase = getSupabaseServer();
-  if (!supabase) return fallback;
-
-  const { count, error } = await supabase
-    .from('webinar_signups')
-    .select('id', { count: 'exact', head: true })
-    .eq('webinar_session_id', session.id)
-    .in('status', [...SEAT_HOLDER_STATUSES]);
-  if (error || count === null) {
-    console.error('[webinar-sessions] seat count failed:', error);
-    return fallback;
-  }
-  return computeSeatInfo({
-    seatCap: session.seatCap,
-    seatsTaken: count,
-    storedStatus: session.registrationStatus,
-  });
-}
-
-/**
- * Topics for one session (Phase 140 rows) — the agenda fallback for
- * webinars that predate the Phase 161 agenda jsonb column.
- */
-export async function getTopicsForSession(sessionId: string): Promise<WebinarTopic[]> {
-  if (!isSupabaseServerConfigured()) return [];
-  const supabase = getSupabaseServer();
-  if (!supabase) return [];
-  const { data, error } = await supabase
-    .from('webinar_topics')
-    .select(
-      'id, session_id, intake, degree, title_en, title_zh, body_en, body_zh, display_order, created_at, updated_at',
-    )
-    .eq('session_id', sessionId)
-    .order('display_order', { ascending: true });
-  if (error) {
-    console.error('[webinar-sessions] topics query failed:', error);
-    return [];
-  }
-  return (data ?? []).map((r) => mapTopic(r as Record<string, unknown>));
-}
-
-/**
- * Email-render fields for a specific session (by id) — used by the
- * per-webinar signup confirmation + the reminder cron. Legacy-safe:
- * only pre-Phase-161 columns are selected.
- */
-export async function getSessionEmailFieldsById(
-  sessionId: string,
-): Promise<{ joinUrl: string | null; webinarDateIso: string | null; webinarTime: string | null; titleEn: string | null }> {
-  const empty = { joinUrl: null, webinarDateIso: null, webinarTime: null, titleEn: null };
-  if (!isSupabaseServerConfigured()) return empty;
-  const supabase = getSupabaseServer();
-  if (!supabase) return empty;
-  const { data, error } = await supabase
-    .from('webinar_sessions')
-    .select('join_url, session_date, session_time, title_en')
-    .eq('id', sessionId)
-    .maybeSingle();
-  if (error || !data) return empty;
-  return {
-    joinUrl: (data.join_url as string | null) ?? null,
-    webinarDateIso: (data.session_date as string | null) ?? null,
-    webinarTime: (data.session_time as string | null) ?? null,
-    titleEn: (data.title_en as string | null) ?? null,
-  };
 }

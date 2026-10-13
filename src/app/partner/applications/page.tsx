@@ -233,6 +233,19 @@ export default function PartnerApplicationsPage() {
     urgent: 0,
     archived: 0,
   });
+  // Phase 111b: initial fetch via the shared refetcher so the
+  // handler used after bulk / delete / restore is the same code
+  // path. The mount effect just kicks it off once.
+  useEffect(() => {
+    void refetchStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleDeleteApp = (id: string) => {
+    setAppToDelete(id);
+    setShowDeleteModal(true);
+  };
+
   // Phase 111b: refetch stats after a bulk action so the
   // headline cards stay honest (the previous version fetched
   // stats once on mount and let them drift after each bulk
@@ -253,21 +266,6 @@ export default function PartnerApplicationsPage() {
       // refresh below is the source of truth on the table.
     }
   }, []);
-
-  // Phase 111b: initial fetch via the shared refetcher so the
-  // handler used after bulk / delete / restore is the same code
-  // path. The mount effect just kicks it off once. Must be
-  // declared after refetchStats — the react-compiler lint gate
-  // rejects use-before-declare.
-  useEffect(() => {
-    void refetchStats();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const handleDeleteApp = (id: string) => {
-    setAppToDelete(id);
-    setShowDeleteModal(true);
-  };
 
   // Phase 1.4: bulk action. Per S27, partner can only do
   // priority / delete (no status, no notes). The action is

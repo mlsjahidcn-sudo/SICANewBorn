@@ -44,24 +44,20 @@ const INTEREST_COLOR: Record<string, string> = {
  * Stats errors are swallowed — best-effort, the list page
  * still works.
  */
-/** Phase 161: optional `webinarId` scopes every aggregate to the
- *  selected webinar (the admin page's webinar selector).
- */
-export function WebinarStatsCards({ webinarId }: { webinarId?: string | null }) {
+export function WebinarStatsCards() {
   const { t } = useI18n();
   const [stats, setStats] = useState<WebinarStats | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const qs = webinarId ? `?webinarId=${encodeURIComponent(webinarId)}` : '';
-      const res = await apiFetchJson<WebinarStats>(`/api/admin/webinar-signups/stats${qs}`);
+      const res = await apiFetchJson<WebinarStats>('/api/admin/webinar-signups/stats');
       setStats(res);
       setError(null);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('adminWebinars.errorStats'));
     }
-  }, [t, webinarId]);
+  }, [t]);
 
   useEffect(() => {
     load();

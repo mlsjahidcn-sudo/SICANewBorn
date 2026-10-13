@@ -3,12 +3,10 @@ import { createHash } from 'crypto';
 import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
 import { checkPublicRateLimit, isHoneypotFilled } from '@/lib/rate-limit';
 import { sendWebinarConfirmation } from '@/lib/email';
-import { trackServer } from '@/lib/analytics';
 import {
-  getSessionEmailFieldsById,
-  formatWebinarDate,
-  getWebinarBySlug,
+  getActiveSessionEmailFields,
   getActiveSessionId,
+  formatWebinarDate,
 } from '@/lib/webinar-sessions';
 
 export const dynamic = 'force-dynamic';
@@ -16,27 +14,18 @@ export const dynamic = 'force-dynamic';
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
 /**
- * Phase 139 + 140 + 161: public webinar signup endpoint.
+ * Phase 139 + 140: public webinar signup endpoint for
+ * /webinar-2027-intake-csc. Persists the row, fires the
+ * `webinar.confirmed` email with the live session's join
+ * link / date / time (Phase 140 — instead of the Phase 139
+ * "TBA" defaults), and returns the row id so the client can
+ * show a reference number on /thank-you.
  *
- * Phase 139/140: persists the row + fires the `webinar.confirmed`
- * email with the session's join link / date / time.
+ * Anti-abuse: same 5/hr/IP + 200/hr/global + honeypot pattern
+ * as /api/leads and /api/assessments.
  *
- * Phase 161 (per-webinar): the body may carry `webinarSlug` (the
- * /webinar/[slug] pages always send it). The slug is resolved to a
- * webinar_sessions row; a capped webinar that is full answers 409
- * `{ code: 'WEBINAR_FULL' }` so the client switches to waitlist
- * mode, and a closed/draft webinar answers 403
- * `{ code: 'WEBINAR_CLOSED' }`. When the last seat fills, the stored
- * registration_status flips to 'full' (best-effort — the computed
- * gate in `computeSeatInfo` is what actually enforces the cap, so a
- * missed flip can't overbook).
- *
- * No `webinarSlug` → legacy behaviour (Phase 158): link to the
- * active session when one exists, else land as an uncapped
- * "register your interest" row.
- *
- * Anti-abuse: 5/hr/IP + 200/hr/global + honeypot, same as
- * /api/leads and /api/assessments.
+ * Phase 140 expanded the program_interests taxonomy to 7
+ * values — March bachelor + PhD were missing from Phase 139.
  */
 
 const VALID_PROGRAM_INTERESTS = [
@@ -105,7 +94,8 @@ export async function POST(request: NextRequest) {
 
   // Whitelist program_interests against the closed enum so a
   // hostile client can't smuggle arbitrary text[] values into
-  // the DB.
+  // the DB. Empty array is allowed (the form lets the user skip
+  // the checkboxes and submit only the contact fields).
   const rawInterests = Array.isArray(body.programInterests) ? body.programInterests : [];
   const programInterests: ProgramInterest[] = rawInterests.filter(
     (v): v is ProgramInterest =>
@@ -119,6 +109,10 @@ export async function POST(request: NextRequest) {
   const sourcePage = (body.sourcePage as string) ?? null;
   const referrer = request.headers.get('referer') ?? null;
   const userAgent = request.headers.get('user-agent') ?? null;
+  // Phase 141: extract country as a top-level variable so the
+  // email sender can render the per-recipient local time. The
+  // same trimmed string also flows into the webinar_signups
+  // row below.
   const country = ((body.country as string)?.trim() ?? null) || null;
   const utmSource = (body.utmSource as string)?.trim() || null;
   const utmMedium = (body.utmMedium as string)?.trim() || null;
@@ -128,47 +122,20 @@ export async function POST(request: NextRequest) {
 
   // ip_hash: sha256 of the originating IP. Lets us dedup + flag
   // abuse without ever writing the raw IP to a long-lived table.
+  // Falls back to a constant string when the IP is missing so
+  // the column is never NULL from the public form path.
   const xff = request.headers.get('x-forwarded-for');
   const ip = (xff ? xff.split(',')[0]?.trim() : null) ?? 'unknown';
   const ipHash = createHash('sha256').update(ip).digest('hex');
 
-  // ---------------------------------------------------------------------
-  // Phase 161: resolve the target webinar + enforce the seat gate.
-  // ---------------------------------------------------------------------
-  const webinarSlug = typeof body.webinarSlug === 'string' ? body.webinarSlug.trim() : '';
-  let sessionId: string | null = null;
-  let seatCap: number | null = null;
-  let seatsTakenBefore = 0;
-
-  if (webinarSlug) {
-    const bundle = await getWebinarBySlug(webinarSlug);
-    if (!bundle) {
-      return NextResponse.json({ error: 'Webinar not found' }, { status: 404 });
-    }
-    const { seatInfo, session } = bundle;
-    if (seatInfo.formMode === 'closed') {
-      return NextResponse.json(
-        { error: 'Registration for this webinar is closed', code: 'WEBINAR_CLOSED' },
-        { status: 403 },
-      );
-    }
-    if (seatInfo.formMode === 'waitlist') {
-      return NextResponse.json(
-        {
-          error: 'This webinar is full — join the waitlist instead',
-          code: 'WEBINAR_FULL',
-        },
-        { status: 409 },
-      );
-    }
-    sessionId = session.id;
-    seatCap = seatInfo.seatCap;
-    seatsTakenBefore = seatInfo.seatsTaken;
-  } else {
-    // Legacy path (popup teaser / old page): active session when one
-    // exists, else uncapped interest capture (Phase 158).
-    sessionId = await getActiveSessionId();
-  }
+  // Phase 158: capacity + active-session gate removed. The form
+  // is the page's primary conversion, so when no active session
+  // exists we still capture the signup — `webinar_session_id`
+  // is nullable, so the row lands as a "register your interest"
+  // lead. Staff can later link them via the admin signups page
+  // when a session is published. Active session is still
+  // resolved when present so the email + FK are wired.
+  const activeSessionId = await getActiveSessionId();
 
   try {
     const { data, error } = await supabase
@@ -190,7 +157,13 @@ export async function POST(request: NextRequest) {
         gclid,
         fbclid,
         ip_hash: ipHash,
-        webinar_session_id: sessionId,
+        // Phase 144b: populate the FK when an active session
+        // exists so the admin signups list can join back.
+        // Phase 158: nullable — signups captured before staff
+        // publishes a session land with null FK and act as a
+        // "register your interest" lead. Staff can link them
+        // later via /admin/webinar-signups.
+        webinar_session_id: activeSessionId,
       })
       .select('id, created_at')
       .single();
@@ -200,28 +173,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to submit' }, { status: 500 });
     }
 
-    // Best-effort flip to 'full' when this signup took the last seat.
-    // The computed gate above is the real enforcement — this write only
-    // keeps the admin list honest. (Two concurrent final-seat requests
-    // can overshoot the count by one; accepted trade-off from Phase 142.)
-    if (seatCap !== null && sessionId && seatsTakenBefore + 1 >= seatCap) {
-      void supabase
-        .from('webinar_sessions')
-        .update({ registration_status: 'full' })
-        .eq('id', sessionId)
-        .then((res) => {
-          if (res.error) {
-            console.warn('[POST /api/webinar-signups] full-flip failed:', res.error);
-          }
-        });
-    }
-
     // Fire-and-forget confirmation email. Failures are logged,
     // never propagated — the signup row already exists, so a
-    // 500 here would just confuse the user.
-    const sessionFields = sessionId
-      ? await getSessionEmailFieldsById(sessionId)
-      : { joinUrl: null, webinarDateIso: null, webinarTime: null, titleEn: null };
+    // 500 here would just confuse the user (their seat is
+    // reserved, they just didn't get the auto-email).
+    //
+    // Phase 140: pull the active session's email-render fields
+    // so the email carries the real join link + date instead
+    // of the Phase 139 placeholders. The helper falls back to
+    // {null, null, null} when no session is active, and
+    // `sendWebinarConfirmation` already substitutes its own
+    // "TBA" defaults in that branch — so the API never breaks
+    // even before staff seed a session.
+    const sessionFields = await getActiveSessionEmailFields();
     const reference = `SICA-WEB-${data.id.slice(0, 8).toUpperCase()}`;
     sendWebinarConfirmation({
       toEmail: email,
@@ -231,22 +195,13 @@ export async function POST(request: NextRequest) {
       joinLink: sessionFields.joinUrl,
       webinarDate: formatWebinarDate(sessionFields.webinarDateIso) || null,
       webinarTime: sessionFields.webinarTime,
+      // Phase 141: pass the captured country so the email
+      // can render the webinar time in the student's local
+      // timezone alongside China time. Unknown / null falls
+      // back to the China-time-only branch in
+      // sendWebinarConfirmation.
       studentCountry: country || null,
     }).catch((err) => console.error('[POST /api/webinar-signups] confirmation email failed:', err));
-
-    // Phase 161: server-side funnel event, wrapped in its own try/catch
-    // so an analytics failure can NEVER turn into a 500 after the row is
-    // saved — the row exists, the seat is reserved, the user must see
-    // success even if GA is down.
-    try {
-      trackServer('webinar_signup_created', {
-        locale: (body.locale as string) === 'zh' ? 'zh' : 'en',
-        webinar_slug: webinarSlug || null,
-        signup_id: data.id,
-      });
-    } catch (analyticsErr) {
-      console.warn('[POST /api/webinar-signups] analytics failed (non-fatal):', analyticsErr);
-    }
 
     return NextResponse.json({ success: true, id: data.id, reference });
   } catch (err) {
