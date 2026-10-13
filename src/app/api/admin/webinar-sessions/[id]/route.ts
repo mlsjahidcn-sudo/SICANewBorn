@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/supabase-auth';
 import { trackServer } from '@/lib/analytics';
+import { parseSeatCapInput, type WebinarRegistrationStatus } from '@/lib/webinar-capacity';
 
 export const dynamic = 'force-dynamic';
 
 const VALID_STATUSES = ['Scheduled', 'Live', 'Completed', 'Cancelled'] as const;
 type WebinarStatus = (typeof VALID_STATUSES)[number];
+
+const VALID_REGISTRATION_STATUSES = ['draft', 'open', 'full', 'closed'] as const;
 
 interface UpdateBody {
   slug?: string;
@@ -20,6 +23,12 @@ interface UpdateBody {
   status?: WebinarStatus;
   isActive?: boolean;
   displayOrder?: number;
+  /** Phase 161: seat cap — null/'' = uncapped. */
+  seatCap?: number | string | null;
+  /** Phase 161: draft | open | full | closed. */
+  registrationStatus?: WebinarRegistrationStatus;
+  /** Phase 161: canonical IANA timezone label. */
+  timezoneLabel?: string;
 }
 
 /**
@@ -62,6 +71,15 @@ export async function PATCH(
       { status: 400 },
     );
   }
+  if (
+    body.registrationStatus &&
+    !(VALID_REGISTRATION_STATUSES as readonly string[]).includes(body.registrationStatus)
+  ) {
+    return NextResponse.json(
+      { error: `registrationStatus must be one of ${VALID_REGISTRATION_STATUSES.join('|')}` },
+      { status: 400 },
+    );
+  }
 
   // If toggling is_active to true, clear the previous active row
   // first (excluding self) so the partial unique index accepts
@@ -87,6 +105,14 @@ export async function PATCH(
   if (body.status !== undefined) update.status = body.status;
   if (body.isActive !== undefined) update.is_active = body.isActive;
   if (body.displayOrder !== undefined) update.display_order = body.displayOrder;
+  // Phase 161 fields. When the migration hasn't been applied these
+  // writes fail with a column-not-found error which surfaces as a
+  // 500 — the admin UI only sends them after the column probe in
+  // the sessions GET reports them, so pre-migration deploys never
+  // reach this branch with values set.
+  if (body.seatCap !== undefined) update.seat_cap = parseSeatCapInput(body.seatCap);
+  if (body.registrationStatus !== undefined) update.registration_status = body.registrationStatus;
+  if (body.timezoneLabel !== undefined) update.timezone_label = body.timezoneLabel;
 
   if (Object.keys(update).length === 0) {
     return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
@@ -118,17 +144,22 @@ export async function PATCH(
     return NextResponse.json({ error: 'Failed to update session' }, { status: 500 });
   }
 
-  // Phase 143: best-effort admin events. The status flip +
+  // Phase 143 + 161: best-effort admin events. The status flip +
   // toggle events give GA a single source of truth for admin
-  // activity.
-  trackServer('webinar_session_updated', { locale: 'en', session_id: paramsId });
-  const newIsActive = Boolean(data.is_active);
-  if (newIsActive !== oldIsActive) {
-    trackServer('webinar_session_toggled', {
-      locale: 'en',
-      session_id: paramsId,
-      new_is_active: newIsActive,
-    });
+  // activity. Wrapped in their own try/catch so an analytics
+  // failure can never 500 a PATCH that already succeeded.
+  try {
+    trackServer('webinar_session_updated', { locale: 'en', session_id: paramsId });
+    const newIsActive = Boolean(data.is_active);
+    if (newIsActive !== oldIsActive) {
+      trackServer('webinar_session_toggled', {
+        locale: 'en',
+        session_id: paramsId,
+        new_is_active: newIsActive,
+      });
+    }
+  } catch (analyticsErr) {
+    console.warn('[PATCH /api/admin/webinar-sessions/[id]] analytics failed:', analyticsErr);
   }
 
   return NextResponse.json({
@@ -157,7 +188,11 @@ export async function DELETE(
     return NextResponse.json({ error: 'Failed to delete session' }, { status: 500 });
   }
 
-  trackServer('webinar_session_deleted', { locale: 'en', session_id: paramsId });
+  try {
+    trackServer('webinar_session_deleted', { locale: 'en', session_id: paramsId });
+  } catch {
+    // best-effort
+  }
 
   return NextResponse.json({ success: true });
 }

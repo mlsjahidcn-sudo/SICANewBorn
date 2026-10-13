@@ -30,6 +30,10 @@ export interface SessionEditValue {
   status: 'Scheduled' | 'Live' | 'Completed' | 'Cancelled';
   isActive: boolean;
   displayOrder: number;
+  /** Phase 161: null = uncapped (Phase 157 semantics). */
+  seatCap: number | null;
+  /** Phase 161: registration lifecycle. */
+  registrationStatus: 'draft' | 'open' | 'full' | 'closed';
 }
 
 interface Props {
@@ -74,6 +78,8 @@ export function SessionEditDialog({ open, onOpenChange, initial, onSaved }: Prop
     status: SessionEditValue['status'];
     isActive: boolean;
     displayOrder: number;
+    seatCap: string;
+    registrationStatus: SessionEditValue['registrationStatus'];
   }>(() => blankForm(initial));
 
   // Re-seed when the dialog opens for a different row
@@ -120,6 +126,9 @@ export function SessionEditDialog({ open, onOpenChange, initial, onSaved }: Prop
       status: form.status,
       isActive: form.isActive,
       displayOrder: Number(form.displayOrder) || 0,
+      // Phase 161: '' → null → uncapped.
+      seatCap: form.seatCap.trim() === '' ? null : Number(form.seatCap),
+      registrationStatus: form.registrationStatus,
     };
 
     try {
@@ -285,6 +294,44 @@ export function SessionEditDialog({ open, onOpenChange, initial, onSaved }: Prop
             />
           </FormField>
 
+          {/* Phase 161: seat cap (empty = uncapped) + registration status. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormField
+              label={t('adminWebinars.sessionFieldSeatCap')}
+              help={t('adminWebinars.sessionFieldSeatCapHelp')}
+              error={null}
+            >
+              <Input
+                type="number"
+                min={1}
+                value={form.seatCap}
+                onChange={(e) => update('seatCap', e.target.value)}
+                placeholder={t('adminWebinars.sessionSeatCapUncapped')}
+              />
+            </FormField>
+            <FormField
+              label={t('adminWebinars.sessionFieldRegistrationStatus')}
+              help={t('adminWebinars.sessionFieldRegistrationStatusHelp')}
+              error={null}
+            >
+              <select
+                value={form.registrationStatus}
+                onChange={(e) =>
+                  update(
+                    'registrationStatus',
+                    e.target.value as SessionEditValue['registrationStatus'],
+                  )
+                }
+                className="w-full border border-gray-300 px-4 py-2 text-sm text-[#1F2937] bg-white rounded-none focus:border-[#9B1B30] focus:outline-none focus:ring-1 focus:ring-[#9B1B30]"
+              >
+                <option value="open">{t('adminWebinars.regStatus.open')}</option>
+                <option value="draft">{t('adminWebinars.regStatus.draft')}</option>
+                <option value="full">{t('adminWebinars.regStatus.full')}</option>
+                <option value="closed">{t('adminWebinars.regStatus.closed')}</option>
+              </select>
+            </FormField>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label={t('adminWebinars.sessionFieldStatus')} help={null} error={null}>
               <select
@@ -374,6 +421,8 @@ function blankForm(initial: SessionEditValue | null) {
     status: initial?.status ?? 'Scheduled',
     isActive: initial?.isActive ?? false,
     displayOrder: initial?.displayOrder ?? 0,
+    seatCap: initial?.seatCap != null ? String(initial.seatCap) : '',
+    registrationStatus: initial?.registrationStatus ?? 'open',
   };
 }
 

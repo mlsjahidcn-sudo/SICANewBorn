@@ -22,7 +22,12 @@ export type CronAuthResult =
 
 export function verifyCronSecret(
   request: Request,
-  envVar: 'NEWS_CRON_SECRET' | 'DRIP_CRON_SECRET' | 'STUDENT_FEES_CRON_SECRET' | 'FAQ_CRON_SECRET',
+  envVar:
+    | 'NEWS_CRON_SECRET'
+    | 'DRIP_CRON_SECRET'
+    | 'STUDENT_FEES_CRON_SECRET'
+    | 'FAQ_CRON_SECRET'
+    | 'WEBINAR_CRON_SECRET',
 ): CronAuthResult {
   const expected = process.env[envVar];
   if (!expected) {

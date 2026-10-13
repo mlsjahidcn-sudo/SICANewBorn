@@ -474,13 +474,14 @@ export interface AnalyticsEventMap {
   };
   /** Phase 143: signup submit failed server-side. Fires
    *  BEFORE the next page render so the funnel sees the
-   *  failure before the success metric sees the recovery. */
+   *  failure before the success metric sees the recovery.
+   *  Phase 161: 'full' restored — capped webinars 409 into
+   *  the waitlist flow (Phase 157 removed it when uncapped). */
   webinar_form_submitted_failed: {
     /** Page locale. */
     locale: 'en' | 'zh';
-    /** Stable error code so GA can group funnel leaks.
-     *  Phase 157: 'session_full' removed — registration is uncapped. */
-    error_code: 'validation' | 'server';
+    /** Stable error code so GA can group funnel leaks. */
+    error_code: 'validation' | 'server' | 'full';
   };
   /** Phase 143: admin created a new session row. */
   webinar_session_created: {
@@ -519,6 +520,46 @@ export interface AnalyticsEventMap {
     signup_id: string;
     old_status: string;
     new_status: string;
+  };
+  // -----------------------------------------------------------------
+  // Phase 161: per-webinar funnel + waitlist + attendance events.
+  // Server events fire from the route handlers (own try/catch so an
+  // analytics failure never fails an already-saved row); the waitlist
+  // submit event is client-fired like webinar_signup_submit.
+  // -----------------------------------------------------------------
+  /** Phase 161: server confirmed a signup row was created. */
+  webinar_signup_created: {
+    locale: 'en' | 'zh';
+    webinar_slug: string | null;
+    signup_id: string;
+  };
+  /** Phase 161: visitor submitted the waitlist form (client, after 200). */
+  webinar_waitlist_submit: {
+    locale: 'en' | 'zh';
+    webinar_slug: string;
+  };
+  /** Phase 161: server saved a waitlist row (restored Phase 142 event). */
+  webinar_waitlist_added: {
+    locale: 'en' | 'zh';
+    webinar_slug: string;
+  };
+  /** Phase 161: admin imported a Meet attendee CSV (matched rows). */
+  webinar_attendance_imported: {
+    locale: 'en' | 'zh';
+    webinar_slug: string | null;
+    matched: number;
+    not_found: number;
+  };
+  /** Phase 161: reminder cron sent reminders (audit trail in GA). */
+  webinar_reminders_sent: {
+    locale: 'en' | 'zh';
+    count: number;
+  };
+  /** Phase 161: visitor ran the on-page eligibility checker. */
+  webinar_eligibility_check: {
+    locale: 'en' | 'zh';
+    /** How many universities the checker evaluated. */
+    universities: number;
   };
 }
 

@@ -24,6 +24,7 @@
  * copy and structure only change via code deployment.
  */
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import {
   GraduationCap,
   Globe2,
@@ -42,6 +43,7 @@ import { COUNTRIES } from '@/lib/seo-data';
 import {
   getActiveSessionWithTopics,
   formatWebinarDate,
+  getWebinarBySlug,
 } from '@/lib/webinar-sessions';
 import type { WebinarTopicDegree, WebinarTopicIntake } from '@/lib/webinar-sessions';
 import { WebinarSignupForm } from './webinar-signup-form';
@@ -93,6 +95,17 @@ const INTAKE_BADGE_KEYS: Record<WebinarTopicIntake, string> = {
 };
 
 export default async function WebinarPage() {
+  // Phase 161: this URL now lives at /webinar/[slug]. Once the
+  // migration has pinned the legacy session's slug, redirect there
+  // (307 — the slug could change again, and "accessible" beats
+  // "cached forever" for a marketing URL). Pre-migration the lookup
+  // returns null and the legacy hardcoded page below still renders,
+  // so deploying the code before applying the SQL breaks nothing.
+  const legacy = await getWebinarBySlug('webinar-2027-intake-csc');
+  if (legacy) {
+    redirect(`/webinar/webinar-2027-intake-csc`);
+  }
+
   const t = await getServerT();
   const bundle = await getActiveSessionWithTopics();
   const activeSession = bundle?.session ?? null;

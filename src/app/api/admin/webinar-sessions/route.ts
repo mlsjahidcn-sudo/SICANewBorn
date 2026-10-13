@@ -1,39 +1,59 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/supabase-auth';
 import { trackServer } from '@/lib/analytics';
+import { parseSeatCapInput, type WebinarRegistrationStatus } from '@/lib/webinar-capacity';
 
 export const dynamic = 'force-dynamic';
 
 const VALID_STATUSES = ['Scheduled', 'Live', 'Completed', 'Cancelled'] as const;
 type WebinarStatus = (typeof VALID_STATUSES)[number];
 
+const VALID_REGISTRATION_STATUSES = ['draft', 'open', 'full', 'closed'] as const;
+type RegistrationStatus = (typeof VALID_REGISTRATION_STATUSES)[number];
+
+const COLUMNS_V2 =
+  'id, slug, title_en, title_zh, description_en, description_zh, session_date, session_time, duration_minutes, join_url, status, is_active, display_order, seat_cap, registration_status, timezone_label, created_at, updated_at';
+const COLUMNS_LEGACY =
+  'id, slug, title_en, title_zh, description_en, description_zh, session_date, session_time, duration_minutes, join_url, status, is_active, display_order, created_at, updated_at';
+
 /**
- * Phase 140: admin CRUD on webinar_sessions.
+ * Phase 140 + 161: admin CRUD on webinar_sessions.
  *
  * GET — list all sessions (active + inactive), ordered by
- * display_order then created_at desc. Admin sees everything.
+ * display_order then created_at desc. Phase 161 adds seat_cap +
+ * registration_status to the payload; when the Phase 161 migration
+ * hasn't been applied yet the extended SELECT errors and we retry
+ * with the legacy column list so the admin page still loads
+ * (defaults: uncapped + 'open').
  *
  * POST — create a new session. `is_active=true` is supported
  * on create; the partial unique index makes this fail loudly
- * if another row is already active (the UI toggles the
- * previous row to false in the same transaction so the
- * operation succeeds).
+ * if another row is already active.
  */
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
-  const { data, error } = await auth.supabase
+  let data: Record<string, unknown>[] | null = null;
+  const v2 = await auth.supabase
     .from('webinar_sessions')
-    .select(
-      'id, slug, title_en, title_zh, description_en, description_zh, session_date, session_time, duration_minutes, join_url, status, is_active, display_order, created_at, updated_at',
-    )
+    .select(COLUMNS_V2)
     .order('display_order', { ascending: true })
     .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('[GET /api/admin/webinar-sessions] query failed:', error);
-    return NextResponse.json({ error: 'Failed to load sessions' }, { status: 500 });
+  if (v2.error) {
+    // Phase 161 columns missing — degrade to the legacy shape.
+    const legacy = await auth.supabase
+      .from('webinar_sessions')
+      .select(COLUMNS_LEGACY)
+      .order('display_order', { ascending: true })
+      .order('created_at', { ascending: false });
+    if (legacy.error) {
+      console.error('[GET /api/admin/webinar-sessions] query failed:', legacy.error);
+      return NextResponse.json({ error: 'Failed to load sessions' }, { status: 500 });
+    }
+    data = legacy.data as Record<string, unknown>[];
+  } else {
+    data = v2.data as Record<string, unknown>[];
   }
 
   const sessions = (data ?? []).map((row) => ({
@@ -50,6 +70,9 @@ export async function GET(request: NextRequest) {
     status: (row.status as WebinarStatus) ?? 'Scheduled',
     isActive: Boolean(row.is_active),
     displayOrder: (row.display_order as number) ?? 0,
+    seatCap: (row.seat_cap as number | null) ?? null,
+    registrationStatus: (row.registration_status as RegistrationStatus) ?? 'open',
+    timezoneLabel: (row.timezone_label as string) ?? 'Asia/Shanghai',
     createdAt: row.created_at as string,
     updatedAt: (row.updated_at as string | null) ?? null,
   }));
@@ -70,6 +93,9 @@ interface CreateBody {
   status?: WebinarStatus;
   isActive?: boolean;
   displayOrder?: number;
+  /** Phase 161 */
+  seatCap?: number | string | null;
+  registrationStatus?: RegistrationStatus;
 }
 
 export async function POST(request: NextRequest) {
@@ -95,6 +121,15 @@ export async function POST(request: NextRequest) {
   if (body.status && !(VALID_STATUSES as readonly string[]).includes(body.status)) {
     return NextResponse.json(
       { error: `status must be one of ${VALID_STATUSES.join('|')}` },
+      { status: 400 },
+    );
+  }
+  if (
+    body.registrationStatus &&
+    !(VALID_REGISTRATION_STATUSES as readonly string[]).includes(body.registrationStatus)
+  ) {
+    return NextResponse.json(
+      { error: `registrationStatus must be one of ${VALID_REGISTRATION_STATUSES.join('|')}` },
       { status: 400 },
     );
   }
@@ -125,6 +160,8 @@ export async function POST(request: NextRequest) {
       status: body.status ?? 'Scheduled',
       is_active: isActive,
       display_order: body.displayOrder ?? 0,
+      seat_cap: parseSeatCapInput(body.seatCap ?? null),
+      registration_status: body.registrationStatus ?? 'open',
     })
     .select('id, slug, is_active')
     .single();
@@ -135,10 +172,14 @@ export async function POST(request: NextRequest) {
   }
 
   // Phase 143: admin-action event.
-  trackServer('webinar_session_created', {
-    locale: 'en',
-    session_id: data.id,
-  });
+  try {
+    trackServer('webinar_session_created', {
+      locale: 'en',
+      session_id: data.id,
+    });
+  } catch {
+    // best-effort
+  }
 
   return NextResponse.json({
     id: data.id,

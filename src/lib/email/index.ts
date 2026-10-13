@@ -1191,3 +1191,72 @@ export async function sendWebinarConfirmation(params: {
     };
   }
 }
+
+// ============================================================================
+// Phase 161: webinar reminders (24h + 1h before start)
+// ============================================================================
+
+/**
+ * Reminder email fired by the /api/cron/webinar-reminders worker.
+ * `kind` picks the template (`webinar.reminder_24h` / `webinar.reminder_1h`)
+ * — both bodies are bilingual single blocks (Phase 124b convention), so
+ * locale only affects the fallback rendering, not what the recipient sees.
+ *
+ * joinLink falls back to a "watch your email" line when staff hasn't
+ * pasted the meeting link yet — a reminder without a link is still
+ * useful; a reminder with a stale fake link is not.
+ */
+export async function sendWebinarReminder(params: {
+  toEmail: string;
+  name: string;
+  reference: string;
+  locale: string;
+  kind: '24h' | '1h';
+  webinarTitle: string;
+  joinLink?: string | null;
+  dateLabel?: string | null;
+  timeLabel?: string | null;
+}): Promise<LoggedSendTextResult> {
+  if (!isEmailConfigured()) return notConfigured();
+  const locale: EmailLocale = params.locale === 'zh' ? 'zh' : 'en';
+  const slug = params.kind === '24h' ? 'webinar.reminder_24h' : 'webinar.reminder_1h';
+
+  const tpl = await loadTemplate(slug, locale);
+  if (!tpl) {
+    console.warn('[email] webinar reminder template missing', slug, locale);
+    return { ok: false, error: `template missing: ${slug}`, subject: null, text: null };
+  }
+
+  const subject = tpl.subject;
+  const body = renderTextTemplate(tpl.body_text, {
+    name: params.name,
+    webinarTitle: params.webinarTitle,
+    joinLink:
+      params.joinLink ??
+      'Will be emailed to you before the session starts — watch your inbox.',
+    dateLabel: params.dateLabel ?? 'See calendar invite',
+    timeLabel: params.timeLabel ?? 'See calendar invite',
+    reference: params.reference,
+  });
+  const rendered = formatWithSignature({
+    subject,
+    bodyText: body,
+    unsubscribeToken: unsubTokenFor(params.toEmail),
+  });
+  try {
+    const result = await sendTextEmail({
+      to: params.toEmail,
+      subject: rendered.subject,
+      text: rendered.text,
+    });
+    return toLogged(result, rendered.subject, rendered.text);
+  } catch (err) {
+    console.error(`[email] ${slug} failed:`, err);
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : 'send threw',
+      subject: rendered.subject,
+      text: rendered.text,
+    };
+  }
+}
