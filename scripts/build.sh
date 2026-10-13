@@ -56,10 +56,18 @@ npm ci --no-audit --no-fund
 # until a future Next patch closes the gap.
 if [ "${ANALYZE:-false}" = "true" ]; then
   echo "Building with bundle analyzer (webpack)..."
-  ANALYZE=true npx next build --webpack
+  # Phase 159: invoke the locally-installed `next` binary directly
+  # rather than `npx next`. `npx` resolves the package through its
+  # own temp cache at `~/.npm/_npx/<id>/node_modules/...`, which is a
+  # SEPARATE node_modules tree from the one `npm ci` just populated.
+  # The local binary inherits the same node_modules as the
+  # `npm ci` step and finds react / react-dom. Without this, the
+  # Hostinger build dies with `Cannot find module 'react'` even
+  # though package.json + package-lock.json are correct.
+  ANALYZE=true ./node_modules/.bin/next build --webpack
 else
   echo "Building the Next.js project (webpack)..."
-  npx next build --webpack
+  ./node_modules/.bin/next build --webpack
 fi
 
 echo "Bundling server with tsup..."
