@@ -3989,10 +3989,15 @@ export const translations: Record<Locale, Record<string, string>> = {
     'consultationActivity.statsBadge': 'Real consultations · With consent',
     'consultationActivity.cardEyebrow': 'Live',
     'consultationActivity.dateLabel': 'Session on {{date}}',
+    // Phase 158: reframe the activity captions to focus on the 3
+    // things the service actually delivers — university selection,
+    // program fit, scholarship guidance — instead of the previous
+    // pre-departure + visa + arrival framing. The screenshots are
+    // real activity; the captions describe what was being discussed.
     'consultationActivity.onboardingCaption':
-      'Onboarding call with Carlos De Avila Bravo, a newly admitted student from Latin America. Walking through pre-departure logistics, visa timeline, and the first-week arrival plan.',
+      'Program + scholarship selection call with Carlos De Avila Bravo, a prospective bachelor’s applicant from Latin America. Comparing engineering programs at three Beijing universities against CSC scholarship eligibility.',
     'consultationActivity.deepDiveCaption':
-      'Deep-dive program-fit review with Jahid Abdullah, founder of SICA, walking through university + program options for an applicant comparing engineering programs in Beijing.',
+      'University + program-fit review led by Jahid Abdullah, founder of SICA, with an applicant weighing bachelor’s engineering programs across three Beijing universities and scholarship positioning for each.',
 
     // Phase 6A: assessment page metadata
     'assessment.title': 'Free Academic Assessment',
@@ -4697,20 +4702,32 @@ export const translations: Record<Locale, Record<string, string>> = {
     'counselling.metaTitle': 'Free 10-Minute Counselling Session — Study in China',
     'counselling.badge': '100% Free · 10 Minutes · Online',
     'counselling.heroTitle': 'Talk to a SICA advisor before you decide',
-    'counselling.heroSubtitle': 'Book a free 10-minute one-on-one online counselling session about studying in China — programs, scholarships, costs, and your personal application plan. No fees, no obligation.',
+    'counselling.heroSubtitle':
+      'Book a free 10-minute one-on-one online session for university selection, program fit, and scholarship guidance — built around your background and goals. No fees, no obligation.',
+    // Phase 158: refocus the 10-minute value-prop on the 3 things the
+    // service actually delivers — university selection, program fit,
+    // scholarship guidance — and drop the previous "honest cost
+    // breakdown" benefit which implicitly framed the service around
+    // pre-departure / city logistics. Reordered to put the 3 core
+    // benefits first; the 4th benefit is now "next-step plan" rather
+    // than cost.
     'counselling.ctaBook': 'Book My Free Session',
     'counselling.reassure1': 'No card required',
     'counselling.reassure2': 'No obligation to apply',
     'counselling.reassure3': 'English & 中文 welcome',
     'counselling.whatYouGetTitle': 'What you’ll get in 10 minutes',
-    'counselling.benefit1Title': 'Program direction',
-    'counselling.benefit1Body': 'A shortlist of programs that fit your grades, budget, and career goals.',
-    'counselling.benefit2Title': 'Admission roadmap',
-    'counselling.benefit2Body': 'Requirements, deadlines, and the documents you’ll need — in the right order.',
-    'counselling.benefit3Title': 'Scholarship options',
-    'counselling.benefit3Body': 'Which scholarships you could realistically qualify for and how to apply.',
-    'counselling.benefit4Title': 'Honest cost breakdown',
-    'counselling.benefit4Body': 'Tuition, accommodation, and living costs for your target cities — no surprises.',
+    'counselling.benefit1Title': 'University selection',
+    'counselling.benefit1Body':
+      'A shortlist of universities that fit your grades, budget, and target city — ranked by fit, not just ranking.',
+    'counselling.benefit2Title': 'Program fit',
+    'counselling.benefit2Body':
+      'Which program (bachelor / master / MBBS / MBA) at which school matches your background and your career goal — and which to skip.',
+    'counselling.benefit3Title': 'Scholarship guidance',
+    'counselling.benefit3Body':
+      'CSC, Confucius, university-specific scholarships you could realistically qualify for — and how to position your application for each.',
+    'counselling.benefit4Title': 'Your next-step plan',
+    'counselling.benefit4Body':
+      'A clear, prioritized list of what to do next — which application to submit first, which document to prepare, which scholarship to apply for — in the right order.',
     'counselling.howTitle': 'How it works',
     'counselling.step1Title': 'Pick a time',
     'counselling.step1Body': 'Choose any open slot — all times are Beijing time (GMT+8).',
@@ -8987,10 +9004,13 @@ export const translations: Record<Locale, Record<string, string>> = {
     'consultationActivity.statsBadge': '真实咨询 · 经本人授权',
     'consultationActivity.cardEyebrow': '实况',
     'consultationActivity.dateLabel': '咨询时间：{{date}}',
+    // Phase 158: 把活动截图文案重新聚焦到本服务真正交付的三件事 —
+    // 院校选择、项目匹配、奖学金指导——弱化此前的"出发前/签证/
+    // 到校"等行前信息。截图是真实的活动画面;文案说明当时在讨论什么。
     'consultationActivity.onboardingCaption':
-      '与来自拉丁美洲的已录取新生 Carlos De Avila Bravo 的入学对接通话。一起梳理出发前的准备、签证时间线,以及到校第一周的安排。',
+      '与来自拉丁美洲的本科申请人 Carlos De Avila Bravo 的项目 + 奖学金选择通话。对比北京三所大学的工程类专业,并对每位候选人进行 CSC 奖学金申请可行性评估。',
     'consultationActivity.deepDiveCaption':
-      '与 SICA 创始人 Jahid Abdullah 的项目深度匹配度复盘,陪同申请人对比北京的几所工程类项目。',
+      '由 SICA 创始人 Jahid Abdullah 主讲的院校 + 项目匹配度复盘,与一位申请人对接——权衡北京三所大学的本科工程类专业,并为每个项目做奖学金定位。',
 
     // Phase 6A: assessment page metadata
     'assessment.title': '免费学术评估',
@@ -9663,20 +9683,29 @@ export const translations: Record<Locale, Record<string, string>> = {
     'counselling.metaTitle': '免费 10 分钟留学咨询 — 中国留学',
     'counselling.badge': '完全免费 · 10 分钟 · 在线',
     'counselling.heroTitle': '做决定之前，先和 SICA 顾问聊聊',
-    'counselling.heroSubtitle': '预约 10 分钟免费一对一在线咨询，了解中国留学：院校项目、奖学金、费用，以及你的专属申请规划。不收费、无任何约束。',
+    'counselling.heroSubtitle':
+      '预约 10 分钟免费一对一在线咨询,围绕院校选择、项目匹配、奖学金指导,结合你的背景与目标。不收费、无任何约束。',
+    // Phase 158: 重塑咨询服务的定位 — 围绕"院校选择 + 项目匹配 +
+    // 奖学金指导"三件事,弱化此前的"真实费用明细"——后者隐含了
+    // 落地后的城市/行前信息,而非本服务真正交付的内容。顺序重排为先
+    // 讲 3 件核心价值,第 4 项改为"下一步行动清单"而非费用。
+    'counselling.benefit1Title': '院校选择',
+    'counselling.benefit1Body':
+      '根据你的成绩、预算和目标城市,给出一份匹配度排序的院校短名单——按"适合度"而非单纯"排名"。',
+    'counselling.benefit2Title': '项目匹配',
+    'counselling.benefit2Body':
+      '哪所学校的哪个项目（本科 / 硕士 / MBBS / MBA）匹配你的背景与职业目标——以及哪些项目不适合你,直说。',
+    'counselling.benefit3Title': '奖学金指导',
+    'counselling.benefit3Body':
+      'CSC、孔子学院、院校专项奖学金——你现实有机会拿到的有哪些,以及每个怎么定位申请材料。',
+    'counselling.benefit4Title': '你的下一步行动清单',
+    'counselling.benefit4Body':
+      '一份清晰、有优先级的下一步清单——先提交哪个申请、先准备哪份材料、先申请哪个奖学金,按正确顺序。',
     'counselling.ctaBook': '预约我的免费咨询',
     'counselling.reassure1': '无需银行卡',
     'counselling.reassure2': '不强制申请',
     'counselling.reassure3': '中英文均可',
     'counselling.whatYouGetTitle': '10 分钟你能获得什么',
-    'counselling.benefit1Title': '选校方向',
-    'counselling.benefit1Body': '根据你的成绩、预算和职业目标，给出匹配的项目清单。',
-    'counselling.benefit2Title': '申请路线图',
-    'counselling.benefit2Body': '入学要求、时间节点、所需材料——按正确的顺序讲清楚。',
-    'counselling.benefit3Title': '奖学金选择',
-    'counselling.benefit3Body': '哪些奖学金你有机会拿到，以及怎么申请。',
-    'counselling.benefit4Title': '真实费用明细',
-    'counselling.benefit4Body': '目标城市的学费、住宿和生活费——没有任何隐藏成本。',
     'counselling.howTitle': '流程是怎样的',
     'counselling.step1Title': '选择时间',
     'counselling.step1Body': '选择任意空闲时段——所有时间均为北京时间（GMT+8）。',
