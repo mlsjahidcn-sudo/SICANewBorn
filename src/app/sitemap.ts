@@ -118,6 +118,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/china-university-dorms-cost`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/peking-vs-tsinghua-international-students`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/china-student-visa-jw202-residence-permit`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    // Phase 122: HSK 3.0 transition cluster (4 articles, the most
+    // time-sensitive SEO bet on the site ahead of the Dec 13, 2026
+    // full format switch). All four are bilingual LocalizedGuide
+    // pages with en+zh hub cards + per-cycle cross-link mesh.
+    { url: `${SITE_URL}/hsk-3-vs-hsk-2`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/hsk-3-0-vocabulary-list`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/hsk-3-0-speaking-writing`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/hsk-3-0-prep-timeline`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     // Phase 122-124: the 10 top-level university profile pages were
     // here — removed in Phase 146 (they 301 to /universities/<slug>,
     // see the comment in the CSCA block above).

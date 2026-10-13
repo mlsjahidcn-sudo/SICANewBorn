@@ -595,6 +595,54 @@ export const guideCards: LocalizedGuideCards = {
       readTime: '11 min read',
       highlight: '3 layers',
     },
+    // Phase 122 — HSK 3.0 transition cluster (4 articles, the most
+    // time-sensitive SEO bet on the site ahead of the Dec 13, 2026
+    // full format switch). All four share the graduation-cap icon
+    // and a 12-min-read tag.
+    {
+      slug: 'hsk-3-vs-hsk-2',
+      href: '/hsk-3-vs-hsk-2',
+      icon: 'graduation-cap',
+      category: 'process',
+      title: 'HSK 3.0 vs HSK 2.0 — what is changing and when',
+      subtitle:
+        'The flagship comparison: 6→9 levels, vocabulary shift at L1–L5, new speaking + writing components, July 2026 standard, Dec 13, 2026 full format switch.',
+      readTime: '12 min read',
+      highlight: 'Time-sensitive',
+    },
+    {
+      slug: 'hsk-3-0-vocabulary-list',
+      href: '/hsk-3-0-vocabulary-list',
+      icon: 'graduation-cap',
+      category: 'process',
+      title: 'HSK 3.0 vocabulary — what is on the list and what dropped',
+      subtitle:
+        'Per-level word counts, modern vocab that replaced classical terms, starter lists per band, and how to build your own study deck from the official PDF.',
+      readTime: '10 min read',
+      highlight: 'Free source list',
+    },
+    {
+      slug: 'hsk-3-0-speaking-writing',
+      href: '/hsk-3-0-speaking-writing',
+      icon: 'graduation-cap',
+      category: 'process',
+      title: 'Speaking and writing in HSK 3.0 — the new scored components',
+      subtitle:
+        'Speaking and writing become scored at L3+. Recorded audio for speaking, typed input for writing at L3–L4, no handwriting until L5, computer-based default.',
+      readTime: '11 min read',
+      highlight: 'New components',
+    },
+    {
+      slug: 'hsk-3-0-prep-timeline',
+      href: '/hsk-3-0-prep-timeline',
+      icon: 'graduation-cap',
+      category: 'process',
+      title: 'HSK 3.0 prep timeline — what to do at every stage',
+      subtitle:
+        'Branched by where you are now: just heard about HSK 3.0, already sat 2.0, or mid-prep. Sequenced against March + September 2027 intakes with monthly checklists.',
+      readTime: '12 min read',
+      highlight: 'March + Sept 2027',
+    },
     {
       slug: 'peking-university',
       href: '/peking-university',
