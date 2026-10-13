@@ -114,15 +114,19 @@ function isLoopbackHost(hostname: string): boolean {
  *  above (::ffff:127.0.0.1 etc). When `allowLoopback` is true,
  *  the loopback ranges (127/8, ::1, ::ffff:127.0.0.0/104) are
  *  permitted — that's the dev-mode exemption for testing webhooks
- *  against a local tunnel. */
+ *  against a local tunnel.
+ *
+ *  Phase 161 fix: the old version ran isBlockedV4 on EVERY string,
+ *  and isBlockedV4's malformed branch (anything without 4
+ *  dot-separated octets) therefore blocked EVERY IPv6 literal —
+ *  on an IPv6-capable host, any webhook domain that resolved
+ *  IPv6-first was marked dead. Dispatch on the parsed family
+ *  instead; only genuinely malformed strings still block. */
 export function isBlockedAddress(ip: string, allowLoopback = false): boolean {
-  const v4Mapped = ip.match(/^::ffff:([0-9a-f:.]+)$/i);
-  const v4 = v4Mapped ? v4Mapped[1] : null;
-
-  if (v4 && isBlockedV4(v4, allowLoopback && v4Mapped !== null)) return true;
-  if (isBlockedV4(ip, allowLoopback)) return true;
-  if (isBlockedV6(ip, allowLoopback)) return true;
-  return false;
+  const family = isIP(ip);
+  if (family === 4) return isBlockedV4(ip, allowLoopback);
+  if (family === 6) return isBlockedV6(ip, allowLoopback);
+  return true; // not a valid IP literal → block
 }
 
 function isBlockedV4(ip: string, allowLoopback: boolean): boolean {
@@ -150,6 +154,22 @@ function isBlockedV6(ip: string, allowLoopback: boolean): boolean {
   const lc = ip.toLowerCase();
   if (lc === '::') return true; // unspecified
   if (lc === '::1') return !allowLoopback; // loopback (allow in dev)
+  // IPv4-mapped ::ffff:0:0/96 — dotted or hex-embedded form; judge
+  // by the embedded v4 address (Phase 161: both forms, not just dotted).
+  if (lc.startsWith('::ffff:')) {
+    const tail = lc.slice('::ffff:'.length);
+    if (tail.includes('.')) return isBlockedV4(tail, allowLoopback);
+    const groups = tail.split(':').filter(Boolean);
+    if (groups.length === 2) {
+      const hi = Number.parseInt(groups[0] ?? '', 16);
+      const lo = Number.parseInt(groups[1] ?? '', 16);
+      if (Number.isFinite(hi) && Number.isFinite(lo)) {
+        const dotted = `${hi >> 8}.${hi & 0xff}.${lo >> 8}.${lo & 0xff}`;
+        return isBlockedV4(dotted, allowLoopback);
+      }
+    }
+    return true; // malformed mapped form → block
+  }
   if (lc.startsWith('fc') || lc.startsWith('fd')) return true; // fc00::/7 unique-local
   if (
     lc.startsWith('fe8') ||

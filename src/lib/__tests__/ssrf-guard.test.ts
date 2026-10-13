@@ -58,6 +58,25 @@ describe('isBlockedAddress', () => {
     expect(isBlockedAddress('::ffff:169.254.169.254')).toBe(true);
   });
 
+  it('blocks hex-embedded v4-mapped IPv6 representations of private IPs', () => {
+    // ::ffff:7f00:1 == ::ffff:127.0.0.1 (loopback)
+    expect(isBlockedAddress('::ffff:7f00:1')).toBe(true);
+    // ::ffff:a00:1 == ::ffff:10.0.0.1 (private)
+    expect(isBlockedAddress('::ffff:a00:1')).toBe(true);
+  });
+
+  it('allows public IPv6 (Phase 161 regression — every IPv6 used to hit the malformed-IPv4 branch)', () => {
+    // Real Cloudflare / Google AAAA records — public global unicast.
+    expect(isBlockedAddress('2606:4700:10::6814:179a')).toBe(false);
+    expect(isBlockedAddress('2606:4700:4700::1111')).toBe(false);
+    expect(isBlockedAddress('2404:6800:4003::c07')).toBe(false);
+    // Public v4-mapped form stays allowed.
+    expect(isBlockedAddress('::ffff:93.184.216.34')).toBe(false);
+    // Garbage strings still block (fail closed).
+    expect(isBlockedAddress('not-an-ip')).toBe(true);
+    expect(isBlockedAddress('999.999.999.999')).toBe(true);
+  });
+
   it('allows public IPv4 (sanity)', () => {
     expect(isBlockedAddress('8.8.8.8')).toBe(false);
     expect(isBlockedAddress('1.1.1.1')).toBe(false);

@@ -52,7 +52,10 @@ describe('applySicaWatermark', () => {
     expect(meta.height).toBeGreaterThan(0);
   });
 
-  it('caps the output width at 1600px', async () => {
+  // 6-megapixel encode + resize + watermark composites can exceed the
+  // 5s default when the suite runs at full parallelism on a 2-core CI
+  // runner — sharp is real CPU work, not a unit-time operation.
+  it('caps the output width at 1600px', { timeout: 30_000 }, async () => {
     const input = await makeTestJpeg(3000, 2000);
     const output = await applySicaWatermark(input);
     const meta = await sharp(output).metadata();

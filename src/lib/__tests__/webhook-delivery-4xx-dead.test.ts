@@ -75,7 +75,11 @@ function setupQueueMocks(opts: { rows?: unknown[]; httpStatus: number; body?: st
     payload: { event: 'university.updated', delivery_id: 'oops', data: {} },
     attempt_count: 0,
     webhook_subscriptions: {
-      url: 'https://example.com/hook',
+      // Phase 161: IP literal, not example.com — the guard's isIP
+      // branch skips DNS entirely, so the test is hermetic on every
+      // runner (on GitHub's runners the DNS mock leaked real IPv6
+      // answers and tripped the guard before fetch ever ran).
+      url: 'https://93.184.216.34/hook',
       secret: encryptWebhookSecret('sica-test-secret'),
       active: true,
     },
@@ -164,7 +168,7 @@ describe('processWebhookQueue — S144 4xx-dead-immediately fix', () => {
     expect(patch?.next_retry_at).toBeTruthy();
     // fetch was called with redirect: 'manual' — assert that here.
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://example.com/hook',
+      'https://93.184.216.34/hook',
       expect.objectContaining({ redirect: 'manual' }),
     );
   });
