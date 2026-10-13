@@ -14,6 +14,7 @@ import {
   UserCheck,
   FileText,
   Settings,
+  VideoIcon,
   LogOut,
   Menu,
   X,
@@ -62,6 +63,13 @@ const navItems = [
   { href: '/admin/webinar-signups', key: 'webinars', icon: Megaphone },
   // Phase 114: free counselling session bookings from /counselling.
   { href: '/admin/counselling', key: 'counselling', icon: CalendarClock },
+  // Phase 160: admin-managed CRUD for the "consultation activity"
+  // social proof shots that render on /counselling + /. Source of
+  // truth moved out of a hardcoded array in Phase 158 (which
+  // shipped wrong metadata); admins now upload + caption + toggle
+  // shots without shipping code. Storage backed by the public
+  // Supabase `consultation-activity` bucket.
+  { href: '/admin/consultation-activity', key: 'consultationActivity', icon: VideoIcon },
   { href: '/admin/students', key: 'students', icon: UserCheck },
   { href: '/admin/partner-students', key: 'partnerStudents', icon: Users },
   { href: '/admin/documents', key: 'documents', icon: FileCheck },

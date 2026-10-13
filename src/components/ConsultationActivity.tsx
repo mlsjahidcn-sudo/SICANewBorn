@@ -1,17 +1,21 @@
-'use client';
-
 import Image from 'next/image';
 import { Video as VideoIcon, Sparkles } from 'lucide-react';
-import { useI18n } from '@/lib/i18n';
+import { getServerT } from '@/lib/server-t';
+import { getActiveConsultationShots } from '@/lib/consultation-activity';
+import type { Locale } from '@/lib/i18n-translations';
+import { cookies } from 'next/headers';
 
 /**
- * ConsultationActivity — "live activity in progress" social proof.
+ * ConsultationActivity — admin-managed "live activity in progress"
+ * social proof section.
  *
- * Renders two real screenshots from recent SICA consultation calls
- * (Carlos De Avila Bravo onboarding + deep-dive sessions, Oct 2026)
- * as static image cards with captions. No video, no playback — the
- * point is to show the visitor that SICA is running real 1:1 video
- * calls this week, not just templated outreach.
+ * Phase 160: now server-rendered. Reads the active shot list from
+ * the `consultation_activity_shots` table via getActiveConsultationShots
+ * (which signs the storage URLs with a 24h expiry). The list is
+ * rendered in `display_order ASC` order; rows where `is_active=false`
+ * are filtered out before signing. Renders nothing when there are 0
+ * active shots — the consultation page + homepage just omit the
+ * section rather than showing an empty grid.
  *
  * Mounted on:
  *   - /counselling (the consultation page) — full-width section
@@ -19,84 +23,45 @@ import { useI18n } from '@/lib/i18n';
  *   - / (homepage) — compact 2-image strip at the end of the
  *     social-proof section so it doesn't push LCP
  *
- * Why native images (not `<video>` or animated):
- *   - The images carry enough proof: a real video call in progress
- *     with names + faces visible. Animation would add weight + risk.
- *   - Static images load instantly with `next/image` priority hints
- *     on the consultation page, lazy on the homepage.
- *   - The two JPGs are 460KB + 580KB (resized from 3600×2096 to
- *     1600×931 / 815). Next/image re-encodes to AVIF/WebP on the
- *     fly at the requested `sizes` — actual payload drops ~70%.
- *
- * Why a single component used on both pages (instead of two):
- *   - The styling is identical (card + caption + verification
- *     badge). `variant: 'compact' | 'full'` swaps the heading +
- *     subtitle + grid sizing — no copy-paste duplication.
- *   - When more activity shots land, add a new entry to
- *     CONSULTATIONS + drop one i18n pair. One file.
+ * The whole point of moving this out of a hardcoded array (Phase 158
+ * mistake) is so admins can upload + caption + toggle shots without
+ * shipping code. Schema in `database/2026-10-12_consultation_activity.sql`,
+ * admin CRUD at /admin/consultation-activity (Phase 160), storage
+ * bucket policy at `consultation/<shotId>/<filename>`.
  */
-
-interface ConsultationShot {
-  id: 'team-prep' | 'deep-dive';
-  /** Alt text + caption key — single string, surfaced in alt and card. */
-  captionKey:
-    | 'consultationActivity.teamPrepCaption'
-    | 'consultationActivity.deepDiveCaption';
-  /** Display the date the call happened, for the "live activity" trust signal. */
-  date: string;
-  /** Resized JPG in /public/consultation/. */
-  src: string;
-  /** 1600x{height} source — preserved so next/image can compute sizes. */
-  width: number;
-  height: number;
-  /** Person initials overlay on the bottom-right card (2-3 letters). */
-  initials: string;
-  /** Person full name (caption shows this). */
-  personName: string;
-}
-
-const CONSULTATIONS: ConsultationShot[] = [
-  {
-    id: 'team-prep',
-    captionKey: 'consultationActivity.teamPrepCaption',
-    date: '2026-10-09',
-    // Renamed from carlos-onboarding-session.jpg in Phase 159 —
-    // the Oct 9 screenshot actually shows two SICA staff (Jahid +
-    // emeka) in a planning call, not Carlos. The new name + i18n
-    // caption make that honest.
-    src: '/consultation/sica-team-prep.jpg',
-    width: 1600,
-    height: 931,
-    initials: 'JA',
-    personName: 'Jahid Abdullah',
-  },
-  {
-    id: 'deep-dive',
-    captionKey: 'consultationActivity.deepDiveCaption',
-    date: '2026-10-13',
-    src: '/consultation/carlos-deep-dive-session.jpg',
-    width: 1600,
-    height: 815,
-    initials: 'CD',
-    personName: 'Carlos De Avila Bravo',
-  },
-];
 
 export interface ConsultationActivityProps {
   /** `full` (consultation page) shows eyebrow + section title + 2-up grid.
-   *  `compact` (homepage) hides the header and uses a tighter grid. */
+   *  `compact` (homepage) hides the header for a tighter rhythm. */
   variant?: 'full' | 'compact';
 }
 
-export function ConsultationActivity({
+export async function ConsultationActivity({
   variant = 'full',
 }: ConsultationActivityProps) {
-  const { t } = useI18n();
+  const cookieStore = await cookies();
+  const locale: Locale = cookieStore.get('sica-locale')?.value === 'zh' ? 'zh' : 'en';
+  const t = await getServerT();
   const isFull = variant === 'full';
+
+  const shots = await getActiveConsultationShots(locale);
+
+  // No active shots — hide the section rather than show an empty
+  // grid. Both the consultation page + the homepage render this
+  // component; either can decide to expose it or not, but the
+  // component itself stays the same.
+  if (shots.length === 0) return null;
+
+  const eyebrowText = t('consultationActivity.eyebrow');
+  const title = t('consultationActivity.title');
+  const subtitle = t('consultationActivity.subtitle');
+  const statsBadge = t('consultationActivity.statsBadge');
+  const cardEyebrow = t('consultationActivity.cardEyebrow');
+  const dateLabelTemplate = t('consultationActivity.dateLabel');
 
   return (
     <section
-      aria-label={t('consultationActivity.eyebrow')}
+      aria-label={eyebrowText}
       className={
         isFull
           ? 'bg-[#FAFAF8] border-y border-gray-200 py-14 lg:py-20'
@@ -108,13 +73,13 @@ export function ConsultationActivity({
           <div className="text-center max-w-3xl mx-auto">
             <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-[#9B1B30] mb-3">
               <Sparkles className="h-4 w-4" />
-              {t('consultationActivity.eyebrow')}
+              {eyebrowText}
             </div>
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#1B2A4A]">
-              {t('consultationActivity.title')}
+              {title}
             </h2>
             <p className="mt-4 text-sm sm:text-base text-[#4B5563] leading-relaxed">
-              {t('consultationActivity.subtitle')}
+              {subtitle}
             </p>
             <div className="mt-5 inline-flex items-center gap-2 text-xs font-semibold text-[#1B2A4A] bg-white border border-gray-200 px-3 py-1.5">
               <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-[#D4A853] text-white">
@@ -126,7 +91,7 @@ export function ConsultationActivity({
                   />
                 </svg>
               </span>
-              {t('consultationActivity.statsBadge')}
+              {statsBadge}
             </div>
           </div>
         )}
@@ -138,16 +103,22 @@ export function ConsultationActivity({
               : 'mt-6 grid sm:grid-cols-2 gap-4'
           }
         >
-          {CONSULTATIONS.map((shot) => (
+          {shots.map((shot) => (
             <ConsultationCard
               key={shot.id}
               shot={shot}
               compact={!isFull}
-              caption={t(shot.captionKey)}
+              caption={shot.caption}
               personName={shot.personName}
               initials={shot.initials}
-              eyebrowText={t('consultationActivity.cardEyebrow')}
-              dateLabel={t('consultationActivity.dateLabel', { date: shot.date })}
+              eyebrowText={cardEyebrow}
+              // dateLabel uses the {{date}} placeholder; we pass the
+              // server-formatted shot date (YYYY-MM-DD or null).
+              dateLabel={
+                shot.shotDate
+                  ? dateLabelTemplate.replace('{{date}}', shot.shotDate)
+                  : null
+              }
             />
           ))}
         </div>
@@ -156,11 +127,22 @@ export function ConsultationActivity({
   );
 }
 
+interface ResolvedShot {
+  id: string;
+  /** Signed URL from `createSignedReadUrl(shot.imageUrl, 24 * 3600)`. */
+  imageSrc: string;
+  caption: string;
+  personName: string;
+  initials: string;
+  shotDate: string | null;
+}
+
 /**
- * One activity card. Renders the screenshot as `next/image` (responsive
- * + lazy after the first card) with a gradient overlay at the bottom
- * for the caption + initials badge + date. The whole card is wrapped
- * in a `<figure>` so screen readers announce it as a captioned image.
+ * One activity card. Renders the screenshot as `next/image`
+ * (responsive + lazy after the first card) with a gradient overlay
+ * at the bottom for the date + initials badge, a "Live" pill at
+ * top-left, and a caption below. `figure` + `figcaption` keep the
+ * markup accessible to screen readers.
  */
 function ConsultationCard({
   shot,
@@ -171,18 +153,14 @@ function ConsultationCard({
   eyebrowText,
   dateLabel,
 }: {
-  shot: ConsultationShot;
+  shot: ResolvedShot;
   compact: boolean;
   caption: string;
   personName: string;
   initials: string;
   eyebrowText: string;
-  dateLabel: string;
+  dateLabel: string | null;
 }) {
-  // 16:9 aspect for both cards (matches the resized JPGs at 1600×931
-  // and 1600×815 after cropping). Cards stretch to the same height via
-  // the parent grid; the caption area below the image always lands at
-  // the same Y across the row.
   const aspectClass = 'aspect-[16/9]';
 
   return (
@@ -195,7 +173,7 @@ function ConsultationCard({
     >
       <div className={`relative w-full overflow-hidden bg-black ${aspectClass}`}>
         <Image
-          src={shot.src}
+          src={shot.imageSrc}
           alt={`${personName} — ${caption}`}
           fill
           sizes={
@@ -207,21 +185,13 @@ function ConsultationCard({
           priority={!compact}
         />
 
-        {/* Bottom gradient — keeps the date + initials badge legible
-            against any screenshot content. Stronger on the bottom-left
-            where both pills sit. */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/0 to-black/15 pointer-events-none" />
 
-        {/* Live badge — top-left. Small gold pill on a dark scrim so
-            visitors immediately read "this happened recently". */}
         <span className="absolute top-3 left-3 inline-flex items-center gap-1.5 bg-black/70 backdrop-blur-sm text-white text-[11px] font-semibold px-2.5 py-1 rounded-full">
           <VideoIcon className="h-3 w-3 text-[#D4A853]" />
           {eyebrowText}
         </span>
 
-        {/* Initials badge — bottom-right. Anchors the screenshot to a
-            real person + their initials. Sits over the gradient so
-            it's legible regardless of screenshot content. */}
         <span className="absolute bottom-3 right-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#9B1B30] text-white text-sm font-bold ring-2 ring-white/40">
           {initials}
         </span>
@@ -239,9 +209,11 @@ function ConsultationCard({
             >
               {caption}
             </p>
-            <p className="mt-2 text-[11px] uppercase tracking-[0.15em] font-semibold text-[#1B2A4A]/60">
-              {dateLabel}
-            </p>
+            {dateLabel && (
+              <p className="mt-2 text-[11px] uppercase tracking-[0.15em] font-semibold text-[#1B2A4A]/60">
+                {dateLabel}
+              </p>
+            )}
           </div>
         </div>
       </figcaption>
