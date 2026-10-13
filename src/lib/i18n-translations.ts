@@ -3989,15 +3989,18 @@ export const translations: Record<Locale, Record<string, string>> = {
     'consultationActivity.statsBadge': 'Real consultations · With consent',
     'consultationActivity.cardEyebrow': 'Live',
     'consultationActivity.dateLabel': 'Session on {{date}}',
-    // Phase 158: reframe the activity captions to focus on the 3
-    // things the service actually delivers — university selection,
-    // program fit, scholarship guidance — instead of the previous
-    // pre-departure + visa + arrival framing. The screenshots are
-    // real activity; the captions describe what was being discussed.
-    'consultationActivity.onboardingCaption':
-      'Program + scholarship selection call with Carlos De Avila Bravo, a prospective bachelor’s applicant from Latin America. Comparing engineering programs at three Beijing universities against CSC scholarship eligibility.',
+    // Phase 159: corrected the activity metadata after the user
+    // pointed out which screenshot shows Carlos. The Oct 13 shot
+    // (carlos-deep-dive-session.jpg) actually shows Carlos +
+    // Jahid — that's the Carlos consultation. The Oct 9 shot
+    // shows two SICA staff (Jahid + emeka) in a planning call —
+    // honest caption = "SICA team preparing", not "Carlos
+    // onboarding". Filename also renamed
+    // (carlos-onboarding-session.jpg → sica-team-prep.jpg).
+    'consultationActivity.teamPrepCaption':
+      'Behind the scenes: SICA team planning a student consultation call. Walking through the shortlisted universities and scholarship framing before the live session.',
     'consultationActivity.deepDiveCaption':
-      'University + program-fit review led by Jahid Abdullah, founder of SICA, with an applicant weighing bachelor’s engineering programs across three Beijing universities and scholarship positioning for each.',
+      'University + program-fit review with Carlos De Avila Bravo, a prospective bachelor’s applicant from Latin America. Comparing engineering programs at three Beijing universities against CSC scholarship eligibility.',
 
     // Phase 6A: assessment page metadata
     'assessment.title': 'Free Academic Assessment',
@@ -9004,13 +9007,14 @@ export const translations: Record<Locale, Record<string, string>> = {
     'consultationActivity.statsBadge': '真实咨询 · 经本人授权',
     'consultationActivity.cardEyebrow': '实况',
     'consultationActivity.dateLabel': '咨询时间：{{date}}',
-    // Phase 158: 把活动截图文案重新聚焦到本服务真正交付的三件事 —
-    // 院校选择、项目匹配、奖学金指导——弱化此前的"出发前/签证/
-    // 到校"等行前信息。截图是真实的活动画面;文案说明当时在讨论什么。
-    'consultationActivity.onboardingCaption':
-      '与来自拉丁美洲的本科申请人 Carlos De Avila Bravo 的项目 + 奖学金选择通话。对比北京三所大学的工程类专业,并对每位候选人进行 CSC 奖学金申请可行性评估。',
+    // Phase 159: 修正活动截图元数据——10/13 的截图确实是 Carlos +
+    // Jahid,作为 Carlos 咨询使用;10/9 的截图是 SICA 团队的内部
+    // 备课通话(只显示 SICA 员工),如实标注。文件名同步重命名
+    // (carlos-onboarding-session.jpg → sica-team-prep.jpg)。
+    'consultationActivity.teamPrepCaption':
+      '幕后花絮：SICA 团队在为一次学生咨询做准备工作。正式通话前,先梳理院校短名单与奖学金的呈现角度。',
     'consultationActivity.deepDiveCaption':
-      '由 SICA 创始人 Jahid Abdullah 主讲的院校 + 项目匹配度复盘,与一位申请人对接——权衡北京三所大学的本科工程类专业,并为每个项目做奖学金定位。',
+      '与来自拉丁美洲的本科申请人 Carlos De Avila Bravo 的项目 + 奖学金选择通话。对比北京三所大学的工程类专业,并对每位候选人进行 CSC 奖学金申请可行性评估。',
 
     // Phase 6A: assessment page metadata
     'assessment.title': '免费学术评估',

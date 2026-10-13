@@ -37,10 +37,10 @@ import { useI18n } from '@/lib/i18n';
  */
 
 interface ConsultationShot {
-  id: 'onboarding' | 'deep-dive';
+  id: 'team-prep' | 'deep-dive';
   /** Alt text + caption key — single string, surfaced in alt and card. */
   captionKey:
-    | 'consultationActivity.onboardingCaption'
+    | 'consultationActivity.teamPrepCaption'
     | 'consultationActivity.deepDiveCaption';
   /** Display the date the call happened, for the "live activity" trust signal. */
   date: string;
@@ -57,14 +57,18 @@ interface ConsultationShot {
 
 const CONSULTATIONS: ConsultationShot[] = [
   {
-    id: 'onboarding',
-    captionKey: 'consultationActivity.onboardingCaption',
+    id: 'team-prep',
+    captionKey: 'consultationActivity.teamPrepCaption',
     date: '2026-10-09',
-    src: '/consultation/carlos-onboarding-session.jpg',
+    // Renamed from carlos-onboarding-session.jpg in Phase 159 —
+    // the Oct 9 screenshot actually shows two SICA staff (Jahid +
+    // emeka) in a planning call, not Carlos. The new name + i18n
+    // caption make that honest.
+    src: '/consultation/sica-team-prep.jpg',
     width: 1600,
     height: 931,
-    initials: 'CD',
-    personName: 'Carlos De Avila Bravo',
+    initials: 'JA',
+    personName: 'Jahid Abdullah',
   },
   {
     id: 'deep-dive',
@@ -73,8 +77,8 @@ const CONSULTATIONS: ConsultationShot[] = [
     src: '/consultation/carlos-deep-dive-session.jpg',
     width: 1600,
     height: 815,
-    initials: 'JA',
-    personName: 'Jahid Abdullah',
+    initials: 'CD',
+    personName: 'Carlos De Avila Bravo',
   },
 ];
 
