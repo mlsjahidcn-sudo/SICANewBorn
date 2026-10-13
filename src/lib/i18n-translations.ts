@@ -3978,6 +3978,21 @@ export const translations: Record<Locale, Record<string, string>> = {
     'videoTestimonials.verifiedBadge': 'SICA Student',
     'videoTestimonials.watchCta': 'Watch the story',
     'videoTestimonials.statsBadge': 'Real students · Recorded with consent',
+    // Phase 157: consultation activity screenshots — social proof that
+    // SICA is running real 1:1 video consultations this week. The
+    // placeholder syntax on dateLabel uses {{date}} so the call site
+    // can pass the formatted YYYY-MM-DD string from the source array.
+    'consultationActivity.eyebrow': 'Live this week · 1:1 video sessions',
+    'consultationActivity.title': 'Real consultations, happening right now',
+    'consultationActivity.subtitle':
+      'Two screenshots from recent SICA video sessions — one onboarding call with an admitted student, one deep-dive program-fit review. These are real consultations with real SICA advisors, not templated outreach.',
+    'consultationActivity.statsBadge': 'Real consultations · With consent',
+    'consultationActivity.cardEyebrow': 'Live',
+    'consultationActivity.dateLabel': 'Session on {{date}}',
+    'consultationActivity.onboardingCaption':
+      'Onboarding call with Carlos De Avila Bravo, a newly admitted student from Latin America. Walking through pre-departure logistics, visa timeline, and the first-week arrival plan.',
+    'consultationActivity.deepDiveCaption':
+      'Deep-dive program-fit review with Jahid Abdullah, founder of SICA, walking through university + program options for an applicant comparing engineering programs in Beijing.',
 
     // Phase 6A: assessment page metadata
     'assessment.title': 'Free Academic Assessment',
@@ -8963,6 +8978,19 @@ export const translations: Record<Locale, Record<string, string>> = {
     'videoTestimonials.verifiedBadge': 'SICA 学生',
     'videoTestimonials.watchCta': '观看完整故事',
     'videoTestimonials.statsBadge': '真实学生 · 经本人授权拍摄',
+    // Phase 157: 实时咨询活动截图 — SICA 每周都在进行真实 1:1 视频咨询的社
+    // 会证据。{{date}} 占位符让调用方传入源数组里的 YYYY-MM-DD 字符串。
+    'consultationActivity.eyebrow': '本周实况 · 1:1 视频咨询',
+    'consultationActivity.title': '正在进行的真实咨询',
+    'consultationActivity.subtitle':
+      '两张来自最近 SICA 视频咨询的截图 — 一场与已录取新生的入学对接通话,一场深度项目匹配度复盘。这些都是 SICA 顾问的真实咨询,而非模板化外联。',
+    'consultationActivity.statsBadge': '真实咨询 · 经本人授权',
+    'consultationActivity.cardEyebrow': '实况',
+    'consultationActivity.dateLabel': '咨询时间：{{date}}',
+    'consultationActivity.onboardingCaption':
+      '与来自拉丁美洲的已录取新生 Carlos De Avila Bravo 的入学对接通话。一起梳理出发前的准备、签证时间线,以及到校第一周的安排。',
+    'consultationActivity.deepDiveCaption':
+      '与 SICA 创始人 Jahid Abdullah 的项目深度匹配度复盘,陪同申请人对比北京的几所工程类项目。',
 
     // Phase 6A: assessment page metadata
     'assessment.title': '免费学术评估',

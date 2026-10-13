@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { getServerT } from '@/lib/server-t';
 import { BookingWizard } from './booking-wizard';
+import { ConsultationActivity } from '@/components/ConsultationActivity';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getServerT();
@@ -163,6 +164,14 @@ export default async function CounsellingPage() {
           </div>
         </div>
       </section>
+
+      {/* Phase 157: live activity proof — two real screenshots
+          from recent SICA video sessions, positioned between
+          "how it works" and the booking wizard so the visitor
+          sees the social proof right before the CTA. Variant
+          `full` shows the eyebrow + title + 2-up grid; the compact
+          variant is reserved for the homepage. */}
+      <ConsultationActivity variant="full" />
 
       {/* Booking wizard */}
       <section className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-16">

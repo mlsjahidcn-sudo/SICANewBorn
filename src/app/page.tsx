@@ -34,6 +34,7 @@ import { getFeaturedUniversities, getFeaturedPrograms } from '@/lib/data-fetcher
 import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
 import { getStat } from '@/lib/site-stats';
 import { VideoTestimonials } from '@/components/VideoTestimonials';
+import { ConsultationActivity } from '@/components/ConsultationActivity';
 import dynamic from 'next/dynamic';
 import { getServiceSchema } from '@/lib/structured-data';
 
@@ -574,6 +575,13 @@ export default async function HomePage() {
           surfaces wherever a prospective student is reading
           about a specific school. */}
       <VideoTestimonials location="home" />
+
+      {/* Phase 157: live 1:1 consultation activity proof — the
+          "we ran actual calls this week" signal that complements
+          (not duplicates) the VideoTestimonials section above.
+          Compact variant hides the section header to keep the
+          homepage rhythm tight; the cards carry the captions. */}
+      <ConsultationActivity variant="compact" />
 
       {/* S38: Latest from SICA News — server-rendered teaser row.
           Closes the home-page → news interlinking loop so the
