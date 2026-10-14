@@ -120,6 +120,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/shenyang-pharmaceutical-university`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/nankai-university`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/sufe`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    // Phase 170: CSCA fee deep-dive for Pakistan, Nigeria, Bangladesh
+    // — closes the country-specific payment-rail gap from the
+    // global /csca-exam-fees article (per-country bank wire +
+    // Payoneer + Flutterwave + bKash / Nagad paths + common
+    // failure modes).
+    { url: `${SITE_URL}/csca-fee-pakistan-nigeria-bangladesh`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    // Phase 171: standalone medical-check + physical-examination
+    // form guide — was referenced as a checkbox across 4+ guides
+    // (visa, mbbs, jw202, csc-pakistan) without an operational
+    // deep-dive. Now has its own URL.
+    { url: `${SITE_URL}/medical-check-physical-examination-form`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/x1-vs-x2-student-visa-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/study-in-china-without-ielts`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     // Phase 150: English-track ETP landscape article — the broad

@@ -60,6 +60,11 @@
 - [Nankai University admissions guide](https://studyinchina.academy/nankai-university): Tianjin-based 985 + DFC (math + chemistry + statistics + business administration + Marxist theory). Chen Sheng-Shen school of mathematics + finance/economics strengths. Tianjin vs Beijing logistics (30 min by HSR). Tianjin MoE CSC + Type B direct.
 - [SUFE (Shanghai University of Finance and Economics) for international students](https://studyinchina.academy/sufe): the most specialized finance + economics university in China. DFC economics + business administration. Actuarial + financial engineering + public finance + taxation + IB. Shanghai finance industry ties. CSC + Type B routes.
 
+## CSCA + medical operational guides (Phase 170 + 171)
+
+- [CSCA fee in Pakistan, Nigeria and Bangladesh: what it costs and how to pay](https://studyinchina.academy/csca-fee-pakistan-nigeria-bangladesh): CSCA fee structure (¥450 / ¥700), per-country payment rails (bank wire / Payoneer / Flutterwave / bKash / Nagad), currency conversion losses, common payment failures, 8-week timeline.
+- [Medical check and the physical examination form for a China student visa](https://studyinchina.academy/medical-check-physical-examination-form): where to do it (home country vs entry port), 8-12 medical checks (blood + chest X-ray + ECG + vaccinations), approved-hospital lists per country (Pakistan + Nigeria + Bangladesh + India), 6-month validity, 5 common rejection reasons + how to avoid them.
+
 ## Long-form guides (2026, fact-checked)
 
 - [How to study in China: complete guide](https://studyinchina.academy/guides/study-in-china)
