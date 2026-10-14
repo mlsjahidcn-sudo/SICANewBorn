@@ -509,8 +509,17 @@ export interface AnalyticsEventMap {
   webinar_topic_added: {
     locale: 'en' | 'zh';
     session_id: string;
-    /** Topic degree enum (so GA can group by intake). */
-    degree: string;
+    /** Topic degree enum (so GA can group by intake). Optional
+        since Phase 162's university-kind topics have kind instead
+        of degree. */
+    degree?: string;
+    /** Phase 162: when set, this is a university-kind topic
+        bound to a specific featured university. */
+    university_id?: string;
+    /** Phase 162: kind of the topic ('program' | 'scholarship'
+        | 'timing' | 'requirement' for university-kind topics).
+        Optional for back-compat. */
+    kind?: string;
   };
   /** Phase 143: admin flipped a signup's status. Fired from
    *  the API route (works for any caller, not just the UI). */

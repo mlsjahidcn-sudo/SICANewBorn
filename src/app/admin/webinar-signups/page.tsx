@@ -42,6 +42,12 @@ import {
 } from '@/components/ui/alert-dialog';
 import { SessionEditDialog, type SessionEditValue } from '@/components/admin/SessionEditDialog';
 import { TopicEditDialog, type TopicEditValue } from '@/components/admin/TopicEditDialog';
+import {
+  UniversityTopicEditDialog,
+  type UniversityTopicEditValue,
+  type UniversityTopicKind,
+  type UniversityOption,
+} from '@/components/admin/UniversityTopicEditDialog';
 import { WebinarStatsCards } from '@/components/admin/WebinarStatsCards';
 
 // Phase 139 + 140 — admin surface.
@@ -108,8 +114,11 @@ interface SessionsResponse {
 interface Topic {
   id: string;
   sessionId: string;
-  intake: 'march_2027' | 'september_2027' | 'csc' | 'other';
-  degree: 'chinese_language' | 'foundation' | 'bachelor' | 'master' | 'phd' | 'csc';
+  intake: 'march_2027' | 'september_2027' | 'csc' | 'other' | null;
+  degree: 'chinese_language' | 'foundation' | 'bachelor' | 'master' | 'phd' | 'csc' | null;
+  kind: UniversityTopicKind | null;
+  universityId: string | null;
+  universityName?: string | null;
   titleEn: string;
   titleZh: string;
   bodyEn: string;
@@ -914,12 +923,16 @@ function TopicsTab() {
   const { t } = useI18n();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [topics, setTopics] = useState<Topic[]>([]);
+  const [universities, setUniversities] = useState<UniversityOption[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [editing, setEditing] = useState<TopicEditValue | null>(null);
   const [creating, setCreating] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Topic | null>(null);
+  const [editingUniversity, setEditingUniversity] = useState<UniversityTopicEditValue | null>(null);
+  const [creatingUniversity, setCreatingUniversity] = useState(false);
+  const [pendingUniversityDelete, setPendingUniversityDelete] = useState<Topic | null>(null);
 
   const loadSessions = useCallback(async () => {
     try {
@@ -932,61 +945,107 @@ function TopicsTab() {
     }
   }, [t]);
 
+  // Phase 162: load the 5 featured universities so the
+  // UniversityTopicEditDialog's <select> can render them.
+  // Uses the public /api/universities endpoint (limit=500) —
+  // any admin can already see every university via the
+  // chatbot / /universities listing, so reusing that surface
+  // is fine and avoids a parallel admin-only list endpoint.
+  const loadUniversities = useCallback(async () => {
+    try {
+      const res = await apiFetchJson<{
+        universities: { id: string; name: string; nameCn: string; slug: string }[];
+      }>('/api/universities?limit=500');
+      const opts: UniversityOption[] = (res.universities ?? [])
+        .filter((u) => u.id)
+        .map((u) => ({
+          id: u.id as string,
+          name: u.name as string,
+          nameZh: (u.nameCn as string) ?? '',
+          slug: u.slug as string,
+        }));
+      setUniversities(opts);
+    } catch {
+      // Best-effort — the dialog will render an empty <select>.
+    }
+  }, []);
+
   const loadTopics = useCallback(
     async (sessionId: string | null) => {
       if (!sessionId) {
         setTopics([]);
         return;
       }
-      // We piggyback on the existing /api/webinar-sessions/[id]/topics
-      // POST path; for GET, list topics via a Supabase-style fetch
-      // through an admin endpoint. Since we don't have a GET
-      // endpoint yet, we use the active session's id and the public
-      // RLS-gated read path via the supabase client... but we're
-      // client-side. Simplest: add a topics list under the session
-      // endpoint. Use the existing PATCH endpoint + a new fetch via
-      // the admin web path. The cleanest is to call the admin
-      // session endpoint and ask for topics inline — but we don't
-      // have one. We'll list via fetch to the same admin endpoint
-      // by session id using a listTopics style... since the API
-      // doesn't expose that, fall back to fetching topics via the
-      // supabase JS client from the browser... not viable.
-      //
-      // Simplest correct path: use a small list endpoint scoped to
-      // the active session. The session list endpoint doesn't
-      // include topics. Add a parallel route: GET /api/admin/
-      // webinar-sessions/[id]/topics — implemented as the list
-      // half of the existing POST endpoint. For this tab we'll
-      // page-fetch both sessions + topics separately.
       try {
         const res = await apiFetchJson<{ topics: Topic[] }>(
           `/api/admin/webinar-sessions/${sessionId}/topics`,
         );
-        setTopics(res.topics || []);
+        // Hydrate `universityName` from the universities list
+        // (already in state by the time topics render).
+        const uniById = new Map(universities.map((u) => [u.id, u]));
+        const hydrated = (res.topics || []).map((row) => {
+          if (row.universityId) {
+            const u = uniById.get(row.universityId);
+            return {
+              ...row,
+              universityName: u ? `${u.name} / ${u.nameZh}` : undefined,
+            };
+          }
+          return row;
+        });
+        setTopics(hydrated);
       } catch (err) {
         setLoadError(err instanceof ApiError ? err.message : t('adminWebinars.errorLoad'));
       }
     },
-    [t],
+    [universities, t],
   );
 
   useEffect(() => {
     setIsLoading(true);
     (async () => {
-      await loadSessions();
+      await Promise.all([loadSessions(), loadUniversities()]);
       setIsLoading(false);
     })();
-  }, [loadSessions]);
+  }, [loadSessions, loadUniversities]);
 
   useEffect(() => {
     if (activeSessionId) loadTopics(activeSessionId);
   }, [activeSessionId, loadTopics]);
 
+  // Phase 162: split topics by shape so the UI can show the
+  // track-schema topics in the existing block + the
+  // university-kind topics in a new "University topics"
+  // section. Order matches the agenda grid display order.
+  const trackTopics = topics.filter((row) => !row.kind);
+  const universityTopics = topics
+    .filter((row) => row.kind)
+    .sort((a, b) => {
+      const uniCmp = (a.universityName ?? a.universityId ?? '').localeCompare(
+        b.universityName ?? b.universityId ?? '',
+      );
+      if (uniCmp !== 0) return uniCmp;
+      return (a.displayOrder ?? 0) - (b.displayOrder ?? 0);
+    });
+
   const topicToEditValue = (row: Topic): TopicEditValue => ({
     id: row.id,
     sessionId: row.sessionId,
-    intake: row.intake,
-    degree: row.degree,
+    intake: (row.intake ?? 'march_2027') as TopicEditValue['intake'],
+    degree: (row.degree ?? 'chinese_language') as TopicEditValue['degree'],
+    titleEn: row.titleEn,
+    titleZh: row.titleZh,
+    bodyEn: row.bodyEn,
+    bodyZh: row.bodyZh,
+    displayOrder: row.displayOrder,
+  });
+
+  const universityTopicToEditValue = (row: Topic): UniversityTopicEditValue => ({
+    id: row.id,
+    sessionId: row.sessionId,
+    universityId: row.universityId ?? '',
+    universityName: row.universityName ?? undefined,
+    kind: (row.kind ?? 'program') as UniversityTopicKind,
     titleEn: row.titleEn,
     titleZh: row.titleZh,
     bodyEn: row.bodyEn,
@@ -1008,11 +1067,46 @@ function TopicsTab() {
     setCreating(false);
   };
 
+  const handleUniversitySaved = (next: UniversityTopicEditValue) => {
+    setTopics((prev) => {
+      const idx = prev.findIndex((row) => row.id === next.id);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = { ...copy[idx], ...next, kind: next.kind, universityId: next.universityId } as Topic;
+        return copy;
+      }
+      return [
+        ...prev,
+        {
+          ...next,
+          kind: undefined,
+          universityId: undefined,
+          intake: null,
+          degree: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: null,
+        } as unknown as Topic,
+      ];
+    });
+    setEditingUniversity(null);
+    setCreatingUniversity(false);
+  };
+
   const handleDelete = async (row: Topic) => {
     try {
       await apiFetchJson(`/api/admin/webinar-topics/${row.id}`, { method: 'DELETE' });
       setTopics((prev) => prev.filter((r) => r.id !== row.id));
       setPendingDelete(null);
+    } catch (err) {
+      setLoadError(err instanceof ApiError ? err.message : t('adminWebinars.errorDeleteTopic'));
+    }
+  };
+
+  const handleUniversityDelete = async (row: Topic) => {
+    try {
+      await apiFetchJson(`/api/admin/webinar-university-topics/${row.id}`, { method: 'DELETE' });
+      setTopics((prev) => prev.filter((r) => r.id !== row.id));
+      setPendingUniversityDelete(null);
     } catch (err) {
       setLoadError(err instanceof ApiError ? err.message : t('adminWebinars.errorDeleteTopic'));
     }
@@ -1064,13 +1158,21 @@ function TopicsTab() {
         </Card>
       )}
 
+      {/* ============================================
+          Section 1: track-schema topics (intake + degree)
+          Phase 140 — unchanged. Agenda-grid row.
+          ============================================ */}
       {!activeSessionId ? (
+        <div className="bg-white border border-gray-200 px-4 py-12 text-center text-gray-500">
+          {t('adminWebinars.topicNoTopics')}
+        </div>
+      ) : trackTopics.length === 0 ? (
         <div className="bg-white border border-gray-200 px-4 py-12 text-center text-gray-500">
           {t('adminWebinars.topicNoTopics')}
         </div>
       ) : (
         <div className="space-y-3">
-          {topics.map((row) => (
+          {trackTopics.map((row) => (
             <div
               key={row.id}
               className="bg-white border border-gray-200 p-4 hover:border-[#9B1B30]/50 transition-colors"
@@ -1114,6 +1216,85 @@ function TopicsTab() {
         </div>
       )}
 
+      {/* ============================================
+          Section 2: university-kind topics (kind + university_id)
+          Phase 162 — NEW. Feeds the public 5-card university grid.
+          ============================================ */}
+      <div className="pt-6 border-t border-gray-200">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-[#1B2A4A]">{t('adminWebinars.universityTopicsTitle')}</h2>
+            <p className="text-sm text-gray-600">{t('adminWebinars.universityTopicsSubtitle')}</p>
+          </div>
+          <Button
+            className="bg-[#9B1B30] hover:bg-[#7A1526] rounded-none"
+            onClick={() => setCreatingUniversity(true)}
+            disabled={!activeSessionId}
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            {t('adminWebinars.addUniversityTopic')}
+          </Button>
+        </div>
+
+        {!activeSessionId ? (
+          <div className="bg-white border border-gray-200 px-4 py-12 text-center text-gray-500 mt-4">
+            {t('adminWebinars.topicNoTopics')}
+          </div>
+        ) : universityTopics.length === 0 ? (
+          <div className="bg-white border border-gray-200 px-4 py-12 text-center text-gray-500 mt-4">
+            {t('adminWebinars.topicNoUniversityTopics')}
+          </div>
+        ) : (
+          <div className="space-y-3 mt-4">
+            {universityTopics.map((row) => (
+              <div
+                key={row.id}
+                className="bg-white border border-gray-200 p-4 hover:border-[#9B1B30]/50 transition-colors"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-semibold text-[#1B2A4A]">{row.titleEn}</h3>
+                      {row.universityName && (
+                        <Badge variant="outline" className="bg-[#1B2A4A]/10 text-[#1B2A4A] border-[#1B2A4A]/30">
+                          {row.universityName}
+                        </Badge>
+                      )}
+                      {row.kind && (
+                        <Badge variant="outline">
+                          {t(`adminWebinars.kind.${row.kind}`)}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1 line-clamp-2">{row.bodyEn}</p>
+                    <p className="text-xs text-gray-500 mt-1 line-clamp-1">{row.titleZh} — {row.bodyZh}</p>
+                  </div>
+                  <div className="flex flex-col gap-1.5 flex-shrink-0">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setEditingUniversity(universityTopicToEditValue(row))}
+                      className="rounded-none"
+                    >
+                      <Pencil className="h-3 w-3 mr-1" />
+                      Edit
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setPendingUniversityDelete(row)}
+                      className="text-gray-400 hover:text-[#9B1B30] hover:bg-red-50 rounded-none"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <TopicEditDialog
         open={editing !== null || creating}
         onOpenChange={(open) => {
@@ -1125,6 +1306,20 @@ function TopicsTab() {
         sessionId={activeSessionId}
         initial={editing}
         onSaved={handleSaved}
+      />
+
+      <UniversityTopicEditDialog
+        open={editingUniversity !== null || creatingUniversity}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingUniversity(null);
+            setCreatingUniversity(false);
+          }
+        }}
+        sessionId={activeSessionId}
+        initial={editingUniversity}
+        universities={universities}
+        onSaved={handleUniversitySaved}
       />
 
       <AlertDialog
@@ -1142,6 +1337,29 @@ function TopicsTab() {
             <AlertDialogCancel className="rounded-none">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => pendingDelete && handleDelete(pendingDelete)}
+              className="bg-[#9B1B30] hover:bg-[#7A1526] rounded-none"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={!!pendingUniversityDelete}
+        onOpenChange={(open) => !open && setPendingUniversityDelete(null)}
+      >
+        <AlertDialogContent className="rounded-none">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('adminWebinars.topicDeleteTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('adminWebinars.topicDeleteBody')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-none">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => pendingUniversityDelete && handleUniversityDelete(pendingUniversityDelete)}
               className="bg-[#9B1B30] hover:bg-[#7A1526] rounded-none"
             >
               Delete

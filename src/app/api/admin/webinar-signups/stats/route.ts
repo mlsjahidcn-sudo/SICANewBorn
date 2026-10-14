@@ -6,6 +6,14 @@ export const dynamic = 'force-dynamic';
 const VALID_STATUSES = ['Registered', 'Attended', 'No-Show', 'Cancelled'] as const;
 type WebinarStatus = (typeof VALID_STATUSES)[number];
 
+interface FeaturedUniversity {
+  id: string;
+  name: string;
+  nameZh: string;
+  slug: string;
+  topicCount: number;
+}
+
 /**
  * Phase 143: admin stats endpoint for /admin/webinar-signups.
  *
@@ -31,6 +39,13 @@ interface WebinarStats {
   byCountry: { label: string; count: number }[];
   byInterest: { label: string; count: number }[];
   bySource: { label: string; count: number }[];
+  // Phase 162: the 5 (or fewer) featured universities bound to
+  // the active session's university-kind topics, plus their
+  // topic counts. Used by the admin's "University spotlight"
+  // panel — there is no signup attribution per university
+  // (signups don't bind to a university_id), so the panel just
+  // surfaces the topic count to confirm coverage.
+  featuredUniversities: FeaturedUniversity[];
   generatedAt: string;
 }
 
@@ -43,6 +58,7 @@ const EMPTY_STATS: WebinarStats = {
   byCountry: [],
   byInterest: [],
   bySource: [],
+  featuredUniversities: [],
   generatedAt: new Date().toISOString(),
 };
 
@@ -61,6 +77,67 @@ export async function GET(request: Request) {
   const thirtyDaysAgo = new Date(now.getTime() - 30 * ONE_DAY_MS);
 
   try {
+    // Phase 162: featured universities from the active session's
+    // university-kind topics, plus their topic counts. Best-effort
+    // — non-fatal failures just render an empty
+    // `featuredUniversities` panel. We do the lookup inline so
+    // TypeScript keeps the auth.ok narrowing (threading the
+    // typed supabase client through a helper function would cost
+    // us that).
+    const featuredUniversities: FeaturedUniversity[] = await (async () => {
+      try {
+        const { data: sessionRow, error: sessionErr } = await auth.supabase
+          .from('webinar_sessions')
+          .select('id')
+          .eq('is_active', true)
+          .maybeSingle();
+        if (sessionErr || !sessionRow) return [];
+        const sessionId = (sessionRow as { id: string }).id;
+
+        const { data: topicRows, error: topicsErr } = await auth.supabase
+          .from('webinar_topics')
+          .select(
+            'university_id, university:universities!university_id (id, name, name_cn, slug)',
+          )
+          .eq('session_id', sessionId)
+          .not('university_id', 'is', null);
+        if (topicsErr) return [];
+
+        const seen = new Map<string, FeaturedUniversity>();
+        for (const row of topicRows ?? []) {
+          const uid = (row as { university_id: string | null }).university_id;
+          if (!uid) continue;
+          const existing = seen.get(uid);
+          if (existing) {
+            existing.topicCount += 1;
+            continue;
+          }
+          // PostgREST embedded relationship shape — `row.university`
+          // is either an object or an array (one-to-one joins
+          // usually return an object, but the type reflects the FK
+          // cardinality).
+          const raw = (row as { university: unknown }).university as
+            | { name?: string; name_cn?: string; slug?: string; id?: string }
+            | { name?: string; name_cn?: string; slug?: string; id?: string }[]
+            | null;
+          const u = Array.isArray(raw) ? raw[0] : raw;
+          if (!u) continue;
+          seen.set(uid, {
+            id: uid,
+            name: (u.name as string) ?? '',
+            nameZh: (u.name_cn as string) ?? '',
+            slug: (u.slug as string) ?? '',
+            topicCount: 1,
+          });
+        }
+        return Array.from(seen.values()).sort((a, b) =>
+          a.name.localeCompare(b.name),
+        );
+      } catch {
+        return [];
+      }
+    })();
+
     // Run all 9 aggregates in parallel — each is a cheap
     // `head: true, count: 'exact'` query against the indexed
     // created_at column.
@@ -160,6 +237,7 @@ export async function GET(request: Request) {
       byCountry,
       byInterest,
       bySource,
+      featuredUniversities,
       generatedAt: new Date().toISOString(),
     } satisfies WebinarStats);
   } catch (err) {
@@ -167,3 +245,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ ...EMPTY_STATS, error: 'Failed to load stats' });
   }
 }
+
+/**
+ * Phase 162: loadFeaturedUniversitiesInline helper removed —
+ * the lookup is now inlined inside the try block above so
+ * TypeScript keeps the `auth.ok` narrowing. Hoisting the lookup
+ * into a helper required either threading a complex generic
+ * type through or losing narrowing; the inline IIFE is simpler.
+ */

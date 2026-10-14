@@ -26,6 +26,11 @@ export type WebinarTopicDegree =
   | 'master'
   | 'phd'
   | 'csc';
+// Phase 162: a topic can now also be a "university card section"
+// (kind=program|scholarship|timing|requirement, bound to a
+// specific university). The track-shape topic still uses
+// intake+degree; the university-kind topic sets them to NULL.
+export type WebinarTopicKind = 'program' | 'scholarship' | 'timing' | 'requirement';
 
 export interface WebinarSession {
   id: string;
@@ -48,8 +53,10 @@ export interface WebinarSession {
 export interface WebinarTopic {
   id: string;
   sessionId: string;
-  intake: WebinarTopicIntake;
-  degree: WebinarTopicDegree;
+  intake: WebinarTopicIntake | null;
+  degree: WebinarTopicDegree | null;
+  kind: WebinarTopicKind | null;
+  universityId: string | null;
   titleEn: string;
   titleZh: string;
   bodyEn: string;
@@ -62,6 +69,23 @@ export interface WebinarTopic {
 export interface ActiveWebinarBundle {
   session: WebinarSession;
   topics: WebinarTopic[];
+  /**
+   * Phase 162: featured universities for the active session's
+   * university-kind topics. Empty array when the session has
+   * no university-kind topics (or no active session at all).
+   * Each university has the slim public shape the page needs
+   * to render the 5-card grid (logo, name, nameZh, city).
+   */
+  universities: WebinarUniversity[];
+}
+
+export interface WebinarUniversity {
+  id: string;
+  slug: string;
+  name: string;
+  nameZh: string;
+  city: string | null;
+  logo: string | null;
 }
 
 function mapSession(row: Record<string, unknown>): WebinarSession {
@@ -88,8 +112,10 @@ function mapTopic(row: Record<string, unknown>): WebinarTopic {
   return {
     id: row.id as string,
     sessionId: row.session_id as string,
-    intake: row.intake as WebinarTopicIntake,
-    degree: row.degree as WebinarTopicDegree,
+    intake: (row.intake as WebinarTopicIntake | null) ?? null,
+    degree: (row.degree as WebinarTopicDegree | null) ?? null,
+    kind: (row.kind as WebinarTopicKind | null) ?? null,
+    universityId: (row.university_id as string | null) ?? null,
     titleEn: (row.title_en as string) ?? '',
     titleZh: (row.title_zh as string) ?? '',
     bodyEn: (row.body_en as string) ?? '',
@@ -127,7 +153,7 @@ export async function getActiveSessionWithTopics(): Promise<ActiveWebinarBundle 
   const { data: topicRows, error: topicsErr } = await supabase
     .from('webinar_topics')
     .select(
-      'id, session_id, intake, degree, title_en, title_zh, body_en, body_zh, display_order, created_at, updated_at',
+      'id, session_id, intake, degree, kind, university_id, title_en, title_zh, body_en, body_zh, display_order, created_at, updated_at',
     )
     .eq('session_id', sessionRow.id)
     .order('display_order', { ascending: true });
@@ -135,10 +161,52 @@ export async function getActiveSessionWithTopics(): Promise<ActiveWebinarBundle 
     console.error('[webinar-sessions] topics query failed:', topicsErr);
     return null;
   }
+  const topics = (topicRows ?? []).map((r) => mapTopic(r as Record<string, unknown>));
+
+  // Phase 162: featured universities — only the ones bound to
+  // the active session's university-kind topics. Fetched as
+  // a single SELECT IN (uuid[]) call (cheaper than N round
+  // trips and the result is naturally limited to ~5 rows by
+  // the topic fan-out).
+  const uniIds = Array.from(
+    new Set(
+      topics
+        .map((t) => t.universityId)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0),
+    ),
+  );
+  let universities: WebinarUniversity[] = [];
+  if (uniIds.length > 0) {
+    const { data: uniRows, error: uniErr } = await supabase
+      .from('universities')
+      .select('id, slug, name, name_cn, city, logo')
+      .in('id', uniIds);
+    if (uniErr) {
+      console.error('[webinar-sessions] featured universities query failed:', uniErr);
+      universities = [];
+    } else {
+      universities = (uniRows ?? []).map((row) => ({
+        id: row.id as string,
+        slug: row.slug as string,
+        name: (row.name as string) ?? '',
+        nameZh: (row.name_cn as string) ?? '',
+        city: (row.city as string | null) ?? null,
+        logo: (row.logo as string | null) ?? null,
+      }));
+      // Preserve the order from the topics (so the first university
+      // to appear in a topic row renders first on the page).
+      const orderById = new Map(uniIds.map((id, i) => [id, i]));
+      universities.sort(
+        (a, b) =>
+          (orderById.get(a.id) ?? 0) - (orderById.get(b.id) ?? 0),
+      );
+    }
+  }
 
   return {
     session: mapSession(sessionRow as Record<string, unknown>),
-    topics: (topicRows ?? []).map((r) => mapTopic(r as Record<string, unknown>)),
+    topics,
+    universities,
   };
 }
 
@@ -218,4 +286,55 @@ export async function getActiveSessionId(): Promise<string | null> {
     .maybeSingle();
   if (error || !data) return null;
   return (data.id as string) ?? null;
+}
+
+/**
+ * Phase 162: return the active session's id + session_date (or
+ * null/null). The signup route uses both — the id to set the FK
+ * on insert, the date to enforce the "registration closes after
+ * the webinar day" gate at 410. We combine into one query because
+ * the active-session lookup is already in the hot path of every
+ * POST and adding a second query would double the round trips.
+ */
+export async function getActiveSessionWithDate(): Promise<{
+  id: string;
+  sessionDate: string | null;
+} | null> {
+  if (!isSupabaseServerConfigured()) return null;
+  const supabase = getSupabaseServer();
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from('webinar_sessions')
+    .select('id, session_date')
+    .eq('is_active', true)
+    .maybeSingle();
+  if (error || !data) return null;
+  return {
+    id: (data.id as string) ?? '',
+    sessionDate: (data.session_date as string | null) ?? null,
+  };
+}
+
+/**
+ * Phase 162: closed-state predicate (pure). Spec says
+ * "registration closes after the webinar day until we setup
+ * for next webinar". With single-active enforcement, when the
+ * active session's date is in the past AND no future session
+ * has been set up, registration is closed. When staff flips
+ * `is_active=true` on a future-dated session, registration
+ * reopens automatically.
+ *
+ * Pure function — `nowMs` is injectable so the unit test can
+ * fix "now" without mocking the clock. Hoisted to module scope
+ * per Phase 161's lint rule (no `Date.now()` inside render
+ * bodies — same lesson applies to any pure helper).
+ */
+export function isSessionClosed(
+  sessionDateIso: string | null,
+  nowMs: number = Date.now(),
+): boolean {
+  if (!sessionDateIso) return false;
+  const ms = new Date(sessionDateIso).getTime();
+  if (!Number.isFinite(ms)) return false;
+  return ms < nowMs;
 }

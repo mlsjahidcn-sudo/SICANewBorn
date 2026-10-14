@@ -27,10 +27,10 @@ export async function GET(
 
   const { id: paramsId } = await context.params;
 
-  const { data, error } = await auth.supabase
+const { data, error } = await auth.supabase
     .from('webinar_topics')
     .select(
-      'id, session_id, intake, degree, title_en, title_zh, body_en, body_zh, display_order, created_at, updated_at',
+      'id, session_id, intake, degree, kind, university_id, title_en, title_zh, body_en, body_zh, display_order, created_at, updated_at',
     )
     .eq('session_id', paramsId)
     .order('display_order', { ascending: true });
@@ -43,14 +43,17 @@ export async function GET(
   const topics = (data ?? []).map((row) => ({
     id: row.id as string,
     sessionId: row.session_id as string,
-    intake: row.intake as 'march_2027' | 'september_2027' | 'csc' | 'other',
-    degree: row.degree as
+    intake: (row.intake as 'march_2027' | 'september_2027' | 'csc' | 'other' | null) ?? null,
+    degree: (row.degree as
       | 'chinese_language'
       | 'foundation'
       | 'bachelor'
       | 'master'
       | 'phd'
-      | 'csc',
+      | 'csc'
+      | null) ?? null,
+    kind: (row.kind as 'program' | 'scholarship' | 'timing' | 'requirement' | null) ?? null,
+    universityId: (row.university_id as string | null) ?? null,
     titleEn: (row.title_en as string) ?? '',
     titleZh: (row.title_zh as string) ?? '',
     bodyEn: (row.body_en as string) ?? '',
