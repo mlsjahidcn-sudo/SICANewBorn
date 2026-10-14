@@ -92,6 +92,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // sibling pages.
     { url: `${SITE_URL}/csc-scholarship-pakistan`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/csc-scholarship-nigeria`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    // Phase 166: Bangladesh joins the Phase 147 country guide batch.
+    // Closes the only country gap from the original Phase 147 list.
+    { url: `${SITE_URL}/csc-scholarship-bangladesh`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/moe-listed-mbbs-universities-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/x1-vs-x2-student-visa-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/study-in-china-without-ielts`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
