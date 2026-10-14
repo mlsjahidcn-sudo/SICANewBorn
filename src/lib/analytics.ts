@@ -529,6 +529,35 @@ export interface AnalyticsEventMap {
     old_status: string;
     new_status: string;
   };
+  /** Phase 163: AI-generated webinar brief returned. */
+  webinar_brief_generated: {
+    locale: 'en' | 'zh';
+    /** Count of featured universities in the returned brief. */
+    university_count: string;
+    /** Count of (uni, kind) topic slots filled. */
+    topic_count: string;
+    /** Count of sanitization warnings (dropped slugs, pricing
+        scrub hits, both-empty bodies). */
+    warning_count: string;
+    /** Model identifier echoed by the API (doubao-* | deepseek-*). */
+    model: string;
+  };
+  /** Phase 163: admin applied the AI-generated session title /
+   *  description patch. */
+  webinar_brief_applied_session: {
+    locale: 'en' | 'zh';
+    session_id: string;
+  };
+  /** Phase 163: admin applied the AI-generated per-(uni, kind)
+   *  topic rows. */
+  webinar_brief_applied_topics: {
+    locale: 'en' | 'zh';
+    session_id: string;
+    created: string;
+    updated: string;
+    skipped: string;
+    failed: string;
+  };
 }
 
 /** Convenience alias for the event-name union. */
