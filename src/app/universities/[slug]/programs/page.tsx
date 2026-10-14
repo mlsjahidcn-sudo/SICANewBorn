@@ -8,6 +8,7 @@ import { getAllUniversities, getAllPrograms } from '@/lib/data-fetcher';
 import { buildLanguageAlternates } from '@/lib/alternates';
 import { getServerLocale } from '@/lib/server-t';
 import { SITE_URL } from '@/lib/site-url';
+import { PROGRAM_DEGREES } from '@/lib/program-types';
 // Render on demand with ISR — reads the live DB so newly-added
 // universities (post-build) show up automatically, and the
 // per-university program list stays current with admin edits.
@@ -40,7 +41,7 @@ export async function generateMetadata({
   if (!uni) return { title: 'Not Found' };
 
   const title = `Programs at ${uni.name} for International Students (2026)`;
-  const description = `Bachelor's, Master's, and PhD programs at ${uni.name} for international students. Tuition, duration, language of instruction, and scholarship availability for each.`;
+  const description = `Bachelor's, Master's, PhD, Chinese language, foundation and other non-degree programs at ${uni.name} for international students. Tuition, duration, language of instruction, and scholarship availability for each.`;
 
   return {
     title,
@@ -75,11 +76,9 @@ export default async function UniversityProgramsPage({
   const programs = allPrograms.filter((p) => p.universitySlug === slug);
 
   // Group by degree level
-  const byDegree = {
-    Bachelor: programs.filter((p) => p.degree === 'Bachelor'),
-    Master: programs.filter((p) => p.degree === 'Master'),
-    PhD: programs.filter((p) => p.degree === 'PhD'),
-  };
+  const byDegree = Object.fromEntries(
+    PROGRAM_DEGREES.map((degree) => [degree, programs.filter((p) => p.degree === degree)]),
+  ) as Record<string, typeof programs>;
 
   const breadcrumbSchema = {
     '@context': 'https://schema.org',
@@ -145,7 +144,7 @@ export default async function UniversityProgramsPage({
             <p className="mt-3 text-lg text-gray-300 max-w-3xl">
               {programs.length === 0
                 ? `Browse all program types offered at ${uni.name} for international students.`
-                : `Browse all ${programs.length} programs offered at ${uni.name} for international students — Bachelor's, Master's, and PhD in English, Chinese, and bilingual tracks.`}
+                : `Browse all ${programs.length} programs offered at ${uni.name} for international students — degree, Chinese language, foundation and other non-degree options. Teaching language is shown where confirmed.`}
             </p>
             <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-gray-300">
               <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4" />{uni.city}, China</span>
@@ -172,7 +171,7 @@ export default async function UniversityProgramsPage({
             </div>
           </section>
         ) : (
-          (['Bachelor', 'Master', 'PhD'] as const).map((deg) => {
+          PROGRAM_DEGREES.map((deg) => {
             const list = byDegree[deg];
             if (list.length === 0) return null;
             return (
@@ -182,9 +181,9 @@ export default async function UniversityProgramsPage({
               >
                 <h2 className="text-2xl font-bold text-[#1B2A4A] mb-5 flex items-center gap-3">
                   <span
-                    className={`inline-block border px-3 py-1 text-sm font-semibold ${DEGREE_COLOR[deg]}`}
+                    className={`inline-block border px-3 py-1 text-sm font-semibold ${DEGREE_COLOR[deg] || 'bg-gray-50 text-[#1B2A4A] border-gray-200'}`}
                   >
-                    {deg === 'Bachelor' ? "Bachelor's" : deg === 'Master' ? "Master's" : 'PhD'}
+                    {deg === 'Bachelor' ? "Bachelor's" : deg === 'Master' ? "Master's" : deg}
                   </span>
                   <span className="text-sm text-gray-500 font-normal">{list.length} programs</span>
                 </h2>
