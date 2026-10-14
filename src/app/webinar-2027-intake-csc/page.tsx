@@ -249,19 +249,11 @@ export default async function WebinarPage() {
                   key={uni.slug}
                   className="bg-[#FAFAF8] border-2 border-[#D4A853]/40 p-5 flex flex-col"
                 >
-                  <div className="flex items-center gap-3 mb-3">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={uni.logo}
-                      alt={`${uni.name} logo`}
-                      className="h-12 w-12 object-contain bg-white p-1 border border-gray-200"
-                    />
-                    <div className="min-w-0">
-                      <h3 className="font-bold text-[#1B2A4A] text-sm leading-tight">
-                        {uni.name}
-                      </h3>
-                      <p className="text-xs text-gray-500 leading-tight">{uni.nameCn}</p>
-                    </div>
+                  <div className="mb-3">
+                    <h3 className="font-bold text-[#1B2A4A] text-base leading-tight">
+                      {uni.name}
+                    </h3>
+                    <p className="text-xs text-gray-500 leading-tight mt-0.5">{uni.nameCn}</p>
                   </div>
                   <div className="text-xs text-gray-600 mb-3 flex items-center gap-2 flex-wrap">
                     <span className="font-semibold text-[#1B2A4A]">#{uni.ranking}</span>
