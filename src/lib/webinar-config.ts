@@ -96,23 +96,21 @@ export interface WebinarAgendaTrack {
 /**
  * Phase 165b: featured-university slugs that the public landing
  * page renders as a 5-card grid below the 4-track agenda. These
- * come from `src/lib/data.ts`'s static fallback (Phase 1 seeds)
- * — no DB lookup, no dynamic query. When the admin wants a
- * different 5, edit this array + commit + push.
+ * come from `src/lib/data.ts`'s static fallback (Phase 1 seeds
+ * + the 5 Phase 165b webinar entries: SCUT, UESTC, HITSZ,
+ * Sichuan U, NUAA). No DB lookup, no dynamic query. When the
+ * admin wants a different 5, edit this array + commit + push.
  *
- * The 5 below are the C9-tier universities that drive the most
- * international-student traffic to /universities — Tsinghua,
- * Peking, Fudan, Shanghai Jiao Tong, Zhejiang. They have the
- * strongest English-taught program catalogs and the highest
- * scholarship coverage, which is the topic the webinar is
- * actually about.
+ * The 5 below are the Phase 162 shortlist: strong engineering
+ * / science / aerospace schools with the highest CSC
+ * scholarship coverage and full English-taught catalogs.
  */
 export const WEBINAR_FEATURED_UNIVERSITY_SLUGS = [
-  'tsinghua-university',
-  'peking-university',
-  'fudan-university',
-  'shanghai-jiao-tong-university',
-  'zhejiang-university',
+  'south-china-university-of-technology',
+  'uestc-university',
+  'hitsz-university',
+  'sichuan-university',
+  'nuaa-university',
 ] as const;
 
 export const WEBINAR_AGENDA_TRACKS: WebinarAgendaTrack[] = [
