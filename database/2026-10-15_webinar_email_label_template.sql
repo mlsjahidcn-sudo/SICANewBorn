@@ -4,19 +4,30 @@
 -- raw date. Both bodies stay bilingual in a single block per
 -- the Phase 124b convention.
 --
--- Idempotent UPSERT — safe to re-run. The body is rewritten
--- as a whole (we have no delta-vs-current body parser) so
--- admins who edited the template body in the dashboard will
--- see their edits overwritten. The description + subject
--- fields are not touched.
+-- Idempotent UPSERT — safe to re-run. Uses INSERT ... ON
+-- CONFLICT (slug) DO UPDATE so missing rows (e.g. when the
+-- Phase 162 reminder template never landed on a fresh
+-- project) get inserted and existing ones get refreshed.
+-- Body is rewritten as a whole (we have no delta-vs-current
+-- body parser) so admins who edited the template body in the
+-- dashboard will see their edits overwritten. The
+-- description + subject fields are not touched.
 
 -- ───────────────────────────────────────────────────────────────────────
 -- webinar.confirmed
 -- ───────────────────────────────────────────────────────────────────────
 
-UPDATE public.email_templates
-SET
-  body_text = 'Hi {{name}},
+INSERT INTO public.email_templates (
+  slug, name, description, category,
+  subject, body_text, subject_zh, body_text_zh,
+  variables, is_active, step_index, delay_ms
+) VALUES (
+  'webinar.confirmed',
+  'Webinar signup confirmed',
+  'Phase 139: instant confirmation after a /webinar-2027-intake-csc signup. Carries the join link + WhatsApp CTA. Phase 164: adds {{webinarLabel}} so the email carries the per-session label.',
+  'oneoff',
+  'Your 2027 Intake + CSC Scholarship webinar seat is reserved',
+  'Hi {{name}},
 
 Thank you for registering for the SICA 2027 Intake + CSC Scholarship webinar.
 
@@ -45,7 +56,8 @@ Questions before then? Just reply to this email or WhatsApp +86 173 2576 4171.
 SICA Study in China Academy
 https://studyinchina.academy
 info@studyinchina.academy',
-  body_text_zh = '您好 {{name}}，
+  '您的 2027 入学 + CSC 奖学金线上讲座席位已预留',
+  '您好 {{name}}，
 
 感谢您报名 SICA 2027 入学 + CSC 奖学金线上讲座。
 
@@ -74,19 +86,46 @@ info@studyinchina.academy',
 SICA Study in China Academy
 https://studyinchina.academy
 info@studyinchina.academy',
-  variables = jsonb_build_array(
+  jsonb_build_array(
     'name', 'joinLink', 'webinarDate', 'webinarTime',
     'webinarLabel', 'webinarTimeLocal', 'reference'
-  )
-WHERE slug = 'webinar.confirmed';
+  ),
+  true,
+  0,
+  0
+)
+ON CONFLICT (slug) DO UPDATE SET
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  subject = EXCLUDED.subject,
+  body_text = EXCLUDED.body_text,
+  subject_zh = EXCLUDED.subject_zh,
+  body_text_zh = EXCLUDED.body_text_zh,
+  variables = EXCLUDED.variables,
+  is_active = EXCLUDED.is_active;
 
 -- ───────────────────────────────────────────────────────────────────────
 -- webinar.reminder_24h
+--
+-- The original Phase 162 file used INSERT ... ON CONFLICT DO UPDATE
+-- (it never landed on this project for whatever reason — the
+-- apply_now migration included it but the row never made it to
+-- the live DB). Phase 164 mirrors the same pattern so this row
+-- gets created if missing + refreshed with the new webinarLabel
+-- variable if existing.
 -- ───────────────────────────────────────────────────────────────────────
 
-UPDATE public.email_templates
-SET
-  body_text = 'Hi {{name}},
+INSERT INTO public.email_templates (
+  slug, name, description, category,
+  subject, body_text, subject_zh, body_text_zh,
+  variables, is_active, step_index, delay_ms
+) VALUES (
+  'webinar.reminder_24h',
+  'Webinar 24-hour reminder',
+  'Phase 162: dispatched by /api/cron/webinar-reminders ~24h before the session. Bilingual single-block body (en+zh) per Phase 124b convention. Phase 164: adds {{webinarLabel}} so the email carries the per-session label.',
+  'oneoff',
+  'Reminder: your SICA webinar is tomorrow at {{webinarTime}}',
+  'Hi {{name}},
 
 This is your 24-hour reminder for the SICA webinar.
 
@@ -104,7 +143,8 @@ See you tomorrow — bring questions.
 SICA Study in China Academy
 https://studyinchina.academy
 info@studyinchina.academy',
-  body_text_zh = '您好 {{name}}，
+  '提醒：您的 SICA 线上讲座将于明日 {{webinarTime}} 举行',
+  '您好 {{name}}，
 
 这是您参加的 SICA 线上讲座的 24 小时提醒。
 
@@ -122,11 +162,23 @@ info@studyinchina.academy',
 SICA Study in China Academy
 https://studyinchina.academy
 info@studyinchina.academy',
-  variables = jsonb_build_array(
+  jsonb_build_array(
     'name', 'joinLink', 'webinarDate', 'webinarTime',
     'webinarLabel', 'webinarTimeLocal', 'reference'
-  )
-WHERE slug = 'webinar.reminder_24h';
+  ),
+  true,
+  0,
+  0
+)
+ON CONFLICT (slug) DO UPDATE SET
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  subject = EXCLUDED.subject,
+  body_text = EXCLUDED.body_text,
+  subject_zh = EXCLUDED.subject_zh,
+  body_text_zh = EXCLUDED.body_text_zh,
+  variables = EXCLUDED.variables,
+  is_active = EXCLUDED.is_active;
 
 -- Sanity probe — fail loud if either template missed.
 DO $$
