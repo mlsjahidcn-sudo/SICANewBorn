@@ -86,10 +86,10 @@ export interface PublicProgram {
   name: string;
   name_cn: string;
   university_slug: string;
-  degree: 'Bachelor' | 'Master' | 'PhD';
+  degree: Program['degree'];
   discipline: string;
   discipline_cn: string;
-  language: 'English' | 'Chinese' | 'Bilingual';
+  language: Program['language'];
   duration: string;
   duration_cn: string;
   tuition: string;
@@ -99,7 +99,7 @@ export interface PublicProgram {
   requirements_cn: string[];
   curriculum: string[];
   curriculum_cn: string[];
-  scholarship_available: boolean;
+  scholarship_available: boolean | null;
   intake: string;
   intake_cn: string;
 }
