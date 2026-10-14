@@ -16,6 +16,16 @@ interface CountryOption {
 interface Props {
   /** Pre-serialized country list from the RSC parent. */
   countryOptions: CountryOption[];
+  /**
+   * Phase 162: when true, the form renders a "Registration
+   * closed" banner and the submit button is disabled. The
+   * parent computes this from `activeSession.sessionDate <
+   * now()` (the webinar day has passed). The server enforces
+   * the same rule at /api/webinar-signups and returns 410 —
+   * the client banner is for UX, the server gate is the
+   * source of truth.
+   */
+  isClosed?: boolean;
 }
 
 const PROGRAM_INTEREST_VALUES = [
@@ -52,7 +62,7 @@ const INTEREST_KEYS: Record<ProgramInterestValue, string> = {
  * give themselves away — and we fake a 200 so the bot
  * can't tell which field betrayed it.
  */
-export function WebinarSignupForm({ countryOptions }: Props) {
+export function WebinarSignupForm({ countryOptions, isClosed = false }: Props) {
   const router = useRouter();
   const { locale, t } = useI18n();
 
@@ -212,6 +222,23 @@ export function WebinarSignupForm({ countryOptions }: Props) {
             </div>
           )}
 
+          {/* Phase 162: registration-closed banner. The page
+              sets `isClosed` when `activeSession.sessionDate`
+              is in the past AND there's no future session —
+              the spec's "close after the webinar day" rule.
+              Server enforces the same gate with 410 at
+              /api/webinar-signups; this banner is UX-only. */}
+          {isClosed && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 text-sm">
+              <p className="font-semibold mb-1">
+                {t('webinar.closedBanner.title')}
+              </p>
+              <p className="text-amber-800">
+                {t('webinar.closedBanner.body')}
+              </p>
+            </div>
+          )}
+
           <div className="grid sm:grid-cols-2 gap-5">
             <div>
               <label className="block text-sm font-medium text-[#1F2937] mb-1">
@@ -332,7 +359,7 @@ export function WebinarSignupForm({ countryOptions }: Props) {
 
           <button
             type="submit"
-            disabled={status === 'submitting'}
+            disabled={status === 'submitting' || isClosed}
             className="w-full sm:w-auto px-8 py-3 bg-[#9B1B30] text-white font-semibold uppercase tracking-wider text-sm hover:bg-[#7A1526] transition-colors duration-150 flex items-center gap-2 disabled:opacity-50"
           >
             {status === 'submitting' ? (
@@ -340,6 +367,8 @@ export function WebinarSignupForm({ countryOptions }: Props) {
                 <Spinner size="sm" />
                 {t('webinar.form.submitting')}
               </>
+            ) : isClosed ? (
+              t('webinar.form.submitClosed')
             ) : (
               t('webinar.form.submit')
             )}

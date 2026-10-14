@@ -43,7 +43,14 @@ import {
   getActiveSessionWithTopics,
   formatWebinarDate,
 } from '@/lib/webinar-sessions';
-import type { WebinarTopicDegree, WebinarTopicIntake } from '@/lib/webinar-sessions';
+import type {
+  WebinarTopicDegree,
+  WebinarTopicIntake,
+  WebinarTopic,
+  WebinarTopicKind,
+} from '@/lib/webinar-sessions';
+import { CountdownTimer } from './CountdownTimer';
+import { UniversityCard } from './UniversityCard';
 import { WebinarSignupForm } from './webinar-signup-form';
 
 export const revalidate = 3600;
@@ -97,7 +104,48 @@ export default async function WebinarPage() {
   const bundle = await getActiveSessionWithTopics();
   const activeSession = bundle?.session ?? null;
   const activeTopics = bundle?.topics ?? [];
+  const featuredUniversities = bundle?.universities ?? [];
   const hasActiveTopics = activeTopics.length > 0;
+
+  // Phase 162: split the active session's topics by kind.
+  // Track-schema topics (intake+degree) keep rendering in the
+  // legacy agenda grid; university-kind topics (kind+university_id)
+  // render in the 5-card featured-university grid below.
+  const trackTopics = activeTopics.filter((topic) => !topic.kind);
+  const universityTopics = activeTopics.filter(
+    (topic): topic is WebinarTopic & { kind: WebinarTopicKind; universityId: string } =>
+      Boolean(topic.kind) && Boolean(topic.universityId),
+  );
+
+  // Group the university-kind topics by university, preserving
+  // each kind's body via a typed map. Each university ends up
+  // with at most 4 slots (program | scholarship | timing |
+  // requirement).
+  const topicsByUniversity = new Map<
+    string,
+    Partial<Record<WebinarTopicKind, WebinarTopic>>
+  >();
+  for (const topic of universityTopics) {
+    const bucket = topicsByUniversity.get(topic.universityId) ?? {};
+    if (topic.kind) bucket[topic.kind] = topic;
+    topicsByUniversity.set(topic.universityId, bucket);
+  }
+
+  // Phase 162: closed-state computation. Spec says "registration
+  // closes after the webinar day until we setup for next
+  // webinar". With single-active enforcement, when the active
+  // session's date is in the past AND no future session has
+  // been set up, registration is closed. When staff flips
+  // `is_active=true` on a future-dated session, registration
+  // reopens automatically.
+  const now = new Date();
+  const sessionDateMs = activeSession?.sessionDate
+    ? new Date(activeSession.sessionDate).getTime()
+    : null;
+  const isSessionClosed =
+    sessionDateMs !== null &&
+    Number.isFinite(sessionDateMs) &&
+    sessionDateMs < now.getTime();
 
   // Phase 158: the form is the page's primary conversion —
   // always render it. When no active session is published,
@@ -153,6 +201,11 @@ export default async function WebinarPage() {
   // slug/iso2/region metadata for an enrollment dropdown.
   const countryOptions = COUNTRIES.map((c) => ({ value: c.name, label: c.name }));
 
+  // Phase 162: did the active session seed any university-kind
+  // topics? If yes, render the 5-card featured-university grid
+  // in place of the legacy agenda grid.
+  const hasUniversityGrid = featuredUniversities.length > 0;
+
   return (
     <div className="min-h-screen bg-[#FAFAF8]">
       {/* ============================== HERO ============================== */}
@@ -188,13 +241,37 @@ export default async function WebinarPage() {
                 </>
               )}
             </div>
+            {/* Phase 162: live countdown to the session date. The
+                client island self-hides when the session is
+                closed (session_date < now()) so this slot stays
+                in sync with the closed-state banner below. */}
+            {!isSessionClosed && (
+              <CountdownTimer sessionDate={activeSession?.sessionDate ?? null} />
+            )}
           </div>
+          {/* Phase 162: closed-state hero banner. Distinct from
+              the form's banner so the headline reads as a
+              standalone statement of the page's current state. */}
+          {isSessionClosed && (
+            <div className="mt-6 max-w-2xl mx-auto bg-white/10 border border-white/20 px-4 py-3 text-sm text-white/90">
+              <p className="font-semibold mb-1">
+                {t('webinar.hero.closedTitle')}
+              </p>
+              <p className="text-white/70">
+                {t('webinar.hero.closedBody')}
+              </p>
+            </div>
+          )}
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
+            {/* Phase 162: when the session is closed, swap the
+              primary CTA from the in-page #signup anchor to the
+              /universities browse page so the user can still
+              keep exploring without a dead-end. */}
             <a
-              href="#signup"
+              href={isSessionClosed ? '/universities' : '#signup'}
               className="inline-flex items-center justify-center px-7 py-3 bg-[#9B1B30] text-white font-semibold uppercase tracking-wider text-sm hover:bg-[#7A1526] transition-colors"
             >
-              {t('webinar.hero.ctaPrimary')}
+              {isSessionClosed ? t('webinar.hero.ctaPrimaryClosed') : t('webinar.hero.ctaPrimary')}
               <ChevronDown className="ml-2 h-4 w-4" />
             </a>
             <a
@@ -207,22 +284,52 @@ export default async function WebinarPage() {
         </div>
       </section>
 
-      {/* ============================== AGENDA ============================== */}
+      {/* ============================== AGENDA / FEATURED UNIVERSITIES ============================== */}
       <section id="agenda" className="bg-[#FAFAF8] py-14 lg:py-20">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9B1B30]">
-              {t('webinar.agenda.eyebrow')}
+              {hasUniversityGrid
+                ? t('webinar.featuredEyebrow')
+                : t('webinar.agenda.eyebrow')}
             </p>
             <h2 className="mt-3 text-3xl font-bold text-[#1B2A4A]">
-              {t('webinar.agenda.title')}
+              {hasUniversityGrid
+                ? t('webinar.featuredTitle')
+                : t('webinar.agenda.title')}
             </h2>
+            {hasUniversityGrid && (
+              <p className="mt-3 text-base text-[#4B5563] max-w-3xl mx-auto leading-relaxed">
+                {t('webinar.featuredSubtitle')}
+              </p>
+            )}
           </div>
-          {hasActiveTopics ? (
+
+          {/* Phase 162: when the active session has university-kind
+              topics, render the 5-card featured-university grid.
+              Otherwise fall back to the legacy track-schema agenda
+              grid (Phase 140) or the original Phase 139 4-track
+              hardcoded fallback if even that has no rows yet. */}
+          {hasUniversityGrid ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {featuredUniversities.map((uni) => (
+                <UniversityCard
+                  key={uni.id}
+                  university={uni}
+                  topicsByKind={topicsByUniversity.get(uni.id) ?? {}}
+                />
+              ))}
+            </div>
+          ) : hasActiveTopics ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {activeTopics.map((topic) => {
-                const Icon = DEGREE_ICONS[topic.degree] ?? GraduationCap;
-                const badgeKey = INTAKE_BADGE_KEYS[topic.intake];
+                // Phase 162: track-schema topics still have intake +
+                // degree; the university-kind topics are filtered
+                // out above, so the non-null assertion is safe here.
+                const Icon = DEGREE_ICONS[(topic.degree ?? 'chinese_language') as WebinarTopicDegree] ?? GraduationCap;
+                const badgeKey = topic.intake
+                  ? INTAKE_BADGE_KEYS[topic.intake as WebinarTopicIntake]
+                  : 'webinar.intakeBadge.other';
                 const isZh = false; // RSC locale detection happens via getServerT; badge keys are pre-localized
                 const title = isZh ? topic.titleZh : topic.titleEn;
                 const body = isZh ? topic.bodyZh : topic.bodyEn;
@@ -246,9 +353,6 @@ export default async function WebinarPage() {
               })}
             </div>
           ) : (
-            // No active topics seeded yet — Phase 139 fallback
-            // renders the original 4 hardcoded tracks so the
-            // page isn't a blank wall during the seed window.
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {fallbackTracks.map((track, i) => {
                 const Icon = fallbackIcons[i] ?? GraduationCap;
@@ -355,7 +459,7 @@ export default async function WebinarPage() {
               your interest" capture (the API accepts signups
               with null webinar_session_id FK). */}
           <div>
-            <WebinarSignupForm countryOptions={countryOptions} />
+            <WebinarSignupForm countryOptions={countryOptions} isClosed={isSessionClosed} />
           </div>
         </div>
       </section>
