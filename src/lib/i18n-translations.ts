@@ -5137,6 +5137,19 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminWebinars.topicNoTopics': 'No topics yet for this session. Add the first one to populate the public agenda.',
     'adminWebinars.errorSaveTopic': 'Failed to save topic',
     'adminWebinars.errorDeleteTopic': 'Failed to delete topic',
+    // Phase 162: university-kind topic CRUD (distinct from the
+    //  track-schema topics above). Bound to a university + kind;
+    //  feeds the public 5-card featured-university grid.
+    'adminWebinars.universityTopicsTitle': 'University topics',
+    'adminWebinars.universityTopicsSubtitle': 'One set of (program | scholarship | timing | requirement) per featured university. Feeds the public 5-card spotlight grid.',
+    'adminWebinars.addUniversityTopic': 'Add university topic',
+    'adminWebinars.topicFieldUniversity': 'University',
+    'adminWebinars.topicFieldKind': 'Section',
+    'adminWebinars.topicNoUniversityTopics': 'No university-kind topics seeded for this session yet.',
+    'adminWebinars.kind.program': 'Programs available',
+    'adminWebinars.kind.scholarship': 'Scholarships',
+    'adminWebinars.kind.timing': 'Best time to apply',
+    'adminWebinars.kind.requirement': 'Admission requirements',
     // Phase 142: admin quick-toggle (Phase 157: waitlist + capacity
     //  blocks removed — registration is uncapped).
     'adminWebinars.sessionMarkInactive': 'Mark inactive',
@@ -5194,6 +5207,30 @@ export const translations: Record<Locale, Record<string, string>> = {
     'webinar.popupTeaserCta': 'Notify me',
     // Phase 157: webinar.registeredCount removed — capacity / waitlist
     //  gone, registration is uncapped.
+
+    // Phase 162: 5 featured-university spotlight + countdown +
+    // closed-state UX. Keys kept en/zh balanced per the Phase 113
+    // i18n parity gate.
+    'webinar.featuredEyebrow': 'Featured universities',
+    'webinar.featuredTitle': 'Five schools we will spotlight',
+    'webinar.featuredSubtitle': 'Per-school programs, scholarships, best-time-to-apply, and admission requirements — for the September 2027 intake.',
+    'webinar.card.sections.program': 'Programs available',
+    'webinar.card.sections.scholarship': 'Scholarships',
+    'webinar.card.sections.timing': 'Best time to apply',
+    'webinar.card.sections.requirement': 'Admission requirements',
+    'webinar.card.noContent': '— to be announced —',
+    'webinar.card.noTopicsAtAll': 'No university-kind topics are seeded for this session yet — admins can add them via /admin/webinar-signups.',
+    'webinar.countdown.daysLabel': 'd',
+    'webinar.countdown.hoursLabel': 'h',
+    'webinar.countdown.minutesLabel': 'm',
+    'webinar.countdown.secondsLabel': 's',
+    'webinar.countdown.ariaLabel': 'Time remaining until the webinar starts',
+    'webinar.closedBanner.title': 'This webinar session has ended',
+    'webinar.closedBanner.body': 'Registration is closed — we are scheduling the next one. Drop your details below and we will email + WhatsApp you when the new date is confirmed.',
+    'webinar.hero.closedTitle': 'This session has ended',
+    'webinar.hero.closedBody': 'We are scheduling the next one. Browse the /universities page in the meantime to keep exploring.',
+    'webinar.hero.ctaPrimaryClosed': 'Browse universities',
+    'webinar.form.submitClosed': 'Registration closed',
   },
   zh: {
     // Nav
@@ -10143,6 +10180,18 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminWebinars.topicNoTopics': '当前场次暂无主题。添加第一条以填充公开页面。',
     'adminWebinars.errorSaveTopic': '主题保存失败',
     'adminWebinars.errorDeleteTopic': '主题删除失败',
+    // Phase 162: university-kind topic CRUD (distinct from the
+    //  track-schema topics above).
+    'adminWebinars.universityTopicsTitle': '大学专题',
+    'adminWebinars.universityTopicsSubtitle': '每所重点大学对应一组（项目 | 奖学金 | 申请时机 | 录取要求）。用于公开 5 卡大学展示区。',
+    'adminWebinars.addUniversityTopic': '新增大学专题',
+    'adminWebinars.topicFieldUniversity': '大学',
+    'adminWebinars.topicFieldKind': '板块',
+    'adminWebinars.topicNoUniversityTopics': '本次会议尚未配置任何大学专题。',
+    'adminWebinars.kind.program': '开设项目',
+    'adminWebinars.kind.scholarship': '奖学金',
+    'adminWebinars.kind.timing': '最佳申请时机',
+    'adminWebinars.kind.requirement': '录取要求',
     // Phase 142: capacity + admin quick-toggle + waitlist admin
     // Phase 157: waitlist + capacity removed — registration is uncapped.
     'adminWebinars.sessionMarkInactive': '取消激活',
@@ -10192,6 +10241,30 @@ export const translations: Record<Locale, Record<string, string>> = {
     'webinar.popupTeaserTitle': '讲座即将开放 — 留下您的邮箱',
     'webinar.popupTeaserBody': '下一场 2027 入学 + CSC 奖学金讲座开放报名时，我们会第一时间通知您。',
     'webinar.popupTeaserCta': '通知我',
+
+    // Phase 162: featured-university spotlight + countdown +
+    // closed-state UX. Keys kept en/zh balanced per the Phase 113
+    // i18n parity gate.
+    'webinar.featuredEyebrow': '重点大学',
+    'webinar.featuredTitle': '本期重点介绍的五所大学',
+    'webinar.featuredSubtitle': '逐校介绍 2027 年 9 月入学的项目、奖学金、最佳申请时机与录取要求。',
+    'webinar.card.sections.program': '开设项目',
+    'webinar.card.sections.scholarship': '奖学金',
+    'webinar.card.sections.timing': '最佳申请时机',
+    'webinar.card.sections.requirement': '录取要求',
+    'webinar.card.noContent': '— 待公布 —',
+    'webinar.card.noTopicsAtAll': '本次会议未对任意大学设置专题 — 请在后台 /admin/webinar-signups 添加。',
+    'webinar.countdown.daysLabel': '天',
+    'webinar.countdown.hoursLabel': '时',
+    'webinar.countdown.minutesLabel': '分',
+    'webinar.countdown.secondsLabel': '秒',
+    'webinar.countdown.ariaLabel': '距离讲座开始还有多久',
+    'webinar.closedBanner.title': '本场讲座已结束',
+    'webinar.closedBanner.body': '报名已截止 — 我们正在安排下一场。在下方留下您的信息，新日期确定后我们会通过邮件 + WhatsApp 第一时间通知您。',
+    'webinar.hero.closedTitle': '本场讲座已结束',
+    'webinar.hero.closedBody': '我们正在安排下一场。期间请浏览大学页面继续探索。',
+    'webinar.hero.ctaPrimaryClosed': '浏览大学',
+    'webinar.form.submitClosed': '报名已截止',
   },
 };
 
