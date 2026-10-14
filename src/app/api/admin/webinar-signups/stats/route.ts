@@ -77,19 +77,23 @@ export async function GET(request: Request) {
   const thirtyDaysAgo = new Date(now.getTime() - 30 * ONE_DAY_MS);
 
   try {
-    // Phase 162: featured universities from the active session's
-    // university-kind topics, plus their topic counts. Best-effort
-    // — non-fatal failures just render an empty
+    // Phase 164: featured universities from the next-upcoming
+    // session's university-kind topics, plus their topic counts.
+    // Best-effort — non-fatal failures just render an empty
     // `featuredUniversities` panel. We do the lookup inline so
     // TypeScript keeps the auth.ok narrowing (threading the
     // typed supabase client through a helper function would cost
-    // us that).
+    // us that). Auto-rollover query — earliest future-dated,
+    // non-cancelled session.
     const featuredUniversities: FeaturedUniversity[] = await (async () => {
       try {
         const { data: sessionRow, error: sessionErr } = await auth.supabase
           .from('webinar_sessions')
           .select('id')
-          .eq('is_active', true)
+          .gt('session_date', new Date().toISOString())
+          .neq('status', 'Cancelled')
+          .order('session_date', { ascending: true })
+          .limit(1)
           .maybeSingle();
         if (sessionErr || !sessionRow) return [];
         const sessionId = (sessionRow as { id: string }).id;

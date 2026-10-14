@@ -1,14 +1,15 @@
 /**
- * Phase 140: server-side helpers for the active webinar
+ * Phase 164: server-side helpers for the next-upcoming webinar
  * session + its topics. Single source of truth — both the
  * public RSC landing page and the public `/api/webinar-sessions/active`
- * endpoint call `getActiveSessionWithTopics()` so the cache
+ * endpoint call `getUpcomingSessionWithTopics()` so the cache
  * shape stays consistent.
  *
- * The active session is the one row where `is_active = true`,
- * enforced at the DB layer by a partial unique index. If
- * none is active, the function returns `null` and the public
- * page falls back to the "Date coming soon" empty-state copy.
+ * Phase 164 replaced the `is_active=true` single-row toggle
+ * (Phase 139-162 model) with an auto-rollover derived query:
+ * "the next-upcoming session is the earliest future-dated,
+ * non-cancelled session_date." When that date passes, the
+ * next-earliest one becomes "upcoming" with no admin action.
  *
  * Bilingual shape: each row carries `title_en` + `title_zh`,
  * `body_en` + `body_zh`. The caller picks the locale (via
@@ -44,8 +45,12 @@ export interface WebinarSession {
   durationMinutes: number;
   joinUrl: string | null;
   status: WebinarSessionStatus;
-  isActive: boolean;
-  displayOrder: number;
+  /** Phase 164: human-readable label like "Week 5 · Oct 20, 2026".
+   *  Auto-generated on insert; admins can override via PATCH. */
+  label: string | null;
+  /** Phase 164: sequential week number (1, 2, 3...) for sorting.
+   *  Sparse unique — historic rows can be NULL. */
+  weekNumber: number | null;
   createdAt: string;
   updatedAt: string | null;
 }
@@ -88,6 +93,15 @@ export interface WebinarUniversity {
   logo: string | null;
 }
 
+// Fields the helpers + admin GET endpoints read on webinar_sessions.
+// Centralised so the column list lives in one place and the Supabase
+// `.select(...)` shape stays in sync with the mapper below.
+const SESSION_SELECT =
+  'id, slug, title_en, title_zh, description_en, description_zh, session_date, session_time, duration_minutes, join_url, status, label, week_number, created_at, updated_at';
+
+const TOPIC_SELECT =
+  'id, session_id, intake, degree, kind, university_id, title_en, title_zh, body_en, body_zh, display_order, created_at, updated_at';
+
 function mapSession(row: Record<string, unknown>): WebinarSession {
   return {
     id: row.id as string,
@@ -101,8 +115,8 @@ function mapSession(row: Record<string, unknown>): WebinarSession {
     durationMinutes: (row.duration_minutes as number) ?? 60,
     joinUrl: (row.join_url as string | null) ?? null,
     status: (row.status as WebinarSessionStatus) ?? 'Scheduled',
-    isActive: Boolean(row.is_active),
-    displayOrder: (row.display_order as number) ?? 0,
+    label: (row.label as string | null) ?? null,
+    weekNumber: (row.week_number as number | null) ?? null,
     createdAt: row.created_at as string,
     updatedAt: (row.updated_at as string | null) ?? null,
   };
@@ -127,34 +141,28 @@ function mapTopic(row: Record<string, unknown>): WebinarTopic {
 }
 
 /**
- * Fetch the single active session + its topics (ordered by
- * display_order). Returns `null` when no session is active.
- * Used by the public RSC + the public `/api/webinar-sessions/active`
- * endpoint.
+ * Phase 164: fetch the next-upcoming session + its topics
+ * (ordered by display_order). Replaces the Phase 139-162
+ * `getActiveSessionWithTopics()` (which gated on
+ * `is_active = true`). The new contract:
+ *   - "upcoming" = earliest future-dated, non-cancelled session
+ *   - When that session passes, the next-earliest becomes
+ *     upcoming automatically (no admin toggle)
+ *   - Returns `null` when no upcoming session is scheduled,
+ *     so the public page can render the "register your
+ *     interest" copy
  */
-export async function getActiveSessionWithTopics(): Promise<ActiveWebinarBundle | null> {
+export async function getUpcomingSessionWithTopics(): Promise<ActiveWebinarBundle | null> {
   if (!isSupabaseServerConfigured()) return null;
   const supabase = getSupabaseServer();
   if (!supabase) return null;
 
-  const { data: sessionRow, error: sessionErr } = await supabase
-    .from('webinar_sessions')
-    .select(
-      'id, slug, title_en, title_zh, description_en, description_zh, session_date, session_time, duration_minutes, join_url, status, is_active, display_order, created_at, updated_at',
-    )
-    .eq('is_active', true)
-    .maybeSingle();
-  if (sessionErr) {
-    console.error('[webinar-sessions] active session query failed:', sessionErr);
-    return null;
-  }
+  const sessionRow = await fetchUpcomingSessionRow(supabase);
   if (!sessionRow) return null;
 
   const { data: topicRows, error: topicsErr } = await supabase
     .from('webinar_topics')
-    .select(
-      'id, session_id, intake, degree, kind, university_id, title_en, title_zh, body_en, body_zh, display_order, created_at, updated_at',
-    )
+    .select(TOPIC_SELECT)
     .eq('session_id', sessionRow.id)
     .order('display_order', { ascending: true });
   if (topicsErr) {
@@ -204,42 +212,123 @@ export async function getActiveSessionWithTopics(): Promise<ActiveWebinarBundle 
   }
 
   return {
-    session: mapSession(sessionRow as Record<string, unknown>),
+    session: mapSession(sessionRow),
     topics,
     universities,
   };
 }
 
 /**
- * Fetch just the active session's email-render fields. Used
- * by the public signup POST handler before it fires
- * `sendWebinarConfirmation` so the email carries the real
- * join link + date instead of the Phase 139 placeholders.
+ * Phase 164: the public RSC page uses this to show
+ * "Next: Week N · Oct 27" when the current week's session
+ * has passed but the week-after's is still upcoming. Both
+ * come from the same `fetchUpcomingSessionRow` helper so
+ * the ordering is consistent.
  */
-export async function getActiveSessionEmailFields(): Promise<{
+export interface CurrentAndNextSessions {
+  current: WebinarSession | null;
+  next: WebinarSession | null;
+}
+
+export async function getCurrentAndNextSessions(): Promise<CurrentAndNextSessions> {
+  if (!isSupabaseServerConfigured()) return { current: null, next: null };
+  const supabase = getSupabaseServer();
+  if (!supabase) return { current: null, next: null };
+
+  const { data, error } = await supabase
+    .from('webinar_sessions')
+    .select(SESSION_SELECT)
+    .gt('session_date', new Date().toISOString())
+    .neq('status', 'Cancelled')
+    .order('session_date', { ascending: true })
+    .limit(2);
+  if (error) {
+    console.error('[webinar-sessions] current+next query failed:', error);
+    return { current: null, next: null };
+  }
+  const rows = data ?? [];
+  return {
+    current: rows[0] ? mapSession(rows[0] as Record<string, unknown>) : null,
+    next: rows[1] ? mapSession(rows[1] as Record<string, unknown>) : null,
+  };
+}
+
+/**
+ * Phase 164: return the next-upcoming session's id (or null).
+ * The signup handler uses this to set the FK on insert so the
+ * admin signups list can join back. Replaces the Phase 162
+ * `getActiveSessionId()` (which gated on `is_active=true`).
+ */
+export async function getUpcomingSessionId(): Promise<string | null> {
+  if (!isSupabaseServerConfigured()) return null;
+  const supabase = getSupabaseServer();
+  if (!supabase) return null;
+  const row = await fetchUpcomingSessionRow(supabase, 'id, slug, session_date');
+  return row ? ((row.id as string) ?? null) : null;
+}
+
+/**
+ * Phase 164: shared internal helper — fetch the next-upcoming
+ * session row (any columns). Used by getUpcomingSessionWithTopics,
+ * getUpcomingSessionId, and the upcoming-session email-fields
+ * lookup. Encapsulates the "earliest future, non-cancelled"
+ * query so callers don't drift.
+ */
+async function fetchUpcomingSessionRow(
+  supabase: ReturnType<typeof getSupabaseServer>,
+  columns: string = SESSION_SELECT,
+): Promise<Record<string, unknown> | null> {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from('webinar_sessions')
+    .select(columns)
+    .gt('session_date', new Date().toISOString())
+    .neq('status', 'Cancelled')
+    .order('session_date', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (error) return null;
+  return (data as Record<string, unknown> | null) ?? null;
+}
+
+/**
+ * Phase 164: the public signup POST handler needs the
+ * next-upcoming session's email-render fields before firing
+ * `sendWebinarConfirmation`. Replaces the Phase 162
+ * `getActiveSessionEmailFields()` (which gated on
+ * `is_active=true`).
+ *
+ * The `id` field lets the API stamp the FK on the signup row
+ * without a second round-trip — same query serves both purposes.
+ */
+export async function getUpcomingSessionEmailFields(): Promise<{
+  id: string | null;
   joinUrl: string | null;
   webinarDateIso: string | null;
   webinarTime: string | null;
+  label: string | null;
 }> {
-  if (!isSupabaseServerConfigured()) {
-    return { joinUrl: null, webinarDateIso: null, webinarTime: null };
-  }
+  const empty = {
+    id: null,
+    joinUrl: null,
+    webinarDateIso: null,
+    webinarTime: null,
+    label: null,
+  };
+  if (!isSupabaseServerConfigured()) return empty;
   const supabase = getSupabaseServer();
-  if (!supabase) {
-    return { joinUrl: null, webinarDateIso: null, webinarTime: null };
-  }
-  const { data, error } = await supabase
-    .from('webinar_sessions')
-    .select('join_url, session_date, session_time')
-    .eq('is_active', true)
-    .maybeSingle();
-  if (error || !data) {
-    return { joinUrl: null, webinarDateIso: null, webinarTime: null };
-  }
+  if (!supabase) return empty;
+  const row = await fetchUpcomingSessionRow(
+    supabase,
+    'id, slug, session_date, session_time, join_url, label',
+  );
+  if (!row) return empty;
   return {
-    joinUrl: (data.join_url as string | null) ?? null,
-    webinarDateIso: (data.session_date as string | null) ?? null,
-    webinarTime: (data.session_time as string | null) ?? null,
+    id: (row.id as string | null) ?? null,
+    joinUrl: (row.join_url as string | null) ?? null,
+    webinarDateIso: (row.session_date as string | null) ?? null,
+    webinarTime: (row.session_time as string | null) ?? null,
+    label: (row.label as string | null) ?? null,
   };
 }
 
@@ -259,75 +348,56 @@ export function formatWebinarDate(iso: string | null): string {
   }
 }
 
-// ============================================================================
-// Phase 157: capacity / waitlist removed — registration is uncapped.
-//   The /api/webinar-sessions/capacity route + the webinar_waitlist
-//   table are dropped. The only gate is "is there an active session
-//   row?" — answered by getActiveSessionId() below.
-// ============================================================================
-
 /**
- * Phase 144b: return just the active session's UUID (or null).
- * Cheap — used by the signup handler to set the FK on insert
- * so the capacity count query (`eq('webinar_session_id', id)`)
- * actually finds the rows. Historical Phase 139/140/142 signups
- * were inserted with `webinar_session_id = null`, so without
- * this backfill the public counter stays at 50/50 even after
- * signups land.
+ * Phase 164: format `session_date` as a "Week N · MMM DD, YYYY"
+ * label for the hero heading. Falls back to `formatWebinarDate`
+ * when no explicit label / week_number is set (the historic
+ * Phase 139-140 rows that pre-date auto-generation).
  */
-export async function getActiveSessionId(): Promise<string | null> {
-  if (!isSupabaseServerConfigured()) return null;
-  const supabase = getSupabaseServer();
-  if (!supabase) return null;
-  const { data, error } = await supabase
-    .from('webinar_sessions')
-    .select('id')
-    .eq('is_active', true)
-    .maybeSingle();
-  if (error || !data) return null;
-  return (data.id as string) ?? null;
+export function formatWebinarLabel(
+  iso: string | null,
+  label: string | null,
+  weekNumber: number | null,
+  locale: 'en' | 'zh' = 'en',
+): string {
+  if (label && label.trim().length > 0) return label;
+  const dateStr = formatWebinarDate(iso);
+  if (weekNumber != null) {
+    return locale === 'zh' ? `第 ${weekNumber} 期 · ${dateStr}` : `Week ${weekNumber} · ${dateStr}`;
+  }
+  return dateStr;
 }
 
 /**
- * Phase 162: return the active session's id + session_date (or
- * null/null). The signup route uses both — the id to set the FK
- * on insert, the date to enforce the "registration closes after
- * the webinar day" gate at 410. We combine into one query because
- * the active-session lookup is already in the hot path of every
- * POST and adding a second query would double the round trips.
+ * Phase 164: derive the next session_date for "Schedule next".
+ * Returns the same time-of-day as the most-recently-scheduled
+ * upcoming session (default 14:00 Beijing = 06:00 UTC) + 7 days.
+ * Pure function — `nowMs` injectable for tests.
  */
-export async function getActiveSessionWithDate(): Promise<{
-  id: string;
-  sessionDate: string | null;
-} | null> {
-  if (!isSupabaseServerConfigured()) return null;
-  const supabase = getSupabaseServer();
-  if (!supabase) return null;
-  const { data, error } = await supabase
-    .from('webinar_sessions')
-    .select('id, session_date')
-    .eq('is_active', true)
-    .maybeSingle();
-  if (error || !data) return null;
-  return {
-    id: (data.id as string) ?? '',
-    sessionDate: (data.session_date as string | null) ?? null,
-  };
+export function computeNextSessionDate(
+  referenceDateIso: string | null,
+  nowMs: number = Date.now(),
+): string {
+  const base = referenceDateIso
+    ? new Date(referenceDateIso).getTime()
+    : nowMs;
+  if (!Number.isFinite(base)) {
+    return new Date(nowMs + 7 * 24 * 60 * 60 * 1000).toISOString();
+  }
+  return new Date(base + 7 * 24 * 60 * 60 * 1000).toISOString();
 }
 
 /**
  * Phase 162: closed-state predicate (pure). Spec says
  * "registration closes after the webinar day until we setup
- * for next webinar". With single-active enforcement, when the
- * active session's date is in the past AND no future session
- * has been set up, registration is closed. When staff flips
- * `is_active=true` on a future-dated session, registration
- * reopens automatically.
+ * for next webinar". With Phase 164 auto-rollover, the API
+ * just returns 410 when `getUpcomingSession()` is null — but
+ * the public page still uses this for the closed banner +
+ * the submit-disabled UX, which can be cheaper than a second
+ * round-trip to the DB.
  *
  * Pure function — `nowMs` is injectable so the unit test can
- * fix "now" without mocking the clock. Hoisted to module scope
- * per Phase 161's lint rule (no `Date.now()` inside render
- * bodies — same lesson applies to any pure helper).
+ * fix "now" without mocking the clock.
  */
 export function isSessionClosed(
   sessionDateIso: string | null,

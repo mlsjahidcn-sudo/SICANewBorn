@@ -20,6 +20,7 @@ import {
   Link as LinkIcon,
   Video,
   Users,
+  CalendarPlus,
 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
@@ -29,6 +30,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { apiFetchJson, ApiError } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
+import { track } from '@/lib/analytics';
 import { useUrlState } from '@/hooks/use-url-state';
 import {
   AlertDialog,
@@ -101,8 +103,9 @@ interface Session {
   durationMinutes: number;
   joinUrl: string | null;
   status: 'Scheduled' | 'Live' | 'Completed' | 'Cancelled';
-  isActive: boolean;
-  displayOrder: number;
+  /** Phase 164: replaced isActive + displayOrder. */
+  label: string | null;
+  weekNumber: number | null;
   createdAt: string;
   updatedAt: string | null;
 }
@@ -603,15 +606,17 @@ function RegistrationsTab() {
 // ============================================================================
 
 function SessionsTab() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [editing, setEditing] = useState<SessionEditValue | null>(null);
   const [creating, setCreating] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Session | null>(null);
-  // Phase 142: which row is mid-toggle (button shows spinner)
-  const [pendingToggleId, setPendingToggleId] = useState<string | null>(null);
+  // Phase 164: schedule-next button click flow — shows a
+  // success toast, then opens the edit dialog on the new row.
+  const [pendingScheduleId, setPendingScheduleId] = useState<string | null>(null);
+  const [scheduleSuccess, setScheduleSuccess] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -630,6 +635,25 @@ function SessionsTab() {
     load();
   }, [load]);
 
+  // Phase 164: keep the sessions list sorted upcoming-first
+  // (the API already sorts by session_date ASC, but a NULL
+  // date floats one way or the other — keep historic rows
+  // below future ones regardless of their date).
+  // Phase 161 lint rule: capture `now` once on mount via
+  // `useState(() => ...)` — calling `Date.now()` directly
+  // in the component body trips react-hooks/purity.
+  const [nowMs] = useState(() => Date.now());
+  const sortedSessions = useMemo(() => {
+    return [...sessions].sort((a, b) => {
+      const aMs = a.sessionDate ? new Date(a.sessionDate).getTime() : 0;
+      const bMs = b.sessionDate ? new Date(b.sessionDate).getTime() : 0;
+      const aIsPast = aMs > 0 && aMs < nowMs;
+      const bIsPast = bMs > 0 && bMs < nowMs;
+      if (aIsPast !== bIsPast) return aIsPast ? 1 : -1;
+      return aMs - bMs;
+    });
+  }, [sessions, nowMs]);
+
 const sessionToEditValue = (s: Session): SessionEditValue => ({
   id: s.id,
   slug: s.slug,
@@ -642,15 +666,14 @@ const sessionToEditValue = (s: Session): SessionEditValue => ({
   durationMinutes: s.durationMinutes,
   joinUrl: s.joinUrl,
   status: s.status,
-  isActive: s.isActive,
-  displayOrder: s.displayOrder,
+  label: s.label,
+  weekNumber: s.weekNumber,
 });
 
   const handleSaved = (next: SessionEditValue) => {
     setSessions((prev) => {
       const idx = prev.findIndex((s) => s.id === next.id);
       if (idx >= 0) {
-        // Merge into the existing row so createdAt/updatedAt survive.
         const merged: Session = {
           ...prev[idx],
           slug: next.slug,
@@ -663,22 +686,11 @@ const sessionToEditValue = (s: Session): SessionEditValue => ({
           durationMinutes: next.durationMinutes,
           joinUrl: next.joinUrl,
           status: next.status,
-          isActive: next.isActive,
-          displayOrder: next.displayOrder,
+          label: next.label,
+          weekNumber: next.weekNumber,
         };
         const copy = [...prev];
         copy[idx] = merged;
-        // If a session was just toggled inactive, mark the rest
-        // isActive=false (the server already did this — DB partial
-        // unique index enforces it — but mirror locally so the
-        // UI doesn't briefly show two active rows).
-        if (!next.isActive) {
-          copy[idx].isActive = false;
-        } else {
-          copy.forEach((s, i) => {
-            if (i !== idx) copy[i] = { ...s, isActive: false };
-          });
-        }
         return copy;
       }
       // New row — createdAt/updatedAt will be filled by the next
@@ -696,30 +708,69 @@ const sessionToEditValue = (s: Session): SessionEditValue => ({
     setCreating(false);
   };
 
-  // Phase 142: one-click isActive toggle. The PATCH endpoint
-  // already flips the previous active row off before setting
-  // the new (so the partial unique index doesn't 23505), so
-  // we just mirror that locally.
-  const quickToggle = async (s: Session, nextIsActive: boolean) => {
-    setPendingToggleId(s.id);
+  /**
+   * Phase 164: one-click "Schedule next" — POSTs a new row
+   * with the next-week default date. The server auto-derives
+   * `label` (Week N · Mon DD) and `week_number` (MAX + 1),
+   * so the admin only has to come back to fill in title +
+   * join URL. We refresh the list to surface the new row +
+   * surface a "scheduled" success toast + fire the
+   * `webinar_session_scheduled` GA event.
+   */
+  const scheduleNext = async () => {
+    setPendingScheduleId('__creating__');
     setLoadError(null);
     try {
-      await apiFetchJson(`/api/admin/webinar-sessions/${s.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isActive: nextIsActive }),
+      // Copy title + time from the most-recent upcoming
+      // session so the admin doesn't have to retype.
+      const upcoming = sortedSessions.find((s) => {
+        const ms = s.sessionDate ? new Date(s.sessionDate).getTime() : 0;
+        return ms > Date.now() && s.status !== 'Cancelled';
       });
-      setSessions((prev) =>
-        prev.map((row) =>
-          row.id === s.id
-            ? { ...row, isActive: nextIsActive }
-            : { ...row, isActive: false },
-        ),
-      );
+      const nextWeekIso = (() => {
+        const ref = upcoming?.sessionDate ?? null;
+        const base = ref ? new Date(ref).getTime() : Date.now();
+        return new Date(base + 7 * 24 * 60 * 60 * 1000).toISOString();
+      })();
+      const result = await apiFetchJson<{
+        id: string;
+        slug: string;
+        label: string | null;
+        weekNumber: number | null;
+      }>('/api/admin/webinar-sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug: `webinar-weekly-${nextWeekIso.slice(0, 10)}`,
+          titleEn: upcoming?.titleEn ?? '2027 Intake + CSC Scholarship webinar',
+          titleZh: upcoming?.titleZh ?? '2027 入学 + CSC 奖学金线上讲座',
+          sessionDate: nextWeekIso,
+          sessionTime: upcoming?.sessionTime ?? '14:00 Beijing Time',
+          durationMinutes: upcoming?.durationMinutes ?? 60,
+          status: 'Scheduled',
+        }),
+      });
+      // Phase 164: dedicated GA event for the cadence flow.
+      // Distinct from `webinar_session_created` (the manual
+      // dialog path) so we can measure "did the admin use the
+      // one-click vs the dialog" in GA.
+      track('webinar_session_scheduled', {
+        locale,
+        session_id: result.id,
+        week_number: result.weekNumber != null ? String(result.weekNumber) : '',
+      });
+      await load();
+      setScheduleSuccess(result.label ?? t('adminWebinars.scheduleNextSuccess'));
+      window.setTimeout(() => setScheduleSuccess(null), 4000);
+      const fresh = await apiFetchJson<SessionsResponse>('/api/admin/webinar-sessions');
+      const created = (fresh.sessions ?? []).find((s) => s.id === result.id);
+      if (created) {
+        setEditing(sessionToEditValue(created));
+      }
     } catch (err) {
       setLoadError(err instanceof ApiError ? err.message : t('adminWebinars.errorSaveSession'));
     } finally {
-      setPendingToggleId(null);
+      setPendingScheduleId(null);
     }
   };
 
@@ -740,14 +791,41 @@ const sessionToEditValue = (s: Session): SessionEditValue => ({
           <h2 className="text-lg font-bold text-[#1B2A4A]">{t('adminWebinars.sessionsTitle')}</h2>
           <p className="text-sm text-gray-600">{t('adminWebinars.sessionsSubtitle')}</p>
         </div>
-        <Button
-          className="bg-[#9B1B30] hover:bg-[#7A1526] rounded-none"
-          onClick={() => setCreating(true)}
-        >
-          <Plus className="h-4 w-4 mr-1" />
-          {t('adminWebinars.addSession')}
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Phase 164: "Schedule next" — the primary action
+              for weekly cadence. One click creates a new
+              row for next week at the same time-of-day, with
+              auto-generated label + week_number. Replaces
+              the manual "Add session" flow as the default
+              entry point. */}
+          <Button
+            className="bg-[#9B1B30] hover:bg-[#7A1526] rounded-none"
+            onClick={scheduleNext}
+            disabled={pendingScheduleId !== null}
+          >
+            {pendingScheduleId ? (
+              <Spinner size="xs" />
+            ) : (
+              <CalendarPlus className="h-4 w-4 mr-1" />
+            )}
+            {t('adminWebinars.scheduleNext')}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setCreating(true)}
+            className="rounded-none"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            {t('adminWebinars.addSession')}
+          </Button>
+        </div>
       </div>
+
+      {scheduleSuccess && (
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 px-4 py-3 text-sm">
+          {scheduleSuccess}
+        </div>
+      )}
 
       {loadError && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm flex items-start gap-2">
@@ -766,114 +844,93 @@ const sessionToEditValue = (s: Session): SessionEditValue => ({
         </div>
       ) : (
         <div className="space-y-3">
-          {sessions.map((s) => (
-            <div
-              key={s.id}
-              className={`bg-white border p-4 ${
-                s.isActive ? 'border-[#9B1B30] ring-1 ring-[#9B1B30]' : 'border-gray-200'
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-semibold text-[#1B2A4A]">
-                      {s.titleEn}{' '}
-                      <span className="text-gray-500 font-normal">/ {s.titleZh}</span>
-                    </h3>
-                    {s.isActive && (
-                      <Badge className="bg-[#9B1B30] text-white">
-                        {t('adminWebinars.sessionActiveBadge')}
-                      </Badge>
-                    )}
-                    <Badge variant="outline">{s.status}</Badge>
-                  </div>
-                  <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      {s.sessionDate ? formatDate(s.sessionDate) : t('adminWebinars.sessionNoDate')}
-                      {s.sessionTime && ` · ${s.sessionTime}`}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {s.durationMinutes} min
-                    </span>
-                    {s.joinUrl && (
-                      <a
-                        href={s.joinUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-[#1B2A4A] hover:underline truncate max-w-xs"
-                      >
-                        <LinkIcon className="h-3 w-3" />
-                        <span className="truncate">{s.joinUrl}</span>
-                      </a>
-                    )}
-                    {!s.joinUrl && (
-                      <span className="flex items-center gap-1 text-gray-400">
-                        <LinkIcon className="h-3 w-3" />
-                        {t('adminWebinars.sessionNoJoinUrl')}
+          {sortedSessions.map((s) => {
+            const isUpcoming = s.sessionDate
+              ? new Date(s.sessionDate).getTime() > nowMs
+              : false;
+            return (
+              <div
+                key={s.id}
+                className={`bg-white border p-4 ${
+                  isUpcoming ? 'border-[#9B1B30] ring-1 ring-[#9B1B30]' : 'border-gray-200'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-semibold text-[#1B2A4A]">
+                        {s.label ?? s.titleEn}{' '}
+                        <span className="text-gray-500 font-normal">/ {s.titleZh}</span>
+                      </h3>
+                      {isUpcoming && (
+                        <Badge className="bg-[#9B1B30] text-white">
+                          {t('adminWebinars.sessionUpcomingBadge')}
+                        </Badge>
+                      )}
+                      <Badge variant="outline">{s.status}</Badge>
+                      {s.weekNumber != null && (
+                        <Badge variant="outline" className="bg-[#1B2A4A]/10 text-[#1B2A4A] border-[#1B2A4A]/30">
+                          #{s.weekNumber}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {s.sessionDate ? formatDate(s.sessionDate) : t('adminWebinars.sessionNoDate')}
+                        {s.sessionTime && ` · ${s.sessionTime}`}
                       </span>
-                    )}
-                    <code className="text-xs bg-gray-100 px-1.5 py-0.5">{s.slug}</code>
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {s.durationMinutes} min
+                      </span>
+                      {s.joinUrl && (
+                        <a
+                          href={s.joinUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-[#1B2A4A] hover:underline truncate max-w-xs"
+                        >
+                          <LinkIcon className="h-3 w-3" />
+                          <span className="truncate">{s.joinUrl}</span>
+                        </a>
+                      )}
+                      {!s.joinUrl && (
+                        <span className="flex items-center gap-1 text-gray-400">
+                          <LinkIcon className="h-3 w-3" />
+                          {t('adminWebinars.sessionNoJoinUrl')}
+                        </span>
+                      )}
+                      <code className="text-xs bg-gray-100 px-1.5 py-0.5">{s.slug}</code>
+                    </div>
                   </div>
-                </div>
-                <div className="flex flex-col gap-1.5 flex-shrink-0">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setEditing(sessionToEditValue(s))}
-                    className="rounded-none"
-                  >
-                    <Pencil className="h-3 w-3 mr-1" />
-                    Edit
-                  </Button>
-                  {/* Phase 142: one-click active/inactive toggle.
-                      No dialog required for the most common action.
-                      The PATCH endpoint already flips the previous
-                      active row off before setting the new. */}
-                  {s.isActive ? (
+                  <div className="flex flex-col gap-1.5 flex-shrink-0">
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => quickToggle(s, false)}
+                      onClick={() => setEditing(sessionToEditValue(s))}
                       className="rounded-none"
-                      disabled={pendingToggleId === s.id}
                     >
-                      {pendingToggleId === s.id ? (
-                        <Spinner size="xs" />
-                      ) : (
-                        <Video className="h-3 w-3 mr-1" />
-                      )}
-                      {t('adminWebinars.sessionMarkInactive')}
+                      <Pencil className="h-3 w-3 mr-1" />
+                      Edit
                     </Button>
-                  ) : (
+                    {/* Phase 164: the Make Active / Mark
+                        Inactive toggle pair is gone — auto-
+                        rollover replaced it. Delete stays as
+                        the only secondary action. */}
                     <Button
                       size="sm"
-                      variant="outline"
-                      onClick={() => quickToggle(s, true)}
-                      className="rounded-none"
-                      disabled={pendingToggleId === s.id}
+                      variant="ghost"
+                      onClick={() => setPendingDelete(s)}
+                      className="text-gray-400 hover:text-[#9B1B30] hover:bg-red-50 rounded-none"
                     >
-                      {pendingToggleId === s.id ? (
-                        <Spinner size="xs" />
-                      ) : (
-                        <Video className="h-3 w-3 mr-1" />
-                      )}
-                      {t('adminWebinars.sessionMakeActive')}
+                      <Trash2 className="h-3 w-3" />
                     </Button>
-                  )}
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setPendingDelete(s)}
-                    className="text-gray-400 hover:text-[#9B1B30] hover:bg-red-50 rounded-none"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -938,8 +995,22 @@ function TopicsTab() {
     try {
       const res = await apiFetchJson<SessionsResponse>('/api/admin/webinar-sessions');
       setSessions(res.sessions || []);
-      const active = res.sessions?.find((s) => s.isActive);
-      if (active) setActiveSessionId(active.id);
+      // Phase 164: auto-pick the next-upcoming session for
+      // the Topics tab (replaces Phase 140's
+      // `sessions.find((s) => s.isActive)`). When there's
+      // no upcoming session, fall back to the first row
+      // alphabetically so admins can still browse past
+      // sessions' topics.
+      const now = Date.now();
+      const upcoming = (res.sessions ?? [])
+        .filter((s) => s.status !== 'Cancelled')
+        .filter((s) => !s.sessionDate || new Date(s.sessionDate).getTime() >= now)
+        .sort((a, b) => {
+          const aMs = a.sessionDate ? new Date(a.sessionDate).getTime() : Number.MAX_SAFE_INTEGER;
+          const bMs = b.sessionDate ? new Date(b.sessionDate).getTime() : Number.MAX_SAFE_INTEGER;
+          return aMs - bMs;
+        })[0];
+      if (upcoming) setActiveSessionId(upcoming.id);
     } catch (err) {
       setLoadError(err instanceof ApiError ? err.message : t('adminWebinars.errorLoad'));
     }
@@ -1150,7 +1221,7 @@ function TopicsTab() {
             >
               {sessions.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.titleEn} {s.isActive ? '(active)' : ''}
+                  {s.label ?? s.titleEn} ({s.status})
                 </option>
               ))}
             </select>

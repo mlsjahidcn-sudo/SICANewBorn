@@ -4,8 +4,7 @@ import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-se
 import { checkPublicRateLimit, isHoneypotFilled } from '@/lib/rate-limit';
 import { sendWebinarConfirmation } from '@/lib/email';
 import {
-  getActiveSessionEmailFields,
-  getActiveSessionWithDate,
+  getUpcomingSessionEmailFields,
   formatWebinarDate,
 } from '@/lib/webinar-sessions';
 
@@ -128,34 +127,24 @@ export async function POST(request: NextRequest) {
   const ip = (xff ? xff.split(',')[0]?.trim() : null) ?? 'unknown';
   const ipHash = createHash('sha256').update(ip).digest('hex');
 
-  // Phase 162: closed-state gate. The user spec says
-  // "registration will close after the webinar day until we
-  // setup for next webinar". The single-active partial unique
-  // index on webinar_sessions guarantees at most one active row,
-  // so when the active session's `session_date` is in the past
-  // there's no future session available and registration is
-  // closed. We return 410 Gone with a clear message — the
-  // client form renders its own banner via the `isClosed` prop,
-  // but the server is the source of truth (Phase 160 ended the
-  // "client-only gate" pattern from the Phase 161 revert).
-  const activeSession = await getActiveSessionWithDate();
-  let activeSessionId: string | null = null;
-  if (activeSession) {
-    if (
-      activeSession.sessionDate &&
-      Number.isFinite(new Date(activeSession.sessionDate).getTime()) &&
-      new Date(activeSession.sessionDate).getTime() < Date.now()
-    ) {
-      return NextResponse.json(
-        {
-          error: 'registration_closed',
-          message:
-            'This webinar session has ended. We are scheduling the next one — check back next week.',
-        },
-        { status: 410 },
-      );
-    }
-    activeSessionId = activeSession.id;
+  // Phase 164: closed-state gate replaced. Auto-rollover means
+  // there's no manual `is_active=true` toggle — the next-upcoming
+  // session is whatever has the earliest future session_date.
+  // When `getUpcomingSessionEmailFields()` returns null, there's
+  // no upcoming webinar scheduled (no rows in the future, or all
+  // are Cancelled) and registration is closed. Same 410 contract
+  // as Phase 162 — client form renders its banner via the
+  // `isClosed` prop, server gate is the source of truth.
+  const sessionFields = await getUpcomingSessionEmailFields();
+  if (!sessionFields.webinarDateIso) {
+    return NextResponse.json(
+      {
+        error: 'registration_closed',
+        message:
+          'The next webinar session is being scheduled. Check back next week or drop your details and we will email you when the date is confirmed.',
+      },
+      { status: 410 },
+    );
   }
 
   try {
@@ -178,13 +167,13 @@ export async function POST(request: NextRequest) {
         gclid,
         fbclid,
         ip_hash: ipHash,
-        // Phase 144b: populate the FK when an active session
-        // exists so the admin signups list can join back.
-        // Phase 158: nullable — signups captured before staff
-        // publishes a session land with null FK and act as a
-        // "register your interest" lead. Staff can link them
-        // later via /admin/webinar-signups.
-        webinar_session_id: activeSessionId,
+        // Phase 164: FK auto-resolved to the next-upcoming session
+        // via `sessionFields.id` (same row the email helper just
+        // fetched — single query serves both purposes). When the
+        // next-upcoming exists, this id is the same row; the admin
+        // signups list joins back via `webinar_session_id` to show
+        // "registered for Week 5".
+        webinar_session_id: sessionFields.id,
       })
       .select('id, created_at')
       .single();
@@ -199,14 +188,10 @@ export async function POST(request: NextRequest) {
     // 500 here would just confuse the user (their seat is
     // reserved, they just didn't get the auto-email).
     //
-    // Phase 140: pull the active session's email-render fields
-    // so the email carries the real join link + date instead
-    // of the Phase 139 placeholders. The helper falls back to
-    // {null, null, null} when no session is active, and
-    // `sendWebinarConfirmation` already substitutes its own
-    // "TBA" defaults in that branch — so the API never breaks
-    // even before staff seed a session.
-    const sessionFields = await getActiveSessionEmailFields();
+    // Phase 164: pass `webinarLabel` so the email can render
+    // "You're registered for Week 5 · Oct 20" instead of just
+    // the date — the label is the user-visible identifier
+    // across all surfaces (hero, email, thank-you page).
     const reference = `SICA-WEB-${data.id.slice(0, 8).toUpperCase()}`;
     sendWebinarConfirmation({
       toEmail: email,
@@ -216,6 +201,7 @@ export async function POST(request: NextRequest) {
       joinLink: sessionFields.joinUrl,
       webinarDate: formatWebinarDate(sessionFields.webinarDateIso) || null,
       webinarTime: sessionFields.webinarTime,
+      webinarLabel: sessionFields.label,
       // Phase 141: pass the captured country so the email
       // can render the webinar time in the student's local
       // timezone alongside China time. Unknown / null falls

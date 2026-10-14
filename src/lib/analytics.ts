@@ -497,13 +497,15 @@ export interface AnalyticsEventMap {
     locale: 'en' | 'zh';
     session_id: string;
   };
-  /** Phase 143: admin toggled a session's is_active (the
-   *  quick-toggle button or the dialog checkbox). */
-  webinar_session_toggled: {
+  /** Phase 164: admin scheduled a new session via the
+   *  one-click "Schedule next" button (auto-rollover flow).
+   *  Distinguishes the cadence-driven weekly schedule
+   *  from the manual "Add session" dialog flow in GA. */
+  webinar_session_scheduled: {
     locale: 'en' | 'zh';
     session_id: string;
-    /** New is_active value. */
-    new_is_active: boolean;
+    /** The auto-derived week_number for this session. */
+    week_number: string;
   };
   /** Phase 143: admin added a topic under a session. */
   webinar_topic_added: {

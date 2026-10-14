@@ -5083,16 +5083,24 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminWebinars.statusChangeTo': 'Change status',
     'adminWebinars.statusChanged': '✓ Status updated',
     'adminWebinars.errorUpdateStatus': 'Failed to update status',
-    // Phase 140: session CRUD
+    // Phase 140 + 164: session CRUD
     'adminWebinars.sessionsTitle': 'Webinar sessions',
-    'adminWebinars.sessionsSubtitle': 'One row is rendered publicly at a time — staff toggle which is active.',
+    // Phase 164: subtitle reflects the auto-rollover model.
+    // No more "toggle which is active" — the next-future
+    // session_date is implicitly the active one.
+    'adminWebinars.sessionsSubtitle': 'Weekly cadence. The next future-dated session is the one rendered publicly — staff schedule the next one via "Schedule next".',
     'adminWebinars.addSession': 'Add session',
     'adminWebinars.editSession': 'Edit session',
-    'adminWebinars.sessionActiveBadge': 'Active',
-    'adminWebinars.sessionInactiveBadge': 'Inactive',
-    'adminWebinars.sessionMakeActive': 'Make active',
-    'adminWebinars.sessionIsActiveLabel': 'Show on public page',
-    'adminWebinars.sessionSetActiveHelp': 'Only one session can be active at a time. Toggling this will deactivate the previous active session.',
+    // Phase 164: "Upcoming" badge replaces the old Active/Inactive pair.
+    // The list now highlights every row whose session_date is in the
+    // future (vs historic past sessions).
+    'adminWebinars.sessionUpcomingBadge': 'Upcoming',
+    // Phase 164: replaces sessionSetActiveHelp + sessionIsActiveLabel
+    // (no more isActive checkbox — the next-future session_date is
+    // implicitly public).
+    'adminWebinars.sessionAutoRolloverHelp': 'The session_date in the future is the one shown on the public page. Set a title, date, and join URL — then click "Schedule next" to add another one a week out.',
+    'adminWebinars.scheduleNext': 'Schedule next',
+    'adminWebinars.scheduleNextSuccess': 'Scheduled — fill in the join URL to finish setup.',
     'adminWebinars.sessionFieldSlug': 'Slug',
     'adminWebinars.sessionFieldSlugHelp': 'URL-safe id (e.g. webinar-2027-intake-csc)',
     'adminWebinars.sessionFieldTitleEn': 'Title (English)',
@@ -5107,7 +5115,13 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminWebinars.sessionFieldJoinUrl': 'Join URL',
     'adminWebinars.sessionFieldJoinUrlHelp': 'Sent to attendees via the webinar.confirmed email.',
     'adminWebinars.sessionFieldStatus': 'Lifecycle status',
-    'adminWebinars.sessionFieldDisplayOrder': 'Display order',
+    // Phase 164: label + week_number replace displayOrder +
+    // sessionIsActiveLabel (auto-rollover removed both).
+    'adminWebinars.sessionFieldLabel': 'Public label',
+    'adminWebinars.sessionFieldLabelHelp': 'Rendered in the hero heading + email. Leave blank to auto-generate from the week number + date.',
+    'adminWebinars.sessionFieldLabelPlaceholder': 'Week 5 · Oct 20, 2026',
+    'adminWebinars.sessionFieldWeekNumber': 'Week number',
+    'adminWebinars.sessionFieldWeekNumberHelp': 'Sequential integer. Leave blank to auto-assign (max + 1).',
     'adminWebinars.sessionFieldCreatedAt': 'Created',
     'adminWebinars.sessionFieldUpdatedAt': 'Updated',
     'adminWebinars.sessionSaved': '✓ Session saved',
@@ -5118,6 +5132,10 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminWebinars.sessionNoJoinUrl': 'Link TBA',
     'adminWebinars.errorSaveSession': 'Failed to save session',
     'adminWebinars.errorDeleteSession': 'Failed to delete session',
+    // Phase 164: scheduleNext flow surfaces this banner after
+    // the next-row insert succeeds, before the admin fills in
+    // the join URL.
+    'adminWebinars.scheduleNextCreated': 'Scheduled.',
     // Phase 140: topic CRUD
     'adminWebinars.topicsTitle': 'Webinar topics',
     'adminWebinars.topicsSubtitle': 'Tracks rendered on the public page for the active session, ordered by display order.',
@@ -5296,6 +5314,12 @@ export const translations: Record<Locale, Record<string, string>> = {
     'webinar.closedBanner.body': 'Registration is closed — we are scheduling the next one. Drop your details below and we will email + WhatsApp you when the new date is confirmed.',
     'webinar.hero.closedTitle': 'This session has ended',
     'webinar.hero.closedBody': 'We are scheduling the next one. Browse the /universities page in the meantime to keep exploring.',
+    // Phase 164: per-session label rendered in the hero
+    // (when there's still a future session after the
+    // current one). The "Week N · Mon DD" string itself is
+    // derived server-side via formatWebinarLabel(); this key
+    // is the eyebrow that sits before it.
+    'webinar.hero.nextEyebrow': 'Coming up next',
     'webinar.hero.ctaPrimaryClosed': 'Browse universities',
     'webinar.form.submitClosed': 'Registration closed',
   },
@@ -10193,31 +10217,37 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminWebinars.statusChangeTo': '修改状态',
     'adminWebinars.statusChanged': '✓ 状态已更新',
     'adminWebinars.errorUpdateStatus': '状态更新失败',
-    // Phase 140: session CRUD
-    'adminWebinars.sessionsTitle': '讲座场次',
-    'adminWebinars.sessionsSubtitle': '同一时间仅一场公开显示 — 工作人员可切换当前激活场次。',
-    'adminWebinars.addSession': '添加场次',
+    // Phase 140 + 164: session CRUD
+    'adminWebinars.sessionsTitle': 'Webinar 场次',
+    // Phase 164: 每周排期 — 自动滚动到下一个未来日期
+    'adminWebinars.sessionsSubtitle': '每周一场。日期最近的一场会自动显示在公开页 — 工作人员通过"排下一场"添加下一周的场次。',
+    'adminWebinars.addSession': '新增场次',
     'adminWebinars.editSession': '编辑场次',
-    'adminWebinars.sessionActiveBadge': '已激活',
-    'adminWebinars.sessionInactiveBadge': '未激活',
-    'adminWebinars.sessionMakeActive': '设为激活',
-    'adminWebinars.sessionIsActiveLabel': '在公开页面显示',
-    'adminWebinars.sessionSetActiveHelp': '同一时间只能有一场激活。开启此选项将自动取消之前激活的场次。',
-    'adminWebinars.sessionFieldSlug': 'URL 别名',
-    'adminWebinars.sessionFieldSlugHelp': 'URL 安全标识（例如 webinar-2027-intake-csc）',
+    // Phase 164: Upcoming 徽章取代 Active/Inactive 切换
+    'adminWebinars.sessionUpcomingBadge': '即将开始',
+    'adminWebinars.sessionAutoRolloverHelp': '日期在未来且最接近的一场会自动显示在公开页。填写标题、日期和会议链接 — 然后点击"排下一场"添加一周后的下一场。',
+    'adminWebinars.scheduleNext': '排下一场',
+    'adminWebinars.scheduleNextSuccess': '已排定 — 填入会议链接即可完成设置。',
+    'adminWebinars.sessionFieldSlug': 'Slug',
+    'adminWebinars.sessionFieldSlugHelp': 'URL 安全的标识符（例如 webinar-2027-intake-csc）',
     'adminWebinars.sessionFieldTitleEn': '标题（英文）',
     'adminWebinars.sessionFieldTitleZh': '标题（中文）',
     'adminWebinars.sessionFieldDescriptionEn': '描述（英文）',
     'adminWebinars.sessionFieldDescriptionZh': '描述（中文）',
-    'adminWebinars.sessionFieldDate': '讲座日期',
-    'adminWebinars.sessionFieldDateHelp': '日期未确定前请留空。',
-    'adminWebinars.sessionFieldTime': '讲座时间',
-    'adminWebinars.sessionFieldTimeHelp': '自由格式显示字符串（例如 10:00 AM Beijing Time）。',
+    'adminWebinars.sessionFieldDate': '场次日期',
+    'adminWebinars.sessionFieldDateHelp': '排期待定时可留空。',
+    'adminWebinars.sessionFieldTime': '场次时间',
+    'adminWebinars.sessionFieldTimeHelp': '自由文本显示字符串（例如 10:00 AM Beijing Time）。',
     'adminWebinars.sessionFieldDuration': '时长（分钟）',
     'adminWebinars.sessionFieldJoinUrl': '会议链接',
-    'adminWebinars.sessionFieldJoinUrlHelp': '将发送给报名者，附在确认邮件中。',
+    'adminWebinars.sessionFieldJoinUrlHelp': '通过 webinar.confirmed 邮件发送给参会者。',
     'adminWebinars.sessionFieldStatus': '生命周期状态',
-    'adminWebinars.sessionFieldDisplayOrder': '显示顺序',
+    // Phase 164: label + week_number 取代 displayOrder + sessionIsActiveLabel
+    'adminWebinars.sessionFieldLabel': '公开标签',
+    'adminWebinars.sessionFieldLabelHelp': '显示在页面标题和邮件中。留空则根据周数和日期自动生成。',
+    'adminWebinars.sessionFieldLabelPlaceholder': '第 5 期 · 2026-10-20',
+    'adminWebinars.sessionFieldWeekNumber': '周序号',
+    'adminWebinars.sessionFieldWeekNumberHelp': '递增整数。留空则自动分配（最大 + 1）。',
     'adminWebinars.sessionFieldCreatedAt': '创建时间',
     'adminWebinars.sessionFieldUpdatedAt': '更新时间',
     'adminWebinars.sessionSaved': '✓ 场次已保存',
@@ -10228,6 +10258,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminWebinars.sessionNoJoinUrl': '链接待定',
     'adminWebinars.errorSaveSession': '场次保存失败',
     'adminWebinars.errorDeleteSession': '场次删除失败',
+    // Phase 164: 排下一场成功提示
+    'adminWebinars.scheduleNextCreated': '已排定。',
     // Phase 140: topic CRUD
     'adminWebinars.topicsTitle': '讲座主题',
     'adminWebinars.topicsSubtitle': '在公开页面按显示顺序展示激活场次下的主题。',
@@ -10395,6 +10427,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'webinar.closedBanner.body': '报名已截止 — 我们正在安排下一场。在下方留下您的信息，新日期确定后我们会通过邮件 + WhatsApp 第一时间通知您。',
     'webinar.hero.closedTitle': '本场讲座已结束',
     'webinar.hero.closedBody': '我们正在安排下一场。期间请浏览大学页面继续探索。',
+    // Phase 164: 下一场提示（current 场结束后，下一场的 eyebrow 文案）
+    'webinar.hero.nextEyebrow': '下一场',
     'webinar.hero.ctaPrimaryClosed': '浏览大学',
     'webinar.form.submitClosed': '报名已截止',
   },

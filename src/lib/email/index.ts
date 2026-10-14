@@ -1115,6 +1115,10 @@ export async function sendCounsellingProposalExpiredAdmin(
  * country via the COUNTRIES `<select>`). The local-time
  * line falls back to a "we'll confirm the date" placeholder
  * when the country is unknown / the session date is null.
+ *
+ * Phase 164: also passes `webinarLabel` through so the
+ * `{{webinarLabel}}` template variable can render
+ * "Week 5 · Oct 20, 2026" alongside the date.
  */
 export async function sendWebinarConfirmation(params: {
   toEmail: string;
@@ -1125,6 +1129,9 @@ export async function sendWebinarConfirmation(params: {
   joinLink?: string | null;
   webinarDate?: string | null;
   webinarTime?: string | null;
+  /** Phase 164: per-session human-readable label like
+   *  "Week 5 · Oct 20, 2026". Renders into {{webinarLabel}}. */
+  webinarLabel?: string | null;
   /** English country name from the signup form. Used to
    *  compute the per-recipient local time. Unknown / null
    *  falls back to China-time-only rendering. */
@@ -1166,6 +1173,10 @@ export async function sendWebinarConfirmation(params: {
     joinLink: params.joinLink ?? 'TBA — full link will be sent 48 hours before the session.',
     webinarDate: params.webinarDate ?? 'TBA — date coming soon',
     webinarTime: params.webinarTime ?? 'TBA',
+    // Phase 164: empty/null label falls back to the date so
+    // templates that already have a "DATE:" line still render
+    // sensibly when staff hasn't set a label.
+    webinarLabel: params.webinarLabel ?? params.webinarDate ?? 'TBA',
     webinarTimeLocal,
     reference: params.reference,
   });
@@ -1214,6 +1225,8 @@ export async function sendWebinarReminder(params: {
   joinLink?: string | null;
   webinarDate?: string | null;
   webinarTime?: string | null;
+  /** Phase 164: per-session label (mirrors sendWebinarConfirmation). */
+  webinarLabel?: string | null;
   studentCountry?: string | null;
 }): Promise<LoggedSendTextResult> {
   if (!isEmailConfigured()) return notConfigured();
@@ -1251,6 +1264,7 @@ export async function sendWebinarReminder(params: {
     joinLink: params.joinLink ?? 'TBA — full link will be sent 48 hours before the session.',
     webinarDate: params.webinarDate ?? 'TBA — date coming soon',
     webinarTime: params.webinarTime ?? 'TBA',
+    webinarLabel: params.webinarLabel ?? params.webinarDate ?? 'TBA',
     webinarTimeLocal,
     reference: params.reference,
   });

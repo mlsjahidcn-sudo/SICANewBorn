@@ -28,8 +28,10 @@ export interface SessionEditValue {
   durationMinutes: number;
   joinUrl: string | null;
   status: 'Scheduled' | 'Live' | 'Completed' | 'Cancelled';
-  isActive: boolean;
-  displayOrder: number;
+  /** Phase 164: editable label (overrides the auto-generated default). */
+  label: string | null;
+  /** Phase 164: editable week number (NULL means "not numbered"). */
+  weekNumber: number | null;
 }
 
 interface Props {
@@ -40,7 +42,16 @@ interface Props {
 }
 
 /**
- * Phase 140: inline edit dialog for a single webinar session.
+ * Phase 164: inline edit dialog for a single webinar session.
+ *
+ * Phase 164 dropped the `isActive` checkbox + the
+ * `displayOrder` input — auto-rollover removed the manual
+ * toggle, and the date sort replaced the manual order. New
+ * fields: `label` (overrides the auto-generated "Week N ·
+ * Mon DD, YYYY" default) and `weekNumber` (sparse integer
+ * used for sort + display). Both are nullable so the API
+ * can re-derive them on the server side.
+ *
  * Used by the Sessions tab in /admin/webinar-signups. Renders
  * one row per editable column from the webinar_sessions table.
  *
@@ -72,8 +83,8 @@ export function SessionEditDialog({ open, onOpenChange, initial, onSaved }: Prop
     durationMinutes: number;
     joinUrl: string;
     status: SessionEditValue['status'];
-    isActive: boolean;
-    displayOrder: number;
+    label: string;
+    weekNumber: string;
   }>(() => blankForm(initial));
 
   // Re-seed when the dialog opens for a different row
@@ -104,7 +115,7 @@ export function SessionEditDialog({ open, onOpenChange, initial, onSaved }: Prop
     if (!validate()) return;
     setIsSaving(true);
     setSaveError(null);
-    const payload = {
+    const payload: Record<string, unknown> = {
       slug: form.slug.trim(),
       titleEn: form.titleEn.trim(),
       titleZh: form.titleZh.trim(),
@@ -118,22 +129,30 @@ export function SessionEditDialog({ open, onOpenChange, initial, onSaved }: Prop
       durationMinutes: Number(form.durationMinutes) || 60,
       joinUrl: form.joinUrl.trim() || null,
       status: form.status,
-      isActive: form.isActive,
-      displayOrder: Number(form.displayOrder) || 0,
     };
+    // Phase 164: label + weekNumber are nullable in the API.
+    // Empty string → null so the server-side "auto-derive"
+    // logic (MAX + 1 + formatWebinarDate) kicks in instead of
+    // silently storing ''.
+    const trimmedLabel = form.label.trim();
+    payload.label = trimmedLabel ? trimmedLabel : null;
+    const parsedWeek = parseInt(form.weekNumber, 10);
+    payload.weekNumber = Number.isFinite(parsedWeek) ? parsedWeek : null;
 
     try {
       const endpoint = initial
         ? `/api/admin/webinar-sessions/${initial.id}`
         : `/api/admin/webinar-sessions`;
-      const result = await apiFetchJson<{ id: string; slug: string; isActive: boolean }>(
-        endpoint,
-        {
-          method: initial ? 'PATCH' : 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        },
-      );
+      const result = await apiFetchJson<{
+        id: string;
+        slug: string;
+        label: string | null;
+        weekNumber: number | null;
+      }>(endpoint, {
+        method: initial ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
       onSaved({
         ...(initial ?? {
           descriptionEn: null,
@@ -142,10 +161,11 @@ export function SessionEditDialog({ open, onOpenChange, initial, onSaved }: Prop
           sessionTime: null,
           joinUrl: null,
         }),
-        ...payload,
+        ...(payload as Partial<SessionEditValue>),
         id: result.id,
         slug: result.slug,
-        isActive: result.isActive,
+        label: result.label,
+        weekNumber: result.weekNumber,
       } as SessionEditValue);
       onOpenChange(false);
     } catch (err) {
@@ -163,7 +183,7 @@ export function SessionEditDialog({ open, onOpenChange, initial, onSaved }: Prop
             {initial ? t('adminWebinars.editSession') : t('adminWebinars.addSession')}
           </DialogTitle>
           <DialogDescription>
-            {t('adminWebinars.sessionSetActiveHelp')}
+            {t('adminWebinars.sessionAutoRolloverHelp')}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -299,36 +319,36 @@ export function SessionEditDialog({ open, onOpenChange, initial, onSaved }: Prop
               </select>
             </FormField>
           </div>
+          {/* Phase 164: label + weekNumber replace the
+              removed isActive + displayOrder inputs. Label
+              is auto-generated server-side from
+              weekNumber + sessionDate when blank; weekNumber
+              auto-increments from MAX+1 when blank. Staff can
+              override either to retitle or re-number. */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <FormField
-              label={t('adminWebinars.sessionFieldDisplayOrder')}
-              help={null}
+              label={t('adminWebinars.sessionFieldLabel')}
+              help={t('adminWebinars.sessionFieldLabelHelp')}
+              error={null}
+            >
+              <Input
+                value={form.label}
+                onChange={(e) => update('label', e.target.value)}
+                placeholder={t('adminWebinars.sessionFieldLabelPlaceholder')}
+              />
+            </FormField>
+            <FormField
+              label={t('adminWebinars.sessionFieldWeekNumber')}
+              help={t('adminWebinars.sessionFieldWeekNumberHelp')}
               error={null}
             >
               <Input
                 type="number"
-                value={form.displayOrder}
-                onChange={(e) => update('displayOrder', parseInt(e.target.value || '0', 10))}
+                min={1}
+                value={form.weekNumber}
+                onChange={(e) => update('weekNumber', e.target.value)}
+                placeholder="auto"
               />
-            </FormField>
-            <FormField
-              label={t('adminWebinars.sessionIsActiveLabel')}
-              help={null}
-              error={null}
-            >
-              <label className="flex items-center gap-2 h-[42px]">
-                <input
-                  type="checkbox"
-                  checked={form.isActive}
-                  onChange={(e) => update('isActive', e.target.checked)}
-                  className="h-4 w-4 accent-[#9B1B30]"
-                />
-                <span className="text-sm text-[#1F2937]">
-                  {form.isActive
-                    ? t('adminWebinars.sessionActiveBadge')
-                    : t('adminWebinars.sessionInactiveBadge')}
-                </span>
-              </label>
             </FormField>
           </div>
 
@@ -397,8 +417,8 @@ function blankForm(initial: SessionEditValue | null) {
     durationMinutes: initial?.durationMinutes ?? 60,
     joinUrl: initial?.joinUrl ?? '',
     status: initial?.status ?? 'Scheduled',
-    isActive: initial?.isActive ?? false,
-    displayOrder: initial?.displayOrder ?? 0,
+    label: initial?.label ?? '',
+    weekNumber: initial?.weekNumber != null ? String(initial.weekNumber) : '',
   };
 }
 

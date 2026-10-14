@@ -1,5 +1,13 @@
 /**
- * Phase 139 + 140: public webinar landing page.
+ * Phase 139 + 164: public webinar landing page.
+ *
+ * Phase 164: auto-rollover. The page no longer gates on
+ * `webinar_sessions.is_active = true`; instead it shows the
+ * next-upcoming session (earliest future-dated, non-cancelled
+ * row). When that session has passed but a later one is
+ * scheduled, the hero shows "Current session passed — next is
+ * Week N · Mon DD" so the visitor lands on a still-registerable
+ * surface.
  *
  * One-session webinar covering March 2027 Intake (Chinese
  * Language + Foundation + select Bachelor programs),
@@ -7,18 +15,6 @@
  * Scholarship. Signup form posts to /api/webinar-signups
  * and redirects to
  * /thank-you?source=webinar&interest=webinar-2027-intake-csc.
- *
- * Phase 140 swaps the hardcoded "Date coming soon" + 4
- * hardcoded tracks for DB-backed values:
- *   - Hero date pill: reads `active.session_date` +
- *     `session_time` from `webinar_sessions where is_active=true`.
- *     Falls back to the "Date coming soon" copy when no active
- *     session is set up yet (preserves Phase 139 behavior
- *     during the seed window).
- *   - Agenda section: iterates `webinar_topics` ordered by
- *     `display_order` for the active session. Falls back to
- *     the 4 hardcoded i18n tracks when no topics are seeded
- *     yet.
  *
  * RSC + client island. Static (revalidate = 3600) since the
  * copy and structure only change via code deployment.
@@ -40,14 +36,15 @@ import { getServerT } from '@/lib/server-t';
 import { buildLanguageAlternates } from '@/lib/alternates';
 import { COUNTRIES } from '@/lib/seo-data';
 import {
-  getActiveSessionWithTopics,
+  getCurrentAndNextSessions,
+  getUpcomingSessionWithTopics,
   formatWebinarDate,
-} from '@/lib/webinar-sessions';
-import type {
-  WebinarTopicDegree,
-  WebinarTopicIntake,
-  WebinarTopic,
-  WebinarTopicKind,
+  formatWebinarLabel,
+  isSessionClosed,
+  type WebinarTopicDegree,
+  type WebinarTopicIntake,
+  type WebinarTopic,
+  type WebinarTopicKind,
 } from '@/lib/webinar-sessions';
 import { CountdownTimer } from './CountdownTimer';
 import { UniversityCard } from './UniversityCard';
@@ -101,7 +98,19 @@ const INTAKE_BADGE_KEYS: Record<WebinarTopicIntake, string> = {
 
 export default async function WebinarPage() {
   const t = await getServerT();
-  const bundle = await getActiveSessionWithTopics();
+  const locale: 'en' | 'zh' = t('common.localeCode') === 'zh' ? 'zh' : 'en';
+
+  // Phase 164: parallelise the two queries so the page
+  // doesn't pay the round-trip sequentially. The bundle
+  // carries session + topics + featured universities for
+  // the next-upcoming session; the {current, next} pair lets
+  // us render the "next one is Week N · Mon DD" pill below
+  // the hero when the current has passed.
+  const [bundle, currentNext] = await Promise.all([
+    getUpcomingSessionWithTopics(),
+    getCurrentAndNextSessions(),
+  ]);
+
   const activeSession = bundle?.session ?? null;
   const activeTopics = bundle?.topics ?? [];
   const featuredUniversities = bundle?.universities ?? [];
@@ -131,21 +140,43 @@ export default async function WebinarPage() {
     topicsByUniversity.set(topic.universityId, bucket);
   }
 
-  // Phase 162: closed-state computation. Spec says "registration
-  // closes after the webinar day until we setup for next
-  // webinar". With single-active enforcement, when the active
-  // session's date is in the past AND no future session has
-  // been set up, registration is closed. When staff flips
-  // `is_active=true` on a future-dated session, registration
-  // reopens automatically.
-  const now = new Date();
-  const sessionDateMs = activeSession?.sessionDate
-    ? new Date(activeSession.sessionDate).getTime()
+  // Phase 164: closed-state computed from "no upcoming
+  // session" (the auto-rollover query returns null when
+  // every row is past-dated or Cancelled). The original
+  // Phase 162 gate ("active session's date < now()") is
+  // subsumed by this — if the upcoming has passed, the next
+  // query already moved on to the next one.
+  const noUpcoming = !activeSession;
+  const isSessionClosedState = activeSession
+    ? isSessionClosed(activeSession.sessionDate)
+    : true;
+
+  // Phase 164: hero label. The session row carries its own
+  // auto-generated "Week N · Mon DD, YYYY" label; fall back to
+  // the live-computed formatWebinarLabel when the row was
+  // backfilled without a label (Phase 139-140 legacy rows).
+  const heroLabel = activeSession
+    ? formatWebinarLabel(
+        activeSession.sessionDate,
+        activeSession.label,
+        activeSession.weekNumber,
+        locale,
+      )
+    : '';
+
+  // Phase 164: "next" pill shown below the hero when the
+  // current session has passed but a later one is still
+  // upcoming. currentNext.current is what getUpcomingSession
+  // returned; currentNext.next is the row AFTER it.
+  const hasUpcomingAfter = currentNext.next != null;
+  const nextLabel = currentNext.next
+    ? formatWebinarLabel(
+        currentNext.next.sessionDate,
+        currentNext.next.label,
+        currentNext.next.weekNumber,
+        locale,
+      )
     : null;
-  const isSessionClosed =
-    sessionDateMs !== null &&
-    Number.isFinite(sessionDateMs) &&
-    sessionDateMs < now.getTime();
 
   // Phase 158: the form is the page's primary conversion —
   // always render it. When no active session is published,
@@ -154,7 +185,6 @@ export default async function WebinarPage() {
   // staff links them when the session is published). The TBA
   // variant shows when the session exists but date/time is
   // unconfirmed.
-  const showFullForm = true;
   const noActiveSession = !activeSession;
 
   // Format the hero date pill. When the session has a real
@@ -215,15 +245,20 @@ export default async function WebinarPage() {
           <span className="inline-block bg-white/10 border border-white/20 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.2em] text-white">
             {t('webinar.hero.eyebrow')}
           </span>
+          {/* Phase 164: per-session label rendered as the
+              primary H1 anchor. When the row has a label
+              (auto-generated "Week N · Mon DD, YYYY"), it
+              replaces the generic webinar title. When no
+              session is scheduled, fall back to the
+              titleNoSession copy. */}
           <h1 className="mt-6 text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white leading-tight">
-            {/* Phase 158: swap the headline when no session is
-                published yet — "Schedule coming soon — register
-                your interest" so the visitor knows the form is
-                a real capture even before staff has confirmed
-                the date. */}
-            {noActiveSession
-              ? t('webinar.hero.titleNoSession')
-              : t('webinar.hero.title')}
+            {heroLabel && !noActiveSession ? (
+              heroLabel
+            ) : noActiveSession ? (
+              t('webinar.hero.titleNoSession')
+            ) : (
+              t('webinar.hero.title')
+            )}
           </h1>
           <p className="mt-5 text-base sm:text-lg text-gray-300 max-w-3xl mx-auto leading-relaxed">
             {noActiveSession
@@ -245,14 +280,28 @@ export default async function WebinarPage() {
                 client island self-hides when the session is
                 closed (session_date < now()) so this slot stays
                 in sync with the closed-state banner below. */}
-            {!isSessionClosed && (
+            {!isSessionClosedState && (
               <CountdownTimer sessionDate={activeSession?.sessionDate ?? null} />
             )}
           </div>
+          {/* Phase 164: "next" pill — rendered when there's
+              still a future-dated session after the current
+              one. Distinguishes "this week's webinar is over"
+              from "no webinar scheduled at all" — in the
+              former case the form is still open, just for
+              a later date. */}
+          {hasUpcomingAfter && nextLabel && (
+            <div className="mt-4 inline-flex items-center gap-2 bg-white/5 border border-white/20 px-3 py-1.5 text-xs text-white/80">
+              <span className="uppercase tracking-[0.18em] text-[10px] text-white/60">
+                {t('webinar.hero.nextEyebrow')}
+              </span>
+              <span className="font-semibold">{nextLabel}</span>
+            </div>
+          )}
           {/* Phase 162: closed-state hero banner. Distinct from
               the form's banner so the headline reads as a
               standalone statement of the page's current state. */}
-          {isSessionClosed && (
+          {isSessionClosedState && (
             <div className="mt-6 max-w-2xl mx-auto bg-white/10 border border-white/20 px-4 py-3 text-sm text-white/90">
               <p className="font-semibold mb-1">
                 {t('webinar.hero.closedTitle')}
@@ -268,10 +317,10 @@ export default async function WebinarPage() {
               /universities browse page so the user can still
               keep exploring without a dead-end. */}
             <a
-              href={isSessionClosed ? '/universities' : '#signup'}
+              href={isSessionClosedState ? '/universities' : '#signup'}
               className="inline-flex items-center justify-center px-7 py-3 bg-[#9B1B30] text-white font-semibold uppercase tracking-wider text-sm hover:bg-[#7A1526] transition-colors"
             >
-              {isSessionClosed ? t('webinar.hero.ctaPrimaryClosed') : t('webinar.hero.ctaPrimary')}
+              {isSessionClosedState ? t('webinar.hero.ctaPrimaryClosed') : t('webinar.hero.ctaPrimary')}
               <ChevronDown className="ml-2 h-4 w-4" />
             </a>
             <a
@@ -330,9 +379,8 @@ export default async function WebinarPage() {
                 const badgeKey = topic.intake
                   ? INTAKE_BADGE_KEYS[topic.intake as WebinarTopicIntake]
                   : 'webinar.intakeBadge.other';
-                const isZh = false; // RSC locale detection happens via getServerT; badge keys are pre-localized
-                const title = isZh ? topic.titleZh : topic.titleEn;
-                const body = isZh ? topic.bodyZh : topic.bodyEn;
+                const title = topic.titleEn;
+                const body = topic.bodyEn;
                 return (
                   <div
                     key={topic.id}
@@ -459,7 +507,7 @@ export default async function WebinarPage() {
               your interest" capture (the API accepts signups
               with null webinar_session_id FK). */}
           <div>
-            <WebinarSignupForm countryOptions={countryOptions} isClosed={isSessionClosed} />
+            <WebinarSignupForm countryOptions={countryOptions} isClosed={isSessionClosedState} />
           </div>
         </div>
       </section>

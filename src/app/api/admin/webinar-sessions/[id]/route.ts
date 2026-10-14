@@ -18,22 +18,20 @@ interface UpdateBody {
   durationMinutes?: number;
   joinUrl?: string | null;
   status?: WebinarStatus;
-  isActive?: boolean;
-  displayOrder?: number;
+  /** Phase 164: editable label (overrides the auto-generated default). */
+  label?: string | null;
+  /** Phase 164: editable week number (NULL means "not numbered"). */
+  weekNumber?: number | null;
 }
 
 /**
- * Phase 140: per-session update + delete.
+ * Phase 164: per-session update + delete.
  *
  * PATCH — staff edits the title / date / time / join URL /
- * status / display order / is_active toggle. The is_active
- * transition is special: if `isActive=true` is being turned on
- * for THIS row, we first flip every other active row off so
- * the partial unique index doesn't 23505 us. The admin-side
- * dialog toggles them in sequence (no transaction needed for
- * the typical single-row update; if a real race ever appears
- * the partial index will refuse the second active row and
- * the API surfaces the 500 cleanly).
+ * status / label / week_number. Phase 164 dropped the
+ * `isActive` toggle (no more single-active partial unique
+ * index, no more flip-previous-off sequence). The "active"
+ * concept is now derived by `getUpcomingSession()`.
  *
  * DELETE — admin explicitly removes a session. ON DELETE
  * CASCADE on `webinar_topics.session_id` handles the topics;
@@ -63,17 +61,6 @@ export async function PATCH(
     );
   }
 
-  // If toggling is_active to true, clear the previous active row
-  // first (excluding self) so the partial unique index accepts
-  // the new state.
-  if (body.isActive === true) {
-    await auth.supabase
-      .from('webinar_sessions')
-      .update({ is_active: false })
-      .eq('is_active', true)
-      .neq('id', paramsId);
-  }
-
   const update: Record<string, unknown> = {};
   if (body.slug !== undefined) update.slug = body.slug;
   if (body.titleEn !== undefined) update.title_en = body.titleEn;
@@ -85,32 +72,18 @@ export async function PATCH(
   if (body.durationMinutes !== undefined) update.duration_minutes = body.durationMinutes;
   if (body.joinUrl !== undefined) update.join_url = body.joinUrl;
   if (body.status !== undefined) update.status = body.status;
-  if (body.isActive !== undefined) update.is_active = body.isActive;
-  if (body.displayOrder !== undefined) update.display_order = body.displayOrder;
+  if (body.label !== undefined) update.label = body.label;
+  if (body.weekNumber !== undefined) update.week_number = body.weekNumber;
 
   if (Object.keys(update).length === 0) {
     return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
   }
 
-  // Phase 157: capacity check removed — registration is uncapped.
-  // Capture old is_active before the update so the admin-toggle
-  // event has the before/after pair.
-  const { data: existing, error: readErr } = await auth.supabase
-    .from('webinar_sessions')
-    .select('is_active')
-    .eq('id', paramsId)
-    .maybeSingle();
-  if (readErr || !existing) {
-    console.error('[PATCH /api/admin/webinar-sessions/[id]] lookup failed:', readErr);
-    return NextResponse.json({ error: 'Session not found' }, { status: 404 });
-  }
-  const oldIsActive = Boolean(existing.is_active);
-
   const { data, error } = await auth.supabase
     .from('webinar_sessions')
     .update(update)
     .eq('id', paramsId)
-    .select('id, slug, is_active')
+    .select('id, slug, label, week_number')
     .single();
 
   if (error) {
@@ -118,23 +91,16 @@ export async function PATCH(
     return NextResponse.json({ error: 'Failed to update session' }, { status: 500 });
   }
 
-  // Phase 143: best-effort admin events. The status flip +
-  // toggle events give GA a single source of truth for admin
-  // activity.
+  // Phase 143: best-effort admin event. Phase 164 dropped the
+  // separate `webinar_session_toggled` event — auto-rollover
+  // means there's no "is_active flipped" transition to track.
   trackServer('webinar_session_updated', { locale: 'en', session_id: paramsId });
-  const newIsActive = Boolean(data.is_active);
-  if (newIsActive !== oldIsActive) {
-    trackServer('webinar_session_toggled', {
-      locale: 'en',
-      session_id: paramsId,
-      new_is_active: newIsActive,
-    });
-  }
 
   return NextResponse.json({
     id: data.id,
     slug: data.slug,
-    isActive: Boolean(data.is_active),
+    label: (data.label as string | null) ?? null,
+    weekNumber: (data.week_number as number | null) ?? null,
   });
 }
 

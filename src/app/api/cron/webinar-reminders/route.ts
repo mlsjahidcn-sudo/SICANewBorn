@@ -68,13 +68,25 @@ async function runReminders(request: NextRequest) {
     );
   }
 
-  // Step 1: resolve the active session + its session_date. The
-  // single-active partial unique index guarantees at most one
-  // row; if there isn't one, there's no webinar to remind about.
+  // Phase 164: resolve the next-upcoming session whose
+  // session_date falls in the 23-25h window. Replaces the
+  // Phase 162 `.eq('is_active', true)` lookup with an
+  // auto-rollover query (the single-active partial unique
+  // index was dropped in Phase 164).
+  const now = Date.now();
+  const lower = 23 * 60 * 60 * 1000;
+  const upper = 25 * 60 * 60 * 1000;
+  const windowLowIso = new Date(now + lower).toISOString();
+  const windowHighIso = new Date(now + upper).toISOString();
+
   const { data: sessionRow, error: sessionErr } = await supabase
     .from('webinar_sessions')
-    .select('id, slug, session_date, session_time, join_url')
-    .eq('is_active', true)
+    .select('id, slug, session_date, session_time, join_url, label')
+    .gt('session_date', windowLowIso)
+    .lt('session_date', windowHighIso)
+    .neq('status', 'Cancelled')
+    .order('session_date', { ascending: true })
+    .limit(1)
     .maybeSingle();
   if (sessionErr) {
     console.error('[cron/webinar-reminders] session lookup failed:', sessionErr);
@@ -87,7 +99,7 @@ async function runReminders(request: NextRequest) {
       skipped: 0,
       failed: 0,
       session_id: null,
-      note: 'no active session',
+      note: 'no upcoming session in 24h-reminder window',
     });
   }
 
@@ -95,6 +107,7 @@ async function runReminders(request: NextRequest) {
   const sessionDateIso = (sessionRow as { session_date: string | null }).session_date;
   const sessionTime = (sessionRow as { session_time: string | null }).session_time;
   const joinUrl = (sessionRow as { join_url: string | null }).join_url;
+  const sessionLabel = (sessionRow as { label: string | null }).label;
 
   if (!sessionDateIso) {
     return NextResponse.json({
@@ -103,14 +116,12 @@ async function runReminders(request: NextRequest) {
       skipped: 0,
       failed: 0,
       session_id: sessionId,
-      note: 'active session has no session_date',
+      note: 'upcoming session has no session_date',
     });
   }
 
-  // Step 2: time gate — only run for sessions in the 23-25h
-  // window. We deliberately use a 2h window so hourly cron
-  // ticks don't double-dispatch (a tick at 23:50 + a tick at
-  // 24:50 both fall inside).
+  // Step 2 (time gate folded into the SELECT above — kept here
+  // as a sanity probe in case the indexed query drifts).
   const sessionMs = new Date(sessionDateIso).getTime();
   if (!Number.isFinite(sessionMs)) {
     return NextResponse.json(
@@ -118,10 +129,7 @@ async function runReminders(request: NextRequest) {
       { status: 500 },
     );
   }
-  const now = Date.now();
   const diff = sessionMs - now;
-  const lower = 23 * 60 * 60 * 1000;
-  const upper = 25 * 60 * 60 * 1000;
   if (diff < lower || diff > upper) {
     return NextResponse.json({
       scanned: 0,
@@ -189,6 +197,7 @@ async function runReminders(request: NextRequest) {
         joinLink: joinUrl,
         webinarDate: formatWebinarDate(sessionDateIso) || null,
         webinarTime: sessionTime,
+        webinarLabel: sessionLabel,
         studentCountry: country,
       });
       if (result.ok) {
