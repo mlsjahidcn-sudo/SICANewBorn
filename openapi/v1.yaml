@@ -207,7 +207,7 @@ paths:
           required: false
           schema:
             type: string
-            enum: [Bachelor, Master, PhD]
+            enum: [Bachelor, Master, PhD, Chinese Language, Foundation, Non-degree]
         - name: discipline
           in: query
           required: false
@@ -220,7 +220,7 @@ paths:
           description: Filter by **instruction** language (not response language).
           schema:
             type: string
-            enum: [English, Chinese, Bilingual]
+            enum: [English, Chinese, Bilingual, To be confirmed]
         - name: scholarship
           in: query
           required: false
@@ -716,13 +716,13 @@ components:
         university_slug: { type: string, example: tsinghua-university }
         degree:
           type: string
-          enum: [Bachelor, Master, PhD]
+          enum: [Bachelor, Master, PhD, Chinese Language, Foundation, Non-degree]
         discipline: { type: string, example: Computer Science }
         discipline_cn: { type: string, example: 计算机科学 }
         language:
           type: string
           description: Instruction language.
-          enum: [English, Chinese, Bilingual]
+          enum: [English, Chinese, Bilingual, To be confirmed]
         duration: { type: string, example: '4 years' }
         duration_cn: { type: string, example: '4年' }
         tuition: { type: string, example: '¥30,000/year' }
@@ -741,7 +741,7 @@ components:
         curriculum_cn:
           type: array
           items: { type: string }
-        scholarship_available: { type: boolean, example: true }
+        scholarship_available: { type: boolean, nullable: true, example: true }
         intake: { type: string, example: 'September' }
         intake_cn: { type: string }
 
