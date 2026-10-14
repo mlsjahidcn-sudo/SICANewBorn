@@ -28,10 +28,10 @@ interface ParsedProgram {
 const COLUMNS = [
   { key: 'name', label: 'Program Name', example: 'BSc in Computer Science' },
   { key: 'nameCn', label: '中文名称', example: '计算机科学学士' },
-  { key: 'degree', label: 'Degree', example: 'Bachelor/Master/PhD' },
+  { key: 'degree', label: 'Degree', example: 'Bachelor/Master/PhD/Chinese Language/Foundation/Non-degree' },
   { key: 'discipline', label: 'Discipline', example: 'Computer Science' },
   { key: 'disciplineCn', label: '学科(中)', example: '计算机科学' },
-  { key: 'language', label: 'Language', example: 'English/Chinese/Bilingual' },
+  { key: 'language', label: 'Language', example: 'English/Chinese/Bilingual/To be confirmed' },
   { key: 'duration', label: 'Duration', example: '4 years' },
   { key: 'durationCn', label: '学制(中)', example: '4年' },
   { key: 'tuition', label: 'Tuition', example: '¥30,000/year' },
@@ -118,7 +118,7 @@ function BulkImportContent() {
       if (parts.length < 4) {
         programs.push({
           name: '', nameCn: '', degree: '', discipline: '', disciplineCn: '',
-          language: 'English', duration: '', durationCn: '', tuition: '',
+          language: 'To be confirmed', duration: '', durationCn: '', tuition: '',
           intake: 'September', intakeCn: '9月', scholarshipAvailable: false,
           _valid: false, _error: `Line ${i + 1}: needs at least 4 fields (name|nameCn|degree|discipline)`,
         });
@@ -131,7 +131,7 @@ function BulkImportContent() {
         degree: parts[2] || 'Bachelor',
         discipline: parts[3] || '',
         disciplineCn: parts[4] || '',
-        language: parts[5] || 'English',
+        language: parts[5] || 'To be confirmed',
         duration: parts[6] || '',
         durationCn: parts[7] || '',
         tuition: parts[8] || '',
@@ -204,7 +204,7 @@ function BulkImportContent() {
         degree: r.degree,
         discipline: r.discipline,
         disciplineCn: r.disciplineCn || '',
-        language: r.language || 'English',
+        language: r.language || 'To be confirmed',
         duration: r.duration || '',
         durationCn: r.durationCn || '',
         tuition: r.tuition || '',
