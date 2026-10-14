@@ -4,10 +4,6 @@ import { programs as staticPrograms, type Program } from '@/lib/data';
 import { CACHE_TAGS } from '@/lib/cache';
 import { fetchProgramRows } from '@/lib/program-rows';
 
-export interface GetProgramsOptions {
-  limit?: number;
-}
-
 async function fetchProgramBySlug(slug: string): Promise<Program | null> {
   if (isSupabaseServerConfigured() && supabaseServer) {
     const { data, error } = await supabaseServer
@@ -38,6 +34,19 @@ export const getProgramBySlug = unstable_cache(
   },
 );
 
+/**
+ * NOTE (Phase 173): the list fetcher `getPrograms()` that used to live
+ * here was removed. It defaulted to `limit = Infinity`, so the only
+ * caller — the /programs page — shipped the entire catalogue to the
+ * browser. It also carried its own copy of `mapProgramFromDb`, which is
+ * how the client and API filter implementations drifted apart in the
+ * first place. The replacement is `queryPrograms()` in
+ * `src/lib/program-query.ts`, which is shared by the API route and the
+ * RSC page and returns a single paginated page.
+ *
+ * `getProgramBySlug` and `getProgramsByUniversity` below are unchanged
+ * and still in use by the detail pages.
+ */
 async function fetchProgramsByUniversity(universitySlug: string, limit = 50): Promise<Program[]> {
   if (isSupabaseServerConfigured() && supabaseServer) {
     const { data, error } = await fetchProgramRows(supabaseServer, { universitySlug, limit });
@@ -59,35 +68,6 @@ async function fetchProgramsByUniversity(universitySlug: string, limit = 50): Pr
 export const getProgramsByUniversity = unstable_cache(
   fetchProgramsByUniversity,
   ['programs-by-university'],
-  {
-    tags: [CACHE_TAGS.programs],
-    revalidate: 300,
-  },
-);
-
-async function fetchPrograms(options: GetProgramsOptions = {}): Promise<Program[]> {
-  const { limit = Infinity } = options;
-
-  if (isSupabaseServerConfigured() && supabaseServer) {
-    const { data, error } = await fetchProgramRows(supabaseServer, { limit });
-
-    if (!error && data && data.length > 0) {
-      return data.map(mapProgramFromDb);
-    }
-  }
-
-  return staticPrograms.slice(0, limit);
-}
-
-/**
- * Server-only helper for fetching the program list.
- * Tries Supabase first, then falls back to the curated static data.
- * Used by the listing API and by the /programs server page so the
- * initial HTML already contains the grid (no client-side fetch delay).
- */
-export const getPrograms = unstable_cache(
-  fetchPrograms,
-  ['programs-list'],
   {
     tags: [CACHE_TAGS.programs],
     revalidate: 300,

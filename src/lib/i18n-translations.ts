@@ -201,6 +201,11 @@ export const translations: Record<Locale, Record<string, string>> = {
     'prog.at': 'at',
     'prog.viewDetails': 'View Details',
     'prog.results': 'programs found',
+    // Phase 173: university-name search + density redesign
+    'prog.searchProgramsOrUniversities': 'Search programs or universities…',
+    'prog.matchedUniversities': 'Matching university: {{names}}',
+    'prog.matchedViaUniversity': 'Matched by university',
+    'prog.pagination': 'Programs pagination',
     // Filter system (shared between /universities and /programs)
     'filter.activeFilters': 'Active filters',
     'filter.clearAll': 'Clear all',
@@ -5338,6 +5343,11 @@ export const translations: Record<Locale, Record<string, string>> = {
     'prog.at': '—',
     'prog.viewDetails': '查看详情',
     'prog.results': '个项目',
+    // Phase 173: university-name search + density redesign
+    'prog.searchProgramsOrUniversities': '搜索项目或大学…',
+    'prog.matchedUniversities': '匹配的大学：{{names}}',
+    'prog.matchedViaUniversity': '按大学匹配',
+    'prog.pagination': '项目分页',
     // Filter system
     'filter.activeFilters': '当前筛选',
     'filter.clearAll': '清除全部',
