@@ -26,14 +26,17 @@ import {
   ChevronDown,
   MessageCircle,
   Microscope,
+  ArrowRight,
   type LucideIcon,
 } from 'lucide-react';
 import { getServerT } from '@/lib/server-t';
 import { buildLanguageAlternates } from '@/lib/alternates';
 import { COUNTRIES } from '@/lib/seo-data';
+import { universities as staticUniversities } from '@/lib/data';
 import {
   WEBINAR_CONFIG,
   WEBINAR_AGENDA_TRACKS,
+  WEBINAR_FEATURED_UNIVERSITY_SLUGS,
   type WebinarAgendaTrack,
 } from '@/lib/webinar-config';
 import { formatWebinarDate } from '@/lib/webinar-config';
@@ -209,6 +212,83 @@ export default async function WebinarPage() {
                   <p className="text-sm text-gray-300 leading-relaxed">
                     {t(item.bodyKey)}
                   </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ============================== FEATURED UNIVERSITIES (static, no DB) ============================== */}
+      {/* Phase 165b: 5-card grid sourced from src/lib/data.ts's
+          static fallback (no DB query, no Phase 162 dynamic topic
+          rows). The 5 slugs are hardcoded in WEBINAR_FEATURED_UNIVERSITY_SLUGS
+          so staff can swap the featured list with a commit. Each
+          card shows logo + bilingual name + city + QS ranking + 3
+          top programs + a "View detail" link to /universities/<slug>. */}
+      <section id="universities" className="bg-white border-y border-gray-200 py-14 lg:py-20">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-10">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9B1B30]">
+              {t('webinar.featuredEyebrow')}
+            </p>
+            <h2 className="mt-3 text-3xl font-bold text-[#1B2A4A]">
+              {t('webinar.featuredTitle')}
+            </h2>
+            <p className="mt-3 text-base text-[#4B5563] max-w-3xl mx-auto leading-relaxed">
+              {t('webinar.featuredSubtitle')}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            {WEBINAR_FEATURED_UNIVERSITY_SLUGS.map((slug) => {
+              const uni = staticUniversities.find((u) => u.slug === slug);
+              if (!uni) return null;
+              return (
+                <div
+                  key={uni.slug}
+                  className="bg-[#FAFAF8] border-2 border-[#D4A853]/40 p-5 flex flex-col"
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={uni.logo}
+                      alt={`${uni.name} logo`}
+                      className="h-12 w-12 object-contain bg-white p-1 border border-gray-200"
+                    />
+                    <div className="min-w-0">
+                      <h3 className="font-bold text-[#1B2A4A] text-sm leading-tight">
+                        {uni.name}
+                      </h3>
+                      <p className="text-xs text-gray-500 leading-tight">{uni.nameCn}</p>
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-600 mb-3 flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold text-[#1B2A4A]">#{uni.ranking}</span>
+                    <span className="text-gray-400">·</span>
+                    <span>{uni.city}</span>
+                  </div>
+                  <div className="text-[10px] uppercase tracking-[0.15em] text-[#9B1B30] font-bold mb-1">
+                    {t('webinar.card.topPrograms')}
+                  </div>
+                  <ul className="text-xs text-[#4B5563] space-y-0.5 mb-3 flex-1">
+                    {uni.popularPrograms.slice(0, 3).map((program, i) => (
+                      <li key={i} className="truncate">
+                        • {program}
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="text-[10px] uppercase tracking-[0.15em] text-[#9B1B30] font-bold mb-1">
+                    {t('webinar.card.tuition')}
+                  </div>
+                  <p className="text-xs text-[#4B5563] mb-4">{uni.tuitionUndergrad}</p>
+                  <a
+                    href={`/universities/${uni.slug}`}
+                    className="mt-auto inline-flex items-center justify-center gap-1 px-3 py-2 bg-[#1B2A4A] text-white text-xs font-semibold uppercase tracking-wider hover:bg-[#0F1B33] transition-colors"
+                  >
+                    {t('webinar.card.viewDetail')}
+                    <ArrowRight className="h-3 w-3" />
+                  </a>
                 </div>
               );
             })}

@@ -4948,6 +4948,15 @@ export const translations: Record<Locale, Record<string, string>> = {
     'webinar.hero.ctaSecondary': 'What is CSC?',
     'webinar.agenda.title': 'What we will cover',
     'webinar.agenda.eyebrow': 'The agenda',
+    // Phase 165b: featured-university section (restored from Phase 162;
+    // data is static from src/lib/data.ts, no DB needed). Section
+    // title + subtitle + a few per-card labels.
+    'webinar.featuredEyebrow': 'Featured universities',
+    'webinar.featuredTitle': '5 universities we will cover',
+    'webinar.featuredSubtitle': 'Each of these schools runs a full English-taught program catalog across Bachelor + Master + PhD, with CSC scholarship coverage and dedicated international admissions teams.',
+    'webinar.card.topPrograms': 'Top programs',
+    'webinar.card.tuition': 'Tuition',
+    'webinar.card.viewDetail': 'View detail',
     'webinar.agenda.t1Badge': 'March 2027',
     'webinar.agenda.t1Title': 'Chinese Language Programs',
     'webinar.agenda.t1Body': 'Spring intake — 1-year and short-term Chinese language programs for international students. Eligibility, fees, universities that accept language-year applicants, and how to combine with a degree.',
@@ -9901,6 +9910,13 @@ export const translations: Record<Locale, Record<string, string>> = {
     'webinar.hero.ctaSecondary': '什么是 CSC？',
     'webinar.agenda.title': '本次讲座内容',
     'webinar.agenda.eyebrow': '讲座大纲',
+    // Phase 165b: featured-university section (zh)
+    'webinar.featuredEyebrow': '重点大学',
+    'webinar.featuredTitle': '本场讲座聚焦的 5 所大学',
+    'webinar.featuredSubtitle': '这些学校均开设完整的英语授课本科、硕士、博士项目体系，覆盖 CSC 奖学金申请通道，并配备专门的国际生招生团队。',
+    'webinar.card.topPrograms': '热门项目',
+    'webinar.card.tuition': '学费',
+    'webinar.card.viewDetail': '查看详情',
     'webinar.agenda.t1Badge': '2027 年 3 月',
     'webinar.agenda.t1Title': '中文语言项目',
     'webinar.agenda.t1Body': '春季入学 — 1 年制及短期中文语言项目。申请资格、学费、可接受语言年申请的院校，以及如何与学位项目衔接。',
