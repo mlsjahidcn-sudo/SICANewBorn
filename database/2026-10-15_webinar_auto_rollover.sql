@@ -21,7 +21,18 @@
 -- rather than silently no-op'ing.
 
 -- ============================================
--- 1. Drop the single-active enforcement
+-- 1a. Drop the RLS policies that reference is_active
+--     before dropping the column. The original migration
+--     failed at 2BP01 because Postgres won't drop a
+--     column that an active policy depends on. Drop these
+--     first so the column drop below succeeds.
+-- ============================================
+
+DROP POLICY IF EXISTS "Public view active session" ON public.webinar_sessions;
+DROP POLICY IF EXISTS "Public view topics of active sessions" ON public.webinar_topics;
+
+-- ============================================
+-- 1b. Drop the single-active enforcement
 -- ============================================
 
 DROP INDEX IF EXISTS public.idx_webinar_sessions_single_active;
@@ -69,16 +80,15 @@ CREATE INDEX IF NOT EXISTS idx_webinar_sessions_session_date
   WHERE status != 'Cancelled';
 
 -- ============================================
--- 4. Update the public-SELECT RLS policy
---    The old policy gated on `is_active = true`; with
---    auto-rollover, anon can read any non-cancelled
---    session (the live query only fetches the next-up
---    anyway, so this just lets the calendar surface
---    render if/when we add one).
+-- 4. Create the new public-SELECT RLS policy.
+--    The old policies were already dropped in section 1a
+--    (they referenced is_active). The new policy lets
+--    anon read any non-cancelled session — the live
+--    query only fetches the next-upcoming anyway, so
+--    this just lets the calendar surface render if/when
+--    we add one.
 -- ============================================
 
-DROP POLICY IF EXISTS "Public view active session" ON public.webinar_sessions;
-DROP POLICY IF EXISTS "Public view non-cancelled sessions" ON public.webinar_sessions;
 CREATE POLICY "Public view non-cancelled sessions"
   ON public.webinar_sessions FOR SELECT TO anon, authenticated
   USING (status <> 'Cancelled');
