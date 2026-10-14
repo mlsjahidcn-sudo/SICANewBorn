@@ -101,6 +101,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // references the study plan as a required document but no
     // single article operationalizes "how to actually write one".
     { url: `${SITE_URL}/how-to-write-study-plan-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    // Phase 168: province + city comparator templates (novel
+    // format — pairs two SICA-listed regions head-to-head on
+    // cost, climate, language, programs, international student
+    // community, scholarships). The pattern lives in the
+    // shared LocalizedGuide shell — both pages use the same
+    // template so future comparators (Yunnan vs Guizhou,
+    // Wuhan vs Nanjing, etc.) can reuse it without a new shell.
+    { url: `${SITE_URL}/hunan-vs-yunnan`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/xiamen-vs-fuzhou`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/x1-vs-x2-student-visa-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/study-in-china-without-ielts`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     // Phase 150: English-track ETP landscape article — the broad
