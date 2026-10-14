@@ -5150,6 +5150,73 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminWebinars.kind.scholarship': 'Scholarships',
     'adminWebinars.kind.timing': 'Best time to apply',
     'adminWebinars.kind.requirement': 'Admission requirements',
+    // Phase 163: AI-generated webinar brief wizard at
+    //  /admin/webinar-ai + the "Generate with AI" trigger button
+    //  inside the SessionEditDialog footer. Keys mirror the
+    //  3-step state machine (setup / preview / apply).
+    'adminWebinars.ai.openInNewTabCta': 'Generate with AI',
+    'adminWebinars.ai.openInNewTabTitle':
+      'Open the AI brief wizard in a new tab — your in-progress edits here are preserved.',
+    'adminWebinars.ai.title': 'AI webinar brief',
+    'adminWebinars.ai.subtitle':
+      'Drafts the session title + description and the 4 topic sections per featured university from a short intent. Review every field, then apply.',
+    'adminWebinars.ai.loadError': 'Failed to load sessions or universities',
+    'adminWebinars.ai.stepSetup': 'Setup',
+    'adminWebinars.ai.stepPreview': 'Preview',
+    'adminWebinars.ai.stepApply': 'Apply',
+    'adminWebinars.ai.setupTitle': 'Pick a session + write an intent',
+    'adminWebinars.ai.setupSubtitle':
+      'Pick the session to populate, write a short description of what the webinar covers, and choose up to 5 featured universities.',
+    'adminWebinars.ai.sessionLabel': 'Target session',
+    'adminWebinars.ai.sessionLabelHint':
+      'slug: {{slug}} · {{time}}',
+    'adminWebinars.ai.dateLabel': 'Session date label (optional)',
+    'adminWebinars.ai.dateLabelHint':
+      'For copy only — leave blank if no date is set yet.',
+    'adminWebinars.ai.intentLabel': 'Intent',
+    'adminWebinars.ai.intentPlaceholder':
+      'e.g. Engineering + Computer Science universities spotlight for the 2027 September intake. Focus on programs, scholarships, and best time to apply.',
+    'adminWebinars.ai.intentHint':
+      'Be specific about which universities or disciplines to highlight — the AI uses your intent to choose the copy angle.',
+    'adminWebinars.ai.featuredLabel': 'Featured universities (max 5)',
+    'adminWebinars.ai.featuredCount': '{{count}} selected',
+    'adminWebinars.ai.featuredHint':
+      'Pick up to 5. Defaults to the first 5 by id — change to control which schools are in the cards.',
+    'adminWebinars.ai.generateCta': 'Generate brief',
+    'adminWebinars.ai.generating': 'Generating…',
+    'adminWebinars.ai.errorNoSession': 'Pick a target session first',
+    'adminWebinars.ai.errorNoIntent': 'Write a brief intent first',
+    'adminWebinars.ai.errorNoUniversities': 'Pick at least one featured university',
+    'adminWebinars.ai.errorGeneric': 'AI call failed. Please try again.',
+    'adminWebinars.ai.errorProviderNotConfigured':
+      'AI provider not configured — set DEEPSEEK_API_KEY or DOUBAO_API_KEY on the server.',
+    'adminWebinars.ai.warningsTitle':
+      'AI returned warnings — review before applying',
+    'adminWebinars.ai.sessionFields': 'Session title + description',
+    'adminWebinars.ai.sessionFieldsHint':
+      'Replaces the active session\'s existing title + description.',
+    'adminWebinars.ai.universitiesTitle': 'Per-university topic sections',
+    'adminWebinars.ai.universitiesHint':
+      'Creates 4 topic rows per accepted university (program / scholarship / timing / requirement). Existing rows are updated, not duplicated.',
+    'adminWebinars.ai.acceptLabel': 'Apply',
+    'adminWebinars.ai.rawToggle': 'View raw model output (debug)',
+    'adminWebinars.ai.backToSetup': 'Back to setup',
+    'adminWebinars.ai.backToPreview': 'Back to preview',
+    'adminWebinars.ai.applyCta': 'Apply accepted fields',
+    'adminWebinars.ai.applying': 'Applying…',
+    'adminWebinars.ai.applyDoneTitle': 'Done',
+    'adminWebinars.ai.applyDoneSummary':
+      '{{created}} created, {{updated}} updated, {{skipped}} skipped, {{failed}} failed.',
+    'adminWebinars.ai.session': 'Session',
+    'adminWebinars.ai.sessionUpdated': 'Updated',
+    'adminWebinars.ai.sessionSkipped': 'Skipped (not accepted)',
+    'adminWebinars.ai.sessionFailed': 'Failed',
+    'adminWebinars.ai.topicsTitle': 'Topics',
+    'adminWebinars.ai.topicCreated': 'Created',
+    'adminWebinars.ai.topicUpdated': 'Updated',
+    'adminWebinars.ai.topicSkipped': 'Skipped',
+    'adminWebinars.ai.topicError': 'Error: {{error}}',
+    'adminWebinars.ai.viewSessions': 'View webinars',
     // Phase 142: admin quick-toggle (Phase 157: waitlist + capacity
     //  blocks removed — registration is uncapped).
     'adminWebinars.sessionMarkInactive': 'Mark inactive',
@@ -10192,6 +10259,71 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminWebinars.kind.scholarship': '奖学金',
     'adminWebinars.kind.timing': '最佳申请时机',
     'adminWebinars.kind.requirement': '录取要求',
+    // Phase 163: AI 生成讲座简报向导(/admin/webinar-ai) +
+    //  SessionEditDialog 内的 “AI 生成”按钮。
+    'adminWebinars.ai.openInNewTabCta': 'AI 生成',
+    'adminWebinars.ai.openInNewTabTitle':
+      '在新标签页打开 AI 简报向导 — 当前编辑内容会被保留。',
+    'adminWebinars.ai.title': 'AI 讲座简报',
+    'adminWebinars.ai.subtitle':
+      '根据一句简短描述，自动生成讲座标题、简介以及每所重点大学 4 个板块（项目/奖学金/申请时机/录取要求）。逐项确认后再应用。',
+    'adminWebinars.ai.loadError': '加载会议或大学列表失败',
+    'adminWebinars.ai.stepSetup': '设置',
+    'adminWebinars.ai.stepPreview': '预览',
+    'adminWebinars.ai.stepApply': '应用',
+    'adminWebinars.ai.setupTitle': '选择会议 + 输入描述',
+    'adminWebinars.ai.setupSubtitle':
+      '选择要填充的会议，输入简短的讲座描述，并挑出最多 5 所重点大学。',
+    'adminWebinars.ai.sessionLabel': '目标会议',
+    'adminWebinars.ai.sessionLabelHint':
+      'slug：{{slug}} · {{time}}',
+    'adminWebinars.ai.dateLabel': '会议日期标签（可选）',
+    'adminWebinars.ai.dateLabelHint':
+      '仅用于文案生成 —— 如未确定日期可留空。',
+    'adminWebinars.ai.intentLabel': '讲座描述',
+    'adminWebinars.ai.intentPlaceholder':
+      '例如：聚焦 2027 年 9 月入学的工程与计算机科学大学，重点展示项目、奖学金与最佳申请时机。',
+    'adminWebinars.ai.intentHint':
+      '写得越具体（指定大学或学科），AI 生成的文案越贴近你的预期。',
+    'adminWebinars.ai.featuredLabel': '重点大学（最多 5 所）',
+    'adminWebinars.ai.featuredCount': '已选 {{count}} 所',
+    'adminWebinars.ai.featuredHint':
+      '最多选择 5 所。默认按 id 前 5 所预填，可手动调整。',
+    'adminWebinars.ai.generateCta': '生成简报',
+    'adminWebinars.ai.generating': '生成中…',
+    'adminWebinars.ai.errorNoSession': '请先选择目标会议',
+    'adminWebinars.ai.errorNoIntent': '请先填写讲座描述',
+    'adminWebinars.ai.errorNoUniversities': '请至少选择一所重点大学',
+    'adminWebinars.ai.errorGeneric': 'AI 调用失败，请稍后重试。',
+    'adminWebinars.ai.errorProviderNotConfigured':
+      'AI 提供方未配置 —— 请在服务器上设置 DEEPSEEK_API_KEY 或 DOUBAO_API_KEY。',
+    'adminWebinars.ai.warningsTitle':
+      'AI 返回了警告 — 应用前请检查',
+    'adminWebinars.ai.sessionFields': '会议标题 + 简介',
+    'adminWebinars.ai.sessionFieldsHint':
+      '会覆盖当前会议已有的标题与简介。',
+    'adminWebinars.ai.universitiesTitle': '每所大学的专题板块',
+    'adminWebinars.ai.universitiesHint':
+      '为每所勾选的大学创建 4 条专题记录（项目/奖学金/申请时机/录取要求）。已存在的记录会被更新而非重复创建。',
+    'adminWebinars.ai.acceptLabel': '应用',
+    'adminWebinars.ai.rawToggle': '查看原始模型输出（调试）',
+    'adminWebinars.ai.backToSetup': '返回设置',
+    'adminWebinars.ai.backToPreview': '返回预览',
+    'adminWebinars.ai.applyCta': '应用已勾选字段',
+    'adminWebinars.ai.applying': '应用中…',
+    'adminWebinars.ai.applyDoneTitle': '完成',
+    'adminWebinars.ai.applyDoneSummary':
+      '新建 {{created}} 条，更新 {{updated}} 条，跳过 {{skipped}} 条，失败 {{failed}} 条。',
+    'adminWebinars.ai.session': '会议',
+    'adminWebinars.ai.sessionUpdated': '已更新',
+    'adminWebinars.ai.sessionSkipped': '已跳过（未勾选）',
+    'adminWebinars.ai.sessionFailed': '失败',
+    'adminWebinars.ai.topicsTitle': '专题',
+    'adminWebinars.ai.topicCreated': '已创建',
+    'adminWebinars.ai.topicUpdated': '已更新',
+    'adminWebinars.ai.topicSkipped': '已跳过',
+    'adminWebinars.ai.topicError': '失败：{{error}}',
+    'adminWebinars.ai.viewSessions': '查看讲座',
     // Phase 142: capacity + admin quick-toggle + waitlist admin
     // Phase 157: waitlist + capacity removed — registration is uncapped.
     'adminWebinars.sessionMarkInactive': '取消激活',
