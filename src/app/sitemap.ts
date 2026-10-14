@@ -110,6 +110,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Wuhan vs Nanjing, etc.) can reuse it without a new shell.
     { url: `${SITE_URL}/hunan-vs-yunnan`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/xiamen-vs-fuzhou`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    // Phase 169: 3 university deep-dive guides (same Phase 136
+    // flagship pattern as Tsinghua + Peking + Fudan + SJTU +
+    // Zhejiang admissions). Shenyang Pharma is the only
+    // dedicated pharmacy specialist; Nankai is Tianjin-based
+    // 985 with strong math/finance/economics; SUFE is the
+    // most specialized finance + economics university in
+    // China (DFC economics + business administration).
+    { url: `${SITE_URL}/shenyang-pharmaceutical-university`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/nankai-university`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/sufe`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/x1-vs-x2-student-visa-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/study-in-china-without-ielts`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     // Phase 150: English-track ETP landscape article — the broad
