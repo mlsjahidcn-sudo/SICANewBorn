@@ -52,7 +52,7 @@ Output a top-level JSON ARRAY. Each element MUST be a flat object with EXACTLY t
   {
     "name": "English program name",
     "nameCn": "Chinese program name (or empty string)",
-    "degree": "Bachelor | Master | PhD",
+    "degree": "Bachelor | Master | PhD | Chinese Language | Foundation | Non-degree",
     "discipline": "Broad discipline in English",
     "disciplineCn": "Broad discipline in Chinese (or empty string)",
     "language": "English | Chinese | Bilingual (or empty string)",
@@ -68,7 +68,7 @@ Output a top-level JSON ARRAY. Each element MUST be a flat object with EXACTLY t
 Rules:
 - "name": the **bare major only** — no degree prefix, no "Bachelor in / MSc in / B.Eng in /  Bachelor of Science in" wrapper. The degree is its own column, so duplicating it in the name is noise. Translate Chinese major names (计算机科学与技术 → Computer Science and Technology) and use the conventional English title. Examples: "Computer Science and Technology", "Civil Engineering", "International Economics and Trade", "MBA", "Mechanical Engineering". Never wrap in "Bachelor of …" or "MSc in …".
 - "nameCn"/"disciplineCn": use the Chinese name from the notes when present; otherwise give the standard Chinese translation of the major — these are conventional, not guesses. Use "" only when genuinely unsure.
-- "degree": EXACTLY one of Bachelor, Master, PhD. Infer from the heading the program sits under (本科/Undergraduate → Bachelor, 硕士 → Master, 博士 → PhD).
+- "degree": EXACTLY one of Bachelor, Master, PhD, Chinese Language, Foundation, Non-degree. 汉语进修 → Chinese Language; 预科/Preparatory → Foundation; other non-degree courses → Non-degree. Infer from the heading the program sits under (本科/Undergraduate → Bachelor, 硕士 → Master, 博士 → PhD).
 - "discipline": the broad field in English (e.g. Computer Science, Business Administration, Clinical Medicine, Civil Engineering) — not a copy of the program name unless nothing broader applies.
 - "language"/"duration"/"durationCn"/"tuition"/"intake"/"intakeCn": fill ONLY from what the notes state (a note like "English-taught, 2 years" fills both). NEVER invent or estimate tuition, duration, or intake — the site is public. When unstated, use "".
 - "scholarshipAvailable": true ONLY when the notes explicitly say scholarships are available for that program; otherwise false.
