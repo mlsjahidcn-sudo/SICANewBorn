@@ -431,10 +431,10 @@ export interface Program {
   name: string;
   nameCn: string;
   universitySlug: string;
-  degree: 'Bachelor' | 'Master' | 'PhD';
+  degree: import('./program-types').ProgramDegree;
   discipline: string;
   disciplineCn: string;
-  language: 'English' | 'Chinese' | 'Bilingual';
+  language: import('./program-types').ProgramLanguage;
   duration: string;
   durationCn: string;
   tuition: string;
@@ -444,7 +444,7 @@ export interface Program {
   requirementsCn: string[];
   curriculum: string[];
   curriculumCn: string[];
-  scholarshipAvailable: boolean;
+  scholarshipAvailable: boolean | null;
   intake: string;
   intakeCn: string;
   // Phase 128a: status surface — see migration
@@ -812,11 +812,10 @@ export const programs: Program[] = [
   },
 ];
 
-export const degreeTypes = ['Bachelor', 'Master', 'PhD'];
-export const degreeTypesCn = ['学士', '硕士', '博士'];
+export { PROGRAM_DEGREES as degreeTypes, PROGRAM_LANGUAGES as languages } from './program-types';
+export const degreeTypesCn = ['学士', '硕士', '博士', '汉语进修', '预科', '非学历'];
 
-export const languages = ['English', 'Chinese', 'Bilingual'];
-export const languagesCn = ['英语', '中文', '双语'];
+export const languagesCn = ['英语', '中文', '双语', '待确认'];
 
 export const programDisciplines = ['Engineering', 'Computer Science', 'Business', 'Medicine', 'Humanities', 'Social Sciences', 'Law', 'Sciences'];
 export const programDisciplinesCn = ['工程学', '计算机科学', '商业', '医学', '人文', '社会科学', '法学', '理科'];

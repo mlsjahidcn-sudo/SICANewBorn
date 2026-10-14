@@ -363,6 +363,9 @@ function ProgramsPageInner() {
             <option value="Bachelor">Bachelor</option>
             <option value="Master">Master</option>
             <option value="PhD">PhD</option>
+            <option value="Chinese Language">Chinese Language</option>
+            <option value="Foundation">Foundation</option>
+            <option value="Non-degree">Non-degree</option>
           </select>
           {/* Phase 128a: status filter — Active (default, hides archived),
               Archived (only archived, for restoring), All (every row). */}

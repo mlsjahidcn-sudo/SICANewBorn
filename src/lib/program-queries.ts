@@ -2,6 +2,7 @@ import { unstable_cache } from 'next/cache';
 import { supabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-server';
 import { programs as staticPrograms, type Program } from '@/lib/data';
 import { CACHE_TAGS } from '@/lib/cache';
+import { fetchProgramRows } from '@/lib/program-rows';
 
 export interface GetProgramsOptions {
   limit?: number;
@@ -33,17 +34,13 @@ export const getProgramBySlug = unstable_cache(
   ['program-by-slug'],
   {
     tags: [CACHE_TAGS.programs],
+    revalidate: 300,
   },
 );
 
 async function fetchProgramsByUniversity(universitySlug: string, limit = 50): Promise<Program[]> {
   if (isSupabaseServerConfigured() && supabaseServer) {
-    const { data, error } = await supabaseServer
-      .from('programs')
-      .select('*')
-      .eq('university_slug', universitySlug)
-      .order('name', { ascending: true })
-      .limit(limit);
+    const { data, error } = await fetchProgramRows(supabaseServer, { universitySlug, limit });
 
     if (!error && data && data.length > 0) {
       return data.map(mapProgramFromDb);
@@ -64,18 +61,15 @@ export const getProgramsByUniversity = unstable_cache(
   ['programs-by-university'],
   {
     tags: [CACHE_TAGS.programs],
+    revalidate: 300,
   },
 );
 
 async function fetchPrograms(options: GetProgramsOptions = {}): Promise<Program[]> {
-  const { limit = 2000 } = options;
+  const { limit = Infinity } = options;
 
   if (isSupabaseServerConfigured() && supabaseServer) {
-    const { data, error } = await supabaseServer
-      .from('programs')
-      .select('*')
-      .order('name', { ascending: true })
-      .limit(limit);
+    const { data, error } = await fetchProgramRows(supabaseServer, { limit });
 
     if (!error && data && data.length > 0) {
       return data.map(mapProgramFromDb);
@@ -96,6 +90,7 @@ export const getPrograms = unstable_cache(
   ['programs-list'],
   {
     tags: [CACHE_TAGS.programs],
+    revalidate: 300,
   },
 );
 
@@ -115,23 +110,23 @@ function mapProgramFromDb(row: Record<string, unknown>): Program {
   return {
     slug,
     name: String(row.name ?? ''),
-    nameCn: String(row.name_cn ?? ''),
+    nameCn: String(row.name_cn || row.name || ''),
     universitySlug: String(row.university_slug ?? ''),
     degree: String(row.degree ?? 'Bachelor') as Program['degree'],
     discipline: String(row.discipline ?? ''),
     disciplineCn: row.discipline_cn ? String(row.discipline_cn) : cnFallback(slug, 'disciplineCn') ?? '',
-    language: String(row.language ?? 'English') as Program['language'],
+    language: String(row.language || 'To be confirmed') as Program['language'],
     duration: String(row.duration ?? ''),
-    durationCn: row.duration_cn ? String(row.duration_cn) : cnFallback(slug, 'durationCn') ?? '',
+    durationCn: row.duration_cn ? String(row.duration_cn) : cnFallback(slug, 'durationCn') || String(row.duration ?? ''),
     tuition: String(row.tuition ?? ''),
     description: String(row.description ?? ''),
-    descriptionCn: String(row.description_cn ?? ''),
+    descriptionCn: String(row.description_cn || row.description || ''),
     requirements: toStringArray(row.requirements),
-    requirementsCn: toStringArray(row.requirements_cn),
+    requirementsCn: toStringArray(row.requirements_cn).length ? toStringArray(row.requirements_cn) : toStringArray(row.requirements),
     curriculum: toStringArray(row.curriculum),
-    curriculumCn: toStringArray(row.curriculum_cn),
-    scholarshipAvailable: Boolean(row.scholarship_available),
+    curriculumCn: toStringArray(row.curriculum_cn).length ? toStringArray(row.curriculum_cn) : toStringArray(row.curriculum),
+    scholarshipAvailable: row.scholarship_available == null ? null : Boolean(row.scholarship_available),
     intake: String(row.intake ?? ''),
-    intakeCn: row.intake_cn ? String(row.intake_cn) : cnFallback(slug, 'intakeCn') ?? '',
+    intakeCn: row.intake_cn ? String(row.intake_cn) : cnFallback(slug, 'intakeCn') || String(row.intake ?? ''),
   };
 }

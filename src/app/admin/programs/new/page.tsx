@@ -25,7 +25,7 @@ interface ProgramFormData {
   requirementsCn: string;
   curriculum: string;
   curriculumCn: string;
-  scholarshipAvailable: boolean;
+  scholarshipAvailable: boolean | null;
   intake: string;
 }
 
@@ -37,7 +37,7 @@ const defaultFormData: ProgramFormData = {
   degree: 'Bachelor',
   discipline: '',
   disciplineCn: '',
-  language: 'English',
+  language: 'To be confirmed',
   duration: '',
   durationCn: '',
   tuition: '',
@@ -47,7 +47,7 @@ const defaultFormData: ProgramFormData = {
   requirementsCn: '',
   curriculum: '',
   curriculumCn: '',
-  scholarshipAvailable: false,
+  scholarshipAvailable: null,
   intake: '',
 };
 
@@ -60,7 +60,7 @@ function programToForm(prog: Program): ProgramFormData {
     degree: prog.degree || 'Bachelor',
     discipline: prog.discipline || '',
     disciplineCn: prog.disciplineCn || '',
-    language: prog.language || 'English',
+    language: prog.language || 'To be confirmed',
     duration: prog.duration || '',
     durationCn: prog.durationCn || '',
     tuition: prog.tuition || '',
@@ -70,7 +70,7 @@ function programToForm(prog: Program): ProgramFormData {
     requirementsCn: (prog.requirementsCn || []).join('\n'),
     curriculum: (prog.curriculum || []).join('\n'),
     curriculumCn: (prog.curriculumCn || []).join('\n'),
-    scholarshipAvailable: prog.scholarshipAvailable || false,
+    scholarshipAvailable: prog.scholarshipAvailable ?? null,
     intake: prog.intake || '',
   };
 }
@@ -182,6 +182,9 @@ function ProgramFormInner({ slug }: { slug?: string }) {
                 <option value="Bachelor">Bachelor</option>
                 <option value="Master">Master</option>
                 <option value="PhD">PhD</option>
+                <option value="Chinese Language">Chinese Language</option>
+                <option value="Foundation">Foundation</option>
+                <option value="Non-degree">Non-degree</option>
               </select>
             </div>
             <div>
@@ -198,6 +201,7 @@ function ProgramFormInner({ slug }: { slug?: string }) {
                 <option value="English">English</option>
                 <option value="Chinese">Chinese</option>
                 <option value="Bilingual">Bilingual</option>
+                <option value="To be confirmed">To be confirmed</option>
               </select>
             </div>
             <div>
@@ -210,21 +214,23 @@ function ProgramFormInner({ slug }: { slug?: string }) {
             </div>
             <div>
               <label className="block text-sm font-medium text-[#1F2937] mb-1">Tuition</label>
-              <input name="tuition" value={form.tuition} onChange={handleChange} required className={inputClass} placeholder="e.g. ¥30,000/year" />
+              <input name="tuition" value={form.tuition} onChange={handleChange} className={inputClass} placeholder="e.g. ¥30,000/year" />
             </div>
             <div>
               <label className="block text-sm font-medium text-[#1F2937] mb-1">Intake</label>
               <input name="intake" value={form.intake} onChange={handleChange} className={inputClass} placeholder="e.g. September" />
             </div>
-            <div className="flex items-center gap-2 mt-6">
-              <input
-                type="checkbox"
-                name="scholarshipAvailable"
-                checked={form.scholarshipAvailable}
-                onChange={handleChange}
-                className="w-4 h-4 accent-[#9B1B30]"
-              />
-              <label className="text-sm font-medium text-[#1F2937]">Scholarship Available</label>
+            <div>
+              <label className="block text-sm font-medium text-[#1F2937] mb-1">Scholarship Available</label>
+              <select
+                value={form.scholarshipAvailable == null ? '' : String(form.scholarshipAvailable)}
+                onChange={(e) => setForm((prev) => ({ ...prev, scholarshipAvailable: e.target.value === '' ? null : e.target.value === 'true' }))}
+                className={inputClass}
+              >
+                <option value="">To be confirmed</option>
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+              </select>
             </div>
           </div>
         </div>

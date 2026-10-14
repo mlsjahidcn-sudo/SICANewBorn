@@ -1,3 +1,4 @@
+import { PROGRAM_DEGREES, PROGRAM_LANGUAGES } from '@/lib/program-types';
 import { z } from 'zod';
 import { stringArraySchema } from './shared';
 
@@ -7,10 +8,10 @@ export const programSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   nameCn: z.string().default(''),
   universitySlug: z.string().min(1, 'University slug is required'),
-  degree: z.enum(['Bachelor', 'Master', 'PhD']).default('Bachelor'),
+  degree: z.enum(PROGRAM_DEGREES).default('Bachelor'),
   discipline: z.string().min(1, 'Discipline is required'),
   disciplineCn: z.string().default(''),
-  language: z.enum(['English', 'Chinese', 'Bilingual']).default('English'),
+  language: z.enum(PROGRAM_LANGUAGES).default('To be confirmed'),
   duration: z.string().default(''),
   durationCn: z.string().default(''),
   tuition: z.string().default(''),
@@ -20,7 +21,7 @@ export const programSchema = z.object({
   requirementsCn: stringArraySchema,
   curriculum: stringArraySchema,
   curriculumCn: stringArraySchema,
-  scholarshipAvailable: z.coerce.boolean().default(false),
+  scholarshipAvailable: z.coerce.boolean().nullable().default(null),
   intake: z.string().default(''),
   intakeCn: z.string().default(''),
 });

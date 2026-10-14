@@ -299,7 +299,9 @@ export default function ProgramDetailClient({ program, university }: ProgramDeta
                   <div className="flex items-center justify-between py-3">
                     <span className="text-gray-600">{t('prog.scholarship')}</span>
                     <span className={`font-semibold ${program.scholarshipAvailable ? 'text-[#9B1B30]' : 'text-gray-400'}`}>
-                      {program.scholarshipAvailable ? t('prog.scholarship') : t('prog.noScholarship')}
+                      {program.scholarshipAvailable == null
+                        ? (locale === 'zh' ? '待确认' : 'To be confirmed')
+                        : program.scholarshipAvailable ? t('prog.scholarship') : t('prog.noScholarship')}
                     </span>
                   </div>
                 </div>

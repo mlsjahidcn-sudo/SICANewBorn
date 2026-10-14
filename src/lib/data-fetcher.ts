@@ -29,6 +29,7 @@
  * already declare, so runtime staleness is unchanged.
  */
 import { cache } from 'react';
+import { fetchProgramRows } from './program-rows';
 import { supabaseServer, isSupabaseServerConfigured } from './supabase-server';
 import {
   universities as staticUniversities,
@@ -141,25 +142,25 @@ function mapProgram(row: Record<string, unknown>, slug: string): Program {
   return {
     slug,
     name: row.name as string,
-    nameCn: (row.name_cn as string) ?? '',
+    nameCn: String(row.name_cn || row.name || ''),
     universitySlug: (row.university_slug as string) ?? '',
-    degree: row.degree as 'Bachelor' | 'Master' | 'PhD',
+    degree: row.degree as Program['degree'],
     discipline: (row.discipline as string) ?? '',
     disciplineCn:
       (row.discipline_cn as string) ?? staticRow?.disciplineCn ?? '',
-    language: row.language as 'English' | 'Chinese' | 'Bilingual',
+    language: (row.language || 'To be confirmed') as Program['language'],
     duration: (row.duration as string) ?? '',
-    durationCn: (row.duration_cn as string) ?? staticRow?.durationCn ?? '',
+    durationCn: (row.duration_cn as string) || staticRow?.durationCn || String(row.duration ?? ''),
     tuition: (row.tuition as string) ?? '',
     description: (row.description as string) ?? '',
-    descriptionCn: (row.description_cn as string) ?? '',
+    descriptionCn: String(row.description_cn || row.description || ''),
     requirements: (row.requirements as string[]) ?? [],
     requirementsCn: (row.requirements_cn as string[]) ?? [],
     curriculum: (row.curriculum as string[]) ?? [],
     curriculumCn: (row.curriculum_cn as string[]) ?? [],
-    scholarshipAvailable: (row.scholarship_available as boolean) ?? false,
+    scholarshipAvailable: (row.scholarship_available as boolean | null) ?? null,
     intake: (row.intake as string) ?? '',
-    intakeCn: (row.intake_cn as string) ?? staticRow?.intakeCn ?? '',
+    intakeCn: (row.intake_cn as string) || staticRow?.intakeCn || String(row.intake ?? ''),
     // Phase 128a: round-trip the status surface. Defaults match the
     // DB column defaults (not featured, published, not archived,
     // rank NULL) so old DB rows that pre-date the migration render
@@ -375,10 +376,7 @@ export const getAllPrograms = cache(
   async (): Promise<Program[]> => {
     return cachedProcess('programs:all', async () => {
       if (isSupabaseServerConfigured() && supabaseServer) {
-        const { data, error } = await supabaseServer
-          .from('programs')
-          .select('*')
-          .order('name', { ascending: true });
+        const { data, error } = await fetchProgramRows(supabaseServer);
         if (!error && data && data.length > 0) {
           return data.map((row) =>
             mapProgram(row, row.slug as string),

@@ -75,7 +75,9 @@ function hasProgramsStatusColumns(): Promise<boolean> {
       .select('*', { count: 'exact' });
 
     if (degree) query = query.eq('degree', degree);
-    if (language) query = query.eq('language', language);
+    if (language) query = language === 'To be confirmed'
+      ? query.or('language.is.null,language.eq.,language.eq.To be confirmed')
+      : query.eq('language', language);
     if (discipline) query = query.eq('discipline', discipline);
     if (universitySlug) query = query.eq('university_slug', universitySlug);
     // Phase 128a: status surface. Default behaviour (no flags) hides
