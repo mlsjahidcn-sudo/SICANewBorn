@@ -20,8 +20,8 @@
  * repairs.
  */
 
-export const PROGRAM_DEGREES = ['Bachelor', 'Master', 'PhD'] as const;
-export const PROGRAM_LANGUAGES = ['English', 'Chinese', 'Bilingual'] as const;
+import { PROGRAM_DEGREES, PROGRAM_LANGUAGES } from '@/lib/program-types';
+export { PROGRAM_DEGREES, PROGRAM_LANGUAGES };
 
 export type ProgramDegree = (typeof PROGRAM_DEGREES)[number];
 export type ProgramLanguage = (typeof PROGRAM_LANGUAGES)[number];
@@ -93,6 +93,16 @@ const DEGREE_ALIASES: Record<string, ProgramDegree> = {
   doctoral: 'PhD',
   doctorate: 'PhD',
   博士: 'PhD',
+  'chinese language': 'Chinese Language',
+  'language program': 'Chinese Language',
+  汉语进修: 'Chinese Language',
+  汉语: 'Chinese Language',
+  foundation: 'Foundation',
+  preparatory: 'Foundation',
+  'pre-university': 'Foundation',
+  预科: 'Foundation',
+  'non-degree': 'Non-degree',
+  非学历: 'Non-degree',
 };
 
 const LANGUAGE_ALIASES: Record<string, ProgramLanguage> = {
@@ -106,6 +116,10 @@ const LANGUAGE_ALIASES: Record<string, ProgramLanguage> = {
   bilingual: 'Bilingual',
   中英: 'Bilingual',
   双语: 'Bilingual',
+  'to be confirmed': 'To be confirmed',
+  unknown: 'To be confirmed',
+  'not specified': 'To be confirmed',
+  待确认: 'To be confirmed',
 };
 
 function normalizeDegree(value: unknown, rowIndex: number, warnings: string[]): ProgramDegree {
@@ -136,12 +150,11 @@ function normalizeLanguage(value: unknown, rowIndex: number, warnings: string[])
     const hit = LANGUAGE_ALIASES[key];
     if (hit) return hit;
     warnings.push(
-      `Row ${rowIndex}: unrecognized language "${value.trim()}" — defaulted to English (edit before importing).`,
+      `Row ${rowIndex}: unrecognized language "${value.trim()}" — marked as To be confirmed (edit before importing).`,
     );
   }
-  // Empty is the expected case — the prompt leaves language blank
-  // when the notes don't state it; the import default is English.
-  return 'English';
+  // Missing teaching-language evidence must not become an English track.
+  return 'To be confirmed';
 }
 
 function normalizeString(value: unknown, cap: number): string {
