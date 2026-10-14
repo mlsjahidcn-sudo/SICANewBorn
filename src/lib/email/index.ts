@@ -1191,3 +1191,88 @@ export async function sendWebinarConfirmation(params: {
     };
   }
 }
+
+/**
+ * Phase 162: 24-hour reminder for an upcoming webinar signup.
+ *
+ * Fires from `/api/cron/webinar-reminders` ~24h before the
+ * session's `session_date`. Uses the same `webinarTimeLocal`
+ * rendering as `sendWebinarConfirmation` so the recipient sees
+ * their local time alongside the China time.
+ *
+ * Idempotency: the cron route guards dispatch via an `email_log`
+ * write-before-send pattern (Phase 136), so a retried tick that
+ * re-encounters the same signup just appends a second
+ * `email_log` row. The cron route uses that log to dedup on
+ * retry; this helper itself doesn't track duplicates.
+ */
+export async function sendWebinarReminder(params: {
+  toEmail: string;
+  name: string;
+  reference: string;
+  locale: string;
+  joinLink?: string | null;
+  webinarDate?: string | null;
+  webinarTime?: string | null;
+  studentCountry?: string | null;
+}): Promise<LoggedSendTextResult> {
+  if (!isEmailConfigured()) return notConfigured();
+  const locale: EmailLocale = params.locale === 'zh' ? 'zh' : 'en';
+
+  // Same per-recipient local-time rendering as
+  // sendWebinarConfirmation — keeps the two emails visually
+  // consistent for the recipient.
+  let webinarTimeLocal: string;
+  if (params.webinarDate && params.studentCountry) {
+    const tz = getTimezoneForCountry(params.studentCountry);
+    const localLine = tz ? formatTimeInZone(params.webinarDate, tz, locale) : null;
+    if (localLine && tz) {
+      const approxNote = isMultiTimezoneCountry(params.studentCountry)
+        ? ', approximate — confirm local time'
+        : '';
+      webinarTimeLocal = `${localLine} (${tz}${approxNote})`;
+    } else {
+      webinarTimeLocal =
+        'Time in your country will appear here once we confirm the date';
+    }
+  } else {
+    webinarTimeLocal =
+      'Time in your country will appear here once we confirm the date';
+  }
+
+  const tpl = await loadTemplate('webinar.reminder_24h', locale);
+  if (!tpl) {
+    console.warn('[email] webinar reminder template missing', 'webinar.reminder_24h', locale);
+    return { ok: false, error: 'template missing: webinar.reminder_24h', subject: null, text: null };
+  }
+  const subject = tpl.subject;
+  const body = renderTextTemplate(tpl.body_text, {
+    name: params.name,
+    joinLink: params.joinLink ?? 'TBA — full link will be sent 48 hours before the session.',
+    webinarDate: params.webinarDate ?? 'TBA — date coming soon',
+    webinarTime: params.webinarTime ?? 'TBA',
+    webinarTimeLocal,
+    reference: params.reference,
+  });
+  const rendered = formatWithSignature({
+    subject,
+    bodyText: body,
+    unsubscribeToken: unsubTokenFor(params.toEmail),
+  });
+  try {
+    const result = await sendTextEmail({
+      to: params.toEmail,
+      subject: rendered.subject,
+      text: rendered.text,
+    });
+    return toLogged(result, rendered.subject, rendered.text);
+  } catch (err) {
+    console.error('[email] webinar.reminder_24h failed:', err);
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : 'send threw',
+      subject: rendered.subject,
+      text: rendered.text,
+    };
+  }
+}

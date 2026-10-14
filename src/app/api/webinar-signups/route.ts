@@ -5,7 +5,7 @@ import { checkPublicRateLimit, isHoneypotFilled } from '@/lib/rate-limit';
 import { sendWebinarConfirmation } from '@/lib/email';
 import {
   getActiveSessionEmailFields,
-  getActiveSessionId,
+  getActiveSessionWithDate,
   formatWebinarDate,
 } from '@/lib/webinar-sessions';
 
@@ -128,14 +128,35 @@ export async function POST(request: NextRequest) {
   const ip = (xff ? xff.split(',')[0]?.trim() : null) ?? 'unknown';
   const ipHash = createHash('sha256').update(ip).digest('hex');
 
-  // Phase 158: capacity + active-session gate removed. The form
-  // is the page's primary conversion, so when no active session
-  // exists we still capture the signup — `webinar_session_id`
-  // is nullable, so the row lands as a "register your interest"
-  // lead. Staff can later link them via the admin signups page
-  // when a session is published. Active session is still
-  // resolved when present so the email + FK are wired.
-  const activeSessionId = await getActiveSessionId();
+  // Phase 162: closed-state gate. The user spec says
+  // "registration will close after the webinar day until we
+  // setup for next webinar". The single-active partial unique
+  // index on webinar_sessions guarantees at most one active row,
+  // so when the active session's `session_date` is in the past
+  // there's no future session available and registration is
+  // closed. We return 410 Gone with a clear message — the
+  // client form renders its own banner via the `isClosed` prop,
+  // but the server is the source of truth (Phase 160 ended the
+  // "client-only gate" pattern from the Phase 161 revert).
+  const activeSession = await getActiveSessionWithDate();
+  let activeSessionId: string | null = null;
+  if (activeSession) {
+    if (
+      activeSession.sessionDate &&
+      Number.isFinite(new Date(activeSession.sessionDate).getTime()) &&
+      new Date(activeSession.sessionDate).getTime() < Date.now()
+    ) {
+      return NextResponse.json(
+        {
+          error: 'registration_closed',
+          message:
+            'This webinar session has ended. We are scheduling the next one — check back next week.',
+        },
+        { status: 410 },
+      );
+    }
+    activeSessionId = activeSession.id;
+  }
 
   try {
     const { data, error } = await supabase
