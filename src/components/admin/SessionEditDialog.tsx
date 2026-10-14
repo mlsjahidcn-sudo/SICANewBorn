@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
-import { AlertCircle, Save } from 'lucide-react';
+import { AlertCircle, Save, Sparkles } from 'lucide-react';
 import { apiFetchJson, ApiError } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 
@@ -333,23 +333,48 @@ export function SessionEditDialog({ open, onOpenChange, initial, onSaved }: Prop
           </div>
 
           <DialogFooter className="gap-2">
+            {/* Phase 163: "Generate with AI" deep-links to the
+              wizard page with this session pre-loaded. Renders in a
+              new tab so the admin can keep the current session
+              values in the dialog (in case they want to compare
+              the AI's draft against their in-progress typing). */}
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={() => {
+                if (initial?.id) {
+                  window.open(
+                    `/admin/webinar-ai?sessionId=${encodeURIComponent(initial.id)}`,
+                    '_blank',
+                  );
+                }
+              }}
               className="rounded-none"
-              disabled={isSaving}
+              disabled={!initial}
+              title={t('adminWebinars.ai.openInNewTabTitle')}
             >
-              Cancel
+              <Sparkles className="h-4 w-4 mr-1" />
+              {t('adminWebinars.ai.openInNewTabCta')}
             </Button>
-            <Button
-              type="submit"
-              disabled={isSaving}
-              className="bg-[#9B1B30] hover:bg-[#7A1526] rounded-none"
-            >
-              {isSaving ? <Spinner size="xs" /> : <Save className="h-4 w-4 mr-1" />}
-              {t('adminWebinars.sessionSaved').replace('✓ ', '')}
-            </Button>
+            <div className="flex items-center gap-2 ml-auto">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                className="rounded-none"
+                disabled={isSaving}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isSaving}
+                className="bg-[#9B1B30] hover:bg-[#7A1526] rounded-none"
+              >
+                {isSaving ? <Spinner size="xs" /> : <Save className="h-4 w-4 mr-1" />}
+                {t('adminWebinars.sessionSaved').replace('✓ ', '')}
+              </Button>
+            </div>
           </DialogFooter>
         </form>
       </DialogContent>
