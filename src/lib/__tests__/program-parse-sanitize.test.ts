@@ -107,17 +107,17 @@ describe('normalizeProgramRows', () => {
     expect(warnings.some((w) => w.includes('no degree given'))).toBe(true);
   });
 
-  it('treats blank language as English silently, unknown language as a warning', () => {
+  it('keeps blank and unsupported teaching languages unconfirmed', () => {
     const blank = normalizeProgramRows([
       { name: 'MBA', degree: 'Master', discipline: 'Business', language: '' },
     ]);
-    expect(blank.programs[0].language).toBe('English');
+    expect(blank.programs[0].language).toBe('To be confirmed');
     expect(blank.warnings).toHaveLength(0);
 
     const odd = normalizeProgramRows([
       { name: 'MBA', degree: 'Master', discipline: 'Business', language: 'French' },
     ]);
-    expect(odd.programs[0].language).toBe('English');
+    expect(odd.programs[0].language).toBe('To be confirmed');
     expect(odd.warnings.some((w) => w.includes('unrecognized language'))).toBe(true);
   });
 
