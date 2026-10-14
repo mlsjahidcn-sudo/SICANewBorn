@@ -290,7 +290,9 @@ export function ChatWindow({ isOpen, onClose, onMinimize }: ChatWindowProps) {
           role: 'assistant',
           content:
             daysAgo > 0
-              ? t('chat.restoredFromDaysAgo', { count: daysAgo })
+              ? daysAgo === 1
+                ? t('chat.restoredFromDaysAgo_one', { count: daysAgo })
+                : t('chat.restoredFromDaysAgo_other', { count: daysAgo })
               : t('chat.restoredBanner'),
         };
         setMessages((prev) => {

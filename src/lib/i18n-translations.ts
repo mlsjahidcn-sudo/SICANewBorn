@@ -836,6 +836,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'common.saveChanges': 'Save changes',
     'common.create': 'Create',
     'common.cancel': 'Cancel',
+    'common.error': 'Something went wrong. Please try again.',
     'common.delete': 'Delete',
     'common.edit': 'Edit',
     'common.errorPrefix': 'Error:',
@@ -2697,6 +2698,15 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminFees.timelineBulkChip': 'Bulk action: {{count}} fees',
     'adminFees.kpiOverdueAutoNote': 'Auto-marked overdue by daily cron',
     // Phase 106 B3: Admin Settings (profile / password / site)
+    // Student-portal settings page (/student/settings). Separate from
+    // `adminSettings.*` (the admin portal). Phase 173b: these three keys
+    // were referenced by the page but never registered, so `t()` fell back
+    // to the key itself and the page literally rendered "settings.title".
+    // The page also had `t('settings.title') || 'Settings'` fallbacks —
+    // dead code, because a non-empty key string is always truthy.
+    'settings.title': 'Settings',
+    'settings.subtitle': 'Manage your account preferences',
+    'settings.account': 'Account',
     'adminSettings.title': 'Settings',
     'adminSettings.subtitle': 'Manage your account and site settings',
     'adminSettings.tabProfile': 'Profile',
@@ -2992,8 +3002,13 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminUniversities.aiRefine.removed': 'removed',
     'adminUniversities.aiRefine.added': 'added',
     'adminUniversities.aiRefine.noneAccepted': 'Neither field is checked — the form will not change.',
-    'adminUniversities.aiRefine.partialAccepted_one': '{{en}} English + {{zh}} Chinese accepted.',
-    'adminUniversities.aiRefine.partialAccepted_other': '{{en}} English + {{zh}} Chinese accepted.',
+    // Phase 173b: was `partialAccepted_one` / `_other` — both strings were
+    // IDENTICAL, and this branch is only reached when exactly one field is
+    // accepted (the modal picks `bothAccepted` / `noneAccepted` otherwise),
+    // so the pluralization was vestigial. The call site used the bare key,
+    // which no suffix lookup could ever match, so it rendered the raw key.
+    'adminUniversities.aiRefine.partialAccepted': '{{en}} English + {{zh}} Chinese accepted.',
+    'adminUniversities.aiRefine.cancel': 'Cancel',
     'adminUniversities.aiRefine.bothAccepted': 'Both fields accepted — click Confirm to apply.',
     'adminUniversities.aiRefine.confirm': 'Apply accepted changes',
     'adminUniversities.aiRefine.error': 'AI refine failed',
@@ -3548,6 +3563,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminPartnerStudentDetail.notesSave': 'Save Notes',
     'adminPartnerStudentDetail.errorFailedLoad': 'Failed to load partner student',
     'adminPartnerStudentDetail.errorFailedSave': 'Failed to save notes',
+    'adminPartnerStudentDetail.errorFailedUpdate': 'Failed to update partner student',
     'adminPartnerStudentDetail.errorPrefix': 'Error:',
     'adminPartnerStudentDetail.notFoundTitle': 'Partner student not found',
     'adminPartnerStudentDetail.notFoundBody': 'The record may have been deleted or archived.',
@@ -4710,6 +4726,11 @@ export const translations: Record<Locale, Record<string, string>> = {
     'nav.admissions.counselling': 'Free Counselling',
     'nav.admissions.counsellingDesc': 'Book a free 10-min session with an advisor',
     'adminNav.counselling': 'Counselling',
+    // Phase 173b: this key was referenced by the sidebar (Phase 157/160)
+    // but never registered, and `t()` falls back to the key ITSELF — so
+    // the admin sidebar rendered the literal string
+    // "adminNav.consultationActivity" instead of a label.
+    'adminNav.consultationActivity': 'Consultation Activity',
     'counselling.metaTitle': 'Free 10-Minute Counselling Session — Study in China',
     'counselling.badge': '100% Free · 10 Minutes · Online',
     'counselling.heroTitle': 'Talk to a SICA advisor before you decide',
@@ -4795,6 +4816,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'counselling.successWhatsappCta': 'WhatsApp us',
     'counselling.successWhatsappMessage': 'Hi SICA, about my counselling booking',
     'counselling.backHome': 'Back to home',
+    'counselling.loading': 'Loading…',
+    'counselling.cancelEdit': 'Cancel edit',
     'counselling.respondTitle': 'Reschedule your free counselling session',
     'counselling.respondSubtitle': 'Confirm the time we suggested, or pick another slot.',
     'counselling.respondHeading': 'Does this time work for you?',
@@ -5961,6 +5984,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'common.saveChanges': '保存更改',
     'common.create': '创建',
     'common.cancel': '取消',
+    'common.error': '出错了，请重试。',
     'common.delete': '删除',
     'common.edit': '编辑',
     'common.errorPrefix': '错误:',
@@ -7771,6 +7795,10 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminFees.timelineBulkChip': '批量操作：{{count}} 条',
     'adminFees.kpiOverdueAutoNote': '由每日 cron 自动标记为逾期',
     // Phase 106 B3: 管理后台设置（资料 / 密码 / 站点）
+    // Phase 173b: see the EN note — student-portal settings page.
+    'settings.title': '设置',
+    'settings.subtitle': '管理你的账户偏好',
+    'settings.account': '账户',
     'adminSettings.title': '设置',
     'adminSettings.subtitle': '管理你的账户与站点设置',
     'adminSettings.tabProfile': '个人资料',
@@ -8061,8 +8089,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminUniversities.aiRefine.removed': '已删除',
     'adminUniversities.aiRefine.added': '已添加',
     'adminUniversities.aiRefine.noneAccepted': '两个字段都未勾选 — 表单不会变化。',
-    'adminUniversities.aiRefine.partialAccepted_one': '已接受 {{en}} 项英文 + {{zh}} 项中文。',
-    'adminUniversities.aiRefine.partialAccepted_other': '已接受 {{en}} 项英文 + {{zh}} 项中文。',
+    // Phase 173b: see the EN note — collapsed to a single key.
+    'adminUniversities.aiRefine.partialAccepted': '已接受 {{en}} 项英文 + {{zh}} 项中文。',
+    'adminUniversities.aiRefine.cancel': '取消',
     'adminUniversities.aiRefine.bothAccepted': '两个字段都已接受 — 点击"应用"即可生效。',
     'adminUniversities.aiRefine.confirm': '应用已接受的修改',
     'adminUniversities.aiRefine.error': 'AI 润色失败',
@@ -8595,6 +8624,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminPartnerStudentDetail.notesSave': '保存备注',
     'adminPartnerStudentDetail.errorFailedLoad': '加载合作方学生失败',
     'adminPartnerStudentDetail.errorFailedSave': '保存备注失败',
+    'adminPartnerStudentDetail.errorFailedUpdate': '更新合作方学生失败',
     'adminPartnerStudentDetail.errorPrefix': '错误：',
     'adminPartnerStudentDetail.notFoundTitle': '未找到合作方学生',
     'adminPartnerStudentDetail.notFoundBody': '该记录可能已被删除或归档。',
@@ -9695,6 +9725,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'nav.admissions.counselling': '免费咨询',
     'nav.admissions.counsellingDesc': '预约 10 分钟免费一对一咨询',
     'adminNav.counselling': '咨询预约',
+    // Phase 173b: see the EN note — this key was referenced but never
+    // registered, so the sidebar showed the raw key.
+    'adminNav.consultationActivity': '咨询实况',
     'counselling.metaTitle': '免费 10 分钟留学咨询 — 中国留学',
     'counselling.badge': '完全免费 · 10 分钟 · 在线',
     'counselling.heroTitle': '做决定之前，先和 SICA 顾问聊聊',
@@ -9777,6 +9810,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'counselling.successWhatsappCta': 'WhatsApp 联系我们',
     'counselling.successWhatsappMessage': '您好 SICA，关于我的咨询预约',
     'counselling.backHome': '返回首页',
+    'counselling.loading': '加载中…',
+    'counselling.cancelEdit': '取消编辑',
     'counselling.respondTitle': '改期您的免费咨询',
     'counselling.respondSubtitle': '确认我们建议的时间，或选择另一个时段。',
     'counselling.respondHeading': '这个时间合适吗？',

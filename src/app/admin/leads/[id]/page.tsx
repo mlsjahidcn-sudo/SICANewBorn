@@ -717,7 +717,9 @@ export default function LeadDetailPage() {
               </Button>
               {Number(lead.contact_attempts || 0) > 0 && (
                 <p className="text-xs text-gray-500">
-                  {t('adminLeadDetail.contactAttempts', { count: Number(lead.contact_attempts) })}
+                  {Number(lead.contact_attempts) === 1
+                    ? t('adminLeadDetail.contactAttempts_one', { count: Number(lead.contact_attempts) })
+                    : t('adminLeadDetail.contactAttempts_other', { count: Number(lead.contact_attempts) })}
                   {lead.last_contacted_at
                     ? ` · ${t('adminLeadDetail.contactLastOn', {
                         date: new Date(String(lead.last_contacted_at)).toLocaleDateString(),

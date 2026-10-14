@@ -39,5 +39,13 @@ jobs:
       - name: Unit tests
         run: npm test
 
+      # Phase 173b: catches translation keys that are referenced by a
+      # t('…') call but defined in NEITHER locale. The i18n parity check
+      # above cannot see those — from its point of view the key simply
+      # doesn't exist — and t() falls back to rendering the key itself,
+      # so it ships as a raw string in the UI instead of failing a build.
+      - name: i18n missing keys
+        run: npm run i18n:missing
+
       - name: Build
         run: npx next build

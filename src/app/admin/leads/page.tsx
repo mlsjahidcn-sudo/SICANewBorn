@@ -689,7 +689,10 @@ export default function LeadsPage() {
                           )}
                           {lead.contact_attempts > 0 && (
                             <span className="text-xs text-gray-500">
-                              · {t('adminLeads.contactAttempts', { count: lead.contact_attempts })}
+                              ·{' '}
+                              {lead.contact_attempts === 1
+                                ? t('adminLeads.contactAttempts_one', { count: lead.contact_attempts })
+                                : t('adminLeads.contactAttempts_other', { count: lead.contact_attempts })}
                             </span>
                           )}
                         </div>

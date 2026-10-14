@@ -71,8 +71,8 @@ export default function StudentSettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-[#1B2A4A]">{t('settings.title') || 'Settings'}</h1>
-        <p className="text-[#4B5563] mt-1">{t('settings.subtitle') || 'Manage your account preferences'}</p>
+        <h1 className="text-2xl font-bold text-[#1B2A4A]">{t('settings.title')}</h1>
+        <p className="text-[#4B5563] mt-1">{t('settings.subtitle')}</p>
       </div>
 
       {status.kind !== 'idle' && (
@@ -104,7 +104,7 @@ export default function StudentSettingsPage() {
             <div className="flex items-center gap-3">
               <User className="h-5 w-5 text-[#1B2A4A]" />
               <div>
-                <CardTitle>{t('settings.account') || 'Account'}</CardTitle>
+                <CardTitle>{t('settings.account')}</CardTitle>
                 <CardDescription>Your sign-in details</CardDescription>
               </div>
             </div>
