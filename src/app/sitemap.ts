@@ -96,6 +96,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Closes the only country gap from the original Phase 147 list.
     { url: `${SITE_URL}/csc-scholarship-bangladesh`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/moe-listed-mbbs-universities-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    // Phase 167: closes the highest-intent transactional gap from
+    // the 20-article audit — every admissions guide on SICA
+    // references the study plan as a required document but no
+    // single article operationalizes "how to actually write one".
+    { url: `${SITE_URL}/how-to-write-study-plan-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/x1-vs-x2-student-visa-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/study-in-china-without-ielts`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     // Phase 150: English-track ETP landscape article — the broad
