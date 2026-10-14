@@ -1116,9 +1116,10 @@ export async function sendCounsellingProposalExpiredAdmin(
  * line falls back to a "we'll confirm the date" placeholder
  * when the country is unknown / the session date is null.
  *
- * Phase 164: also passes `webinarLabel` through so the
- * `{{webinarLabel}}` template variable can render
- * "Week 5 · Oct 20, 2026" alongside the date.
+ * Phase 165: dropped `webinarLabel` — the public page is
+ * fully static (no `webinar_sessions` row to pull a label
+ * from). The email template body still has a `SESSION: ...`
+ * line but it renders the date instead of a per-week label.
  */
 export async function sendWebinarConfirmation(params: {
   toEmail: string;
@@ -1129,9 +1130,6 @@ export async function sendWebinarConfirmation(params: {
   joinLink?: string | null;
   webinarDate?: string | null;
   webinarTime?: string | null;
-  /** Phase 164: per-session human-readable label like
-   *  "Week 5 · Oct 20, 2026". Renders into {{webinarLabel}}. */
-  webinarLabel?: string | null;
   /** English country name from the signup form. Used to
    *  compute the per-recipient local time. Unknown / null
    *  falls back to China-time-only rendering. */
@@ -1173,10 +1171,6 @@ export async function sendWebinarConfirmation(params: {
     joinLink: params.joinLink ?? 'TBA — full link will be sent 48 hours before the session.',
     webinarDate: params.webinarDate ?? 'TBA — date coming soon',
     webinarTime: params.webinarTime ?? 'TBA',
-    // Phase 164: empty/null label falls back to the date so
-    // templates that already have a "DATE:" line still render
-    // sensibly when staff hasn't set a label.
-    webinarLabel: params.webinarLabel ?? params.webinarDate ?? 'TBA',
     webinarTimeLocal,
     reference: params.reference,
   });
@@ -1203,90 +1197,10 @@ export async function sendWebinarConfirmation(params: {
   }
 }
 
-/**
- * Phase 162: 24-hour reminder for an upcoming webinar signup.
- *
- * Fires from `/api/cron/webinar-reminders` ~24h before the
- * session's `session_date`. Uses the same `webinarTimeLocal`
- * rendering as `sendWebinarConfirmation` so the recipient sees
- * their local time alongside the China time.
- *
- * Idempotency: the cron route guards dispatch via an `email_log`
- * write-before-send pattern (Phase 136), so a retried tick that
- * re-encounters the same signup just appends a second
- * `email_log` row. The cron route uses that log to dedup on
- * retry; this helper itself doesn't track duplicates.
- */
-export async function sendWebinarReminder(params: {
-  toEmail: string;
-  name: string;
-  reference: string;
-  locale: string;
-  joinLink?: string | null;
-  webinarDate?: string | null;
-  webinarTime?: string | null;
-  /** Phase 164: per-session label (mirrors sendWebinarConfirmation). */
-  webinarLabel?: string | null;
-  studentCountry?: string | null;
-}): Promise<LoggedSendTextResult> {
-  if (!isEmailConfigured()) return notConfigured();
-  const locale: EmailLocale = params.locale === 'zh' ? 'zh' : 'en';
-
-  // Same per-recipient local-time rendering as
-  // sendWebinarConfirmation — keeps the two emails visually
-  // consistent for the recipient.
-  let webinarTimeLocal: string;
-  if (params.webinarDate && params.studentCountry) {
-    const tz = getTimezoneForCountry(params.studentCountry);
-    const localLine = tz ? formatTimeInZone(params.webinarDate, tz, locale) : null;
-    if (localLine && tz) {
-      const approxNote = isMultiTimezoneCountry(params.studentCountry)
-        ? ', approximate — confirm local time'
-        : '';
-      webinarTimeLocal = `${localLine} (${tz}${approxNote})`;
-    } else {
-      webinarTimeLocal =
-        'Time in your country will appear here once we confirm the date';
-    }
-  } else {
-    webinarTimeLocal =
-      'Time in your country will appear here once we confirm the date';
-  }
-
-  const tpl = await loadTemplate('webinar.reminder_24h', locale);
-  if (!tpl) {
-    console.warn('[email] webinar reminder template missing', 'webinar.reminder_24h', locale);
-    return { ok: false, error: 'template missing: webinar.reminder_24h', subject: null, text: null };
-  }
-  const subject = tpl.subject;
-  const body = renderTextTemplate(tpl.body_text, {
-    name: params.name,
-    joinLink: params.joinLink ?? 'TBA — full link will be sent 48 hours before the session.',
-    webinarDate: params.webinarDate ?? 'TBA — date coming soon',
-    webinarTime: params.webinarTime ?? 'TBA',
-    webinarLabel: params.webinarLabel ?? params.webinarDate ?? 'TBA',
-    webinarTimeLocal,
-    reference: params.reference,
-  });
-  const rendered = formatWithSignature({
-    subject,
-    bodyText: body,
-    unsubscribeToken: unsubTokenFor(params.toEmail),
-  });
-  try {
-    const result = await sendTextEmail({
-      to: params.toEmail,
-      subject: rendered.subject,
-      text: rendered.text,
-    });
-    return toLogged(result, rendered.subject, rendered.text);
-  } catch (err) {
-    console.error('[email] webinar.reminder_24h failed:', err);
-    return {
-      ok: false,
-      error: err instanceof Error ? err.message : 'send threw',
-      subject: rendered.subject,
-      text: rendered.text,
-    };
-  }
-}
+// Phase 162's sendWebinarReminder() + the cron endpoint + the
+// webinar.reminder_24h email template are all removed in Phase 165
+// — the public page is fully static, there's no session FK on
+// signups, and staff edits WEBINAR_CONFIG when the date moves.
+// No 24h reminder makes sense without a queryable session row.
+// If reminders ever come back as a feature, re-add the helper +
+// the cron route + the email template from git history.

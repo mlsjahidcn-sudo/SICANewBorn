@@ -392,69 +392,15 @@ export interface AnalyticsEventMap {
     country?: string;
   };
   // -----------------------------------------------------------------
-  // Phase 142: webinar promo popup funnel events.
-  //
-  // Same shape as Phase 129+ `whatsapp_popup_*` — `view` fires
-  // once when the popup actually mounts (after the 3s/scroll
-  // trigger fires), `click` fires on CTA, `dismiss` fires on
-  // either X-button close or CTA click.
-  // -----------------------------------------------------------------
-  /** Phase 142: webinar promo popup first became visible. */
-  webinar_popup_view: {
-    /** Page locale. */
-    locale: 'en' | 'zh';
-    /** Pathname at the moment the popup mounted. */
-    path: string;
-  };
-  /** Phase 142: user clicked the popup CTA. */
-  webinar_popup_click: {
-    /** Page locale. */
-    locale: 'en' | 'zh';
-    /** Pathname at the moment of click. */
-    path: string;
-  };
-  // -----------------------------------------------------------------
-  // Phase 144: fallback-teaser branch.
-  //
-  // The active-session path (above) only fires when the public
-  // page has an active webinar_sessions row. When no session
-  // exists (or the fetch errors silently), we now render a
-  // "Webinar coming — register your interest" teaser instead of
-  // staying silent. These two events distinguish the two
-  // branches in GA so the funnel doesn't conflate them.
-  // -----------------------------------------------------------------
-  /** Phase 144: popup mounted under the no-active-session
-   *  fallback branch. */
-  webinar_popup_view_teaser: {
-    locale: 'en' | 'zh';
-    path: string;
-  };
-  /** Phase 144: visitor clicked the "Notify me" CTA from the
-   *  fallback branch (vs webinar_popup_click for the
-   *  active-session branch). */
-  webinar_popup_click_register: {
-    locale: 'en' | 'zh';
-    path: string;
-  };
-  /** Phase 142: user dismissed the popup (X-button or CTA-click navigates away). */
-  webinar_popup_dismiss: {
-    /** What closed the popup. */
-    source: 'close_button' | 'cta_click';
-    /** Page locale. */
-    locale: 'en' | 'zh';
-    /** Pathname at the moment of dismiss. */
-    path: string;
-  };
-  // -----------------------------------------------------------------
-  // Phase 143: form drop-off funnel + admin-action events.
+  // Phase 143: form drop-off funnel events.
   //
   // The form events (`webinar_form_started`, `_field_focused`,
   // `_submitted_failed`) are client-fired from
   // webinar-signup-form.tsx so the funnel leak is measurable
-  // in GA without any backend changes. Admin-action events
-  // (`webinar_session_*`, `webinar_signup_status_changed`,
-  // `webinar_signup_status_changed`) are server-fired from the
-  // route handlers so they fire on every API call regardless of UI.
+  // in GA without any backend changes. Phase 165: dropped the
+  // admin-action session/topic events (no admin-side session
+  // management anymore — public page is static) and the
+  // webinar_popup_* events (promo popup removed in Phase 165).
   // -----------------------------------------------------------------
   /** Phase 143: visitor started interacting with the signup form
    *  (first field focus). */
@@ -478,87 +424,18 @@ export interface AnalyticsEventMap {
   webinar_form_submitted_failed: {
     /** Page locale. */
     locale: 'en' | 'zh';
-    /** Stable error code so GA can group funnel leaks.
-     *  Phase 157: 'session_full' removed — registration is uncapped. */
+    /** Stable error code so GA can group funnel leaks. */
     error_code: 'validation' | 'server';
   };
-  /** Phase 143: admin created a new session row. */
-  webinar_session_created: {
-    locale: 'en' | 'zh';
-    session_id: string;
-  };
-  /** Phase 143: admin edited a session row (any field). */
-  webinar_session_updated: {
-    locale: 'en' | 'zh';
-    session_id: string;
-  };
-  /** Phase 143: admin deleted a session row. */
-  webinar_session_deleted: {
-    locale: 'en' | 'zh';
-    session_id: string;
-  };
-  /** Phase 164: admin scheduled a new session via the
-   *  one-click "Schedule next" button (auto-rollover flow).
-   *  Distinguishes the cadence-driven weekly schedule
-   *  from the manual "Add session" dialog flow in GA. */
-  webinar_session_scheduled: {
-    locale: 'en' | 'zh';
-    session_id: string;
-    /** The auto-derived week_number for this session. */
-    week_number: string;
-  };
-  /** Phase 143: admin added a topic under a session. */
-  webinar_topic_added: {
-    locale: 'en' | 'zh';
-    session_id: string;
-    /** Topic degree enum (so GA can group by intake). Optional
-        since Phase 162's university-kind topics have kind instead
-        of degree. */
-    degree?: string;
-    /** Phase 162: when set, this is a university-kind topic
-        bound to a specific featured university. */
-    university_id?: string;
-    /** Phase 162: kind of the topic ('program' | 'scholarship'
-        | 'timing' | 'requirement' for university-kind topics).
-        Optional for back-compat. */
-    kind?: string;
-  };
   /** Phase 143: admin flipped a signup's status. Fired from
-   *  the API route (works for any caller, not just the UI). */
+   *  the API route (works for any caller, not just the UI).
+   *  Phase 165: kept — signup status flips are still the only
+   *  admin-side action that needs tracking. */
   webinar_signup_status_changed: {
     locale: 'en' | 'zh';
     signup_id: string;
     old_status: string;
     new_status: string;
-  };
-  /** Phase 163: AI-generated webinar brief returned. */
-  webinar_brief_generated: {
-    locale: 'en' | 'zh';
-    /** Count of featured universities in the returned brief. */
-    university_count: string;
-    /** Count of (uni, kind) topic slots filled. */
-    topic_count: string;
-    /** Count of sanitization warnings (dropped slugs, pricing
-        scrub hits, both-empty bodies). */
-    warning_count: string;
-    /** Model identifier echoed by the API (doubao-* | deepseek-*). */
-    model: string;
-  };
-  /** Phase 163: admin applied the AI-generated session title /
-   *  description patch. */
-  webinar_brief_applied_session: {
-    locale: 'en' | 'zh';
-    session_id: string;
-  };
-  /** Phase 163: admin applied the AI-generated per-(uni, kind)
-   *  topic rows. */
-  webinar_brief_applied_topics: {
-    locale: 'en' | 'zh';
-    session_id: string;
-    created: string;
-    updated: string;
-    skipped: string;
-    failed: string;
   };
 }
 

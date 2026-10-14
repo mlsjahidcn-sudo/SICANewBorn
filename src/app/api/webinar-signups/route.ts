@@ -3,22 +3,20 @@ import { createHash } from 'crypto';
 import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
 import { checkPublicRateLimit, isHoneypotFilled } from '@/lib/rate-limit';
 import { sendWebinarConfirmation } from '@/lib/email';
-import {
-  getUpcomingSessionEmailFields,
-  formatWebinarDate,
-} from '@/lib/webinar-sessions';
+import { formatWebinarDate, WEBINAR_CONFIG } from '@/lib/webinar-config';
 
 export const dynamic = 'force-dynamic';
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
 /**
- * Phase 139 + 140: public webinar signup endpoint for
- * /webinar-2027-intake-csc. Persists the row, fires the
- * `webinar.confirmed` email with the live session's join
- * link / date / time (Phase 140 — instead of the Phase 139
- * "TBA" defaults), and returns the row id so the client can
- * show a reference number on /thank-you.
+ * Phase 165: public webinar signup endpoint for
+ * /webinar-2027-intake-csc. Persists the row + fires the
+ * `webinar.confirmed` email with the static-config session
+ * metadata (Phase 164's `webinar_sessions` table is gone).
+ *
+ * Returns the row id so the client can show a reference
+ * number on /thank-you.
  *
  * Anti-abuse: same 5/hr/IP + 200/hr/global + honeypot pattern
  * as /api/leads and /api/assessments.
@@ -26,7 +24,6 @@ const ONE_HOUR_MS = 60 * 60 * 1000;
  * Phase 140 expanded the program_interests taxonomy to 7
  * values — March bachelor + PhD were missing from Phase 139.
  */
-
 const VALID_PROGRAM_INTERESTS = [
   'chinese_language',
   'foundation',
@@ -109,9 +106,7 @@ export async function POST(request: NextRequest) {
   const referrer = request.headers.get('referer') ?? null;
   const userAgent = request.headers.get('user-agent') ?? null;
   // Phase 141: extract country as a top-level variable so the
-  // email sender can render the per-recipient local time. The
-  // same trimmed string also flows into the webinar_signups
-  // row below.
+  // email sender can render the per-recipient local time.
   const country = ((body.country as string)?.trim() ?? null) || null;
   const utmSource = (body.utmSource as string)?.trim() || null;
   const utmMedium = (body.utmMedium as string)?.trim() || null;
@@ -126,26 +121,6 @@ export async function POST(request: NextRequest) {
   const xff = request.headers.get('x-forwarded-for');
   const ip = (xff ? xff.split(',')[0]?.trim() : null) ?? 'unknown';
   const ipHash = createHash('sha256').update(ip).digest('hex');
-
-  // Phase 164: closed-state gate replaced. Auto-rollover means
-  // there's no manual `is_active=true` toggle — the next-upcoming
-  // session is whatever has the earliest future session_date.
-  // When `getUpcomingSessionEmailFields()` returns null, there's
-  // no upcoming webinar scheduled (no rows in the future, or all
-  // are Cancelled) and registration is closed. Same 410 contract
-  // as Phase 162 — client form renders its banner via the
-  // `isClosed` prop, server gate is the source of truth.
-  const sessionFields = await getUpcomingSessionEmailFields();
-  if (!sessionFields.webinarDateIso) {
-    return NextResponse.json(
-      {
-        error: 'registration_closed',
-        message:
-          'The next webinar session is being scheduled. Check back next week or drop your details and we will email you when the date is confirmed.',
-      },
-      { status: 410 },
-    );
-  }
 
   try {
     const { data, error } = await supabase
@@ -167,13 +142,9 @@ export async function POST(request: NextRequest) {
         gclid,
         fbclid,
         ip_hash: ipHash,
-        // Phase 164: FK auto-resolved to the next-upcoming session
-        // via `sessionFields.id` (same row the email helper just
-        // fetched — single query serves both purposes). When the
-        // next-upcoming exists, this id is the same row; the admin
-        // signups list joins back via `webinar_session_id` to show
-        // "registered for Week 5".
-        webinar_session_id: sessionFields.id,
+        // Phase 165: no more webinar_session_id FK — the
+        // session is hardcoded in WEBINAR_CONFIG. Signups
+        // are anonymous leads, not tied to a specific row.
       })
       .select('id, created_at')
       .single();
@@ -187,26 +158,18 @@ export async function POST(request: NextRequest) {
     // never propagated — the signup row already exists, so a
     // 500 here would just confuse the user (their seat is
     // reserved, they just didn't get the auto-email).
-    //
-    // Phase 164: pass `webinarLabel` so the email can render
-    // "You're registered for Week 5 · Oct 20" instead of just
-    // the date — the label is the user-visible identifier
-    // across all surfaces (hero, email, thank-you page).
     const reference = `SICA-WEB-${data.id.slice(0, 8).toUpperCase()}`;
     sendWebinarConfirmation({
       toEmail: email,
       name: firstName,
       reference,
       locale: (body.locale as string) ?? 'en',
-      joinLink: sessionFields.joinUrl,
-      webinarDate: formatWebinarDate(sessionFields.webinarDateIso) || null,
-      webinarTime: sessionFields.webinarTime,
-      webinarLabel: sessionFields.label,
+      joinLink: WEBINAR_CONFIG.joinUrl,
+      webinarDate: formatWebinarDate(WEBINAR_CONFIG.sessionDateIso) || null,
+      webinarTime: WEBINAR_CONFIG.sessionTimeDisplay,
       // Phase 141: pass the captured country so the email
       // can render the webinar time in the student's local
-      // timezone alongside China time. Unknown / null falls
-      // back to the China-time-only branch in
-      // sendWebinarConfirmation.
+      // timezone alongside China time.
       studentCountry: country || null,
     }).catch((err) => console.error('[POST /api/webinar-signups] confirmation email failed:', err));
 

@@ -4941,9 +4941,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'webinar.hero.title': '2027 Intake + CSC Scholarship webinar',
     // Phase 158: TBA copy used when no active session is published —
     // the form still acts as a register-your-interest capture.
-    'webinar.hero.titleNoSession': '2027 Intake + CSC Scholarship webinar — register your interest',
     'webinar.hero.subtitle': 'Free 60-minute live session covering March 2027 Chinese Language + Foundation, September 2027 Bachelor + Master, and CSC Scholarship strategy.',
-    'webinar.hero.subtitleNoSession': 'SICA is finalising the next live session. Drop your details below and we will email + WhatsApp you the moment the date and join link are confirmed.',
     'webinar.hero.dateLabel': 'Date coming soon',
     'webinar.hero.dateBody': 'Register now and we will email + WhatsApp you the moment the date and join link are confirmed.',
     'webinar.hero.ctaPrimary': 'Register below',
@@ -5063,7 +5061,6 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminWebinars.colInterests': 'Interests',
     'adminWebinars.colStatus': 'Status',
     'adminWebinars.colCreated': 'Signed up',
-    'adminWebinars.colSource': 'Source',
     'adminWebinars.emptyAll': 'No signups yet.',
     'adminWebinars.emptyFiltered': 'No signups match the current filters.',
     'adminWebinars.errorLoad': 'Failed to load signups',
@@ -5084,186 +5081,34 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminWebinars.statusChanged': '✓ Status updated',
     'adminWebinars.errorUpdateStatus': 'Failed to update status',
     // Phase 140 + 164: session CRUD
-    'adminWebinars.sessionsTitle': 'Webinar sessions',
-    // Phase 164: subtitle reflects the auto-rollover model.
     // No more "toggle which is active" — the next-future
     // session_date is implicitly the active one.
-    'adminWebinars.sessionsSubtitle': 'Weekly cadence. The next future-dated session is the one rendered publicly — staff schedule the next one via "Schedule next".',
-    'adminWebinars.addSession': 'Add session',
-    'adminWebinars.editSession': 'Edit session',
-    // Phase 164: "Upcoming" badge replaces the old Active/Inactive pair.
     // The list now highlights every row whose session_date is in the
     // future (vs historic past sessions).
-    'adminWebinars.sessionUpcomingBadge': 'Upcoming',
-    // Phase 164: replaces sessionSetActiveHelp + sessionIsActiveLabel
     // (no more isActive checkbox — the next-future session_date is
     // implicitly public).
-    'adminWebinars.sessionAutoRolloverHelp': 'The session_date in the future is the one shown on the public page. Set a title, date, and join URL — then click "Schedule next" to add another one a week out.',
-    'adminWebinars.scheduleNext': 'Schedule next',
-    'adminWebinars.scheduleNextSuccess': 'Scheduled — fill in the join URL to finish setup.',
-    'adminWebinars.sessionFieldSlug': 'Slug',
-    'adminWebinars.sessionFieldSlugHelp': 'URL-safe id (e.g. webinar-2027-intake-csc)',
-    'adminWebinars.sessionFieldTitleEn': 'Title (English)',
-    'adminWebinars.sessionFieldTitleZh': 'Title (Chinese)',
-    'adminWebinars.sessionFieldDescriptionEn': 'Description (English)',
-    'adminWebinars.sessionFieldDescriptionZh': 'Description (Chinese)',
-    'adminWebinars.sessionFieldDate': 'Session date',
-    'adminWebinars.sessionFieldDateHelp': 'Leave blank while scheduling is TBA.',
-    'adminWebinars.sessionFieldTime': 'Session time',
-    'adminWebinars.sessionFieldTimeHelp': 'Free-form display string (e.g. 10:00 AM Beijing Time).',
-    'adminWebinars.sessionFieldDuration': 'Duration (minutes)',
-    'adminWebinars.sessionFieldJoinUrl': 'Join URL',
-    'adminWebinars.sessionFieldJoinUrlHelp': 'Sent to attendees via the webinar.confirmed email.',
-    'adminWebinars.sessionFieldStatus': 'Lifecycle status',
-    // Phase 164: label + week_number replace displayOrder +
     // sessionIsActiveLabel (auto-rollover removed both).
-    'adminWebinars.sessionFieldLabel': 'Public label',
-    'adminWebinars.sessionFieldLabelHelp': 'Rendered in the hero heading + email. Leave blank to auto-generate from the week number + date.',
-    'adminWebinars.sessionFieldLabelPlaceholder': 'Week 5 · Oct 20, 2026',
-    'adminWebinars.sessionFieldWeekNumber': 'Week number',
-    'adminWebinars.sessionFieldWeekNumberHelp': 'Sequential integer. Leave blank to auto-assign (max + 1).',
-    'adminWebinars.sessionFieldCreatedAt': 'Created',
-    'adminWebinars.sessionFieldUpdatedAt': 'Updated',
     'adminWebinars.sessionSaved': '✓ Session saved',
     'adminWebinars.sessionDeleted': '✓ Session deleted',
     'adminWebinars.sessionDeleteTitle': 'Delete this session?',
     'adminWebinars.sessionDeleteBody': 'Topics are deleted via ON DELETE CASCADE. Historical signups keep their signup row (webinar_session_id is set NULL on delete).',
-    'adminWebinars.sessionNoDate': 'Date TBA',
-    'adminWebinars.sessionNoJoinUrl': 'Link TBA',
-    'adminWebinars.errorSaveSession': 'Failed to save session',
-    'adminWebinars.errorDeleteSession': 'Failed to delete session',
-    // Phase 164: scheduleNext flow surfaces this banner after
     // the next-row insert succeeds, before the admin fills in
     // the join URL.
-    'adminWebinars.scheduleNextCreated': 'Scheduled.',
-    // Phase 140: topic CRUD
-    'adminWebinars.topicsTitle': 'Webinar topics',
-    'adminWebinars.topicsSubtitle': 'Tracks rendered on the public page for the active session, ordered by display order.',
-    'adminWebinars.addTopic': 'Add topic',
-    'adminWebinars.editTopic': 'Edit topic',
-    'adminWebinars.topicFieldIntake': 'Intake',
-    'adminWebinars.topicFieldDegree': 'Degree',
-    'adminWebinars.topicFieldTitleEn': 'Title (English)',
-    'adminWebinars.topicFieldTitleZh': 'Title (Chinese)',
-    'adminWebinars.topicFieldBodyEn': 'Body (English)',
-    'adminWebinars.topicFieldBodyZh': 'Body (Chinese)',
-    'adminWebinars.topicFieldDisplayOrder': 'Display order',
-    'adminWebinars.topicSaved': '✓ Topic saved',
-    'adminWebinars.topicDeleted': '✓ Topic deleted',
-    'adminWebinars.topicDeleteTitle': 'Delete this topic?',
-    'adminWebinars.topicDeleteBody': 'It will be removed from the public agenda immediately.',
-    'adminWebinars.topicNoTopics': 'No topics yet for this session. Add the first one to populate the public agenda.',
-    'adminWebinars.errorSaveTopic': 'Failed to save topic',
-    'adminWebinars.errorDeleteTopic': 'Failed to delete topic',
-    // Phase 162: university-kind topic CRUD (distinct from the
     //  track-schema topics above). Bound to a university + kind;
     //  feeds the public 5-card featured-university grid.
-    'adminWebinars.universityTopicsTitle': 'University topics',
-    'adminWebinars.universityTopicsSubtitle': 'One set of (program | scholarship | timing | requirement) per featured university. Feeds the public 5-card spotlight grid.',
-    'adminWebinars.addUniversityTopic': 'Add university topic',
-    'adminWebinars.topicFieldUniversity': 'University',
-    'adminWebinars.topicFieldKind': 'Section',
     'adminWebinars.topicNoUniversityTopics': 'No university-kind topics seeded for this session yet.',
-    'adminWebinars.kind.program': 'Programs available',
-    'adminWebinars.kind.scholarship': 'Scholarships',
-    'adminWebinars.kind.timing': 'Best time to apply',
-    'adminWebinars.kind.requirement': 'Admission requirements',
-    // Phase 163: AI-generated webinar brief wizard at
     //  /admin/webinar-ai + the "Generate with AI" trigger button
     //  inside the SessionEditDialog footer. Keys mirror the
     //  3-step state machine (setup / preview / apply).
-    'adminWebinars.ai.openInNewTabCta': 'Generate with AI',
-    'adminWebinars.ai.openInNewTabTitle':
-      'Open the AI brief wizard in a new tab — your in-progress edits here are preserved.',
-    'adminWebinars.ai.title': 'AI webinar brief',
-    'adminWebinars.ai.subtitle':
-      'Drafts the session title + description and the 4 topic sections per featured university from a short intent. Review every field, then apply.',
-    'adminWebinars.ai.loadError': 'Failed to load sessions or universities',
-    'adminWebinars.ai.stepSetup': 'Setup',
-    'adminWebinars.ai.stepPreview': 'Preview',
-    'adminWebinars.ai.stepApply': 'Apply',
-    'adminWebinars.ai.setupTitle': 'Pick a session + write an intent',
-    'adminWebinars.ai.setupSubtitle':
-      'Pick the session to populate, write a short description of what the webinar covers, and choose up to 5 featured universities.',
-    'adminWebinars.ai.sessionLabel': 'Target session',
-    'adminWebinars.ai.sessionLabelHint':
-      'slug: {{slug}} · {{time}}',
-    'adminWebinars.ai.dateLabel': 'Session date label (optional)',
-    'adminWebinars.ai.dateLabelHint':
-      'For copy only — leave blank if no date is set yet.',
-    'adminWebinars.ai.intentLabel': 'Intent',
-    'adminWebinars.ai.intentPlaceholder':
-      'e.g. Engineering + Computer Science universities spotlight for the 2027 September intake. Focus on programs, scholarships, and best time to apply.',
-    'adminWebinars.ai.intentHint':
-      'Be specific about which universities or disciplines to highlight — the AI uses your intent to choose the copy angle.',
-    'adminWebinars.ai.featuredLabel': 'Featured universities (max 5)',
-    'adminWebinars.ai.featuredCount': '{{count}} selected',
-    'adminWebinars.ai.featuredHint':
-      'Pick up to 5. Defaults to the first 5 by id — change to control which schools are in the cards.',
-    'adminWebinars.ai.generateCta': 'Generate brief',
-    'adminWebinars.ai.generating': 'Generating…',
-    'adminWebinars.ai.errorNoSession': 'Pick a target session first',
-    'adminWebinars.ai.errorNoIntent': 'Write a brief intent first',
-    'adminWebinars.ai.errorNoUniversities': 'Pick at least one featured university',
-    'adminWebinars.ai.errorGeneric': 'AI call failed. Please try again.',
-    'adminWebinars.ai.errorProviderNotConfigured':
-      'AI provider not configured — set DEEPSEEK_API_KEY or DOUBAO_API_KEY on the server.',
-    'adminWebinars.ai.warningsTitle':
-      'AI returned warnings — review before applying',
-    'adminWebinars.ai.sessionFields': 'Session title + description',
-    'adminWebinars.ai.sessionFieldsHint':
-      'Replaces the active session\'s existing title + description.',
-    'adminWebinars.ai.universitiesTitle': 'Per-university topic sections',
-    'adminWebinars.ai.universitiesHint':
-      'Creates 4 topic rows per accepted university (program / scholarship / timing / requirement). Existing rows are updated, not duplicated.',
-    'adminWebinars.ai.acceptLabel': 'Apply',
-    'adminWebinars.ai.rawToggle': 'View raw model output (debug)',
-    'adminWebinars.ai.backToSetup': 'Back to setup',
-    'adminWebinars.ai.backToPreview': 'Back to preview',
-    'adminWebinars.ai.applyCta': 'Apply accepted fields',
-    'adminWebinars.ai.applying': 'Applying…',
-    'adminWebinars.ai.applyDoneTitle': 'Done',
-    'adminWebinars.ai.applyDoneSummary':
-      '{{created}} created, {{updated}} updated, {{skipped}} skipped, {{failed}} failed.',
-    'adminWebinars.ai.session': 'Session',
-    'adminWebinars.ai.sessionUpdated': 'Updated',
-    'adminWebinars.ai.sessionSkipped': 'Skipped (not accepted)',
-    'adminWebinars.ai.sessionFailed': 'Failed',
-    'adminWebinars.ai.topicsTitle': 'Topics',
-    'adminWebinars.ai.topicCreated': 'Created',
-    'adminWebinars.ai.topicUpdated': 'Updated',
-    'adminWebinars.ai.topicSkipped': 'Skipped',
-    'adminWebinars.ai.topicError': 'Error: {{error}}',
-    'adminWebinars.ai.viewSessions': 'View webinars',
-    // Phase 142: admin quick-toggle (Phase 157: waitlist + capacity
     //  blocks removed — registration is uncapped).
     'adminWebinars.sessionMarkInactive': 'Mark inactive',
     // Phase 143: admin stats widget
-    'adminWebinars.statTotal': 'Total registrations',
-    'adminWebinars.statToday': 'Today',
-    'adminWebinars.stat7d': 'Last 7 days',
-    'adminWebinars.stat30d': 'Last 30 days',
-    'adminWebinars.statByStatus': 'By status',
-    'adminWebinars.statByCountry': 'Top countries',
-    'adminWebinars.statByInterest': 'Top interests',
-    'adminWebinars.statBySource': 'Top sources',
-    'adminWebinars.errorStats': 'Failed to load stats',
-    // (adminWebinars.statusChanged already defined in Phase 140
     //  block above; reuse the same key for the Phase 143 stats
     //  widget so we don't shadow it.)
     'adminWebinars.statusChangedFailed': 'Failed to update status',
     // Phase 140: intake + degree closed-enum labels (admin only)
     'adminWebinars.intake.march_2027': 'March 2027',
     'adminWebinars.intake.september_2027': 'September 2027',
-    'adminWebinars.intake.csc': 'CSC Scholarship',
-    'adminWebinars.intake.other': 'Other',
-    'adminWebinars.degree.chinese_language': 'Chinese Language',
-    'adminWebinars.degree.foundation': 'Foundation',
-    'adminWebinars.degree.bachelor': 'Bachelor',
-    'adminWebinars.degree.master': 'Master',
-    'adminWebinars.degree.phd': 'PhD',
-    'adminWebinars.degree.csc': 'CSC Scholarship',
-    // Phase 140: public page intake badge labels (separate from
     // admin intake labels so the public copy can stay colloquial
     // while the admin stays terse)
     'webinar.intakeBadge.march2027': 'March 2027',
@@ -5273,55 +5118,24 @@ export const translations: Record<Locale, Record<string, string>> = {
     // Phase 140: empty-state + new bachelor + phd interest labels
     'webinar.interests.bachelorMarch': "Bachelor's degree — March 2027",
     'webinar.interests.phd': "PhD — September 2027",
-    'webinar.hero.dateTba': 'Scheduled — date coming soon',
     'webinar.agenda.tracksCount': 'Tracks on the agenda',
     'webinar.agenda.tracksList': 'Chinese Language · Foundation · Bachelor (March + Sept) · Master · PhD · CSC Scholarship',
     // Phase 142: public capacity + waitlist + popup
-    'webinar.popupEyebrow': 'Free live session',
-    'webinar.popupTitle': '2027 Intake + CSC Scholarship webinar',
-    'webinar.popupBody': 'Free 60-minute session covering March + September 2027 intakes and CSC Scholarship. Join us — seats are limited.',
-    'webinar.popupCta': 'Reserve my seat',
-    'webinar.popupDismiss': 'No thanks',
-    'webinar.popupAriaLabel': 'Webinar promo popup',
-    // Phase 144: fallback teaser copy when no active session exists.
-    // CTA points at the signup page (which renders its own
     // "Date coming soon" empty state for that audience).
-    'webinar.popupTeaserEyebrow': 'Live online session',
-    'webinar.popupTeaserTitle': 'Webinar coming — register your interest',
-    'webinar.popupTeaserBody': 'Sign up to get notified when we open registration for the next 2027 intake + CSC Scholarship webinar.',
-    'webinar.popupTeaserCta': 'Notify me',
-    // Phase 157: webinar.registeredCount removed — capacity / waitlist
     //  gone, registration is uncapped.
 
     // Phase 162: 5 featured-university spotlight + countdown +
     // closed-state UX. Keys kept en/zh balanced per the Phase 113
     // i18n parity gate.
-    'webinar.featuredEyebrow': 'Featured universities',
-    'webinar.featuredTitle': 'Five schools we will spotlight',
-    'webinar.featuredSubtitle': 'Per-school programs, scholarships, best-time-to-apply, and admission requirements — for the September 2027 intake.',
-    'webinar.card.sections.program': 'Programs available',
-    'webinar.card.sections.scholarship': 'Scholarships',
-    'webinar.card.sections.timing': 'Best time to apply',
-    'webinar.card.sections.requirement': 'Admission requirements',
-    'webinar.card.noContent': '— to be announced —',
-    'webinar.card.noTopicsAtAll': 'No university-kind topics are seeded for this session yet — admins can add them via /admin/webinar-signups.',
     'webinar.countdown.daysLabel': 'd',
     'webinar.countdown.hoursLabel': 'h',
     'webinar.countdown.minutesLabel': 'm',
     'webinar.countdown.secondsLabel': 's',
     'webinar.countdown.ariaLabel': 'Time remaining until the webinar starts',
-    'webinar.closedBanner.title': 'This webinar session has ended',
-    'webinar.closedBanner.body': 'Registration is closed — we are scheduling the next one. Drop your details below and we will email + WhatsApp you when the new date is confirmed.',
-    'webinar.hero.closedTitle': 'This session has ended',
-    'webinar.hero.closedBody': 'We are scheduling the next one. Browse the /universities page in the meantime to keep exploring.',
-    // Phase 164: per-session label rendered in the hero
     // (when there's still a future session after the
     // current one). The "Week N · Mon DD" string itself is
     // derived server-side via formatWebinarLabel(); this key
     // is the eyebrow that sits before it.
-    'webinar.hero.nextEyebrow': 'Coming up next',
-    'webinar.hero.ctaPrimaryClosed': 'Browse universities',
-    'webinar.form.submitClosed': 'Registration closed',
   },
   zh: {
     // Nav
@@ -10080,9 +9894,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'webinar.hero.title': '2027 入学 + CSC 奖学金线上讲座',
     // Phase 158: TBA copy used when no active session is published —
     // the form still acts as a register-your-interest capture.
-    'webinar.hero.titleNoSession': '2027 入学 + CSC 奖学金线上讲座 — 留下您的兴趣',
     'webinar.hero.subtitle': '免费 60 分钟直播，覆盖 2027 年 3 月中文语言 + 预科入学、2027 年 9 月本科 + 硕士入学，以及 CSC 奖学金申请策略。',
-    'webinar.hero.subtitleNoSession': 'SICA 正在确认下一场直播时间。请在下方留下您的信息，一旦确定日期和参会链接，我们将通过邮件 + WhatsApp 第一时间通知您。',
     'webinar.hero.dateLabel': '日期即将公布',
     'webinar.hero.dateBody': '现在注册，日期和会议链接确定后我们将通过邮件 + WhatsApp 第一时间通知您。',
     'webinar.hero.ctaPrimary': '立即报名',
@@ -10197,7 +10009,6 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminWebinars.colInterests': '兴趣方向',
     'adminWebinars.colStatus': '状态',
     'adminWebinars.colCreated': '报名时间',
-    'adminWebinars.colSource': '来源',
     'adminWebinars.emptyAll': '暂无报名记录。',
     'adminWebinars.emptyFiltered': '当前筛选下没有匹配的报名记录。',
     'adminWebinars.errorLoad': '加载报名记录失败',
@@ -10218,171 +10029,20 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminWebinars.statusChanged': '✓ 状态已更新',
     'adminWebinars.errorUpdateStatus': '状态更新失败',
     // Phase 140 + 164: session CRUD
-    'adminWebinars.sessionsTitle': 'Webinar 场次',
-    // Phase 164: 每周排期 — 自动滚动到下一个未来日期
-    'adminWebinars.sessionsSubtitle': '每周一场。日期最近的一场会自动显示在公开页 — 工作人员通过"排下一场"添加下一周的场次。',
-    'adminWebinars.addSession': '新增场次',
-    'adminWebinars.editSession': '编辑场次',
-    // Phase 164: Upcoming 徽章取代 Active/Inactive 切换
-    'adminWebinars.sessionUpcomingBadge': '即将开始',
-    'adminWebinars.sessionAutoRolloverHelp': '日期在未来且最接近的一场会自动显示在公开页。填写标题、日期和会议链接 — 然后点击"排下一场"添加一周后的下一场。',
-    'adminWebinars.scheduleNext': '排下一场',
-    'adminWebinars.scheduleNextSuccess': '已排定 — 填入会议链接即可完成设置。',
-    'adminWebinars.sessionFieldSlug': 'Slug',
-    'adminWebinars.sessionFieldSlugHelp': 'URL 安全的标识符（例如 webinar-2027-intake-csc）',
-    'adminWebinars.sessionFieldTitleEn': '标题（英文）',
-    'adminWebinars.sessionFieldTitleZh': '标题（中文）',
-    'adminWebinars.sessionFieldDescriptionEn': '描述（英文）',
-    'adminWebinars.sessionFieldDescriptionZh': '描述（中文）',
-    'adminWebinars.sessionFieldDate': '场次日期',
-    'adminWebinars.sessionFieldDateHelp': '排期待定时可留空。',
-    'adminWebinars.sessionFieldTime': '场次时间',
-    'adminWebinars.sessionFieldTimeHelp': '自由文本显示字符串（例如 10:00 AM Beijing Time）。',
-    'adminWebinars.sessionFieldDuration': '时长（分钟）',
-    'adminWebinars.sessionFieldJoinUrl': '会议链接',
-    'adminWebinars.sessionFieldJoinUrlHelp': '通过 webinar.confirmed 邮件发送给参会者。',
-    'adminWebinars.sessionFieldStatus': '生命周期状态',
-    // Phase 164: label + week_number 取代 displayOrder + sessionIsActiveLabel
-    'adminWebinars.sessionFieldLabel': '公开标签',
-    'adminWebinars.sessionFieldLabelHelp': '显示在页面标题和邮件中。留空则根据周数和日期自动生成。',
-    'adminWebinars.sessionFieldLabelPlaceholder': '第 5 期 · 2026-10-20',
-    'adminWebinars.sessionFieldWeekNumber': '周序号',
-    'adminWebinars.sessionFieldWeekNumberHelp': '递增整数。留空则自动分配（最大 + 1）。',
-    'adminWebinars.sessionFieldCreatedAt': '创建时间',
-    'adminWebinars.sessionFieldUpdatedAt': '更新时间',
     'adminWebinars.sessionSaved': '✓ 场次已保存',
     'adminWebinars.sessionDeleted': '✓ 场次已删除',
     'adminWebinars.sessionDeleteTitle': '确认删除此场次？',
     'adminWebinars.sessionDeleteBody': '讲座主题将通过 ON DELETE CASCADE 一并删除；历史报名记录仍保留（webinar_session_id 会被置空）。',
-    'adminWebinars.sessionNoDate': '日期待定',
-    'adminWebinars.sessionNoJoinUrl': '链接待定',
-    'adminWebinars.errorSaveSession': '场次保存失败',
-    'adminWebinars.errorDeleteSession': '场次删除失败',
-    // Phase 164: 排下一场成功提示
-    'adminWebinars.scheduleNextCreated': '已排定。',
-    // Phase 140: topic CRUD
-    'adminWebinars.topicsTitle': '讲座主题',
-    'adminWebinars.topicsSubtitle': '在公开页面按显示顺序展示激活场次下的主题。',
-    'adminWebinars.addTopic': '添加主题',
-    'adminWebinars.editTopic': '编辑主题',
-    'adminWebinars.topicFieldIntake': '入学时间',
-    'adminWebinars.topicFieldDegree': '学位',
-    'adminWebinars.topicFieldTitleEn': '标题（英文）',
-    'adminWebinars.topicFieldTitleZh': '标题（中文）',
-    'adminWebinars.topicFieldBodyEn': '正文（英文）',
-    'adminWebinars.topicFieldBodyZh': '正文（中文）',
-    'adminWebinars.topicFieldDisplayOrder': '显示顺序',
-    'adminWebinars.topicSaved': '✓ 主题已保存',
-    'adminWebinars.topicDeleted': '✓ 主题已删除',
-    'adminWebinars.topicDeleteTitle': '确认删除此主题？',
-    'adminWebinars.topicDeleteBody': '该主题会立即从公开讲座大纲中移除。',
-    'adminWebinars.topicNoTopics': '当前场次暂无主题。添加第一条以填充公开页面。',
-    'adminWebinars.errorSaveTopic': '主题保存失败',
-    'adminWebinars.errorDeleteTopic': '主题删除失败',
-    // Phase 162: university-kind topic CRUD (distinct from the
     //  track-schema topics above).
-    'adminWebinars.universityTopicsTitle': '大学专题',
-    'adminWebinars.universityTopicsSubtitle': '每所重点大学对应一组（项目 | 奖学金 | 申请时机 | 录取要求）。用于公开 5 卡大学展示区。',
-    'adminWebinars.addUniversityTopic': '新增大学专题',
-    'adminWebinars.topicFieldUniversity': '大学',
-    'adminWebinars.topicFieldKind': '板块',
     'adminWebinars.topicNoUniversityTopics': '本次会议尚未配置任何大学专题。',
-    'adminWebinars.kind.program': '开设项目',
-    'adminWebinars.kind.scholarship': '奖学金',
-    'adminWebinars.kind.timing': '最佳申请时机',
-    'adminWebinars.kind.requirement': '录取要求',
-    // Phase 163: AI 生成讲座简报向导(/admin/webinar-ai) +
     //  SessionEditDialog 内的 “AI 生成”按钮。
-    'adminWebinars.ai.openInNewTabCta': 'AI 生成',
-    'adminWebinars.ai.openInNewTabTitle':
-      '在新标签页打开 AI 简报向导 — 当前编辑内容会被保留。',
-    'adminWebinars.ai.title': 'AI 讲座简报',
-    'adminWebinars.ai.subtitle':
-      '根据一句简短描述，自动生成讲座标题、简介以及每所重点大学 4 个板块（项目/奖学金/申请时机/录取要求）。逐项确认后再应用。',
-    'adminWebinars.ai.loadError': '加载会议或大学列表失败',
-    'adminWebinars.ai.stepSetup': '设置',
-    'adminWebinars.ai.stepPreview': '预览',
-    'adminWebinars.ai.stepApply': '应用',
-    'adminWebinars.ai.setupTitle': '选择会议 + 输入描述',
-    'adminWebinars.ai.setupSubtitle':
-      '选择要填充的会议，输入简短的讲座描述，并挑出最多 5 所重点大学。',
-    'adminWebinars.ai.sessionLabel': '目标会议',
-    'adminWebinars.ai.sessionLabelHint':
-      'slug：{{slug}} · {{time}}',
-    'adminWebinars.ai.dateLabel': '会议日期标签（可选）',
-    'adminWebinars.ai.dateLabelHint':
-      '仅用于文案生成 —— 如未确定日期可留空。',
-    'adminWebinars.ai.intentLabel': '讲座描述',
-    'adminWebinars.ai.intentPlaceholder':
-      '例如：聚焦 2027 年 9 月入学的工程与计算机科学大学，重点展示项目、奖学金与最佳申请时机。',
-    'adminWebinars.ai.intentHint':
-      '写得越具体（指定大学或学科），AI 生成的文案越贴近你的预期。',
-    'adminWebinars.ai.featuredLabel': '重点大学（最多 5 所）',
-    'adminWebinars.ai.featuredCount': '已选 {{count}} 所',
-    'adminWebinars.ai.featuredHint':
-      '最多选择 5 所。默认按 id 前 5 所预填，可手动调整。',
-    'adminWebinars.ai.generateCta': '生成简报',
-    'adminWebinars.ai.generating': '生成中…',
-    'adminWebinars.ai.errorNoSession': '请先选择目标会议',
-    'adminWebinars.ai.errorNoIntent': '请先填写讲座描述',
-    'adminWebinars.ai.errorNoUniversities': '请至少选择一所重点大学',
-    'adminWebinars.ai.errorGeneric': 'AI 调用失败，请稍后重试。',
-    'adminWebinars.ai.errorProviderNotConfigured':
-      'AI 提供方未配置 —— 请在服务器上设置 DEEPSEEK_API_KEY 或 DOUBAO_API_KEY。',
-    'adminWebinars.ai.warningsTitle':
-      'AI 返回了警告 — 应用前请检查',
-    'adminWebinars.ai.sessionFields': '会议标题 + 简介',
-    'adminWebinars.ai.sessionFieldsHint':
-      '会覆盖当前会议已有的标题与简介。',
-    'adminWebinars.ai.universitiesTitle': '每所大学的专题板块',
-    'adminWebinars.ai.universitiesHint':
-      '为每所勾选的大学创建 4 条专题记录（项目/奖学金/申请时机/录取要求）。已存在的记录会被更新而非重复创建。',
-    'adminWebinars.ai.acceptLabel': '应用',
-    'adminWebinars.ai.rawToggle': '查看原始模型输出（调试）',
-    'adminWebinars.ai.backToSetup': '返回设置',
-    'adminWebinars.ai.backToPreview': '返回预览',
-    'adminWebinars.ai.applyCta': '应用已勾选字段',
-    'adminWebinars.ai.applying': '应用中…',
-    'adminWebinars.ai.applyDoneTitle': '完成',
-    'adminWebinars.ai.applyDoneSummary':
-      '新建 {{created}} 条，更新 {{updated}} 条，跳过 {{skipped}} 条，失败 {{failed}} 条。',
-    'adminWebinars.ai.session': '会议',
-    'adminWebinars.ai.sessionUpdated': '已更新',
-    'adminWebinars.ai.sessionSkipped': '已跳过（未勾选）',
-    'adminWebinars.ai.sessionFailed': '失败',
-    'adminWebinars.ai.topicsTitle': '专题',
-    'adminWebinars.ai.topicCreated': '已创建',
-    'adminWebinars.ai.topicUpdated': '已更新',
-    'adminWebinars.ai.topicSkipped': '已跳过',
-    'adminWebinars.ai.topicError': '失败：{{error}}',
-    'adminWebinars.ai.viewSessions': '查看讲座',
-    // Phase 142: capacity + admin quick-toggle + waitlist admin
     // Phase 157: waitlist + capacity removed — registration is uncapped.
     'adminWebinars.sessionMarkInactive': '取消激活',
     // Phase 143: admin stats widget
-    'adminWebinars.statTotal': '总报名数',
-    'adminWebinars.statToday': '今日',
-    'adminWebinars.stat7d': '近 7 天',
-    'adminWebinars.stat30d': '近 30 天',
-    'adminWebinars.statByStatus': '按状态',
-    'adminWebinars.statByCountry': '主要国家',
-    'adminWebinars.statByInterest': '主要兴趣',
-    'adminWebinars.statBySource': '主要来源',
-    'adminWebinars.errorStats': '加载统计失败',
-    // 复用 Phase 140 已有的 statusChanged 翻译，避免重复声明同名 key。
     'adminWebinars.statusChangedFailed': '状态更新失败',
     // Phase 140: intake + degree closed-enum labels (admin)
     'adminWebinars.intake.march_2027': '2027 年 3 月',
     'adminWebinars.intake.september_2027': '2027 年 9 月',
-    'adminWebinars.intake.csc': 'CSC 奖学金',
-    'adminWebinars.intake.other': '其他',
-    'adminWebinars.degree.chinese_language': '中文语言',
-    'adminWebinars.degree.foundation': '预科',
-    'adminWebinars.degree.bachelor': '本科',
-    'adminWebinars.degree.master': '硕士',
-    'adminWebinars.degree.phd': '博士',
-    'adminWebinars.degree.csc': 'CSC 奖学金',
-    // Phase 140: public intake badge labels
     'webinar.intakeBadge.march2027': '2027 年 3 月',
     'webinar.intakeBadge.september2027': '2027 年 9 月',
     'webinar.intakeBadge.csc': '奖学金',
@@ -10390,47 +10050,15 @@ export const translations: Record<Locale, Record<string, string>> = {
     // Phase 140: empty-state + new interests
     'webinar.interests.bachelorMarch': '本科学位 — 2027 年 3 月',
     'webinar.interests.phd': '博士 — 2027 年 9 月',
-    'webinar.hero.dateTba': '已排期 — 日期即将公布',
     'webinar.agenda.tracksCount': '本次讲座涵盖以下方向',
     'webinar.agenda.tracksList': '中文语言 · 预科 · 本科（3 月 + 9 月）· 硕士 · 博士 · CSC 奖学金',
     // Phase 142: public capacity + waitlist + popup
-    'webinar.popupEyebrow': '免费直播讲座',
-    'webinar.popupTitle': '2027 入学 + CSC 奖学金线上讲座',
-    'webinar.popupBody': '60 分钟免费讲座，覆盖 2027 年 3 月 + 9 月入学，以及 CSC 奖学金申请策略。席位有限，立即报名。',
-    'webinar.popupCta': '立即报名',
-    'webinar.popupDismiss': '不感兴趣',
-    'webinar.popupAriaLabel': '讲座宣传弹窗',
-    // Phase 144: 没有场次时的兜底提示文案。
-    'webinar.popupTeaserEyebrow': '线上直播讲座',
-    'webinar.popupTeaserTitle': '讲座即将开放 — 留下您的邮箱',
-    'webinar.popupTeaserBody': '下一场 2027 入学 + CSC 奖学金讲座开放报名时，我们会第一时间通知您。',
-    'webinar.popupTeaserCta': '通知我',
-
-    // Phase 162: featured-university spotlight + countdown +
-    // closed-state UX. Keys kept en/zh balanced per the Phase 113
     // i18n parity gate.
-    'webinar.featuredEyebrow': '重点大学',
-    'webinar.featuredTitle': '本期重点介绍的五所大学',
-    'webinar.featuredSubtitle': '逐校介绍 2027 年 9 月入学的项目、奖学金、最佳申请时机与录取要求。',
-    'webinar.card.sections.program': '开设项目',
-    'webinar.card.sections.scholarship': '奖学金',
-    'webinar.card.sections.timing': '最佳申请时机',
-    'webinar.card.sections.requirement': '录取要求',
-    'webinar.card.noContent': '— 待公布 —',
-    'webinar.card.noTopicsAtAll': '本次会议未对任意大学设置专题 — 请在后台 /admin/webinar-signups 添加。',
     'webinar.countdown.daysLabel': '天',
     'webinar.countdown.hoursLabel': '时',
     'webinar.countdown.minutesLabel': '分',
     'webinar.countdown.secondsLabel': '秒',
     'webinar.countdown.ariaLabel': '距离讲座开始还有多久',
-    'webinar.closedBanner.title': '本场讲座已结束',
-    'webinar.closedBanner.body': '报名已截止 — 我们正在安排下一场。在下方留下您的信息，新日期确定后我们会通过邮件 + WhatsApp 第一时间通知您。',
-    'webinar.hero.closedTitle': '本场讲座已结束',
-    'webinar.hero.closedBody': '我们正在安排下一场。期间请浏览大学页面继续探索。',
-    // Phase 164: 下一场提示（current 场结束后，下一场的 eyebrow 文案）
-    'webinar.hero.nextEyebrow': '下一场',
-    'webinar.hero.ctaPrimaryClosed': '浏览大学',
-    'webinar.form.submitClosed': '报名已截止',
   },
 };
 

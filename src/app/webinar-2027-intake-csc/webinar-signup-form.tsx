@@ -16,16 +16,6 @@ interface CountryOption {
 interface Props {
   /** Pre-serialized country list from the RSC parent. */
   countryOptions: CountryOption[];
-  /**
-   * Phase 162: when true, the form renders a "Registration
-   * closed" banner and the submit button is disabled. The
-   * parent computes this from `activeSession.sessionDate <
-   * now()` (the webinar day has passed). The server enforces
-   * the same rule at /api/webinar-signups and returns 410 —
-   * the client banner is for UX, the server gate is the
-   * source of truth.
-   */
-  isClosed?: boolean;
 }
 
 const PROGRAM_INTEREST_VALUES = [
@@ -62,7 +52,7 @@ const INTEREST_KEYS: Record<ProgramInterestValue, string> = {
  * give themselves away — and we fake a 200 so the bot
  * can't tell which field betrayed it.
  */
-export function WebinarSignupForm({ countryOptions, isClosed = false }: Props) {
+export function WebinarSignupForm({ countryOptions }: Props) {
   const router = useRouter();
   const { locale, t } = useI18n();
 
@@ -222,22 +212,10 @@ export function WebinarSignupForm({ countryOptions, isClosed = false }: Props) {
             </div>
           )}
 
-          {/* Phase 162: registration-closed banner. The page
-              sets `isClosed` when `activeSession.sessionDate`
-              is in the past AND there's no future session —
-              the spec's "close after the webinar day" rule.
-              Server enforces the same gate with 410 at
-              /api/webinar-signups; this banner is UX-only. */}
-          {isClosed && (
-            <div className="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 text-sm">
-              <p className="font-semibold mb-1">
-                {t('webinar.closedBanner.title')}
-              </p>
-              <p className="text-amber-800">
-                {t('webinar.closedBanner.body')}
-              </p>
-            </div>
-          )}
+          {/* Phase 165: closed-state banner + the disabled-on-closed
+              branch are gone — the form is always open. Registration
+              is decoupled from any session row; the API just inserts
+              to webinar_signups and fires the email. */}
 
           <div className="grid sm:grid-cols-2 gap-5">
             <div>
@@ -359,7 +337,7 @@ export function WebinarSignupForm({ countryOptions, isClosed = false }: Props) {
 
           <button
             type="submit"
-            disabled={status === 'submitting' || isClosed}
+            disabled={status === 'submitting'}
             className="w-full sm:w-auto px-8 py-3 bg-[#9B1B30] text-white font-semibold uppercase tracking-wider text-sm hover:bg-[#7A1526] transition-colors duration-150 flex items-center gap-2 disabled:opacity-50"
           >
             {status === 'submitting' ? (
@@ -367,8 +345,6 @@ export function WebinarSignupForm({ countryOptions, isClosed = false }: Props) {
                 <Spinner size="sm" />
                 {t('webinar.form.submitting')}
               </>
-            ) : isClosed ? (
-              t('webinar.form.submitClosed')
             ) : (
               t('webinar.form.submit')
             )}
