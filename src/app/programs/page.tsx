@@ -18,7 +18,7 @@ export default async function ProgramsPage() {
   // Fetch on the server so the first paint already contains the grid
   // instead of waiting for client-side /api round-trips.
   const [programs, universities] = await Promise.all([
-    getPrograms({ limit: 2000 }),
+    getPrograms(),
     getUniversities({ limit: 1000 }),
   ]);
 
