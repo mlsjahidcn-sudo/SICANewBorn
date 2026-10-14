@@ -10,7 +10,7 @@ const VALID_STATUSES = ['Registered', 'Attended', 'No-Show', 'Cancelled'] as con
 type WebinarStatus = (typeof VALID_STATUSES)[number];
 
 /**
- * Phase 139: list webinar signups for /admin/webinar-signups.
+ * Phase 139 + 165e: list webinar signups for /admin/webinar-signups.
  *
  * Read-only — the page only displays rows and lets staff
  * change status client-side (via PATCH). No create/delete
@@ -20,6 +20,13 @@ type WebinarStatus = (typeof VALID_STATUSES)[number];
  * Pagination: ?page=1 (1-indexed) + ?limit= (default 50,
  * capped at 200). Total count uses head:'exact' so the admin
  * header shows the true row count, not the page slice.
+ *
+ * Date filter (Phase 165e): ?start_date=YYYY-MM-DD + ?end_date=
+ * YYYY-MM-DD scope `created_at` to that range (inclusive on
+ * both ends). Both optional; missing dates are unbounded on
+ * that side. Dates are validated as YYYY-MM-DD strings; any
+ * invalid value falls back to the unbounded side (silently —
+ * the client UI controls the format).
  */
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
@@ -43,6 +50,20 @@ export async function GET(request: NextRequest) {
   );
   const offset = (page - 1) * limit;
 
+  // Phase 165e: date range filter. Validate YYYY-MM-DD; invalid
+  // inputs are silently dropped (the admin UI controls the format
+  // via <input type="date">).
+  const startDateRaw = searchParams.get('start_date')?.trim() || null;
+  const endDateRaw = searchParams.get('end_date')?.trim() || null;
+  const startIso = startDateRaw && /^\d{4}-\d{2}-\d{2}$/.test(startDateRaw)
+    ? `${startDateRaw}T00:00:00.000Z`
+    : null;
+  // end_date is inclusive — bump to the END of the day so a one-day
+  // window doesn't drop signups from that day.
+  const endIso = endDateRaw && /^\d{4}-\d{2}-\d{2}$/.test(endDateRaw)
+    ? `${endDateRaw}T23:59:59.999Z`
+    : null;
+
   let query = auth.supabase
     .from('webinar_signups')
     .select(
@@ -63,6 +84,12 @@ export async function GET(request: NextRequest) {
     query = query.or(
       `first_name.ilike.${term},last_name.ilike.${term},email.ilike.${term},whatsapp.ilike.${term}`,
     );
+  }
+  if (startIso) {
+    query = query.gte('created_at', startIso);
+  }
+  if (endIso) {
+    query = query.lte('created_at', endIso);
   }
 
   const { data, error, count } = await query;

@@ -19,6 +19,8 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { apiFetchJson, ApiError } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
+import { useUrlState } from '@/hooks/use-url-state';
+import { WebinarStatsCards } from '@/components/admin/WebinarStatsCards';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -118,6 +120,11 @@ export default function WebinarSignupsPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  // Phase 165e: date range filter — YYYY-MM-DD strings (HTML
+  // <input type="date"> format). Both optional; missing sides
+  // are unbounded.
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [pendingStatusChange, setPendingStatusChange] = useState<{
     signup: WebinarSignup;
     next: WebinarSignup['status'];
@@ -134,6 +141,8 @@ export default function WebinarSignupsPage() {
       const params = new URLSearchParams();
       if (statusFilter !== 'all') params.set('status', statusFilter);
       if (searchQuery.trim()) params.set('q', searchQuery.trim());
+      if (startDate) params.set('start_date', startDate);
+      if (endDate) params.set('end_date', endDate);
       params.set('page', String(page));
       params.set('limit', String(PAGE_SIZE));
       const res = await apiFetchJson<WebinarSignupResponse>(
@@ -146,17 +155,17 @@ export default function WebinarSignupsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [statusFilter, searchQuery, page, t]);
+  }, [statusFilter, searchQuery, startDate, endDate, page, t]);
 
   useEffect(() => {
     setPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, searchQuery]);
+  }, [statusFilter, searchQuery, startDate, endDate]);
 
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, searchQuery, page]);
+  }, [statusFilter, searchQuery, startDate, endDate, page]);
 
   const visible = useMemo(() => {
     if (!searchQuery) return signups;
@@ -226,6 +235,12 @@ export default function WebinarSignupsPage() {
         </div>
       )}
 
+      {/* Phase 165e: stats widget — 4-card strip + 4 breakdowns
+          (status / country / interest / source). Polled every 30s
+          by the component; errors are best-effort (the list below
+          keeps working). */}
+      <WebinarStatsCards />
+
       <Card>
         <div className="p-6">
           <div className="flex flex-col lg:flex-row gap-4">
@@ -240,6 +255,42 @@ export default function WebinarSignupsPage() {
                   className="pl-10"
                 />
               </div>
+            </div>
+            {/* Phase 165e: date range filter. Both inputs are
+                optional — leave either blank to make that side
+                unbounded. The YYYY-MM-DD format matches the
+                HTML <input type="date"> default. */}
+            <div className="w-full lg:w-auto flex items-center gap-2">
+              <label className="text-xs text-gray-500 font-medium uppercase tracking-wider whitespace-nowrap">
+                Date
+              </label>
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-36"
+                aria-label="Start date"
+              />
+              <span className="text-gray-400">→</span>
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-36"
+                aria-label="End date"
+              />
+              {(startDate || endDate) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStartDate('');
+                    setEndDate('');
+                  }}
+                  className="text-xs text-[#1B2A4A] underline whitespace-nowrap"
+                >
+                  Clear
+                </button>
+              )}
             </div>
             <div className="w-full lg:w-auto">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
