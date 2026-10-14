@@ -1,3 +1,4 @@
+import { PROGRAM_DEGREES, PROGRAM_LANGUAGES } from '@/lib/program-types';
 // Phase 71: when changing this route, update openapi/v1.yaml so the B2B docs stay in sync.
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
@@ -20,9 +21,9 @@ const CACHE_TTL_SECONDS = 600;
 const QuerySchema = z.object({
   q: z.string().min(1).max(120).optional(),
   university: z.string().min(1).max(120).optional(), // slug of the parent uni
-  degree: z.enum(['Bachelor', 'Master', 'PhD']).optional(),
+  degree: z.enum(PROGRAM_DEGREES).optional(),
   discipline: z.string().min(1).max(80).optional(),
-  language: z.enum(['English', 'Chinese', 'Bilingual']).optional(), // instruction language
+  language: z.enum(PROGRAM_LANGUAGES).optional(), // instruction language
   scholarship: z.coerce.boolean().optional(),
   pageLanguage: z.enum(['en', 'zh', 'both']).default('both'),
   sort: z.enum(['name', 'tuition', 'created_at']).default('name'),
@@ -39,9 +40,9 @@ const QuerySchema = z.object({
  * Query params (all optional):
  *   q            : free-text search on name + nameCn
  *   university   : parent university slug
- *   degree       : "Bachelor" | "Master" | "PhD"
+ *   degree       : Bachelor | Master | PhD | Chinese Language | Foundation | Non-degree
  *   discipline   : e.g. "Engineering", "Business"
- *   language     : "English" | "Chinese" | "Bilingual" (instruction language)
+ *   language     : English | Chinese | Bilingual | To be confirmed (instruction language)
  *   scholarship  : true to filter only scholarship-available programs
  *   pageLanguage : response field shaping — "en" | "zh" | "both" (default "both")
  *   sort         : name | tuition | created_at (default name)
@@ -95,7 +96,9 @@ export async function GET(request: NextRequest) {
     query = query.or(`discipline.ilike.${q.discipline},discipline_cn.ilike.${q.discipline}`);
   }
   if (q.language) {
-    query = query.eq('language', q.language);
+    query = q.language === 'To be confirmed'
+      ? query.or('language.is.null,language.eq.,language.eq.To be confirmed')
+      : query.eq('language', q.language);
   }
   if (q.scholarship !== undefined) {
     query = query.eq('scholarship_available', q.scholarship);
