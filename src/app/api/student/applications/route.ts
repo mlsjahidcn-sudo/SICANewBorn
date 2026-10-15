@@ -5,10 +5,15 @@
 // Two reasons, both from the same migration
 // (database/2026-10-15_campaign_columns_admin_only.sql):
 //
-//  1. The migration REVOKEs SELECT on campaign_id / campaign_role from
+//  1. The migration REVOKEs SELECT on this whole table from
 //     `authenticated`. A PostgREST `.select('*')` issued with the
 //     student's own token would then ERROR, not return fewer columns —
 //     so staying on the caller's client would break this endpoint.
+//
+//     (It is a TABLE-level revoke, not a column one. PostgreSQL
+//     privileges are additive, so a column-level REVOKE cannot
+//     subtract Supabase's table-level `ALL` grant — that version was
+//     applied on 2026-10-15 and demonstrably did nothing.)
 //
 //  2. The migration also REVOKEs INSERT/UPDATE. Direct PostgREST writes
 //     bypass every status-transition check below, which is how a

@@ -58,12 +58,34 @@
 -- Apply via Supabase dashboard SQL editor. Idempotent.
 -- ============================================================================
 
--- 1. The advisor's shortlist reasoning becomes admin-only -------------
+-- 1. Students lose ALL direct access to this table --------------------
 
--- Column-level SELECT revoke. Admin routes use the service role, which
--- bypasses column privileges, so every admin surface is unaffected.
--- Re-runnable: REVOKE on a non-granted column is a no-op, not an error.
-REVOKE SELECT (campaign_id, campaign_role) ON public.student_applications FROM authenticated;
+-- TABLE-level revoke, not column-level. This was originally written as
+--
+--     REVOKE SELECT (campaign_id, campaign_role) ... FROM authenticated;
+--
+-- and it does NOT work on Supabase. Verified on 2026-10-15: after
+-- applying that version, has_column_privilege still returned true for
+-- campaign_role.
+--
+-- Why: PostgreSQL privileges are ADDITIVE. Supabase grants ALL on every
+-- table in `public`, so there is a TABLE-level SELECT grant. A
+-- column-level REVOKE can only subtract a privilege granted at the
+-- column level; the table-level grant still confers SELECT on every
+-- column. Subtracting is impossible — you can only remove the table
+-- grant, then add back the columns you actually want.
+--
+-- So: revoke the table grant outright and grant nothing back.
+--
+-- That is safe because as of this same phase EVERY route that reads or
+-- writes student_applications runs on the service-role client
+-- (/api/student/applications moved here), which bypasses RLS and grants
+-- alike. The student-facing scoping is the explicit
+-- `.eq('student_id', user.id)` on those queries, not RLS. The RLS
+-- policies below stay in place as defence in depth.
+--
+-- Re-runnable: REVOKE on an ungranted privilege is a no-op.
+REVOKE SELECT ON public.student_applications FROM authenticated;
 
 COMMENT ON COLUMN public.student_applications.campaign_id IS
   'Groups the rows of one shortlist. NULL = a pre-Phase-175 single-target application. Admin-only since Phase 179: the `authenticated` role has no SELECT privilege on this column, so a student cannot read it via direct PostgREST.';
@@ -97,9 +119,22 @@ REVOKE UPDATE ON public.student_applications FROM authenticated;
 -- use has_column_privilege for column-level):
 --
 --   SELECT
---     has_column_privilege('authenticated', 'student_applications', 'campaign_role', 'SELECT')  AS can_read_campaign_role,
---     has_column_privilege('authenticated', 'student_applications', 'admin_notes',    'SELECT')  AS can_read_admin_notes,
---     has_column_privilege('authenticated', 'student_applications', 'status',         'UPDATE')  AS can_write_status;
+--     has_column_privilege('authenticated', 'student_applications', 'campaign_role', 'SELECT') AS can_read_campaign_role,
+--     has_column_privilege('authenticated', 'student_applications', 'admin_notes',    'SELECT') AS can_read_admin_notes,
+--     has_column_privilege('authenticated', 'student_applications', 'university_name','SELECT') AS can_read_anything,
+--     has_column_privilege('authenticated', 'student_applications', 'status',         'UPDATE') AS can_write_status;
 --
--- Expected: false | true | false
---   admin_notes stays readable on purpose ("Notes from admissions").
+-- Expected: false | false | false | false
+--
+-- admin_notes is unreadable now too — not by choice, but because the
+-- whole table is off-limits to `authenticated`. Students still see it:
+-- the API route uses the service role and mapApplicationForStudent
+-- decides what reaches the browser. The RLS policies on the table
+-- remain as a second layer.
+
+-- To restore column-selective access later (if a client-side reader
+-- ever needs one), revoke the table grant and grant columns back:
+--
+--   REVOKE SELECT ON public.student_applications FROM authenticated;
+--   GRANT SELECT (id, university_name, program_name, status, ...)
+--     ON public.student_applications TO authenticated;
