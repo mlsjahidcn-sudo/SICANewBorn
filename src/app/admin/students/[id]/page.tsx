@@ -10,6 +10,7 @@
  * chrome (labels, banners, empty states, note copy) translates.
  */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import EducationHistoryEditor from '../_components/education-history-editor';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -321,6 +322,7 @@ export default function AdminStudentDetailPage() {
           <TabsTrigger value="overview">{t('adminStudentDetail.tabOverview')}</TabsTrigger>
           <TabsTrigger value="documents">{t('adminStudentDetail.tabDocuments')}</TabsTrigger>
           <TabsTrigger value="applications">{t('adminStudentDetail.tabApplications')}</TabsTrigger>
+          <TabsTrigger value="education">{t('adminStudentDetail.tabEducation')}</TabsTrigger>
           <TabsTrigger value="notes">{t('adminStudentDetail.tabNotes')}</TabsTrigger>
           <TabsTrigger value="activity">{t('adminStudentDetail.tabActivity')}</TabsTrigger>
         </TabsList>
@@ -510,6 +512,20 @@ export default function AdminStudentDetailPage() {
                   ))}
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Phase 183: education history, read-only. Replaces the
+            highSchool/bachelor/master fields, which cannot express a
+            fourth qualification, a gap year, or a grading scale. */}
+        <TabsContent value="education" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('adminStudentDetail.educationTitle')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <EducationHistoryEditor studentId={studentId} readOnly />
             </CardContent>
           </Card>
         </TabsContent>
