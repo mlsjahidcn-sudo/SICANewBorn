@@ -6,6 +6,7 @@ import { ArrowLeft, Save } from 'lucide-react';
 import { programs as staticPrograms, universities as staticUniversities, type Program } from '@/lib/data';
 import { ToastProvider, useToast } from '@/components/admin/toast';
 import { apiFetch } from '@/lib/api-client';
+import { PageContainer } from '@/components/admin/page-container';
 
 interface ProgramFormData {
   slug: string;
@@ -139,7 +140,7 @@ function ProgramFormInner({ slug }: { slug?: string }) {
   const inputClass = "w-full px-3 py-2 border border-gray-300 text-sm focus:outline-none focus:border-[#9B1B30]";
 
   return (
-    <div>
+    <PageContainer width="narrow">
       <div className="flex items-center gap-4 mb-6">
         <button onClick={() => router.push('/admin/programs')} className="p-2 text-[#1B2A4A] hover:bg-gray-100 transition-colors">
           <ArrowLeft className="w-5 h-5" />
@@ -284,7 +285,7 @@ function ProgramFormInner({ slug }: { slug?: string }) {
           </button>
         </div>
       </form>
-    </div>
+    </PageContainer>
   );
 }
 

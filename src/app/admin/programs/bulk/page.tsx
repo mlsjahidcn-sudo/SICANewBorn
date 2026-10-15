@@ -7,6 +7,7 @@ import { universities as staticUniversities } from '@/lib/data';
 import { ToastProvider, useToast } from '@/components/admin/toast';
 import { apiFetch } from '@/lib/api-client';
 import type { ParsedProgramRow } from '@/lib/ai/program-parse-sanitize';
+import { PageContainer } from '@/components/admin/page-container';
 
 interface ParsedProgram {
   name: string;
@@ -346,7 +347,7 @@ function BulkImportContent() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto p-6">
+      <PageContainer width="wide">
         {importResult ? (
           /* Success State */
           <div className="bg-white border border-gray-200 rounded-none p-8 text-center">
@@ -711,7 +712,7 @@ function BulkImportContent() {
             </div>
           </div>
         )}
-      </div>
+      </PageContainer>
     </div>
   );
 }

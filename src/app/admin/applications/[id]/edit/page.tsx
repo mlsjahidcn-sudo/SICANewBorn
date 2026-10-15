@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
+import { PageContainer } from '@/components/admin/page-container';
 
 const STATUS_OPTIONS = [
   { value: 'Draft', label: 'Draft' },
@@ -225,7 +226,7 @@ export default function AdminApplicationEditPage() {
   const statusChanged = formData.status !== originalStatus;
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <PageContainer width="narrow">
       <div className="flex items-center justify-between">
         <Button variant="ghost" onClick={() => router.push(`/admin/applications/${id}`)}>
           <ArrowLeft className="w-4 h-4 mr-2" />
@@ -455,6 +456,6 @@ export default function AdminApplicationEditPage() {
           )}
         </Button>
       </div>
-    </div>
+    </PageContainer>
   );
 }

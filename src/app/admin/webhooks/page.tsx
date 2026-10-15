@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PageContainer } from '@/components/admin/page-container';
 import {
   Dialog,
   DialogContent,
@@ -264,7 +265,7 @@ export default function AdminWebhooksPage() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <PageContainer width="wide">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-[#1B2A4A] flex items-center gap-2">
@@ -599,6 +600,6 @@ export default function AdminWebhooksPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </PageContainer>
   );
 }

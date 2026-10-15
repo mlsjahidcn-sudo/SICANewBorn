@@ -4,13 +4,14 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Upload, FileText, X } from 'lucide-react';
 import Link from 'next/link';
+import { PageContainer } from '@/components/admin/page-container';
 
 export default function ImportLeadsPage() {
   const [step, setStep] = useState<'upload' | 'mapping' | 'preview'>('upload');
   const [file, setFile] = useState<File | null>(null);
 
   return (
-    <div className="space-y-6">
+    <PageContainer width="narrow">
       {/* Header */}
       <div className="flex items-center gap-4">
         <Link href="/admin/leads">
@@ -117,6 +118,6 @@ export default function ImportLeadsPage() {
           </div>
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

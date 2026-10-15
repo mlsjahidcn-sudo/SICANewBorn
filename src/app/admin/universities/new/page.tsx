@@ -9,6 +9,7 @@ import { ToastProvider, useToast } from '@/components/admin/toast';
 import { apiFetch } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 import { AiRefineModal } from '@/components/admin/ai-refine-modal';
+import { PageContainer } from '@/components/admin/page-container';
 
 interface UniversityFormData {
   slug: string;
@@ -322,7 +323,7 @@ function UniversityFormInner({ slug }: { slug?: string }) {
   const inputClass = "w-full px-3 py-2 border border-gray-300 text-sm focus:outline-none focus:border-[#9B1B30]";
 
   return (
-    <div>
+    <PageContainer width="narrow">
       <div className="flex items-center gap-4 mb-6">
         <button
           onClick={() => router.push('/admin/universities')}
@@ -686,7 +687,7 @@ function UniversityFormInner({ slug }: { slug?: string }) {
         onCancel={handleCloseRefine}
         onAccept={handleAcceptRefine}
       />
-    </div>
+    </PageContainer>
   );
 }
 

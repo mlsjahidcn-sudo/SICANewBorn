@@ -8,6 +8,7 @@ import { ToastProvider, useToast } from '@/components/admin/toast';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch } from '@/lib/api-client';
 import { StructuredFieldsEditor } from '@/components/admin/StructuredFieldsEditor';
+import { PageContainer } from '@/components/admin/page-container';
 
 const CATEGORIES = [
   { value: 'announcement', label: 'Announcement' },
@@ -234,7 +235,7 @@ function NewPostInner() {
   }
 
   return (
-    <div>
+    <PageContainer width="narrow">
       <div className="flex items-center gap-4 mb-6">
         <Link href="/admin/news" className="p-2 text-[#1B2A4A] hover:bg-gray-100">
           <ArrowLeft className="w-5 h-5" />
@@ -684,7 +685,7 @@ function NewPostInner() {
           </div>
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }
 

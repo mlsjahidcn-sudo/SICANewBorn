@@ -365,9 +365,16 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        {/* Page content */}
-        <main className="flex-1 p-6 overflow-auto">
-          {children}
+        {/* Page content.
+            Phase 174: the 1900px ceiling is a "don't sprawl on
+            ultrawide" guard only — deliberately wider than any table
+            needs, so nothing regresses on a 1920 screen (where the
+            content column is ~1616px anyway). Per-page measure is the
+            job of <PageContainer width="…"> in
+            src/components/admin/page-container.tsx; this is the
+            backstop for the pages that haven't been migrated yet. */}
+        <main className="flex-1 overflow-auto">
+          <div className="mx-auto w-full max-w-[1900px] p-6">{children}</div>
         </main>
       </div>
     </div>

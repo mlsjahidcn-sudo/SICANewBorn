@@ -9,6 +9,7 @@ import { apiFetch } from '@/lib/api-client';
 import { ToastProvider, useToast } from '@/components/admin/toast';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
 import { StructuredFieldsEditor } from '@/components/admin/StructuredFieldsEditor';
+import { PageContainer } from '@/components/admin/page-container';
 
 const CATEGORIES = [
   { value: 'announcement', label: 'Announcement' },
@@ -135,7 +136,7 @@ function EditPostInner() {
   }
 
   return (
-    <div>
+    <PageContainer width="narrow">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <Link href="/admin/news" className="p-2 text-[#1B2A4A] hover:bg-gray-100">
@@ -366,7 +367,7 @@ function EditPostInner() {
         onCancel={() => setConfirmDelete(false)}
         variant="danger"
       />
-    </div>
+    </PageContainer>
   );
 }
 

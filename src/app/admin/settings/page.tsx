@@ -5,6 +5,7 @@ import { User, Lock, Building2 } from 'lucide-react';
 import { ToastProvider, useToast } from '@/components/admin/toast';
 import { apiFetch } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
+import { PageContainer } from '@/components/admin/page-container';
 
 function SettingsPageInner() {
   const { addToast } = useToast();
@@ -66,7 +67,7 @@ function SettingsPageInner() {
   ];
 
   return (
-    <div>
+    <PageContainer width="narrow">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-[#1F2937]">{t('adminSettings.title')}</h1>
         <p className="text-[#4B5563] text-sm mt-1">{t('adminSettings.subtitle')}</p>
@@ -232,7 +233,7 @@ function SettingsPageInner() {
           </div>
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }
 

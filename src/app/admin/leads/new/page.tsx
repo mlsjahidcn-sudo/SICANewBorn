@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PageContainer } from '@/components/admin/page-container';
 
 interface LeadFormData {
   firstName: string;
@@ -92,7 +93,7 @@ function LeadFormPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <PageContainer width="narrow">
       <div className="flex items-center gap-4">
         <Button variant="ghost" onClick={() => router.back()} className="p-2">
           <ArrowLeft className="h-5 w-5" />
@@ -338,7 +339,7 @@ function LeadFormPage() {
           </Button>
         </div>
       </form>
-    </div>
+    </PageContainer>
   );
 }
 

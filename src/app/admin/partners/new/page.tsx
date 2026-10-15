@@ -27,6 +27,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useI18n } from '@/lib/i18n';
 import { apiFetchJson } from '@/lib/api-client';
+import { PageContainer } from '@/components/admin/page-container';
 
 const EMAIL_REGEX = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
@@ -196,7 +197,7 @@ export default function NewPartnerPage() {
   if (createdPartner) {
     return (
       <div>
-        <div className="max-w-2xl space-y-6">
+        <PageContainer width="narrow">
           <Card>
             <CardContent className="pt-6">
               <div className="text-center mb-6">
@@ -282,7 +283,7 @@ export default function NewPartnerPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
+        </PageContainer>
       </div>
     );
   }
