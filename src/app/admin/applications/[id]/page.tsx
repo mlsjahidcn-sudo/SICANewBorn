@@ -95,6 +95,14 @@ export default function AdminApplicationDetailPage() {
   const [notifyApplicant, setNotifyApplicant] = useState(true);
   const [applicantNote, setApplicantNote] = useState('');
 
+  // Phase 177: catalog re-sync (finding B). `university_name` /
+  // `program_name` are snapshots taken when the row was created; a
+  // catalog rename leaves them stale forever. This button re-reads the
+  // live catalog and writes back only the fields that differ.
+  const [isResyncing, setIsResyncing] = useState(false);
+  const [resyncNote, setResyncNote] = useState<string | null>(null);
+
+
   const load = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -160,6 +168,39 @@ export default function AdminApplicationDetailPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const handleResync = useCallback(async () => {
+    if (!app) return;
+    setIsResyncing(true);
+    setResyncNote(null);
+    try {
+      const res = await apiFetchJson<{
+        updated: number;
+        alreadyCurrent: number;
+        withUnresolved: number;
+        unresolvedReasons: string[];
+      }>('/api/admin/applications/resync', {
+        method: 'POST',
+        body: JSON.stringify({ id: app.id }),
+      });
+      if (res.updated > 0) {
+        await load();
+        setResyncNote(
+          `Updated ${res.updated} field${res.updated === 1 ? '' : 's'} from the catalog.`,
+        );
+      } else if (res.withUnresolved > 0) {
+        setResyncNote(
+          `Nothing to update — ${res.unresolvedReasons[0] ?? 'this application has no catalog slug'}.`,
+        );
+      } else {
+        setResyncNote('Already matches the catalog.');
+      }
+    } catch (e) {
+      setResyncNote(e instanceof Error ? e.message : 'Re-sync failed');
+    } finally {
+      setIsResyncing(false);
+    }
+  }, [app, load]);
 
   const handleStatusChange = useCallback(
     async (newStatus: AdminAction) => {
@@ -355,6 +396,27 @@ export default function AdminApplicationDetailPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                     <Field label="University" value={app.university} icon={<BookOpen className="w-4 h-4" />} />
                     <Field label="Program" value={app.program} icon={<BookOpen className="w-4 h-4" />} />
+
+                    {/* Phase 177: re-sync the snapshot against the live
+                        catalog. Safe to press repeatedly — a row that
+                        already matches reports "Already matches". */}
+                    <div className="sm:col-span-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-none"
+                        onClick={handleResync}
+                        disabled={isResyncing}
+                      >
+                        <RefreshCw
+                          className={`w-4 h-4 mr-2 ${isResyncing ? 'animate-spin' : ''}`}
+                        />
+                        Re-sync names from catalog
+                      </Button>
+                      {resyncNote && (
+                        <div className="mt-1 text-xs text-[#4B5563]">{resyncNote}</div>
+                      )}
+                    </div>
                     <Field label="Degree" value={app.degree} />
                     <Field label="Intake" value={app.intake} />
                   </div>

@@ -224,6 +224,18 @@ export default function AdminApplicationsPage() {
   // spinner. Keyed by application id.
   const [settingStatusFor, setSettingStatusFor] = useState<string | null>(null);
 
+  // Phase 177: bulk catalog re-sync. Fixes finding B (stale name
+  // snapshots) across a whole selection in one pass instead of
+  // opening rows one at a time.
+  const [resyncRunning, setResyncRunning] = useState(false);
+  const [resyncResult, setResyncResult] = useState<{
+    updated: number;
+    alreadyCurrent: number;
+    withUnresolved: number;
+    unresolvedReasons: string[];
+  } | null>(null);
+
+
   // Phase 122b: server-side sort. Defaults mirror the API's original
   // fixed behavior (created_at desc). Clicking a sortable header
   // cycles desc → asc → back to the default.
@@ -642,6 +654,32 @@ export default function AdminApplicationsPage() {
     [selectedIds, fetchCounts],
   );
 
+  const handleBulkResync = useCallback(async () => {
+    if (selectedIds.size === 0) return;
+    setResyncRunning(true);
+    try {
+      const res = await apiFetchJson<{
+        updated: number;
+        alreadyCurrent: number;
+        withUnresolved: number;
+        unresolvedReasons: string[];
+      }>('/api/admin/applications/resync', {
+        method: 'POST',
+        body: JSON.stringify({ ids: Array.from(selectedIds) }),
+      });
+      setResyncResult(res);
+      setSelectedIds(new Set());
+      if (res.updated > 0) {
+        setRetryNonce((n) => n + 1);
+        fetchCounts();
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Re-sync failed');
+    } finally {
+      setResyncRunning(false);
+    }
+  }, [selectedIds, fetchCounts]);
+
   // Phase 176: per-target quick status from inside a collapsed
   // shortlist. This PATCHes exactly ONE application id — never a
   // group. That's the whole safety story for the grouped view: a
@@ -800,6 +838,47 @@ export default function AdminApplicationsPage() {
           confuse: clicking "Student" would just be a way back to
           the unified view, which the "All Applications" link in
           the header already does. */}
+      {/* Phase 177: re-sync outcome. Reported rather than swallowed —
+          "38 of 50 were already correct" is the answer an admin
+          wants, and the unresolved reasons tell them which rows
+          they'll never be able to fix by re-syncing. */}
+      {resyncResult && (
+        <div className="mb-3 px-4 py-3 border border-[#1B2A4A]/20 bg-[#FAFAF8] text-sm text-[#1B2A4A]">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="font-semibold">
+                Re-synced {resyncResult.updated} row
+                {resyncResult.updated === 1 ? '' : 's'} from the catalog.
+              </div>
+              <div className="text-xs text-[#4B5563] mt-0.5">
+                {resyncResult.alreadyCurrent} already matched
+                {resyncResult.withUnresolved > 0
+                  ? ` · ${resyncResult.withUnresolved} could not be matched to a catalog entry (left unchanged)`
+                  : ''}
+              </div>
+              {resyncResult.unresolvedReasons.length > 0 && (
+                <ul className="text-[11px] text-[#6B7280] mt-1 list-disc pl-4">
+                  {resyncResult.unresolvedReasons.slice(0, 4).map((r) => (
+                    <li key={r}>{r}</li>
+                  ))}
+                  {resyncResult.unresolvedReasons.length > 4 && (
+                    <li>…and {resyncResult.unresolvedReasons.length - 4} more</li>
+                  )}
+                </ul>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setResyncResult(null)}
+              aria-label="Dismiss"
+              className="shrink-0 text-[#6B7280] hover:text-[#1B2A4A]"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      )}
+
       {!partnerOnly && (
       <div className="border-b border-gray-200">
         <nav className="flex gap-1 overflow-x-auto" aria-label="Application source tabs">
@@ -1639,6 +1718,17 @@ export default function AdminApplicationsPage() {
                 disabled={bulkRunning}
               >
                 <X size={14} className="mr-1" /> Clear
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-none"
+                onClick={handleBulkResync}
+                disabled={bulkRunning || resyncRunning}
+                title="Re-read university and program names from the live catalog and update the selected rows where they've drifted"
+              >
+                <RefreshCw size={14} className={`mr-1 ${resyncRunning ? 'animate-spin' : ''}`} />
+                Re-sync from catalog
               </Button>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
