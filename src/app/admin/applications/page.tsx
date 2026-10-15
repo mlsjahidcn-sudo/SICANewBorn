@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Plus, Eye, Trash2, MoreHorizontal, ArrowUpRight, ArrowDownRight, Minus, RefreshCw, AlertCircle, Search, Users, Building2, UserPlus, CheckSquare, Square, X, StickyNote, Flag, Download, CalendarClock, Loader2, ChevronUp, ChevronDown, ChevronsUpDown, DollarSign } from 'lucide-react';
+import { Plus, Eye, Trash2, MoreHorizontal, ArrowUpRight, ArrowDownRight, Minus, RefreshCw, AlertCircle, Search, Users, Building2, UserPlus, CheckSquare, Square, X, StickyNote, Flag, Download, CalendarClock, Layers, Loader2, ChevronUp, ChevronDown, ChevronsUpDown, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -693,6 +693,15 @@ export default function AdminApplicationsPage() {
           >
             {isExporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
             {isExporting ? 'Exporting…' : 'Export CSV'}
+          </Button>
+          <Button
+            variant="outline"
+            className="rounded-none"
+            onClick={() => router.push('/admin/applications/shortlist')}
+            title="Build a multi-university shortlist for one student (1 reach, 2 targets, 1 safety)"
+          >
+            <Layers className="w-4 h-4 mr-2" />
+            New Shortlist
           </Button>
           <Button
             className="bg-[#9B1B30] hover:bg-[#7A1526] text-white"
