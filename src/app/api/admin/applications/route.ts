@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, buildServiceClient, getServerEnv } from '@/lib/supabase-auth';
 import { insertTimelineEvent } from '@/lib/timeline';
 import { mapApplicationFromDb, RawApp, leadAttributionIsValid, type StudentLeadType } from '@/lib/application-mapper';
+import { ALLOWED_STUDENT_STATUSES } from '@/lib/application-status';
 import { normalizeIntake, parseIntakeFilter } from '@/lib/intake-normalize';
 import {
   PARTNER_APPLICATION_DEGREES,
@@ -572,6 +573,12 @@ interface UnifiedAppRow {
   // partnerPriority. Uniform field so the sort comparator (and any
   // future consumer) reads one key.
   priority?: string | null;
+  // Phase 175: shortlist linkage. Both surfaces declare it so the
+  // grouped view can read one key — partner_applications has no
+  // campaign concept, so those rows are always null and simply never
+  // group with a student shortlist.
+  campaignId?: string | null;
+  campaignRole?: string | null;
   partnerDecision?: string | null;
   partnerOrgId?: string | null;
   partnerOrgName?: string | null;
@@ -617,6 +624,11 @@ function mapPartnerAppForUnifiedList(row: UnifiedPartnerRow): Omit<UnifiedAppRow
     // works: 'Partner' selects both 'Partner' and 'Partner CRM'.
     source: 'Partner CRM',
     applicationNumber: row.application_number,
+    // partner_applications has no shortlist concept (Phase 175 is
+    // student_applications only), so these stay null and the grouped
+    // view leaves partner rows flat.
+    campaignId: null,
+    campaignRole: null,
     // Phase 33: partner-only fields, surfaced into the unified
     // shape so the page can render them on the partner surface.
     partnerPriority: row.priority,
@@ -645,10 +657,7 @@ function mapPartnerAppForUnifiedList(row: UnifiedPartnerRow): Omit<UnifiedAppRow
  * Generates application_number via the SQL function (S5 fix) and writes
  * a timeline event (S12.6) so the audit trail is complete.
  */
-const ALLOWED_STATUSES = [
-  'Draft', 'Submitted', 'Under Review', 'Documents Requested',
-  'Decision Made', 'Accepted', 'Rejected', 'Withdrawn',
-] as const;
+const ALLOWED_STATUSES = ALLOWED_STUDENT_STATUSES;
 
 export async function POST(request: NextRequest) {
   if (!getServerEnv().serviceKey) {

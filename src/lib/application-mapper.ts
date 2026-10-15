@@ -98,6 +98,12 @@ export interface AdminApplication {
   decision: string | null;
   decisionDate: string | null;
   priority: string | null;
+  // Phase 175: shortlist linkage. NULL campaignId = a pre-Phase-175
+  // row, which is a correct reading rather than missing data. The
+  // grouped list view uses this to collapse a campaign into one row;
+  // legacy rows fall back to grouping by studentId.
+  campaignId: string | null;
+  campaignRole: string | null;
   submittedAt: string | null;
   reviewedAt: string | null;
   // Phase 107 Batch 6: opt-out for internal timeline events.
@@ -118,6 +124,8 @@ export type RawApp = {
   intake: string;
   status: string;
   priority: string | null;
+  campaign_id?: string | null;
+  campaign_role?: string | null;
   submitted_at: string | null;
   reviewed_at: string | null;
   decision_date: string | null;
@@ -196,6 +204,8 @@ export function mapApplicationFromDb(row: RawApp): AdminApplication {
     decision: row.decision,
     decisionDate: row.decision_date,
     priority: row.priority,
+    campaignId: row.campaign_id ?? null,
+    campaignRole: row.campaign_role ?? null,
     submittedAt: row.submitted_at,
     reviewedAt: row.reviewed_at,
     timelineVisibleToStudent: row.timeline_visible_to_student ?? true,

@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { ALLOWED_STUDENT_STATUSES } from '@/lib/application-status';
 import { requireAdmin, buildServiceClient, getServerEnv } from '@/lib/supabase-auth';
 import { insertTimelineEvent } from '@/lib/timeline';
 import { mapApplicationFromDb } from '@/lib/application-mapper';
 import { notifyApplicantOnStatusChange } from '@/lib/email';
 import { computePaymentAggregateForApp } from '@/lib/payment-aggregate';
 
-const ALLOWED_STATUSES = [
-  'Draft', 'Submitted', 'Under Review', 'Documents Requested',
-  'Decision Made', 'Accepted', 'Rejected', 'Withdrawn',
-] as const;
+const ALLOWED_STATUSES = ALLOWED_STUDENT_STATUSES;
 
 /**
  * S29: student notification title (in-app inbox). The full message

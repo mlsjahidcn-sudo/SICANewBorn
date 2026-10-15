@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Plus, Eye, Trash2, MoreHorizontal, ArrowUpRight, ArrowDownRight, Minus, RefreshCw, AlertCircle, Search, Users, Building2, UserPlus, CheckSquare, Square, X, StickyNote, Flag, Download, CalendarClock, Layers, Loader2, ChevronUp, ChevronDown, ChevronsUpDown, DollarSign } from 'lucide-react';
+import { Plus, Eye, Trash2, MoreHorizontal, ArrowUpRight, ArrowDownRight, Minus, RefreshCw, AlertCircle, Search, Users, Building2, UserPlus, CheckSquare, Square, X, StickyNote, Flag, Download, CalendarClock, Layers, List, Loader2, ChevronUp, ChevronDown, ChevronsUpDown, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -22,6 +22,7 @@ import { downloadCsvViaApi } from '@/lib/download-csv';
 import { APPLICATION_STATUSES, ApplicationStatus } from '@/lib/application-mapper';
 import { parseIntakeFilter, getCanonicalCohorts } from '@/lib/intake-normalize';
 import { APPLICATION_PAYMENT_STATUSES, APPLICATION_PAYMENT_STATUS_DISPLAY, type ApplicationPaymentStatus } from '@/lib/payment-aggregate';
+import ApplicationGroups from './_components/application-groups';
 import { useI18n } from '@/lib/i18n';
 
 interface Application {
@@ -211,6 +212,17 @@ export default function AdminApplicationsPage() {
   // value so they don't pollute the cohort counts. Partner rows
   // always pass through (no fee link yet).
   const [paymentFilter, setPaymentFilter] = useState<'all' | ApplicationPaymentStatus>('all');
+
+  // Phase 176: flat vs grouped view. 'flat' is the default and is
+  // deliberately the ONLY mode that renders the original table —
+  // sorting, bulk-select and CSV export all live inside it, and the
+  // risk table in the plan says to leave them alone. The grouped
+  // view is additive: a separate component, its own rows, no shared
+  // state with the flat one.
+  const [viewMode, setViewMode] = useState<'flat' | 'grouped'>('flat');
+  // Which row is mid-status-update, so only that row's select shows a
+  // spinner. Keyed by application id.
+  const [settingStatusFor, setSettingStatusFor] = useState<string | null>(null);
 
   // Phase 122b: server-side sort. Defaults mirror the API's original
   // fixed behavior (created_at desc). Clicking a sortable header
@@ -630,6 +642,41 @@ export default function AdminApplicationsPage() {
     [selectedIds, fetchCounts],
   );
 
+  // Phase 176: per-target quick status from inside a collapsed
+  // shortlist. This PATCHes exactly ONE application id — never a
+  // group. That's the whole safety story for the grouped view: a
+  // status change in a grouped card can only ever touch the target
+  // whose dropdown the advisor actually used.
+  const handleSetTargetStatus = useCallback(
+    async (id: string, status: string) => {
+      setSettingStatusFor(id);
+      try {
+        await apiFetchJson(`/api/admin/applications/${id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status }),
+        });
+        setRetryNonce((n) => n + 1);
+        fetchCounts();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Could not update status');
+      } finally {
+        setSettingStatusFor(null);
+      }
+    },
+    [fetchCounts],
+  );
+
+  // Phase 176: open one application from a grouped card. Mirrors the
+  // href the flat table builds — partner rows live under a different
+  // route tree, so a grouped partner row must too.
+  const handleOpenRow = useCallback((app: { id: string; surface: string }) => {
+    router.push(
+      app.surface === 'partner'
+        ? `/admin/partner-applications/${app.id}`
+        : `/admin/applications/${app.id}`,
+    );
+  }, [router]);
+
   // Count for the active tab — prefer the badge count from /counts,
   // fall back to `total` from the list (which the API already filtered).
   const getActiveCount = (): number => {
@@ -694,6 +741,40 @@ export default function AdminApplicationsPage() {
             {isExporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
             {isExporting ? 'Exporting…' : 'Export CSV'}
           </Button>
+          {/* Phase 176: flat / grouped toggle. Flat stays the default
+              so nothing changes for anyone who doesn't reach for it. */}
+          <div
+            className="flex border border-gray-300"
+            role="group"
+            aria-label="Application view mode"
+          >
+            <button
+              type="button"
+              onClick={() => setViewMode('flat')}
+              aria-pressed={viewMode === 'flat'}
+              className={`px-3 py-2 text-sm flex items-center gap-1.5 ${
+                viewMode === 'flat'
+                  ? 'bg-[#1B2A4A] text-white'
+                  : 'text-[#4B5563] hover:bg-gray-100'
+              }`}
+            >
+              <List className="w-4 h-4" />
+              Flat
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('grouped')}
+              aria-pressed={viewMode === 'grouped'}
+              className={`px-3 py-2 text-sm flex items-center gap-1.5 border-l border-gray-300 ${
+                viewMode === 'grouped'
+                  ? 'bg-[#1B2A4A] text-white'
+                  : 'text-[#4B5563] hover:bg-gray-100'
+              }`}
+            >
+              <Layers className="w-4 h-4" />
+              Grouped
+            </button>
+          </div>
           <Button
             variant="outline"
             className="rounded-none"
@@ -1062,6 +1143,7 @@ export default function AdminApplicationsPage() {
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
+              {viewMode === 'flat' ? (
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-[#F3F4F6] border-b border-gray-200">
@@ -1466,6 +1548,14 @@ export default function AdminApplicationsPage() {
                   )}
                 </tbody>
               </table>
+              ) : (
+                <ApplicationGroups
+                  applications={filteredApplications}
+                  onOpenRow={handleOpenRow}
+                  onSetStatus={handleSetTargetStatus}
+                  settingStatusFor={settingStatusFor}
+                />
+              )}
             </div>
           </CardContent>
         </Card>

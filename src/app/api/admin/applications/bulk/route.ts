@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { ALLOWED_STUDENT_STATUSES, ALLOWED_PARTNER_STATUSES } from '@/lib/application-status';
 import { requireAdmin, buildServiceClient, getServerEnv } from '@/lib/supabase-auth';
 import { insertTimelineEvent } from '@/lib/timeline';
 import {
@@ -75,14 +76,10 @@ export const dynamic = 'force-dynamic';
  * if the selection limit ever goes above 200, swap to a
  * Promise.all + chunked loop.
  */
-const ALLOWED_STUDENT_STATUSES = [
-  'Draft', 'Submitted', 'Under Review', 'Documents Requested',
-  'Decision Made', 'Accepted', 'Rejected', 'Withdrawn',
-] as const;
-
-const ALLOWED_PARTNER_STATUSES = [
-  'Draft', 'Submitted', 'In Review', 'Accepted', 'Rejected', 'Withdrawn',
-] as const;
+// Phase 176: both vocabularies now live in one module. They are
+// genuinely different — partner_applications says 'In Review',
+// student_applications says 'Under Review' — so the shared module
+// keeps them separate rather than merging them into one list.
 
 const ALLOWED_PRIORITIES = ['Low', 'Normal', 'High', 'Urgent'] as const;
 
