@@ -7,6 +7,7 @@ import {
   Save,
   User,
   GraduationCap,
+  ShieldCheck,
   BookOpen,
   CheckCircle2,
   Copy,
@@ -37,6 +38,11 @@ import {
 
 // Fields that map to fixed columns in student_profiles.
 // Everything else goes to the `extra` JSONB blob.
+/** Mirrors the CHECK constraint in
+ *  database/2026-10-15_student_visa_fields.sql and the identical
+ *  vocabulary on partner_applications. Keep all three in step. */
+const FUNDING_SOURCES = ['Self', 'Parents', 'Scholarship', 'Sponsor', 'Government'] as const;
+
 const FIXED_FIELDS = [
   'firstName',
   'lastName',
@@ -51,6 +57,35 @@ const FIXED_FIELDS = [
   'preferredUniversities',
   'source',
   'status',
+  // Phase 181: visa-critical fields become real columns rather than
+  // riding the `extra` JSON blob, so they are queryable, filterable and
+  // migratable. The blob still works — but a field nobody can SELECT is
+  // a field nobody can report on.
+  'chineseName',
+  'placeOfBirth',
+  'maritalStatus',
+  'permanentAddress',
+  'postalCode',
+  'hasStudiedInChina',
+  'fundingSource',
+  'sponsorName',
+  'sponsorRelationship',
+  'sponsorOccupation',
+  'sponsorPhone',
+  'sponsorEmail',
+  'sponsorAnnualIncome',
+  'emergencyContactName',
+  'emergencyContactRelationship',
+  'emergencyContactPhone',
+  'emergencyContactEmail',
+  'fatherName',
+  'fatherNationality',
+  'fatherOccupation',
+  'fatherPhone',
+  'motherName',
+  'motherNationality',
+  'motherOccupation',
+  'motherPhone',
 ] as const;
 
 export default function AdminAddStudentPage() {
@@ -99,6 +134,32 @@ export default function AdminAddStudentPage() {
   }, []); // mount only — the wizard's nationality state is set later
 
   const [formData, setFormData] = useState({
+    // Phase 181: visa-critical fields (step 4).
+    chineseName: '',
+    placeOfBirth: '',
+    maritalStatus: '',
+    permanentAddress: '',
+    postalCode: '',
+    hasStudiedInChina: '',
+    fundingSource: '',
+    sponsorName: '',
+    sponsorRelationship: '',
+    sponsorOccupation: '',
+    sponsorPhone: '',
+    sponsorEmail: '',
+    sponsorAnnualIncome: '',
+    emergencyContactName: '',
+    emergencyContactRelationship: '',
+    emergencyContactPhone: '',
+    emergencyContactEmail: '',
+    fatherName: '',
+    fatherNationality: '',
+    fatherOccupation: '',
+    fatherPhone: '',
+    motherName: '',
+    motherNationality: '',
+    motherOccupation: '',
+    motherPhone: '',
     // Personal Info
     firstName: '',
     lastName: '',
@@ -108,7 +169,6 @@ export default function AdminAddStudentPage() {
     passportIssueDate: '',
     passportExpiryDate: '',
     gender: '',
-    maritalStatus: '',
     partnerInfo: '',
 
     // Contact Info
@@ -303,7 +363,7 @@ export default function AdminAddStudentPage() {
     }
   };
 
-  const totalSteps = 4;
+  const totalSteps = 5;
 
   // Success state: show the temp password + next-step actions
   if (success) {
@@ -942,7 +1002,111 @@ export default function AdminAddStudentPage() {
               </div>
             )}
 
+            {/* Phase 181: visa-critical step. Split out because these
+                are not "student details" — they are the inputs to a
+                financial-guarantor declaration, a family-background
+                declaration, and a visa category decision. Burying them
+                in step 1 is how they stay empty in practice. */}
             {step === 4 && (
+              <div className="space-y-6">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-[#1B2A4A]" />
+                  <h2 className="text-lg font-semibold text-[#1B2A4A]">{t('adminStudentForm.sectionVisaEmergency')}</h2>
+                </div>
+                <p className="text-sm text-[#4B5563]">{t('adminStudentForm.sectionVisaEmergencyHint')}</p>
+
+                {/* Has the student studied in China before? Changes the
+                    visa category, so it is a yes/no we must be able to
+                    distinguish from "never asked". */}
+                <label className="flex items-center gap-2 text-sm text-[#1F2937]">
+                  <input
+                    type="checkbox"
+                    checked={formData.hasStudiedInChina === 'true'}
+                    onChange={(e) =>
+                      setFormData((f) => ({ ...f, hasStudiedInChina: e.target.checked ? 'true' : '' }))
+                    }
+                    className="h-4 w-4"
+                  />
+                  {t('adminStudentForm.hasStudiedInChina')}
+                </label>
+
+                {/* Funding */}
+                <div>
+                  <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('adminStudentForm.fundingSource')}</label>
+                  <select
+                    value={formData.fundingSource ?? ''}
+                    onChange={(e) => setFormData((f) => ({ ...f, fundingSource: e.target.value }))}
+                    className="w-full border border-gray-300 px-3 py-2 text-sm"
+                  >
+                    <option value="">—</option>
+                    {(FUNDING_SOURCES).map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {(formData.fundingSource === 'Sponsor' || formData.fundingSource === 'Parents') && (
+                  <div className="border border-[#D4A853]/50 bg-[#FAF6E8] p-4 space-y-3">
+                    <div className="text-sm font-medium text-[#1B2A4A]">{t('adminStudentForm.sponsorDetail')}</div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <input placeholder={t('adminStudentForm.sponsorName')} value={formData.sponsorName ?? ''}
+                        onChange={(e) => setFormData((f) => ({ ...f, sponsorName: e.target.value }))} className="border border-gray-300 px-3 py-2 text-sm" />
+                      <input placeholder={t('adminStudentForm.sponsorRelationship')} value={formData.sponsorRelationship ?? ''}
+                        onChange={(e) => setFormData((f) => ({ ...f, sponsorRelationship: e.target.value }))} className="border border-gray-300 px-3 py-2 text-sm" />
+                      <input placeholder={t('adminStudentForm.sponsorOccupation')} value={formData.sponsorOccupation ?? ''}
+                        onChange={(e) => setFormData((f) => ({ ...f, sponsorOccupation: e.target.value }))} className="border border-gray-300 px-3 py-2 text-sm" />
+                      <input placeholder={t('adminStudentForm.sponsorPhone')} value={formData.sponsorPhone ?? ''}
+                        onChange={(e) => setFormData((f) => ({ ...f, sponsorPhone: e.target.value }))} className="border border-gray-300 px-3 py-2 text-sm" />
+                      <input placeholder={t('adminStudentForm.sponsorEmail')} value={formData.sponsorEmail ?? ''}
+                        onChange={(e) => setFormData((f) => ({ ...f, sponsorEmail: e.target.value }))} className="border border-gray-300 px-3 py-2 text-sm" />
+                      <input placeholder={t('adminStudentForm.sponsorAnnualIncome')} value={formData.sponsorAnnualIncome ?? ''}
+                        onChange={(e) => setFormData((f) => ({ ...f, sponsorAnnualIncome: e.target.value }))} className="border border-gray-300 px-3 py-2 text-sm" />
+                    </div>
+                  </div>
+                )}
+
+                {/* Emergency contact — mirrors partner_applications */}
+                <div className="space-y-2">
+                  <div className="text-sm font-medium text-[#1B2A4A]">{t('adminStudentForm.emergencyContact')}</div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <input placeholder={t('adminStudentForm.emergencyContactName')} value={formData.emergencyContactName ?? ''}
+                      onChange={(e) => setFormData((f) => ({ ...f, emergencyContactName: e.target.value }))} className="border border-gray-300 px-3 py-2 text-sm" />
+                    <input placeholder={t('adminStudentForm.emergencyContactRelationship')} value={formData.emergencyContactRelationship ?? ''}
+                      onChange={(e) => setFormData((f) => ({ ...f, emergencyContactRelationship: e.target.value }))} className="border border-gray-300 px-3 py-2 text-sm" />
+                    <input placeholder={t('adminStudentForm.emergencyContactPhone')} value={formData.emergencyContactPhone ?? ''}
+                      onChange={(e) => setFormData((f) => ({ ...f, emergencyContactPhone: e.target.value }))} className="border border-gray-300 px-3 py-2 text-sm" />
+                    <input placeholder={t('adminStudentForm.emergencyContactEmail')} value={formData.emergencyContactEmail ?? ''}
+                      onChange={(e) => setFormData((f) => ({ ...f, emergencyContactEmail: e.target.value }))} className="border border-gray-300 px-3 py-2 text-sm" />
+                  </div>
+                </div>
+
+                {/* Parents — X1 family-background declaration */}
+                <div className="space-y-3 border-t border-gray-200 pt-4">
+                  <div className="text-sm font-medium text-[#1B2A4A]">{t('adminStudentForm.parents')}</div>
+                  {(['father', 'mother'] as const).map((p) => (
+                    <div key={p} className="grid gap-3 sm:grid-cols-3">
+                      <input
+                        placeholder={t(`adminStudentForm.${p}Name`)}
+                        value={(formData[`${p}Name`] as string) ?? ''}
+                        onChange={(e) => setFormData((f) => ({ ...f, [`${p}Name`]: e.target.value }))}
+                        className="border border-gray-300 px-3 py-2 text-sm" />
+                      <input
+                        placeholder={t(`adminStudentForm.${p}Nationality`)}
+                        value={(formData[`${p}Nationality`] as string) ?? ''}
+                        onChange={(e) => setFormData((f) => ({ ...f, [`${p}Nationality`]: e.target.value }))}
+                        className="border border-gray-300 px-3 py-2 text-sm" />
+                      <input
+                        placeholder={t(`adminStudentForm.${p}Occupation`)}
+                        value={(formData[`${p}Occupation`] as string) ?? ''}
+                        onChange={(e) => setFormData((f) => ({ ...f, [`${p}Occupation`]: e.target.value }))}
+                        className="border border-gray-300 px-3 py-2 text-sm" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {step === 5 && (
               <div className="space-y-6">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-5 h-5 text-[#1B2A4A]" />

@@ -63,6 +63,36 @@ describe('mapStudentFromDb', () => {
       // Phase 122a: application count from the list endpoint — null
       // when the row didn't come through a count-annotated query.
       applicationCount: null,
+      // Phase 181: visa-critical fields default to null, never to a
+      // falsy value. null means "not collected yet"; it must not be
+      // indistinguishable from false — hasStudiedInChina in
+      // particular changes the visa category, so "never asked"
+      // and "no" are different facts.
+      chineseName: null,
+      placeOfBirth: null,
+      maritalStatus: null,
+      permanentAddress: null,
+      postalCode: null,
+      hasStudiedInChina: null,
+      fundingSource: null,
+      sponsorName: null,
+      sponsorRelationship: null,
+      sponsorOccupation: null,
+      sponsorPhone: null,
+      sponsorEmail: null,
+      sponsorAnnualIncome: null,
+      emergencyContactName: null,
+      emergencyContactRelationship: null,
+      emergencyContactPhone: null,
+      emergencyContactEmail: null,
+      fatherName: null,
+      fatherNationality: null,
+      fatherOccupation: null,
+      fatherPhone: null,
+      motherName: null,
+      motherNationality: null,
+      motherOccupation: null,
+      motherPhone: null,
     });
   });
 

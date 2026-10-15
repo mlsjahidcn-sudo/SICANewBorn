@@ -439,6 +439,31 @@ export default function AdminStudentEditPage() {
 
                 <Separator />
 
+                {/* Phase 181: the edit form had NO passport section at
+                    all — number, issue date and expiry were creation-only,
+                    so a typo in a passport number could never be fixed.
+                    Passport expiry in particular drives application
+                    urgency, so it must be correctable. */}
+                <div className="space-y-2">
+                  <Label htmlFor="passportNumber">{t('adminStudentForm.fieldPassportNumber')}</Label>
+                  <Input id="passportNumber" value={v('passportNumber')}
+                    onChange={(e) => handleInputChange('passportNumber', e.target.value)} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="passportIssueDate">{t('adminStudentForm.fieldPassportIssueDate')}</Label>
+                    <Input id="passportIssueDate" type="date" value={v('passportIssueDate')}
+                      onChange={(e) => handleInputChange('passportIssueDate', e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="passportExpiryDate">{t('adminStudentForm.fieldPassportExpiryDate')}</Label>
+                    <Input id="passportExpiryDate" type="date" value={v('passportExpiryDate')}
+                      onChange={(e) => handleInputChange('passportExpiryDate', e.target.value)} />
+                  </div>
+                </div>
+
+                <Separator />
+
                 <h3 className="text-lg font-semibold">{t('adminStudentForm.sectionTargetApplication')}</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2"><Label htmlFor="targetDegree">{t('adminStudentForm.fieldTargetDegree')}</Label>
@@ -451,6 +476,15 @@ export default function AdminStudentEditPage() {
                         <SelectItem value="Chinese Language">Chinese Language</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+                  {/* Phase 181: targetField (the student's intended
+                      major) was settable at creation but NOT editable
+                      afterwards — so a student's plan could never be
+                      corrected, which also desynchronises it from the
+                      target_degree they applied under. */}
+                  <div className="space-y-2"><Label htmlFor="targetField">{t('adminStudentForm.fieldTargetField')}</Label>
+                    <Input id="targetField" value={v('targetField')}
+                      onChange={(e) => handleInputChange('targetField', e.target.value)} />
                   </div>
                   <div className="space-y-2"><Label htmlFor="targetIntake">{t('adminStudentForm.fieldTargetIntake')}</Label>
                     <Select value={v('targetIntake')} onValueChange={(value) => handleInputChange('targetIntake', value)}>
