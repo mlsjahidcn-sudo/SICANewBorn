@@ -321,9 +321,29 @@ function UniversityFormInner({ slug }: { slug?: string }) {
   }, [form, isEdit, slug, router, addToast]);
 
   const inputClass = "w-full px-3 py-2 border border-gray-300 text-sm focus:outline-none focus:border-[#9B1B30]";
+  // Phase 183: textareas are full-width single-column, and this form now
+  // sits at `default` (1152px) rather than `narrow` (768px). Without a
+  // cap, "Description (English)" would run to ~1100px — past the point
+  // where prose stays readable and an advisor is chasing the start of
+  // the next line. Short fields (names, URLs, codes) are happy to use
+  // the full width; long prose is not, so it gets its own measure.
+  const textareaClass = `${inputClass} max-w-2xl`;
 
+  // Phase 183: width="default", not "narrow".
+  //
+  // Phase 174 put every form on `narrow` under a "forms are narrow" rule,
+  // and this form is the exception. 36 inputs across 8 sections — dense
+  // enough that the paired fields were cramped at 768px, and the page read
+  // as a narrow strip floating in a 1920px admin shell.
+  //
+  // `programs/new` genuinely IS narrow (18 inputs, no long prose).
+  // Density, not "is it a form", is what decides the tier.
+  //
+  // Long-form fields are capped separately (textareaClass) so the extra
+  // width goes to the fields that benefit, instead of making every
+  // description ~1100px wide.
   return (
-    <PageContainer width="narrow">
+    <PageContainer width="default">
       <div className="flex items-center gap-4 mb-6">
         <button
           onClick={() => router.push('/admin/universities')}
