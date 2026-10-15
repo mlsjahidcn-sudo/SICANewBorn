@@ -15,7 +15,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Trash2, ExternalLink, Eye, EyeOff, RefreshCw } from 'lucide-react';
-import { apiFetchJson } from '@/lib/api-client';
+import { apiFetch, apiFetchJson } from '@/lib/api-client';
 import type { AdmissionDegree } from '@/lib/admission-notices/types';
 
 interface AdmissionNotice {
@@ -82,7 +82,15 @@ export default function AdminAdmissionNoticesPage() {
     if (!confirm(t('adminAdmissionNotices.deleteConfirm'))) return;
     setDeletingId(id);
     try {
-      await fetch(`/api/admin/admission-notices/${id}`, { method: 'DELETE' });
+      // apiFetch for the Bearer header, AND check res.ok — the previous
+      // version did neither, so a 401 was swallowed entirely: the
+      // notice stayed in the list with no error shown, which reads as
+      // "the server is flaky" rather than "you aren't authorised".
+      const res = await apiFetch(`/api/admin/admission-notices/${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error || `HTTP ${res.status}`);
+      }
       await fetchNotices();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Delete failed');

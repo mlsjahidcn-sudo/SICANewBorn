@@ -23,7 +23,7 @@ import next from 'next';
  *   - Local `npm run dev`           → dev mode (no env vars set)
  *   - Local `NODE_ENV=production node dist/server.js` → production
  *   - Hostinger (the only deploy target since Phase 91) → production
- *     (NODE_ENV=production; the in-process drip + webhook schedulers
+ *     (NODE_ENV=production; the in-process drip scheduler
  *     below only run on this Node server, which is exactly why the
  *     deploy target matters)
  *   - Coze dev                      → dev (COZE_PROJECT_ENV=DEV)
@@ -82,13 +82,6 @@ app.prepare().then(() => {
       import('./lib/email/drip/scheduler').then((m) => m.startDripScheduler()).catch((err) =>
         console.error('[server] failed to start drip scheduler', err),
       );
-      // Phase 72 (C-5): webhook delivery worker (1-minute tick).
-      // Picks up pending + due-for-retry webhook deliveries and
-      // POSTs them. Same in-process scheduler pattern as the drip
-      // worker. Auto-skips if Supabase isn't configured.
-      import('./lib/webhook-scheduler').then((m) => m.startWebhookScheduler()).catch((err) =>
-        console.error('[server] failed to start webhook scheduler', err),
-      );
       // Phase 123: counselling session reminders (5-minute tick).
       // 24h + 2h reminders for Confirmed bookings, stamped per booking
       // so each fires exactly once. Same in-process pattern as the
@@ -97,7 +90,7 @@ app.prepare().then(() => {
         .then((m) => m.startCounsellingReminderScheduler())
         .catch((err) => console.error('[server] failed to start counselling reminder scheduler', err));
     } else {
-      console.log('[server] dev mode — drip + webhook schedulers disabled (set NODE_ENV=production to enable)');
+      console.log('[server] dev mode — drip scheduler disabled (set NODE_ENV=production to enable)');
     }
   });
 });

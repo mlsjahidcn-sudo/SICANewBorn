@@ -12,8 +12,6 @@ import { requireAdmin } from '@/lib/supabase-auth';
 import { parseProgramQueryParams, queryPrograms } from '@/lib/program-query';
 // Track 1.3 U2: DB mappers consolidated into src/lib/catalog-mappers.ts.
 import { mapProgramFromDb, mapProgramToDb } from '@/lib/catalog-mappers';
-// Phase 72: emit B2B webhook events on program mutations.
-import { dispatchEvent } from '@/lib/webhook-emitter';
 import { invalidateLiveCatalogCache } from '@/lib/ai/live-data-context';
 
 /**
@@ -68,7 +66,6 @@ export async function POST(request: Request) {
     // Phase 121: the chatbot's RAG catalog has its own 5-min cache.
     invalidateLiveCatalogCache();
     // Phase 72: fire program.created webhook
-    void dispatchEvent('program.created', mapProgramFromDb(data));
     return NextResponse.json({ program: mapProgramFromDb(data) }, { status: 201 });
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });

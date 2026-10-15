@@ -135,7 +135,9 @@ function NewPostInner() {
     setAiRawContent('');
 
     try {
-      const res = await fetch('/api/ai/generate-blog', {
+      // apiFetch, not bare fetch: requireAdmin() only accepts an
+      // Authorization: Bearer header, which only apiFetch attaches.
+      const res = await apiFetch('/api/ai/generate-blog', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

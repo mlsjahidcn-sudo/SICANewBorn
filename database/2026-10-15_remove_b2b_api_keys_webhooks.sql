@@ -1,0 +1,69 @@
+-- ============================================================================
+-- Phase 182 (2026-10-15): remove the unused B2B API-key + webhook surface.
+--
+-- WHY
+-- ---
+-- The 2026-08-20 migrations added a paired B2B product: an API-key-gated
+-- public v1 catalog API (`/api/v1/catalog/*`) plus a webhook delivery engine
+-- (`webhook_subscriptions`, `webhook_deliveries`, an emitter, an SSRF-guarded
+-- delivery worker, and a 1-minute scheduler).
+--
+-- Confirmed on 2026-10-15 that nothing is using it — no issued keys, no
+-- active subscriptions, no deliveries. It was speculative infrastructure
+-- for an integration that never landed, so it is being removed whole
+-- rather than left half-maintained.
+--
+-- The CODE removal is in the same commit: the admin pages, the admin API
+-- routes, every `/api/v1/*` route, and all eight supporting lib modules,
+-- plus the 9 `dispatchEvent()` call sites the public catalog routes had
+-- woven into their mutation paths.
+--
+-- ─────────────────────────────────────────────────────────────────
+-- WHY DROP THE TABLES AND NOT JUST THE CODE
+-- ─────────────────────────────────────────────────────────────────
+-- The alternative — leave the tables, delete the UI — is the worst option.
+-- The API-key validator reads straight from `api_keys`, so previously
+-- issued keys would keep working with no way to revoke them. That is
+-- strictly worse than either keeping the feature or removing it.
+--
+-- Both tables are empty, so this is a clean drop with no data loss. If
+-- you ever want the rows back, restore from a Supabase point-in-time
+-- backup first — DROP TABLE does not survive a careless re-run.
+--
+-- Apply via Supabase dashboard SQL editor. Idempotent.
+-- ============================================================================
+
+-- 1. Verify empty before dropping anything ────────────────────────────
+-- Do NOT run past this comment until all three return 0. A non-zero
+-- count means someone IS integrated, and deleting the admin UI would
+-- strand their key with no way to revoke it.
+--
+--   SELECT count(*) FROM public.api_keys;
+--   SELECT count(*) FROM public.webhook_subscriptions;
+--   SELECT count(*) FROM public.webhook_deliveries;
+
+-- 2. Drop the tables ──────────────────────────────────────────────────
+-- CASCADE would silently drop anything that still points here, which is
+-- exactly the kind of quiet coupling this migration is removing — so no
+-- CASCADE. If something does still reference these, the statement
+-- below fails loudly and that dependency gets deleted deliberately.
+DROP TABLE IF EXISTS public.webhook_deliveries;
+DROP TABLE IF EXISTS public.webhook_subscriptions;
+DROP TABLE IF EXISTS public.api_keys;
+
+-- 3. Verification ─────────────────────────────────────────────────────
+--
+--   SELECT tablename FROM pg_tables
+--    WHERE schemaname = 'public'
+--      AND tablename IN ('api_keys','webhook_subscriptions','webhook_deliveries');
+--
+-- Expect 0 rows.
+--
+-- Then confirm the public catalog still mutates cleanly — those routes
+-- lost their `dispatchEvent()` calls, so a leftover reference there
+-- would surface as a build error rather than a runtime one:
+--
+--   curl -s -o /dev/null -w '%{http_code}\n' \
+--     https://studyinchina.academy/api/programs?limit=1
+--
+-- Expect 200.

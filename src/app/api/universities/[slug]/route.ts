@@ -8,8 +8,6 @@ import { validationErrorResponse, pickSentFields } from '@/lib/validators/shared
 import { requireAdmin } from '@/lib/supabase-auth';
 // Track 1.3 U2: DB mappers consolidated into src/lib/catalog-mappers.ts.
 import { mapUniversityFromDb, mapUniversityToDb } from '@/lib/catalog-mappers';
-// Phase 72: emit B2B webhook events on university mutations.
-import { dispatchEvent } from '@/lib/webhook-emitter';
 import { invalidateLiveCatalogCache } from '@/lib/ai/live-data-context';
 // Track 1.3 U4 #1: cascade delete helpers (refuse with counts
 // unless ?force=true, then delete children first).
@@ -99,7 +97,6 @@ export async function PUT(
     // Phase 121: the chatbot's RAG catalog has its own 5-min cache.
     invalidateLiveCatalogCache();
     // Phase 72: fire university.updated webhook
-    void dispatchEvent('university.updated', mapUniversityFromDb(data));
     return NextResponse.json({ university: mapUniversityFromDb(data) });
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
@@ -201,7 +198,6 @@ export async function DELETE(
   revalidateTag(CACHE_TAGS.university(slug), 'default');
   invalidateLiveCatalogCache();
   // Phase 72: fire university.deleted webhook
-  void dispatchEvent('university.deleted', { slug });
   return NextResponse.json({
     success: true,
     counts: {

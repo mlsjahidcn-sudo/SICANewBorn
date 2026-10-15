@@ -31,8 +31,6 @@ import {
   Trophy,
   BarChart3,
   Sparkles,
-  Key,
-  Webhook,
   CalendarClock,
   Megaphone,
 } from 'lucide-react';
@@ -94,15 +92,6 @@ const navItems = [
   // intake. Sits right below Applications because it's the
   // "where am I in the pipeline" companion view.
   { href: '/admin/cohorts', key: 'cohorts', icon: LayoutGrid },
-  // Phase 62: B2B API Keys — admin UI to issue + revoke scoped
-  // API keys for external integrators calling /v1/catalog/*.
-  // Sits under Cohorts because it's a power-user / config surface
-  // rather than a day-to-day ops tab.
-  { href: '/admin/api-keys', key: 'apiKeys', icon: Key },
-  // Phase 72 (C-5): B2B webhooks — admin view of /v1/webhooks
-  // subscriptions + per-subscription delivery log. Sits under
-  // API Keys because they share the B2B-integration surface.
-  { href: '/admin/webhooks', key: 'webhooks', icon: Webhook },
   { href: '/admin/settings', key: 'settings', icon: Settings },
 ];
 

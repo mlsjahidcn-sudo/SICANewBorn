@@ -30,7 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { apiFetchJson } from '@/lib/api-client';
+import { apiFetch, apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 import type { PartnerStudent, PartnerStudentStatus } from '@/lib/partner-student-mapper';
 
@@ -168,7 +168,10 @@ export default function AdminPartnerStudentsPage() {
     const { action, student } = dialogState;
     setActionBusy(true);
     try {
-      const res = await fetch(`/api/admin/partner-students/${student.id}`, {
+      // apiFetch, not bare fetch: the route is requireAdmin, which only
+      // accepts an Authorization: Bearer header. Same 401 class as the
+      // candidates bug in Phase 175b.
+      const res = await apiFetch(`/api/admin/partner-students/${student.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ archived: action === 'archive' }),
