@@ -1633,6 +1633,9 @@ export default function AdminApplicationsPage() {
                   onOpenRow={handleOpenRow}
                   onSetStatus={handleSetTargetStatus}
                   settingStatusFor={settingStatusFor}
+                  onAddTarget={(campaignId) =>
+                    router.push(`/admin/applications/shortlist?campaign=${campaignId}`)
+                  }
                 />
               )}
             </div>

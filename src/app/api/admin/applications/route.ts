@@ -68,6 +68,8 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const source = searchParams.get('source');
     const search = searchParams.get('search')?.trim();
+    // Phase 180: one-shortlist filter. Powers the builder's append mode.
+    const campaign = searchParams.get('campaign')?.trim() || null;
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20', 10)));
     // S34: cohort filter. parseIntakeFilter() turns the slug
@@ -169,6 +171,7 @@ export async function GET(request: NextRequest) {
           fetchLimit: studentFetchLimit,
           hasDecision,
           enrolled,
+          campaign,
         })
       : Promise.resolve<{ data: RawApp[]; count: number | null; error?: undefined }>({
           data: [],
@@ -373,6 +376,9 @@ async function fetchStudentApplications(
     // Pushed into SQL when set; null means "any".
     hasDecision: boolean | null;
     enrolled: boolean | null;
+    // Phase 180: pull exactly one shortlist. Used by the builder's
+    // append mode to hydrate an existing campaign's targets.
+    campaign: string | null;
   },
 ): Promise<{ data: RawApp[]; count: number | null; error?: { message: string } }> {
   // For the Admin (offline) source we can push the filter into SQL —
@@ -390,6 +396,12 @@ async function fetchStudentApplications(
       { count: 'exact' },
     )
     .order('created_at', { ascending: false });
+
+  // A campaign filter is authoritative on its own: every row sharing
+  // that campaign_id IS the answer, whatever tab it came from. Not
+  // AND-ed with `source`, or an admin on the Partner tab would get an
+  // empty list for their own shortlist.
+  if (opts.campaign) query = query.eq('campaign_id', opts.campaign);
 
   if (opts.student) query = query.eq('student_id', opts.student);
   if (opts.status) query = query.eq('status', opts.status);

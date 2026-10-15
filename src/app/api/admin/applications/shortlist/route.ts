@@ -100,8 +100,90 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // ─────────────────────────────────────────────────────────────────
+  // Phase 180: appending to an EXISTING shortlist
+  // ─────────────────────────────────────────────────────────────────
+  // Previously this route always minted a fresh campaign_id, so an
+  // advisor who built 3 targets and later wanted a 4th got a SECOND
+  // shortlist for the same student — which Phase 176's grouped view
+  // then renders as two unrelated cards. The campaign is authoritative
+  // for student + intake; we inherit rather than trust the client, and
+  // reject a mismatched body outright.
+  const campaignIdIn = typeof body.campaignId === 'string' ? body.campaignId.trim() : '';
+
+  let campaignId = campaignIdIn;
+  const effectiveStudentId = studentId;
+  let effectiveIntake = intake;
+
+  if (campaignIdIn) {
+    const { data: existing, error: existingErr } = await service
+      .from('student_applications')
+      .select('student_id, intake, university_id')
+      .eq('campaign_id', campaignIdIn)
+      .limit(1)
+      .maybeSingle();
+    if (existingErr) {
+      console.error('[shortlist] campaign lookup failed:', existingErr);
+      return NextResponse.json({ error: 'Could not read that shortlist' }, { status: 500 });
+    }
+    if (!existing) {
+      return NextResponse.json({ error: 'Shortlist not found' }, { status: 404 });
+    }
+    const owner = existing as { student_id: string | null; intake: string | null; university_id: string };
+
+    if (owner.student_id !== studentId) {
+      return NextResponse.json(
+        { error: 'That shortlist belongs to a different student' },
+        { status: 400 },
+      );
+    }
+    if (owner.intake && owner.intake !== intake) {
+      return NextResponse.json(
+        { error: `That shortlist is for intake "${owner.intake}", not "${intake}"` },
+        { status: 400 },
+      );
+    }
+
+    // ── One university per shortlist ──
+    // Phase 176's grouped view assumes a campaign's targets are
+    // distinct schools. Appending a university already in this
+    // campaign would silently violate that assumption and render a
+    // card with the same school twice.
+    const { data: existingUnis } = await service
+      .from('student_applications')
+      .select('university_id')
+      .eq('campaign_id', campaignIdIn);
+
+    const taken = new Set(
+      ((existingUnis ?? []) as { university_id: string }[]).map((r) => r.university_id),
+    );
+
+    effectiveIntake = owner.intake || intake;
+
+    // Re-validate with the duplicate rule folded in. validateShortlist
+    // already rejects duplicates WITHIN the submitted batch; this
+    // catches them against the campaign's EXISTING rows.
+    const collisions = validation.targets
+      .map((t, i) => ({ t, i }))
+      .filter(({ t }) => taken.has(t.universityId || 'manual'));
+    if (collisions.length > 0) {
+      return NextResponse.json(
+        {
+          error: 'Already in this shortlist',
+          issues: collisions.map(({ t, i }) => ({
+            index: i,
+            field: 'universityId',
+            reason: `${t.universityName} is already a target in this shortlist`,
+          })),
+        },
+        { status: 400 },
+      );
+    }
+  }
+
   // ── One campaign for the whole shortlist ─────────────────────────────
-  const campaignId = crypto.randomUUID();
+  // Append mode reuses the caller's campaignId; create mode mints one.
+  if (!campaignId) campaignId = crypto.randomUUID();
 
   const created: CreatedRow[] = [];
   const failed: FailedRow[] = [];
@@ -130,12 +212,12 @@ export async function POST(request: NextRequest) {
       program_name_cn: target.programNameCn ?? null,
       degree: target.degree,
       degree_level: target.degree,
-      intake,
+      intake: effectiveIntake,
       status: 'Submitted',
       priority: 'Medium',
       application_number: rpcData as string,
     };
-    if (studentId) insert.student_id = studentId;
+    if (effectiveStudentId) insert.student_id = effectiveStudentId;
     if (applicantEmail) {
       insert.applicant_name = applicantName;
       insert.applicant_email = applicantEmail;
@@ -177,7 +259,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json(
     {
       campaignId,
-      intake,
+      intake: effectiveIntake,
       created,
       failed,
       /** true when at least one target failed — the UI keeps the

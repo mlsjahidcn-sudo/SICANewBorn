@@ -84,10 +84,32 @@ interface SuggestionResponse {
   model?: string;
 }
 
+/** Shape consumed when hydrating an existing campaign in append mode.
+ *  Deliberately loose (`campaign` doubles as the university slug) — the
+ *  list API returns `university` / `program` display names, and the
+ *  builder only needs something stable to key the preselection on. */
+interface PreloadedTarget {
+  studentId: string | null;
+  intake: string;
+  university: string;
+  universityNameCn?: string | null;
+  program: string;
+  programNameCn?: string | null;
+  degree?: string | null;
+  campaignRole?: string | null;
+}
+
 export default function ShortlistBuilder() {
   const { t, locale } = useI18n();
   const router = useRouter();
   const { students, isLoading: studentsLoading } = useStudentList();
+
+  // Phase 180: append mode. Arriving with ?campaign=<uuid> means the
+  // advisor clicked "Add another target" on an existing shortlist, so
+  // we load that campaign's rows and treat them as already-selected.
+  // Submitting then appends rather than creating a second campaign.
+  const [appendToCampaign, setAppendToCampaign] = useState<string | null>(null);
+  const [loadingCampaign, setLoadingCampaign] = useState(false);
 
   const [studentId, setStudentId] = useState('');
   const [intake, setIntake] = useState('');
@@ -165,7 +187,46 @@ export default function ShortlistBuilder() {
     };
   }, [degree, discipline, search]);
 
+  // Phase 180: resolve ?campaign= into (student, intake, preselected).
   const targetKey = (uni: string, prog: string) => `${uni}::${prog}`;
+
+  useEffect(() => {
+    const cid = new URLSearchParams(window.location.search).get('campaign');
+    if (!cid) return;
+    setAppendToCampaign(cid);
+    setLoadingCampaign(true);
+    (async () => {
+      try {
+        const rows = await apiFetchJson<{ applications: PreloadedTarget[] }>(
+          `/api/admin/applications?campaign=${encodeURIComponent(cid)}`,
+        );
+        const list = rows.applications ?? [];
+        if (list.length) {
+          setStudentId(list[0].studentId ?? '');
+          setIntake(list[0].intake ?? '');
+          const preselected: Record<string, ShortlistTarget> = {};
+          for (const r of list) {
+            preselected[targetKey(r.university, r.program)] = {
+              universityId: r.university,
+              universityName: r.university,
+              universityNameCn: r.universityNameCn ?? null,
+              programId: r.program,
+              programName: r.program,
+              programNameCn: r.programNameCn ?? null,
+              degree: r.degree ?? '',
+              role: (r.campaignRole as CampaignRole) ?? 'Target',
+            };
+          }
+          setSelected(preselected);
+        }
+      } catch {
+        setSubmitError(t('adminShortlist.loadFailed'));
+      } finally {
+        setLoadingCampaign(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const isSelected = useCallback(
     (uni: string, prog: string) => targetKey(uni, prog) in selected,
@@ -305,6 +366,8 @@ export default function ShortlistBuilder() {
         body: JSON.stringify({
           studentId,
           intake: intake.trim(),
+          // Phase 180: append to this campaign instead of minting one.
+          campaignId: appendToCampaign || undefined,
           targets: selectedList.map(({ universityId, universityName, universityNameCn, programId, programName, programNameCn, degree: deg, role }) => ({
             universityId,
             universityName,

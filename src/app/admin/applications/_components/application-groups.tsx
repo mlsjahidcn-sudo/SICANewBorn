@@ -32,7 +32,7 @@
  * notes this file is a stopgap; the admin list's own copy is un-localised).
  */
 import { useMemo, useState } from 'react';
-import { ChevronDown, ChevronRight, Layers, Users } from 'lucide-react';
+import { ChevronDown, ChevronRight, Layers, Plus, Users } from 'lucide-react';
 import {
   ALLOWED_STUDENT_STATUSES,
   statusColorClass,
@@ -56,6 +56,11 @@ export interface ApplicationGroupsProps {
   onOpenRow: (app: { id: string; surface: string }) => void;
   onSetStatus: (id: string, status: string) => void;
   settingStatusFor: string | null;
+  /** Phase 180: open the shortlist builder in append mode for an
+   *  existing campaign. Routed through the page rather than handled
+   *  here, because target picking needs the full candidate browser —
+   *  duplicating it would give the grouped view its second catalog. */
+  onAddTarget: (campaignId: string) => void;
 }
 
 /** Phase 176: imported, not copied. This dropdown and the PATCH
@@ -82,6 +87,7 @@ export default function ApplicationGroups({
   onOpenRow,
   onSetStatus,
   settingStatusFor,
+  onAddTarget,
 }: ApplicationGroupsProps) {
   const groups = useMemo(() => groupApplications(applications), [applications]);
 
@@ -269,6 +275,16 @@ export default function ApplicationGroups({
                       </li>
                     );
                   })}
+                  <li className="pl-11 py-2 border-t border-gray-100">
+                    <button
+                      type="button"
+                      onClick={() => onAddTarget(group.campaignId!)}
+                      className="text-xs text-[#9B1B30] hover:underline flex items-center gap-1"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      Add another target to this shortlist
+                    </button>
+                  </li>
                 </ul>
               )}
             </li>
