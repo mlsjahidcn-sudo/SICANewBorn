@@ -1,5 +1,28 @@
+// ─────────────────────────────────────────────────────────────────
+// PHASE 179: this route now reads/writes through the SERVICE-ROLE
+// client, not the caller's anon+token client.
+//
+// Two reasons, both from the same migration
+// (database/2026-10-15_campaign_columns_admin_only.sql):
+//
+//  1. The migration REVOKEs SELECT on campaign_id / campaign_role from
+//     `authenticated`. A PostgREST `.select('*')` issued with the
+//     student's own token would then ERROR, not return fewer columns —
+//     so staying on the caller's client would break this endpoint.
+//
+//  2. The migration also REVOKEs INSERT/UPDATE. Direct PostgREST writes
+//     bypass every status-transition check below, which is how a
+//     student could PATCH their own row to status='Accepted'.
+//
+// The trade: the service role BYPASSES RLS, so the `.eq('student_id',
+// user.id)` filter below is now the ONLY thing scoping this query. It
+// is not optional and must not be removed. Every query in this file is
+// scoped by `user.id` on purpose; a new query added here without that
+// filter would leak every student's applications.
+
 import { NextResponse } from 'next/server';
 import { getRequestAuth } from '@/lib/supabase-auth';
+import { supabaseServer } from '@/lib/supabase-server';
 import { mapApplicationForStudent } from '@/lib/application-mapper';
 import { insertTimelineEvent } from '@/lib/timeline';
 
@@ -19,7 +42,15 @@ export async function GET(request: Request) {
     if (!auth.ok) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
-    const { supabase, user } = auth;
+    const { user } = auth;
+    // Phase 179: service-role client. Throws if unconfigured rather
+    // than silently falling back to anon privileges — see
+    // isSupabaseServerConfigured(), which reports true on the
+    // anon-key fallback.
+    if (!supabaseServer) {
+      return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
+    }
+    const service = supabaseServer;
 
     // Phase 1.1: pagination. Default page=1, limit=20. The
     // student UI uses the same shape as the admin/partner
@@ -32,7 +63,7 @@ export async function GET(request: Request) {
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
-    let query = supabase
+    let query = service
       .from('student_applications')
       .select('*', { count: 'exact' })
       .eq('student_id', user.id);
@@ -72,7 +103,15 @@ export async function POST(request: Request) {
     if (!auth.ok) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
-    const { supabase, user } = auth;
+    const { user } = auth;
+    // Phase 179: service-role client (bypasses RLS + the Phase 179
+    // column grants). Every query below MUST keep its explicit
+    // `.eq('student_id', user.id)` — that filter is now the only
+    // thing scoping rows to this student.
+    if (!supabaseServer) {
+      return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
+    }
+    const service = supabaseServer;
 
     const body = await request.json();
 
@@ -129,7 +168,7 @@ export async function POST(request: Request) {
     // same university + program + intake. Students may re-apply after
     // Rejection or Withdrawal, so we only block non-terminal duplicates.
     if (!isDraft) {
-      const { data: duplicates, error: dupError } = await supabase
+      const { data: duplicates, error: dupError } = await service
         .from('student_applications')
         .select('id, status')
         .eq('student_id', user.id)
@@ -150,7 +189,7 @@ export async function POST(request: Request) {
     }
 
     // Generate application_number atomically (S5 fix)
-    const { data: rpcData, error: rpcError } = await supabase.rpc('generate_application_number');
+    const { data: rpcData, error: rpcError } = await service.rpc('generate_application_number');
     if (rpcError || !rpcData) {
       console.error('[Student Applications POST] generate_application_number failed:', rpcError);
       return NextResponse.json(
@@ -181,7 +220,7 @@ export async function POST(request: Request) {
       submitted_at: requestedStatus === 'Submitted' ? new Date().toISOString() : null,
     };
 
-    const { data: row, error } = await supabase
+    const { data: row, error } = await service
       .from('student_applications')
       .insert(applicationData)
       .select('*')
@@ -192,7 +231,7 @@ export async function POST(request: Request) {
     }
 
     // Audit trail: timeline event
-    await insertTimelineEvent(supabase, {
+    await insertTimelineEvent(service, {
       application_id: row.id,
       status: requestedStatus,
       notes: 'Application created by student.',

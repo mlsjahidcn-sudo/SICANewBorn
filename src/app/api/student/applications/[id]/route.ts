@@ -1,5 +1,28 @@
+// ─────────────────────────────────────────────────────────────────
+// PHASE 179: this route now reads/writes through the SERVICE-ROLE
+// client, not the caller's anon+token client.
+//
+// Two reasons, both from the same migration
+// (database/2026-10-15_campaign_columns_admin_only.sql):
+//
+//  1. The migration REVOKEs SELECT on campaign_id / campaign_role from
+//     `authenticated`. A PostgREST `.select('*')` issued with the
+//     student's own token would then ERROR, not return fewer columns —
+//     so staying on the caller's client would break this endpoint.
+//
+//  2. The migration also REVOKEs INSERT/UPDATE. Direct PostgREST writes
+//     bypass every status-transition check below, which is how a
+//     student could PATCH their own row to status='Accepted'.
+//
+// The trade: the service role BYPASSES RLS, so the `.eq('student_id',
+// user.id)` filter below is now the ONLY thing scoping this query. It
+// is not optional and must not be removed. Every query in this file is
+// scoped by `user.id` on purpose; a new query added here without that
+// filter would leak every student's applications.
+
 import { NextResponse } from 'next/server';
 import { getRequestAuth } from '@/lib/supabase-auth';
+import { supabaseServer } from '@/lib/supabase-server';
 import {
   mapApplicationForStudent,
   missingSubmitFields,
@@ -28,9 +51,17 @@ export async function GET(
     if (!auth.ok) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
-    const { supabase, user } = auth;
+    const { user } = auth;
+    // Phase 179: service-role client. Throws if unconfigured rather
+    // than silently falling back to anon privileges — see
+    // isSupabaseServerConfigured(), which reports true on the
+    // anon-key fallback.
+    if (!supabaseServer) {
+      return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
+    }
+    const service = supabaseServer;
 
-    const { data: application, error } = await supabase
+    const { data: application, error } = await service
       .from('student_applications')
       .select('*')
       .eq('id', params.id)
@@ -52,7 +83,7 @@ export async function GET(
     const timelineVisible = application.timeline_visible_to_student !== false;
 
     const [docsRes, timelineRes, stageRes] = await Promise.all([
-      supabase
+      service
         .from('student_documents')
         .select('*')
         .eq('application_id', params.id)
@@ -63,14 +94,14 @@ export async function GET(
         .eq('student_id', user.id)
         .order('uploaded_at', { ascending: false }),
       timelineVisible
-        ? supabase
+        ? service
             .from('application_timeline')
             .select('id, application_id, status, notes, created_at, created_by')
             .eq('application_id', params.id)
             .order('created_at', { ascending: false })
         : Promise.resolve({ data: [], error: null } as { data: never[]; error: null }),
       timelineVisible
-        ? supabase
+        ? service
             .from('application_stage_history')
             .select('id, application_id, from_status, to_status, note, created_at, actor_email, actor_role')
             .eq('application_id', params.id)
@@ -139,14 +170,22 @@ export async function PUT(
     if (!auth.ok) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
-    const { supabase, user } = auth;
+    const { user } = auth;
+    // Phase 179: service-role client (bypasses RLS + the Phase 179
+    // column grants). Every query below MUST keep its explicit
+    // `.eq('student_id', user.id)` — that filter is now the only
+    // thing scoping rows to this student.
+    if (!supabaseServer) {
+      return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
+    }
+    const service = supabaseServer;
 
     const body = await request.json();
 
     // 1. Fetch the existing row first so we can validate the transition.
     // Phase 97: widened to the submit-required fields so Draft→Submitted
     // can be re-validated (POST always validated these; PUT didn't).
-    const { data: existingRow } = await supabase
+    const { data: existingRow } = await service
       .from('student_applications')
       .select('status, application_number, personal_statement, additional_notes, university_name, program_name, degree, intake')
       .eq('id', params.id)
@@ -227,7 +266,7 @@ export async function PUT(
       // resubmit loop was honor-system: a student could flip back to
       // Under Review without uploading anything.
       if (currentStatus === 'Documents Requested' && body.status === 'Under Review') {
-        const { count: usableDocs, error: cntErr } = await supabase
+        const { count: usableDocs, error: cntErr } = await service
           .from('student_documents')
           .select('id', { count: 'exact', head: true })
           .eq('application_id', params.id)
@@ -276,7 +315,7 @@ export async function PUT(
       );
     }
 
-    const { data: row, error } = await supabase
+    const { data: row, error } = await service
       .from('student_applications')
       .update(allowed)
       .eq('id', params.id)
@@ -300,7 +339,7 @@ export async function PUT(
         toStatus,
         existingRow.application_number as string | null,
       );
-      await insertTimelineEvent(supabase, {
+      await insertTimelineEvent(service, {
         application_id: params.id,
         status: toStatus,
         notes: note,
