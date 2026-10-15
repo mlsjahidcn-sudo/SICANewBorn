@@ -59,6 +59,13 @@ const ADMIN_AI_LIMITS = {
   // Short output (~300-500 tokens). 20/15min — it's a per-lead
   // action, so a busy outreach hour stays well under it.
   'compose-email': 20,
+  // Phase 175b: AI-ranked shortlist suggestions. Input is a full
+  // candidate list (up to 200 programs ≈ 6-10K tokens) and the output
+  // is a ranked subset with a reason per pick (~1-3K tokens), so this
+  // is the most expensive admin AI action per call.
+  // 5 / 15 min matches parse-programs-adjacent usage: an advisor
+  // iterating on one student's list, not bulk use.
+  'recommend-shortlist': 5,
 } as const;
 
 export type AdminAIAction = keyof typeof ADMIN_AI_LIMITS;

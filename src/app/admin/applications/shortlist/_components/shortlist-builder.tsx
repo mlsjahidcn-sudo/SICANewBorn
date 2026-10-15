@@ -69,6 +69,21 @@ interface ShortlistResponse {
   partial?: boolean;
 }
 
+interface SuggestionResponse {
+  summary: string;
+  /** Slugs + role + reason only — names are looked up from the loaded
+   *  candidate list, so the model can never put a made-up name on
+   *  screen. See applySuggestion. */
+  recommendations: {
+    programSlug: string;
+    universitySlug: string;
+    role: CampaignRole;
+    reason: string;
+  }[];
+  warnings: string[];
+  model?: string;
+}
+
 export default function ShortlistBuilder() {
   const { t, locale } = useI18n();
   const router = useRouter();
@@ -92,6 +107,14 @@ export default function ShortlistBuilder() {
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<ShortlistResponse | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Phase 175b: AI-ranked suggestions. These are NOT created
+  // applications — the advisor reviews them and adds the ones they
+  // agree with. The API has already guaranteed every slug came from
+  // the live catalog, so an "add" here is always safe.
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestions, setSuggestions] = useState<SuggestionResponse | null>(null);
+  const [suggestError, setSuggestError] = useState<string | null>(null);
 
   // Load candidates whenever the filter set changes. Debounced so
   // typing in the search box is one request, not one per keystroke.
@@ -172,6 +195,78 @@ export default function ShortlistBuilder() {
   }, []);
 
   const selectedList = useMemo(() => Object.values(selected), [selected]);
+
+  const suggest = useCallback(async () => {
+    setSuggesting(true);
+    setSuggestError(null);
+    try {
+      const res = await apiFetchJson<SuggestionResponse>('/api/admin/ai/recommend-shortlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentId,
+          intake: intake.trim(),
+          discipline,
+          degree,
+          search: search.trim(),
+        }),
+      });
+      setSuggestions(res);
+    } catch (e) {
+      setSuggestError((e as Error).message || 'Could not generate suggestions');
+    } finally {
+      setSuggesting(false);
+    }
+  }, [studentId, intake, discipline, degree, search]);
+
+  /**
+   * Move an AI suggestion into the shortlist.
+   *
+   * Names come from the candidate list the UI already holds, NOT from
+   * the AI response — the response only carries slugs, so this can't
+   * be the path where a fabricated name gets rendered. If the slug
+   * isn't in the loaded candidates we don't add it at all.
+   */
+  const applySuggestion = useCallback(
+    (rec: SuggestionResponse['recommendations'][number]) => {
+      const group = candidates?.universities.find((u) => u.university.slug === rec.universitySlug);
+      const program = group?.programs.find((p) => p.slug === rec.programSlug);
+      if (!group || !program) return;
+      const key = targetKey(group.university.slug, program.slug);
+      // Add directly rather than via toggle() — toggling would REMOVE
+      // an already-selected suggestion, which is the opposite of what
+      // "apply" means.
+      setSelected((prev) => {
+        if (key in prev) return prev;
+        if (Object.keys(prev).length >= CAMPAIGN_MAX_TARGETS) return prev;
+        return {
+          ...prev,
+          [key]: {
+            universityId: group.university.slug,
+            universityName: locale === 'zh' ? group.university.nameCn : group.university.name,
+            universityNameCn: group.university.nameCn,
+            programId: program.slug,
+            programName: locale === 'zh' ? program.nameCn : program.name,
+            programNameCn: program.nameCn,
+            degree: program.degree,
+            role: rec.role,
+          },
+        };
+      });
+    },
+    [candidates, locale],
+  );
+
+  /** Add every suggestion that isn't already in the shortlist, honouring
+   *  the capacity cap. One click for the advisor who agrees with the AI. */
+  const applyAll = useCallback(() => {
+    if (!suggestions) return;
+    for (const rec of suggestions.recommendations) {
+      if (Object.keys(selected).length >= CAMPAIGN_MAX_TARGETS) break;
+      const key = targetKey(rec.universitySlug, rec.programSlug);
+      if (!(key in selected)) applySuggestion(rec);
+    }
+  }, [suggestions, selected, applySuggestion]);
 
   const roleCounts = useMemo(() => {
     const counts: Record<CampaignRole, number> = { Reach: 0, Target: 0, Safety: 0 };
@@ -519,16 +614,122 @@ export default function ShortlistBuilder() {
             {t('adminShortlist.submit', { count: selectedList.length })}
           </button>
 
-          {/* Phase 175 Part B placeholder. The AI ranks the candidate
-              set this builder already loaded — it never invents one —
-              so the button is inert until that PR ships. */}
-          <div
-            className="mt-2 flex items-center justify-center gap-2 px-4 py-2 border border-dashed border-gray-300 text-xs text-gray-400"
-            title={t('adminShortlist.aiComingSoon')}
+          {/* Phase 175b: AI ranks the SAME candidate set the builder
+              above is showing — the route allowlists every returned
+              slug against the live catalog and drops invented ones
+              with a warning. The advisor still reviews and picks. */}
+          <button
+            type="button"
+            onClick={suggest}
+            disabled={suggesting || !studentId || !intake.trim()}
+            className="mt-2 w-full flex items-center justify-center gap-2 px-4 py-2 border border-[#9B1B30] text-[#9B1B30] text-sm font-medium hover:bg-[#9B1B30]/5 disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            <Sparkles className="h-3.5 w-3.5" />
-            {t('adminShortlist.aiComingSoon')}
-          </div>
+            {suggesting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            {suggesting ? t('adminShortlist.aiThinking') : t('adminShortlist.aiSuggest')}
+          </button>
+          {!studentId && (
+            <p className="mt-1 text-[11px] text-gray-400">{t('adminShortlist.aiNeedsStudent')}</p>
+          )}
+
+          {suggestError && (
+            <div className="mt-3 p-3 bg-red-50 border border-red-300 text-sm text-red-800">
+              {suggestError}
+            </div>
+          )}
+
+          {suggestions && (
+            <div className="mt-3 border border-[#9B1B30]/30">
+              {suggestions.summary && (
+                <p className="px-3 py-2 text-sm text-[#1B2A4A] bg-[#9B1B30]/5 border-b border-[#9B1B30]/20">
+                  {suggestions.summary}
+                </p>
+              )}
+
+              {suggestions.warnings.length > 0 && (
+                <details className="px-3 py-2 bg-amber-50 border-b border-amber-200">
+                  <summary className="text-xs text-amber-900 cursor-pointer flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {t('adminShortlist.aiWarnings', { count: suggestions.warnings.length })}
+                  </summary>
+                  <ul className="mt-1 list-disc pl-4 text-[11px] text-amber-900 space-y-0.5">
+                    {suggestions.warnings.map((w) => (
+                      <li key={w}>{w}</li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+
+              {suggestions.recommendations.length === 0 ? (
+                <p className="px-3 py-3 text-sm text-gray-500">{t('adminShortlist.aiNone')}</p>
+              ) : (
+                <>
+                  <ul>
+                    {suggestions.recommendations.map((rec) => {
+                      const key = targetKey(rec.universitySlug, rec.programSlug);
+                      const added = key in selected;
+                      const group = candidates?.universities.find((u) => u.university.slug === rec.universitySlug);
+                      const program = group?.programs.find((p) => p.slug === rec.programSlug);
+                      return (
+                        <li key={rec.programSlug} className="px-3 py-2 border-b border-gray-100">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <span className="block text-sm font-medium text-[#1B2A4A] truncate">
+                                {program && group
+                                  ? locale === 'zh'
+                                    ? group.university.nameCn
+                                    : group.university.name
+                                  : rec.universitySlug}
+                              </span>
+                              <span className="block text-xs text-gray-500 truncate">
+                                {program ? (locale === 'zh' ? program.nameCn : program.name) : rec.programSlug}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => applySuggestion(rec)}
+                              disabled={added || atCapacity}
+                              className={`shrink-0 px-2 py-1 text-[11px] border ${
+                                added
+                                  ? 'border-green-600 text-green-700 bg-green-50'
+                                  : 'border-[#9B1B30] text-[#9B1B30] hover:bg-[#9B1B30]/5 disabled:opacity-40'
+                              }`}
+                            >
+                              {added ? t('adminShortlist.aiAdded') : t('adminShortlist.aiAdd')}
+                            </button>
+                          </div>
+                          <div className="mt-1 flex items-center gap-2">
+                            <span className="px-1.5 py-0.5 text-[10px] border border-gray-300 text-gray-600">
+                              {t(`adminShortlist.role_${rec.role}`)}
+                            </span>
+                            {rec.reason && (
+                              <span className="text-[11px] text-gray-500 leading-snug">{rec.reason}</span>
+                            )}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <div className="px-3 py-2 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={applyAll}
+                      disabled={atCapacity}
+                      className="flex-1 px-3 py-1.5 text-xs bg-[#1B2A4A] hover:bg-[#26345A] text-white disabled:opacity-40"
+                    >
+                      {t('adminShortlist.aiAddAll')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSuggestions(null)}
+                      className="px-3 py-1.5 text-xs border border-gray-300 text-gray-600 hover:bg-gray-100"
+                    >
+                      {t('adminShortlist.aiDismiss')}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </PageContainer>
