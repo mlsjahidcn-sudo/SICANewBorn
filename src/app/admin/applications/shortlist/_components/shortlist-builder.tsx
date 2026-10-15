@@ -27,7 +27,7 @@ import { SearchableSelect } from '@/components/ui/searchable-select';
 import { PageContainer } from '@/components/admin/page-container';
 import { useStudentList } from '@/hooks/use-student-list';
 import { useI18n } from '@/lib/i18n';
-import { apiFetchJson } from '@/lib/api-client';
+import { apiFetch, apiFetchJson } from '@/lib/api-client';
 import {
   CAMPAIGN_ROLES,
   CAMPAIGN_MAX_TARGETS,
@@ -128,11 +128,29 @@ export default function ShortlistBuilder() {
         if (degree) sp.set('degree', degree);
         if (discipline) sp.set('discipline', discipline);
         if (search.trim()) sp.set('search', search.trim());
-        const res = await fetch(
+        // MUST be apiFetch, not bare fetch: requireAdmin() demands an
+        // `Authorization: Bearer <token>` header, and only apiFetch
+        // attaches the Supabase session token. A bare fetch() here
+        // returns 401 "Not authenticated" for every admin — which is
+        // exactly what happened on 2026-10-15.
+        const res = await apiFetch(
           `/api/admin/applications/candidates?${sp.toString()}`,
           { signal: controller.signal },
         );
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) {
+          // Surface the server's reason, not just the status code.
+          // "Not authenticated" and "Database not configured" need
+          // completely different fixes; `HTTP 401` tells the admin
+          // nothing.
+          let reason = `HTTP ${res.status}`;
+          try {
+            const body = (await res.json()) as { error?: string };
+            if (body?.error) reason = body.error;
+          } catch {
+            /* non-JSON error body — keep the status code */
+          }
+          throw new Error(reason);
+        }
         setCandidates((await res.json()) as CandidatesResponse);
       } catch (e) {
         if ((e as Error)?.name === 'AbortError') return;
