@@ -42,7 +42,14 @@ describe('i18n missing-key gate', () => {
       );
     }
     expect(problems).toHaveLength(0);
-  });
+    // 60s, not the default 5s. This walks the entire src/ tree with
+    // readdir + file reads, which on a network mount or a busy CI
+    // runner legitimately takes >5s — the gate itself was timing out
+    // under load (2026-10-15) and reporting a failure that had
+    // nothing to do with translations. The synthetic detector tests
+    // below stay on the default; they use a throwaway fixture dir and
+    // are genuinely fast.
+  }, 60_000);
 
   // ── Detector self-tests ────────────────────────────────────────────────
   // A gate that can't fail is worthless, so prove each detection shape
