@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { buildLanguageAlternates } from "@/lib/alternates";
+import { buildServiceSchema } from "@/lib/catalog-schema";
 import { FileText, Mail, MessageCircle, MapPin } from 'lucide-react';
 import Image from 'next/image';
 import { getServerT } from '@/lib/server-t';
@@ -30,6 +31,20 @@ export default async function AssessmentPage() {
   const t = await getServerT();
   return (
     <div className="min-h-screen bg-[#FAFAF8]">
+      {/* Service JSON-LD for the free academic assessment offer. Claims
+          only what the page above the fold actually offers. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(
+            buildServiceSchema({
+              name: t('assessment.title'),
+              description: t('assessment.description'),
+              url: '/assessment',
+            })
+          ),
+        }}
+      />
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div

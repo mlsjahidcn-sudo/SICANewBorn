@@ -121,9 +121,18 @@ export default function UniversityDetailClient({
                   <Trophy className="h-4 w-4 fill-[#D4A853] text-[#D4A853]" />
                   {t('uni.qsWorldRankingValue', { ranking: uni.qsWorldRanking })}
                 </span>
-                <span className="flex items-center gap-1.5">
-                  <Star className="h-4 w-4 fill-[#D4A853] text-[#D4A853]" />
+                {/* Labelled, because a bare star + 4.9 sitting next to
+                    the QS ranking reads as a student review score. It is
+                    a SICA editorial rating — and Phase 185 removed the
+                    matching AggregateRating schema for exactly that
+                    reason. Say what it is. */}
+                <span
+                  className="flex items-center gap-1.5"
+                  title={t('uni.sicaRatingTooltip')}
+                >
+                  <Star className="w-4 h-4 fill-[#D4A853] text-[#D4A853]" />
                   {uni.rating}
+                  <span className="text-xs text-[#6B7280]">{t('uni.sicaRatingShort')}</span>
                 </span>
               </div>
               <div className="mt-4 flex flex-wrap gap-2">

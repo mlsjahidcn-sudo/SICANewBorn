@@ -5,7 +5,7 @@ import ThankYouClient from './ThankYouClient';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
-  alternates: await buildLanguageAlternates('/thank-you'),
+    alternates: await buildLanguageAlternates('/thank-you'),
   robots: { index: false, follow: false },
   };
 }

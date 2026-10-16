@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { getAllUniversities } from '@/lib/data-fetcher';
 import { universities as staticUniversities, type University } from '@/lib/data';
 import { buildLanguageAlternates } from '@/lib/alternates';
+import { buildPageOpenGraph } from '@/lib/page-opengraph';
 import ComparePicker, { type CompareUni } from './compare-picker';
 
 /**
@@ -25,6 +26,12 @@ export async function generateMetadata(): Promise<Metadata> {
   description:
     'Pick any two Chinese universities to see them side by side — rankings, tuition, scholarships, programs, and more.',
   alternates: await buildLanguageAlternates('/universities/compare'),
+  ...buildPageOpenGraph({
+    title: 'Compare Chinese Universities | SICA',
+    description:
+      'Pick any two Chinese universities to see them side by side — rankings, tuition, scholarships, programs, and more.',
+    path: '/universities/compare',
+  }),
   };
 }
 

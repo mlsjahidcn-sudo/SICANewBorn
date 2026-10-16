@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { buildLanguageAlternates } from "@/lib/alternates";
+import { buildContactPageSchema } from "@/lib/catalog-schema";
 import { Mail, Phone, MapPin, Clock, MessageCircle, CalendarCheck, ArrowRight } from 'lucide-react';
 import Image from 'next/image';
 import { getServerT } from '@/lib/server-t';
@@ -31,6 +32,23 @@ export default async function ContactPage() {
 
   return (
     <div className="min-h-screen bg-[#FAFAF8]">
+      {/* ContactPage JSON-LD. Every value here is copied from the
+          visible contact block further down this same page — if that
+          block changes, this must change with it. Deliberately no
+          AggregateRating: this site publishes no reviews. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(
+            buildContactPageSchema({
+              email: 'info@studyinchina.academy',
+              telephone: '+86 173 2576 4171',
+              addressLocality: 'Guangzhou',
+              addressCountry: 'CN',
+            })
+          ),
+        }}
+      />
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div

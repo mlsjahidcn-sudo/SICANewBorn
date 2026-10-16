@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ArrowRight, GraduationCap, ChevronRight } from 'lucide-react';
 import { getAllPrograms } from '@/lib/data-fetcher';
 import { buildLanguageAlternates } from '@/lib/alternates';
+import { buildPageOpenGraph } from '@/lib/page-opengraph';
 
 const slugifyDiscipline = (s: string) => s.toLowerCase().replace(/\s+/g, '-');
 
@@ -17,6 +18,12 @@ export async function generateMetadata(): Promise<Metadata> {
   description:
     'Browse all academic fields (majors) available to international students at top Chinese universities. Computer Science, Engineering, Business, Medicine, and more.',
   alternates: await buildLanguageAlternates('/majors'),
+  ...buildPageOpenGraph({
+    title: 'Study by Major in China: All Fields of Study (2026)',
+    description:
+      'Browse all academic fields (majors) available to international students at top Chinese universities. Computer Science, Engineering, Business, Medicine, and more.',
+    path: '/majors',
+  }),
   };
 }
 

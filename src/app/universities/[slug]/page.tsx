@@ -165,14 +165,28 @@ export default async function UniversityDetailPage({ params }: UniversityPagePro
   if (uni.image) {
     universitySchema.image = uni.image;
   }
-  if (uni.rating > 0) {
-    universitySchema.aggregateRating = {
-      '@type': 'AggregateRating',
-      ratingValue: uni.rating,
-      bestRating: 5,
-      reviewCount: 1,
-    };
-  }
+  // ─────────────────────────────────────────────────────────────────
+  // NO AggregateRating — deliberately removed 2026-10-16.
+  // ─────────────────────────────────────────────────────────────────
+  // This used to emit:
+  //
+  //     aggregateRating: { ratingValue: uni.rating, bestRating: 5, reviewCount: 1 }
+  //
+  // `universities.rating` is a SEEDED EDITORIAL value — 4.9 Tsinghua,
+  // 4.7 SJTU, 4.8 Fudan, hand-written in the seed SQL. There are no
+  // reviews anywhere in this system, so `reviewCount: 1` was invented,
+  // and presenting an editorial score as an aggregated review count is
+  // exactly the pattern Google's structured-data policy treats as
+  // review-snippet abuse. The penalty is a MANUAL ACTION that can strip
+  // rich results site-wide.
+  //
+  // The value itself is legitimate editorial content and stays: it
+  // drives filtering, sorting and the compare view in the UI, and it is
+  // labelled there as a SICA rating rather than a student one. Only the
+  // schema costume comes off.
+  //
+  // The genuinely-citable external signal — QS World Ranking — is
+  // already carried as its own property on the same schema object.
 
   const breadcrumbSchema = {
     '@context': 'https://schema.org',

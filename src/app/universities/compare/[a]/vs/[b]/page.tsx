@@ -154,7 +154,7 @@ export default async function ComparePage({
     {
       label: t(locale, 'compare.sicaRating'),
       icon: Star,
-      a: `${uniA.rating} / 5`,
+      a: `${uniA.rating} / 5 (SICA)`,
       b: `${uniB.rating} / 5`,
       winner: uniA.rating > uniB.rating ? 'a' : uniB.rating > uniA.rating ? 'b' : null,
     },
@@ -239,7 +239,12 @@ export default async function ComparePage({
     description: `Compare ${nameA} and ${nameB} on rankings, tuition, scholarships, programs, and location.`,
     author: { '@id': `${SITE_URL}/#editorial-team` },
     publisher: { '@id': `${SITE_URL}/#organization` },
-    dateModified: new Date().toISOString().slice(0, 10),
+    // No dateModified. This was `new Date()`, which re-renders as
+    // "today" on every build — so every compare page claimed to have
+    // been edited the moment the site deployed, including the hundreds
+    // that nobody had touched. A freshness signal that is always fresh
+    // is indistinguishable from no signal, and crawlers discount it.
+    // When real per-page edit dates exist, add them here.
     inLanguage: locale === 'zh' ? 'zh' : 'en',
     mainEntityOfPage: {
       '@type': 'WebPage',

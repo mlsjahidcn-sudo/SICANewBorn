@@ -75,6 +75,28 @@ export interface Guide {
   ctaContactLabel: string;
   /** Cross-link related guides. */
   related: Array<{ href: string; label: string; description: string }>;
+  /**
+   * Real publication date as `YYYY-MM-DD`, or OMITTED.
+   *
+   * Optional on purpose. This used to be a hardcoded `'2026-01-01'` in
+   * the shared Article schema, which meant every guide on the site
+   * claimed the same publication day — a pattern that makes the date
+   * worthless to a reader and easily discounted by a crawler.
+   *
+   * Do NOT fill this with a guess. An absent date costs one recommended
+   * (not required) field; a fabricated one is a false claim. Populate
+   * it only when the real publication date is known.
+   */
+  publishedAt?: string;
+  /**
+   * Real last-content-change date as `YYYY-MM-DD`, or OMITTED.
+   *
+   * This was `new Date()` — which re-rendered as "today" on every single
+   * build, so every guide claimed to have been edited the moment the
+   * site was deployed, including the ones nobody had touched. A
+   * freshness signal that is always fresh is the same as no signal.
+   */
+  updatedAt?: string;
 }
 
 export type LocalizedGuide = Record<Locale, Guide>;

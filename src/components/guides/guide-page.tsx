@@ -303,8 +303,16 @@ export function GuidePage({
       url: SITE_URL,
       logo: { '@type': 'ImageObject', url: `${SITE_URL}/logo.png` },
     },
-    datePublished: '2026-01-01',
-    dateModified: new Date().toISOString().slice(0, 10),
+    // Dates are emitted ONLY when a guide carries a real one. See the
+    // `publishedAt` / `updatedAt` docs on the Guide interface for why
+    // these are optional rather than defaulted: the previous hardcoded
+    // '2026-01-01' made every article on the site claim the same
+    // publication day, and `new Date()` made every guide claim it was
+    // edited on every build. datePublished is recommended, not required,
+    // by Google's Article spec — so omitting it costs a soft signal,
+    // while inventing it is a false claim.
+    ...(guide.publishedAt ? { datePublished: guide.publishedAt } : {}),
+    ...(guide.updatedAt ? { dateModified: guide.updatedAt } : {}),
     inLanguage: 'en',
     mainEntityOfPage: { '@type': 'WebPage', '@id': url },
   };

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { buildLanguageAlternates } from '@/lib/alternates';
+import { buildPageOpenGraph } from '@/lib/page-opengraph';
 import { getServerT } from '@/lib/server-t';
 import { supabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-server';
 import { universities as staticUniversities } from '@/lib/data';
@@ -9,6 +10,7 @@ import {
   DEFAULT_PROGRAM_PAGE_SIZE,
 } from '@/lib/program-query';
 import ProgramsClient, { type UniversityOption } from './_components/programs-client';
+import { buildItemListSchema, buildBreadcrumbSchema } from '@/lib/catalog-schema';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getServerT();
@@ -16,6 +18,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: t('seo.programsTitle'),
     description: t('seo.programsDescription'),
     alternates: await buildLanguageAlternates('/programs'),
+    ...buildPageOpenGraph({ title: t('seo.programsTitle'), description: t('seo.programsDescription'), path: '/programs' }),
   };
 }
 
@@ -45,12 +48,37 @@ export default async function ProgramsPage({
     getUniversityOptions(),
   ]);
 
+  // Built from the same page of results handed to the client, so the
+  // ItemList is exactly the rows this page rendered — not the whole
+  // catalogue. Claiming 10,000 programs on a paginated page is a
+  // mismatch between markup and content, and a mismatch is worse than
+  // no markup at all.
+  const itemListSchema = buildItemListSchema(
+    'Study programs in China for international students',
+    initialResult.programs
+      .filter((p) => p.slug)
+      .map((p) => ({ name: p.name, url: `/programs/${p.slug}` }))
+  );
+  const breadcrumbSchema = buildBreadcrumbSchema([
+    { name: 'Programs', path: '/programs' },
+  ]);
+
   return (
-    <ProgramsClient
-      initialResult={initialResult}
-      universityOptions={universityOptions}
-      pageSize={DEFAULT_PROGRAM_PAGE_SIZE}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
+      <ProgramsClient
+        initialResult={initialResult}
+        universityOptions={universityOptions}
+        pageSize={DEFAULT_PROGRAM_PAGE_SIZE}
+      />
+    </>
   );
 }
 

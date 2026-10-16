@@ -4597,6 +4597,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'uni.orClickHere': 'or click here',
     'uni.browseAll': 'Browse all universities',
     'uni.qsWorldRankingValue': 'QS World #{{ranking}}',
+    'uni.sicaRatingShort': 'SICA rating',
+    'uni.sicaRatingTooltip': "SICA's own editorial rating, not a student review score.",
     'uni.applicationDeadlineLabel': '{{name}} · Application Deadline',
 
     // University detail
@@ -9683,6 +9685,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'uni.orClickHere': '或点击此处',
     'uni.browseAll': '浏览所有大学',
     'uni.qsWorldRankingValue': 'QS 世界第 {{ranking}} 名',
+    'uni.sicaRatingShort': 'SICA 评分',
+    'uni.sicaRatingTooltip': 'SICA 自行给出的编辑评分，非学生评价。',
     'uni.applicationDeadlineLabel': '{{name}} · 申请截止',
 
     // 大学详情
