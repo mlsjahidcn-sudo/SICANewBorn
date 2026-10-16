@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: UniversityPageProps): Promise
   return {
     title,
     description,
-    alternates: buildLanguageAlternates(`/universities/${slug}`),
+    alternates: await buildLanguageAlternates(`/universities/${slug}`),
     openGraph: {
       title,
       description,

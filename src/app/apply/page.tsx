@@ -22,7 +22,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t('apply.metaTitle'),
     description: t('apply.metaDescription'),
-    alternates: buildLanguageAlternates('/apply'),
+    alternates: await buildLanguageAlternates('/apply'),
     openGraph: {
       title: t('apply.metaTitle'),
       description: t('apply.metaDescription'),

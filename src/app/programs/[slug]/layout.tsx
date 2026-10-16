@@ -14,7 +14,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   return {
-    alternates: buildLanguageAlternates(`/programs/${slug}`),
+    alternates: await buildLanguageAlternates(`/programs/${slug}`),
   };
 }
 

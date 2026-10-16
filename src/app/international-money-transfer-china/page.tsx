@@ -15,7 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: guide.title,
     description: guide.description,
-    alternates: buildLanguageAlternates('/international-money-transfer-china'),
+    alternates: await buildLanguageAlternates('/international-money-transfer-china'),
     openGraph: {
       title: guide.title,
       description: guide.description,

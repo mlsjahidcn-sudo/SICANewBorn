@@ -26,7 +26,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   return {
     title: t('counselling.respondTitle'),
     description: t('counselling.respondSubtitle'),
-    alternates: buildLanguageAlternates('/counselling/respond'),
+    alternates: await buildLanguageAlternates('/counselling/respond'),
     robots: { index: false },
   };
 }

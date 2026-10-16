@@ -19,12 +19,14 @@ import ComparePicker, { type CompareUni } from './compare-picker';
 // surface, and this keeps the route out of per-request DB paths.
 export const revalidate = 3600;
 
-export const metadata: Metadata = {
+export async function generateMetadata(): Promise<Metadata> {
+  return {
   title: 'Compare Chinese Universities | SICA',
   description:
     'Pick any two Chinese universities to see them side by side — rankings, tuition, scholarships, programs, and more.',
-  alternates: buildLanguageAlternates('/universities/compare'),
-};
+  alternates: await buildLanguageAlternates('/universities/compare'),
+  };
+}
 
 export default async function ComparePickerPage() {
   const live = await getAllUniversities();

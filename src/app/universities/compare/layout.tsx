@@ -7,9 +7,11 @@
 import type { Metadata } from 'next';
 import { buildLanguageAlternates } from '@/lib/alternates';
 
-export const metadata: Metadata = {
-  alternates: buildLanguageAlternates('/universities/compare'),
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+  alternates: await buildLanguageAlternates('/universities/compare'),
+  };
+}
 
 export default function UniversitiesCompareLayout({
   children,

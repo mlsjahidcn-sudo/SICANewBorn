@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: ProgramPageProps): Promise<Me
   return {
     title,
     description,
-    alternates: buildLanguageAlternates(`/programs/${slug}`),
+    alternates: await buildLanguageAlternates(`/programs/${slug}`),
     openGraph: {
       title,
       description,

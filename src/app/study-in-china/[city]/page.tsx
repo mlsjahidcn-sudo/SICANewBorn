@@ -55,7 +55,7 @@ export async function generateMetadata({
   return {
     title,
     description,
-    alternates: buildLanguageAlternates(`${SITE_URL}/study-in-china/${city.slug}`),
+    alternates: await buildLanguageAlternates(`${SITE_URL}/study-in-china/${city.slug}`),
     openGraph: {
       title,
       description,

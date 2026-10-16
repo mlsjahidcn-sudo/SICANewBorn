@@ -48,7 +48,7 @@ export async function generateMetadata({
   return {
     title,
     description,
-    alternates: buildLanguageAlternates(`/universities/${slug}/scholarships`),
+    alternates: await buildLanguageAlternates(`/universities/${slug}/scholarships`),
     openGraph: { title, description, type: 'article' },
   };
 }

@@ -15,7 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t('seo.programsTitle'),
     description: t('seo.programsDescription'),
-    alternates: buildLanguageAlternates('/programs'),
+    alternates: await buildLanguageAlternates('/programs'),
   };
 }
 

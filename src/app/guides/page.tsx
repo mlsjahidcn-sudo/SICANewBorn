@@ -16,7 +16,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t('seo.guidesTitle'),
     description: t('seo.guidesDescription'),
-    alternates: buildLanguageAlternates('/guides'),
+    alternates: await buildLanguageAlternates('/guides'),
     openGraph: {
       title: t('seo.guidesOgTitle'),
       description: t('seo.guidesDescription'),

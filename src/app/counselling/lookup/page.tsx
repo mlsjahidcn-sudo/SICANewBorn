@@ -33,7 +33,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
       ? `${t('counsellingLookup.statusHeading')} · SICA`
       : `${t('counsellingLookup.title')} · SICA`,
     description: t('counsellingLookup.subtitle'),
-    alternates: buildLanguageAlternates('/counselling/lookup'),
+    alternates: await buildLanguageAlternates('/counselling/lookup'),
     robots: { index: false, follow: false },
   };
 }

@@ -7,9 +7,11 @@
 import type { Metadata } from 'next';
 import { buildLanguageAlternates } from '@/lib/alternates';
 
-export const metadata: Metadata = {
-  alternates: buildLanguageAlternates('/programs'),
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+  alternates: await buildLanguageAlternates('/programs'),
+  };
+}
 
 export default function ProgramsLayout({
   children,

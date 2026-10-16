@@ -35,10 +35,11 @@ const PAGE_TITLE = 'Get into a top Chinese university — SICA admission service
 const PAGE_DESCRIPTION =
   'SICA admission services for international students: real students, real offer letters, end-to-end support from application to arrival. Start with a free 10-minute consultation.';
 
-export const metadata: Metadata = {
+export async function generateMetadata(): Promise<Metadata> {
+  return {
   title: PAGE_TITLE,
   description: PAGE_DESCRIPTION,
-  alternates: buildLanguageAlternates('/get-started'),
+  alternates: await buildLanguageAlternates('/get-started'),
   openGraph: {
     title: PAGE_TITLE,
     description: PAGE_DESCRIPTION,
@@ -60,7 +61,8 @@ export const metadata: Metadata = {
     index: false,
     follow: false,
   },
-};
+  };
+}
 
 interface RawAdmissionRow {
   id: string;

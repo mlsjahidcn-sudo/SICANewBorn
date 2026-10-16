@@ -11,12 +11,14 @@ const slugifyDiscipline = (s: string) => s.toLowerCase().replace(/\s+/g, '-');
 // edge for 60s.
 export const revalidate = 60;
 
-export const metadata: Metadata = {
+export async function generateMetadata(): Promise<Metadata> {
+  return {
   title: 'Study by Major in China: All Fields of Study (2026)',
   description:
     'Browse all academic fields (majors) available to international students at top Chinese universities. Computer Science, Engineering, Business, Medicine, and more.',
-  alternates: buildLanguageAlternates('/majors'),
-};
+  alternates: await buildLanguageAlternates('/majors'),
+  };
+}
 
 export default async function MajorsIndexPage() {
   const programs = await getAllPrograms();

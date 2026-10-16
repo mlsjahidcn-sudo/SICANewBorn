@@ -47,9 +47,11 @@ const ConsultationCtaHero = dynamic(
   () => import('@/components/ConsultationCta').then((m) => m.ConsultationCta),
 );
 
-export const metadata: Metadata = {
-  alternates: buildLanguageAlternates('/'),
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+  alternates: await buildLanguageAlternates('/'),
+  };
+}
 
 // Home page is server-rendered. We re-fetch the live list on every
 // request (with a 60s edge cache via `revalidate`) so newly-added

@@ -37,7 +37,7 @@ export async function generateMetadata({ params }: ScholarshipPageProps): Promis
   return {
     title: t(locale, 'seo.dynamic.scholarshipTitle', { name }),
     description,
-    alternates: buildLanguageAlternates(`/scholarships/${slug}`),
+    alternates: await buildLanguageAlternates(`/scholarships/${slug}`),
     openGraph: {
       title: t(locale, 'seo.dynamic.scholarshipTitle', { name }),
       description,

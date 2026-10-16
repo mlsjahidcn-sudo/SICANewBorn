@@ -59,7 +59,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t('webinar.hero.title'),
     description: t('webinar.hero.subtitle'),
-    alternates: buildLanguageAlternates('/webinar-2027-intake-csc'),
+    alternates: await buildLanguageAlternates('/webinar-2027-intake-csc'),
     openGraph: {
       title: t('webinar.hero.title'),
       description: t('webinar.hero.subtitle'),

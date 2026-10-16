@@ -3,10 +3,12 @@ import { buildLanguageAlternates } from "@/lib/alternates";
 import { Suspense } from 'react';
 import ThankYouClient from './ThankYouClient';
 
-export const metadata: Metadata = {
-  alternates: buildLanguageAlternates('/thank-you'),
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+  alternates: await buildLanguageAlternates('/thank-you'),
   robots: { index: false, follow: false },
-};
+  };
+}
 
 /**
  * /thank-you — post-conversion confirmation page.

@@ -9,7 +9,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t('seo.universitiesTitle'),
     description: t('seo.universitiesDescription'),
-    alternates: buildLanguageAlternates('/universities'),
+    alternates: await buildLanguageAlternates('/universities'),
   };
 }
 

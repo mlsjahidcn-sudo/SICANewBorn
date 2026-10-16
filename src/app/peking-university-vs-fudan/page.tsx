@@ -15,7 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: guide.title,
     description: guide.description,
-    alternates: buildLanguageAlternates('/peking-university-vs-fudan'),
+    alternates: await buildLanguageAlternates('/peking-university-vs-fudan'),
     openGraph: {
       title: guide.title,
       description: guide.description,

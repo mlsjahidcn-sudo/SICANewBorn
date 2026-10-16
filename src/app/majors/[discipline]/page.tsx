@@ -53,7 +53,7 @@ export async function generateMetadata({
   return {
     title,
     description,
-    alternates: buildLanguageAlternates(`${SITE_URL}/majors/${disciplineSlug}`),
+    alternates: await buildLanguageAlternates(`${SITE_URL}/majors/${disciplineSlug}`),
     openGraph: { title, description, type: 'article' },
   };
 }

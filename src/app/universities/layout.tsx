@@ -10,9 +10,11 @@
 import type { Metadata } from 'next';
 import { buildLanguageAlternates } from '@/lib/alternates';
 
-export const metadata: Metadata = {
-  alternates: buildLanguageAlternates('/universities'),
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+  alternates: await buildLanguageAlternates('/universities'),
+  };
+}
 
 export default function UniversitiesLayout({
   children,
