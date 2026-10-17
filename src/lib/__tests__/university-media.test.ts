@@ -114,7 +114,7 @@ describe('importUniversityImageFromUrl', () => {
       url: 'https://8.8.8.8/logo.png',
       kind: 'logo',
       _testFetch: async () =>
-        new Response(png, {
+        new Response(new Uint8Array(png), {
           status: 200,
           headers: { 'content-type': 'image/png' },
         }),
@@ -191,7 +191,7 @@ describe('importUniversityMediaFields', () => {
       image: 'https://8.8.8.8/banner.jpg',
       gallery: null,
       _testFetch: async () =>
-        new Response(png, {
+        new Response(new Uint8Array(png), {
           status: 200,
           headers: { 'content-type': 'image/png' },
         }),
@@ -227,7 +227,7 @@ describe('importUniversityMediaFields', () => {
       slug: 'test-uni',
       gallery,
       _testFetch: async () =>
-        new Response(png, {
+        new Response(new Uint8Array(png), {
           status: 200,
           headers: { 'content-type': 'image/png' },
         }),

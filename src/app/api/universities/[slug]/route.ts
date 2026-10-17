@@ -82,17 +82,24 @@ export async function PUT(
 
     // Phase 175: download external logo/banner/gallery → WebP before
     // update. Partial failures keep the original URL; row still saves.
+    // mapUniversityFromDb returns Record-derived unknowns for media
+    // fields — coerce before the typed import helper.
+    const mergedLogo = typeof merged.logo === 'string' ? merged.logo : null;
+    const mergedImage = typeof merged.image === 'string' ? merged.image : null;
+    const mergedGallery = Array.isArray(merged.gallery)
+      ? merged.gallery.filter((u): u is string => typeof u === 'string')
+      : null;
     const media = await importUniversityMediaFields({
       slug,
-      logo: merged.logo,
-      image: merged.image,
-      gallery: merged.gallery,
+      logo: mergedLogo,
+      image: mergedImage,
+      gallery: mergedGallery,
     });
     const withMedia = {
       ...merged,
-      logo: media.logo ?? merged.logo,
-      image: media.image ?? merged.image,
-      gallery: media.gallery ?? merged.gallery,
+      logo: media.logo ?? mergedLogo,
+      image: media.image ?? mergedImage,
+      gallery: media.gallery ?? mergedGallery,
     };
 
     const { slug: _ignored, ...updateRecord } = mapUniversityToDb(withMedia);
