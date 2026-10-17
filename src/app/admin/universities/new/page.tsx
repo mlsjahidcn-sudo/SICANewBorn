@@ -470,6 +470,7 @@ function UniversityFormInner({ slug }: { slug?: string }) {
         {/* Media */}
         <div className="bg-white border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-[#1F2937] mb-4">Media & Ranking</h2>
+          <p className="text-xs text-gray-500 mb-4">{t('adminUniversities.mediaImportHint')}</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-[#1F2937] mb-1">Banner Image URL</label>
@@ -594,6 +595,7 @@ function UniversityFormInner({ slug }: { slug?: string }) {
                 placeholder={"https://images.unsplash.com/photo-xxx?w=800&q=80\nhttps://images.unsplash.com/photo-yyy?w=800&q=80\nhttps://images.unsplash.com/photo-zzz?w=800&q=80"}
               />
               <p className="mt-1 text-xs text-gray-400">Paste image URLs, one per line. Used for campus gallery display.</p>
+              <p className="mt-1 text-xs text-gray-500">{t('adminUniversities.mediaImportHint')}</p>
               {form.gallery && form.gallery.split('\n').filter(s => s.trim()).length > 0 && (
                 <div className="mt-3 grid grid-cols-4 gap-2">
                   {form.gallery.split('\n').filter(s => s.trim()).map((url, idx) => (

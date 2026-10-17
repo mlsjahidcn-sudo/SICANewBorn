@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Plus, Pencil, Trash2, ExternalLink, Sparkles, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, ExternalLink, Sparkles, Loader2, Download } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { universities as staticUniversities, type University } from '@/lib/data';
 import { ToastProvider, useToast } from '@/components/admin/toast';
@@ -52,6 +52,8 @@ function UniversitiesPageInner() {
   const [cascadePending, setCascadePending] = useState(false);
   const [showAIModal, setShowAIModal] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
+  const [showImportConfirm, setShowImportConfirm] = useState(false);
+  const [importBusy, setImportBusy] = useState(false);
   const [aiMode, setAiMode] = useState<'create' | 'regenerate'>('create');
   const [aiInitialName, setAiInitialName] = useState('');
 
@@ -179,6 +181,48 @@ function UniversitiesPageInner() {
     setShowAIModal(true);
   };
 
+  // Phase 175 — bulk-import external logo/banner/gallery URLs into
+  // the university-media Storage bucket as WebP. Rate-limited server-
+  // side (3/15min); the confirm dialog warns about wall-clock cost.
+  const handleImportMedia = useCallback(async () => {
+    setImportBusy(true);
+    setShowImportConfirm(false);
+    try {
+      const result = await apiFetchJson<{
+        processed: number;
+        updated: number;
+        imported: number;
+        skipped: number;
+        failed: number;
+      }>('/api/admin/universities/import-media', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ limit: 25 }),
+      });
+      addToast(
+        t('adminUniversities.importMediaToast', {
+          processed: result.processed,
+          updated: result.updated,
+          imported: result.imported,
+          skipped: result.skipped,
+          failed: result.failed,
+        }),
+        result.failed > 0 ? 'error' : 'success',
+      );
+      if (result.updated > 0) {
+        await refreshUniversities();
+      }
+    } catch (err) {
+      const message =
+        err instanceof ApiError
+          ? err.message || t('adminUniversities.importMediaError')
+          : t('adminUniversities.importMediaError');
+      addToast(message, 'error');
+    } finally {
+      setImportBusy(false);
+    }
+  }, [addToast, refreshUniversities, t]);
+
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
@@ -186,7 +230,22 @@ function UniversitiesPageInner() {
           <h1 className="text-2xl font-bold text-[#1F2937]">{t('adminUniversities.title')}</h1>
           <p className="text-[#4B5563] text-sm mt-1">{t('adminUniversities.subtitle')}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setShowImportConfirm(true)}
+            disabled={importBusy}
+            className="inline-flex items-center gap-2 border-2 border-[#1B2A4A] text-[#1B2A4A] px-4 py-2 text-sm font-semibold hover:bg-[#1B2A4A] hover:text-white transition-colors disabled:opacity-50"
+            title={t('adminUniversities.importMediaConfirmTitle')}
+          >
+            {importBusy ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            {importBusy
+              ? t('adminUniversities.importMediaBusy')
+              : t('adminUniversities.importMedia')}
+          </button>
           <button
             onClick={() => setShowBulkModal(true)}
             className="inline-flex items-center gap-2 border-2 border-[#1B2A4A] text-[#1B2A4A] px-4 py-2 text-sm font-semibold hover:bg-[#1B2A4A] hover:text-white transition-colors"
@@ -397,6 +456,18 @@ function UniversitiesPageInner() {
             : t('adminUniversities.delete')
         }
         variant={cascadeCounts ? 'warning' : 'danger'}
+      />
+
+      <ConfirmDialog
+        open={showImportConfirm}
+        onCancel={() => setShowImportConfirm(false)}
+        onConfirm={() => {
+          void handleImportMedia();
+        }}
+        title={t('adminUniversities.importMediaConfirmTitle')}
+        message={t('adminUniversities.importMediaConfirmBody')}
+        confirmText={t('adminUniversities.importMedia')}
+        variant="info"
       />
 
       <AIGenerateModal
