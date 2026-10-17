@@ -9,6 +9,7 @@ import { requireAdmin } from '@/lib/supabase-auth';
 // Track 1.3 U2: DB mappers consolidated into src/lib/catalog-mappers.ts.
 import { mapUniversityFromDb, mapUniversityToDb } from '@/lib/catalog-mappers';
 import { invalidateLiveCatalogCache } from '@/lib/ai/live-data-context';
+import { importUniversityMediaFields } from '@/lib/university-media';
 // Track 1.3 U4 #1: cascade delete helpers (refuse with counts
 // unless ?force=true, then delete children first).
 import { isForceDelete, summarizeCascade } from '@/lib/cascade-delete';
@@ -78,7 +79,23 @@ export async function PUT(
     // Slug is excluded from the update payload: the path slug is the
     // identifier and renaming slugs is out of scope for PUT (U4).
     const merged = { ...mapUniversityFromDb(existing), ...pickSentFields(parsed.data, raw) };
-    const { slug: _ignored, ...updateRecord } = mapUniversityToDb(merged);
+
+    // Phase 175: download external logo/banner/gallery → WebP before
+    // update. Partial failures keep the original URL; row still saves.
+    const media = await importUniversityMediaFields({
+      slug,
+      logo: merged.logo,
+      image: merged.image,
+      gallery: merged.gallery,
+    });
+    const withMedia = {
+      ...merged,
+      logo: media.logo ?? merged.logo,
+      image: media.image ?? merged.image,
+      gallery: media.gallery ?? merged.gallery,
+    };
+
+    const { slug: _ignored, ...updateRecord } = mapUniversityToDb(withMedia);
 
     const { data, error } = await supabaseServer
       .from('universities')
@@ -97,7 +114,10 @@ export async function PUT(
     // Phase 121: the chatbot's RAG catalog has its own 5-min cache.
     invalidateLiveCatalogCache();
     // Phase 72: fire university.updated webhook
-    return NextResponse.json({ university: mapUniversityFromDb(data) });
+    return NextResponse.json({
+      university: mapUniversityFromDb(data),
+      mediaImport: media.report,
+    });
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }

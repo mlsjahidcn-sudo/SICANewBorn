@@ -10,6 +10,7 @@ import { sanitizeOrTerm, parseIntParam } from '@/lib/postgrest';
 // Track 1.3 U2: DB mappers consolidated into src/lib/catalog-mappers.ts.
 import { mapUniversityFromDb, mapUniversityToDb } from '@/lib/catalog-mappers';
 import { invalidateLiveCatalogCache } from '@/lib/ai/live-data-context';
+import { importUniversityMediaFields } from '@/lib/university-media';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -107,7 +108,23 @@ export async function POST(request: Request) {
     const parsed = universitySchema.safeParse(raw);
     if (!parsed.success) return validationErrorResponse(parsed.error);
 
-    const dbRecord = mapUniversityToDb(parsed.data);
+    // Phase 175: download external logo/banner/gallery → WebP in
+    // university-media bucket before insert. Partial failures keep
+    // the original URL; the row still saves.
+    const media = await importUniversityMediaFields({
+      slug: parsed.data.slug,
+      logo: parsed.data.logo,
+      image: parsed.data.image,
+      gallery: parsed.data.gallery,
+    });
+    const withMedia = {
+      ...parsed.data,
+      logo: media.logo ?? parsed.data.logo,
+      image: media.image ?? parsed.data.image,
+      gallery: media.gallery ?? parsed.data.gallery,
+    };
+
+    const dbRecord = mapUniversityToDb(withMedia);
     const { data, error } = await supabaseServer
       .from('universities')
       .insert(dbRecord)
@@ -124,7 +141,10 @@ export async function POST(request: Request) {
     invalidateLiveCatalogCache();
     // Phase 72: fire university.created webhook (fire-and-forget;
     // the event emitter handles queueing + delivery)
-    return NextResponse.json({ university: mapUniversityFromDb(data) }, { status: 201 });
+    return NextResponse.json(
+      { university: mapUniversityFromDb(data), mediaImport: media.report },
+      { status: 201 },
+    );
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
