@@ -20,6 +20,8 @@ export const pekingUniversityVsTsinghuaGuide: LocalizedGuide = {
     title: 'Peking University vs Tsinghua University — Which One Should International Students Apply To?',
     description:
       'Peking vs Tsinghua compared for international applicants: strengths by subject, CSCA combinations, deadlines, tuition, scholarships, and who should pick which.',
+    seoTitle: 'Peking University vs Tsinghua University',
+    seoDescription: 'Peking vs Tsinghua compared for international applicants: strengths by subject, CSCA combinations, deadlines, tuition, scholarships, and who should pick',
     subtitle:
       'They are China\'s two most famous universities, they sit on adjacent campuses in northwest Beijing, and international applicants ask the same question every cycle: Peking University or Tsinghua? The honest answer is that the comparison is not "which is better" — the pair trades the top two spots in Chinese rankings depending on the year and the metric — but "which one fits your subject, your CSCA combination, and your study plan." This guide compares them on the dimensions that actually change an application decision: academic identity, subject-level strength, admissions requirements, deadlines, cost, scholarships, and campus life.',
     stats: [

@@ -29,6 +29,8 @@ export const xiamenVsFuzhouGuide: LocalizedGuide = {
     title: 'Xiamen vs Fuzhou for International Students',
     description:
       'Xiamen vs Fuzhou for international students: cost, climate, universities, programs, English coverage, international community, scholarships, and which fits which student profile.',
+    seoTitle: 'Xiamen vs Fuzhou for International Students',
+    seoDescription: 'Xiamen vs Fuzhou for international students: cost, climate, universities, programs, English coverage, international community, scholarships, and which',
     subtitle:
       'Two Fujian-province coastal cities that international students often compare. Xiamen (XMU, Tan Kah Kee legacy) has stronger English-medium coverage + cleaner coastal city + tourism economy. Fuzhou (FZU) has cheaper living costs + larger local student community + materials + math strengths. Both have 211 options + coastal Fujian climate (mild winters, hot humid summers) + the cross-strait scholarship history (Tan Kah Kee). The choice comes down to: English-medium depth, community size preference, and budget tolerance.',
     stats: [

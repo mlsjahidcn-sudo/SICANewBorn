@@ -10,6 +10,8 @@ export const tsinghuaUniversityGuide: LocalizedGuide = {
     title: 'Tsinghua University — Engineering Powerhouse, Programs & International Admissions',
     description:
       'Tsinghua University (清华) — engineering and applied-science flagship of China. History, signature programs, English-taught options, CSCA admissions combinations, scholarships, cost, and practical guidance.',
+    seoTitle: 'Tsinghua University — Engineering Powerhouse',
+    seoDescription: 'Tsinghua University (清华) — engineering and applied-science flagship of China.',
     subtitle:
       'Tsinghua University is China\'s engineering and applied-science flagship — founded in 1911 as a study-abroad preparatory school, it became a full university in 1928 and grew into the nation\'s premier engineering school after 1952. Today it runs across all major disciplines with particular strength in engineering, computer science, materials, and increasingly in basic sciences and management. International applicants face one of the most selective admissions environments in China, with strong programs across engineering, business, public policy, and sciences.',
     stats: [

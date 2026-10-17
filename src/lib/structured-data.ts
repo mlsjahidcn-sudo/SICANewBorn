@@ -10,7 +10,15 @@ export function getOrganizationSchema() {
     name: 'SICA',
     alternateName: 'Study in China Academy',
     description:
-      'SICA is a professional study-in-China consultancy helping international students gain admission to top Chinese universities, secure scholarships, and navigate the application and visa process end-to-end.',
+      "SICA's team has 10 years of experience in study-in-China admissions. SICA is a professional study-in-China consultancy helping international students gain admission to top Chinese universities, secure scholarships, and navigate the application and visa process end-to-end. SICA is part of Ednex Group LTD (UK).",
+    // The corporate parent. An answer engine resolving "SICA" as an
+    // entity can now link it to a real, verifiable UK company instead
+    // of a name with no provenance.
+    parentOrganization: {
+      '@type': 'Organization',
+      name: 'Ednex Group LTD',
+      address: { '@type': 'PostalAddress', addressCountry: 'GB' },
+    },
     url: SITE_URL,
     logo: {
       '@type': 'ImageObject',
@@ -33,7 +41,11 @@ export function getOrganizationSchema() {
       addressCountry: 'CN',
     },
     sameAs: [
-      // Add real social URLs when available
+      // Intentionally empty. The footer used to link bare
+      // https://www.instagram.com/ etc.; those were removed in Phase
+      // 145 because a homepage-only social link is a low-trust
+      // sameAs. Only real profile URLs belong here — and the footer
+      // currently has none (WhatsApp only).
     ],
     knowsAbout: [
       'Chinese universities',

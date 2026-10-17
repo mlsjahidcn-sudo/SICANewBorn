@@ -13,6 +13,8 @@ export const nanjingUniversityGuide: LocalizedGuide = {
     title: 'Nanjing University — History, Programs, Admissions & International Student Guide',
     description:
       'Nanjing University (南大, NJU) — one of China\'s oldest and most prestigious comprehensive universities. History, schools, signature programs, English-taught options, CSCA combinations, scholarships (CSC + provincial + NJU-specific), cost, and practical guidance.',
+    seoTitle: 'Nanjing University — History, Programs',
+    seoDescription: 'Nanjing University (南大, NJU) — one of China\'s oldest and most prestigious comprehensive universities.',
     subtitle:
       'Nanjing University is one of China\'s oldest universities, with a long tradition in humanities, basic sciences, and engineering. Located in Nanjing — a historic capital with rich cultural heritage — NJU is the flagship of Jiangsu province and one of the top-ranked Chinese universities globally. This profile covers what international applicants need: NJU\'s schools and signature programs, the CSCA subject combinations Nanjing requires, English-taught master\'s options, the scholarship landscape (CSC, Jiangsu provincial scholarship, Nanjing University scholarships), cost of attendance, and practical application timeline.',
     stats: [
@@ -313,6 +315,8 @@ export const nanjingUniversityGuide: LocalizedGuide = {
     title: '南京大学——历史、院系、申请与留学生指南',
     description:
       '南京大学（南大, NJU）——中国最古老、最负盛名的综合性大学之一。历史、院系、特色专业、英语授课选项、CSCA 组合、奖学金（CSC + 省 + 南大自有）、费用与实务指引。',
+    seoTitle: '南京大学——历史、院系、申请与留学生指南',
+    seoDescription: '南京大学（南大, NJU）——中国最古老、最负盛名的综合性大学之一。历史、院系、特色专业、英语授课选项、CSCA 组合、奖学金（CSC + 省 +',
     subtitle:
       '南京大学是中国最古老的大学之一，在人文、基础科学、工程方面有传统。位于南京——历史古都、文化底蕴深厚，是江苏省的旗舰大学，也是中国顶尖的综合性大学。本简介覆盖国际申请者需要的信息：南大学院与特色专业、CSCA 申请科目、英语授课硕博项目、奖学金图景（CSC、江苏省、南大自有）、留学费用，以及实用申请时间线。',
     stats: [

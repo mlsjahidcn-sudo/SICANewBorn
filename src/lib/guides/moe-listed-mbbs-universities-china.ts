@@ -19,6 +19,8 @@ export const moeMbbsGuide: LocalizedGuide = {
     title: 'MOE-Listed MBBS Universities in China 2027',
     description:
       'What the MOE MBBS list is, why only listed universities may teach clinical medicine in English (43 or 45 schools [verify]), what regulators require, and CSCA subjects by university.',
+    seoTitle: 'MOE-Listed MBBS Universities in China 2027',
+    seoDescription: 'What the MOE MBBS list is, why only listed universities may teach clinical medicine in English (43 or 45 schools [verify]), what regulators require, and',
     subtitle:
       'China\'s Ministry of Education (MOE) publishes the list of universities permitted to teach clinical medicine in English to international students — the 2026-27 list counts 43 or 45 universities depending on the source [verify]. Only these universities can award an English-taught MBBS that WHO lists and your regulator will assess.',
     stats: [

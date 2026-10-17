@@ -21,6 +21,8 @@ export const bestCitiesGuide: LocalizedGuide = {
     title: 'Best Cities in China for International Students (2026 Ranking)',
     description:
       'Top-ranked Chinese cities for international students — by number of top universities, English-medium programs, cost of living, and lifestyle.',
+    seoTitle: 'Best Cities in China',
+    seoDescription: 'Top-ranked Chinese cities for international students — by number of top universities, English-medium programs, cost of living, and lifestyle.',
     subtitle:
       'Choosing the right Chinese city affects your university quality, living cost, job opportunities, and overall experience. Here is the data, ranked.',
     stats: [

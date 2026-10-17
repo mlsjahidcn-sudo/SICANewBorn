@@ -19,18 +19,18 @@ export async function generateMetadata(): Promise<Metadata> {
   const t = await getServerT();
   return {
     title: t('counselling.metaTitle'),
-    description: t('counselling.heroSubtitle'),
+    description: t('counselling.metaDescription'),
     alternates: await buildLanguageAlternates('/counselling'),
     openGraph: {
       title: t('counselling.metaTitle'),
-      description: t('counselling.heroSubtitle'),
+      description: t('counselling.metaDescription'),
       url: '/counselling',
       images: ['/og-default.png'],
     },
     twitter: {
       card: 'summary_large_image',
       title: t('counselling.metaTitle'),
-      description: t('counselling.heroSubtitle'),
+      description: t('counselling.metaDescription'),
       images: ['/og-default.png'],
     },
   };

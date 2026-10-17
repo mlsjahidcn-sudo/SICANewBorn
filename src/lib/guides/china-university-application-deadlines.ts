@@ -18,6 +18,8 @@ export const chinaApplicationDeadlinesGuide: LocalizedGuide = {
     title: 'China University Application Deadlines 2027 (Sept & March)',
     description:
       'Sept 2027 and March 2027 intake deadlines for Chinese universities: bachelor\'s, master\'s, PhD, MBBS and CSC scholarship windows, plus CSCA timing.',
+    seoTitle: 'China University Application Deadlines 2027',
+    seoDescription: 'Sept 2027 and March 2027 intake deadlines for Chinese universities: bachelor\'s, master\'s, PhD, MBBS and CSC scholarship windows, plus CSCA timing.',
     subtitle:
       'Chinese universities run two main intakes: September (the larger, with more programs and scholarships) and March. For September 2027, apply November 2026 through spring 2027 — CSC scholarship deadlines cluster January-April 2027, and bachelor\'s applicants need a CSCA score from a November 2026 - January 2027 sitting. Applications for the March 2027 intake close roughly September-December 2026.',
     stats: [

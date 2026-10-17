@@ -128,11 +128,55 @@ export default async function GetStartedPage() {
   const initialNotices = await loadInitialNotices();
   return (
     // useSearchParams in GetStartedClient requires <Suspense>
-    // (Next 16 App Router rule). The fallback is the full page
-    // rendered with an empty UTM context — the page is static
-    // enough that this won't be visible for more than a frame.
-    <Suspense fallback={<GetStartedClient initialNotices={initialNotices} />}>
+    // (Next 16 App Router rule).
+    //
+    // The fallback used to be `<GetStartedClient ... />` — the FULL
+    // page. Because the boundary suspends during SSR, Next streamed
+    // the fallback into a `<template id="B:0">` AND then streamed the
+    // real content — so the HTML carried the page twice.
+    //
+    // Two consequences, both verified on the live site 2026-10-17:
+    //   - the page rendered TWO identical <h1> elements ("Get into a
+    //     top Chinese university — without the chaos"), which is a
+    //     genuine duplicate-heading defect, not a cosmetic one;
+    //   - every byte of the page was transmitted twice, on a page
+    //     that already weighs ~121 KB.
+    //
+    // The fallback is now a content-free skeleton: same visual shape,
+    // no headings and no copy, so it cannot duplicate anything a
+    // parser would read.
+    <Suspense fallback={<GetStartedSkeleton />}>
       <GetStartedClient initialNotices={initialNotices} />
     </Suspense>
+  );
+}
+
+/**
+ * Content-free placeholder for the Suspense boundary above.
+ *
+ * Deliberately contains NO headings, NO text and NO links — only
+ * sized blocks. The old fallback rendered the entire page, so the
+ * streamed HTML carried two <h1>s and two copies of every word.
+ */
+function GetStartedSkeleton() {
+  return (
+    <div className="min-h-screen bg-[#FAFAF8]" aria-hidden="true">
+      <section className="bg-gradient-to-br from-[#1B2A4A] to-[#2d4170] text-white">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12 sm:py-20 text-center">
+          <div className="mx-auto mb-4 h-6 w-48 rounded-full bg-white/10" />
+          <div className="mx-auto mb-4 h-12 w-full max-w-xl rounded bg-white/10" />
+          <div className="mx-auto mb-8 h-6 w-full max-w-2xl rounded bg-white/10" />
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <div className="h-12 w-40 rounded bg-white/10" />
+            <div className="h-12 w-40 rounded bg-white/10" />
+          </div>
+        </div>
+      </section>
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12 space-y-6">
+        <div className="h-8 w-2/3 rounded bg-[#1B2A4A]/10" />
+        <div className="h-40 w-full rounded bg-[#1B2A4A]/5" />
+        <div className="h-40 w-full rounded bg-[#1B2A4A]/5" />
+      </div>
+    </div>
   );
 }

@@ -18,6 +18,8 @@ export const cscaFeesGuide: LocalizedGuide = {
     title: 'CSCA Exam Fee 2027: RMB 450 or 700 & How to Pay',
     description:
       'CSCA exam fee for the 2027 cycle: RMB 450 for one subject, RMB 700 for two or more (official, csca.cn). How to pay from abroad, refunds, and what else to budget.',
+    seoTitle: 'CSCA Exam Fee 2027: RMB 450 or 700 & How to Pay',
+    seoDescription: 'CSCA exam fee for the 2027 cycle: RMB 450 for one subject, RMB 700 for two or more (official, csca.cn).',
     subtitle:
       'The CSCA exam fee is RMB 450 for one subject or RMB 700 total for two or more subjects in the same sitting (official, csca.cn) — the same band has applied since launch and continues into the 2027 cycle. Math is required for everyone; English-taught applicants usually add 1–2 more subjects, paying the RMB 700 band. Payment runs through the official portal — the real cost traps are payment-channel friction from abroad, not the fee itself.',
     stats: [
@@ -285,6 +287,8 @@ export const cscaFeesGuide: LocalizedGuide = {
     title: 'CSCA 考试费 2026-27：450 或 700 元及支付方法',
     description:
       'CSCA 考试费：单科 450 元人民币，两科及以上 700 元（官方 csca.cn）。境外如何支付、退款政策以及其他预算项。',
+    seoTitle: 'CSCA 考试费 2026-27',
+    seoDescription: 'CSCA 考试费：单科 450 元人民币，两科及以上 700 元（官方 csca.cn）。境外如何支付、退款政策以及其他预算项。',
     subtitle:
       'CSCA 考试费为单科 450 元人民币，或同场两科及以上合计 700 元（官方 csca.cn）。数学为全员必考；英文授课申请者通常加考 1-2 科，支付 700 元档。缴费经官方门户完成——真正的成本陷阱是境外支付通道的摩擦，不是费用本身。',
     stats: [

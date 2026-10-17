@@ -18,6 +18,8 @@ export const cscaVsHskGuide: LocalizedGuide = {
     title: 'CSCA vs HSK — What\'s the Difference, and Which Do You Actually Need?',
     description:
       'The CSCA tests academic competency (Professional Chinese + Math, Physics, Chemistry); the HSK tests general Chinese proficiency. Side-by-side comparison, who needs which or both, and how the HSK exemption and waiver interact.',
+    seoTitle: 'CSCA vs HSK — What\'s the Difference',
+    seoDescription: 'The CSCA tests academic competency (Professional Chinese + Math, Physics, Chemistry); the HSK tests general Chinese proficiency.',
     subtitle:
       'They sound similar and get confused constantly, but they measure different things: the HSK is a general Chinese-language proficiency test (levels 1–6); the CSCA is an academic competency exam for bachelor\'s admission that includes a Professional Chinese track plus Mathematics and sciences. Most Chinese-taught degree applicants need both; English-taught applicants usually need the CSCA + IELTS/TOEFL instead of HSK; and a strong HSK can reduce or eliminate parts of your CSCA through the exemption and waiver routes.',
     stats: [

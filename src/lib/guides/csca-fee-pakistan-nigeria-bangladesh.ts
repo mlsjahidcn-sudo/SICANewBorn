@@ -25,6 +25,8 @@ export const cscaFeePakistanNigeriaBangladeshGuide: LocalizedGuide = {
     title: 'CSCA Fee in Pakistan, Nigeria and Bangladesh: What It Costs and How to Pay',
     description:
       'CSCA exam fee for Pakistani, Nigerian, and Bangladeshi applicants 2027: amount (RMB 450 / 700), how to pay from each country (bank wire, Payoneer, Flutterwave, bKash, Nagad), common payment failures, and per-country timeline.',
+    seoTitle: 'CSCA Fee in Pakistan, Nigeria and Bangladesh',
+    seoDescription: 'CSCA exam fee for Pakistani, Nigerian, and Bangladeshi applicants 2027: amount (RMB 450 / 700), how to pay from each country (bank wire, Payoneer',
     subtitle:
       'The CSCA exam fee is the same for every applicant (RMB 450 for one subject, RMB 700 for two or more) — but how you PAY it from Pakistan, Nigeria, or Bangladesh differs dramatically. Most international applicants don\'t have a Chinese credit card or Alipay; the practical payment paths are international bank wires, regional mobile money, and Payoneer / Flutterwave transfers. This guide covers the per-country payment mechanics, common failures, and the timeline that gets your CSCA sitting done before your CSC deadline.',
     stats: [
@@ -283,6 +285,8 @@ export const cscaFeePakistanNigeriaBangladeshGuide: LocalizedGuide = {
     title: '巴基斯坦、尼日利亚、孟加拉国 CSCA 考试费：费用与支付方式',
     description:
       '2027 年巴基斯坦、尼日利亚、孟加拉国申请者 CSCA 考试费：金额（人民币 450 / 700）、从各国支付的方式（银行汇款、Payoneer、Flutterwave、bKash、Nagad）、常见支付失败、按国时间线。',
+    seoTitle: '巴基斯坦、尼日利亚、孟加拉国 CSCA 考试费',
+    seoDescription: '2027 年巴基斯坦、尼日利亚、孟加拉国申请者 CSCA 考试费：金额（人民币 450 /',
     subtitle:
       'CSCA 考试费全球统一——每位申请者 RMB 450 单科或 RMB 700 两科及以上——但从巴基斯坦、尼日利亚或孟加拉国支付的方式截然不同。大多数国际申请者没有中国信用卡或支付宝；实际支付路径是国际银行电汇、区域移动钱包、Payoneer / Flutterwave 转账。本指南涵盖按国支付机制、常见失败与时间线，确保 CSCA 考试在你的 CSC 截止前完成。',
     stats: [

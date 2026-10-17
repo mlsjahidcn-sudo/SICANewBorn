@@ -13,6 +13,8 @@ export const pekingUniversityGuide: LocalizedGuide = {
     title: 'Peking University — Programs, Admissions & International Student Guide',
     description:
       'Peking University (PKU, 北大) — China\'s oldest modern national university. History, schools, signature programs, English-taught options, CSCA admissions combinations, scholarships, cost of attendance, and practical guidance for international applicants.',
+    seoTitle: 'Peking University — Programs',
+    seoDescription: 'Peking University (PKU, 北大) — China\'s oldest modern national university.',
     subtitle:
       'Peking University is the oldest modern national university in China, founded in 1898 as the Imperial University of Peking (Jingshi Daxuetang). It sits at the top of every Chinese university ranking and runs the full range of humanities, social sciences, and natural sciences — most with strong international recognition. This profile covers what international applicants actually need: PKU\'s schools and signature programs, the CSCA subject combinations Peking requires, the English-taught master\'s and undergraduate programs, the scholarships (CSC + PKU\'s own Peking University scholarships), cost of attendance, and the practical application timeline.',
     stats: [
@@ -305,6 +307,8 @@ export const pekingUniversityGuide: LocalizedGuide = {
     title: '北京大学——院系、申请与留学生指南',
     description:
       '北京大学（PKU, 北大）——中国最古老的现代国立大学。历史、院系、特色专业、英语授课项目、CSCA 申请科目组合、奖学金、留学费用，以及给国际申请者的实务指引。',
+    seoTitle: '北京大学——院系、申请与留学生指南',
+    seoDescription: '北京大学（PKU, 北大）——中国最古老的现代国立大学。历史、院系、特色专业、英语授课项目、CSCA',
     subtitle:
       '北京大学是 1898 年成立的京师大学堂，是中国最古老的现代国立大学，居各类中国大学排名之首，文、社、理科齐全，多数国际知名度高。本简介覆盖国际申请者实际需要的信息：北大学院与特色专业、CSCA 申请科目、英语授课硕博项目、奖学金（ CSC + 北大自有奖学金）、留学费用，以及实用申请时间线。',
     stats: [

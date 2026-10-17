@@ -12,19 +12,19 @@ export async function generateMetadata(): Promise<Metadata> {
   const locale: Locale = cookieStore.get('sica-locale')?.value === 'zh' ? 'zh' : 'en';
   const guide = healthInsuranceGuide[locale];
   return {
-    title: guide.title,
-    description: guide.description,
+    title: guide.seoTitle ?? guide.title,
+    description: guide.seoDescription ?? guide.description,
     alternates: await buildLanguageAlternates('/guides/health-insurance'),
     openGraph: {
-      title: guide.title,
-      description: guide.description,
+      title: guide.seoTitle ?? guide.title,
+      description: guide.seoDescription ?? guide.description,
       url: `${SITE_URL}/guides/health-insurance`,
       type: 'article',
     },
     twitter: {
       card: 'summary_large_image',
-      title: guide.title,
-      description: guide.description,
+      title: guide.seoTitle ?? guide.title,
+      description: guide.seoDescription ?? guide.description,
     },
   };
 }

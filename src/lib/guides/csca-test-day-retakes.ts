@@ -18,6 +18,8 @@ export const cscaTestDayGuide: LocalizedGuide = {
     title: 'CSCA Test Day & Retakes — What to Bring, Answer-Sheet Discipline, and the Resit Playbook',
     description:
       'The complete CSCA test-day kit: what to bring, what stays outside, answer-sheet rules that protect your score, and the retake playbook — resit mechanics, session math, and how universities read your second report.',
+    seoTitle: 'CSCA Test Day & Retakes — What to Bring',
+    seoDescription: 'The complete CSCA test-day kit: what to bring, what stays outside, answer-sheet rules that protect your score, and the retake playbook — resit mechanics',
     subtitle:
       'Test day is where months of preparation either converts to points or leaks away on logistics: the wrong passport, a screen-only admission ticket, a mis-bubbled subject code. The rules follow the standard Chinese national-exam playbook — strict ID checks, no electronics, multiple-choice answer sheets only — and the retake system is forgiving in theory (6 sittings a year, no published attempt limit) but unforgiving in calendar terms. This guide covers the kit, the answer-sheet discipline that protects every point you earned, what happens after the exam, and the resit playbook for a second attempt.',
     stats: [

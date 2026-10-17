@@ -16,6 +16,8 @@ export const x1x2VisaGuide: LocalizedGuide = {
     title: 'China Student Visa: X1 vs X2 and JW201 vs JW202',
     description:
       'X1 vs X2 China student visa explained: the 180-day rule, documents, the 30-day residence-permit conversion, and the difference between JW201 and JW202 forms.',
+    seoTitle: 'China Student Visa: X1 vs X2 and JW201 vs JW202',
+    seoDescription: 'X1 vs X2 China student visa explained: the 180-day rule, documents, the 30-day residence-permit conversion, and the difference between JW201 and JW202',
     subtitle:
       'The X1 visa covers study longer than 180 days — degree programs — and must be converted to a residence permit within 30 days of entering China. The X2 covers 180 days or less. Your admission notice comes with JW201 (if you hold a CSC scholarship) or JW202 (university admission), and the form your visa application needs depends on which one you hold.',
     stats: [

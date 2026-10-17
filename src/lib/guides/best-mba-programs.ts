@@ -17,6 +17,8 @@ export const bestMbaGuide: LocalizedGuide = {
     title: 'Best MBA Programs in China for International Students (2026)',
     description:
       'Every English-medium MBA program at top Chinese universities — duration, tuition, scholarships, GMAT/GRE requirements, and admissions strategy.',
+    seoTitle: 'Best MBA Programs in China',
+    seoDescription: 'Every English-medium MBA program at top Chinese universities — duration, tuition, scholarships, GMAT/GRE requirements, and admissions strategy.',
     subtitle:
       'A 1-2 year MBA in English from a Chinese university — at 1/5 the cost of a US MBA, with C9 League brand recognition and emerging-market network.',
     stats: [

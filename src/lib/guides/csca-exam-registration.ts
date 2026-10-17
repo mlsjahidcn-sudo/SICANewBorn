@@ -17,6 +17,8 @@ export const cscaRegistrationGuide: LocalizedGuide = {
     title: 'How to Register for the CSCA Exam — Step-by-Step Guide (Portal, Centers, Mistakes to Avoid)',
     description:
       'The complete CSCA registration walkthrough: finding the official portal, the 8-step flow, choosing a test center at home or abroad, payment, admission tickets, and the 6 mistakes that cost candidates a session.',
+    seoTitle: 'How to Register for the CSCA Exam',
+    seoDescription: 'The complete CSCA registration walkthrough: finding the official portal, the 8-step flow, choosing a test center at home or abroad, payment, admission',
     subtitle:
       'CSCA registration runs through the official portal, csca.cn: create an account with passport-exact details, pick a sitting (mainly online at home with a live proctor), select your subjects, pay RMB 450 (1 subject) or RMB 700 (2+ subjects) inside the window, then download your admission ticket. Registration windows are announced per sitting — for the November 2026 sitting the window runs 15-21 October (Beijing time).',
     stats: [
@@ -269,6 +271,8 @@ export const cscaRegistrationGuide: LocalizedGuide = {
     title: 'CSCA 考试报名全流程——逐步操作指南（门户、考点、避坑清单）',
     description:
       'CSCA 报名完整 walkthrough：找到官方门户、8 步流程、境内外考点选择、缴费、准考证，以及让考生损失一场考试的 6 个错误。',
+    seoTitle: 'CSCA 考试报名全流程——逐步操作指南（门户、考点',
+    seoDescription: 'CSCA 报名完整 walkthrough：找到官方门户、8 步流程、境内外考点选择、缴费、准考证，以及让考生损失一场考试的 6 个错误。',
     subtitle:
       'CSCA 经官方门户 csca.cn 报名：用与护照逐字一致的姓名注册账号，选场次（以居家线上、真人监考为主），选科目，在窗口内支付 450 元（1 科）或 700 元（两科及以上），再下载准考证。报名窗口逐场公布——2026 年 11 月场次为 10 月 15-21 日（北京时间）。',
     stats: [

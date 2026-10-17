@@ -32,6 +32,8 @@ export const shenyangPharmaceuticalGuide: LocalizedGuide = {
     title: 'Shenyang Pharmaceutical University for International Students: Programs and How to Apply',
     description:
       'Shenyang Pharmaceutical University (SYPHU) for international students: pharmacy + pharmaceutical engineering + clinical pharmacy programs, English-medium coverage, MOE-listed status, CSC pathway, and step-by-step application.',
+    seoTitle: 'Shenyang Pharmaceutical University',
+    seoDescription: 'Shenyang Pharmaceutical University (SYPHU) for international students: pharmacy + pharmaceutical engineering + clinical pharmacy programs, English-medium',
     subtitle:
       'Shenyang Pharmaceutical University is the only Chinese university specialized in pharmacy + pharmaceutical sciences. It is one of four Chinese universities with pharmacy in the Double First-Class tier, and one of the strongest English-medium pharmacy programs in China. For international students targeting pharmacy, pharmacology, or pharmaceutical engineering, SYPHU is the most direct path — especially for applicants who want to enter China\'s pharmaceutical industry after graduation. Located in Shenyang (Liaoning Province, northeastern China), tuition is mid-tier ¥16,000-22,000/yr.',
     stats: [

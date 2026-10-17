@@ -18,6 +18,8 @@ export const cscScholarshipGuide: LocalizedGuide = {
     title: 'CSC Scholarship 2027: Chinese Government Scholarship Guide',
     description:
       'CSC (Chinese Government Scholarship) for 2027: what it covers, stipend, eligibility, the 4 application channels, deadlines by country, and the CSCA requirement for bachelor\'s applicants.',
+    seoTitle: 'CSC Scholarship 2027',
+    seoDescription: 'CSC (Chinese Government Scholarship) for 2027: what it covers, stipend, eligibility, the 4 application channels, deadlines by country, and the CSCA',
     subtitle:
       'A CSC scholarship fully funds your degree at a participating Chinese university — covering tuition, dorm, health insurance, a monthly stipend, and (for most categories) round-trip airfare. Applications for the September 2027 intake run roughly January–April 2027, earlier via some country channels.',
     stats: [

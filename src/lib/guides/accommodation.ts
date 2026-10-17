@@ -12,6 +12,8 @@ export const accommodationGuide: LocalizedGuide = {
     title: 'Student Accommodation in China: Dorms, Apartments, and What to Expect',
     description:
       'How to find housing as an international student in China: on-campus dorms, off-campus apartments, costs, contracts, and what to look for.',
+    seoTitle: 'Student Accommodation in China',
+    seoDescription: 'How to find housing as an international student in China: on-campus dorms, off-campus apartments, costs, contracts, and what to look for.',
     subtitle:
       'Your dorm is where you\'ll spend half your time in China. Here is how to pick the right one.',
     stats: [

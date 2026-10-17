@@ -11,6 +11,8 @@ export const sunYatSenUniversityGuide: LocalizedGuide = {
     title: 'Sun Yat-sen University — Guangzhou Flagship, Medicine & Business, Programs & International Admissions',
     description:
       'Sun Yat-sen University (中山大学, SYSU) — the flagship comprehensive university of the Pearl River Delta. History, signature programs (medicine, business, sciences), English-taught options, CSCA combinations, scholarships, cost, and practical guidance.',
+    seoTitle: 'Sun Yat-sen University — Guangzhou Flagship',
+    seoDescription: 'Sun Yat-sen University (中山大学, SYSU) — the flagship comprehensive university of the Pearl River Delta.',
     subtitle:
       'Sun Yat-sen University is the flagship comprehensive university of Guangzhou and the Pearl River Delta region, founded in 1924 by Sun Yat-sen. Strong across medicine, business, sciences, and humanities, with five campuses across Guangdong. For international applicants considering medicine, business, or sciences in southern China, SYSU is the top option and one of the most internationally diverse Chinese universities.',
     stats: [

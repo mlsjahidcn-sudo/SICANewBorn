@@ -21,6 +21,8 @@ export const englishTaughtProgramsGuide: LocalizedGuide = {
     title: 'English-Taught Programs in China: 2027 Guide for Non-Chinese Speakers',
     description:
       'English-taught bachelor\'s, master\'s and PhD programs in China for 2027 — the MOE ETP catalog, top universities by ETP depth, subjects with the biggest catalogs, admissions pathway, CSC scholarships, and what the English-track campus experience actually looks like.',
+    seoTitle: 'English-Taught Programs in China',
+    seoDescription: 'English-taught bachelor\'s, master\'s and PhD programs in China for 2027 — the MOE ETP catalog, top universities by ETP depth, subjects with the biggest',
     subtitle:
       'China is one of the largest English-taught-degree markets in Asia — over 300 universities now run ETP bachelor\'s and master\'s programs in engineering, business, medicine, computer science, and the natural sciences, all taught in English without an HSK requirement. The MOE publishes an official ETP catalog each cycle; the C9 League + ~30 strong research universities lead it. You apply with IELTS/TOEFL (no Chinese needed) — but you still sit the CSCA from the 2026 intake, even on the English track. Here is the landscape, the universities to target by field, the admissions pathway, and what to budget for an English-taught China degree in 2027.',
     stats: [
@@ -365,6 +367,8 @@ export const englishTaughtProgramsGuide: LocalizedGuide = {
     title: '2027 中国英文授课项目全指南：非汉语母语者的完整路径',
     description:
       '2027 年中国学士、硕士、博士英文授课项目——教育部 ETP 目录、英文轨最深的高校目录、英文项目最多的学科、申请路径、CSC 奖学金，以及英文轨校园的真实体验。',
+    seoTitle: '2027 中国英文授课项目全指南：非汉语母语者的完整路径',
+    seoDescription: '2027 年中国学士、硕士、博士英文授课项目——教育部 ETP 目录、英文轨最深的高校目录、英文项目最多的学科、申请路径、CSC',
     subtitle:
       '中国是亚洲规模最大的英文授课学位市场之一——300+ 所大学开设英文授课的工科、商科、医学、计算机与自然科学学士、硕士、博士项目，全部英文教学，无需 HSK。教育部（MOE）每周期发布官方 ETP 目录；C9 联盟 + ~30 所强研究型大学领衔。凭雅思/托福申请（不需要汉语），但自 2026 级起仍须参加 CSCA 考试（含英文轨）。本文给出全图、按学科对应的高校、申请路径与 2027 年英文授课中国的预算。',
     stats: [

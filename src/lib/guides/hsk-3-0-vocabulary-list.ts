@@ -16,6 +16,8 @@ export const hsk3VocabularyListGuide: LocalizedGuide = {
     title: 'HSK 3.0 vocabulary — what is on the list and what dropped',
     description:
       'Per-level word counts, the modern vocab that replaced classical terms, a starter list for each band, and how to build your own study deck from the official 2025 syllabus without buying a prep book.',
+    seoTitle: 'HSK 3.0 vocabulary — what is on the list and what',
+    seoDescription: 'Per-level word counts, the modern vocab that replaced classical terms, a starter list for each band, and how to build your own study deck from the',
     subtitle:
       'The HSK 3.0 vocabulary list is the single biggest change from 2.0 — and the most useful study artifact you can build. Per-level word counts roughly double at L1–L5 but the practical coverage is comparable because the new list is more efficient: modern Chinese replaces classical and literary vocabulary, and high-frequency everyday and professional terms are added. This guide walks through what is on the list, what dropped from 2.0, how to build your own study deck from the official sources, and which prep books are still worth using.',
     stats: [

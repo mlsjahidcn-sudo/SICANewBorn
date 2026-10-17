@@ -21,6 +21,8 @@ export const pekingUniversityVsFudanGuide: LocalizedGuide = {
     title: 'Peking University vs Fudan University — Beijing Flagship or Shanghai Flagship?',
     description:
       'Peking vs Fudan compared for international applicants: subjects, deadlines (Fudan closes earlier), tuition, scholarships, and Beijing-vs-Shanghai city choice.',
+    seoTitle: 'Peking University vs Fudan University',
+    seoDescription: 'Peking vs Fudan compared for international applicants: subjects, deadlines (Fudan closes earlier), tuition, scholarships, and Beijing-vs-Shanghai city',
     subtitle:
       'This comparison is as much about the two cities as the two universities. Peking University is the national flagship in the political and cultural capital; Fudan is Shanghai\'s comprehensive flagship in China\'s financial center. Academically the overlap is wide — both are elite across humanities, economics, medicine, and math — but the application calendars run on different clocks (Fudan closes December–March, with CSC nominations as early as December–January, while PKU runs to March 31–May 31), the scholarship stacks sit in different municipal systems, and the city you choose shapes your internship market and your daily life for years. This guide compares both layers so you can decide with the full picture.',
     stats: [

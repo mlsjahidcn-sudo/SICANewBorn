@@ -17,6 +17,8 @@ export const fudanUniversityAdmissionsGuide: LocalizedGuide = {
     title: 'Fudan University admissions — step-by-step guide for international students',
     description:
       'How to apply to Fudan University as an international student: routes, deadlines, document checklist, CSCA combinations by school, language requirements, scholarship stack, and what makes a competitive applicant.',
+    seoTitle: 'Fudan University admissions',
+    seoDescription: 'How to apply to Fudan University as an international student: routes, deadlines, document checklist, CSCA combinations by school, language requirements',
     subtitle:
       'Fudan University admits international bachelor\'s and master\'s applicants through a study-plan-based admissions process with the CSCA exam mandatory from 2026. This guide walks the full operational picture: which application channel to use (Fudan ISO portal vs CSC channel vs embassy recommendation), when each intake window closes, what documents to send, the exact CSCA combination each Fudan school asks for, the language thresholds (HSK / IELTS / TOEFL) by program level, how to stack CSC + Fudan\'s own scholarships + Shanghai Government Scholarship, what to expect in the Fudan interview, and the profile components that move a borderline applicant to admit.',
     stats: [

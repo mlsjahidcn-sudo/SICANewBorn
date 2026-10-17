@@ -12,6 +12,8 @@ export const costOfLivingGuide: LocalizedGuide = {
     title: 'Cost of Living in China for Students (2027): Monthly Budget',
     description:
       'Monthly cost of living in China for international students: rent, food, transport and phone by city, plus tuition ranges and a free 10-minute budget check.',
+    seoTitle: 'Cost of Living in China for Students (2027)',
+    seoDescription: 'Monthly cost of living in China for international students: rent, food, transport and phone by city, plus tuition ranges and a free 10-minute budget check.',
     subtitle:
       'International students in China typically spend USD 800-1,500 per month all-in. The biggest variables are city (Beijing and Shanghai cost more than tier-2 cities), housing (an on-campus dorm is the single biggest saving), and lifestyle. Here is the full monthly breakdown by category and city.',
     stats: [

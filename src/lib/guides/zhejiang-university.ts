@@ -10,6 +10,8 @@ export const zhejiangUniversityGuide: LocalizedGuide = {
     title: 'Zhejiang University — Hangzhou\'s Comprehensive Flagship, Programs & International Admissions',
     description:
       'Zhejiang University (ZJU, 浙大) — Hangzhou\'s flagship comprehensive research university. History, signature programs (engineering, sciences, medicine, business), English-taught options, CSCA combinations, scholarships, cost, and practical guidance.',
+    seoTitle: 'Zhejiang University — Hangzhou\'s Comprehensive',
+    seoDescription: 'Zhejiang University (ZJU, 浙大) — Hangzhou\'s flagship comprehensive research university.',
     subtitle:
       'Zhejiang University is one of China\'s oldest and most selective universities, located in Hangzhou — the home of Alibaba and a growing tech center. Strong across engineering, computer science, basic sciences, and medicine, ZJU has substantial international programs and English-language options at the master\'s and PhD levels. For international applicants considering a strong comprehensive university outside Beijing or Shanghai, ZJU is the top option.',
     stats: [

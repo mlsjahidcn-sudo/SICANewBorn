@@ -17,19 +17,19 @@ export async function generateMetadata(): Promise<Metadata> {
   const locale: Locale = cookieStore.get('sica-locale')?.value === 'zh' ? 'zh' : 'en';
   const guide = studyInChinaGuide[locale];
   return {
-    title: guide.title,
-    description: guide.description,
+    title: guide.seoTitle ?? guide.title,
+    description: guide.seoDescription ?? guide.description,
     alternates: await buildLanguageAlternates('/guides/study-in-china'),
     openGraph: {
-      title: guide.title,
-      description: guide.description,
+      title: guide.seoTitle ?? guide.title,
+      description: guide.seoDescription ?? guide.description,
       url: `${SITE_URL}/guides/study-in-china`,
       type: 'article',
     },
     twitter: {
       card: 'summary_large_image',
-      title: guide.title,
-      description: guide.description,
+      title: guide.seoTitle ?? guide.title,
+      description: guide.seoDescription ?? guide.description,
     },
   };
 }

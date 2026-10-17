@@ -17,6 +17,8 @@ export const tsinghuaUniversityAdmissionsGuide: LocalizedGuide = {
     title: 'Tsinghua University admissions — step-by-step guide for international students',
     description:
       'How to apply to Tsinghua University as an international student: routes, deadlines, document checklist, CSCA combinations by school, language requirements, scholarship stack, the Schwarzman Scholars pathway, and what makes a competitive applicant.',
+    seoTitle: 'Tsinghua University admissions',
+    seoDescription: 'How to apply to Tsinghua University as an international student: routes, deadlines, document checklist, CSCA combinations by school, language',
     subtitle:
       'Tsinghua University admits international bachelor\'s and master\'s applicants through a study-plan-based admissions process with the CSCA exam mandatory from 2026. Beyond the standard Tsinghua ISO portal route, the Schwarzman Scholars master\'s program runs a separate global application process with its own deadlines and requirements. This guide covers both the standard Tsinghua application and the Schwarzman pathway: routes, deadlines, document checklist, CSCA combinations by Tsinghua school, language thresholds (HSK / IELTS / TOEFL), the Tsinghua + CSC + Beijing Government scholarship stack, the Schwarzman-specific application timeline, what to expect in the Tsinghua interview, and the profile components that move a borderline applicant to admit.',
     stats: [

@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Script from 'next/script';
 import { GoogleAnalytics } from '@next/third-parties/google';
 import { cookies } from 'next/headers';
 import { DevInspector } from '@/components/dev-inspector';
@@ -33,7 +32,9 @@ const baseMetadata: Metadata = {
   authors: [{ name: 'SICA' }],
   creator: 'SICA',
   publisher: 'SICA',
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || SITE_URL),
+  // SITE_URL is already trailing-slash-normalised; the raw env var is
+  // not, and mixing the two is how a double slash got into robots.txt.
+  metadataBase: new URL(SITE_URL),
   openGraph: {
     type: 'website',
     locale: 'en_US',
@@ -112,23 +113,39 @@ export default async function RootLayout({
     <html lang={initialLocale} className={inter.variable}>
       <body className={`${inter.className} antialiased`} suppressHydrationWarning>
         {isDev && <DevInspector />}
-        {/* Global JSON-LD structured data for SEO */}
-        <Script
-          id="ld-organization"
+        {/* Global JSON-LD structured data for SEO.
+          //
+          // These were `<Script strategy="beforeInteractive">`. That
+          // ships the JSON-LD inside the RSC flight payload
+          // (`self.__next_s.push([0,{"type":"application/ld+json",...}])`)
+          // rather than as a literal <script type="application/ld+json">
+          // element in the server HTML. Verified on the live site
+          // 2026-10-17: the homepage had ZERO Organization/WebSite
+          // script tags and the entity node existed only in the flight
+          // payload, so it was referenced by @id but never defined.
+          //
+          // Anything that does not execute JavaScript therefore never
+          // saw the Organization node — that is most AI crawlers
+          // (ChatGPT-User, Perplexity, ClaudeBot), every social
+          // scraper, and many SEO tools. The Organization entity is the
+          // single most important node for answer engines: it is what
+          // lets one resolve "SICA" to a logo, a contact point, an
+          // address, a parent company and a body of knowledge.
+          //
+          // A plain inline <script> renders into the HTML directly.
+          // The page-level JSON-LD on guide and catalog pages already
+          // works this way and is confirmed present as real script
+          // tags. */}
+        <script
           type="application/ld+json"
-          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: organizationJsonLd }}
         />
-        <Script
-          id="ld-website"
+        <script
           type="application/ld+json"
-          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: websiteJsonLd }}
         />
-        <Script
-          id="ld-editorial-team"
+        <script
           type="application/ld+json"
-          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: editorialTeamJsonLd }}
         />
         <ClientLayout initialLocale={initialLocale}>{children}</ClientLayout>

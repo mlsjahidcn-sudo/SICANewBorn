@@ -10,6 +10,8 @@ export const fudanUniversityGuide: LocalizedGuide = {
     title: 'Fudan University — Shanghai\'s Flagship, Programs & International Admissions',
     description:
       'Fudan University (复旦) — Shanghai\'s flagship comprehensive research university. History, signature programs (humanities, sciences, medicine), English-taught options, CSCA combinations, scholarships, cost, and practical guidance.',
+    seoTitle: 'Fudan University — Shanghai\'s Flagship',
+    seoDescription: 'Fudan University (复旦) — Shanghai\'s flagship comprehensive research university.',
     subtitle:
       'Fudan University is one of China\'s oldest and most prestigious universities, located in Shanghai. With a tradition in humanities, journalism, economics, and basic sciences, and a strong medical school through the merger with Shanghai Medical University, Fudan offers a full range of programs for international applicants. The Shanghai location is itself a major draw — China\'s financial and cultural center with deep international connections.',
     stats: [

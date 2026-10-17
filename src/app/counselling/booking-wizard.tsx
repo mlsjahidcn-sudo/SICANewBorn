@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   AlertCircle,
@@ -49,6 +49,19 @@ export function BookingWizard() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [slots, setSlots] = useState<SlotOption[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
+  /**
+   * True once a slot fetch for the selected date has RESOLVED.
+   *
+   * Needed because "we have not asked the server yet" and "we asked and
+   * there is nothing" are different states, and the old code collapsed
+   * them: `slotsLoading` started `false` and `slots` started `[]`, so
+   * the first render hit the `slots.length === 0` branch and told the
+   * visitor "No open slots on this day — please try another date"
+   * BEFORE any request had been made. That text was in the
+   * server-rendered HTML of /counselling — the primary conversion page
+   * — so it was the first thing a student (and every crawler) saw.
+   */
+  const [slotsFetched, setSlotsFetched] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<SlotOption | null>(null);
 
   const [step, setStep] = useState<'datetime' | 'details' | 'success'>('datetime');
@@ -64,18 +77,34 @@ export function BookingWizard() {
   const [submitting, setSubmitting] = useState(false);
   const [booked, setBooked] = useState<BookedInfo | null>(null);
 
-  const loadSlots = useCallback(async (date: string) => {
-    setSlotsLoading(true);
-    try {
-      const res = await fetch(`/api/counselling/slots?date=${encodeURIComponent(date)}`);
-      const data = (await res.json()) as { slots?: SlotOption[] };
-      setSlots(data.slots ?? []);
-    } catch {
-      setSlots([]);
-    } finally {
-      setSlotsLoading(false);
-    }
+  /** Raw fetch, no state mutation — reused by the availability probe. */
+  const fetchSlots = useCallback(async (date: string): Promise<SlotOption[]> => {
+    const res = await fetch(`/api/counselling/slots?date=${encodeURIComponent(date)}`);
+    const data = (await res.json()) as { slots?: SlotOption[] };
+    return data.slots ?? [];
   }, []);
+
+  /** Cache so the probe and the selection effect don't double-fetch. */
+  const slotsCache = useRef<Map<string, SlotOption[]>>(new Map());
+
+  const loadSlots = useCallback(
+    async (date: string) => {
+      setSlotsLoading(true);
+      setSlotsFetched(false);
+      try {
+        const cached = slotsCache.current.get(date);
+        const result = cached ?? (await fetchSlots(date));
+        slotsCache.current.set(date, result);
+        setSlots(result);
+      } catch {
+        setSlots([]);
+      } finally {
+        setSlotsLoading(false);
+        setSlotsFetched(true);
+      }
+    },
+    [fetchSlots],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -86,7 +115,36 @@ export function BookingWizard() {
         if (cancelled) return;
         const list = data.dates ?? [];
         setDates(list);
-        if (list.length > 0) setSelectedDate(list[0]);
+        if (list.length === 0) return;
+
+        // Auto-select the first date that actually has an open slot.
+        //
+        // `list[0]` is simply the first working day, which may be fully
+        // booked — in which case the default view was an empty state
+        // telling the visitor to try another date, on the page whose
+        // entire job is to get them to pick a time.
+        //
+        // Probe a bounded number of dates so a fully-booked morning
+        // does not leave the default view empty. The probe result is
+        // cached, so the selection effect reuses it instead of
+        // re-fetching.
+        const PROBE_LIMIT = 5;
+        let chosen: string | null = null;
+        for (const date of list.slice(0, PROBE_LIMIT)) {
+          if (cancelled) return;
+          try {
+            const probe = await fetchSlots(date);
+            slotsCache.current.set(date, probe);
+            if (probe.some((s) => s.available)) {
+              chosen = date;
+              break;
+            }
+          } catch {
+            // Network hiccup on one date — fall through to the next.
+          }
+        }
+        if (cancelled) return;
+        setSelectedDate(chosen ?? list[0]);
       } catch {
         if (!cancelled) setDates([]);
       } finally {
@@ -326,9 +384,7 @@ export function BookingWizard() {
               <Loader2 className="h-4 w-4 animate-spin" />
               {t('counselling.loadingSlots')}
             </div>
-          ) : slots.length === 0 ? (
-            <div className="text-sm text-gray-500 py-3">{t('counselling.noSlots')}</div>
-          ) : (
+          ) : slots.length > 0 ? (
             <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
               {slots.map((slot) => (
                 <button
@@ -372,7 +428,9 @@ export function BookingWizard() {
                 </button>
               ))}
             </div>
-          )}
+          ) : slotsFetched && selectedDate ? (
+            <div className="text-sm text-gray-500 py-3">{t('counselling.noSlots')}</div>
+          ) : null}
 
           <button
             type="button"

@@ -12,6 +12,8 @@ export const hsk3PrepTimelineGuide: LocalizedGuide = {
     title: 'HSK 3.0 prep timeline — what to do at every stage of your application',
     description:
       'Branched by where you are now: just heard about HSK 3.0, already sat 2.0, or mid-prep. Sequenced against the March 2027 and September 2027 intake deadlines with monthly task checklists for each path.',
+    seoTitle: 'HSK 3.0 prep timeline — what to do at every stage',
+    seoDescription: 'Branched by where you are now: just heard about HSK 3.0, already sat 2.0, or mid-prep.',
     subtitle:
       'The HSK 3.0 transition makes prep timing more consequential than ever. With the December 13, 2026 format switch, applicants targeting March 2027 intake must prep for 3.0; applicants targeting September 2027 intake definitely prep for 3.0; and applicants between intakes can use a longer prep window. This guide provides branched prep timelines for three starting points (no Chinese yet, basic Chinese, advanced Chinese), monthly task checklists for each path, and the calendar anchors that should drive your test date.',
     stats: [

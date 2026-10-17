@@ -18,6 +18,8 @@ export const cscaHumanitiesChineseGuide: LocalizedGuide = {
     title: 'CSCA Professional Chinese — Humanities Track: Format, Vocabulary, and Prep for Business, Law & Arts Applicants',
     description:
       'The Humanities Chinese track of the CSCA Professional Chinese subject: 80 multiple-choice questions in ~60 minutes testing academic Chinese for humanities and social-science degrees. Who picks it, the vocabulary layer, and the HSK-to-CSCA bridging plan.',
+    seoTitle: 'CSCA Professional Chinese — Humanities Track',
+    seoDescription: 'The Humanities Chinese track of the CSCA Professional Chinese subject: 80 multiple-choice questions in ~60 minutes testing academic Chinese for humanities',
     subtitle:
       'Professional Chinese is the language half of the CSCA, offered in two tracks — Humanities (人文中文) and STEM (理工中文). The Humanities track serves applicants to business, economics, law, humanities, social sciences, and arts degrees: 80 multiple-choice questions in about 60 minutes, scored out of 100. It tests academic and professional Chinese — reading passages and vocabulary from the domains you will study — beyond general proficiency as measured by HSK. HSK 4–5 vocabulary is the floor; domain terminology is the differentiator.',
     stats: [
@@ -257,6 +259,8 @@ export const cscaHumanitiesChineseGuide: LocalizedGuide = {
     title: 'CSCA 专业中文——人文中文轨：题型、词汇与商科/法律/艺术类申请者备考方案',
     description:
       'CSCA 专业中文的人文中文轨：约 60 分钟 80 道选择题，考查人文社科类学位所需的学术中文。适用人群、词汇层次与 HSK 到 CSCA 的衔接计划。',
+    seoTitle: 'CSCA 专业中文——人文中文轨',
+    seoDescription: 'CSCA 专业中文的人文中文轨：约 60 分钟 80 道选择题，考查人文社科类学位所需的学术中文。适用人群、词汇层次与 HSK 到 CSCA 的衔接计划。',
     subtitle:
       '专业中文是 CSCA 的语言科目，分人文中文与理工中文两轨。人文中文轨面向商科、经济学、法律、人文社科与艺术类学位申请者：约 60 分钟 80 道选择题、满分 100。它考的是学术与专业中文——来自你将攻读领域的语篇与词汇——超出 HSK 所测的通用水平。HSK 4-5 词汇是地板；领域术语才是拉开差距处。',
     stats: [

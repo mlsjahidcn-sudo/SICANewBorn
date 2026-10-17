@@ -20,6 +20,8 @@ export const chinaDormsCostGuide: LocalizedGuide = {
     title: 'China University Dorms: What to Expect and What It Costs (2027)',
     description:
       'On-campus dorms for international students in China — room types (single, double, quad, suite), shared vs in-suite bathrooms, the international-dorm vs local-dorm distinction, what\'s in the room (WiFi, washer, kettle) and what isn\'t, full cost tables by city tier, and when to live off-campus.',
+    seoTitle: 'China University Dorms',
+    seoDescription: 'On-campus dorms for international students in China — room types (single, double, quad, suite), shared vs in-suite bathrooms, the international-dorm vs',
     subtitle:
       'Most international students in China live in university dorms in year one. The dorm system is standardized across Chinese universities but the room type, the in-room amenities, and whether the building is reserved for international students all affect cost and comfort. This guide maps the full dorm landscape — from the ¥800/semester quad room with a floor-shared bathroom up to the ¥2,500/semester single suite in an international dorm — so you can pick the right room when you apply, not the leftover.',
     stats: [
@@ -306,6 +308,8 @@ export const chinaDormsCostGuide: LocalizedGuide = {
     title: '2027 中国大学宿舍：实际什么样、多少钱、怎么选',
     description:
       '中国大学国际生宿舍——房型（单人间、双人间、四人间、套间）、公共与独立卫浴、留学生楼与本土学生楼的差异、房内配置（WiFi、洗衣机、电水壶）与不配置、按城市分级的完整费用表，以及什么时候该搬出校园租房。',
+    seoTitle: '2027 中国大学宿舍：实际什么样、多少钱、怎么选',
+    seoDescription: '中国大学国际生宿舍——房型（单人间、双人间、四人间、套间）、公共与独立卫浴、留学生楼与本土学生楼的差异、房内配置（WiFi、洗衣机、电水壶）与不配置、按城市',
     subtitle:
       '多数国际生第一年住校内宿舍。宿舍系统在中国大学是标准化的，但房型、房内设施以及宿舍楼是否专供国际生会影响成本与舒适度。本指南绘制完整住宿图景——从 800 元/学期的四人间配楼层公卫，到 2,500 元/学期的单人间套间带独立卫浴的留学生楼——让你申请时选对房型，而不是挑剩下的。',
     stats: [

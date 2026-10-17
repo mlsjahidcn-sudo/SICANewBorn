@@ -19,6 +19,8 @@ export const chinaVsRussiaMbbsGuide: LocalizedGuide = {
     title: 'Study MBBS in China vs Russia — Full Comparison for International Students (2026)',
     description:
       'Side-by-side comparison of MBBS in China vs Russia — duration, tuition, recognition (MCI/NMC, WHO, FAIMER, ECFMG), clinical exposure, language, climate, and post-MBBS career paths.',
+    seoTitle: 'Study MBBS in China vs Russia',
+    seoDescription: 'Side-by-side comparison of MBBS in China vs Russia — duration, tuition, recognition (MCI/NMC, WHO, FAIMER, ECFMG), clinical exposure, language, climate',
     subtitle:
       'China and Russia are the two largest destinations for international MBBS students — together they host 60,000+ international medical students from India, Pakistan, Bangladesh, Nigeria, and beyond. This page compares them across the dimensions that matter for your career.',
     stats: [
@@ -336,6 +338,8 @@ export const chinaVsRussiaMbbsGuide: LocalizedGuide = {
     title: '2026 中国 vs 俄罗斯 MBBS——国际生完整对比',
     description:
       '中国与俄罗斯 MBBS 全方位对比——学制、学费、认证（MCI/NMC、WHO、FAIMER、ECFMG）、临床实习、语言、气候、毕业 MBBS 后的职业路径。',
+    seoTitle: '2026 中国 vs 俄罗斯 MBBS——国际生完整对比',
+    seoDescription: '中国与俄罗斯 MBBS 全方位对比——学制、学费、认证（MCI/NMC、WHO、FAIMER、ECFMG）、临床实习、语言、气候、毕业 MBBS',
     subtitle:
       '中国与俄罗斯是国际 MBBS 学生的两大目的地——共有 60,000+ 名来自印度、巴基斯坦、孟加拉、尼日利亚等的国际医学生。本文在影响你职业的各维度上对比两者。',
     stats: [

@@ -13,16 +13,16 @@ export async function generateMetadata(): Promise<Metadata> {
   const locale: Locale = cookieStore.get('sica-locale')?.value === 'zh' ? 'zh' : 'en';
   const guide = hsk3PrepTimelineGuide[locale];
   return {
-    title: guide.title,
-    description: guide.description,
+    title: guide.seoTitle ?? guide.title,
+    description: guide.seoDescription ?? guide.description,
     alternates: await buildLanguageAlternates('/hsk-3-0-prep-timeline'),
     openGraph: {
-      title: guide.title,
-      description: guide.description,
+      title: guide.seoTitle ?? guide.title,
+      description: guide.seoDescription ?? guide.description,
       url: `${SITE_URL}/hsk-3-0-prep-timeline`,
       type: 'article',
     },
-    twitter: { card: 'summary_large_image', title: guide.title, description: guide.description },
+    twitter: { card: 'summary_large_image', title: guide.seoTitle ?? guide.title, description: guide.seoDescription ?? guide.description },
   };
 }
 

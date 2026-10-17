@@ -23,6 +23,8 @@ export const openChineseBankAccountGuide: LocalizedGuide = {
     title: 'How International Students Open a Chinese Bank Account — Banks, Documents, and First-30-Day Reality',
     description:
       'The most-searched banking gap for international students: which Chinese bank, what documents, branch vs app paths, monthly-fee traps, the deposit minimums, and what a student can do in the first 30 days before an account is fully operational.',
+    seoTitle: 'How International Students Open a Chinese Bank',
+    seoDescription: 'The most-searched banking gap for international students: which Chinese bank, what documents, branch vs app paths, monthly-fee traps, the deposit',
     subtitle:
       'A Chinese bank account is the gateway to tuition payment, dorm deposits, Alipay/WeChat Pay setup, monthly stipends, and the payment apps that don\'t work without one — and yet the process differs wildly between the Big Four, regional banks, and the new app-only paths. This deep dive covers what every international student should know: which bank to pick, what documents you actually need (passport, admission letter, residence permit), how branch visits vs in-app signup work for foreigners, the monthly-fee and minimum-balance traps, and the practical first-30-day reality for an account that technically exists but cannot receive or move money yet.',
     stats: [
@@ -300,6 +302,8 @@ export const openChineseBankAccountGuide: LocalizedGuide = {
     title: '国际学生如何开中国银行账户——银行选择、材料与「前 30 天」现实',
     description:
       '国际学生搜索最多的银行缺口：选哪家银行、带什么材料、网点 vs App 路径、月费陷阱、最低存款，以及在账户完全可用前的 30 天里你能做什么。',
+    seoTitle: '国际学生如何开中国银行账户——银行选择',
+    seoDescription: '国际学生搜索最多的银行缺口：选哪家银行、带什么材料、网点 vs App 路径、月费陷阱、最低存款，以及在账户完全可用前的 30 天里你能做什么。',
     subtitle:
       '中国银行账户是缴学费、缴宿舍押金、设置支付宝/微信支付、领取月度补贴，以及离开它就玩不转的各种支付 App 的入口——可流程在四大行、地区银行与新 App 路径之间差异巨大。本文深入覆盖每位国际学生需要知道的事：选哪家银行、到底要哪些文件（护照、录取通知书、居留许可）、外籍人士的网点办理 vs App 流程、月费与最低存款陷阱、以及「账户开了但 30 天内还无法收款或转账」的实务现实。',
     stats: [

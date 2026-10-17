@@ -25,6 +25,8 @@ export const hunanVsYunnanGuide: LocalizedGuide = {
     title: 'Hunan vs Yunnan: Which Province Is Better for International Students?',
     description:
       'Hunan vs Yunnan for international students: cost, climate, language, top universities, programs, international student community, scholarships, and which fits which student profile.',
+    seoTitle: 'Hunan vs Yunnan: Which Province Is Better',
+    seoDescription: 'Hunan vs Yunnan for international students: cost, climate, language, top universities, programs, international student community, scholarships, and which',
     subtitle:
       'Two mid-tier Chinese provinces that international students often compare. Hunan (Changsha) has the Yangtze-valley climate + dense university network (Hunan University, Central South University); Yunnan (Kunming) has the eternal-spring climate + lower cost + a smaller but tight international student community (Yunnan University, KUST, Kunming Medical). Both have 211 / Double First-Class options, both have CSC pathways, both have unique program strengths. The choice comes down to cost tolerance, climate preference, and program fit.',
     stats: [

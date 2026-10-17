@@ -19,6 +19,8 @@ export const cscPakistanGuide: LocalizedGuide = {
     title: 'CSC Scholarship for Pakistani Students 2027',
     description:
       'CSC (Chinese Government Scholarship) for Pakistani students 2027: the HEC route vs the university route, deadlines, CSCA requirement, documents, and common mistakes.',
+    seoTitle: 'CSC Scholarship for Pakistani Students 2027',
+    seoDescription: 'CSC (Chinese Government Scholarship) for Pakistani students 2027: the HEC route vs the university route, deadlines, CSCA requirement, documents, and',
     subtitle:
       'Pakistani applicants reach the Chinese Government Scholarship (CSC) through two routes: the HEC route (agency no. 5861) with a reported earlier December-January deadline [verify], and the university (Type B) route with January-April 2027 deadlines that vary by university. Bachelor\'s applicants need a CSCA score — the next sittings are November 2026, December 2026, and January 2027.',
     stats: [

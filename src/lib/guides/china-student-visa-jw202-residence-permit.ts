@@ -19,6 +19,8 @@ export const chinaVisaJw202Guide: LocalizedGuide = {
     title: 'China Student Visa: X1 vs X2, the JW202 Form, and the Residence Permit (2027)',
     description:
       'The X1 vs X2 student visa decision (180-day rule), the JW202 form (what it is, who issues it, when it arrives), the 30-day residence permit conversion after arrival, biometrics at the Public Security Bureau, extensions, dependents (spouse + child rules), and the most common rejection reasons for the application.',
+    seoTitle: 'China Student Visa: X1 vs X2, the JW202 Form',
+    seoDescription: 'The X1 vs X2 student visa decision (180-day rule), the JW202 form (what it is, who issues it, when it arrives), the 30-day residence permit conversion',
     subtitle:
       'The China student visa has two flavors — X1 for programs longer than 180 days (almost every bachelor\'s, master\'s, PhD, and language program that\'s a year or longer) and X2 for short programs. Behind the X1 is the JW202 form, an official Chinese government document your host university issues. After you land, the 30-day residence permit conversion is the step where students fail the most often. This guide walks every step — from the X1/X2 decision through the JW202 arrival, biometrics, residence permit, and renewal — with the operational details that the official pages leave out.',
     stats: [
@@ -347,6 +349,8 @@ export const chinaVisaJw202Guide: LocalizedGuide = {
     title: '2027 中国学生签证：X1 vs X2、JW202 表、居留许可全指南',
     description:
       'X1 与 X2 学生签证的 180 天判断规则、JW202 表（是什么、谁发、何时到）、抵华后 30 天居留许可转换、公安出入境生物信息采集、续签、家属（配偶 + 子女）规则，以及最常见的拒签原因。',
+    seoTitle: '2027 中国学生签证：X1 vs X2、JW202 表',
+    seoDescription: 'X1 与 X2 学生签证的 180 天判断规则、JW202 表（是什么、谁发、何时到）、抵华后 30',
     subtitle:
       '中国学生签证分两种——X1 给超过 180 天的项目（几乎所有本科、硕士、博士与 1 年以上语言项目），X2 给短期项目。X1 背后是 JW202 表，由接收大学正式出具。抵华后 30 天内要换成居留许可，这是国际生最容易踩坑的一步。本指南带你走每一步——从 X1/X2 判断到 JW202 到达、生物信息、居留许可、续签——加上官方页面没说清的操作细节。',
     stats: [

@@ -13,6 +13,8 @@ export const applicationGuide: LocalizedGuide = {
     title: 'How to Apply to Chinese Universities: Step-by-Step (2026)',
     description:
       'Step-by-step application guide for Chinese universities: timeline, required documents, language tests, application channels, and what to do after you are admitted.',
+    seoTitle: 'How to Apply to Chinese Universities',
+    seoDescription: 'Step-by-step application guide for Chinese universities: timeline, required documents, language tests, application channels, and what to do after you are',
     subtitle:
       'Every document, every deadline, every form — mapped out so nothing falls through the cracks.',
     stats: [

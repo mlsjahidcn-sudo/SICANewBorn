@@ -52,6 +52,25 @@ export interface Guide {
   title: string;
   /** Meta description (max ~155 chars). */
   description: string;
+  /**
+   * SEO title, used for <title> / og:title / twitter:title.
+   *
+   * The `title` above is the visible H1 — a headline, which can run to
+   * 100+ characters. A search result truncates around 60, and a
+   * truncated title reads as a fragment ("Best MBA Programs in China
+   * for International"). So the metadata title is authored separately
+   * and falls back to `title` when a guide has not needed one.
+   *
+   * Kept in the guide data rather than in each page.tsx so the two
+   * never drift, and so a guide can be re-slugged without touching
+   * its metadata.
+   */
+  seoTitle?: string;
+  /**
+   * SEO meta description, used for <meta name="description"> and the
+   * og/twitter description. Falls back to `description`.
+   */
+  seoDescription?: string;
   /** Above-title eyebrow text. */
   eyebrow: string;
   /** Subtitle below H1. */

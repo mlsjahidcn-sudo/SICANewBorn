@@ -18,6 +18,8 @@ export const hsk3VsHsk2Guide: LocalizedGuide = {
     title: 'HSK 3.0 vs HSK 2.0 — what is changing and when',
     description:
       'The new HSK 3.0 syllabus became the official standard in July 2026; the full format switch is December 13, 2026. This guide explains the six-to-nine level shift, the vocabulary cuts at levels 1–5, the new speaking and writing components, and what current prep materials are out of date.',
+    seoTitle: 'HSK 3.0 vs HSK 2.0 — what is changing and when',
+    seoDescription: 'The new HSK 3.0 syllabus became the official standard in July 2026; the full format switch is December 13, 2026.',
     subtitle:
       'HSK 3.0 is the most consequential update to the Chinese proficiency test since its launch in 1984. The shift from a six-level to a nine-level scale, the vocabulary reductions at the lower levels, and the new speaking and writing components change which materials to use, which prep timelines to plan against, and which test centers to look for. Candidates searching "HSK 3.0" today still land on the existing /guides/hsk which describes the 2.0 syllabus — that page is the single most out-of-date SEO liability on the SICA domain.',
     stats: [
@@ -254,6 +256,8 @@ export const hsk3VsHsk2Guide: LocalizedGuide = {
     title: 'HSK 3.0 与 2.0 — 变化内容与时间表',
     description:
       'HSK 3.0 已于 2026 年 7 月正式成为官方标准,12 月 13 日完成全部格式切换。本文解读六级到九级的转变、L1–L5 词汇量的削减、新增的口语与写作部分、以及现行备考资料的过时之处。',
+    seoTitle: 'HSK 3.0 与 2.0 — 变化内容与时间表',
+    seoDescription: 'HSK 3.0 已于 2026 年 7 月正式成为官方标准,12 月 13 日完成全部格式切换。本文解读六级到九级的转变、L1–L5',
     subtitle:
       'HSK 3.0 是 1984 年 HSK 推出以来最重大的更新。从六级到九级的扩展、L1–L5 词汇量的削减、新增的口语和写作部分,共同改变了应使用的备考资料、备考时间线、以及应寻找的考点。仍在搜索"HSK 3.0"的考生目前会进入现有的 /guides/hsk 页面 — 该页面介绍的仍是 2.0 内容,是 SICA 域名上最过时的 SEO 隐患。',
     stats: [

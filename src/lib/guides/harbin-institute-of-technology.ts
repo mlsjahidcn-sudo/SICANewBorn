@@ -12,6 +12,8 @@ export const harbinInstituteOfTechnologyGuide: LocalizedGuide = {
     title: 'Harbin Institute of Technology (HIT) — Engineering Powerhouse, Programs & International Admissions',
     description:
       'Harbin Institute of Technology (HIT, 哈工大) — one of China\'s most internationally diverse engineering universities. History, signature programs (aerospace, mechanical, materials, computer), English-taught options, CSCA combinations, scholarships (CSC + Heilongjiang + HIT-specific), cost, and practical guidance.',
+    seoTitle: 'Harbin Institute of Technology (HIT)',
+    seoDescription: 'Harbin Institute of Technology (HIT, 哈工大) — one of China\'s most internationally diverse engineering universities.',
     subtitle:
       'Harbin Institute of Technology is one of China\'s top engineering universities, founded in 1920 in Harbin — a Chinese engineering tradition rooted in Russian and Soviet influences, with particular strength in aerospace, mechanical engineering, materials science, and computer science. With strong international programs and a sizable international student community, HIT is a distinctive choice for international applicants considering engineering in northeastern China, with growing connections to Belt-and-Road partner countries.',
     stats: [
@@ -310,6 +312,8 @@ export const harbinInstituteOfTechnologyGuide: LocalizedGuide = {
     title: '哈工大——工程强校、院系与留学生申请',
     description:
       '哈尔滨工业大学（哈工大, HIT）——中国国际化程度最高的工科院校之一。历史、特色专业（航天、机械、材料、计算机）、英语授课选项、CSCA 组合、奖学金（黑龙江省 + 哈工大自有）、费用与实务指引。',
+    seoTitle: '哈工大——工程强校、院系与留学生申请',
+    seoDescription: '哈尔滨工业大学（哈工大, HIT）——中国国际化程度最高的工科院校之一。历史、特色专业（航天、机械、材料、计算机）、英语授课选项、CSCA',
     subtitle:
       '哈尔滨工业大学是中国顶级工程大学，1920 年创立于哈尔滨——中国工程教育的俄苏渊源传统，在航天、机械工程、材料科学、计算机科学方面尤为强势。国际项目规模大、国际学生群体庞大，是考虑东北工程教育的国际申请者的独特选择，与一带一路合作伙伴国家的联系日益加深。',
     stats: [

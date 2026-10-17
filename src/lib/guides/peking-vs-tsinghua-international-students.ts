@@ -19,6 +19,8 @@ export const pekingVsTsinghuaGuide: LocalizedGuide = {
     title: 'Peking vs Tsinghua for International Students: 2027 Decision Guide',
     description:
       'Peking University vs Tsinghua University for international bachelor\'s, master\'s, and PhD applicants — rankings, program mix, language of instruction, admissions selectivity, campus life, scholarship competitiveness, employability outcomes, and a decision framework that actually decides.',
+    seoTitle: 'Peking vs Tsinghua for International Students: 2027',
+    seoDescription: 'Peking University vs Tsinghua University for international bachelor\'s, master\'s, and PhD applicants — rankings, program mix, language of instruction',
     subtitle:
       'Peking and Tsinghua sit 3 km apart in northwest Beijing and rank in the top 20 of every major global ranking — but the experience of studying at each, and what they look for, is materially different. Peking is a comprehensive university with strengths across humanities, social sciences, and basic sciences; Tsinghua is an engineering-and-applied-science powerhouse with a fast-rising public policy and business school. Both run English-medium programs; both require the CSCA from the 2026 intake; both have selective admissions. Here is the international-student-centered comparison and the decision framework.',
     stats: [

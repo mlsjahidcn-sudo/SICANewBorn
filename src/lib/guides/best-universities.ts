@@ -17,6 +17,8 @@ export const bestUniversitiesGuide: LocalizedGuide = {
     title: 'Best Universities in China for International Students 2027',
     description:
       'Chinese universities ranked for international students by domestic + QS standing, English-taught program options, and a free 10-minute consultation.',
+    seoTitle: 'Best Universities in China',
+    seoDescription: 'Chinese universities ranked for international students by domestic + QS standing, English-taught program options, and a free 10-minute consultation.',
     subtitle:
       'How to read three independent ranking systems (domestic, QS, ARWU), how to match a university to your goals, and which schools have the strongest English-taught programs.',
     stats: [

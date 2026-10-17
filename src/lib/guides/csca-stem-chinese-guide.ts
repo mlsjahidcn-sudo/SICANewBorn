@@ -17,6 +17,8 @@ export const cscaStemChineseGuide: LocalizedGuide = {
     title: 'CSCA Professional Chinese — STEM Track: Technical Chinese for Engineering & Science Applicants',
     description:
       'The STEM Chinese track of the CSCA Professional Chinese subject: 80 MCQs in ~60 minutes testing technical and academic Chinese for engineering and science degrees. A starter glossary, reading-speed drills, and the two-birds strategy with Physics and Chemistry prep.',
+    seoTitle: 'CSCA Professional Chinese — STEM Track',
+    seoDescription: 'The STEM Chinese track of the CSCA Professional Chinese subject: 80 MCQs in ~60 minutes testing technical and academic Chinese for engineering and science',
     subtitle:
       'Professional Chinese is the language half of the CSCA, offered in two tracks. The STEM track (理工中文) serves applicants to engineering, computer science, physical sciences, and technical degrees: 80 multiple-choice questions in about 60 minutes, scored out of 100. It tests academic Chinese in technical contexts — textbook passages, scenario descriptions, and the vocabulary of math, physics, and chemistry in Chinese. The hidden advantage: preparing this track IS preparing your Physics and Chemistry reading comprehension — one effort, two subjects.',
     stats: [
@@ -265,6 +267,8 @@ export const cscaStemChineseGuide: LocalizedGuide = {
     title: 'CSCA 专业中文——理工中文轨：工科与理科申请者的技术中文',
     description:
       'CSCA 专业中文的理工中文轨：约 60 分钟 80 道选择题，考查工科与理科学位所需的技术学术中文。入门术语表、阅读速度训练，以及与物理化学备考的「一石二鸟」策略。',
+    seoTitle: 'CSCA 专业中文——理工中文轨：工科与理科申请者的技术中文',
+    seoDescription: 'CSCA 专业中文的理工中文轨：约 60 分钟 80 道选择题，考查工科与理科学位所需的技术学术中文。入门术语表、阅读速度训练，以及与物理化学备考的「一石二',
     subtitle:
       '专业中文是 CSCA 的语言科目，分两轨。理工中文轨面向工科、计算机、物理科学与技术类学位申请者：约 60 分钟 80 道选择题、满分 100。它考技术语境下的学术中文——教科书语篇、情景描述，以及中文的数理化词汇。隐藏优势：备考这条轨就是在备考你物理化学试卷的读题理解——一份努力，两科受益。',
     stats: [

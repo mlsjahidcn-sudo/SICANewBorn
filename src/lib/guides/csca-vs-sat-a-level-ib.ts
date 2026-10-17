@@ -17,6 +17,8 @@ export const cscaVsInternationalGuide: LocalizedGuide = {
     title: 'CSCA vs SAT, A-Level & IB — Does China Accept International Test Scores?',
     description:
       'The CSCA is China\'s own standardized admissions test — SAT, A-Level, and IB scores complement but do not replace it. Full comparison, what transfers, how Chinese exam style differs, and what gap-year candidates should do.',
+    seoTitle: 'CSCA vs SAT, A-Level & IB',
+    seoDescription: 'The CSCA is China\'s own standardized admissions test — SAT, A-Level, and IB scores complement but do not replace it.',
     subtitle:
       'A question every internationally-schooled applicant asks: "I already have SAT / A-Levels / IB — why another exam?" The short answer: the CSCA was created precisely because those scores measure different things and couldn\'t be compared across China\'s applicant pool. International qualifications remain your academic record — the CSCA sits on top as the China-specific standardized signal. Content overlaps heavily; format, speed, and no-calculator rules are where candidates lose points.',
     stats: [
@@ -261,6 +263,8 @@ export const cscaVsInternationalGuide: LocalizedGuide = {
     title: 'CSCA 与 SAT、A-Level、IB——中国接受国际考试成绩吗？',
     description:
       'CSCA 是中国自己的标准化入学考试——SAT、A-Level、IB 成绩是补充但不能替代它。完整对比、哪些可迁移、中国考风差异，以及间隔年考生怎么做。',
+    seoTitle: 'CSCA 与 SAT、A-Level',
+    seoDescription: 'CSCA 是中国自己的标准化入学考试——SAT、A-Level、IB 成绩是补充但不能替代它。完整对比、哪些可迁移、中国考风差异，以及间隔年考生怎么做。',
     subtitle:
       '每个国际学校背景的申请者都会问：「我已经有 SAT / A-Level / IB 了，为什么还要再考？」简短回答：CSCA 的创立正是因为这些成绩测的东西不同、无法在中国申请者池内互相比较。国际学历仍是你学业档案的一部分——CSCA 叠加其上，作为中国特定的标准化信号。内容重合度高；形式、速度与无计算器规则才是丢分处。',
     stats: [

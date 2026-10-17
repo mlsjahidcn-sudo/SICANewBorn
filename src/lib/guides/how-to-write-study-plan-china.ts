@@ -30,6 +30,8 @@ export const howToWriteStudyPlanGuide: LocalizedGuide = {
     title: 'How to Write a Study Plan for a Chinese University Application (With Example Structure)',
     description:
       'Study plan for Chinese university applications 2027: the 6-section structure Chinese reviewers reward, before/after examples, CSC vs Type B length targets, and the tailoring that wins.',
+    seoTitle: 'How to Write a Study Plan for a Chinese University',
+    seoDescription: 'Study plan for Chinese university applications 2027: the 6-section structure Chinese reviewers reward, before/after examples, CSC vs Type B length',
     subtitle:
       'Every Chinese university application — CSC (Chinese Government Scholarship), Type B (university direct), or self-funded — asks for a study plan / personal statement. Chinese reviewers reward three things above all: clarity of academic background, fit with the specific program, and a concrete plan for what you\'ll do after graduation. This guide shows the 6-section structure that hits all three, with before/after examples + tailoring for both routes.',
     stats: [

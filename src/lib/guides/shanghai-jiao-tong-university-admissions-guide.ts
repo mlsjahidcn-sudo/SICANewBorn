@@ -18,6 +18,8 @@ export const shanghaiJiaoTongUniversityAdmissionsGuide: LocalizedGuide = {
     title: 'Shanghai Jiao Tong University admissions — step-by-step guide for international students',
     description:
       'How to apply to SJTU as an international student: routes, deadlines, documents, CSCA combinations by school, language requirements, the UM-SJTU Joint Institute stream, scholarship stack, and what makes a competitive applicant.',
+    seoTitle: 'Shanghai Jiao Tong University admissions',
+    seoDescription: 'How to apply to SJTU as an international student: routes, deadlines, documents, CSCA combinations by school, language requirements, the UM-SJTU Joint',
     subtitle:
       'Shanghai Jiao Tong University admits international bachelor\'s and master\'s applicants through a study-plan-based admissions process with the CSCA exam mandatory from 2026. SJTU has a distinctive two-track structure: the standard SJTU ISO application serves most schools, while the UM-SJTU Joint Institute (JI) — the English-medium engineering partnership with the University of Michigan — runs its own admissions stream with separate deadlines and English-only requirements. This guide covers both: routes, deadlines, document checklist, CSCA combinations by SJTU school, language thresholds (HSK / IELTS / TOEFL), the CSC + SJTU + Shanghai Government scholarship stack, interview prep, and the profile components that move a borderline applicant to admit.',
     stats: [

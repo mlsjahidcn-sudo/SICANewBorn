@@ -12,6 +12,8 @@ export const wuhanUniversityGuide: LocalizedGuide = {
     title: 'Wuhan University — Comprehensive Flagship on the Yangtze, Programs & International Admissions',
     description:
       'Wuhan University (武大, WHU) — one of China\'s most beautiful and prestigious comprehensive universities. History, signature programs (sciences, engineering, humanities, medicine), English-taught options, CSCA combinations, scholarships (CSC + Hubei provincial + WHU-specific), cost, and practical guidance.',
+    seoTitle: 'Wuhan University — Comprehensive Flagship',
+    seoDescription: 'Wuhan University (武大, WHU) — one of China\'s most beautiful and prestigious comprehensive universities.',
     subtitle:
       'Wuhan University is one of China\'s oldest comprehensive universities, with a long tradition in sciences, engineering, humanities, and medicine. Located in Wuhan — the largest city in central China and a growing tech and education hub — WHU is famous for its beautiful campus on the shores of East Lake and its strong international programs. This profile covers what international applicants need: WHU\'s schools and signature programs, CSCA subject combinations, English-taught master\'s options, the scholarship landscape (CSC, Hubei provincial scholarship, Wuhan University scholarships), cost of attendance, and practical application timeline.',
     stats: [
@@ -317,6 +319,8 @@ export const wuhanUniversityGuide: LocalizedGuide = {
     title: '武汉大学——长江边的综合性旗舰、院系与留学生申请',
     description:
       '武汉大学（武大, WHU）——中国最美、最负盛名的综合性大学之一。历史、特色专业（理科、工科、人文、医学）、英语授课选项、CSCA 组合、奖学金（CSC + 湖北省 + 武大自有）、费用与实务指引。',
+    seoTitle: '武汉大学——长江边的综合性旗舰、院系与留学生申请',
+    seoDescription: '武汉大学（武大, WHU）——中国最美、最负盛名的综合性大学之一。历史、特色专业（理科、工科、人文、医学）、英语授课选项、CSCA 组合、奖学金（CSC',
     subtitle:
       '武汉大学是中国最古老的综合性大学之一，在理科、工科、人文、医学方面有传统。位于中国中部最大城市武汉——新兴的科技与教育中心——武大以东湖岸边的美丽校园与强大的国际项目闻名。本简介覆盖国际申请者需要的信息：武大学院与特色专业、CSCA 申请科目、英语授课硕博项目、奖学金图景（CSC、湖北省、武大自有）、留学费用，以及实用申请时间线。',
     stats: [

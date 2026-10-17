@@ -21,16 +21,16 @@ export async function generateMetadata(): Promise<Metadata> {
   const locale: Locale = cookieStore.get('sica-locale')?.value === 'zh' ? 'zh' : 'en';
   const guide = chinaApplicationDeadlinesGuide[locale];
   return {
-    title: { absolute: guide.title },
-    description: guide.description,
+    title: { absolute: guide.seoTitle ?? guide.title },
+    description: guide.seoDescription ?? guide.description,
     alternates: await buildLanguageAlternates('/china-university-application-deadlines'),
     openGraph: {
-      title: guide.title,
-      description: guide.description,
+      title: guide.seoTitle ?? guide.title,
+      description: guide.seoDescription ?? guide.description,
       url: `${SITE_URL}/china-university-application-deadlines`,
       type: 'article',
     },
-    twitter: { card: 'summary_large_image', title: guide.title, description: guide.description },
+    twitter: { card: 'summary_large_image', title: guide.seoTitle ?? guide.title, description: guide.seoDescription ?? guide.description },
   };
 }
 

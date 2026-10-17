@@ -152,6 +152,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'why.global': 'Global Opportunities',
     'why.global.desc': 'A Chinese degree opens doors across Asia and beyond, with growing demand for China-savvy professionals worldwide.',
     'why.learnMore': 'Learn More About China',
+    'why.trustLine':
+      "SICA's team has 10 years of experience in study-in-China admissions. SICA is part of Ednex Group LTD (UK).",
     // Popular Fields
     'fields.title': 'Popular Fields of Study',
     'fields.viewAll': 'View All Programs',
@@ -406,16 +408,25 @@ export const translations: Record<Locale, Record<string, string>> = {
      'thankYou.proofTitle': 'Why students choose SICA',
     'thankYou.proofStat1Value': '24h',
     'thankYou.proofStat1Label': 'avg. response time',
-    // Phase 1 fix: '92% placement rate' is an unverified marketing
-    // claim. The audit flagged it as FTC-grade risky if the data
-    // doesn't back it up. Founder action: either back this number
-    // with a sourced stat (e.g. "92% of 47 tracked applicants in
-    // 2024 got their first-choice offer") or change the value to
-    // something defensible. Comment-only fix here — leaving the
-    // value untouched so the founder decides.
-    'thankYou.proofStat2Value': '92%',
+    // The two UNVERIFIED stats — '92% placement rate' and '27+ partner
+    // universities' — no longer live here.
+    //
+    // '92% placement rate' was flagged as FTC-grade risky if the data
+    // does not back it up, and the 2026-10-17 SEO/AEO audit found the
+    // SAME unconfirmed partner-university count ("27+") published on
+    // /counselling, which was removed there too.
+    //
+    // Both now come from src/lib/site-stats.ts, whose established rule
+    // is: an empty value means the tile hides itself. i18n values may
+    // not be empty (enforced by i18n-translations.test.ts), so the
+    // stat mechanism is the right home for "not yet verified".
+    //
+    // FOUNDER ACTION: put the real, sourced numbers in site-stats.ts
+    // and the tiles reappear automatically.
+    //
+    // '24h avg. response time' stays here: that is a service
+    // commitment the business makes, not a performance statistic.
     'thankYou.proofStat2Label': 'placement rate',
-    'thankYou.proofStat3Value': '27+',
     'thankYou.proofStat3Label': 'partner universities',
      'thankYou.relatedTitle': 'While you wait',
      'thankYou.relatedSubtitle': 'A few pages our recent leads found useful.',
@@ -519,6 +530,8 @@ export const translations: Record<Locale, Record<string, string>> = {
      'seo.scholarships.finalCtaTitle': 'Apply from {{country}} to study in China',
      'seo.scholarships.finalCtaSubtitle': 'Our team helps students from {{country}} navigate admissions, visas, and scholarships end-to-end. Start with a free assessment.',
      'seo.scholarships.ctaContact': 'Contact Us',
+     'seo.homeTitle': 'Study in China: Universities, Programs & Scholarships',
+     'seo.homeDescription': 'Study in China with SICA: 300+ universities, English-taught programs, CSC scholarships and free admissions advice. Book a 10-minute consultation.',
      'seo.universitiesTitle': 'Universities in China | SICA',
      'seo.universitiesDescription': 'Explore top universities in China for international students. Filter by city, discipline, ranking, and more.',
      'seo.programsTitle': 'Programs in China | SICA',
@@ -4574,6 +4587,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'home.programs.title': 'Popular programs',
     'home.programs.subtitle': 'Hand-picked degree programs from our partner universities — chosen by the SICA Admissions Team for their academic strength and international focus.',
     'home.programs.viewAll': 'Browse all programs',
+    'home.cscGuideLink': 'CSC Scholarship 2027 guide',
+    'home.deadlinesLink': 'China university application deadlines for 2027',
     'home.programs.scholarshipBadge': 'Scholarship available',
     'news.category.announcement': 'Announcement',
     'news.category.partnership': 'Partnership',
@@ -4822,6 +4837,10 @@ export const translations: Record<Locale, Record<string, string>> = {
     // "adminNav.consultationActivity" instead of a label.
     'adminNav.consultationActivity': 'Consultation Activity',
     'counselling.metaTitle': 'Free 10-Minute Counselling Session — Study in China',
+    // A dedicated meta description. The page was reusing
+    // `counselling.heroSubtitle` here, which is 177 characters — a
+    // search result truncates around 155, and the cut lands mid-phrase.
+    'counselling.metaDescription': 'Book a free 10-minute session with a SICA counsellor for university selection, program fit and scholarship guidance. No fees, no obligation.',
     'counselling.badge': '100% Free · 10 Minutes · Online',
     'counselling.heroTitle': 'Talk to a SICA advisor before you decide',
     'counselling.heroSubtitle':
@@ -4858,7 +4877,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'counselling.step3Title': 'Get your plan',
     'counselling.step3Body': 'A clear, honest next-step plan for your study-in-China journey.',
     'counselling.crossSellTitle': 'Want a deeper evaluation first?',
-    'counselling.crossSellBody': 'The free academic assessment matches your background against 27+ partner universities in about 5 minutes.',
+    'counselling.crossSellBody': 'The free academic assessment matches your background against SICA partner universities in about 5 minutes.',
     'counselling.crossSellCta': 'Start Free Assessment',
     'counselling.wizardTitle': 'Book your session',
     'counselling.stepTime': '1. Pick a time',
@@ -5407,6 +5426,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'why.global': '全球机遇',
     'why.global.desc': '中国学位为你在亚洲及全球打开大门，对中国通人才的需求与日俱增。',
     'why.learnMore': '了解更多关于中国',
+    'why.trustLine': 'SICA 团队拥有 10 年中国留学招生经验。SICA 隶属于英国 Ednex Group LTD。',
     // Popular Fields
     'fields.title': '热门学习领域',
     'fields.viewAll': '查看所有项目',
@@ -5651,9 +5671,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'thankYou.proofTitle': '为什么学生选择 SICA',
     'thankYou.proofStat1Value': '24h',
     'thankYou.proofStat1Label': '平均回复时间',
-    'thankYou.proofStat2Value': '92%',
     'thankYou.proofStat2Label': '录取成功率',
-    'thankYou.proofStat3Value': '27+',
     'thankYou.proofStat3Label': '合作大学',
     'thankYou.relatedTitle': '在您等待期间',
     'thankYou.relatedSubtitle': '一些最近的咨询者觉得有用的页面。',
@@ -5757,6 +5775,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'seo.scholarships.finalCtaTitle': '从{{country}}申请来华留学',
     'seo.scholarships.finalCtaSubtitle': '我们的团队帮助{{country}}学生完成从录取、签证到奖学金申请的全流程。从免费评估开始。',
     'seo.scholarships.ctaContact': '联系我们',
+    'seo.homeTitle': '留学中国：大学、专业与奖学金',
+    'seo.homeDescription': '通过 SICA 了解留学中国：300+ 所大学、英文授课专业、CSC 奖学金与免费招生咨询。预约 10 分钟免费咨询。',
     'seo.universitiesTitle': '中国大学 | SICA',
     'seo.universitiesDescription': '探索面向国际学生的中国顶尖大学。按城市、学科、排名等条件筛选。',
     'seo.programsTitle': '中国留学项目 | SICA',
@@ -9664,6 +9684,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'home.programs.title': '热门学位项目',
     'home.programs.subtitle': '由 SICA 招生团队从合作院校中精心挑选的学位项目,以学术实力与国际化特色为推荐标准。',
     'home.programs.viewAll': '查看全部项目',
+    'home.cscGuideLink': 'CSC 奖学金 2027 指南',
+    'home.deadlinesLink': '中国大学 2027 申请截止时间',
     'home.programs.scholarshipBadge': '可申请奖学金',
     'news.category.announcement': '公告',
     'news.category.partnership': '合作',
@@ -9909,6 +9931,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     // registered, so the sidebar showed the raw key.
     'adminNav.consultationActivity': '咨询实况',
     'counselling.metaTitle': '免费 10 分钟留学咨询 — 中国留学',
+    'counselling.metaDescription': '预约与 SICA 顾问 10 分钟一对一在线咨询：大学选校、专业匹配与奖学金指导。免费，无义务。',
     'counselling.badge': '完全免费 · 10 分钟 · 在线',
     'counselling.heroTitle': '做决定之前，先和 SICA 顾问聊聊',
     'counselling.heroSubtitle':
@@ -9942,7 +9965,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'counselling.step3Title': '获得规划',
     'counselling.step3Body': '得到一份清晰、务实的中国留学下一步规划。',
     'counselling.crossSellTitle': '想先做更完整的评估？',
-    'counselling.crossSellBody': '免费学术评估约 5 分钟，即可将你的背景与 27+ 所合作院校进行匹配。',
+    'counselling.crossSellBody': '免费学术评估约 5 分钟，即可将你的背景与 SICA 合作院校进行匹配。',
     'counselling.crossSellCta': '开始免费评估',
     'counselling.wizardTitle': '预约咨询',
     'counselling.stepTime': '1. 选择时间',

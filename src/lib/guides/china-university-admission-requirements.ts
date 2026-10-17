@@ -19,6 +19,8 @@ export const admissionRequirementsGuide: LocalizedGuide = {
     title: 'China University Admission Requirements by Degree Level (2026)',
     description:
       'Bachelor\'s, master\'s, and PhD admission requirements at Chinese universities — GPA thresholds, language test scores, work experience, and recommendation letters.',
+    seoTitle: 'China University Admission Requirements by Degree',
+    seoDescription: 'Bachelor\'s, master\'s, and PhD admission requirements at Chinese universities — GPA thresholds, language test scores, work experience, and recommendation',
     subtitle:
       'A clear cheat-sheet for what Chinese universities look for at each degree level. Use this to gauge your competitiveness before applying.',
     stats: [

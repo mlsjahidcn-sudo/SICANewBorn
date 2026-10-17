@@ -13,6 +13,8 @@ export const visaGuide: LocalizedGuide = {
     title: 'China Student Visa (X1 / X2): Complete Application Guide',
     description:
       'How to apply for a Chinese student visa: X1 vs X2, required documents, fees, processing times, residence permit, work rights, and renewals.',
+    seoTitle: 'China Student Visa (X1 / X2)',
+    seoDescription: 'How to apply for a Chinese student visa: X1 vs X2, required documents, fees, processing times, residence permit, work rights, and renewals.',
     subtitle:
       'Once you have your admission notice, this is the next 4-7 days that matter.',
     stats: [

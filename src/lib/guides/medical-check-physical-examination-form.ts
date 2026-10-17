@@ -21,6 +21,8 @@ export const medicalCheckPhysicalExaminationGuide: LocalizedGuide = {
     title: 'Medical Check and the Physical Examination Form for a China Student Visa',
     description:
       'Medical check + physical examination form for a China student visa: where to do it (home country vs entry port in China), what the form contains (blood tests + chest X-ray + ECG + vaccinations), country-specific approved hospitals, validity period, common rejections, and how to avoid them.',
+    seoTitle: 'Medical Check and the Physical Examination Form',
+    seoDescription: 'Medical check + physical examination form for a China student visa: where to do it (home country vs entry port in China), what the form contains (blood',
     subtitle:
       'Every China student visa application requires a physical examination form completed within the last 6 months. The form is straightforward — blood tests + chest X-ray + ECG + vaccinations + physical measurements — but country-specific approved-hospital lists catch most international applicants off-guard. This guide covers where to do the medical check, what the form contains, which hospitals are approved in Pakistan / Nigeria / Bangladesh / India / other countries, the 6-month validity window, and the 5 most common rejection reasons.',
     stats: [
@@ -219,6 +221,8 @@ export const medicalCheckPhysicalExaminationGuide: LocalizedGuide = {
     title: '中国学生签证体检与身体检查记录',
     description:
       '中国学生签证体检 + 身体检查记录：在哪里做（本国 vs 中国入境口岸）、体检包含什么（血液检查 + 胸透 + 心电图 + 疫苗记录）、按国认可的医院、6 个月有效期、常见拒签原因与避免方式。',
+    seoTitle: '中国学生签证体检与身体检查记录',
+    seoDescription: '中国学生签证体检 + 身体检查记录：在哪里做（本国 vs 中国入境口岸）、体检包含什么（血液检查 + 胸透 + 心电图 + 疫苗记录）、按国认可的医院、6',
     subtitle:
       '每个中国学生签证申请都需要一份最近 6 个月内的身体检查记录。表格简单——血液检查 + 胸透 + 心电图 + 疫苗 + 体检——但按国认可的医院名单出乎大多数国际申请者意料。本指南涵盖在哪里做体检、表格包含什么、巴基斯坦 / 尼日利亚 / 孟加拉国 / 印度 / 其他国家哪些医院认可、6 个月有效期、以及 5 个最常见的拒签原因。',
     stats: [

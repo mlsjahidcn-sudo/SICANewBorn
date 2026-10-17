@@ -22,6 +22,8 @@ export const cscaExamGuide: LocalizedGuide = {
     title: 'CSCA Exam (China Scholastic Competency Assessment) — Complete Guide for International Students (2026)',
     description:
       'China\'s new standardized admissions exam for international bachelor\'s applicants. Subjects, format, scoring, fees, dates, exemptions, CSC scholarship requirement — and how it differs from HSK.',
+    seoTitle: 'CSCA Exam (China Scholastic Competency Assessment)',
+    seoDescription: 'China\'s new standardized admissions exam for international bachelor\'s applicants.',
     subtitle:
       'From the 2026 intake, most international applicants to Chinese bachelor\'s degrees must sit the CSCA — a centrally-administered multiple-choice exam organized by the China Scholarship Council, held mainly online at home with a live proctor. RMB 450 for one subject, RMB 700 for two or more.',
     stats: [
@@ -450,6 +452,8 @@ export const cscaExamGuide: LocalizedGuide = {
     title: 'CSCA 考试（中国国际学生学业能力评估）完全指南（2026）',
     description:
       '中国面向国际本科申请者的统一入学考试。科目、形式、计分、费用、时间、豁免、CSC 奖学金强制要求——以及与 HSK 的区别。',
+    seoTitle: 'CSCA 考试（中国国际学生学业能力评估）完全指南（2026',
+    seoDescription: '中国面向国际本科申请者的统一入学考试。科目、形式、计分、费用、时间、豁免、CSC 奖学金强制要求——以及与 HSK 的区别。',
     subtitle:
       '自 2026 级起，多数申请中国本科的国际学生须参加 CSCA——由国家留学基金委（CSC）统一组织的选择题考试，以居家线上、真人监考为主。单科 450 元，两科及以上合计 700 元。',
     stats: [

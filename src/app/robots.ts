@@ -39,7 +39,16 @@ export default function robots(): MetadataRoute.Robots {
       { userAgent: 'Googlebot',         allow: '/', disallow: ['/api/', '/_next/', '/admin/', '/student/', '/partner/', '/login/'] },
       { userAgent: 'Applebot-Extended', allow: '/', disallow: ['/api/', '/_next/', '/admin/', '/student/', '/partner/', '/login/'] },
     ],
-    sitemap: `${process.env.NEXT_PUBLIC_SITE_URL || SITE_URL}/sitemap.xml`,
+    // Use the NORMALIZED SITE_URL, not the raw env var.
+    //
+    // SITE_URL is `(env || FALLBACK).replace(/\/+$/, '')` — it strips
+    // trailing slashes. Reading process.env.NEXT_PUBLIC_SITE_URL
+    // directly bypasses that, so a deployment with
+    // NEXT_PUBLIC_SITE_URL=https://studyinchina.academy/ produced
+    // "https://studyinchina.academy//sitemap.xml" in the live
+    // robots.txt. A malformed Sitemap line can make crawlers reject
+    // the sitemap entirely.
+    sitemap: `${SITE_URL}/sitemap.xml`,
   };
   return basePolicy;
 }

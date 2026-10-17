@@ -19,6 +19,8 @@ export const cscaEnglishTaughtGuide: LocalizedGuide = {
     title: 'Does the CSCA Apply to English-Taught Programs? Yes — Here\'s What You Actually Sit',
     description:
       'The CSCA is mandatory for English-taught bachelor\'s applicants too — IELTS/TOEFL does not exempt it. What English-taught candidates sit (usually fundamentals without the Chinese track), how the two tests stack, and the verification checklist.',
+    seoTitle: 'Does the CSCA Apply to English-Taught Programs? Yes',
+    seoDescription: 'The CSCA is mandatory for English-taught bachelor\'s applicants too — IELTS/TOEFL does not exempt it.',
     subtitle:
       'The most persistent myth about the CSCA: that English-taught degree applicants are exempt. They are not — the mandate applies to international bachelor\'s applicants regardless of teaching language. What changes for English-taught candidates is the shape of the exam: most programs require the fundamentals (Mathematics plus program-specific sciences) without the Professional Chinese track, and your language evidence comes from IELTS/TOEFL instead of HSK. But combinations vary more across English-taught programs than any other category, which makes written verification per program the single most important step in your plan.',
     stats: [

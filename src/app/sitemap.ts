@@ -10,64 +10,85 @@ interface SitemapEntry {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const now = new Date();
-
+  // ─────────────────────────────────────────────────────────────────
+  // NO build-time lastmod.
+  // ─────────────────────────────────────────────────────────────────
+  // Every static entry used to carry `lastModified: now`, i.e. the
+  // moment the sitemap was generated. On the live site that produced
+  // 395 URLs sharing one identical timestamp and 187 sharing another.
+  //
+  // That is worse than having no lastmod at all, for two reasons:
+  //
+  //   1. It is a lie. "Changed at 05:58:47 today" for a page that has
+  //      not changed since March tells a crawler the freshness
+  //      signal is worthless.
+  //   2. It poisons the signal that IS real. Google has said
+  //      explicitly that if lastmod is inaccurate they may ignore it
+  //      for the whole sitemap — and this sitemap's DB-driven URLs
+  //      (universities, programs, scholarships) carry genuine
+  //      `updated_at` values. 395 fake stamps would get those 1,000+
+  //      accurate ones discounted too.
+  //
+  // So: static pages now carry NO lastmod, and DB-driven pages carry
+  // their real `updated_at` — and only when the row actually has one.
+  //
   // Static pages
+
   const staticPages: MetadataRoute.Sitemap = [
-    { url: `${SITE_URL}/`, lastModified: now, changeFrequency: 'weekly', priority: 1.0 },
-    { url: `${SITE_URL}/universities`, lastModified: now, changeFrequency: 'weekly', priority: 0.9 },
-    { url: `${SITE_URL}/programs`, lastModified: now, changeFrequency: 'weekly', priority: 0.9 },
-    { url: `${SITE_URL}/scholarships`, lastModified: now, changeFrequency: 'weekly', priority: 0.9 },
-    { url: `${SITE_URL}/about`, lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
-    { url: `${SITE_URL}/contact`, lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
-    { url: `${SITE_URL}/assessment`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
-    { url: `${SITE_URL}/success-stories`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/`, changeFrequency: 'weekly', priority: 1.0 },
+    { url: `${SITE_URL}/universities`, changeFrequency: 'weekly', priority: 0.9 },
+    { url: `${SITE_URL}/programs`, changeFrequency: 'weekly', priority: 0.9 },
+    { url: `${SITE_URL}/scholarships`, changeFrequency: 'weekly', priority: 0.9 },
+    { url: `${SITE_URL}/about`, changeFrequency: 'monthly', priority: 0.5 },
+    { url: `${SITE_URL}/contact`, changeFrequency: 'monthly', priority: 0.5 },
+    { url: `${SITE_URL}/assessment`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/success-stories`, changeFrequency: 'monthly', priority: 0.6 },
     // Phase 57: /get-started is the influencer-traffic sales
     // landing page. Phase 147: removed from the sitemap + noindexed
     // (it shows paid package prices); paid traffic reaches it via
     // direct links. [verify] Jahid decision.
     // Phase 114: free counselling session booking — the conversion
     // landing for "free counselling study in china" queries.
-    { url: `${SITE_URL}/counselling`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
+    { url: `${SITE_URL}/counselling`, changeFrequency: 'weekly', priority: 0.8 },
     // Phase 139: webinar landing page for the March/Sept 2027
     // intake + CSC Scholarship webinar. weekly change frequency
     // because the date copy will update as the session is
     // confirmed; priority 0.8 matches /counselling + /get-started.
-    { url: `${SITE_URL}/webinar-2027-intake-csc`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
+    { url: `${SITE_URL}/webinar-2027-intake-csc`, changeFrequency: 'weekly', priority: 0.8 },
   ];
 
   // Programmatic SEO landing pages (static, high-intent long-tail)
   const landingPages: MetadataRoute.Sitemap = [
-    { url: `${SITE_URL}/best-universities-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/best-universities-in-beijing`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/best-universities-in-shanghai`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/top-engineering-universities-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/best-mba-programs-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/mbbs-in-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/study-in-china-vs-russia-for-mbbs`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
-    { url: `${SITE_URL}/china-university-application-deadlines`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
-    { url: `${SITE_URL}/chinese-government-scholarship-csc`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
+    { url: `${SITE_URL}/best-universities-china`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/best-universities-in-beijing`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/best-universities-in-shanghai`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/top-engineering-universities-china`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/best-mba-programs-china`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/mbbs-in-china`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/study-in-china-vs-russia-for-mbbs`, changeFrequency: 'monthly', priority: 0.75 },
+    { url: `${SITE_URL}/china-university-application-deadlines`, changeFrequency: 'monthly', priority: 0.75 },
+    { url: `${SITE_URL}/chinese-government-scholarship-csc`, changeFrequency: 'monthly', priority: 0.75 },
     // Phase 115: CSCA exam flagship — new mandatory exam for intl bachelor's applicants (2026 intake)
-    { url: `${SITE_URL}/csca-exam`, lastModified: now, changeFrequency: 'monthly', priority: 0.85 },
+    { url: `${SITE_URL}/csca-exam`, changeFrequency: 'monthly', priority: 0.85 },
     // Phase 116: CSCA cluster Batch 1 — logistics pillars
     // Phase 149: /csca-exam-dates removed (dates now live on
     // cscaprep.academy/exam-dates per the spec's CSCA-overlap split;
     // see next.config.ts for the 301 + docs/csca-overlap.md for the
     // keep-vs-explanation table).
-    { url: `${SITE_URL}/csca-exam-registration`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/csca-exam-fees`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/csca-exam-exemptions`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/csca-exam-registration`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/csca-exam-fees`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/csca-exam-exemptions`, changeFrequency: 'monthly', priority: 0.8 },
     // Phase 121: Study-in-China cluster Batch 1 — personal finance & daily life
-    { url: `${SITE_URL}/open-chinese-bank-account`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/international-money-transfer-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/china-mobile-internet-for-international-students`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/student-health-care-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/open-chinese-bank-account`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/international-money-transfer-china`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/china-mobile-internet-for-international-students`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/student-health-care-china`, changeFrequency: 'monthly', priority: 0.8 },
     // Phase 117: Professional Chinese tracks stay on SICA (admissions
     // angle). The 3 subject deep-dives + the 12-week prep plan were
     // removed — they 301 to cscaprep.academy (Phase 146 / Option C in
     // docs/csca-overlap.md).
-    { url: `${SITE_URL}/csca-humanities-chinese-guide`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/csca-stem-chinese-guide`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/csca-humanities-chinese-guide`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/csca-stem-chinese-guide`, changeFrequency: 'monthly', priority: 0.8 },
     // Phase 146: the 10 top-level /<slug>-university profile pages
     // were removed from the sitemap — they now 301 to
     // /universities/<slug> (next.config.ts redirects), which is the
@@ -75,32 +96,32 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // below. Same for /peking-university-vs-* and the 4 pure-prep
     // CSCA pages (→ cscaprep.academy).
     // Phase 118: CSCA cluster Batch 3 — comparisons & scores
-    { url: `${SITE_URL}/csca-vs-hsk`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/csca-vs-sat-a-level-ib`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/csca-scores-and-cutoffs`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/csca-vs-hsk`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/csca-vs-sat-a-level-ib`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/csca-scores-and-cutoffs`, changeFrequency: 'monthly', priority: 0.8 },
     // Phase 119: CSCA cluster Batch 4 — scenario pages
-    { url: `${SITE_URL}/csca-csc-scholarship`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/csca-mbbs-applicants`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/csca-english-taught-programs`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/csca-test-day-retakes`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/csca-csc-scholarship`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/csca-mbbs-applicants`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/csca-english-taught-programs`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/csca-test-day-retakes`, changeFrequency: 'monthly', priority: 0.8 },
     // Phase 120: CSCA cluster Batch 5 — FAQ mega-page + partner handbook (cluster complete: 20/20)
-    { url: `${SITE_URL}/csca-faq`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/csca-partner-guide`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
+    { url: `${SITE_URL}/csca-faq`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/csca-partner-guide`, changeFrequency: 'monthly', priority: 0.75 },
     // Phase 147 (SEO Task 5): 5 country/process pages added to address
     // unserved long-tail queries. All have en+zh via the standard
     // GuidePage shell + auto-rendered CSCA Prep callout on the /csca-*
     // sibling pages.
-    { url: `${SITE_URL}/csc-scholarship-pakistan`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/csc-scholarship-nigeria`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/csc-scholarship-pakistan`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/csc-scholarship-nigeria`, changeFrequency: 'monthly', priority: 0.8 },
     // Phase 166: Bangladesh joins the Phase 147 country guide batch.
     // Closes the only country gap from the original Phase 147 list.
-    { url: `${SITE_URL}/csc-scholarship-bangladesh`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/moe-listed-mbbs-universities-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/csc-scholarship-bangladesh`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/moe-listed-mbbs-universities-china`, changeFrequency: 'monthly', priority: 0.8 },
     // Phase 167: closes the highest-intent transactional gap from
     // the 20-article audit — every admissions guide on SICA
     // references the study plan as a required document but no
     // single article operationalizes "how to actually write one".
-    { url: `${SITE_URL}/how-to-write-study-plan-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/how-to-write-study-plan-china`, changeFrequency: 'monthly', priority: 0.8 },
     // Phase 168: province + city comparator templates (novel
     // format — pairs two SICA-listed regions head-to-head on
     // cost, climate, language, programs, international student
@@ -108,8 +129,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // shared LocalizedGuide shell — both pages use the same
     // template so future comparators (Yunnan vs Guizhou,
     // Wuhan vs Nanjing, etc.) can reuse it without a new shell.
-    { url: `${SITE_URL}/hunan-vs-yunnan`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/xiamen-vs-fuzhou`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/hunan-vs-yunnan`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/xiamen-vs-fuzhou`, changeFrequency: 'monthly', priority: 0.8 },
     // Phase 169: 3 university deep-dive guides (same Phase 136
     // flagship pattern as Tsinghua + Peking + Fudan + SJTU +
     // Zhejiang admissions). Shenyang Pharma is the only
@@ -117,22 +138,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // 985 with strong math/finance/economics; SUFE is the
     // most specialized finance + economics university in
     // China (DFC economics + business administration).
-    { url: `${SITE_URL}/shenyang-pharmaceutical-university`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/nankai-university`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/sufe`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/shenyang-pharmaceutical-university`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/nankai-university`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/sufe`, changeFrequency: 'monthly', priority: 0.8 },
     // Phase 170: CSCA fee deep-dive for Pakistan, Nigeria, Bangladesh
     // — closes the country-specific payment-rail gap from the
     // global /csca-exam-fees article (per-country bank wire +
     // Payoneer + Flutterwave + bKash / Nagad paths + common
     // failure modes).
-    { url: `${SITE_URL}/csca-fee-pakistan-nigeria-bangladesh`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/csca-fee-pakistan-nigeria-bangladesh`, changeFrequency: 'monthly', priority: 0.8 },
     // Phase 171: standalone medical-check + physical-examination
     // form guide — was referenced as a checkbox across 4+ guides
     // (visa, mbbs, jw202, csc-pakistan) without an operational
     // deep-dive. Now has its own URL.
-    { url: `${SITE_URL}/medical-check-physical-examination-form`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/x1-vs-x2-student-visa-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/study-in-china-without-ielts`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/medical-check-physical-examination-form`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/x1-vs-x2-student-visa-china`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/study-in-china-without-ielts`, changeFrequency: 'monthly', priority: 0.8 },
     // Phase 150: English-track ETP landscape article — the broad
     // 300+ university MOE ETP catalog for non-Chinese speakers, the
     // C9 + 30 strong-research-university cluster, subject coverage,
@@ -141,7 +162,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Complements /csca-english-taught-programs (the narrow CSCA
     // angle) and /study-in-china-without-ielts (the IELTS exemption
     // angle).
-    { url: `${SITE_URL}/english-taught-programs-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/english-taught-programs-china`, changeFrequency: 'monthly', priority: 0.8 },
     // Phase 155: 3 new long-form listicles closing the 2027 application
     // cycle + life-in-China content gaps. (a) Dorms deep-dive: the
     // four room types + international-dorm vs local-dorm distinction
@@ -153,65 +174,64 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // operational deep-dive on the visa, the 30-day conversion, the
     // residence permit, and the most common rejection reasons
     // (deeper than /x1-vs-x2-student-visa-china summary).
-    { url: `${SITE_URL}/china-university-dorms-cost`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/peking-vs-tsinghua-international-students`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/china-student-visa-jw202-residence-permit`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/china-university-dorms-cost`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/peking-vs-tsinghua-international-students`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/china-student-visa-jw202-residence-permit`, changeFrequency: 'monthly', priority: 0.8 },
     // Phase 122: HSK 3.0 transition cluster (4 articles, the most
     // time-sensitive SEO bet on the site ahead of the Dec 13, 2026
     // full format switch). All four are bilingual LocalizedGuide
     // pages with en+zh hub cards + per-cycle cross-link mesh.
-    { url: `${SITE_URL}/hsk-3-vs-hsk-2`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/hsk-3-0-vocabulary-list`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/hsk-3-0-speaking-writing`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/hsk-3-0-prep-timeline`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/hsk-3-vs-hsk-2`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/hsk-3-0-vocabulary-list`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/hsk-3-0-speaking-writing`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/hsk-3-0-prep-timeline`, changeFrequency: 'monthly', priority: 0.8 },
     // Phase 122-124: the 10 top-level university profile pages were
     // here — removed in Phase 146 (they 301 to /universities/<slug>,
     // see the comment in the CSCA block above).
     // Phase 136: Flagship admissions deep-dives Batch 1 — operational admissions guides
-    { url: `${SITE_URL}/peking-university-admissions-guide`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/tsinghua-university-admissions-guide`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/fudan-university-admissions-guide`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/shanghai-jiao-tong-university-admissions-guide`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/zhejiang-university-admissions-guide`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/peking-university-admissions-guide`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/tsinghua-university-admissions-guide`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/fudan-university-admissions-guide`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/shanghai-jiao-tong-university-admissions-guide`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/zhejiang-university-admissions-guide`, changeFrequency: 'monthly', priority: 0.8 },
     // Phase 137: /peking-university-vs-* removed in Phase 146 —
     // they 301 to /universities/compare/... (the compareUrls bucket
     // below emits the canonical pairs).
-    { url: `${SITE_URL}/best-universities-in-hong-kong`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/best-universities-in-northeast-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/phd-in-china-international-students`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
-    { url: `${SITE_URL}/china-university-admission-requirements`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
-    { url: `${SITE_URL}/cost-of-living-china-by-city`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
-    { url: `${SITE_URL}/best-cities-china-international-students`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
-    { url: `${SITE_URL}/cheapest-universities-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.75 },
+    { url: `${SITE_URL}/best-universities-in-hong-kong`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/best-universities-in-northeast-china`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/phd-in-china-international-students`, changeFrequency: 'monthly', priority: 0.75 },
+    { url: `${SITE_URL}/china-university-admission-requirements`, changeFrequency: 'monthly', priority: 0.75 },
+    { url: `${SITE_URL}/cost-of-living-china-by-city`, changeFrequency: 'monthly', priority: 0.75 },
+    { url: `${SITE_URL}/best-cities-china-international-students`, changeFrequency: 'monthly', priority: 0.75 },
+    { url: `${SITE_URL}/cheapest-universities-china`, changeFrequency: 'monthly', priority: 0.75 },
   ];
 
   // Programmatic SEO hub pages
   const seoHubPages: MetadataRoute.Sitemap = [
-    { url: `${SITE_URL}/study-in-china`, lastModified: now, changeFrequency: 'weekly', priority: 0.9 },
-    { url: `${SITE_URL}/scholarships-for`, lastModified: now, changeFrequency: 'weekly', priority: 0.9 },
-    { url: `${SITE_URL}/guides`, lastModified: now, changeFrequency: 'weekly', priority: 0.9 },
-    { url: `${SITE_URL}/universities/compare`, lastModified: now, changeFrequency: 'weekly', priority: 0.85 },
-    { url: `${SITE_URL}/majors`, lastModified: now, changeFrequency: 'weekly', priority: 0.85 },
+    { url: `${SITE_URL}/study-in-china`, changeFrequency: 'weekly', priority: 0.9 },
+    { url: `${SITE_URL}/scholarships-for`, changeFrequency: 'weekly', priority: 0.9 },
+    { url: `${SITE_URL}/guides`, changeFrequency: 'weekly', priority: 0.9 },
+    { url: `${SITE_URL}/universities/compare`, changeFrequency: 'weekly', priority: 0.85 },
+    { url: `${SITE_URL}/majors`, changeFrequency: 'weekly', priority: 0.85 },
   ];
 
   // Long-form guide pages — high-value pillar content for SEO + GEO + AEO
   const guidePages: MetadataRoute.Sitemap = [
-    { url: `${SITE_URL}/guides/study-in-china`, lastModified: now, changeFrequency: 'monthly', priority: 0.85 },
-    { url: `${SITE_URL}/guides/application`, lastModified: now, changeFrequency: 'monthly', priority: 0.85 },
-    { url: `${SITE_URL}/guides/scholarships`, lastModified: now, changeFrequency: 'monthly', priority: 0.85 },
-    { url: `${SITE_URL}/guides/visa`, lastModified: now, changeFrequency: 'monthly', priority: 0.85 },
-    { url: `${SITE_URL}/guides/cost-of-living`, lastModified: now, changeFrequency: 'monthly', priority: 0.85 },
-    { url: `${SITE_URL}/guides/accommodation`, lastModified: now, changeFrequency: 'monthly', priority: 0.85 },
-    { url: `${SITE_URL}/guides/health-insurance`, lastModified: now, changeFrequency: 'monthly', priority: 0.85 },
-    { url: `${SITE_URL}/guides/banking`, lastModified: now, changeFrequency: 'monthly', priority: 0.85 },
-    { url: `${SITE_URL}/guides/part-time-work`, lastModified: now, changeFrequency: 'monthly', priority: 0.85 },
-    { url: `${SITE_URL}/guides/hsk`, lastModified: now, changeFrequency: 'monthly', priority: 0.85 },
+    { url: `${SITE_URL}/guides/study-in-china`, changeFrequency: 'monthly', priority: 0.85 },
+    { url: `${SITE_URL}/guides/application`, changeFrequency: 'monthly', priority: 0.85 },
+    { url: `${SITE_URL}/guides/scholarships`, changeFrequency: 'monthly', priority: 0.85 },
+    { url: `${SITE_URL}/guides/visa`, changeFrequency: 'monthly', priority: 0.85 },
+    { url: `${SITE_URL}/guides/cost-of-living`, changeFrequency: 'monthly', priority: 0.85 },
+    { url: `${SITE_URL}/guides/accommodation`, changeFrequency: 'monthly', priority: 0.85 },
+    { url: `${SITE_URL}/guides/health-insurance`, changeFrequency: 'monthly', priority: 0.85 },
+    { url: `${SITE_URL}/guides/banking`, changeFrequency: 'monthly', priority: 0.85 },
+    { url: `${SITE_URL}/guides/part-time-work`, changeFrequency: 'monthly', priority: 0.85 },
+    { url: `${SITE_URL}/guides/hsk`, changeFrequency: 'monthly', priority: 0.85 },
   ];
 
   // City pages — /study-in-china/[city]
   const cityUrls: MetadataRoute.Sitemap = cities.map((c) => ({
     url: `${SITE_URL}/study-in-china/${c.slug}`,
-    lastModified: now,
     changeFrequency: 'weekly',
     priority: 0.8,
   }));
@@ -219,7 +239,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Country pages — /scholarships-for/[country]
   const countryUrls: MetadataRoute.Sitemap = COUNTRIES.map((c) => ({
     url: `${SITE_URL}/scholarships-for/${c.slug}`,
-    lastModified: now,
     changeFrequency: 'weekly',
     priority: 0.8,
   }));
@@ -267,7 +286,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const universityUrls: MetadataRoute.Sitemap = universities.map((entry: SitemapEntry) => ({
     url: `${SITE_URL}/universities/${entry.slug}`,
-    lastModified: entry.updated_at ? new Date(entry.updated_at) : now,
+    ...(entry.updated_at ? { lastModified: new Date(entry.updated_at) } : {}),
     changeFrequency: 'weekly',
     priority: 0.8,
   }));
@@ -275,14 +294,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Program detail pages — were missing from the sitemap entirely.
   const programUrls: MetadataRoute.Sitemap = programs.map((entry: SitemapEntry) => ({
     url: `${SITE_URL}/programs/${entry.slug}`,
-    lastModified: entry.updated_at ? new Date(entry.updated_at) : now,
+    ...(entry.updated_at ? { lastModified: new Date(entry.updated_at) } : {}),
     changeFrequency: 'weekly',
     priority: 0.8,
   }));
 
   const scholarshipUrls: MetadataRoute.Sitemap = scholarships.map((entry: SitemapEntry) => ({
     url: `${SITE_URL}/scholarships/${entry.slug}`,
-    lastModified: entry.updated_at ? new Date(entry.updated_at) : now,
+    ...(entry.updated_at ? { lastModified: new Date(entry.updated_at) } : {}),
     changeFrequency: 'weekly',
     priority: 0.7,
   }));
@@ -317,7 +336,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
   const compareUrls: MetadataRoute.Sitemap = comparePairs.map((p) => ({
     url: `${SITE_URL}/universities/compare/${p.a}/vs/${p.b}`,
-    lastModified: now,
     changeFrequency: 'monthly',
     priority: 0.75,
   }));
@@ -332,13 +350,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const rankedUniSubUrls: MetadataRoute.Sitemap = compareScopeSlugs.flatMap((s) => [
     {
       url: `${SITE_URL}/universities/${s}/scholarships`,
-      lastModified: now,
       changeFrequency: 'monthly',
       priority: 0.7,
     },
     {
       url: `${SITE_URL}/universities/${s}/programs`,
-      lastModified: now,
       changeFrequency: 'monthly',
       priority: 0.7,
     },
@@ -352,7 +368,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   );
   const majorUrls: MetadataRoute.Sitemap = DISCIPLINE_SLUGS.map((d) => ({
     url: `${SITE_URL}/majors/${d}`,
-    lastModified: now,
     changeFrequency: 'monthly',
     priority: 0.7,
   }));
@@ -362,7 +377,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     .filter((s: { slug: string }) => s.slug.includes('scholarship') || s.slug.startsWith('csc-'))
     .map((s: { slug: string }) => ({
       url: `${SITE_URL}/scholarships/${s.slug}/eligible-countries`,
-      lastModified: now,
       changeFrequency: 'monthly',
       priority: 0.65,
     }));
@@ -370,7 +384,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Per-program /scholarships subpage — 17 programs.
   const programScholarshipUrls: MetadataRoute.Sitemap = allPrograms.map((p: { slug: string }) => ({
     url: `${SITE_URL}/programs/${p.slug}/scholarships`,
-    lastModified: now,
     changeFrequency: 'monthly',
     priority: 0.65,
   }));
@@ -380,7 +393,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // we filter here too (defense in depth). Posts are fresh, so weekly
   // change frequency + priority 0.8 matches their SEO weight.
   const newsIndexUrl: MetadataRoute.Sitemap = [
-    { url: `${SITE_URL}/news`, lastModified: now, changeFrequency: 'daily', priority: 0.8 },
+    { url: `${SITE_URL}/news`, changeFrequency: 'daily', priority: 0.8 },
   ];
   let newsPostUrls: MetadataRoute.Sitemap = [];
   if (isSupabaseServerConfigured()) {
@@ -397,7 +410,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           newsPostUrls = (data as Array<{ slug: string; updated_at: string; published_at: string }>).map(
             (p) => ({
               url: `${SITE_URL}/news/${p.slug}`,
-              lastModified: p.updated_at ? new Date(p.updated_at) : now,
+              ...(p.updated_at ? { lastModified: new Date(p.updated_at) } : {}),
               changeFrequency: 'monthly' as const,
               priority: 0.8,
             }),

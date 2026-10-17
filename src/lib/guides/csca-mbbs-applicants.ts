@@ -18,6 +18,8 @@ export const cscaMbbsGuide: LocalizedGuide = {
     title: 'CSCA for MBBS & Medicine Applicants — Subject Combinations, Timing, and Licensing Context',
     description:
       'What MBBS and medical-program applicants need from the CSCA: the typical Math + Chemistry combination, English-taught vs Chinese-taught differences, the MOE-listed program landscape, home-country licensing exams (NMC/PMDC), and a planning calendar for the long medical timeline.',
+    seoTitle: 'CSCA for MBBS & Medicine Applicants',
+    seoDescription: 'What MBBS and medical-program applicants need from the CSCA: the typical Math + Chemistry combination, English-taught vs Chinese-taught differences, the',
     subtitle:
       'MBBS remains the single biggest program type international students pursue in China, and from the 2026 intake its applicants sit the CSCA like everyone else — typically Mathematics + Chemistry, often alongside the STEM Chinese track for Chinese-taught programs. The critical distinctions for medical applicants: most MBBS programs are English-taught (so IELTS/TOEFL, not HSK), combinations are set per program by medical faculties (verify every one), and the CSCA is an admission requirement only — your home country\'s medical council licensing exam (India\'s NMC/FMGE-NExT, Pakistan\'s PMDC/NRE) still stands between you and practice at home.',
     stats: [
@@ -258,6 +260,8 @@ export const cscaMbbsGuide: LocalizedGuide = {
     title: 'MBBS 与医学申请者的 CSCA——科目组合、时间线与执照背景',
     description:
       'MBBS 与医学项目申请者需要从 CSCA 拿到什么：典型的数学 + 化学组合、英文授课与中文授课差异、MOE 名单项目版图、母国执照考试（NMC/PMDC），以及长医学时间线的规划日历。',
+    seoTitle: 'MBBS 与医学申请者的 CSCA——科目组合',
+    seoDescription: 'MBBS 与医学项目申请者需要从 CSCA 拿到什么：典型的数学 + 化学组合、英文授课与中文授课差异、MOE',
     subtitle:
       'MBBS 仍是国际学生在中国攻读的最大单项项目类型，自 2026 级起其申请者与其他人一样参加 CSCA——典型为数学 + 化学，中文授课项目常配理工中文轨。医学申请者的关键区分：多数 MBBS 为英文授课（语言要雅思/托福而非 HSK）、组合由各医学院系按项目设定（逐一核验），且 CSCA 只是入学门槛——你母国医学委员会的执照考试（印度 NMC/FMGE-NExT、巴基斯坦 PMDC/NRE）仍横在你与回国执业之间。',
     stats: [

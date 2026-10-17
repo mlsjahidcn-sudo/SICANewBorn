@@ -14,6 +14,8 @@ export const studentHealthCareChinaGuide: LocalizedGuide = {
     title: 'Student Health Care in China — Insurance, Clinics, Hospitals, and Mental Health Support',
     description:
       'What every international student needs to know about health care in China: the insurance schemes (university vs commercial vs public), what is and is not covered, how to actually use the insurance at a hospital, the campus clinic first, and the mental health support that exists on most campuses.',
+    seoTitle: 'Student Health Care in China — Insurance, Clinics',
+    seoDescription: 'What every international student needs to know about health care in China: the insurance schemes (university vs commercial vs public), what is and is not',
     subtitle:
       'Health care for international students in China runs on a layered system — most universities include a basic insurance plan in tuition (Comprehensive Insurance for Incoming Students to China), commercial top-ups cover gaps, public hospitals handle serious cases, and campus clinics handle everyday issues. This guide walks through each layer, what it costs, what it covers, and how to actually navigate the system — including the mental health support most campuses provide but few students know to ask about.',
     stats: [

@@ -18,6 +18,8 @@ export const cscaExemptionsGuide: LocalizedGuide = {
     title: 'Who Must Take the CSCA Exam — and Who Is Exempt (HSK 4 Route, Waivers, Edge Cases)',
     description:
       'Most international bachelor\'s applicants must sit the CSCA from 2026 — but Chinese-language program applicants with HSK 4 are exempt, and qualifying HSK scores can waive Professional Chinese. Full rules, edge cases, and how to secure a written waiver.',
+    seoTitle: 'Who Must Take the CSCA Exam — and Who Is Exempt',
+    seoDescription: 'Most international bachelor\'s applicants must sit the CSCA from 2026 — but Chinese-language program applicants with HSK 4 are exempt, and qualifying HSK',
     subtitle:
       'The CSCA is mandatory for most international applicants to Chinese bachelor\'s programs from the 2026 intake — including English-taught programs and CSC scholarship applicants. The two published exemptions: applicants to Chinese-language programs may skip the exam entirely with a valid HSK 4, and a qualifying HSK score can waive the Professional Chinese subject for degree applicants (fundamentals still required). Everything else is university discretion — get it in writing.',
     stats: [
@@ -295,6 +297,8 @@ export const cscaExemptionsGuide: LocalizedGuide = {
     title: '谁必须参加 CSCA 考试——谁可豁免（HSK 4 通道、免考与边缘情形）',
     description:
       '自 2026 级起多数国际本科申请者须参加 CSCA——但持 HSK 4 的中文授课项目申请者可豁免，合格 HSK 成绩可免专业中文科目。完整规则、边缘情形与书面豁免确认方法。',
+    seoTitle: '谁必须参加 CSCA 考试——谁可豁免（HSK 4 通道',
+    seoDescription: '自 2026 级起多数国际本科申请者须参加 CSCA——但持 HSK 4 的中文授课项目申请者可豁免，合格 HSK',
     subtitle:
       '自 2026 级起，多数申请中国本科的国际学生必须参加 CSCA——含英文授课项目与 CSC 奖学金申请者。两条已公布豁免：中文授课（语言/预科）项目申请者凭有效 HSK 4 可整体豁免；学位申请者凭合格 HSK 成绩可免专业中文科目（基础科仍须考）。其余均属大学个案裁量——务必拿到书面确认。',
     stats: [

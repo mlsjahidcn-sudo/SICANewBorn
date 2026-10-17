@@ -12,6 +12,8 @@ export const hsk3SpeakingWritingGuide: LocalizedGuide = {
     title: 'Speaking and writing in HSK 3.0 — the new scored components',
     description:
       'Speaking and writing become scored at L3+. Audio recording for speaking, typed input for writing, no handwriting until L5, computer-based default. Format, rubrics, practice strategies, and which test centers support the new components.',
+    seoTitle: 'Speaking and writing in HSK 3.0',
+    seoDescription: 'Speaking and writing become scored at L3+. Audio recording for speaking, typed input for writing, no handwriting until L5, computer-based default.',
     subtitle:
       'The biggest practical change for HSK 3.0 is the integration of speaking and writing into the main test at L3+. The two new components use recorded audio and typed input — no handwriting requirement until L5 — which removes a barrier that discouraged applicants with weaker character-writing skills. This guide covers the format, rubrics, and practice strategies for the new components, plus what to look for in a test center (computer-based default, microphone calibration, typing interface).',
     stats: [

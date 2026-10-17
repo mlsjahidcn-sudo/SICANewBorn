@@ -13,6 +13,8 @@ export const scholarshipsGuide: LocalizedGuide = {
     title: 'Scholarships to Study in China: The Complete 2026 Guide',
     description:
       'How to fund your China degree: Chinese Government Scholarship (CSC), Confucius Institute, university-specific awards, provincial scholarships, and how to apply for each.',
+    seoTitle: 'Scholarships to Study in China',
+    seoDescription: 'How to fund your China degree: Chinese Government Scholarship (CSC), Confucius Institute, university-specific awards, provincial scholarships, and how to',
     subtitle:
       'China is the only major study-abroad destination where full-ride scholarships are still common. Here is how to get one.',
     stats: [

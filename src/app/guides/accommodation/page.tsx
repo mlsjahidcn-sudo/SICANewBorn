@@ -12,16 +12,16 @@ export async function generateMetadata(): Promise<Metadata> {
   const locale: Locale = cookieStore.get('sica-locale')?.value === 'zh' ? 'zh' : 'en';
   const guide = accommodationGuide[locale];
   return {
-    title: guide.title,
-    description: guide.description,
+    title: guide.seoTitle ?? guide.title,
+    description: guide.seoDescription ?? guide.description,
     alternates: await buildLanguageAlternates('/guides/accommodation'),
     openGraph: {
-      title: guide.title,
-      description: guide.description,
+      title: guide.seoTitle ?? guide.title,
+      description: guide.seoDescription ?? guide.description,
       url: `${SITE_URL}/guides/accommodation`,
       type: 'article',
     },
-    twitter: { card: 'summary_large_image', title: guide.title, description: guide.description },
+    twitter: { card: 'summary_large_image', title: guide.seoTitle ?? guide.title, description: guide.seoDescription ?? guide.description },
   };
 }
 

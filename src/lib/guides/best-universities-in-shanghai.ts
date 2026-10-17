@@ -18,6 +18,8 @@ export const bestShanghaiUniversitiesGuide: LocalizedGuide = {
     title: 'Best Universities in Shanghai for International Students (2026)',
     description:
       'Every Shanghai university ranked by domestic ranking + QS World — tuition, international student population, programs, scholarships, and cost of living for students in Shanghai.',
+    seoTitle: 'Best Universities in Shanghai',
+    seoDescription: 'Every Shanghai university ranked by domestic ranking + QS World — tuition, international student population, programs, scholarships, and cost of living',
     subtitle:
       'Shanghai is China\'s #1 international student destination — the financial capital, a global tech hub, and home to C9 League + multiple strong research universities. Here is how to pick the right one.',
     stats: [

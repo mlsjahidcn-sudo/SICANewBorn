@@ -18,6 +18,8 @@ export const zhejiangUniversityAdmissionsGuide: LocalizedGuide = {
     title: 'Zhejiang University admissions — step-by-step guide for international students',
     description:
       'How to apply to Zhejiang University as an international student: routes, deadlines, document checklist, CSCA combinations by school, language requirements, the International Campus joint institutes, scholarship stack, and what makes a competitive applicant.',
+    seoTitle: 'Zhejiang University admissions',
+    seoDescription: 'How to apply to Zhejiang University as an international student: routes, deadlines, document checklist, CSCA combinations by school, language',
     subtitle:
       'Zhejiang University (ZJU) admits international bachelor\'s and master\'s applicants through a study-plan-based admissions process with the CSCA exam mandatory from 2026. ZJU\'s distinctive feature is its multi-campus structure: the main Hangzhou campuses plus the International Campus in Haining, which hosts English-medium joint institutes with the University of Edinburgh (biomedical sciences) and the University of Illinois Urbana-Champaign (engineering). Hangzhou\'s tech ecosystem — Alibaba\'s home city — makes ZJU a magnet for CS, data science, and entrepreneurship-focused international students. This guide covers routes, deadlines, document checklist, CSCA combinations by ZJU school, language thresholds (HSK / IELTS / TOEFL), the CSC + ZJU + Zhejiang Provincial Government scholarship stack, interview prep, and the profile components that move a borderline applicant to admit.',
     stats: [

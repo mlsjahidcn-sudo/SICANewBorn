@@ -18,6 +18,8 @@ export const phdInChinaGuide: LocalizedGuide = {
     title: 'PhD in China for International Students — Programs, Funding, and Admissions (2026)',
     description:
       'Fully-funded PhD programs at Chinese universities — research areas, stipend levels, supervisor matching, CSC scholarship, and the 6-9 month application timeline.',
+    seoTitle: 'PhD in China for International Students — Programs',
+    seoDescription: 'Fully-funded PhD programs at Chinese universities — research areas, stipend levels, supervisor matching, CSC scholarship, and the 6-9 month application',
     subtitle:
       'A 3-5 year PhD at a Chinese research university — typically fully-funded (tuition waived + ¥3,000-7,000/month stipend) with English-medium research and direct access to China\'s R&D ecosystem.',
     stats: [

@@ -14,6 +14,8 @@ export const internationalMoneyTransferGuide: LocalizedGuide = {
     title: 'Sending Money to and from China — Cross-Border Fees, Alipay/WeChat Pay for Foreigners, and the Workarounds',
     description:
       'The day-to-day payment reality for international students: how to get money in and out, cross-border transfer fees, how to set up Alipay and WeChat Pay with a foreign card, and the common failure modes.',
+    seoTitle: 'Sending Money to and from China — Cross-Border Fees',
+    seoDescription: 'The day-to-day payment reality for international students: how to get money in and out, cross-border transfer fees, how to set up Alipay and WeChat Pay',
     subtitle:
       'Moving money in and out of China for an international student is its own small project: incoming family wires carry bank transfer fees and FX margin; outgoing remittances cost more; Alipay and WeChat Pay do not bind most foreign cards for top-up. This guide walks through every practical path and the three day-to-day traps that quietly drain budgets.',
     stats: [
@@ -265,6 +267,8 @@ export const internationalMoneyTransferGuide: LocalizedGuide = {
     title: '向中国汇款与从中国汇出——跨境手续费、外籍人士的支付宝/微信支付与变通方案',
     description:
       '国际学生日常支付现实：钱怎么进怎么出、跨境汇款悄悄累积的手续费、外籍人士如何设置支付宝与微信支付，以及三个悄悄吃掉预算的日常陷阱。',
+    seoTitle: '向中国汇款与从中国汇出——跨境手续费',
+    seoDescription: '国际学生日常支付现实：钱怎么进怎么出、跨境汇款悄悄累积的手续费、外籍人士如何设置支付宝与微信支付，以及三个悄悄吃掉预算的日常陷阱。',
     subtitle:
       '国际学生把钱汇入汇出中国本身就是一项小工程：家里汇来的钱要银行手续费与汇率差；从中国汇出的更贵；支付宝、微信支付又不能绑大多数外币卡充值；有些商家只收中国网络卡。本文带你走每一条实操路径——银行电汇、第三方服务、支付宝/微信支付变通——以及每条的限制，再加三个默默蚕食预算的日常陷阱。',
     stats: [

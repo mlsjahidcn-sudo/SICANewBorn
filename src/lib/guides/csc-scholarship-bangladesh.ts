@@ -36,6 +36,8 @@ export const cscBangladeshGuide: LocalizedGuide = {
     title: 'CSC Scholarship for Bangladeshi Students 2027',
     description:
       'CSC (Chinese Government Scholarship) for Bangladeshi students 2027: the MoE Bangladesh + UGC embassy route vs the university (Type B) route, deadlines, CSCA for bachelor\'s, documents, and the common name-mismatch failure.',
+    seoTitle: 'CSC Scholarship for Bangladeshi Students 2027',
+    seoDescription: 'CSC (Chinese Government Scholarship) for Bangladeshi students 2027: the MoE Bangladesh + UGC embassy route vs the university (Type B) route, deadlines',
     subtitle:
       'Bangladeshi applicants reach the Chinese Government Scholarship (CSC) through two routes: the MoE Bangladesh + UGC embassy route (notices typically released October-November [verify]), and the university (Type B) route with January-April 2027 deadlines that vary by university. Bachelor\'s applicants need a CSCA score — the next sittings are November 2026, December 2026, and January 2027. Bangladesh students are a large share of international enrollment in China, particularly in medicine and engineering.',
     stats: [
@@ -238,6 +240,8 @@ export const cscBangladeshGuide: LocalizedGuide = {
     title: '2027 孟加拉国学生 CSC 奖学金申请指南',
     description:
       '2027 年孟加拉国学生的中国政府奖学金（CSC）：MoE 孟加拉国 + UGC 使馆渠道与大学渠道对比、截止时间、CSCA 要求、材料清单与姓名不一致的常见失误。',
+    seoTitle: '2027 孟加拉国学生 CSC 奖学金申请指南',
+    seoDescription: '2027 年孟加拉国学生的中国政府奖学金（CSC）：MoE 孟加拉国 + UGC 使馆渠道与大学渠道对比、截止时间、CSCA',
     subtitle:
       '孟加拉国申请者可通过两条渠道申请中国政府奖学金（CSC）：MoE 孟加拉国 + UGC 使馆渠道（通知通常 10-11 月 [待核实]），大学（Type B）渠道截止约在 2027 年 1-4 月且因校而异。本科申请者需提交 CSCA 成绩——下一批场次为 2026 年 11 月、12 月与 2027 年 1 月。孟加拉国学生在中国国际生中占比可观，尤其集中在医学与工程领域。',
     stats: [

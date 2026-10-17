@@ -19,6 +19,8 @@ export const cscaScoresGuide: LocalizedGuide = {
     title: 'CSCA Scores Explained — No National Pass Mark, University Cutoffs, and What Score You Should Target',
     description:
       'How CSCA scoring works: 100 points per subject, no national pass mark, each university sets its own cutoffs. Score-report mechanics, tier benchmarks (80+/70+/60s as planning heuristics), and how to pick a target score.',
+    seoTitle: 'CSCA Scores Explained — No National Pass Mark',
+    seoDescription: 'How CSCA scoring works: 100 points per subject, no national pass mark, each university sets its own cutoffs.',
     subtitle:
       'The CSCA has no pass mark and no national ranking — each subject is scored out of 100, results go to universities as a reference, and every university draws its own admission lines per program. That makes "what score do I need?" a question about your target schools, not about the exam. This guide explains the scoring mechanics, how universities use the results, the realistic benchmarks by university tier, and the mechanics of the score report itself.',
     stats: [
@@ -250,6 +252,8 @@ export const cscaScoresGuide: LocalizedGuide = {
     title: 'CSCA 分数解读——无全国及格线、大学自划线，以及你该定多少分',
     description:
       'CSCA 计分机制：单科 100 分、无全国及格线、各校自划录取线。成绩单流转、按层次的规划分数带（80+/70+/60 分段），以及如何定目标分。',
+    seoTitle: 'CSCA 分数解读——无全国及格线、大学自划线',
+    seoDescription: 'CSCA 计分机制：单科 100 分、无全国及格线、各校自划录取线。成绩单流转、按层次的规划分数带（80+/70+/60 分段），以及如何定目标分。',
     subtitle:
       'CSCA 没有及格线也没有全国排名——每科按百分制计分，成绩作为参考交给大学，每所大学按项目与批次自行划线。这让「我需要多少分」变成一个关于目标院校的问题，而非关于考试本身。本指南解释计分机制、大学如何使用成绩、按层次的现实分数带，以及成绩单本身的流转细节。',
     stats: [

@@ -16,6 +16,7 @@ import {
   BookOpen,
   Sparkles,
 } from 'lucide-react';
+import { getStat } from '@/lib/site-stats';
 import { useI18n } from '@/lib/i18n';
 
 /**
@@ -295,19 +296,28 @@ export default function ThankYouClient() {
         </div>
         <div className="grid grid-cols-3 gap-4 lg:gap-8">
           {[
+            // '24h avg. response time' — a service commitment, kept here.
             { value: t('thankYou.proofStat1Value'), label: t('thankYou.proofStat1Label') },
-            { value: t('thankYou.proofStat2Value'), label: t('thankYou.proofStat2Label') },
-            { value: t('thankYou.proofStat3Value'), label: t('thankYou.proofStat3Label') },
-          ].map((stat) => (
-            <div key={stat.label} className="text-center bg-white border border-gray-200 p-5 lg:p-8">
-              <p className="text-3xl lg:text-5xl font-extrabold text-[#9B1B30]">
-                {stat.value}
-              </p>
-              <p className="text-xs lg:text-sm text-[#4B5563] mt-2 font-medium">
-                {stat.label}
-              </p>
-            </div>
-          ))}
+            // The other two come from site-stats.ts: '92% placement rate'
+            // and '27+ partner universities' are UNVERIFIED, and an
+            // empty stat means the tile hides itself rather than
+            // publishing a number nobody has sourced.
+            { value: getStat('admissionRate'), label: t('thankYou.proofStat2Label') },
+            { value: getStat('partnerUniversities'), label: t('thankYou.proofStat3Label') },
+          ]
+            // A stat with no verified value is hidden, not shown blank.
+            // Same rule as src/lib/site-stats.ts.
+            .filter((stat) => stat.value && stat.value.trim().length > 0)
+            .map((stat) => (
+              <div key={stat.label} className="text-center bg-white border border-gray-200 p-5 lg:p-8">
+                <p className="text-3xl lg:text-5xl font-extrabold text-[#9B1B30]">
+                  {stat.value}
+                </p>
+                <p className="text-xs lg:text-sm text-[#4B5563] mt-2 font-medium">
+                  {stat.label}
+                </p>
+              </div>
+            ))}
         </div>
       </section>
 

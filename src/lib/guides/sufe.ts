@@ -36,6 +36,8 @@ export const sufeGuide: LocalizedGuide = {
     title: 'SUFE (Shanghai University of Finance and Economics) for International Students',
     description:
       'SUFE (Shanghai University of Finance and Economics) for international students: programs (finance + economics + actuarial + taxation + international business), English-medium coverage, application routes (CSC + Type B), deadlines, scholarships, and how to apply.',
+    seoTitle: 'SUFE (Shanghai University of Finance and Economics)',
+    seoDescription: 'SUFE (Shanghai University of Finance and Economics) for international students: programs (finance + economics + actuarial + taxation + international',
     subtitle:
       'SUFE is the most specialized finance + economics university in China. Not 985-tier, but with Double First-Class discipline recognition in economics + business administration. Located in Shanghai (the most expensive city in China for international students, but with the deepest finance industry ties — Lujiazui + Pudong actively recruit SUFE graduates). Strongest programs: actuarial science, financial engineering, public finance, taxation, international business. For international students targeting finance + economics + actuarial careers, SUFE is the most direct path. Mid-tier tuition ¥14,000-25,000/yr; high-tier living cost ¥3,500-5,500/mo.',
     stats: [
@@ -257,6 +259,8 @@ export const sufeGuide: LocalizedGuide = {
     title: '上海财经大学国际学生指南',
     description:
       '上海财经大学（SUFE）国际学生：专业（金融 + 经济 + 精算 + 税务 + 工商管理）、英文覆盖、申请渠道（CSC + Type B）、截止、奖学金与申请流程。',
+    seoTitle: '上海财经大学国际学生指南',
+    seoDescription: '上海财经大学（SUFE）国际学生：专业（金融 + 经济 + 精算 + 税务 + 工商管理）、英文覆盖、申请渠道（CSC + Type',
     subtitle:
       'SUFE 是中国最专业的金融 + 经济大学——不是综合性大学有商学院，而是专门的金融经济院校。经济学 + 工商管理双一流学科（非 985）。位于上海（中国对国际学生最贵的城市，但金融产业关联最深——陆家嘴 + 浦东金融区雇主主动招聘 SUFE 毕业生）。最强专业：精算、金融工程、公共财政、税务、工商管理。对于目标金融 + 经济 + 精算职业的国际学生，SUFE 是最直接的路径。中层级学费 ¥14,000-25,000/年；上海高生活成本 ¥3,500-5,500/月。',
     stats: [

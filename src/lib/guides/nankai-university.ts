@@ -35,6 +35,8 @@ export const nankaiUniversityGuide: LocalizedGuide = {
     title: 'Nankai University Admissions Guide for International Students',
     description:
       'Nankai University for international students: programs (math + finance + chemistry + economics + business), English-medium coverage, application routes (CSC + Type B), deadlines, scholarships, and how to apply.',
+    seoTitle: 'Nankai University Admissions Guide',
+    seoDescription: 'Nankai University for international students: programs (math + finance + chemistry + economics + business), English-medium coverage, application routes',
     subtitle:
       'Nankai University is a 985 + Double First-Class university in Tianjin (30 min from Beijing by high-speed rail), one of the strongest math + finance + economics programs in China. Founded in 1919, one of the original Project 985 universities, famous for the Chen Sheng-Shen school of mathematics + applied math + chemistry. For international students targeting quantitative fields, finance, or economics, Nankai offers strong English-medium coverage + active CSC pathway + mid-tier cost-of-living.',
     stats: [

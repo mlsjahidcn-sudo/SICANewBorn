@@ -19,6 +19,8 @@ export const cscaFaqGuide: LocalizedGuide = {
     title: 'CSCA Exam — 50 Frequently Asked Questions (Answered)',
     description:
       'Every CSCA question, answered: who must take it, subjects, scoring, fees, dates, exemptions, CSC scholarship rules, retakes, prep — 50 questions with direct answers, plus links to the deep-dive guides.',
+    seoTitle: 'CSCA Exam — 50 Frequently Asked Questions (Answered)',
+    seoDescription: 'Every CSCA question, answered: who must take it, subjects, scoring, fees, dates, exemptions, CSC scholarship rules, retakes, prep — 50 questions with',
     subtitle:
       'One page, every CSCA question we are asked — from "what is the CSCA?" to "do universities see all my attempts?" Each answer is direct and self-contained; the topic map below points to the deep-dive guide for each area. This page carries the full FAQ schema, so the answers are built to be quoted verbatim by search engines and AI assistants.',
     stats: [

@@ -2,7 +2,7 @@
 
 > SICA is a professional study-abroad consultancy headquartered in Guangzhou, China. We help international students gain admission to top Chinese universities (including Tsinghua, Peking, Fudan, Shanghai Jiao Tong, Zhejiang, Nanjing, Wuhan, Sun Yat-sen), secure scholarships (CSC, Confucius Institute, provincial and university-specific), and navigate the application, visa, and arrival process end-to-end.
 >
-> <!-- Phase 148: site stats are now pulled from src/lib/site-stats.ts. Until Jahid fills the 5 spec fields (partnerUniversities / countriesServed / studentsHelped / admissionRate / visaRate), every stat tile in the UI is hidden rather than showing a guess. This file follows the same rule: no "+xxx  xx+" numbers in the brand-summary line. -->
+> SICA's team has 10 years of experience in study-in-China admissions. SICA is part of Ednex Group LTD (UK).
 
 ## Conversion
 
@@ -37,30 +37,30 @@
 - [Does the CSCA apply to English-taught programs?](https://studyinchina.academy/csca-english-taught-programs)
 - [Who must take the CSCA — and who is exempt](https://studyinchina.academy/csca-exam-exemptions)
 - [CSCA scores explained: no national pass mark](https://studyinchina.academy/csca-scores-and-cutoffs)
-- For live exam dates + practice tests → see https://cscaprep.academy (Phase 149 split; the calendar is published on CSCA Prep, SICA keeps the admissions angle).
+- For live exam dates + practice tests → see https://cscaprep.academy.
 
-## CSC scholarship — country guides (Phase 147 / Phase 166)
+## CSC scholarship — country guides
 
 - [CSC Scholarship for Pakistani students 2027](https://studyinchina.academy/csc-scholarship-pakistan): HEC route + Type B university route, December-January deadline, CSCA, name-mismatch prevention.
 - [CSC Scholarship for Nigerian students 2027](https://studyinchina.academy/csc-scholarship-nigeria): Type B university route, January-April 2027 deadlines, CSCA, WAEC + passport name-matching, agent-fraud warning.
 - [CSC Scholarship for Bangladeshi students 2027](https://studyinchina.academy/csc-scholarship-bangladesh): MoE Bangladesh + UGC embassy route vs Type B, October-November notice window, CSCA, Bangla-script + English transliteration name-match.
 
-## Study plan + application operational guides (Phase 167)
+## Study plan + application operational guides
 
 - [How to write a study plan for a Chinese university application](https://studyinchina.academy/how-to-write-study-plan-china): the 6-section structure (academic background / research interests / why this program + university / study plan in China / future career plans / closing), CSC vs Type B length targets, before/after examples, name-match + tailoring tips, language considerations (HSK 3.0 + English).
 
-## Province + city comparators (Phase 168)
+## Province + city comparators
 
 - [Hunan vs Yunnan: which province is better for international students](https://studyinchina.academy/hunan-vs-yunnan): Hunan (Changsha, CSU 985 + Hunan U 211) vs Yunnan (Kunming, YNU 211 + KUST 211 + Kunming Medical). Cost, climate (Yangtze valley vs Kunming plateau), language, programs, international community, scholarships, side-by-side monthly budget, when-to-pick-which.
 - [Xiamen vs Fuzhou for international students](https://studyinchina.academy/xiamen-vs-fuzhou): Xiamen (XMU 985, marine + chemistry + economics + Tan Kah Kee legacy) vs Fuzhou (FZU 211, materials + chemistry + math). Cost, climate (Fujian coastal), language (Min vs Fuzhou dialect), programs, international community, city amenity (Gulangyu UNESCO vs Three Lanes Seven Alleys), when-to-pick-which.
 
-## University deep-dive guides (Phase 169 — pharmacy + Tianjin + Shanghai)
+## University deep-dive guides
 
 - [Shenyang Pharmaceutical University for international students](https://studyinchina.academy/shenyang-pharmaceutical-university): the only Chinese university specialized in pharmacy + pharmaceutical sciences. DFC pharmacy. Three flagship programs (Pharmacy / PharmE / ClinPharm) + pre-pharmacy foundation year. CSC + Type B routes. English-medium coverage partial. Shenyang climate + cost.
 - [Nankai University admissions guide](https://studyinchina.academy/nankai-university): Tianjin-based 985 + DFC (math + chemistry + statistics + business administration + Marxist theory). Chen Sheng-Shen school of mathematics + finance/economics strengths. Tianjin vs Beijing logistics (30 min by HSR). Tianjin MoE CSC + Type B direct.
 - [SUFE (Shanghai University of Finance and Economics) for international students](https://studyinchina.academy/sufe): the most specialized finance + economics university in China. DFC economics + business administration. Actuarial + financial engineering + public finance + taxation + IB. Shanghai finance industry ties. CSC + Type B routes.
 
-## CSCA + medical operational guides (Phase 170 + 171)
+## CSCA + medical operational guides
 
 - [CSCA fee in Pakistan, Nigeria and Bangladesh: what it costs and how to pay](https://studyinchina.academy/csca-fee-pakistan-nigeria-bangladesh): CSCA fee structure (¥450 / ¥700), per-country payment rails (bank wire / Payoneer / Flutterwave / bKash / Nagad), currency conversion losses, common payment failures, 8-week timeline.
 - [Medical check and the physical examination form for a China student visa](https://studyinchina.academy/medical-check-physical-examination-form): where to do it (home country vs entry port), 8-12 medical checks (blood + chest X-ray + ECG + vaccinations), approved-hospital lists per country (Pakistan + Nigeria + Bangladesh + India), 6-month validity, 5 common rejection reasons + how to avoid them.

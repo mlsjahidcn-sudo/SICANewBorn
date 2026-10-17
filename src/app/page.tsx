@@ -48,8 +48,22 @@ const ConsultationCtaHero = dynamic(
 );
 
 export async function generateMetadata(): Promise<Metadata> {
+  const t = await getServerT();
   return {
-  alternates: await buildLanguageAlternates('/'),
+    // The homepage used to set NO title of its own, so it served the
+    // root layout's `title.default` —
+    //   "SICA | Study in China - Your Gateway to Top Chinese Universities"
+    // — 64 characters, which a search result truncates. It also
+    // inherited the root's 172-character meta description.
+    //
+    // This is the site's head term ("study in china", 227 impressions
+    // at position 86 in the saved GSC analysis), so its title and
+    // description should describe the page rather than the brand.
+    // The layout's "%s | SICA" template adds 7 characters, so the
+    // base title stays ≤ 53.
+    title: t('seo.homeTitle'),
+    description: t('seo.homeDescription'),
+    alternates: await buildLanguageAlternates('/'),
   };
 }
 
@@ -246,7 +260,17 @@ export default async function HomePage() {
           {[
             { icon: GraduationCap, label: t('quick.top'), desc: t('quick.top.desc') },
             { icon: BookOpen, label: t('quick.diverse'), desc: t('quick.diverse.desc') },
-            { icon: Award, label: t('quick.scholarships'), desc: t('quick.scholarships.desc') },
+            {
+              icon: Award,
+              label: t('quick.scholarships'),
+              desc: t('quick.scholarships.desc'),
+              // Contextual in-body link. The homepage previously had
+              // ZERO hrefs to /chinese-government-scholarship-csc —
+              // one of the site's strongest striking-distance pages.
+              // A card with no link is a dead end for a crawler.
+              link: '/chinese-government-scholarship-csc',
+              linkLabel: t('home.cscGuideLink'),
+            },
             { icon: Headphones, label: t('quick.support'), desc: t('quick.support.desc') },
           ].map((item) => (
             <div
@@ -260,6 +284,14 @@ export default async function HomePage() {
               </div>
               <h3 className="text-sm font-semibold text-[#1B2A4A]">{item.label}</h3>
               <p className="text-xs text-gray-500 leading-relaxed">{item.desc}</p>
+              {'link' in item && item.link ? (
+                <Link
+                  href={item.link}
+                  className="mt-1 text-xs font-medium text-[#9B1B30] hover:underline"
+                >
+                  {item.linkLabel}
+                </Link>
+              ) : null}
             </div>
           ))}
         </div>
@@ -293,6 +325,15 @@ export default async function HomePage() {
                 </div>
               ))}
             </div>
+            {/* Confirmed entity facts. These two are verified and
+                quotable, so they are stated plainly: an answer engine
+                resolving "SICA" needs a fact it can cite, and until now
+                the homepage carried none — the stat tiles are hidden
+                until their real values are supplied, which left the
+                homepage with no citable entity claim at all. */}
+            <p className="mt-6 max-w-xl text-sm leading-relaxed text-[#1B2A4A]">
+              {t('why.trustLine')}
+            </p>
             <Button
               asChild
               variant="outline"
@@ -547,7 +588,17 @@ export default async function HomePage() {
         <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
             { icon: MessageSquare, title: t('sica.consult'), desc: t('sica.consult.desc'), step: '01' },
-            { icon: FileText, title: t('sica.application'), desc: t('sica.application.desc'), step: '02' },
+            {
+              icon: FileText,
+              title: t('sica.application'),
+              desc: t('sica.application.desc'),
+              step: '02',
+              // The application step is the natural place to answer
+              // "when do I apply?" — the deadlines guide was linked
+              // from nowhere on the homepage.
+              link: '/china-university-application-deadlines',
+              linkLabel: t('home.deadlinesLink'),
+            },
             { icon: Plane, title: t('sica.visa'), desc: t('sica.visa.desc'), step: '03' },
             { icon: Home, title: t('sica.arrival'), desc: t('sica.arrival.desc'), step: '04' },
           ].map((item) => (
@@ -563,6 +614,14 @@ export default async function HomePage() {
               </div>
               <h3 className="mt-4 font-semibold text-[#1B2A4A]">{item.title}</h3>
               <p className="mt-2 text-sm text-gray-600 leading-relaxed">{item.desc}</p>
+              {'link' in item && item.link ? (
+                <Link
+                  href={item.link}
+                  className="mt-2 inline-block text-sm font-medium text-[#9B1B30] hover:underline"
+                >
+                  {item.linkLabel}
+                </Link>
+              ) : null}
             </div>
           ))}
         </div>

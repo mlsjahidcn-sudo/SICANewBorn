@@ -13,6 +13,8 @@ export const ustcGuide: LocalizedGuide = {
     title: 'USTC — University of Science and Technology of China — Sciences, Programs & International Admissions',
     description:
       'University of Science and Technology of China (USTC, 中科大) — CAS-affiliated sciences powerhouse in Hefei. History, signature programs (physics, mathematics, computer science, chemistry), English-taught options, CSCA combinations, scholarships (CSC + CAS + USTC-specific), cost, and practical guidance.',
+    seoTitle: 'USTC — University of Science and Technology of China',
+    seoDescription: 'University of Science and Technology of China (USTC, 中科大) — CAS-affiliated sciences powerhouse in Hefei.',
     subtitle:
       'USTC is China\'s top sciences-focused research university, established by the Chinese Academy of Sciences in 1958 in Hefei. The only university directly affiliated with the CAS, USTC is renowned for basic sciences (physics, mathematics, computer science, chemistry) and increasingly for engineering and management. For international applicants considering physics, math, computer science, or chemistry at a research-intensive Chinese university, USTC is often the top option alongside Peking and Tsinghua.',
     stats: [
@@ -313,6 +315,8 @@ export const ustcGuide: LocalizedGuide = {
     title: '中科大——中国科学技术大学，理学、院系与留学生申请',
     description:
       '中国科学技术大学（中科大, USTC）——中科院直属的合肥理学强校。历史、特色专业（物理、数学、计算机、化学）、英语授课选项、CSCA 组合、奖学金（CSC + 中科院 + 中科大自有）、费用与实务指引。',
+    seoTitle: '中科大——中国科学技术大学，理学、院系与留学生申请',
+    seoDescription: '中国科学技术大学（中科大, USTC）——中科院直属的合肥理学强校。历史、特色专业（物理、数学、计算机、化学）、英语授课选项、CSCA',
     subtitle:
       '中科大是中国顶级理学研究型大学，1958 年由中国科学院创办于合肥。是唯一直接隶属中科院的大学，以基础科学（物理、数学、计算机、化学）闻名，工程与管理也越来越强。对考虑物理、数学、计算机或化学研究型学府的申请者，中科大是常与北大、清华并列的首选，且合肥生活成本更低。',
     stats: [

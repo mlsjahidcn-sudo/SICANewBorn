@@ -18,6 +18,8 @@ export const bestBeijingUniversitiesGuide: LocalizedGuide = {
     title: 'Best Universities in Beijing for International Students (2026)',
     description:
       'Every Beijing university ranked by domestic ranking + QS World — tuition, international student population, programs, scholarships, and cost of living for students in Beijing.',
+    seoTitle: 'Best Universities in Beijing',
+    seoDescription: 'Every Beijing university ranked by domestic ranking + QS World — tuition, international student population, programs, scholarships, and cost of living for',
     subtitle:
       "Beijing is China's capital + political center + top-2 international student destination. It hosts the two best universities in the country (Tsinghua + Peking) and 6+ other world-class institutions. Here's how to pick the right one for your field.",
     stats: [

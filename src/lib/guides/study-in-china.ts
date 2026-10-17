@@ -12,6 +12,8 @@ export const studyInChinaGuide: LocalizedGuide = {
     title: 'Study in China: The Complete Guide for International Students',
     description:
       'Everything international students need to know about studying in China in 2026: top universities, costs, scholarships, admissions, student life, and career outcomes.',
+    seoTitle: 'Study in China: The Complete Guide',
+    seoDescription: 'Everything international students need to know about studying in China in 2026: top universities, costs, scholarships, admissions, student life, and',
     subtitle:
       'A 5,000-year civilization meets a 21st-century campus. Here is how to make China your study-abroad destination.',
     stats: [

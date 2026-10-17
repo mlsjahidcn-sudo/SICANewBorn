@@ -23,6 +23,8 @@ export const bestUniversitiesInNortheastChinaGuide: LocalizedGuide = {
     title: 'Best Universities in Northeast China for International Students — 985 Quality at China\'s Lowest Living Costs',
     description:
       'The best universities in Northeast China — HIT, Jilin, Dalian UT, Northeastern U, NENU, Harbin Engineering — 985-tier degrees at the cheapest living costs in China.',
+    seoTitle: 'Best Universities in Northeast China',
+    seoDescription: 'The best universities in Northeast China — HIT, Jilin, Dalian UT, Northeastern U, NENU, Harbin Engineering — 985-tier degrees at the cheapest living costs',
     subtitle:
       'Northeast China (Liaoning, Jilin, Heilongjiang) is the most under-priced region in Chinese higher education: it holds four 985-universities — Harbin Institute of Technology, Jilin University, Dalian University of Technology, and Northeastern University — plus the country\'s reference schools for naval architecture (Harbin Engineering) and teacher education (Northeast Normal), all sitting in cities whose living costs are the lowest tier among Chinese university towns. Applications at these universities are often less crowded than at equally-ranked coastal flagships, because international demand concentrates in Beijing, Shanghai, and the south. This guide ranks the universities worth applying to, breaks down the real costs, and is honest about the winters.',
     stats: [
@@ -312,6 +314,8 @@ export const bestUniversitiesInNortheastChinaGuide: LocalizedGuide = {
     title: '中国东北最好的大学 — 以全国最低生活成本，读985层次的学位',
     description:
       '东北最好的大学——哈工大、吉大、大连理工、东北大学、东北师大、哈工程——用最低的生活成本拿到985层次的学位。',
+    seoTitle: '中国东北最好的大学 — 以全国最低生活成本',
+    seoDescription: '东北最好的大学——哈工大、吉大、大连理工、东北大学、东北师大、哈工程——用最低的生活成本拿到985层次的学位。',
     subtitle:
       '中国东北（辽宁、吉林、黑龙江）是中国高等教育中性价比最高的地区：这里有四所985高校——哈尔滨工业大学、吉林大学、大连理工大学和东北大学——再加上船舶领域的全国标杆（哈尔滨工程大学）和师范教育重镇（东北师范大学），而这些城市的生活成本处于中国大学城市的最低档。由于国际学生的需求集中在北京、上海和南方，这些大学的国际申请池往往不如同层次的沿海旗舰拥挤。本指南排出值得申请的大学、拆解真实成本，并且对冬天保持诚实。',
     stats: [

@@ -20,6 +20,8 @@ export const chinaMobileInternetGuide: LocalizedGuide = {
     title: 'China Mobile Internet for International Students — eSIM, Real Apps, and the Practical Workarounds',
     description:
       'Pre-arrival setup for the Chinese phone, data plans that work, the apps that fail without a Chinese number, and the licensed-VPN discussion every student eventually has — practical, not political.',
+    seoTitle: 'China Mobile Internet for International Students',
+    seoDescription: 'Pre-arrival setup for the Chinese phone, data plans that work, the apps that fail without a Chinese number, and the licensed-VPN discussion every student',
     subtitle:
       'A Chinese phone number is the hard prerequisite for almost everything else in this cluster: bank account, Alipay/WeChat Pay, university portals, food delivery, campus Wi-Fi authentication. This guide covers the pre-arrival setup (eSIM vs physical SIM, data plans, the first-week activation), the apps that fail without a Chinese number, and the practical — not theoretical — discussion of VPNs: which kinds are legal, where they are needed, and how students actually use them for academic work without taking on unnecessary risk.',
     stats: [

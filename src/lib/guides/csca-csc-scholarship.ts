@@ -18,6 +18,8 @@ export const cscaCscScholarshipGuide: LocalizedGuide = {
     title: 'CSCA for CSC Scholarship Applicants — Scores, Timeline, and the January–April Crunch',
     description:
       'From the 2026 intake, CSC (Chinese Government Scholarship) bachelor\'s applicants must submit CSCA scores — no score, no shortlist. The deadline timeline, session planning for the Jan–Apr crunch, channel-specific rules, and the retake calculus.',
+    seoTitle: 'CSCA for CSC Scholarship Applicants',
+    seoDescription: 'From the 2026 intake, CSC (Chinese Government Scholarship) bachelor\'s applicants must submit CSCA scores — no score, no shortlist.',
     subtitle:
       'The CSC scholarship is China\'s most competitive full funding — tuition, dorm, monthly stipend, and airfare — and from the 2026 intake its bachelor\'s applicants must submit CSCA scores with the scholarship application. That single rule compresses your entire calendar: CSC deadlines cluster in January–April, which effectively forces scholarship candidates into the earliest CSCA sessions of each year and leaves room for at most one fallback sitting. This guide maps the crunch, the channel differences, and the score targets that make a scholarship file competitive.',
     stats: [
@@ -266,6 +268,8 @@ export const cscaCscScholarshipGuide: LocalizedGuide = {
     title: 'CSC 奖学金申请者的 CSCA——成绩、时间线与 1-4 月截止挤压',
     description:
       '自 2026 级起，CSC（中国政府奖学金）本科申请者必须提交 CSCA 成绩——无成绩即不入围。截止时间线、1-4 月挤压的场次规划、渠道差异与重考算术。',
+    seoTitle: 'CSC 奖学金申请者的 CSCA——成绩',
+    seoDescription: '自 2026 级起，CSC（中国政府奖学金）本科申请者必须提交 CSCA 成绩——无成绩即不入围。截止时间线、1-4 月挤压的场次规划、渠道差异与重考算术。',
     subtitle:
       'CSC 奖学金是中国竞争最激烈的全额资助——学费、住宿、月津贴与机票——自 2026 级起其本科申请者必须随奖学金申请提交 CSCA 成绩。这一条规则压缩了你的整个日历：CSC 截止集中在 1-4 月，这事实上把奖学金考生锁定在每年最早的 CSCA 场次，且最多只留一次兜底场次。本指南绘制挤压地图、渠道差异，以及让奖学金档案有竞争力的分数目标。',
     stats: [

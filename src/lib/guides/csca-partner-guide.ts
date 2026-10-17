@@ -19,6 +19,8 @@ export const cscaPartnerGuide: LocalizedGuide = {
     title: 'Advising Clients on the CSCA — The Partner & Counselor Handbook',
     description:
       'The counselor-side CSCA playbook: client triage in five questions, the subject-combination matrix, the deadline calendar template, advising scripts for the six most common client mistakes, and how to run the waiver check at scale.',
+    seoTitle: 'Advising Clients on the CSCA',
+    seoDescription: 'The counselor-side CSCA playbook: client triage in five questions, the subject-combination matrix, the deadline calendar template, advising scripts for',
     subtitle:
       'This handbook compresses the 18-guide CSCA cluster into counselor workflows: how to triage a new client in five questions, which CSCA subject combination each program family requires, the one-page calendar template that keeps exam sessions, application deadlines, and scholarship windows from colliding, the advising scripts for the six mistakes that cost clients sessions or money, and the process for running exemption/waiver checks across a whole client list at once. Built for SICA partner agencies and counselors; every rule cited here links to the client-facing guide that explains it.',
     stats: [

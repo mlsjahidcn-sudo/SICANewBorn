@@ -10,6 +10,8 @@ export const shanghaiJiaoTongGuide: LocalizedGuide = {
     title: 'Shanghai Jiao Tong University — Engineering, Medicine & International Programs',
     description:
       'Shanghai Jiao Tong University (SJTU, 上交) — Shanghai\'s engineering and applied-science flagship. History, signature programs (engineering, medicine, business, AI), English-taught options, CSCA combinations, scholarships, cost, and practical guidance.',
+    seoTitle: 'Shanghai Jiao Tong University',
+    seoDescription: 'Shanghai Jiao Tong University (SJTU, 上交) — Shanghai\'s engineering and applied-science flagship.',
     subtitle:
       'Shanghai Jiao Tong University is one of China\'s oldest and most selective universities, with particular strength in engineering, computer science, medicine, and applied business. The merger with Shanghai Second Medical University significantly expanded the medical school. For international applicants considering engineering or medicine in Shanghai, SJTU is often the top option alongside Tsinghua.',
     stats: [

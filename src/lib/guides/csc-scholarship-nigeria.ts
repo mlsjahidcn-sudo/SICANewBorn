@@ -19,6 +19,8 @@ export const cscNigeriaGuide: LocalizedGuide = {
     title: 'CSC Scholarship for Nigerian Students 2027',
     description:
       'CSC (Chinese Government Scholarship) for Nigerian students 2027: the university (Type B) route, deadlines, CSCA for bachelor\'s, WAEC/passport name-matching, and avoiding agent fraud.',
+    seoTitle: 'CSC Scholarship for Nigerian Students 2027',
+    seoDescription: 'CSC (Chinese Government Scholarship) for Nigerian students 2027: the university (Type B) route, deadlines, CSCA for bachelor\'s, WAEC/passport',
     subtitle:
       'For Nigerian students, the practical route to the Chinese Government Scholarship (CSC) is usually Type B — applying directly to a Chinese university that nominates you, with deadlines roughly January-April 2027 that vary by university. Bachelor\'s applicants need a CSCA score (next sittings: November 2026, December 2026, January 2027), and every document must match your passport name exactly.',
     stats: [

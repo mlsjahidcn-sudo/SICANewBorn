@@ -181,7 +181,10 @@ export async function POST(
       pickString(leadRow, ['interested_program']) ||
       '',
     sourceKind: type,
-    siteUrl: process.env.NEXT_PUBLIC_SITE_URL || SITE_URL,
+    // SITE_URL already normalises the trailing slash
+    // (`(env || FALLBACK).replace(/\/+$/, '')`). Reading the raw env
+    // var here bypassed that and could emit a doubled slash.
+    siteUrl: SITE_URL,
     ...(body.variables || {}),
   };
 

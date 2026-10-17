@@ -24,6 +24,8 @@ export const bestUniversitiesInHongKongGuide: LocalizedGuide = {
     title: 'Best Universities in Hong Kong for International Students — and How HK Admissions Differ From Mainland China',
     description:
       'The top Hong Kong universities for international students — HKU, CUHK, HKUST, PolyU, CityU, HKBU — plus how HK admissions differ from the mainland: no CSCA, direct application.',
+    seoTitle: 'Best Universities in Hong Kong',
+    seoDescription: 'The top Hong Kong universities for international students — HKU, CUHK, HKUST, PolyU, CityU, HKBU — plus how HK admissions differ from the mainland: no',
     subtitle:
       'Hong Kong appears on almost every "study in China" shortlist, but it is a separate admissions jurisdiction from the mainland: different application system, different exam requirements (none of the mainland\'s CSCA), different deadlines (fall rounds, not spring), and a different price level. This guide ranks the universities worth applying to, explains exactly how the Hong Kong system works for international students, and closes with an honest mainland-vs-Hong-Kong decision table — because for many applicants the right answer is a mainland university with a full scholarship, and for others it is Hong Kong\'s English-medium, finance-hub campus life.',
     stats: [
@@ -314,6 +316,8 @@ export const bestUniversitiesInHongKongGuide: LocalizedGuide = {
     title: '香港最好的大学 — 国际学生择校指南，以及香港与内地申请体系的区别',
     description:
       '国际学生最值得申请的香港高校——港大、中大、科大、理大、城大、浸会——以及香港与内地申请体系的完整区别：无需CSCA、直接申请。',
+    seoTitle: '香港最好的大学 — 国际学生择校指南',
+    seoDescription: '国际学生最值得申请的香港高校——港大、中大、科大、理大、城大、浸会——以及香港与内地申请体系的完整区别：无需CSCA、直接申请。',
     subtitle:
       '几乎每份"留学中国"的名单上都有香港，但它是一个独立于内地的招生体系：申请系统不同、考试要求不同（没有内地的CSCA）、截止日期不同（秋季轮次而非春季）、价格水平也不同。本指南列出值得申请的香港高校，讲清楚香港体系对国际学生究竟如何运作，最后附上一张诚实的"内地 vs 香港"决策表——因为对很多申请者来说，正确答案是拿全额奖学金读内地大学；而对另一些人，答案是香港的英语授课与金融中心城市生活。',
     stats: [
