@@ -1,0 +1,34 @@
+-- ============================================================================
+-- Phase 175 — university-media Storage bucket (manual checklist)
+-- ============================================================================
+--
+-- No table migration. Logo / banner (`image`) / gallery columns already
+-- store URL strings; this feature only changes *where* those URLs point
+-- (external CDN → Supabase Storage public URLs under `university-media`).
+--
+-- Create the bucket in the Supabase dashboard BEFORE deploying the
+-- import-on-save + bulk-import code paths:
+--
+--   Project → Storage → New bucket
+--     Name:        university-media
+--     Public:      ON  (logos/banners/galleries are public assets)
+--     File size:   ≥ 15 MB (upload path validates ≤ 15 MB after fetch)
+--     MIME allow:  image/webp (and optionally image/png, image/jpeg
+--                  for emergency manual uploads; the app only writes WebP)
+--
+-- Object path layout (written by src/lib/university-media.ts):
+--
+--   universities/{slug}/logo.webp
+--   universities/{slug}/banner.webp
+--   universities/{slug}/gallery/{index}-{sha256-8}.webp
+--
+-- Smoke after deploy:
+--   1. Edit one university with an Unsplash (or other https) URL → Save
+--   2. Confirm the DB column is now a …/university-media/…webp URL
+--   3. Open the public university page and confirm the image loads
+--   4. Run "Import external images" on /admin/universities with a small
+--      batch (default limit 25) and check the toast counts
+--
+-- Rollback: unset external URLs are unchanged when import fails; already-
+-- imported Storage objects can be left in place (orphan cleanup is ops).
+-- ============================================================================
