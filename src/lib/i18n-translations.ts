@@ -4978,6 +4978,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminCounselling.calPrev': 'Previous',
     'adminCounselling.calNext': 'Next',
     'adminCounselling.calClosedDay': 'Closed',
+    'adminCounselling.calOutsideWindow':
+      'Outside current booking hours (14:00-23:30 Beijing) — these sessions were booked under the previous window and still need to be honoured:',
     'adminCounselling.calMore': '+{{count}} more',
     'adminCounselling.calDayButton': 'Week',
     'adminCounselling.calOriginalSlot': 'Originally booked',
@@ -10057,6 +10059,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminCounselling.calPrev': '上一页',
     'adminCounselling.calNext': '下一页',
     'adminCounselling.calClosedDay': '休息',
+    'adminCounselling.calOutsideWindow':
+      '不在当前可预约时段内（北京时间 14:00-23:30）—— 这些预约是在旧时段下创建的，仍需照常进行：',
     'adminCounselling.calMore': '+{{count}} 更多',
     'adminCounselling.calDayButton': '周视图',
     'adminCounselling.calOriginalSlot': '原预约时间',

@@ -12,6 +12,8 @@ import {
   parseSlotInstant,
   utcToBeijingDateStr,
   DAY_END_MINUTES,
+  DAY_START_MINUTES,
+  SESSION_MINUTES,
 } from '../counselling-slots';
 
 // 2026-09-19 is a Saturday. 2026-09-20 is the following Sunday.
@@ -65,19 +67,41 @@ describe('working days and bookable dates', () => {
 });
 
 describe('candidate slot grid', () => {
-  it('produces 18 half-hour slots from 09:00 to 17:30 Beijing', () => {
+  it('produces 20 half-hour slots from 14:00 to 23:30 Beijing', () => {
     const slots = listCandidateSlotsForDate('2026-09-19');
-    expect(slots.length).toBe((DAY_END_MINUTES - 9 * 60) / 30 + 1);
-    // 09:00 Beijing − 8h stays on the same UTC calendar day.
-    expect(slots[0].toISOString()).toBe('2026-09-19T01:00:00.000Z');
+    // 14:00→23:30 is 570 minutes = 19 gaps, so 20 starts.
+    expect(slots.length).toBe(20);
+    expect(slots.length).toBe((DAY_END_MINUTES - DAY_START_MINUTES) / 30 + 1);
+    // 14:00 Beijing − 8h = 06:00 UTC, same UTC calendar day.
+    expect(slots[0].toISOString()).toBe('2026-09-19T06:00:00.000Z');
     const last = slots[slots.length - 1];
-    expect(last.toISOString()).toBe('2026-09-19T09:30:00.000Z'); // 17:30 Beijing
+    expect(last.toISOString()).toBe('2026-09-19T15:30:00.000Z'); // 23:30 Beijing
   });
 
   it('labels slots in Beijing wall-clock', () => {
     const slots = listCandidateSlotsForDate('2026-09-19');
-    expect(formatBeijingLabel(slots[0])).toBe('09:00');
-    expect(formatBeijingLabel(slots[slots.length - 1])).toBe('17:30');
+    expect(formatBeijingLabel(slots[0])).toBe('14:00');
+    expect(formatBeijingLabel(slots[slots.length - 1])).toBe('23:30');
+  });
+
+  it('opens at 14:00 Beijing — no morning slot exists', () => {
+    // Phase 185 (2026-10-17): the window moved from 09:00-17:30 to
+    // 14:00-24:00. 09:00 and 13:00 Beijing must no longer be offered.
+    expect(formatBeijingLabel(listCandidateSlotsForDate('2026-09-19')[0])).not.toBe('09:00');
+    const labels = listCandidateSlotsForDate('2026-09-19').map(formatBeijingLabel);
+    expect(labels).not.toContain('09:00');
+    expect(labels).not.toContain('13:30');
+  });
+
+  it('never lets a session cross into the next Beijing day', () => {
+    // The last start is 23:30, not 24:00, so a 10-minute session always
+    // finishes before midnight and stays on the calendar date the
+    // student picked.
+    const slots = listCandidateSlotsForDate('2026-09-19');
+    const last = slots[slots.length - 1];
+    expect(last.getTime() + SESSION_MINUTES * 60_000).toBeLessThan(
+      beijingWallToUtc('2026-09-20', 0)!.getTime()
+    );
   });
 
   it('returns no slots on a closed day', () => {
@@ -112,11 +136,24 @@ describe('slot parsing and membership', () => {
   });
 
   it('confirms on-grid slots and rejects off-grid / closed-day / after-hours', () => {
-    expect(isCandidateSlot(new Date('2026-09-19T01:00:00.000Z'))).toBe(true); // Sat 09:00 Beijing
-    expect(isCandidateSlot(new Date('2026-09-19T01:15:00.000Z'))).toBe(false); // off-grid 09:15
-    expect(isCandidateSlot(new Date('2026-09-20T01:00:00.000Z'))).toBe(false); // Sunday 09:00
-    // Sat 18:00 Beijing = 10:00 UTC — past the last 17:30 slot start.
-    expect(isCandidateSlot(new Date('2026-09-19T10:00:00.000Z'))).toBe(false);
+    expect(isCandidateSlot(new Date('2026-09-19T06:00:00.000Z'))).toBe(true); // Sat 14:00 Beijing
+    expect(isCandidateSlot(new Date('2026-09-19T06:15:00.000Z'))).toBe(false); // off-grid 14:15
+    expect(isCandidateSlot(new Date('2026-09-20T06:00:00.000Z'))).toBe(false); // Sunday 14:00
+    // Sat 00:30 Beijing = 16:30 UTC the previous day — after the last
+    // 23:30 start, so it belongs to no bookable day.
+    expect(isCandidateSlot(new Date('2026-09-19T16:30:00.000Z'))).toBe(false);
+  });
+
+  it('rejects every slot before 14:00 Beijing — the morning is closed', () => {
+    // This is the server-side security boundary for the new window: a
+    // tampered payload asking for 09:00 or 13:00 must not book.
+    for (const hour of [0, 8, 9, 12, 13]) {
+      // Beijing H:00 == (H-8):00 UTC. For H<8 the UTC day rolls forward.
+      const utcDay = hour < 8 ? '2026-09-20' : '2026-09-19';
+      const utcHour = (hour + 24 - 8) % 24;
+      const instant = new Date(`${utcDay}T${String(utcHour).padStart(2, '0')}:00:00.000Z`);
+      expect(isCandidateSlot(instant), `${hour}:00 Beijing must not be bookable`).toBe(false);
+    }
   });
 });
 

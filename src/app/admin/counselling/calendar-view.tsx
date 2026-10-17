@@ -202,6 +202,30 @@ export function AdminCounsellingCalendar({
     return rows;
   }, []);
 
+  /**
+   * Bookings that fall OUTSIDE the current bookable window.
+   *
+   * The window moved from 09:00-17:30 to 14:00-23:30 Beijing on
+   * 2026-10-17. `timeRows` only contains 14:00-23:30, and a chip is
+   * placed by exact minute match, so any booking still sitting in the
+   * old morning window would render NOWHERE in the week grid — a
+   * student with a confirmed session, invisible to the very calendar
+   * an advisor uses to find them.
+   *
+   * They are still real and still have to be honoured and rescheduled,
+   * so they are surfaced in their own strip rather than dropped. The
+   * month view is unaffected (it groups by day, not by minute).
+   */
+  const offWindowBookings = useMemo(() => {
+    const rowSet = new Set(timeRows);
+    const weekDays = new Set(days.slice(0, 7));
+    return bookings.filter((b) => {
+      const at = chipInstant(b);
+      if (!weekDays.has(beijingDayKey(at))) return false;
+      return !rowSet.has(beijingMinutesOfDay(at));
+    });
+  }, [bookings, days, timeRows]);
+
   const minuteLabel = (m: number) =>
     `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 
@@ -238,6 +262,32 @@ export function AdminCounsellingCalendar({
         <div className="flex-1" />
         {loading && <Loader2 className="h-4 w-4 animate-spin text-[#1B2A4A]" />}
       </div>
+
+      {/* Out-of-window bookings for the visible week. Deliberately
+          loud: these cannot be placed on the grid, and losing sight of
+          a confirmed session is worse than an extra row of UI. */}
+      {view === 'week' && offWindowBookings.length > 0 && (
+        <div className="border border-amber-300 bg-amber-50 p-3">
+          <div className="mb-2 text-xs font-semibold text-amber-900">
+            {t('adminCounselling.calOutsideWindow')}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {offWindowBookings.map((b) => {
+              const at = chipInstant(b);
+              return (
+                <button
+                  key={b.id}
+                  onClick={() => setSelected(b)}
+                  className={`text-left text-[10px] leading-tight px-2 py-1 border ${chipClass(b.status)}`}
+                  title={`${formatBeijingLabel(new Date(at))} · ${b.name} · ${b.status}`}
+                >
+                  {beijingDayKey(at)} {formatBeijingLabel(new Date(at))} · {b.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {view === 'week' ? (
         <div className="overflow-x-auto border border-gray-200 bg-white">

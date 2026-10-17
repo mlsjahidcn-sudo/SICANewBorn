@@ -4,7 +4,8 @@
  * vitest suite share one source of truth for what a bookable slot is.
  *
  * Timezone contract: every slot is a 10-minute session starting on a
- * 30-minute grid during SICA's Beijing working hours. Beijing is
+ * 30-minute grid inside SICA's Beijing bookable window (14:00-23:30
+ * starts; see DAY_START_MINUTES / DAY_END_MINUTES). Beijing is
  * UTC+8 year-round (China abolished DST in 1991), so wall-clock ↔
  * absolute-instant conversion is a constant-offset shift and needs no
  * tz database. Slots are stored as timestamptz (absolute instants);
@@ -41,11 +42,27 @@ export const MIN_LEAD_HOURS = 2;
 /** Working days, Monday–Saturday (Sunday closed). Matches Date#getUTCDay. */
 const WORKING_DAYS_UTC = [1, 2, 3, 4, 5, 6];
 
-/** First slot start of the day, minutes from Beijing midnight. */
-export const DAY_START_MINUTES = 9 * 60;
+/**
+ * Bookable window: 14:00–24:00 Beijing wall-clock.
+ *
+ * Changed 2026-10-17 from 09:00–17:30 at SICA's request — counselling
+ * is offered in the afternoon and evening only, so students cannot
+ * book a morning slot.
+ *
+ * DAY_START_MINUTES is the first slot START.
+ *
+ * DAY_END_MINUTES is the last slot START, not the closing time. The
+ * grid is 30 minutes, so the final start of the day is 23:30 and the
+ * session runs 23:30–23:40. Deliberately NOT 1440: a slot starting
+ * at exactly 00:00 is the first instant of the *next* Beijing day, so
+ * it would both misattribute the calendar date and collide with the
+ * following day's first slot. The window therefore ends 20 minutes
+ * before midnight, and no session ever crosses the date boundary.
+ */
+export const DAY_START_MINUTES = 14 * 60;
 
-/** Last slot start of the day, minutes from Beijing midnight. */
-export const DAY_END_MINUTES = 17 * 60 + 30;
+/** Last slot start of the day, minutes from Beijing midnight (23:30). */
+export const DAY_END_MINUTES = 23 * 60 + 30;
 
 const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
