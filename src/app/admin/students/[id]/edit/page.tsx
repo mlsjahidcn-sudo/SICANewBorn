@@ -25,10 +25,13 @@ import {
   type ResumeOcrResult,
   type TranscriptLevel,
 } from '@/components/admin/ocr-upload-modal';
+import { PreferredUniversitiesField } from '@/components/admin/preferred-universities-field';
 
 // Fields with fixed columns. Everything else lives in `extra` JSONB.
 // passportNumber must be here so passport OCR writes the real column
 // (not a silent extra.passportNumber copy).
+// targetField + preferredUniversities must be here so edit save/load
+// hits the real columns (not silent extra.* copies) — Phase C.
 const FIXED_FIELDS = [
   'firstName',
   'lastName',
@@ -38,7 +41,9 @@ const FIXED_FIELDS = [
   'phone',
   'passportNumber',
   'targetDegree',
+  'targetField',
   'targetIntake',
+  'preferredUniversities',
   'source',
   'status',
 ] as const;
@@ -64,7 +69,26 @@ export default function AdminStudentEditPage() {
 
   // Form state — covers all fields the API supports (fixed + extra).
   // initial state is empty; we populate from the GET response in useEffect.
+  // preferredUniversities is a string[] (catalog slugs) so it lives in
+  // its own state — formData stays Record<string, string>.
   const [formData, setFormData] = useState<Record<string, string>>({});
+  const [preferredUniversities, setPreferredUniversities] = useState<string[]>(
+    [],
+  );
+  const [intakes, setIntakes] = useState<{ id: string; label: string }[]>([]);
+
+  // Active intake periods for the target-intake Select (same as create).
+  useEffect(() => {
+    apiFetchJson<{ intakes?: { id: string; label: string }[] }>(
+      '/api/intakes?active=true',
+    )
+      .then((d) => {
+        if (d && Array.isArray(d.intakes)) setIntakes(d.intakes);
+      })
+      .catch(() => {
+        /* swallow — SelectContent falls back to static options below */
+      });
+  }, []);
 
   // Load the student on mount / id change
   useEffect(() => {
@@ -77,15 +101,21 @@ export default function AdminStudentEditPage() {
       signal: controller.signal,
     })
       .then(({ student }) => {
-        // Flatten fixed fields + extra into a single key/value bag
+        // Flatten fixed fields + extra into a single key/value bag.
+        // preferredUniversities is an array — skip it here and hydrate
+        // into its own state below.
         const flat: Record<string, string> = {};
         for (const key of FIXED_FIELDS) {
+          if (key === 'preferredUniversities') continue;
           const v = student[key as keyof AdminStudent];
           flat[key] = typeof v === 'string' ? v : v ? String(v) : '';
         }
         // Spread extra fields into the form (so HSK, IELTS, etc. show up)
         if (student.extra && typeof student.extra === 'object') {
           for (const [k, v] of Object.entries(student.extra)) {
+            // Don't let a stale extra.preferredUniversities / targetField
+            // overwrite the real columns.
+            if (k === 'preferredUniversities' || k === 'targetField') continue;
             if (typeof v === 'string') flat[k] = v;
           }
         }
@@ -95,7 +125,17 @@ export default function AdminStudentEditPage() {
           student.passportIssueDate ?? flat.passportIssueDate ?? '';
         flat.passportExpiryDate =
           student.passportExpiryDate ?? flat.passportExpiryDate ?? '';
+        // targetField is a real column — ensure top-level wins over any
+        // leftover extra.targetField from pre-Phase-C rows.
+        flat.targetField = student.targetField ?? flat.targetField ?? '';
         setFormData(flat);
+        setPreferredUniversities(
+          Array.isArray(student.preferredUniversities)
+            ? student.preferredUniversities.filter(
+                (s): s is string => typeof s === 'string' && s.trim().length > 0,
+              )
+            : [],
+        );
       })
       .catch((err) => {
         if (err.name === 'AbortError') return;
@@ -269,12 +309,18 @@ export default function AdminStudentEditPage() {
       const extra: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(formData)) {
         if (value === '' || value === null || value === undefined) continue;
+        // preferredUniversities is managed via its own array state —
+        // never copy a stale string from formData into the payload.
+        if (key === 'preferredUniversities') continue;
         if ((FIXED_FIELDS as readonly string[]).includes(key)) {
           payload[key] = value;
         } else {
           extra[key] = value;
         }
       }
+      // Always send preferredUniversities (even []) so clearing the
+      // multi-select actually empties the column instead of no-opping.
+      payload.preferredUniversities = preferredUniversities;
       if (Object.keys(extra).length > 0) payload.extra = extra;
 
       await apiFetchJson(`/api/admin/students/${studentId}`, {
@@ -695,13 +741,27 @@ export default function AdminStudentEditPage() {
                     <Select value={v('targetIntake')} onValueChange={(value) => handleInputChange('targetIntake', value)}>
                       <SelectTrigger><SelectValue placeholder={t('adminStudentForm.selectIntake')} /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="September 2025">September 2025</SelectItem>
-                        <SelectItem value="March 2026">March 2026</SelectItem>
-                        <SelectItem value="September 2026">September 2026</SelectItem>
-                        <SelectItem value="March 2027">March 2027</SelectItem>
+                        {intakes.length === 0 ? (
+                          <SelectItem value="__none" disabled>
+                            {t('adminStudentForm.selectIntake')}
+                          </SelectItem>
+                        ) : (
+                          intakes.map((intake) => (
+                            <SelectItem key={intake.id} value={intake.label}>
+                              {intake.label}
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
+
+                <div className="pt-2">
+                  <PreferredUniversitiesField
+                    value={preferredUniversities}
+                    onChange={setPreferredUniversities}
+                  />
                 </div>
 
                 <Separator />
@@ -746,7 +806,14 @@ export default function AdminStudentEditPage() {
                   <CardHeader><CardTitle>{t('adminStudentForm.reviewCardTargetEdit')}</CardTitle></CardHeader>
                   <CardContent className="text-sm space-y-1">
                     <p><span className="text-gray-500">{t('adminStudentForm.reviewLabelTargetDegree')}</span> {v('targetDegree') || '—'}</p>
+                    <p><span className="text-gray-500">{t('adminStudentForm.reviewLabelTargetField')}</span> {v('targetField') || '—'}</p>
                     <p><span className="text-gray-500">{t('adminStudentForm.reviewLabelTargetIntake')}</span> {v('targetIntake') || '—'}</p>
+                    <p>
+                      <span className="text-gray-500">{t('adminStudentForm.reviewLabelPreferredUniversities')}</span>{' '}
+                      {preferredUniversities.length > 0
+                        ? preferredUniversities.join(', ')
+                        : '—'}
+                    </p>
                     <p><span className="text-gray-500">{t('adminStudentForm.reviewLabelHskLevel')}</span> {v('hskLevel') || '—'}</p>
                     <p><span className="text-gray-500">{t('adminStudentForm.reviewLabelIelts')}</span> {v('ieltsScore') || '—'}</p>
                     <p><span className="text-gray-500">{t('adminStudentForm.reviewLabelToefl')}</span> {v('toeflScore') || '—'}</p>

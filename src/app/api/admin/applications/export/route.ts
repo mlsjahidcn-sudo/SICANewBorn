@@ -93,6 +93,11 @@ export async function GET(request: NextRequest) {
     const source = searchParams.get('source');
     const status = searchParams.get('status');
     const search = searchParams.get('search')?.trim();
+    // Catalog filters — mirror list GET (?university= / ?program=).
+    // Slug from SearchableSelect OR free-text; same escape +
+    // humanize rules as /api/admin/applications.
+    const universityFilter = searchParams.get('university')?.trim() || null;
+    const programFilter = searchParams.get('program')?.trim() || null;
     // S34: cohort filter (slug "YYYY-season" or "none"). Mirrors
     // the list endpoint so the cohort card's "View applications"
     // link can hit "Export CSV" and get the same cohort in the
@@ -197,6 +202,18 @@ export async function GET(request: NextRequest) {
           `program_name.ilike.%${safe}%,university_name.ilike.%${safe}%,application_number.ilike.%${safe}%`,
         );
       }
+      if (universityFilter) {
+        const safe = universityFilter.replace(/[%_,]/g, '\\$&');
+        q = q.or(
+          `university_id.eq.${safe},university_name.ilike.%${safe}%`,
+        );
+      }
+      if (programFilter) {
+        const safe = programFilter.replace(/[%_,]/g, '\\$&');
+        q = q.or(
+          `program_id.eq.${safe},program_name.ilike.%${safe}%`,
+        );
+      }
 
       const { data, error } = await q;
       if (error) {
@@ -270,7 +287,7 @@ export async function GET(request: NextRequest) {
       let q = service
         .from('partner_applications')
         .select(
-          'id, application_number, student_name, student_email, student_phone, nationality, passport_number, date_of_birth, gender, university, program, degree, intake, status, decision, priority, submitted_at, created_at, updated_at, notes',
+          'id, application_number, student_name, student_email, student_phone, nationality, passport_number, date_of_birth, gender, university, program, program_slug, degree, intake, status, decision, priority, submitted_at, created_at, updated_at, notes',
         )
         .order('created_at', { ascending: false })
         .limit(MAX_EXPORT_ROWS);
@@ -282,6 +299,25 @@ export async function GET(request: NextRequest) {
         q = q.or(
           `student_name.ilike.%${safe}%,university.ilike.%${safe}%,program.ilike.%${safe}%,application_number.ilike.%${safe}%`,
         );
+      }
+      if (universityFilter) {
+        const safe = universityFilter.replace(/[%_,]/g, '\\$&');
+        const humanized = safe.replace(/-/g, ' ');
+        q = q.or(
+          humanized !== safe
+            ? `university.ilike.%${safe}%,university.ilike.%${humanized}%`
+            : `university.ilike.%${safe}%`,
+        );
+      }
+      if (programFilter) {
+        const safe = programFilter.replace(/[%_,]/g, '\\$&');
+        const humanized = safe.replace(/-/g, ' ');
+        const parts = [
+          `program_slug.eq.${safe}`,
+          `program.ilike.%${safe}%`,
+        ];
+        if (humanized !== safe) parts.push(`program.ilike.%${humanized}%`);
+        q = q.or(parts.join(','));
       }
 
       const { data, error } = await q;

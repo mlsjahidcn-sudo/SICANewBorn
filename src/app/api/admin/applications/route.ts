@@ -72,6 +72,10 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const source = searchParams.get('source');
     const search = searchParams.get('search')?.trim();
+    // Catalog filters: slug or free-text name. UI SearchableSelect
+    // sends the slug; free-text deep-links can send a name.
+    const universityFilter = searchParams.get('university')?.trim() || null;
+    const programFilter = searchParams.get('program')?.trim() || null;
     // Phase 180: one-shortlist filter. Powers the builder's append mode.
     const campaign = searchParams.get('campaign')?.trim() || null;
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
@@ -182,6 +186,8 @@ export async function GET(request: NextRequest) {
           status: status ?? null,
           source: sourceOnly,
           search: search ?? null,
+          university: universityFilter,
+          program: programFilter,
           // Over-fetch when we'll JS-filter on the source so the
           // paginated slice still has `limit` rows after filter.
           fetchLimit: studentFetchLimit,
@@ -203,6 +209,8 @@ export async function GET(request: NextRequest) {
           // array — same SQL effect for non-cross-taxonomy statuses.
           statuses: partnerStatusFilter,
           search: search ?? null,
+          university: universityFilter,
+          program: programFilter,
           // Partners have no SQL-side `source` filter (the column
           // doesn't exist on partner_applications) — over-fetch
           // so we can JS-side filter to source='Partner' later.
@@ -398,6 +406,10 @@ async function fetchStudentApplications(
     status: string | null;
     source: string | null; // 'Online' | 'Admin' (Partner goes via Partner tab)
     search: string | null;
+    /** Catalog slug or free-text name — matches university_id OR university_name. */
+    university: string | null;
+    /** Catalog slug or free-text name — matches program_id OR program_name. */
+    program: string | null;
     fetchLimit: number;
     // Phase 107 Batch 4: optional decision / enrollment filters.
     // Pushed into SQL when set; null means "any".
@@ -464,6 +476,21 @@ async function fetchStudentApplications(
     );
   }
 
+  // Structured catalog filters (slug from SearchableSelect OR free-text).
+  // Escape commas so PostgREST `.or()` doesn't split the value.
+  if (opts.university) {
+    const safe = opts.university.replace(/[%_,]/g, '\\$&');
+    query = query.or(
+      `university_id.eq.${safe},university_name.ilike.%${safe}%`,
+    );
+  }
+  if (opts.program) {
+    const safe = opts.program.replace(/[%_,]/g, '\\$&');
+    query = query.or(
+      `program_id.eq.${safe},program_name.ilike.%${safe}%`,
+    );
+  }
+
   // Over-fetch when JS-side source filtering is happening.
   const fetchLimit = opts.source && !isOfflineFilter ? Math.min(100, opts.fetchLimit) : opts.fetchLimit;
   query = query.range(0, fetchLimit - 1);
@@ -483,6 +510,10 @@ async function fetchPartnerApplications(
   opts: {
     statuses: string[];
     search: string | null;
+    /** Catalog slug or free-text — matches university name (partner has no uni slug column). */
+    university: string | null;
+    /** Catalog slug or free-text — matches program_slug OR program name. */
+    program: string | null;
     fetchLimit: number;
     // Phase 62 (Bug 5): default hides archived (soft-deleted) rows.
     includeArchived?: boolean;
@@ -528,6 +559,31 @@ async function fetchPartnerApplications(
       `student_name.ilike.%${safe}%,university.ilike.%${safe}%,program.ilike.%${safe}%,application_number.ilike.%${safe}%`,
     );
   }
+
+  // Partner stores university as free-text name (no university_slug
+  // column). When the UI sends a catalog slug we also try a
+  // humanized form ("tsinghua-university" → "tsinghua university")
+  // so ilike still hits "Tsinghua University".
+  if (opts.university) {
+    const safe = opts.university.replace(/[%_,]/g, '\\$&');
+    const humanized = safe.replace(/-/g, ' ');
+    query = query.or(
+      humanized !== safe
+        ? `university.ilike.%${safe}%,university.ilike.%${humanized}%`
+        : `university.ilike.%${safe}%`,
+    );
+  }
+  if (opts.program) {
+    const safe = opts.program.replace(/[%_,]/g, '\\$&');
+    const humanized = safe.replace(/-/g, ' ');
+    const parts = [
+      `program_slug.eq.${safe}`,
+      `program.ilike.%${safe}%`,
+    ];
+    if (humanized !== safe) parts.push(`program.ilike.%${humanized}%`);
+    query = query.or(parts.join(','));
+  }
+
   query = query.range(0, opts.fetchLimit - 1);
 
   const { data, error } = await query;
