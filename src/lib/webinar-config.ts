@@ -72,6 +72,27 @@ export const WEBINAR_CONFIG: WebinarStaticConfig = {
 };
 
 /**
+ * Pure upcoming-session check for the promo popup (and any
+ * other surface that needs "is the webinar still open?").
+ *
+ * Pass `nowMs` so callers can capture `Date.now()` once in a
+ * `useState(() => Date.now())` initializer — never call
+ * `Date.now()` inside a render body (Phase 161 lint rule).
+ *
+ * Returns false for missing/invalid ISO strings so a bad
+ * config falls into the teaser branch instead of crashing.
+ */
+export function isWebinarSessionUpcoming(
+  sessionDateIso: string | null | undefined,
+  nowMs: number,
+): boolean {
+  if (!sessionDateIso) return false;
+  const t = Date.parse(sessionDateIso);
+  if (Number.isNaN(t)) return false;
+  return t > nowMs;
+}
+
+/**
  * Hardcoded agenda tracks — the 4-topic grid that the public
  * page renders below the hero. Phase 139/140 had these as
  * `webinar_topics` rows; Phase 162 added university-kind topics

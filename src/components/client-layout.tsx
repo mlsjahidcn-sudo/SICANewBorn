@@ -10,7 +10,7 @@ import { usePathname } from 'next/navigation';
 import type { Locale } from '@/lib/i18n-translations';
 
 /**
- * Phase 67: dynamic-import the 4 floating/overlay widgets so they
+ * Phase 67: dynamic-import the floating/overlay widgets so they
  * don't ship in the initial JS bundle. They only mount after the
  * user scrolls (or clicks, or mouse-leaves) — never on first paint.
  *
@@ -21,6 +21,8 @@ import type { Locale } from '@/lib/i18n-translations';
  *   QR code images on open.
  * - ExitIntentPopup: only mounts when the user moves the mouse
  *   toward the browser chrome (about to leave).
+ * - WebinarPromoPopup: static-config invitation card (restored
+ *   after Phase 165 removed it with the dynamic sessions API).
  *
  * `ssr: false` because they're all interactive-only and rendering
  * them server-side would just produce a non-functional placeholder.
@@ -43,6 +45,10 @@ const ExitIntentPopup = dynamic(() => import('@/components/exit-intent-popup').t
   ssr: false,
   loading: () => null,
 });
+const WebinarPromoPopup = dynamic(
+  () => import('@/components/webinar-promo-popup').then((m) => m.WebinarPromoPopup),
+  { ssr: false, loading: () => null },
+);
 
 export function ClientLayout({
   children,
@@ -71,6 +77,7 @@ export function ClientLayout({
         <WhatsAppFloat />
         <StickyContact />
         <ExitIntentPopup />
+        <WebinarPromoPopup />
         <WhatsAppGroupPopup />
       </div>
     </I18nProvider>

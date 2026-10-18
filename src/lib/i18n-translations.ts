@@ -5302,6 +5302,17 @@ export const translations: Record<Locale, Record<string, string>> = {
     'webinar.countdown.minutesLabel': 'm',
     'webinar.countdown.secondsLabel': 's',
     'webinar.countdown.ariaLabel': 'Time remaining until the webinar starts',
+    // Webinar promo popup (restored after Phase 165)
+    'webinar.popupEyebrow': 'Free live session',
+    'webinar.popupTitle': '2027 Intake + CSC Scholarship webinar',
+    'webinar.popupBody': 'Free 60-minute session covering March + September 2027 intakes and CSC Scholarship. Join us — seats are limited.',
+    'webinar.popupCta': 'Reserve my seat',
+    'webinar.popupDismiss': 'No thanks',
+    'webinar.popupAriaLabel': 'Webinar promo popup',
+    'webinar.popupTeaserEyebrow': 'Live online session',
+    'webinar.popupTeaserTitle': 'Webinar coming — register your interest',
+    'webinar.popupTeaserBody': 'Sign up to get notified when we open registration for the next 2027 intake + CSC Scholarship webinar.',
+    'webinar.popupTeaserCta': 'Notify me',
     // (when there's still a future session after the
     // current one). The "Week N · Mon DD" string itself is
     // derived server-side via formatWebinarLabel(); this key
@@ -10368,6 +10379,17 @@ export const translations: Record<Locale, Record<string, string>> = {
     'webinar.countdown.minutesLabel': '分',
     'webinar.countdown.secondsLabel': '秒',
     'webinar.countdown.ariaLabel': '距离讲座开始还有多久',
+    // Webinar promo popup (restored after Phase 165)
+    'webinar.popupEyebrow': '免费直播讲座',
+    'webinar.popupTitle': '2027 入学 + CSC 奖学金线上讲座',
+    'webinar.popupBody': '60 分钟免费讲座，覆盖 2027 年 3 月 + 9 月入学，以及 CSC 奖学金申请策略。席位有限，立即报名。',
+    'webinar.popupCta': '立即报名',
+    'webinar.popupDismiss': '不感兴趣',
+    'webinar.popupAriaLabel': '讲座宣传弹窗',
+    'webinar.popupTeaserEyebrow': '线上直播讲座',
+    'webinar.popupTeaserTitle': '讲座即将开放 — 留下您的邮箱',
+    'webinar.popupTeaserBody': '下一场 2027 入学 + CSC 奖学金讲座开放报名时，我们会第一时间通知您。',
+    'webinar.popupTeaserCta': '通知我',
   },
 };
 

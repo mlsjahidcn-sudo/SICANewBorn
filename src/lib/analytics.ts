@@ -392,15 +392,42 @@ export interface AnalyticsEventMap {
     country?: string;
   };
   // -----------------------------------------------------------------
+  // Webinar promo popup (restored against static WEBINAR_CONFIG).
+  // -----------------------------------------------------------------
+  /** Visitor saw the active-session webinar promo popup. */
+  webinar_popup_view: {
+    locale: 'en' | 'zh';
+    path: string;
+  };
+  /** Visitor saw the no-upcoming-session teaser popup. */
+  webinar_popup_view_teaser: {
+    locale: 'en' | 'zh';
+    path: string;
+  };
+  /** Visitor clicked Reserve my seat on the active popup. */
+  webinar_popup_click: {
+    locale: 'en' | 'zh';
+    path: string;
+  };
+  /** Visitor clicked Notify me on the teaser popup. */
+  webinar_popup_click_register: {
+    locale: 'en' | 'zh';
+    path: string;
+  };
+  /** Visitor dismissed the webinar promo popup. */
+  webinar_popup_dismiss: {
+    source: 'close_button' | 'cta_click';
+    locale: 'en' | 'zh';
+    path: string;
+  };
+  // -----------------------------------------------------------------
   // Phase 143: form drop-off funnel events.
   //
   // The form events (`webinar_form_started`, `_field_focused`,
   // `_submitted_failed`) are client-fired from
   // webinar-signup-form.tsx so the funnel leak is measurable
-  // in GA without any backend changes. Phase 165: dropped the
-  // admin-action session/topic events (no admin-side session
-  // management anymore — public page is static) and the
-  // webinar_popup_* events (promo popup removed in Phase 165).
+  // in GA without any backend changes. Phase 165 dropped the
+  // admin-action session/topic events (static public page).
   // -----------------------------------------------------------------
   /** Phase 143: visitor started interacting with the signup form
    *  (first field focus). */
