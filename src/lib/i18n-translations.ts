@@ -2930,6 +2930,17 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminUniversities.subtitle': 'Manage university listings and information',
     'adminUniversities.bulkGenerate': 'Bulk Generate (5)',
     'adminUniversities.bulkGenerateTitle': 'Generate 5 universities at once with AI',
+    // Phase 175 — bulk-import external logo/banner/gallery → WebP in Storage
+    'adminUniversities.importMedia': 'Import external images',
+    'adminUniversities.importMediaConfirmTitle': 'Import external images?',
+    'adminUniversities.importMediaConfirmBody':
+      'This downloads remote logos, banners, and gallery images for up to 25 universities, compresses them to WebP, and stores them in SICA Storage. Already-imported URLs are skipped. Runs are limited to 3 per 15 minutes.',
+    'adminUniversities.importMediaBusy': 'Importing…',
+    'adminUniversities.importMediaToast':
+      'Processed {{processed}} · updated {{updated}} · imported {{imported}} · skipped {{skipped}} · failed {{failed}}',
+    'adminUniversities.importMediaError': 'Media import failed. Try again later.',
+    'adminUniversities.mediaImportHint':
+      'On save, external URLs are compressed to WebP and stored in SICA Storage for faster loading.',
     'adminUniversities.aiGenerate': 'AI Generate',
     'adminUniversities.addUniversity': 'Add University',
     'adminUniversities.searchPlaceholder': 'Search universities…',
@@ -8119,6 +8130,17 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminUniversities.subtitle': '管理大学列表及详情',
     'adminUniversities.bulkGenerate': 'AI 批量生成（5 所）',
     'adminUniversities.bulkGenerateTitle': 'AI 一次性生成 5 所大学',
+    // Phase 175 — bulk-import external logo/banner/gallery → WebP in Storage
+    'adminUniversities.importMedia': '导入外部图片',
+    'adminUniversities.importMediaConfirmTitle': '导入外部图片？',
+    'adminUniversities.importMediaConfirmBody':
+      '将下载最多 25 所大学的远程 logo、横幅与图库图片，压缩为 WebP 并存入 SICA 存储。已导入的 URL 会跳过。每位管理员每 15 分钟最多运行 3 次。',
+    'adminUniversities.importMediaBusy': '导入中…',
+    'adminUniversities.importMediaToast':
+      '处理 {{processed}} · 更新 {{updated}} · 导入 {{imported}} · 跳过 {{skipped}} · 失败 {{failed}}',
+    'adminUniversities.importMediaError': '媒体导入失败，请稍后重试。',
+    'adminUniversities.mediaImportHint':
+      '保存时，外部图片 URL 会压缩为 WebP 并存入 SICA 存储，以加快加载。',
     'adminUniversities.aiGenerate': 'AI 生成',
     'adminUniversities.addUniversity': '新增大学',
     'adminUniversities.searchPlaceholder': '搜索大学…',
