@@ -31,8 +31,11 @@ import { ALL_COUNTRIES, NATIONALITY_CUSTOM } from '@/lib/common-countries';
 import { useI18n } from '@/lib/i18n';
 import {
   OcrUploadModal,
+  type OcrKind,
   type OcrResult,
   type PassportOcrResult,
+  type ResumeOcrResult,
+  type TranscriptLevel,
   type TranscriptOcrResult,
 } from '@/components/admin/ocr-upload-modal';
 
@@ -191,6 +194,10 @@ export default function AdminAddStudentPage() {
     bachelorMajor: '',
     bachelorGPA: '',
     bachelorGraduationDate: '',
+    masterUniversityName: '',
+    masterMajor: '',
+    masterGPA: '',
+    masterGraduationDate: '',
 
     // Language Proficiency
     hskLevel: '',
@@ -236,10 +243,15 @@ export default function AdminAddStudentPage() {
       ? formData.nationality
       : NATIONALITY_CUSTOM;
 
-  // Phase 89: OCR modal state + apply handlers.
-  const [ocrKind, setOcrKind] = useState<'passport' | 'transcript' | null>(null);
+  // OCR modal state — single instance, kind + transcriptLevel driven.
+  const [ocrKind, setOcrKind] = useState<OcrKind | null>(null);
+  const [transcriptLevel, setTranscriptLevel] = useState<TranscriptLevel>('high_school');
   const openPassportOcr = () => setOcrKind('passport');
-  const openTranscriptOcr = () => setOcrKind('transcript');
+  const openResumeOcr = () => setOcrKind('resume');
+  const openTranscriptOcr = (level: TranscriptLevel) => {
+    setTranscriptLevel(level);
+    setOcrKind('transcript');
+  };
   const closeOcr = () => setOcrKind(null);
 
   function applyPassportOcr(result: PassportOcrResult): void {
@@ -255,25 +267,60 @@ export default function AdminAddStudentPage() {
     set('passportExpiryDate', result.passportExpiryDate);
   }
 
-  function applyTranscriptOcr(result: TranscriptOcrResult): void {
+  function applyTranscriptOcr(level: TranscriptLevel, result: TranscriptOcrResult): void {
     const set = (k: keyof typeof formData, v: string | null) =>
       handleInputChange(k, v ?? '');
-    set('highSchoolName', result.highSchoolName);
-    set('highSchoolCity', result.highSchoolCity);
-    set('highSchoolCountry', result.highSchoolCountry);
-    set('highSchoolGPA', result.highSchoolGPA);
-    set('highSchoolGraduationDate', result.highSchoolGraduationDate);
+    if (level === 'high_school') {
+      set('highSchoolName', result.highSchoolName);
+      set('highSchoolCity', result.highSchoolCity);
+      set('highSchoolCountry', result.highSchoolCountry);
+      set('highSchoolGPA', result.highSchoolGPA);
+      set('highSchoolGraduationDate', result.highSchoolGraduationDate);
+      return;
+    }
+    if (level === 'bachelor') {
+      set('bachelorUniversityName', result.bachelorUniversityName);
+      set('bachelorMajor', result.bachelorMajor);
+      set('bachelorGPA', result.bachelorGPA);
+      set('bachelorGraduationDate', result.bachelorGraduationDate);
+      return;
+    }
+    set('masterUniversityName', result.masterUniversityName);
+    set('masterMajor', result.masterMajor);
+    set('masterGPA', result.masterGPA);
+    set('masterGraduationDate', result.masterGraduationDate);
+  }
+
+  function applyResumeOcr(result: ResumeOcrResult): void {
+    const set = (k: keyof typeof formData, v: string | null) => {
+      if (v == null || v === '') return;
+      handleInputChange(k, v);
+    };
+    set('phone', result.phone);
+    set('whatsapp', result.whatsapp);
+    set('address', result.address);
+    set('partnerInfo', result.partnerInfo);
+    set('email', result.email);
+    set('city', result.city);
+    set('country', result.country);
+    set('firstName', result.firstName);
+    set('lastName', result.lastName);
   }
 
   const applyOcr = (result: OcrResult) => {
     if (ocrKind === 'passport') {
       applyPassportOcr(result as PassportOcrResult);
     } else if (ocrKind === 'transcript') {
-      applyTranscriptOcr(result as TranscriptOcrResult);
+      applyTranscriptOcr(transcriptLevel, result as TranscriptOcrResult);
+    } else if (ocrKind === 'resume') {
+      applyResumeOcr(result as ResumeOcrResult);
     }
   };
 
-  const passportExistingFields = ([
+  const nonEmpty = (vals: Array<string | undefined>): string[] =>
+    vals.filter((v): v is string => typeof v === 'string' && v.length > 0);
+
+  const passportExistingFields = nonEmpty([
     formData.firstName,
     formData.lastName,
     formData.dateOfBirth,
@@ -282,15 +329,52 @@ export default function AdminAddStudentPage() {
     formData.gender,
     formData.passportIssueDate,
     formData.passportExpiryDate,
-  ] as Array<string | null>).filter((v) => v && v.length > 0) as string[];
+  ]);
 
-  const transcriptExistingFields = ([
+  const resumeExistingFields = nonEmpty([
+    formData.phone,
+    formData.whatsapp,
+    formData.address,
+    formData.partnerInfo,
+    formData.email,
+    formData.city,
+    formData.country,
+    formData.firstName,
+    formData.lastName,
+  ]);
+
+  const highSchoolExistingFields = nonEmpty([
     formData.highSchoolName,
     formData.highSchoolCity,
     formData.highSchoolCountry,
     formData.highSchoolGPA,
     formData.highSchoolGraduationDate,
-  ] as Array<string | null>).filter((v) => v && v.length > 0) as string[];
+  ]);
+
+  const bachelorExistingFields = nonEmpty([
+    formData.bachelorUniversityName,
+    formData.bachelorMajor,
+    formData.bachelorGPA,
+    formData.bachelorGraduationDate,
+  ]);
+
+  const masterExistingFields = nonEmpty([
+    formData.masterUniversityName,
+    formData.masterMajor,
+    formData.masterGPA,
+    formData.masterGraduationDate,
+  ]);
+
+  const ocrExistingFieldKeys =
+    ocrKind === 'passport'
+      ? passportExistingFields
+      : ocrKind === 'resume'
+        ? resumeExistingFields
+        : transcriptLevel === 'bachelor'
+          ? bachelorExistingFields
+          : transcriptLevel === 'master'
+            ? masterExistingFields
+            : highSchoolExistingFields;
 
   /**
    * Split the form into:
@@ -637,9 +721,19 @@ export default function AdminAddStudentPage() {
 
                 <Separator className="my-6" />
 
-                <div className="flex items-center gap-2">
-                  <User className="w-5 h-5 text-[#1B2A4A]" />
-                  <h3 className="text-md font-semibold text-[#1B2A4A]">{t('adminStudentForm.sectionContactInfo')}</h3>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <User className="w-5 h-5 text-[#1B2A4A]" />
+                    <h3 className="text-md font-semibold text-[#1B2A4A]">{t('adminStudentForm.sectionContactInfo')}</h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={openResumeOcr}
+                    className="inline-flex items-center gap-1 text-xs border border-[#1B2A4A] text-[#1B2A4A] px-2.5 py-1 hover:bg-[#1B2A4A] hover:text-white transition-colors"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    {t('adminStudentForm.ocrButtonResume')}
+                  </button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
@@ -742,11 +836,11 @@ export default function AdminAddStudentPage() {
                       <h3 className="text-md font-semibold text-[#1B2A4A]">{t('adminStudentForm.sectionHighSchool')}</h3>
                       <button
                         type="button"
-                        onClick={openTranscriptOcr}
+                        onClick={() => openTranscriptOcr('high_school')}
                         className="inline-flex items-center gap-1 text-xs border border-[#1B2A4A] text-[#1B2A4A] px-2.5 py-1 hover:bg-[#1B2A4A] hover:text-white transition-colors"
                       >
                         <Sparkles className="w-3 h-3" />
-                        {t('adminStudentForm.ocrButtonTranscript')}
+                        {t('adminStudentForm.ocrButtonTranscriptHighSchool')}
                       </button>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -808,7 +902,17 @@ export default function AdminAddStudentPage() {
                   <Separator className="my-6" />
 
                   <div>
-                    <h3 className="text-md font-semibold text-[#1B2A4A] mb-4">{t('adminStudentForm.sectionBachelorsDegree')}</h3>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-md font-semibold text-[#1B2A4A]">{t('adminStudentForm.sectionBachelorsDegree')}</h3>
+                      <button
+                        type="button"
+                        onClick={() => openTranscriptOcr('bachelor')}
+                        className="inline-flex items-center gap-1 text-xs border border-[#1B2A4A] text-[#1B2A4A] px-2.5 py-1 hover:bg-[#1B2A4A] hover:text-white transition-colors"
+                      >
+                        <Sparkles className="w-3 h-3" />
+                        {t('adminStudentForm.ocrButtonTranscriptBachelor')}
+                      </button>
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="md:col-span-2">
                         <Label htmlFor="bachelorUniversityName" className="text-[#1B2A4A]">{t('adminStudentForm.fieldUniversityName')}</Label>
@@ -847,6 +951,65 @@ export default function AdminAddStudentPage() {
                           name="bachelorGraduationDate"
                           type="date"
                           value={formData.bachelorGraduationDate}
+                          onChange={(e) => handleInputChange(e.target.name, e.target.value)}
+                          className="mt-2"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator className="my-6" />
+
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-md font-semibold text-[#1B2A4A]">{t('adminStudentForm.sectionMastersDegree')}</h3>
+                      <button
+                        type="button"
+                        onClick={() => openTranscriptOcr('master')}
+                        className="inline-flex items-center gap-1 text-xs border border-[#1B2A4A] text-[#1B2A4A] px-2.5 py-1 hover:bg-[#1B2A4A] hover:text-white transition-colors"
+                      >
+                        <Sparkles className="w-3 h-3" />
+                        {t('adminStudentForm.ocrButtonTranscriptMaster')}
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="md:col-span-2">
+                        <Label htmlFor="masterUniversityName" className="text-[#1B2A4A]">{t('adminStudentForm.fieldUniversityName')}</Label>
+                        <Input
+                          id="masterUniversityName"
+                          name="masterUniversityName"
+                          value={formData.masterUniversityName}
+                          onChange={(e) => handleInputChange(e.target.name, e.target.value)}
+                          className="mt-2"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="masterMajor" className="text-[#1B2A4A]">{t('adminStudentForm.fieldMajor')}</Label>
+                        <Input
+                          id="masterMajor"
+                          name="masterMajor"
+                          value={formData.masterMajor}
+                          onChange={(e) => handleInputChange(e.target.name, e.target.value)}
+                          className="mt-2"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="masterGPA" className="text-[#1B2A4A]">{t('adminStudentForm.fieldGpa')}</Label>
+                        <Input
+                          id="masterGPA"
+                          name="masterGPA"
+                          value={formData.masterGPA}
+                          onChange={(e) => handleInputChange(e.target.name, e.target.value)}
+                          className="mt-2"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="masterGraduationDate" className="text-[#1B2A4A]">{t('adminStudentForm.fieldGraduationDate')}</Label>
+                        <Input
+                          id="masterGraduationDate"
+                          name="masterGraduationDate"
+                          type="date"
+                          value={formData.masterGraduationDate}
                           onChange={(e) => handleInputChange(e.target.name, e.target.value)}
                           className="mt-2"
                         />
@@ -1142,7 +1305,7 @@ export default function AdminAddStudentPage() {
                     </CardContent>
                   </Card>
 
-                  {(formData.highSchoolName || formData.bachelorUniversityName) && (
+                  {(formData.highSchoolName || formData.bachelorUniversityName || formData.masterUniversityName) && (
                     <Card>
                       <CardHeader>
                         <CardTitle className="text-[#1B2A4A]">{t('adminStudentForm.reviewCardEducationNew')}</CardTitle>
@@ -1156,6 +1319,12 @@ export default function AdminAddStudentPage() {
                             <>
                               <div><span className="text-[#4B5563]">{t('adminStudentForm.reviewLabelBachelorsUniversity')}</span> <span className="font-medium">{formData.bachelorUniversityName}</span></div>
                               <div><span className="text-[#4B5563]">{t('adminStudentForm.reviewLabelMajor')}</span> <span className="font-medium">{formData.bachelorMajor}</span></div>
+                            </>
+                          )}
+                          {formData.masterUniversityName && (
+                            <>
+                              <div><span className="text-[#4B5563]">{t('adminStudentForm.reviewLabelMastersUniversity')}</span> <span className="font-medium">{formData.masterUniversityName}</span></div>
+                              <div><span className="text-[#4B5563]">{t('adminStudentForm.reviewLabelMajor')}</span> <span className="font-medium">{formData.masterMajor}</span></div>
                             </>
                           )}
                         </div>
@@ -1253,23 +1422,15 @@ export default function AdminAddStudentPage() {
         )}
       </div>
 
-      {/* Phase 89: OCR modals — single instance, kind-driven so we
-          don't mount two modals side by side. */}
-      {ocrKind === 'passport' && (
+      {/* Phase 89 + OCR edit plan: single kind-driven modal (passport /
+          leveled transcript / resume). */}
+      {ocrKind && (
         <OcrUploadModal
           open
           onOpenChange={(o) => !o && closeOcr()}
-          kind="passport"
-          existingFieldKeys={passportExistingFields}
-          onApply={applyOcr}
-        />
-      )}
-      {ocrKind === 'transcript' && (
-        <OcrUploadModal
-          open
-          onOpenChange={(o) => !o && closeOcr()}
-          kind="transcript"
-          existingFieldKeys={transcriptExistingFields}
+          kind={ocrKind}
+          transcriptLevel={ocrKind === 'transcript' ? transcriptLevel : undefined}
+          existingFieldKeys={ocrExistingFieldKeys}
           onApply={applyOcr}
         />
       )}

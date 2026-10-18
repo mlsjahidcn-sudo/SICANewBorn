@@ -1,11 +1,13 @@
 /**
- * Phase 89: Pure helpers for the admin OCR upload modal.
+ * Phase 89 / edit-OCR: Pure helpers for the admin OCR upload modal.
  *
  * Kept separate from the modal component so they can be unit-tested
  * without rendering (mirrors the existing pattern in src/lib/__tests__/).
  */
 
-export type OcrKind = 'passport' | 'transcript';
+import type { OcrKind } from '@/components/admin/ocr-result-types';
+
+export type { OcrKind };
 
 export const OCR_ALLOWED_MIME_TYPES = [
   'image/jpeg',
@@ -48,12 +50,35 @@ export function formatFieldLabel(kind: OcrKind, field: string): string {
       default: return field;
     }
   }
+  if (kind === 'resume') {
+    switch (field) {
+      case 'firstName': return 'resume.firstName';
+      case 'lastName': return 'resume.lastName';
+      case 'email': return 'resume.email';
+      case 'phone': return 'resume.phone';
+      case 'whatsapp': return 'resume.whatsapp';
+      case 'address': return 'resume.address';
+      case 'city': return 'resume.city';
+      case 'country': return 'resume.country';
+      case 'partnerInfo': return 'resume.partnerInfo';
+      default: return field;
+    }
+  }
+  // transcript (high school / bachelor / master — same result shape)
   switch (field) {
     case 'highSchoolName': return 'transcript.highSchoolName';
     case 'highSchoolCity': return 'transcript.highSchoolCity';
     case 'highSchoolCountry': return 'transcript.highSchoolCountry';
     case 'highSchoolGPA': return 'transcript.highSchoolGPA';
     case 'highSchoolGraduationDate': return 'transcript.highSchoolGraduationDate';
+    case 'bachelorUniversityName': return 'transcript.bachelorUniversityName';
+    case 'bachelorMajor': return 'transcript.bachelorMajor';
+    case 'bachelorGPA': return 'transcript.bachelorGPA';
+    case 'bachelorGraduationDate': return 'transcript.bachelorGraduationDate';
+    case 'masterUniversityName': return 'transcript.masterUniversityName';
+    case 'masterMajor': return 'transcript.masterMajor';
+    case 'masterGPA': return 'transcript.masterGPA';
+    case 'masterGraduationDate': return 'transcript.masterGraduationDate';
     default: return field;
   }
 }

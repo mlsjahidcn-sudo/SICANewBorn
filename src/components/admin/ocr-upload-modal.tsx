@@ -1,7 +1,8 @@
 'use client';
 
 /**
- * Phase 89: Admin OCR upload modal for passport + high-school transcript.
+ * Phase 89 / edit-OCR: Admin OCR upload modal for passport, leveled
+ * transcripts (high school / bachelor / master), and resume/CV.
  *
  * Flow:
  *   1. Admin picks a file (drag-drop or click) — image or single-page PDF, ≤10MB
@@ -28,6 +29,8 @@ import {
   OcrResult,
   PassportOcrResult,
   TranscriptOcrResult,
+  ResumeOcrResult,
+  TranscriptLevel,
 } from './ocr-result-types';
 import {
   isValidFileType,
@@ -38,12 +41,17 @@ import {
   OCR_MAX_BYTES,
 } from '@/lib/admin-ocr-helpers';
 
-export type { OcrKind, OcrResult, PassportOcrResult, TranscriptOcrResult };
+export type { OcrKind, OcrResult, PassportOcrResult, TranscriptOcrResult, ResumeOcrResult, TranscriptLevel };
 
 export interface OcrUploadModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   kind: OcrKind;
+  /**
+   * Required when kind === 'transcript'. Defaults to 'high_school' for
+   * back-compat if omitted on a transcript open.
+   */
+  transcriptLevel?: TranscriptLevel;
   /** Field names already populated in the wizard form — used to gate the replace-confirm dialog. */
   existingFieldKeys: string[];
   onApply: (result: OcrResult) => void;
@@ -57,10 +65,27 @@ interface UploadUrlResponse {
   documentId: string;
 }
 
+function titleKeyFor(kind: OcrKind, level: TranscriptLevel | undefined): string {
+  if (kind === 'passport') return 'adminStudentOcr.titlePassport';
+  if (kind === 'resume') return 'adminStudentOcr.titleResume';
+  if (level === 'bachelor') return 'adminStudentOcr.titleTranscriptBachelor';
+  if (level === 'master') return 'adminStudentOcr.titleTranscriptMaster';
+  return 'adminStudentOcr.titleTranscript';
+}
+
+function kindBadgeKey(kind: OcrKind, level: TranscriptLevel | undefined): string {
+  if (kind === 'passport') return 'adminStudentOcr.kindBadgePassport';
+  if (kind === 'resume') return 'adminStudentOcr.kindBadgeResume';
+  if (level === 'bachelor') return 'adminStudentOcr.kindBadgeTranscriptBachelor';
+  if (level === 'master') return 'adminStudentOcr.kindBadgeTranscriptMaster';
+  return 'adminStudentOcr.kindBadgeTranscriptHighSchool';
+}
+
 export function OcrUploadModal({
   open,
   onOpenChange,
   kind,
+  transcriptLevel,
   existingFieldKeys,
   onApply,
 }: OcrUploadModalProps) {
@@ -74,6 +99,9 @@ export function OcrUploadModal({
   const [confirmReplaceOpen, setConfirmReplaceOpen] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const resolvedLevel: TranscriptLevel =
+    kind === 'transcript' ? (transcriptLevel ?? 'high_school') : 'high_school';
 
   // Reset state whenever the modal opens so a stale preview from
   // a previous session doesn't leak in.
@@ -156,14 +184,19 @@ export function OcrUploadModal({
 
       // Step 3: kick off the SSE extraction
       setProgress(t('adminStudentOcr.extractingProgress', { progress: '10%' }));
+      const extractBody: Record<string, string> = {
+        kind,
+        storagePath: uploadMeta.storagePath,
+        fileType: file.type,
+      };
+      if (kind === 'transcript') {
+        extractBody.level = resolvedLevel;
+      }
+
       const extractRes = await apiFetch('/api/admin/students/ocr/extract', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          kind,
-          storagePath: uploadMeta.storagePath,
-          fileType: file.type,
-        }),
+        body: JSON.stringify(extractBody),
         signal: abortRef.current.signal,
       });
 
@@ -276,9 +309,8 @@ export function OcrUploadModal({
 
   if (!open) return null;
 
-  const isPassport = kind === 'passport';
-  const titleKey = isPassport ? 'adminStudentOcr.titlePassport' : 'adminStudentOcr.titleTranscript';
-  const kindLabel = isPassport ? 'Passport' : 'High School Transcript';
+  const titleKey = titleKeyFor(kind, kind === 'transcript' ? resolvedLevel : undefined);
+  const badgeKey = kindBadgeKey(kind, kind === 'transcript' ? resolvedLevel : undefined);
 
   return (
     <>
@@ -292,7 +324,7 @@ export function OcrUploadModal({
                 {t(titleKey)}
               </h2>
               <span className="ml-2 text-xs bg-gray-100 text-[#4B5563] px-2 py-0.5">
-                {kindLabel}
+                {t(badgeKey)}
               </span>
             </div>
             <button onClick={handleClose} className="text-gray-400 hover:text-gray-600">
