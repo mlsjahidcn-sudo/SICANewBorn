@@ -7,34 +7,35 @@ import { getAIProvider } from '@/lib/ai/provider';
 import {
   buildPassportOcrPrompt,
   buildTranscriptOcrPrompt,
+  buildResumeOcrPrompt,
 } from '@/lib/ai/ocr-prompt';
 import {
   extractJsonObject,
   normalizePassportOcrPayload,
   normalizeTranscriptOcrPayload,
+  normalizeResumeOcrPayload,
 } from '@/lib/ai/ocr-sanitize';
+import { isTranscriptLevel } from '@/components/admin/ocr-result-types';
+import type { TranscriptLevel } from '@/components/admin/ocr-result-types';
 
 export const dynamic = 'force-dynamic';
 
 /**
  * POST /api/admin/students/ocr/extract
  *
- * Phase 89: second step of the 2-step OCR flow.
+ * Phase 89 / edit-OCR: second step of the 2-step OCR flow.
  *
- * Body: { kind: 'passport' | 'transcript', storagePath: string, fileType: string }
+ * Body: {
+ *   kind: 'passport' | 'transcript' | 'resume',
+ *   level?: 'high_school' | 'bachelor' | 'master',  // required when kind=transcript
+ *   storagePath: string,
+ *   fileType: string
+ * }
  * Response: SSE stream
  *   data: {status, progress}\n\n
- *   data: {parsed: PassportOcrResult | TranscriptOcrResult}\n\n
+ *   data: {parsed: PassportOcrResult | TranscriptOcrResult | ResumeOcrResult}\n\n
  *   data: {error: string}\n\n
  *   data: [DONE]\n\n
- *
- * The route:
- *   1. Downloads the file from Supabase Storage (the admin uploaded
- *      it to a signed URL in the previous step).
- *   2. Builds the appropriate prompt (passport vs transcript).
- *   3. Calls provider.visionChat() with the file as a base64 data URL.
- *   4. Parses the JSON response + normalizes via the sanitizer.
- *   5. Emits the normalized payload as `parsed` for the modal to apply.
  *
  * Admin-only, rate-limited (shared bucket with upload-url — 15/15min).
  */
@@ -58,7 +59,12 @@ export async function POST(request: NextRequest) {
     return rl.response;
   }
 
-  let body: { kind?: string; storagePath?: string; fileType?: string };
+  let body: {
+    kind?: string;
+    level?: string;
+    storagePath?: string;
+    fileType?: string;
+  };
   try {
     body = await request.json();
   } catch {
@@ -69,12 +75,33 @@ export async function POST(request: NextRequest) {
   }
 
   const { kind, storagePath, fileType } = body;
-  if (kind !== 'passport' && kind !== 'transcript') {
+  if (kind !== 'passport' && kind !== 'transcript' && kind !== 'resume') {
     return new Response(
-      JSON.stringify({ error: 'kind must be "passport" or "transcript"' }),
+      JSON.stringify({
+        error: 'kind must be "passport", "transcript", or "resume"',
+      }),
       { status: 400, headers: { 'Content-Type': 'application/json' } },
     );
   }
+
+  let transcriptLevel: TranscriptLevel = 'high_school';
+  if (kind === 'transcript') {
+    if (body.level == null || body.level === '') {
+      // Backward-compat: Phase 89 callers omitted level → high_school
+      transcriptLevel = 'high_school';
+    } else if (!isTranscriptLevel(body.level)) {
+      return new Response(
+        JSON.stringify({
+          error:
+            'level must be "high_school", "bachelor", or "master" when kind is "transcript"',
+        }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      );
+    } else {
+      transcriptLevel = body.level;
+    }
+  }
+
   if (typeof storagePath !== 'string' || !storagePath.startsWith('ocr-tmp-')) {
     return new Response(
       JSON.stringify({ error: 'Invalid storagePath' }),
@@ -116,9 +143,14 @@ export async function POST(request: NextRequest) {
         const { system, user } =
           kind === 'passport'
             ? buildPassportOcrPrompt()
-            : buildTranscriptOcrPrompt();
+            : kind === 'resume'
+              ? buildResumeOcrPrompt()
+              : buildTranscriptOcrPrompt(transcriptLevel);
         // Append the image content part after the instruction text
-        const userMessages = [...user, { type: 'image_url' as const, image_url: { url: dataUrl } }];
+        const userMessages = [
+          ...user,
+          { type: 'image_url' as const, image_url: { url: dataUrl } },
+        ];
 
         const response = await provider.visionChat(
           [
@@ -138,13 +170,17 @@ export async function POST(request: NextRequest) {
         try {
           parsed = JSON.parse(jsonText);
         } catch (err) {
-          throw new Error(`JSON parse failed: ${err instanceof Error ? err.message : 'unknown'}`);
+          throw new Error(
+            `JSON parse failed: ${err instanceof Error ? err.message : 'unknown'}`,
+          );
         }
 
         const normalized =
           kind === 'passport'
             ? normalizePassportOcrPayload(parsed)
-            : normalizeTranscriptOcrPayload(parsed);
+            : kind === 'resume'
+              ? normalizeResumeOcrPayload(parsed)
+              : normalizeTranscriptOcrPayload(parsed, transcriptLevel);
 
         emit({ parsed: normalized });
         controller.enqueue(enc.encode('data: [DONE]\n\n'));
@@ -152,6 +188,7 @@ export async function POST(request: NextRequest) {
         captureAIError('admin-student-ocr', err, {
           stage: 'extract',
           kind,
+          level: kind === 'transcript' ? transcriptLevel : undefined,
           fileType,
           responseLength: 0,
         });

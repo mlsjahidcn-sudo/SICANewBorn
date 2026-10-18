@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Check, Loader2, ChevronRight, ChevronLeft, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Check, Loader2, ChevronRight, ChevronLeft, AlertCircle, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
@@ -16,8 +16,19 @@ import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 import type { AdminStudent } from '@/lib/student-mapper';
 import { ALL_COUNTRIES, NATIONALITY_CUSTOM } from '@/lib/common-countries';
+import {
+  OcrUploadModal,
+  type OcrKind,
+  type OcrResult,
+  type PassportOcrResult,
+  type TranscriptOcrResult,
+  type ResumeOcrResult,
+  type TranscriptLevel,
+} from '@/components/admin/ocr-upload-modal';
 
 // Fields with fixed columns. Everything else lives in `extra` JSONB.
+// passportNumber must be here so passport OCR writes the real column
+// (not a silent extra.passportNumber copy).
 const FIXED_FIELDS = [
   'firstName',
   'lastName',
@@ -25,6 +36,7 @@ const FIXED_FIELDS = [
   'nationality',
   'email',
   'phone',
+  'passportNumber',
   'targetDegree',
   'targetIntake',
   'source',
@@ -77,6 +89,12 @@ export default function AdminStudentEditPage() {
             if (typeof v === 'string') flat[k] = v;
           }
         }
+        // Prefer mapper top-level passport dates (extra is the source of
+        // truth, but AdminStudent surfaces them for convenience).
+        flat.passportIssueDate =
+          student.passportIssueDate ?? flat.passportIssueDate ?? '';
+        flat.passportExpiryDate =
+          student.passportExpiryDate ?? flat.passportExpiryDate ?? '';
         setFormData(flat);
       })
       .catch((err) => {
@@ -97,6 +115,143 @@ export default function AdminStudentEditPage() {
   const handleInputChange = (name: string, value: string) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
+
+  // OCR modal state — single instance, kind + transcriptLevel driven.
+  const [ocrKind, setOcrKind] = useState<OcrKind | null>(null);
+  const [transcriptLevel, setTranscriptLevel] = useState<TranscriptLevel>('high_school');
+  const openPassportOcr = () => {
+    setOcrKind('passport');
+  };
+  const openResumeOcr = () => {
+    setOcrKind('resume');
+  };
+  const openTranscriptOcr = (level: TranscriptLevel) => {
+    setTranscriptLevel(level);
+    setOcrKind('transcript');
+  };
+  const closeOcr = () => setOcrKind(null);
+
+  function applyPassportOcr(result: PassportOcrResult): void {
+    const set = (k: string, val: string | null) => handleInputChange(k, val ?? '');
+    set('firstName', result.firstName);
+    set('lastName', result.lastName);
+    set('dateOfBirth', result.dateOfBirth);
+    set('nationality', result.nationality);
+    set('passportNumber', result.passportNumber);
+    set('gender', result.gender);
+    set('passportIssueDate', result.passportIssueDate);
+    set('passportExpiryDate', result.passportExpiryDate);
+  }
+
+  function applyTranscriptOcr(level: TranscriptLevel, result: TranscriptOcrResult): void {
+    const set = (k: string, val: string | null) => handleInputChange(k, val ?? '');
+    if (level === 'high_school') {
+      set('highSchoolName', result.highSchoolName);
+      set('highSchoolCity', result.highSchoolCity);
+      set('highSchoolCountry', result.highSchoolCountry);
+      set('highSchoolGPA', result.highSchoolGPA);
+      set('highSchoolGraduationDate', result.highSchoolGraduationDate);
+      return;
+    }
+    if (level === 'bachelor') {
+      set('bachelorUniversityName', result.bachelorUniversityName);
+      set('bachelorMajor', result.bachelorMajor);
+      set('bachelorGPA', result.bachelorGPA);
+      set('bachelorGraduationDate', result.bachelorGraduationDate);
+      return;
+    }
+    set('masterUniversityName', result.masterUniversityName);
+    set('masterMajor', result.masterMajor);
+    set('masterGPA', result.masterGPA);
+    set('masterGraduationDate', result.masterGraduationDate);
+  }
+
+  function applyResumeOcr(result: ResumeOcrResult): void {
+    const set = (k: string, val: string | null) => {
+      if (val == null || val === '') return;
+      handleInputChange(k, val);
+    };
+    // Always map when non-null (plan): contact + parent/guardian.
+    set('phone', result.phone);
+    set('whatsapp', result.whatsapp);
+    set('address', result.address);
+    set('partnerInfo', result.partnerInfo);
+    // Also map identity/contact when present (same replace-confirm gate).
+    set('email', result.email);
+    set('city', result.city);
+    set('country', result.country);
+    set('firstName', result.firstName);
+    set('lastName', result.lastName);
+  }
+
+  const applyOcr = (result: OcrResult) => {
+    if (ocrKind === 'passport') {
+      applyPassportOcr(result as PassportOcrResult);
+    } else if (ocrKind === 'transcript') {
+      applyTranscriptOcr(transcriptLevel, result as TranscriptOcrResult);
+    } else if (ocrKind === 'resume') {
+      applyResumeOcr(result as ResumeOcrResult);
+    }
+  };
+
+  const nonEmpty = (vals: Array<string | undefined>): string[] =>
+    vals.filter((v): v is string => typeof v === 'string' && v.length > 0);
+
+  const passportExistingFields = nonEmpty([
+    formData.firstName,
+    formData.lastName,
+    formData.dateOfBirth,
+    formData.nationality,
+    formData.passportNumber,
+    formData.gender,
+    formData.passportIssueDate,
+    formData.passportExpiryDate,
+  ]);
+
+  const resumeExistingFields = nonEmpty([
+    formData.phone,
+    formData.whatsapp,
+    formData.address,
+    formData.partnerInfo,
+    formData.email,
+    formData.city,
+    formData.country,
+    formData.firstName,
+    formData.lastName,
+  ]);
+
+  const highSchoolExistingFields = nonEmpty([
+    formData.highSchoolName,
+    formData.highSchoolCity,
+    formData.highSchoolCountry,
+    formData.highSchoolGPA,
+    formData.highSchoolGraduationDate,
+  ]);
+
+  const bachelorExistingFields = nonEmpty([
+    formData.bachelorUniversityName,
+    formData.bachelorMajor,
+    formData.bachelorGPA,
+    formData.bachelorGraduationDate,
+  ]);
+
+  const masterExistingFields = nonEmpty([
+    formData.masterUniversityName,
+    formData.masterMajor,
+    formData.masterGPA,
+    formData.masterGraduationDate,
+  ]);
+
+  const ocrExistingFieldKeys =
+    ocrKind === 'passport'
+      ? passportExistingFields
+      : ocrKind === 'resume'
+        ? resumeExistingFields
+        : transcriptLevel === 'bachelor'
+          ? bachelorExistingFields
+          : transcriptLevel === 'master'
+            ? masterExistingFields
+            : highSchoolExistingFields;
 
   const handleNext = () => {
     if (currentStep < STEPS.length - 1) setCurrentStep(currentStep + 1);
@@ -222,7 +377,17 @@ export default function AdminStudentEditPage() {
             {/* Step 1: Personal Info */}
             {currentStep === 0 && (
               <div className="space-y-6">
-                <h3 className="text-lg font-semibold">{t('adminStudentForm.sectionPersonalInfo')}</h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">{t('adminStudentForm.sectionPersonalInfo')}</h3>
+                  <button
+                    type="button"
+                    onClick={openPassportOcr}
+                    className="inline-flex items-center gap-1 text-xs border border-[#1B2A4A] text-[#1B2A4A] px-2.5 py-1 hover:bg-[#1B2A4A] hover:text-white transition-colors"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    {t('adminStudentForm.ocrButtonPassport')}
+                  </button>
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="firstName">{t('adminStudentForm.fieldFirstName')}</Label>
@@ -298,7 +463,17 @@ export default function AdminStudentEditPage() {
 
                 <Separator />
 
-                <h3 className="text-lg font-semibold">{t('adminStudentForm.sectionContactInfo')}</h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">{t('adminStudentForm.sectionContactInfo')}</h3>
+                  <button
+                    type="button"
+                    onClick={openResumeOcr}
+                    className="inline-flex items-center gap-1 text-xs border border-[#1B2A4A] text-[#1B2A4A] px-2.5 py-1 hover:bg-[#1B2A4A] hover:text-white transition-colors"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    {t('adminStudentForm.ocrButtonResume')}
+                  </button>
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="email">{t('adminStudentForm.fieldEmail')}</Label>
@@ -366,7 +541,17 @@ export default function AdminStudentEditPage() {
             {/* Step 2: Education */}
             {currentStep === 1 && (
               <div className="space-y-6">
-                <h3 className="text-lg font-semibold">{t('adminStudentForm.sectionHighSchool')}</h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">{t('adminStudentForm.sectionHighSchool')}</h3>
+                  <button
+                    type="button"
+                    onClick={() => openTranscriptOcr('high_school')}
+                    className="inline-flex items-center gap-1 text-xs border border-[#1B2A4A] text-[#1B2A4A] px-2.5 py-1 hover:bg-[#1B2A4A] hover:text-white transition-colors"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    {t('adminStudentForm.ocrButtonTranscriptHighSchool')}
+                  </button>
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2 col-span-2">
                     <Label htmlFor="highSchoolName">{t('adminStudentForm.fieldHighSchoolName')}</Label>
@@ -384,7 +569,17 @@ export default function AdminStudentEditPage() {
 
                 <Separator />
 
-                <h3 className="text-lg font-semibold">{t('adminStudentForm.sectionBachelorsDegree')}</h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">{t('adminStudentForm.sectionBachelorsDegree')}</h3>
+                  <button
+                    type="button"
+                    onClick={() => openTranscriptOcr('bachelor')}
+                    className="inline-flex items-center gap-1 text-xs border border-[#1B2A4A] text-[#1B2A4A] px-2.5 py-1 hover:bg-[#1B2A4A] hover:text-white transition-colors"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    {t('adminStudentForm.ocrButtonTranscriptBachelor')}
+                  </button>
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2 col-span-2">
                     <Label htmlFor="bachelorUniversityName">{t('adminStudentForm.fieldUniversityName')}</Label>
@@ -399,7 +594,17 @@ export default function AdminStudentEditPage() {
 
                 <Separator />
 
-                <h3 className="text-lg font-semibold">{t('adminStudentForm.sectionMastersDegree')}</h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">{t('adminStudentForm.sectionMastersDegree')}</h3>
+                  <button
+                    type="button"
+                    onClick={() => openTranscriptOcr('master')}
+                    className="inline-flex items-center gap-1 text-xs border border-[#1B2A4A] text-[#1B2A4A] px-2.5 py-1 hover:bg-[#1B2A4A] hover:text-white transition-colors"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    {t('adminStudentForm.ocrButtonTranscriptMaster')}
+                  </button>
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2 col-span-2">
                     <Label htmlFor="masterUniversityName">{t('adminStudentForm.fieldUniversityName')}</Label>
@@ -593,6 +798,17 @@ export default function AdminStudentEditPage() {
           )}
         </div>
       </div>
+
+      {ocrKind && (
+        <OcrUploadModal
+          open
+          onOpenChange={(o) => !o && closeOcr()}
+          kind={ocrKind}
+          transcriptLevel={ocrKind === 'transcript' ? transcriptLevel : undefined}
+          existingFieldKeys={ocrExistingFieldKeys}
+          onApply={applyOcr}
+        />
+      )}
     </div>
   );
 }

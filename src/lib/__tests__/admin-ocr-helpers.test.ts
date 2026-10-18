@@ -41,11 +41,23 @@ describe('formatFieldLabel', () => {
     expect(formatFieldLabel('transcript', 'highSchoolName')).toBe('transcript.highSchoolName');
     expect(formatFieldLabel('transcript', 'highSchoolGPA')).toBe('transcript.highSchoolGPA');
     expect(formatFieldLabel('transcript', 'highSchoolGraduationDate')).toBe('transcript.highSchoolGraduationDate');
+    expect(formatFieldLabel('transcript', 'bachelorUniversityName')).toBe(
+      'transcript.bachelorUniversityName',
+    );
+    expect(formatFieldLabel('transcript', 'masterMajor')).toBe('transcript.masterMajor');
+  });
+
+  it('maps resume fields to resume.* labels', () => {
+    expect(formatFieldLabel('resume', 'phone')).toBe('resume.phone');
+    expect(formatFieldLabel('resume', 'partnerInfo')).toBe('resume.partnerInfo');
+    expect(formatFieldLabel('resume', 'address')).toBe('resume.address');
+    expect(formatFieldLabel('resume', 'firstName')).toBe('resume.firstName');
   });
 
   it('returns the raw field name for unknown fields (defensive)', () => {
     expect(formatFieldLabel('passport', 'mystery')).toBe('mystery');
     expect(formatFieldLabel('transcript', 'mystery')).toBe('mystery');
+    expect(formatFieldLabel('resume', 'mystery')).toBe('mystery');
   });
 });
 

@@ -1,5 +1,5 @@
 /**
- * Phase 89: sanitizer + payload normalizer for OCR responses.
+ * Phase 89 / edit-OCR: sanitizer + payload normalizer for OCR responses.
  *
  * The model's freeform output is wrapped with extractJsonObject()
  * (from src/lib/ai/blog-sanitize.ts) — that strips markdown fences
@@ -17,6 +17,7 @@
 
 import { extractJsonObject } from '@/lib/ai/blog-sanitize';
 import { ALL_COUNTRIES } from '@/lib/common-countries';
+import type { TranscriptLevel } from '@/components/admin/ocr-result-types';
 
 // Field length caps — match what student_profiles.extra can hold
 // (JSONB has no real limit, but reasonable for downstream forms).
@@ -24,6 +25,10 @@ const MAX_NAME_LENGTH = 100;
 const MAX_DOC_NUMBER_LENGTH = 50;
 const MAX_PLACE_LENGTH = 100;
 const MAX_GPA_LENGTH = 30;
+const MAX_EMAIL_LENGTH = 200;
+const MAX_PHONE_LENGTH = 40;
+const MAX_ADDRESS_LENGTH = 500;
+const MAX_PARTNER_INFO_LENGTH = 1000;
 
 const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -51,8 +56,68 @@ export interface TranscriptOcrResult {
   highSchoolCountry: string | null;
   highSchoolGPA: string | null;
   highSchoolGraduationDate: string | null;
+  bachelorUniversityName: string | null;
+  bachelorMajor: string | null;
+  bachelorGPA: string | null;
+  bachelorGraduationDate: string | null;
+  masterUniversityName: string | null;
+  masterMajor: string | null;
+  masterGPA: string | null;
+  masterGraduationDate: string | null;
   confidence: Record<string, number>;
 }
+
+export interface ResumeOcrResult {
+  firstName: string | null;
+  lastName: string | null;
+  email: string | null;
+  phone: string | null;
+  whatsapp: string | null;
+  address: string | null;
+  city: string | null;
+  country: string | null;
+  partnerInfo: string | null;
+  confidence: Record<string, number>;
+}
+
+const EMPTY_TRANSCRIPT: TranscriptOcrResult = {
+  highSchoolName: null,
+  highSchoolCity: null,
+  highSchoolCountry: null,
+  highSchoolGPA: null,
+  highSchoolGraduationDate: null,
+  bachelorUniversityName: null,
+  bachelorMajor: null,
+  bachelorGPA: null,
+  bachelorGraduationDate: null,
+  masterUniversityName: null,
+  masterMajor: null,
+  masterGPA: null,
+  masterGraduationDate: null,
+  confidence: {},
+};
+
+const TRANSCRIPT_KEYS_BY_LEVEL: Record<TranscriptLevel, string[]> = {
+  high_school: [
+    'highSchoolName',
+    'highSchoolCity',
+    'highSchoolCountry',
+    'highSchoolGPA',
+    'highSchoolGraduationDate',
+  ],
+  bachelor: [
+    'bachelorUniversityName',
+    'bachelorMajor',
+    'bachelorGPA',
+    'bachelorGraduationDate',
+  ],
+  master: [
+    'masterUniversityName',
+    'masterMajor',
+    'masterGPA',
+    'masterGraduationDate',
+  ],
+};
 
 function clampConfidence(v: unknown): number {
   const n = typeof v === 'number' ? v : Number(v);
@@ -60,6 +125,17 @@ function clampConfidence(v: unknown): number {
   if (n < 0) return 0;
   if (n > 1) return 1;
   return n;
+}
+
+/**
+ * Prefer `confidence` (schema name); fall back to legacy `conf`
+ * some model responses used historically.
+ */
+function pickConfidenceRaw(
+  p: Record<string, unknown>,
+): unknown {
+  if (p.confidence != null) return p.confidence;
+  return p.conf;
 }
 
 function normalizeConfidence(
@@ -179,37 +255,55 @@ export function normalizePassportOcrPayload(
     gender,
     passportIssueDate: normalizeIsoDate(p.passportIssueDate),
     passportExpiryDate: normalizeIsoDate(p.passportExpiryDate),
-    confidence: normalizeConfidence(p.conf, keys),
+    confidence: normalizeConfidence(pickConfidenceRaw(p), keys),
   };
 }
 
 /**
- * Normalize the raw model JSON into the strict TranscriptOcrResult
- * shape. Same defensive guarantees as the passport sanitizer.
+ * Normalize the raw model JSON into the leveled TranscriptOcrResult
+ * shape. Only fields for `level` are populated; others stay null.
+ * Defaults to high_school for Phase 89 backward compatibility.
  */
 export function normalizeTranscriptOcrPayload(
   parsed: unknown,
+  level: TranscriptLevel = 'high_school',
 ): TranscriptOcrResult {
   if (!parsed || typeof parsed !== 'object') {
-    return {
-      highSchoolName: null,
-      highSchoolCity: null,
-      highSchoolCountry: null,
-      highSchoolGPA: null,
-      highSchoolGraduationDate: null,
-      confidence: {},
-    };
+    return { ...EMPTY_TRANSCRIPT };
   }
   const p = parsed as Record<string, unknown>;
-  const keys = [
-    'highSchoolName',
-    'highSchoolCity',
-    'highSchoolCountry',
-    'highSchoolGPA',
-    'highSchoolGraduationDate',
-  ];
+  const keys = TRANSCRIPT_KEYS_BY_LEVEL[level];
+  const confidence = normalizeConfidence(pickConfidenceRaw(p), keys);
 
+  if (level === 'bachelor') {
+    return {
+      ...EMPTY_TRANSCRIPT,
+      bachelorUniversityName: trimCap(p.bachelorUniversityName, MAX_NAME_LENGTH),
+      bachelorMajor: trimCap(p.bachelorMajor, MAX_NAME_LENGTH),
+      bachelorGPA: trimCap(p.bachelorGPA, MAX_GPA_LENGTH),
+      bachelorGraduationDate: normalizeIsoDateYearFlexible(
+        p.bachelorGraduationDate,
+      ),
+      confidence,
+    };
+  }
+
+  if (level === 'master') {
+    return {
+      ...EMPTY_TRANSCRIPT,
+      masterUniversityName: trimCap(p.masterUniversityName, MAX_NAME_LENGTH),
+      masterMajor: trimCap(p.masterMajor, MAX_NAME_LENGTH),
+      masterGPA: trimCap(p.masterGPA, MAX_GPA_LENGTH),
+      masterGraduationDate: normalizeIsoDateYearFlexible(
+        p.masterGraduationDate,
+      ),
+      confidence,
+    };
+  }
+
+  // high_school (default)
   return {
+    ...EMPTY_TRANSCRIPT,
     highSchoolName: trimCap(p.highSchoolName, MAX_NAME_LENGTH),
     highSchoolCity: trimCap(p.highSchoolCity, MAX_PLACE_LENGTH),
     highSchoolCountry: normalizeNationality(p.highSchoolCountry),
@@ -217,7 +311,57 @@ export function normalizeTranscriptOcrPayload(
     highSchoolGraduationDate: normalizeIsoDateYearFlexible(
       p.highSchoolGraduationDate,
     ),
-    confidence: normalizeConfidence(p.conf, keys),
+    confidence,
+  };
+}
+
+/**
+ * Normalize resume / CV OCR payload — contact + parent/guardian.
+ */
+export function normalizeResumeOcrPayload(
+  parsed: unknown,
+): ResumeOcrResult {
+  const empty: ResumeOcrResult = {
+    firstName: null,
+    lastName: null,
+    email: null,
+    phone: null,
+    whatsapp: null,
+    address: null,
+    city: null,
+    country: null,
+    partnerInfo: null,
+    confidence: {},
+  };
+  if (!parsed || typeof parsed !== 'object') return empty;
+
+  const p = parsed as Record<string, unknown>;
+  const keys = [
+    'firstName',
+    'lastName',
+    'email',
+    'phone',
+    'whatsapp',
+    'address',
+    'city',
+    'country',
+    'partnerInfo',
+  ];
+
+  let email = trimCap(p.email, MAX_EMAIL_LENGTH);
+  if (email && !email.includes('@')) email = null;
+
+  return {
+    firstName: trimCap(p.firstName, MAX_NAME_LENGTH),
+    lastName: trimCap(p.lastName, MAX_NAME_LENGTH),
+    email,
+    phone: trimCap(p.phone, MAX_PHONE_LENGTH),
+    whatsapp: trimCap(p.whatsapp, MAX_PHONE_LENGTH),
+    address: trimCap(p.address, MAX_ADDRESS_LENGTH),
+    city: trimCap(p.city, MAX_PLACE_LENGTH),
+    country: normalizeNationality(p.country),
+    partnerInfo: trimCap(p.partnerInfo, MAX_PARTNER_INFO_LENGTH),
+    confidence: normalizeConfidence(pickConfidenceRaw(p), keys),
   };
 }
 
