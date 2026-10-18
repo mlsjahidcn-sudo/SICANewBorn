@@ -15,7 +15,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft, Edit, AlertCircle, FileText, FileCheck, FileX, Clock,
-  Plus, Mail, RefreshCw, Trash2,
+  Plus, Mail, RefreshCw, Trash2, DollarSign,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
@@ -128,6 +128,7 @@ export default function AdminStudentDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const [paidToggleBusy, setPaidToggleBusy] = useState(false);
 
   const [documents, setDocuments] = useState<StudentDocument[]>([]);
   const [applications, setApplications] = useState<StudentApplication[]>([]);
@@ -258,6 +259,30 @@ export default function AdminStudentDetailPage() {
       ? 'Partner'
       : 'Online';
 
+  const toggleServicePaid = async () => {
+    const next = !student.servicePaid;
+    setPaidToggleBusy(true);
+    setError(null);
+    try {
+      const { student: updated } = await apiFetchJson<{ student: AdminStudent }>(
+        `/api/admin/students/${studentId}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ servicePaid: next }),
+        },
+      );
+      setStudent({
+        ...student,
+        servicePaid: updated.servicePaid ?? next,
+        servicePaidAt: updated.servicePaidAt ?? (next ? new Date().toISOString() : null),
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('adminStudents.errorPaidToggle'));
+    } finally {
+      setPaidToggleBusy(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -272,6 +297,17 @@ export default function AdminStudentDetailPage() {
           <Button variant="outline" onClick={loadStudent}>
             <RefreshCw className="h-4 h-4 mr-2" />
             {t('adminStudents.buttonRefresh')}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => void toggleServicePaid()}
+            disabled={paidToggleBusy}
+            title={t('adminStudents.paidToggleHint')}
+          >
+            <DollarSign className="h-4 w-4 mr-2" />
+            {student.servicePaid
+              ? t('adminStudents.actionClearPaid')
+              : t('adminStudents.actionMarkPaid')}
           </Button>
           <Button
             className="bg-[#9B1B30] hover:bg-[#7A1526]"
@@ -300,6 +336,18 @@ export default function AdminStudentDetailPage() {
                 <Badge className={statusColors[student.status] || 'bg-gray-100 text-gray-800'}>
                   {student.status}
                 </Badge>
+                {student.servicePaid && (
+                  <Badge
+                    className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100"
+                    title={
+                      student.servicePaidAt
+                        ? new Date(student.servicePaidAt).toLocaleString()
+                        : t('adminStudents.paidToggleHint')
+                    }
+                  >
+                    {t('adminStudents.badgePaid')}
+                  </Badge>
+                )}
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600">
                 <div><span className="text-gray-400">{t('adminStudentDetail.bannerEmail')}</span> {student.email}</div>
@@ -307,6 +355,7 @@ export default function AdminStudentDetailPage() {
                 <div><span className="text-gray-400">{t('adminStudentDetail.bannerNationality')}</span> {student.nationality || '—'}</div>
                 <div><span className="text-gray-400">{t('adminStudentDetail.bannerCreated')}</span> {new Date(student.createdAt).toLocaleDateString()}</div>
               </div>
+              <p className="mt-2 text-xs text-gray-400">{t('adminStudents.paidToggleHint')}</p>
             </div>
           </div>
         </CardContent>

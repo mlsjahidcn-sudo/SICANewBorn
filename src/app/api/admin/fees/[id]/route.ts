@@ -1,7 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, buildServiceClient, getServerEnv } from '@/lib/supabase-auth';
-import { mapStudentFeeFromDb } from '@/lib/student-fee-mapper';
+import {
+  mapStudentFeeFromDb,
+  parseStudentFeePaymentChannel,
+} from '@/lib/student-fee-mapper';
 import { pickStudentFeeUpdates } from '@/lib/student-fee-validation';
+import {
+  isOfflinePaymentChannel,
+  maybeSetStudentServicePaidFromOfflineFee,
+} from '@/lib/student-service-paid-sync';
+
+/**
+ * Fee form posts camelCase; pickStudentFeeUpdates expects snake_case.
+ * Map the known camelCase keys before the whitelist filter.
+ */
+function normalizeFeePatchBody(body: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...body };
+  const camelToSnake: Record<string, string> = {
+    amountPaid: 'amount_paid',
+    dueDate: 'due_date',
+    paidDate: 'paid_date',
+    paymentMethod: 'payment_method',
+    paymentChannel: 'payment_channel',
+    paymentNotes: 'payment_notes',
+    paymentProofUrl: 'payment_proof_url',
+  };
+  for (const [camel, snake] of Object.entries(camelToSnake)) {
+    if (camel in out && !(snake in out)) {
+      out[snake] = out[camel];
+      delete out[camel];
+    }
+  }
+  if (typeof out.payment_channel === 'string') {
+    const parsed = parseStudentFeePaymentChannel(out.payment_channel);
+    if (parsed) out.payment_channel = parsed;
+  }
+  return out;
+}
 
 /**
  * GET    /api/admin/fees/[id]  — single fee with student + application joins
@@ -103,7 +138,17 @@ export async function PATCH(
 
   try {
     const body = await request.json();
-    const updates = pickStudentFeeUpdates(body);
+    if (
+      body.paymentChannel !== undefined &&
+      !parseStudentFeePaymentChannel(body.paymentChannel) &&
+      !parseStudentFeePaymentChannel(body.payment_channel)
+    ) {
+      return NextResponse.json(
+        { error: 'paymentChannel must be one of unspecified|online|offline|bank_transfer|cash|wechat|alipay|other' },
+        { status: 400 },
+      );
+    }
+    const updates = pickStudentFeeUpdates(normalizeFeePatchBody(body));
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: 'No editable fields provided' }, { status: 400 });
     }
@@ -114,7 +159,7 @@ export async function PATCH(
     // AND build the audit-trail event with from_status / to_status.
     const { data: existing, error: existingErr } = await service
       .from('student_fees')
-      .select('amount, status, amount_paid, payment_proof_url')
+      .select('amount, status, amount_paid, payment_proof_url, student_id, payment_channel')
       .eq('id', id)
       .maybeSingle();
     if (existingErr) {
@@ -192,6 +237,18 @@ export async function PATCH(
       }
     } catch (eventInsertErr) {
       console.warn('[admin/fees/:id PATCH] event insert failed:', eventInsertErr);
+    }
+
+    // Phase 182: one-way sync when channel is (or remains) offline.
+    const effectiveChannel =
+      typeof updates.payment_channel === 'string'
+        ? updates.payment_channel
+        : (data as { payment_channel?: string }).payment_channel;
+    if (isOfflinePaymentChannel(effectiveChannel)) {
+      const studentId =
+        (data as { student_id?: string }).student_id ??
+        (existing as { student_id?: string }).student_id;
+      void maybeSetStudentServicePaidFromOfflineFee(service, studentId);
     }
 
     return NextResponse.json({ fee: mapStudentFeeFromDb(data) });

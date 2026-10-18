@@ -30,7 +30,7 @@ export type CampaignRole = (typeof CAMPAIGN_ROLES)[number];
  *  ceiling the advisor is doing data entry, not advising — and the
  *  business copy says 3-5. */
 export const CAMPAIGN_MIN_TARGETS = 1;
-export const CAMPAIGN_MAX_TARGETS = 8;
+export const CAMPAIGN_MAX_TARGETS = 12;
 
 /** Default placement when the admin doesn't set one. `Target` is the
  *  honest default: an unspecified choice isn't a reach or a safety. */

@@ -118,6 +118,13 @@ export interface AdminStudent {
     feeCount: number;
     lastPaidAt: string | null;
   };
+  /**
+   * Phase 182 — SICA service paid flag (triage). Orthogonal to fee-row
+   * "Paid" status and to `isOffline` (source=Admin). UI label is "Paid".
+   */
+  servicePaid: boolean;
+  /** ISO timestamp when servicePaid was last set true; null when unpaid. */
+  servicePaidAt: string | null;
 }
 
 export type AdminStudentStatus = AdminStudent['status'];
@@ -205,6 +212,10 @@ export function mapStudentFromDb(row: Record<string, unknown>): AdminStudent {
       : undefined,
     applicationCount:
       typeof row.application_count === 'number' ? row.application_count : null,
+    // Phase 182: service paid triage. Missing column (pre-migration) → false.
+    servicePaid: row.service_paid === true,
+    servicePaidAt:
+      typeof row.service_paid_at === 'string' ? row.service_paid_at : null,
   };
 }
 
@@ -248,6 +259,11 @@ export function mapStudentToDb(input: Partial<AdminStudent>): {
   }
   if (input.source !== undefined) dbRow.source = input.source;
   if (input.status !== undefined) dbRow.status = input.status;
+  // Phase 182: servicePaid boolean only — service_paid_at is stamped
+  // by the API route (now() on true, null on false), not the mapper.
+  if (typeof input.servicePaid === 'boolean') {
+    dbRow.service_paid = input.servicePaid;
+  }
 
   // Phase 181: visa-critical fields are real columns. Writing them to
   // `extra` would store them but make them unqueryable — which is how

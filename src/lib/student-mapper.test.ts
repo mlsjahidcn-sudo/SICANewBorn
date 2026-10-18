@@ -63,6 +63,9 @@ describe('mapStudentFromDb', () => {
       // Phase 122a: application count from the list endpoint — null
       // when the row didn't come through a count-annotated query.
       applicationCount: null,
+      // Phase 182: student Paid triage flag — defaults false / null.
+      servicePaid: false,
+      servicePaidAt: null,
       // Phase 181: visa-critical fields default to null, never to a
       // falsy value. null means "not collected yet"; it must not be
       // indistinguishable from false — hasStudiedInChina in
@@ -139,6 +142,28 @@ describe('mapStudentFromDb', () => {
     expect(student.extra).toEqual({});
     expect(student.notes).toBeUndefined();
   });
+
+  it('reads service_paid / service_paid_at into servicePaid / servicePaidAt (Phase 182)', () => {
+    const student = mapStudentFromDb({
+      id: 'x',
+      service_paid: true,
+      service_paid_at: '2026-10-18T12:00:00Z',
+    });
+    expect(student.servicePaid).toBe(true);
+    expect(student.servicePaidAt).toBe('2026-10-18T12:00:00Z');
+  });
+
+  it('defaults servicePaid=false and servicePaidAt=null when columns missing', () => {
+    const student = mapStudentFromDb({ id: 'x' });
+    expect(student.servicePaid).toBe(false);
+    expect(student.servicePaidAt).toBeNull();
+  });
+
+  it('treats non-true service_paid as false', () => {
+    expect(mapStudentFromDb({ id: 'x', service_paid: false }).servicePaid).toBe(false);
+    expect(mapStudentFromDb({ id: 'x', service_paid: null }).servicePaid).toBe(false);
+    expect(mapStudentFromDb({ id: 'x', service_paid: 'true' }).servicePaid).toBe(false);
+  });
 });
 
 describe('mapStudentToDb', () => {
@@ -162,6 +187,21 @@ describe('mapStudentToDb', () => {
     const { dbRow, extraUpdates } = mapStudentToDb({ passportNumber: 'E12345678' });
     expect(dbRow.passport_number).toBe('E12345678');
     expect(Object.keys(extraUpdates)).toHaveLength(0);
+  });
+
+  it('writes servicePaid boolean only — never stamps service_paid_at (Phase 182)', () => {
+    const paid = mapStudentToDb({ servicePaid: true });
+    expect(paid.dbRow.service_paid).toBe(true);
+    expect(paid.dbRow).not.toHaveProperty('service_paid_at');
+
+    const unpaid = mapStudentToDb({ servicePaid: false });
+    expect(unpaid.dbRow.service_paid).toBe(false);
+    expect(unpaid.dbRow).not.toHaveProperty('service_paid_at');
+  });
+
+  it('does NOT touch service_paid when servicePaid is undefined', () => {
+    const { dbRow } = mapStudentToDb({ firstName: 'Sara' });
+    expect(dbRow.service_paid).toBeUndefined();
   });
 
   it('routes free-form fields (gender, notes) to extraUpdates', () => {

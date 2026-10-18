@@ -17,6 +17,7 @@
  *   paidDate            ↔             paid_date  (DATE → ISO date string)
  *   status              ↔             status
  *   paymentMethod       ↔             payment_method
+ *   paymentChannel      ↔             payment_channel
  *   notes               ↔             notes
  *   createdAt           ↔             created_at
  *   updatedAt           ↔             updated_at
@@ -26,6 +27,8 @@
  *    prevent UI/API drift.)
  * Type:   Application | Tuition | Service | Visa | Other
  * Currency: CNY | USD | EUR (closed set)
+ * Channel: unspecified | online | offline | bank_transfer | cash |
+ *          wechat | alipay | other (Phase 182)
  */
 
 export const STUDENT_FEE_STATUSES = [
@@ -49,6 +52,19 @@ export type StudentFeeType = (typeof STUDENT_FEE_TYPES)[number];
 export const STUDENT_FEE_CURRENCIES = ['CNY', 'USD', 'EUR'] as const;
 export type StudentFeeCurrency = (typeof STUDENT_FEE_CURRENCIES)[number];
 
+export const STUDENT_FEE_PAYMENT_CHANNELS = [
+  'unspecified',
+  'online',
+  'offline',
+  'bank_transfer',
+  'cash',
+  'wechat',
+  'alipay',
+  'other',
+] as const;
+export type StudentFeePaymentChannel =
+  (typeof STUDENT_FEE_PAYMENT_CHANNELS)[number];
+
 export interface StudentFee {
   id: string;
   studentId: string;
@@ -62,6 +78,7 @@ export interface StudentFee {
   paidDate?: string | null;
   status: StudentFeeStatus;
   paymentMethod?: string | null;
+  paymentChannel: StudentFeePaymentChannel;
   notes?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -93,6 +110,16 @@ export function parseStudentFeeCurrency(
   return null;
 }
 
+export function parseStudentFeePaymentChannel(
+  input: unknown,
+): StudentFeePaymentChannel | null {
+  if (typeof input !== 'string') return null;
+  if ((STUDENT_FEE_PAYMENT_CHANNELS as readonly string[]).includes(input)) {
+    return input as StudentFeePaymentChannel;
+  }
+  return null;
+}
+
 export interface RawStudentFee {
   id: string;
   student_id: string;
@@ -106,6 +133,7 @@ export interface RawStudentFee {
   paid_date?: string | null;
   status?: string | null;
   payment_method?: string | null;
+  payment_channel?: string | null;
   notes?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
@@ -135,6 +163,8 @@ export function mapStudentFeeFromDb(row: RawStudentFee): StudentFee {
     paidDate: row.paid_date ?? null,
     status: parseStudentFeeStatus(row.status) ?? 'Pending',
     paymentMethod: row.payment_method ?? null,
+    paymentChannel:
+      parseStudentFeePaymentChannel(row.payment_channel) ?? 'unspecified',
     notes: row.notes ?? null,
     createdAt: row.created_at ?? '',
     updatedAt: row.updated_at ?? '',
@@ -153,6 +183,7 @@ export interface StudentFeeWritePayload {
   paidDate?: string | null;
   status?: StudentFeeStatus;
   paymentMethod?: string | null;
+  paymentChannel?: StudentFeePaymentChannel;
   notes?: string | null;
 }
 
@@ -188,6 +219,9 @@ export function mapStudentFeeToDb(
   if (payload.status !== undefined) row.status = payload.status;
   if (payload.paymentMethod !== undefined) {
     row.payment_method = payload.paymentMethod || null;
+  }
+  if (payload.paymentChannel !== undefined) {
+    row.payment_channel = payload.paymentChannel;
   }
   if (payload.notes !== undefined) row.notes = payload.notes || null;
   return row;

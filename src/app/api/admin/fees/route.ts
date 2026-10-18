@@ -5,8 +5,13 @@ import {
   parseStudentFeeStatus,
   parseStudentFeeType,
   parseStudentFeeCurrency,
+  parseStudentFeePaymentChannel,
   type RawStudentFee,
 } from '@/lib/student-fee-mapper';
+import {
+  isOfflinePaymentChannel,
+  maybeSetStudentServicePaidFromOfflineFee,
+} from '@/lib/student-service-paid-sync';
 
 /**
  * GET  /api/admin/fees  — list fees with filters
@@ -115,6 +120,17 @@ export async function POST(request: NextRequest) {
     if (body.status !== undefined && !parseStudentFeeStatus(body.status)) {
       return NextResponse.json({ error: 'status must be one of Pending|Partial|Paid|Overdue|Cancelled' }, { status: 400 });
     }
+    const paymentChannelRaw =
+      body.paymentChannel !== undefined
+        ? parseStudentFeePaymentChannel(body.paymentChannel)
+        : 'unspecified';
+    if (body.paymentChannel !== undefined && !paymentChannelRaw) {
+      return NextResponse.json(
+        { error: 'paymentChannel must be one of unspecified|online|offline|bank_transfer|cash|wechat|alipay|other' },
+        { status: 400 },
+      );
+    }
+    const paymentChannel = paymentChannelRaw ?? 'unspecified';
 
     const service = buildServiceClient();
     const { data, error } = await service
@@ -130,6 +146,7 @@ export async function POST(request: NextRequest) {
         due_date: body.dueDate,
         status: body.status || 'Pending',
         payment_method: body.paymentMethod,
+        payment_channel: paymentChannel,
         notes: body.notes,
         updated_by: auth.user.id,
       })
@@ -156,7 +173,12 @@ export async function POST(request: NextRequest) {
       console.warn('[admin/fees POST] event insert failed:', eventInsertErr);
     }
 
-    return NextResponse.json({ fee: data }, { status: 201 });
+    // Phase 182: one-way sync — offline channel → student Paid flag.
+    if (isOfflinePaymentChannel(paymentChannel)) {
+      void maybeSetStudentServicePaidFromOfflineFee(service, body.studentId);
+    }
+
+    return NextResponse.json({ fee: mapStudentFeeFromDb(data) }, { status: 201 });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     return NextResponse.json({ error: message }, { status: 500 });

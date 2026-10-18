@@ -14,9 +14,11 @@ import {
   STUDENT_FEE_STATUSES,
   STUDENT_FEE_TYPES,
   STUDENT_FEE_CURRENCIES,
+  STUDENT_FEE_PAYMENT_CHANNELS,
   type StudentFeeType,
   type StudentFeeStatus,
   type StudentFeeCurrency,
+  type StudentFeePaymentChannel,
 } from '@/lib/student-fee-mapper';
 
 export interface FeeFormProps {
@@ -44,6 +46,7 @@ interface FeeDetail {
   paidDate?: string | null;
   status: StudentFeeStatus;
   paymentMethod?: string | null;
+  paymentChannel?: StudentFeePaymentChannel;
   notes?: string | null;
 }
 
@@ -63,6 +66,8 @@ export function FeeForm({ feeId, onSuccess }: FeeFormProps) {
   const [dueDate, setDueDate] = useState<string>('');
   const [description, setDescription] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<string>('');
+  const [paymentChannel, setPaymentChannel] =
+    useState<StudentFeePaymentChannel>('unspecified');
   const [notes, setNotes] = useState<string>('');
   const [amountPaid, setAmountPaid] = useState<string>('0');
   const [status, setStatus] = useState<StudentFeeStatus>('Pending');
@@ -89,6 +94,7 @@ export function FeeForm({ feeId, onSuccess }: FeeFormProps) {
         setDueDate(f.dueDate || '');
         setDescription(f.description || '');
         setPaymentMethod(f.paymentMethod || '');
+        setPaymentChannel(f.paymentChannel || 'unspecified');
         setNotes(f.notes || '');
         setAmountPaid(String(f.amountPaid || 0));
         setStatus(f.status);
@@ -158,6 +164,7 @@ export function FeeForm({ feeId, onSuccess }: FeeFormProps) {
         dueDate: dueDate || null,
         description: description || null,
         paymentMethod: paymentMethod || null,
+        paymentChannel,
         notes: notes || null,
         status,
       };
@@ -379,6 +386,25 @@ export function FeeForm({ feeId, onSuccess }: FeeFormProps) {
                 className="w-full min-h-20 px-3 py-2 rounded-md border border-gray-300 bg-white text-sm"
                 rows={3}
               />
+            </Field>
+
+            <Field label={t('adminFees.fieldChannel')}>
+              <select
+                value={paymentChannel}
+                onChange={(e) =>
+                  setPaymentChannel(e.target.value as StudentFeePaymentChannel)
+                }
+                className="h-10 w-full px-3 rounded-md border border-gray-300 bg-white text-sm"
+              >
+                {STUDENT_FEE_PAYMENT_CHANNELS.map((ch) => (
+                  <option key={ch} value={ch}>
+                    {t(`adminFees.channel.${ch}`)}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                {t('adminFees.fieldChannelHint')}
+              </p>
             </Field>
 
             <Field label={t('adminFees.fieldMethod')}>

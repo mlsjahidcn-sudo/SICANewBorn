@@ -16,6 +16,7 @@ import { computePaymentAggregateForApp } from '@/lib/payment-aggregate';
  *   - status   : exact match (Active | Inactive | Pending | Suspended)
  *   - source   : exact match (Admin | Partner | Online)
  *   - isOffline: derived filter — 'true' returns source='Admin', 'false' returns source != 'Admin'
+ *   - servicePaid: 'true' | 'false' — student_profiles.service_paid triage flag
  *   - sort     : created_at | updated_at | first_name | last_name  (default created_at)
  *   - order    : asc | desc                                       (default desc)
  *   - page     : 1-indexed                                        (default 1)
@@ -79,6 +80,8 @@ export async function GET(request: NextRequest) {
     const status = parseStatus(searchParams.get('status'));
     const source = parseSource(searchParams.get('source'));
     const isOfflineRaw = searchParams.get('isOffline');
+    // Phase 182: Paid triage filter (orthogonal to source='Admin' offline intake).
+    const servicePaidRaw = searchParams.get('servicePaid');
     const sortRaw = searchParams.get('sort') || 'created_at';
     const orderRaw = searchParams.get('order') || 'desc';
     const page = parseIntParam(searchParams.get('page'), 1);
@@ -100,6 +103,8 @@ export async function GET(request: NextRequest) {
     if (source) query = query.eq('source', source);
     if (isOfflineRaw === 'true') query = query.eq('source', 'Admin');
     if (isOfflineRaw === 'false') query = query.neq('source', 'Admin');
+    if (servicePaidRaw === 'true') query = query.eq('service_paid', true);
+    if (servicePaidRaw === 'false') query = query.eq('service_paid', false);
 
     // Search: case-insensitive partial match across name, email, and
     // the core registration fields (country/phone/degree/program).

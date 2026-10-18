@@ -21,6 +21,7 @@ import {
   Clock,
   Loader2,
   AlertCircle,
+  User,
 } from 'lucide-react';
 import { StudentDashboardSkeleton } from '@/components/student/skeletons';
 import { computeBasicProfileCompletion } from '@/lib/student-profile-completion';
@@ -79,6 +80,7 @@ export default function StudentDashboardPage() {
     target_degree?: string | null;
     target_field?: string | null;
     target_intake?: string | null;
+    preferred_universities?: string[] | null;
   }
   const [profile, setProfile] = useState<StudentProfileSummary | null>(null);
   // Phase 1.3: latest 3 notifications for the dashboard card.
@@ -242,26 +244,30 @@ export default function StudentDashboardPage() {
     return null;
   })();
 
+  // Docs-first path: students upload documents + fill profile so SICA
+  // can shortlist; New Application stays available but is demoted.
+  const prefsEmpty =
+    !profile?.preferred_universities || profile.preferred_universities.length === 0;
   const quickActions = [
-    {
-      title: t('student.newApplication'),
-      description: t('student.startNewApplication'),
-      icon: Plus,
-      href: '/student/applications/new',
-      color: 'bg-[#9B1B30]',
-    },
     {
       title: t('student.uploadDocument'),
       description: t('student.uploadRequiredDocs'),
       icon: FileText,
       href: '/student/documents',
+      color: 'bg-[#9B1B30]',
+    },
+    {
+      title: t('student.completeProfileAction'),
+      description: t('student.completeProfileActionDesc'),
+      icon: User,
+      href: '/student/profile',
       color: 'bg-[#1B2A4A]',
     },
     {
-      title: t('student.browseUniversities'),
-      description: t('student.explorePrograms'),
-      icon: GraduationCap,
-      href: '/universities',
+      title: t('student.newApplication'),
+      description: t('student.startNewApplication'),
+      icon: Plus,
+      href: '/student/applications/new',
       color: 'bg-[#D4A853]',
     },
   ];
@@ -305,7 +311,7 @@ export default function StudentDashboardPage() {
           }{' '}
           👋
         </h1>
-        <p className="text-[#4B5563] mt-2">{t('student.manageApplications')}</p>
+        <p className="text-[#4B5563] mt-2">{t('student.dashboardSubtitle')}</p>
       </div>
 
       {/* Phase 2: action-needed callout — surfaces the highest-priority
@@ -351,6 +357,54 @@ export default function StudentDashboardPage() {
               className="border-[#1B2A4A] text-[#1B2A4A] hover:bg-[#1B2A4A] hover:text-white rounded-none"
             >
               Resume
+              <ArrowRight className="h-4 w-4 ml-1" />
+            </Button>
+          </Link>
+        </div>
+      )}
+
+      {/* Empty-docs nudge — primary ask after signup. Below docs-requested /
+          draft urgency banners so those keep priority. */}
+      {totalDocuments === 0 && docsNeeded.length === 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 border-l-4 border-[#9B1B30] bg-red-50 rounded-none">
+          <FileText className="h-5 w-5 text-[#9B1B30] flex-shrink-0" />
+          <div className="flex-1">
+            <p className="font-semibold text-[#1B2A4A]">
+              {t('student.emptyDocsTitle')}
+            </p>
+            <p className="text-sm text-gray-700 mt-0.5">
+              {t('student.emptyDocsBody')}
+            </p>
+          </div>
+          <Link href="/student/documents" className="sm:ml-auto">
+            <Button size="sm" className="bg-[#9B1B30] hover:bg-[#7A1525] text-white rounded-none">
+              {t('student.emptyDocsCta')}
+              <ArrowRight className="h-4 w-4 ml-1" />
+            </Button>
+          </Link>
+        </div>
+      )}
+
+      {/* Softer prefs nudge — only when docs exist but preferred universities
+          are still empty (docs-first path is complete enough to advise). */}
+      {totalDocuments > 0 && prefsEmpty && docsNeeded.length === 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 border-l-4 border-[#1B2A4A] bg-[#F3F4F6] rounded-none">
+          <GraduationCap className="h-5 w-5 text-[#1B2A4A] flex-shrink-0" />
+          <div className="flex-1">
+            <p className="font-semibold text-[#1B2A4A]">
+              {t('student.prefsNudgeTitle')}
+            </p>
+            <p className="text-sm text-gray-700 mt-0.5">
+              {t('student.prefsNudgeBody')}
+            </p>
+          </div>
+          <Link href="/student/profile" className="sm:ml-auto">
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-[#1B2A4A] text-[#1B2A4A] hover:bg-[#1B2A4A] hover:text-white rounded-none"
+            >
+              {t('student.prefsNudgeCta')}
               <ArrowRight className="h-4 w-4 ml-1" />
             </Button>
           </Link>

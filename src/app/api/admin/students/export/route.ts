@@ -10,10 +10,10 @@ export const dynamic = 'force-dynamic';
  *
  * CSV export of the admin students list. Mirrors the row shape and
  * the filter surface of GET /api/admin/students (search / status /
- * source / isOffline / sort / order) but ignores pagination — exports
- * are always one response. Capped at 1000 rows; the server flags
- * truncation via `X-Truncated: true` so the UI can warn the admin to
- * narrow the filters.
+ * source / isOffline / servicePaid / sort / order) but ignores
+ * pagination — exports are always one response. Capped at 1000 rows;
+ * the server flags truncation via `X-Truncated: true` so the UI can
+ * warn the admin to narrow the filters.
  *
  * Response: text/csv (UTF-8 BOM so Excel opens it cleanly) with
  * Content-Disposition: attachment; filename sica-students-YYYY-MM-DD.csv.
@@ -33,6 +33,7 @@ const CSV_COLUMNS = [
   'Preferred Universities',
   'Source',
   'Status',
+  'Service Paid', // Phase 182: student_profiles.service_paid triage
   'Applications', // student_applications + partner_applications (linked profile)
   'Created At',
   'Updated At',
@@ -72,6 +73,7 @@ export async function GET(request: NextRequest) {
     const status = parseStatus(searchParams.get('status'));
     const source = parseSource(searchParams.get('source'));
     const isOfflineRaw = searchParams.get('isOffline');
+    const servicePaidRaw = searchParams.get('servicePaid');
     const sortRaw = searchParams.get('sort') || 'created_at';
     const orderRaw = searchParams.get('order') || 'desc';
     const sort = (STUDENT_SORTABLE_FIELDS as readonly string[]).includes(sortRaw)
@@ -90,6 +92,8 @@ export async function GET(request: NextRequest) {
     if (source) query = query.eq('source', source);
     if (isOfflineRaw === 'true') query = query.eq('source', 'Admin');
     if (isOfflineRaw === 'false') query = query.neq('source', 'Admin');
+    if (servicePaidRaw === 'true') query = query.eq('service_paid', true);
+    if (servicePaidRaw === 'false') query = query.eq('service_paid', false);
 
     if (search) {
       const safe = sanitizeOrTerm(search);
@@ -158,6 +162,7 @@ export async function GET(request: NextRequest) {
         s.preferredUniversities.join('; '),
         s.source,
         s.status,
+        s.servicePaid ? 'Yes' : 'No',
         (studentAppCounts.get(s.id) || 0) + (partnerAppCounts.get(s.id) || 0),
         s.createdAt,
         s.updatedAt,

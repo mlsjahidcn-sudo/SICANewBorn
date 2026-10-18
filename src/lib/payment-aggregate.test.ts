@@ -40,6 +40,7 @@ describe('emptyPaymentAggregate', () => {
     expect(agg.paidByCurrency).toEqual({});
     expect(agg.outstandingByCurrency).toEqual({});
     expect(agg.lastPaidAt).toBeNull();
+    expect(agg.hasOfflinePayment).toBe(false);
   });
 });
 
@@ -48,6 +49,7 @@ describe('computePaymentAggregateForApp — priority order', () => {
     const agg = computePaymentAggregateForApp([]);
     expect(agg.status).toBe('none');
     expect(agg.feeCount).toBe(0);
+    expect(agg.hasOfflinePayment).toBe(false);
   });
 
   it('returns "paid" when every fee is Paid', () => {
@@ -164,5 +166,53 @@ describe('computePaymentAggregatesByAppId', () => {
   it('returns an empty map for an empty fee list', () => {
     const map = computePaymentAggregatesByAppId([]);
     expect(map.size).toBe(0);
+  });
+});
+
+describe('computePaymentAggregateForApp — hasOfflinePayment', () => {
+  it('is true when any non-Cancelled fee has payment_channel=offline', () => {
+    const agg = computePaymentAggregateForApp([
+      row({ status: 'Paid', amount: 100, amount_paid: 100, payment_channel: 'offline' }),
+    ]);
+    expect(agg.hasOfflinePayment).toBe(true);
+  });
+
+  it('is false for online / unspecified / missing channel', () => {
+    expect(
+      computePaymentAggregateForApp([
+        row({ status: 'Paid', amount: 100, amount_paid: 100, payment_channel: 'online' }),
+      ]).hasOfflinePayment,
+    ).toBe(false);
+    expect(
+      computePaymentAggregateForApp([
+        row({ status: 'Pending', amount: 50, payment_channel: 'unspecified' }),
+      ]).hasOfflinePayment,
+    ).toBe(false);
+    expect(
+      computePaymentAggregateForApp([row({ status: 'Paid', amount: 100, amount_paid: 100 })]).hasOfflinePayment,
+    ).toBe(false);
+  });
+
+  it('ignores Cancelled offline fees (channel does not resurrect the badge)', () => {
+    const agg = computePaymentAggregateForApp([
+      row({ status: 'Cancelled', amount: 100, amount_paid: 100, payment_channel: 'offline' }),
+      row({ status: 'Paid', amount: 50, amount_paid: 50, payment_channel: 'online' }),
+    ]);
+    expect(agg.hasOfflinePayment).toBe(false);
+    expect(agg.status).toBe('paid');
+  });
+
+  it('stays true when one of several fees is offline', () => {
+    const agg = computePaymentAggregateForApp([
+      row({ status: 'Paid', amount: 100, amount_paid: 100, payment_channel: 'online' }),
+      row({
+        application_id: 'app-1',
+        status: 'Partial',
+        amount: 50,
+        amount_paid: 25,
+        payment_channel: 'offline',
+      }),
+    ]);
+    expect(agg.hasOfflinePayment).toBe(true);
   });
 });

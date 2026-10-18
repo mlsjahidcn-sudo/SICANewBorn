@@ -22,7 +22,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Building2, Check, Plus, Send, Trash2, AlertCircle, Loader2, Sparkles } from 'lucide-react';
+import { ArrowLeft, Building2, Check, FileCheck, Plus, Send, Trash2, AlertCircle, Loader2, Sparkles } from 'lucide-react';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { PageContainer } from '@/components/admin/page-container';
 import { useStudentList } from '@/hooks/use-student-list';
@@ -36,6 +36,20 @@ import {
   type ShortlistTarget,
 } from '@/lib/application-campaign';
 import { degreeTypes, programDisciplines } from '@/lib/data';
+
+/** Light doc-readiness counts for the shortlist builder — only Pending /
+ *  Verified (usable) vs Rejected matter for triage. */
+interface DocReadiness {
+  pending: number;
+  verified: number;
+  rejected: number;
+  total: number;
+}
+
+function isDocUsableStatus(status: string | null | undefined): boolean {
+  const s = (status ?? '').trim();
+  return s === 'Pending' || s === 'Uploaded' || s === 'Verified';
+}
 
 interface CandidateProgram {
   slug: string;
@@ -138,6 +152,11 @@ export default function ShortlistBuilder() {
   const [suggestions, setSuggestions] = useState<SuggestionResponse | null>(null);
   const [suggestError, setSuggestError] = useState<string | null>(null);
 
+  // Offline-pay shortlist: light doc readiness for the picked student
+  // (Pending / Verified counts from the existing admin documents API).
+  const [docReadiness, setDocReadiness] = useState<DocReadiness | null>(null);
+  const [docsLoading, setDocsLoading] = useState(false);
+
   // Load candidates whenever the filter set changes. Debounced so
   // typing in the search box is one request, not one per keystroke.
   useEffect(() => {
@@ -189,6 +208,57 @@ export default function ShortlistBuilder() {
 
   // Phase 180: resolve ?campaign= into (student, intake, preselected).
   const targetKey = (uni: string, prog: string) => `${uni}::${prog}`;
+
+  // Light doc readiness for the picked student — Pending/Verified
+  // matter for triage; Rejected is surfaced so the advisor knows.
+  useEffect(() => {
+    if (!studentId) {
+      setDocReadiness(null);
+      setDocsLoading(false);
+      return;
+    }
+    const controller = new AbortController();
+    setDocsLoading(true);
+    setDocReadiness(null);
+    (async () => {
+      try {
+        const res = await apiFetch(
+          `/api/admin/students/${encodeURIComponent(studentId)}/documents`,
+          { signal: controller.signal },
+        );
+        if (!res.ok) {
+          setDocReadiness(null);
+          return;
+        }
+        const body = (await res.json()) as {
+          documents?: Array<{ status?: string | null }>;
+        };
+        const docs = body.documents ?? [];
+        let pending = 0;
+        let verified = 0;
+        let rejected = 0;
+        for (const d of docs) {
+          const s = (d.status ?? '').trim();
+          if (s === 'Pending' || s === 'Uploaded') pending += 1;
+          else if (s === 'Verified') verified += 1;
+          else if (s === 'Rejected') rejected += 1;
+        }
+        if (controller.signal.aborted) return;
+        setDocReadiness({
+          pending,
+          verified,
+          rejected,
+          total: docs.length,
+        });
+      } catch (e) {
+        if ((e as Error)?.name === 'AbortError') return;
+        setDocReadiness(null);
+      } finally {
+        if (!controller.signal.aborted) setDocsLoading(false);
+      }
+    })();
+    return () => controller.abort();
+  }, [studentId]);
 
   useEffect(() => {
     const cid = new URLSearchParams(window.location.search).get('campaign');
@@ -273,7 +343,101 @@ export default function ShortlistBuilder() {
     });
   }, []);
 
+  /** Add every currently-visible candidate program until capacity. */
+  const addAllVisible = useCallback(() => {
+    if (!candidates) return;
+    setSelected((prev) => {
+      const next = { ...prev };
+      let count = Object.keys(next).length;
+      for (const { university, programs } of candidates.universities) {
+        for (const program of programs) {
+          if (count >= CAMPAIGN_MAX_TARGETS) return next;
+          const key = targetKey(university.slug, program.slug);
+          if (key in next) continue;
+          next[key] = {
+            universityId: university.slug,
+            universityName: locale === 'zh' ? university.nameCn : university.name,
+            universityNameCn: university.nameCn,
+            programId: program.slug,
+            programName: locale === 'zh' ? program.nameCn : program.name,
+            programNameCn: program.nameCn,
+            degree: program.degree,
+            role: DEFAULT_CAMPAIGN_ROLE,
+          };
+          count += 1;
+        }
+      }
+      return next;
+    });
+  }, [candidates, locale]);
+
+  /** Prefill from the student's preferred_universities — match by
+   *  slug OR name (case-insensitive) so legacy free-text prefs still
+   *  resolve against the live candidate groups. */
+  const addPreferred = useCallback(() => {
+    if (!candidates || !studentId) return;
+    const student = students.find((s) => s.id === studentId);
+    const prefs = (student?.preferredUniversities ?? [])
+      .map((p) => p.trim().toLowerCase())
+      .filter(Boolean);
+    if (prefs.length === 0) return;
+    setSelected((prev) => {
+      const next = { ...prev };
+      let count = Object.keys(next).length;
+      for (const { university, programs } of candidates.universities) {
+        const slug = university.slug.toLowerCase();
+        const name = university.name.toLowerCase();
+        const nameCn = (university.nameCn ?? '').toLowerCase();
+        const matches = prefs.some(
+          (p) => p === slug || p === name || (nameCn && p === nameCn),
+        );
+        if (!matches) continue;
+        for (const program of programs) {
+          if (count >= CAMPAIGN_MAX_TARGETS) return next;
+          const key = targetKey(university.slug, program.slug);
+          if (key in next) continue;
+          next[key] = {
+            universityId: university.slug,
+            universityName: locale === 'zh' ? university.nameCn : university.name,
+            universityNameCn: university.nameCn,
+            programId: program.slug,
+            programName: locale === 'zh' ? program.nameCn : program.name,
+            programNameCn: program.nameCn,
+            degree: program.degree,
+            role: DEFAULT_CAMPAIGN_ROLE,
+          };
+          count += 1;
+        }
+      }
+      return next;
+    });
+  }, [candidates, studentId, students, locale]);
+
+  /** Apply one role to every currently-selected target. */
+  const setBulkRole = useCallback((role: CampaignRole) => {
+    setSelected((prev) => {
+      const keys = Object.keys(prev);
+      if (keys.length === 0) return prev;
+      const next: Record<string, ShortlistTarget> = {};
+      for (const k of keys) {
+        next[k] = { ...prev[k], role };
+      }
+      return next;
+    });
+  }, []);
+
+  const selectedStudent = useMemo(
+    () => (studentId ? students.find((s) => s.id === studentId) ?? null : null),
+    [studentId, students],
+  );
+
+  const hasPreferredUnis = (selectedStudent?.preferredUniversities?.length ?? 0) > 0;
+
   const selectedList = useMemo(() => Object.values(selected), [selected]);
+
+  // Silence unused helper warning — isDocUsableStatus documents the
+  // usable-status contract for the shortlist triage UI.
+  void isDocUsableStatus;
 
   const suggest = useCallback(async () => {
     setSuggesting(true);
@@ -496,6 +660,29 @@ export default function ShortlistBuilder() {
             />
           </div>
         </div>
+
+        {studentId && (
+          <div className="flex items-start gap-2 border border-gray-200 bg-[#FAFAF8] px-3 py-2 text-sm text-[#1F2937]">
+            <FileCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#1B2A4A]" />
+            <div className="min-w-0">
+              <p className="font-medium text-[#1B2A4A]">{t('adminShortlist.docReadinessTitle')}</p>
+              {docsLoading ? (
+                <p className="text-xs text-gray-500">{t('adminShortlist.docReadinessLoading')}</p>
+              ) : docReadiness ? (
+                <p className="text-xs text-gray-600">
+                  {t('adminShortlist.docReadinessSummary', {
+                    total: docReadiness.total,
+                    pending: docReadiness.pending,
+                    verified: docReadiness.verified,
+                    rejected: docReadiness.rejected,
+                  })}
+                </p>
+              ) : (
+                <p className="text-xs text-gray-500">{t('adminShortlist.docReadinessEmpty')}</p>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[1fr_360px] items-start">
@@ -540,7 +727,7 @@ export default function ShortlistBuilder() {
             />
           </div>
 
-          <div className="mt-4 flex items-center gap-2 text-sm text-[#4B5563]">
+          <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-[#4B5563]">
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
             <span>
               {candidates?.programCount ?? 0} {t('adminShortlist.programsFound')}
@@ -550,6 +737,29 @@ export default function ShortlistBuilder() {
                 · {candidates.droppedOrphanPrograms} {t('adminShortlist.orphansHidden')}
               </span>
             )}
+            <div className="ml-auto flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={addAllVisible}
+                disabled={!candidates || candidates.programCount === 0 || atCapacity}
+                className="border border-[#1B2A4A] px-2.5 py-1 text-xs font-medium text-[#1B2A4A] hover:bg-[#1B2A4A] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {t('adminShortlist.addAllVisible')}
+              </button>
+              <button
+                type="button"
+                onClick={addPreferred}
+                disabled={!hasPreferredUnis || !candidates || atCapacity}
+                title={
+                  hasPreferredUnis
+                    ? undefined
+                    : t('adminShortlist.addPreferredDisabledHint')
+                }
+                className="border border-[#9B1B30] px-2.5 py-1 text-xs font-medium text-[#9B1B30] hover:bg-[#9B1B30] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {t('adminShortlist.addPreferred')}
+              </button>
+            </div>
           </div>
 
           {loadError && (
@@ -626,6 +836,22 @@ export default function ShortlistBuilder() {
               </span>
             ))}
           </div>
+
+          {selectedList.length > 0 && (
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] text-gray-500">{t('adminShortlist.bulkRoleLabel')}</span>
+              {CAMPAIGN_ROLES.map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setBulkRole(r)}
+                  className="border border-gray-300 px-2 py-0.5 text-[11px] text-gray-700 hover:border-[#9B1B30] hover:text-[#9B1B30]"
+                >
+                  {t(`adminShortlist.bulkRole_${r}`)}
+                </button>
+              ))}
+            </div>
+          )}
 
           {selectedList.length === 0 ? (
             <p className="mt-4 text-sm text-gray-500">{t('adminShortlist.empty')}</p>

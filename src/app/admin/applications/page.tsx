@@ -22,6 +22,10 @@ import { downloadCsvViaApi } from '@/lib/download-csv';
 import { APPLICATION_STATUSES, ApplicationStatus } from '@/lib/application-mapper';
 import { parseIntakeFilter, getCanonicalCohorts } from '@/lib/intake-normalize';
 import { APPLICATION_PAYMENT_STATUSES, APPLICATION_PAYMENT_STATUS_DISPLAY, type ApplicationPaymentStatus } from '@/lib/payment-aggregate';
+import {
+  STUDENT_FEE_PAYMENT_CHANNELS,
+  type StudentFeePaymentChannel,
+} from '@/lib/student-fee-mapper';
 import ApplicationGroups from './_components/application-groups';
 import { useI18n } from '@/lib/i18n';
 
@@ -66,6 +70,8 @@ interface Application {
   // aggregate for partner rows + any student row with no fee). The
   // Payment column + filter chip both consume this; partner rows
   // always have status='none' (no fee link yet).
+  // Phase 182: hasOfflinePayment — true when any non-Cancelled fee
+  // has payment_channel='offline'.
   payment?: {
     status: ApplicationPaymentStatus;
     totalByCurrency: Record<string, number>;
@@ -73,6 +79,7 @@ interface Application {
     outstandingByCurrency: Record<string, number>;
     feeCount: number;
     lastPaidAt: string | null;
+    hasOfflinePayment?: boolean;
   };
 }
 
@@ -212,6 +219,9 @@ export default function AdminApplicationsPage() {
   // value so they don't pollute the cohort counts. Partner rows
   // always pass through (no fee link yet).
   const [paymentFilter, setPaymentFilter] = useState<'all' | ApplicationPaymentStatus>('all');
+  // Phase 182: offline-pay channel filter. Independent of
+  // paymentFilter — an app can be Paid + Offline pay.
+  const [paymentChannelFilter, setPaymentChannelFilter] = useState<'all' | 'offline'>('all');
 
   // Phase 176: flat vs grouped view. 'flat' is the default and is
   // deliberately the ONLY mode that renders the original table —
@@ -306,9 +316,10 @@ export default function AdminApplicationsPage() {
   // moved to "Under Review" in one click.
   const [bulkStatusDialogOpen, setBulkStatusDialogOpen] = useState(false);
   const [bulkStatus, setBulkStatus] = useState<string>('Under Review');
-  // Phase 145: bulk mark-paid dialog state. The dialog asks for
-  // fee type + amount + currency + payment method + paid date,
-  // then POSTs the unified bulk endpoint with action='markPaid'.
+  // Phase 145 / offline-pay: bulk mark-paid dialog state. Asks for
+  // fee type + amount + currency + payment channel + method notes
+  // + paid date, then POSTs action='markPaid'. Default channel is
+  // 'offline' (admin is usually recording an offline payment).
   // Partner rows are excluded from the dialog's effective
   // selection (the API returns 400 per row, surfaced in the
   // result dialog).
@@ -316,6 +327,8 @@ export default function AdminApplicationsPage() {
   const [bulkMarkPaidFeeType, setBulkMarkPaidFeeType] = useState<string>('Application');
   const [bulkMarkPaidAmount, setBulkMarkPaidAmount] = useState<string>('');
   const [bulkMarkPaidCurrency, setBulkMarkPaidCurrency] = useState<string>('CNY');
+  const [bulkMarkPaidChannel, setBulkMarkPaidChannel] =
+    useState<StudentFeePaymentChannel>('offline');
   const [bulkMarkPaidMethod, setBulkMarkPaidMethod] = useState<string>('');
   const [bulkMarkPaidDate, setBulkMarkPaidDate] = useState<string>(
     new Date().toISOString().slice(0, 10),
@@ -413,6 +426,8 @@ export default function AdminApplicationsPage() {
     // Phase 145: payment status filter. Only sent when not 'all'
     // so the API behaves identically for the unfiltered case.
     if (paymentFilter !== 'all') params.set('paymentStatus', paymentFilter);
+    // Phase 182: offline-pay channel filter.
+    if (paymentChannelFilter === 'offline') params.set('paymentChannel', 'offline');
     // Phase 122b: server-side sort.
     params.set('sort', sortBy);
     params.set('order', sortOrder);
@@ -448,7 +463,7 @@ export default function AdminApplicationsPage() {
       controller.abort();
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [page, searchQuery, statusFilter, studentFilter, activeTab, intakeFilter, partnerOnly, retryNonce, decisionFilter, enrolledFilter, paymentFilter, sortBy, sortOrder]);
+  }, [page, searchQuery, statusFilter, studentFilter, activeTab, intakeFilter, partnerOnly, retryNonce, decisionFilter, enrolledFilter, paymentFilter, paymentChannelFilter, sortBy, sortOrder]);
 
   // Debounce search — wait 300ms after the user stops typing before firing
   useEffect(() => {
@@ -462,7 +477,7 @@ export default function AdminApplicationsPage() {
   // which could render empty because the partner surface has few pages.
   useEffect(() => {
     setPage(1);
-  }, [activeTab, statusFilter, studentFilter, searchQuery, intakeFilter, partnerOnly, paymentFilter]);
+  }, [activeTab, statusFilter, studentFilter, searchQuery, intakeFilter, partnerOnly, paymentFilter, paymentChannelFilter]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -1169,13 +1184,29 @@ export default function AdminApplicationsPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                {/* Phase 182: offline-channel filter — orthogonal to
+                    paymentFilter so an app can be Paid + Offline pay. */}
+                <Select
+                  value={paymentChannelFilter}
+                  onValueChange={(v) =>
+                    setPaymentChannelFilter(v as 'all' | 'offline')
+                  }
+                >
+                  <SelectTrigger className="w-[160px] rounded-none">
+                    <SelectValue placeholder={t('adminApps.filterAllChannels')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t('adminApps.filterAllChannels')}</SelectItem>
+                    <SelectItem value="offline">{t('adminApps.filterOfflinePay')}</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             {/* Phase 107 Batch 4: decision + enrollment filter chips.
                 Each chip is a toggle button; clicking the active
                 chip resets to 'all'. The chips mirror the existing
                 cohort pill UX (visible when non-default). */}
-            {(decisionFilter !== 'all' || enrolledFilter !== 'all' || paymentFilter !== 'all') && (
+            {(decisionFilter !== 'all' || enrolledFilter !== 'all' || paymentFilter !== 'all' || paymentChannelFilter !== 'all') && (
               <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-gray-100">
                 {decisionFilter !== 'all' && (
                   <span className="inline-flex items-center gap-1 bg-blue-50 border border-blue-200 px-2.5 py-1 text-xs text-blue-800">
@@ -1212,6 +1243,18 @@ export default function AdminApplicationsPage() {
                       onClick={() => setPaymentFilter('all')}
                       className="ml-1 opacity-70 hover:opacity-100"
                       aria-label="Clear payment filter"
+                    >
+                      <X size={12} />
+                    </button>
+                  </span>
+                )}
+                {paymentChannelFilter !== 'all' && (
+                  <span className="inline-flex items-center gap-1 bg-amber-50 border border-amber-200 px-2.5 py-1 text-xs text-amber-800">
+                    {t('adminApps.filterOfflinePay')}
+                    <button
+                      onClick={() => setPaymentChannelFilter('all')}
+                      className="ml-1 text-amber-700 hover:text-amber-900"
+                      aria-label={t('adminApps.clearOfflinePayFilter')}
                     >
                       <X size={12} />
                     </button>
@@ -1557,17 +1600,24 @@ export default function AdminApplicationsPage() {
                                   (defensive — shouldn't happen but
                                   keeps the row from crashing). */}
                               <td className="px-6 py-4">
-                                <Badge
-                                  className={`${
-                                    APPLICATION_PAYMENT_STATUS_DISPLAY[
+                                <div className="flex flex-wrap items-center gap-1">
+                                  <Badge
+                                    className={`${
+                                      APPLICATION_PAYMENT_STATUS_DISPLAY[
+                                        application.payment?.status ?? 'none'
+                                      ]?.color ?? APPLICATION_PAYMENT_STATUS_DISPLAY.none.color
+                                    } rounded-none border`}
+                                  >
+                                    {APPLICATION_PAYMENT_STATUS_DISPLAY[
                                       application.payment?.status ?? 'none'
-                                    ]?.color ?? APPLICATION_PAYMENT_STATUS_DISPLAY.none.color
-                                  } rounded-none border`}
-                                >
-                                  {APPLICATION_PAYMENT_STATUS_DISPLAY[
-                                    application.payment?.status ?? 'none'
-                                  ]?.label ?? 'No fee set'}
-                                </Badge>
+                                    ]?.label ?? 'No fee set'}
+                                  </Badge>
+                                  {application.payment?.hasOfflinePayment && (
+                                    <Badge className="rounded-none border bg-amber-50 text-amber-800 border-amber-200">
+                                      {t('adminApps.badgeOfflinePay')}
+                                    </Badge>
+                                  )}
+                                </div>
                               </td>
                             </>
                           )}
@@ -2153,6 +2203,31 @@ export default function AdminApplicationsPage() {
                 </Select>
               </div>
             </div>
+            <div>
+              <label className="block text-sm font-medium text-[#1B2A4A] mb-1">
+                {t('adminFees.fieldChannel')}
+              </label>
+              <Select
+                value={bulkMarkPaidChannel}
+                onValueChange={(v) =>
+                  setBulkMarkPaidChannel(v as StudentFeePaymentChannel)
+                }
+              >
+                <SelectTrigger className="rounded-none">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-none">
+                  {STUDENT_FEE_PAYMENT_CHANNELS.map((ch) => (
+                    <SelectItem key={ch} value={ch}>
+                      {t(`adminFees.channel.${ch}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="mt-1 text-xs text-gray-500">
+                {t('adminFees.fieldChannelHint')}
+              </p>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium text-[#1B2A4A] mb-1">Payment method</label>
@@ -2192,6 +2267,7 @@ export default function AdminApplicationsPage() {
                   feeType: bulkMarkPaidFeeType,
                   amount: parseFloat(bulkMarkPaidAmount),
                   currency: bulkMarkPaidCurrency,
+                  paymentChannel: bulkMarkPaidChannel,
                   paymentMethod: bulkMarkPaidMethod.trim() || undefined,
                   paidDate: bulkMarkPaidDate,
                 };

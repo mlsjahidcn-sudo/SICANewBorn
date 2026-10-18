@@ -5,9 +5,11 @@ import {
   parseStudentFeeStatus,
   parseStudentFeeType,
   parseStudentFeeCurrency,
+  parseStudentFeePaymentChannel,
   STUDENT_FEE_STATUSES,
   STUDENT_FEE_TYPES,
   STUDENT_FEE_CURRENCIES,
+  STUDENT_FEE_PAYMENT_CHANNELS,
 } from '@/lib/student-fee-mapper';
 import { currencySymbol } from '@/lib/currency';
 
@@ -54,6 +56,22 @@ describe('student-fee-mapper', () => {
     });
   });
 
+  describe('parseStudentFeePaymentChannel (Phase 182)', () => {
+    it('accepts all channels', () => {
+      for (const c of STUDENT_FEE_PAYMENT_CHANNELS) {
+        expect(parseStudentFeePaymentChannel(c)).toBe(c);
+      }
+    });
+    it('rejects unknowns and case drift', () => {
+      expect(parseStudentFeePaymentChannel('Offline')).toBeNull();
+      expect(parseStudentFeePaymentChannel('bank-transfer')).toBeNull();
+      expect(parseStudentFeePaymentChannel('')).toBeNull();
+      expect(parseStudentFeePaymentChannel(null)).toBeNull();
+      expect(parseStudentFeePaymentChannel(undefined)).toBeNull();
+      expect(parseStudentFeePaymentChannel(42)).toBeNull();
+    });
+  });
+
   describe('mapStudentFeeFromDb', () => {
     it('maps a full row', () => {
       const result = mapStudentFeeFromDb({
@@ -69,6 +87,7 @@ describe('student-fee-mapper', () => {
         paid_date: null,
         status: 'Partial',
         payment_method: 'Bank Transfer',
+        payment_channel: 'offline',
         notes: '50% upfront',
         created_at: '2026-06-01T00:00:00Z',
         updated_at: '2026-06-15T00:00:00Z',
@@ -86,10 +105,36 @@ describe('student-fee-mapper', () => {
         paidDate: null,
         status: 'Partial',
         paymentMethod: 'Bank Transfer',
+        paymentChannel: 'offline',
         notes: '50% upfront',
         createdAt: '2026-06-01T00:00:00Z',
         updatedAt: '2026-06-15T00:00:00Z',
       });
+    });
+
+    it('defaults paymentChannel to unspecified when column missing (Phase 182)', () => {
+      const result = mapStudentFeeFromDb({
+        id: 'fee-1',
+        student_id: 's-1',
+        fee_type: 'Tuition',
+        amount: 100,
+        currency: 'CNY',
+        status: 'Pending',
+      });
+      expect(result.paymentChannel).toBe('unspecified');
+    });
+
+    it('falls back to unspecified for unknown payment_channel values', () => {
+      const result = mapStudentFeeFromDb({
+        id: 'fee-1',
+        student_id: 's-1',
+        fee_type: 'Tuition',
+        amount: 100,
+        currency: 'CNY',
+        status: 'Pending',
+        payment_channel: 'crypto',
+      });
+      expect(result.paymentChannel).toBe('unspecified');
     });
 
     it('coerces NUMERIC strings from PostgREST to number', () => {
@@ -170,6 +215,21 @@ describe('student-fee-mapper', () => {
       expect(mapStudentFeeToDb({ paymentMethod: '' })).toEqual({
         payment_method: null,
       });
+    });
+
+    it('writes paymentChannel as payment_channel (Phase 182)', () => {
+      expect(mapStudentFeeToDb({ paymentChannel: 'offline' })).toEqual({
+        payment_channel: 'offline',
+      });
+      expect(mapStudentFeeToDb({ paymentChannel: 'alipay' })).toEqual({
+        payment_channel: 'alipay',
+      });
+    });
+
+    it('omits payment_channel when paymentChannel is undefined', () => {
+      expect(mapStudentFeeToDb({ status: 'Paid' })).not.toHaveProperty(
+        'payment_channel',
+      );
     });
   });
 

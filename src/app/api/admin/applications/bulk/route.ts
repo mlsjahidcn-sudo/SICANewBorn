@@ -12,7 +12,12 @@ import {
   STUDENT_FEE_CURRENCIES,
   parseStudentFeeType,
   parseStudentFeeCurrency,
+  parseStudentFeePaymentChannel,
 } from '@/lib/student-fee-mapper';
+import {
+  isOfflinePaymentChannel,
+  maybeSetStudentServicePaidFromOfflineFee,
+} from '@/lib/student-service-paid-sync';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,6 +50,9 @@ export const dynamic = 'force-dynamic';
  *                       amount: number,
  *                       currency: StudentFeeCurrency,
  *                       paymentMethod?: string,
+ *                       paymentChannel?: StudentFeePaymentChannel
+ *                         (defaults to 'offline' — admin mark-paid
+ *                         is the offline-pay triage path),
  *                       paidDate?: 'YYYY-MM-DD' (defaults to today) }
  *                   If a Pending/Partial student_fees row already
  *                   exists for this application, it is UPDATED to
@@ -53,6 +61,8 @@ export const dynamic = 'force-dynamic';
  *                   is INSERTED. Partner surface rows are not
  *                   supported yet — the admin uses /admin/fees for
  *                   partner payment tracking (Phase 145b follow-up).
+ *                   When paymentChannel is 'offline', one-way syncs
+ *                   student_profiles.service_paid=true if still false.
  *
  * Response: { updated: number, failed: Array<{id, error}> }
  *
@@ -413,6 +423,17 @@ export async function POST(request: NextRequest) {
           const amountRaw = typeof payload.amount === 'number' ? payload.amount : parseFloat(String(payload.amount ?? ''));
           const currencyRaw = typeof payload.currency === 'string' ? payload.currency : null;
           const paymentMethod = typeof payload.paymentMethod === 'string' && payload.paymentMethod.trim() ? payload.paymentMethod.trim() : null;
+          // Phase 182: default 'offline' — admin mark-paid is the
+          // offline-pay triage path. Explicit channel from the dialog
+          // overrides when present.
+          const channelParsed = payload.paymentChannel !== undefined
+            ? parseStudentFeePaymentChannel(payload.paymentChannel)
+            : 'offline';
+          if (payload.paymentChannel !== undefined && !channelParsed) {
+            failed.push({ id, error: 'paymentChannel is not a valid channel' });
+            continue;
+          }
+          const paymentChannel = channelParsed ?? 'offline';
           const paidDate = typeof payload.paidDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(payload.paidDate)
             ? payload.paidDate
             : new Date().toISOString().slice(0, 10);
@@ -438,7 +459,7 @@ export async function POST(request: NextRequest) {
           // trail. If none exists, we INSERT a new row.
           const { data: existingFee, error: feeLookupErr } = await service
             .from('student_fees')
-            .select('id, status')
+            .select('id, status, student_id')
             .eq('application_id', id)
             .in('status', ['Pending', 'Partial', 'Overdue'])
             .order('created_at', { ascending: false })
@@ -446,7 +467,11 @@ export async function POST(request: NextRequest) {
             .maybeSingle();
           if (feeLookupErr) throw new Error(feeLookupErr.message);
 
+          let linkedStudentId: string | null = null;
+
           if (existingFee) {
+            const feeRow = existingFee as { id: string; student_id: string | null };
+            linkedStudentId = feeRow.student_id;
             const { error: updErr } = await service
               .from('student_fees')
               .update({
@@ -457,8 +482,9 @@ export async function POST(request: NextRequest) {
                 paid_date: paidDate,
                 status: 'Paid',
                 payment_method: paymentMethod,
+                payment_channel: paymentChannel,
               })
-              .eq('id', (existingFee as { id: string }).id);
+              .eq('id', feeRow.id);
             if (updErr) throw new Error(updErr.message);
           } else {
             // No prior fee for this application — we need
@@ -478,6 +504,7 @@ export async function POST(request: NextRequest) {
               });
               continue;
             }
+            linkedStudentId = sr.student_id;
             const { error: insErr } = await service
               .from('student_fees')
               .insert({
@@ -490,8 +517,15 @@ export async function POST(request: NextRequest) {
                 paid_date: paidDate,
                 status: 'Paid',
                 payment_method: paymentMethod,
+                payment_channel: paymentChannel,
               });
             if (insErr) throw new Error(insErr.message);
+          }
+
+          // Phase 182: one-way sync — offline channel sets the
+          // student Paid flag when still false. Best-effort.
+          if (isOfflinePaymentChannel(paymentChannel) && linkedStudentId) {
+            void maybeSetStudentServicePaidFromOfflineFee(service, linkedStudentId);
           }
 
           // No timeline event / no email on a payment flip —

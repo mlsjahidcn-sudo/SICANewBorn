@@ -20,6 +20,7 @@ const EDITABLE_FEE_FIELDS = new Set([
   'paid_date',
   'status',
   'payment_method',
+  'payment_channel',
   'payment_notes',
   'payment_proof_url',
   'notes',

@@ -42,6 +42,10 @@ import {
  *     of this filter — they appear in the unfiltered list with a grey
  *     "No fee set" badge but don't pollute the cohort counts. Partner
  *     surface rows always pass through (no fee rows yet for partners).
+ *   - paymentChannel (Phase 182): currently only 'offline' is accepted.
+ *     Keeps student apps whose payment aggregate has hasOfflinePayment=true
+ *     (any non-Cancelled fee with payment_channel='offline'). Partner rows
+ *     are excluded from this filter.
  *
  * S28: the response is a *unified* list across `student_applications` AND
  * `partner_applications`. Each row carries a `surface` field
@@ -144,6 +148,18 @@ export async function GET(request: NextRequest) {
     if (paymentStatusParam && !paymentStatusFilter) {
       return NextResponse.json(
         { error: `paymentStatus must be one of: ${APPLICATION_PAYMENT_STATUSES.filter((s) => s !== 'none').join(', ')}` },
+        { status: 400 },
+      );
+    }
+
+    // Phase 182: offline-pay channel filter. Only 'offline' is
+    // accepted today — other channels can ride the same param later.
+    const paymentChannelParam = searchParams.get('paymentChannel');
+    const paymentChannelFilter: 'offline' | null =
+      paymentChannelParam === 'offline' ? 'offline' : null;
+    if (paymentChannelParam && !paymentChannelFilter) {
+      return NextResponse.json(
+        { error: "paymentChannel must be 'offline'" },
         { status: 400 },
       );
     }
@@ -276,6 +292,17 @@ export async function GET(request: NextRequest) {
       combined = combined.filter((a) => {
         if (a.surface === 'partner') return true;
         return a.payment?.status === paymentStatusFilter;
+      });
+    }
+
+    // Phase 182: offline-pay channel filter. Student apps whose
+    // aggregate has at least one non-Cancelled fee with
+    // payment_channel='offline'. Partner rows are excluded (no
+    // fee link yet).
+    if (paymentChannelFilter === 'offline') {
+      combined = combined.filter((a) => {
+        if (a.surface === 'partner') return false;
+        return a.payment?.hasOfflinePayment === true;
       });
     }
 
@@ -932,7 +959,9 @@ async function fetchPaymentAggregates(
   try {
     const { data, error } = await service
       .from('student_fees')
-      .select('application_id, status, amount, amount_paid, currency, paid_date, created_at')
+      // Phase 182: payment_channel required so hasOfflinePayment
+      // can flip true for offline-paid fees.
+      .select('application_id, status, amount, amount_paid, currency, paid_date, created_at, payment_channel')
       .in('application_id', applicationIds);
     if (error) {
       console.error('[admin/applications GET] payment aggregate fetch failed:', error);
@@ -946,6 +975,7 @@ async function fetchPaymentAggregates(
       currency: string | null;
       paid_date: string | null;
       created_at: string | null;
+      payment_channel: string | null;
     }>);
   } catch (err) {
     console.error('[admin/applications GET] payment aggregate unhandled:', err);

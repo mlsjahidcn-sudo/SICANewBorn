@@ -1,17 +1,25 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { useI18n } from '@/lib/i18n';
-import { User, Edit, Save, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { User, Edit, Save, AlertCircle, CheckCircle2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { apiFetchJson } from '@/lib/api-client';
 import { computeBasicProfileCompletion } from '@/lib/student-profile-completion';
+import { CAMPAIGN_MAX_TARGETS } from '@/lib/application-campaign';
+
+interface UniversityOption {
+  slug: string;
+  name: string;
+  nameCn?: string | null;
+}
 
 interface StudentProfile {
   id: string;
@@ -69,13 +77,16 @@ const HIGHEST_EDUCATION = ['High School', 'Diploma', 'Bachelor', 'Master', 'PhD'
 
 export default function StudentProfilePage() {
   const { user } = useAuth();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [profile, setProfile] = useState<StudentProfile>(EMPTY_PROFILE);
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const [universities, setUniversities] = useState<UniversityOption[]>([]);
+  const [uniSearch, setUniSearch] = useState('');
+  const [unisLoading, setUnisLoading] = useState(false);
 
   const load = async () => {
     setIsLoading(true);
@@ -100,6 +111,64 @@ export default function StudentProfilePage() {
   useEffect(() => {
     void load();
   }, []);
+
+  // Live catalog for preferred-universities multi-select (cap =
+  // CAMPAIGN_MAX_TARGETS so prefs align with the admin shortlist).
+  useEffect(() => {
+    let cancelled = false;
+    setUnisLoading(true);
+    fetch('/api/universities?limit=500&sort=name')
+      .then((r) => r.json())
+      .then((d: { universities?: UniversityOption[] }) => {
+        if (cancelled) return;
+        setUniversities(
+          (d.universities ?? []).map((u) => ({
+            slug: u.slug,
+            name: u.name,
+            nameCn: u.nameCn ?? null,
+          })),
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setUniversities([]);
+      })
+      .finally(() => {
+        if (!cancelled) setUnisLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const uniLabel = (u: UniversityOption): string =>
+    locale === 'zh' && u.nameCn ? u.nameCn : u.name;
+
+  const selectedPrefs = profile.preferred_universities ?? [];
+
+  const filteredUniversities = useMemo(() => {
+    const q = uniSearch.trim().toLowerCase();
+    if (!q) return universities;
+    return universities.filter(
+      (u) =>
+        u.name.toLowerCase().includes(q) ||
+        (u.nameCn ?? '').toLowerCase().includes(q) ||
+        u.slug.toLowerCase().includes(q),
+    );
+  }, [universities, uniSearch]);
+
+  const togglePreferredUniversity = (slug: string) => {
+    if (!isEditing) return;
+    const current = profile.preferred_universities ?? [];
+    if (current.includes(slug)) {
+      handleChange(
+        'preferred_universities',
+        current.filter((s) => s !== slug),
+      );
+      return;
+    }
+    if (current.length >= CAMPAIGN_MAX_TARGETS) return;
+    handleChange('preferred_universities', [...current, slug]);
+  };
 
   const handleChange = (key: keyof StudentProfile, value: string | string[]) => {
     setProfile((prev) => ({ ...prev, [key]: value }));
@@ -532,24 +601,92 @@ export default function StudentProfilePage() {
                 placeholder="e.g., Computer Science"
               />
             </div>
-            {/* Phase 4D: preferred universities — comma-separated for now. */}
+            {/* Preferred universities — multi-select from live catalog (slugs, cap 12). */}
             <div className="space-y-2">
-              <Label htmlFor="preferred_universities">{t('studentProfile.preferredUniversities')}</Label>
-              <Input
-                id="preferred_universities"
-                value={(profile.preferred_universities ?? []).join(', ')}
-                onChange={(e) =>
-                  handleChange(
-                    'preferred_universities',
-                    e.target.value.split(',').map((s) => s.trim()).filter(Boolean),
-                  )
-                }
-                disabled={!isEditing}
-                className="rounded-none"
-                placeholder="e.g., Tsinghua University, Peking University"
-              />
+              <div className="flex items-center justify-between gap-2">
+                <Label>{t('studentProfile.preferredUniversities')}</Label>
+                <span className="text-xs text-gray-500">
+                  {t('studentProfile.preferredUniversitiesCount', {
+                    count: selectedPrefs.length,
+                    max: CAMPAIGN_MAX_TARGETS,
+                  })}
+                </span>
+              </div>
+              {selectedPrefs.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedPrefs.map((slug) => {
+                    const match = universities.find((u) => u.slug === slug);
+                    const label = match ? uniLabel(match) : slug;
+                    return (
+                      <span
+                        key={slug}
+                        className="inline-flex items-center gap-1 bg-[#1B2A4A]/10 text-[#1B2A4A] text-xs px-2 py-1"
+                      >
+                        {label}
+                        {isEditing && (
+                          <button
+                            type="button"
+                            aria-label={t('studentProfile.preferredUniversitiesRemove', { name: label })}
+                            className="hover:text-[#9B1B30]"
+                            onClick={() => togglePreferredUniversity(slug)}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        )}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+              {isEditing ? (
+                <div className="border border-gray-200 rounded-none">
+                  <Input
+                    value={uniSearch}
+                    onChange={(e) => setUniSearch(e.target.value)}
+                    className="rounded-none border-0 border-b border-gray-200"
+                    placeholder={t('studentProfile.preferredUniversitiesSearch')}
+                  />
+                  <div className="max-h-48 overflow-y-auto p-2 space-y-1">
+                    {unisLoading ? (
+                      <p className="text-xs text-gray-500 px-1 py-2">
+                        {t('studentProfile.preferredUniversitiesLoading')}
+                      </p>
+                    ) : filteredUniversities.length === 0 ? (
+                      <p className="text-xs text-gray-500 px-1 py-2">
+                        {t('studentProfile.preferredUniversitiesEmpty')}
+                      </p>
+                    ) : (
+                      filteredUniversities.slice(0, 80).map((u) => {
+                        const checked = selectedPrefs.includes(u.slug);
+                        const atCap =
+                          !checked && selectedPrefs.length >= CAMPAIGN_MAX_TARGETS;
+                        return (
+                          <label
+                            key={u.slug}
+                            className={`flex items-center gap-2 px-1 py-1.5 text-sm cursor-pointer ${
+                              atCap ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'
+                            }`}
+                          >
+                            <Checkbox
+                              checked={checked}
+                              disabled={atCap}
+                              onCheckedChange={() => togglePreferredUniversity(u.slug)}
+                              className="rounded-none"
+                            />
+                            <span className="truncate">{uniLabel(u)}</span>
+                          </label>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              ) : selectedPrefs.length === 0 ? (
+                <p className="text-sm text-gray-500">{t('studentProfile.notSet')}</p>
+              ) : null}
               <p className="text-xs text-gray-500">
-                {t('studentProfile.preferredUniversitiesHint')}
+                {t('studentProfile.preferredUniversitiesHint', {
+                  max: CAMPAIGN_MAX_TARGETS,
+                })}
               </p>
             </div>
           </CardContent>

@@ -81,6 +81,8 @@ export interface PaymentAggregate {
   feeCount: number;
   // The most recent paid_date across all Paid rows, ISO string or null.
   lastPaidAt: string | null;
+  // Phase 182 — true when any non-Cancelled fee has payment_channel='offline'.
+  hasOfflinePayment: boolean;
 }
 
 /**
@@ -95,6 +97,7 @@ export interface PaymentAggregateFeeRow {
   currency: string | null;
   paid_date: string | null;
   created_at: string | null;
+  payment_channel?: string | null;
 }
 
 /**
@@ -112,6 +115,7 @@ export function computePaymentAggregateForApp(
   let hasPartial = false;
   let hasPaidRow = false;
   let lastPaidAt: string | null = null;
+  let hasOfflinePayment = false;
 
   for (const fee of fees) {
     // Cancelled rows don't contribute to totals or status. The fee has
@@ -127,6 +131,8 @@ export function computePaymentAggregateForApp(
     outstandingByCurrency[currency] = round2(
       Math.max(0, amount - amountPaid),
     );
+
+    if (fee.payment_channel === 'offline') hasOfflinePayment = true;
 
     if (fee.status === 'Overdue') hasOverdue = true;
     if (fee.status === 'Pending' || fee.status === 'Partial') {
@@ -168,6 +174,7 @@ export function computePaymentAggregateForApp(
     outstandingByCurrency,
     feeCount: fees.length,
     lastPaidAt,
+    hasOfflinePayment,
   };
 }
 
@@ -210,6 +217,7 @@ export function emptyPaymentAggregate(): PaymentAggregate {
     outstandingByCurrency: {},
     feeCount: 0,
     lastPaidAt: null,
+    hasOfflinePayment: false,
   };
 }
 

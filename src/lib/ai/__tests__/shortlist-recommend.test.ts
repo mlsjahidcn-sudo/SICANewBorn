@@ -84,6 +84,45 @@ describe('prompts', () => {
     // Nothing that isn't in the candidate set.
     expect(p).not.toContain('fudan');
   });
+
+  it('soft-boosts preferred universities without expanding the candidate set', () => {
+    const p = buildUserPrompt({
+      studentProfile: 'GPA 3.7, wants CS',
+      intake: 'Fall 2027',
+      context: ctx(),
+      preferredUniversities: ['tsinghua-university', '  peking-university  ', '', 'fudan-university'],
+    });
+    expect(p).toContain('PREFERRED UNIVERSITIES (soft boost');
+    expect(p).toContain('- tsinghua-university');
+    expect(p).toContain('- peking-university');
+    expect(p).toContain('- fudan-university'); // listed as preference only
+    // Soft boost must not invent programs — candidate block still only real slugs.
+    expect(p).toContain('3 real records');
+    expect(p).not.toContain('program_slug=fudan');
+  });
+
+  it('omits the preferred block when the list is empty / whitespace-only', () => {
+    const p = buildUserPrompt({
+      studentProfile: 'GPA 3.7',
+      intake: 'Fall 2027',
+      context: ctx(),
+      preferredUniversities: ['  ', ''],
+    });
+    expect(p).not.toContain('PREFERRED UNIVERSITIES');
+  });
+
+  it('caps preferred universities at 12', () => {
+    const many = Array.from({ length: 15 }, (_, i) => `uni-${i}`);
+    const p = buildUserPrompt({
+      studentProfile: 'GPA 3.7',
+      intake: 'Fall 2027',
+      context: ctx(),
+      preferredUniversities: many,
+    });
+    expect(p).toContain('- uni-0');
+    expect(p).toContain('- uni-11');
+    expect(p).not.toContain('- uni-12');
+  });
 });
 
 describe('extractRecommendations', () => {

@@ -99,23 +99,54 @@ export async function POST(request: NextRequest) {
   // The DB profile is preferred over anything the client sends: it's
   // the record the rest of the admin agrees on, and it keeps the
   // advisor from ranking on a stale note.
+  //
+  // Phase 182: read `student_profiles` (not the non-existent
+  // `students` table). Soft-boost `preferred_universities` in the
+  // ranking prompt so AI suggestions lean toward schools the student
+  // already named — without inventing programs outside the candidate set.
   let profile = providedProfile;
+  let preferredUniversities: string[] = [];
   if (studentId && isSupabaseServerConfigured() && supabaseServer) {
     try {
       const { data: student } = await supabaseServer
-        .from('students')
-        .select('first_name, last_name, nationality, current_education_level, intended_major, test_scores, notes')
+        .from('student_profiles')
+        .select(
+          'first_name, last_name, nationality, highest_education, gpa, english_score, target_degree, target_field, target_intake, preferred_universities, extra',
+        )
         .eq('id', studentId)
         .maybeSingle();
       if (student) {
         const s = student as Record<string, unknown>;
+        const prefsRaw = s.preferred_universities;
+        preferredUniversities = Array.isArray(prefsRaw)
+          ? prefsRaw
+              .filter((v): v is string => typeof v === 'string')
+              .map((v) => v.trim())
+              .filter(Boolean)
+              .slice(0, 12)
+          : [];
+        const extra = (s.extra as Record<string, unknown> | null) || {};
+        const notes =
+          typeof extra.notes === 'string'
+            ? str(extra.notes, 600)
+            : typeof s.notes === 'string'
+              ? str(s.notes, 600)
+              : '';
         const parts = [
-          str(s.first_name, 100) && str(s.last_name, 100) ? `${s.first_name} ${s.last_name}` : '',
+          str(s.first_name, 100) && str(s.last_name, 100)
+            ? `${s.first_name} ${s.last_name}`
+            : str(s.first_name, 100) || str(s.last_name, 100),
           str(s.nationality, 100) ? `Nationality: ${s.nationality}` : '',
-          str(s.current_education_level, 100) ? `Current level: ${s.current_education_level}` : '',
-          str(s.intended_major, 200) ? `Intended field: ${s.intended_major}` : '',
-          s.test_scores ? `Test scores: ${JSON.stringify(s.test_scores).slice(0, 400)}` : '',
-          str(s.notes, 600) ? `Advisor notes: ${s.notes}` : '',
+          str(s.highest_education, 100) ? `Highest education: ${s.highest_education}` : '',
+          str(s.gpa, 40) ? `GPA: ${s.gpa}` : '',
+          str(s.english_score, 50) ? `English score: ${s.english_score}` : '',
+          str(s.target_degree, 100) ? `Target degree: ${s.target_degree}` : '',
+          str(s.target_field, 200) ? `Intended field: ${s.target_field}` : '',
+          str(s.target_intake, 100) ? `Target intake: ${s.target_intake}` : '',
+          preferredUniversities.length
+            ? `Preferred universities: ${preferredUniversities.join(', ')}`
+            : '',
+          notes ? `Advisor notes: ${notes}` : '',
         ].filter(Boolean);
         if (parts.length) profile = parts.join('\n');
       }
@@ -164,7 +195,12 @@ export async function POST(request: NextRequest) {
         { role: 'system', content: buildSystemPrompt() },
         {
           role: 'user',
-          content: buildUserPrompt({ studentProfile: profile, intake, context }),
+          content: buildUserPrompt({
+            studentProfile: profile,
+            intake,
+            context,
+            preferredUniversities,
+          }),
         },
       ],
       // Low temperature on purpose: this is a ranking task over known

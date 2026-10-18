@@ -141,3 +141,30 @@ describe('mapStudentToDb — preferredUniversities', () => {
     expect(dbRow.first_name).toBe('Sara');
   });
 });
+
+describe('mapStudentFromDb — servicePaid (Phase 182)', () => {
+  it('round-trips service_paid=true + service_paid_at', () => {
+    const result = mapStudentFromDb({
+      id: 'abc',
+      email: 'x@y.com',
+      service_paid: true,
+      service_paid_at: '2026-10-18T08:00:00Z',
+    });
+    expect(result.servicePaid).toBe(true);
+    expect(result.servicePaidAt).toBe('2026-10-18T08:00:00Z');
+  });
+
+  it('defaults to unpaid when columns are absent', () => {
+    const result = mapStudentFromDb({ id: 'abc', email: 'x@y.com' });
+    expect(result.servicePaid).toBe(false);
+    expect(result.servicePaidAt).toBeNull();
+  });
+});
+
+describe('mapStudentToDb — servicePaid (Phase 182)', () => {
+  it('writes service_paid boolean without service_paid_at (API stamps the timestamp)', () => {
+    const { dbRow } = mapStudentToDb({ servicePaid: true });
+    expect(dbRow.service_paid).toBe(true);
+    expect(dbRow.service_paid_at).toBeUndefined();
+  });
+});

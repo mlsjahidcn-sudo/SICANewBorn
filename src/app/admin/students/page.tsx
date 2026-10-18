@@ -59,7 +59,10 @@ export default function AdminStudentsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sourceFilter, setSourceFilter] = useState<string>('all');
+  // Phase 182: student_profiles.service_paid triage filter.
+  const [servicePaidFilter, setServicePaidFilter] = useState<string>('all');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [paidToggleBusyId, setPaidToggleBusyId] = useState<string | null>(null);
   const [studentToDelete, setStudentToDelete] = useState<AdminStudent | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   // Phase 136 — AI-assisted send-email composer target
@@ -113,6 +116,9 @@ export default function AdminStudentsPage() {
     if (searchQuery.trim()) params.set('search', searchQuery.trim());
     if (statusFilter !== 'all') params.set('status', statusFilter);
     if (sourceFilter !== 'all') params.set('source', sourceFilter);
+    if (servicePaidFilter === 'true' || servicePaidFilter === 'false') {
+      params.set('servicePaid', servicePaidFilter);
+    }
 
     apiFetchJson<{ students: AdminStudent[]; total: number; page: number; totalPages: number }>(
       `/api/admin/students?${params.toString()}`,
@@ -134,7 +140,7 @@ export default function AdminStudentsPage() {
       });
 
     return () => controller.abort();
-  }, [page, searchQuery, statusFilter, sourceFilter, sort, order, refreshToken, t]);
+  }, [page, searchQuery, statusFilter, sourceFilter, servicePaidFilter, sort, order, refreshToken, t]);
 
   // Debounce search input so we don't fire a request on every keystroke.
   const [searchInput, setSearchInput] = useState('');
@@ -147,14 +153,14 @@ export default function AdminStudentsPage() {
   // on a page that no longer exists after a filter narrows the list)
   useEffect(() => {
     setPage(1);
-  }, [statusFilter, sourceFilter, searchQuery]);
+  }, [statusFilter, sourceFilter, servicePaidFilter, searchQuery]);
 
   // Phase 122a: clear the bulk selection when the visible row set
   // changes — a selected id from another page/filter would otherwise
   // be bulk-acted on invisibly.
   useEffect(() => {
     setSelectedIds(new Set());
-  }, [statusFilter, sourceFilter, searchQuery, page]);
+  }, [statusFilter, sourceFilter, servicePaidFilter, searchQuery, page]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -227,6 +233,9 @@ export default function AdminStudentsPage() {
       if (searchQuery.trim()) params.set('search', searchQuery.trim());
       if (statusFilter !== 'all') params.set('status', statusFilter);
       if (sourceFilter !== 'all') params.set('source', sourceFilter);
+      if (servicePaidFilter === 'true' || servicePaidFilter === 'false') {
+        params.set('servicePaid', servicePaidFilter);
+      }
       const res = await apiFetch(
         `/api/admin/students/export?${params.toString()}`,
         { headers: { Accept: 'text/csv' } },
@@ -348,6 +357,54 @@ export default function AdminStudentsPage() {
         return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">{student.source}</Badge>;
       default:
         return <Badge>{student.source}</Badge>;
+    }
+  };
+
+  // Phase 182: green Paid badge — distinct from amber Offline student
+  // and from fee-row payment status on the Payment column.
+  const getServicePaidBadge = (student: AdminStudent) => {
+    if (!student.servicePaid) return null;
+    return (
+      <Badge
+        className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100"
+        title={
+          student.servicePaidAt
+            ? new Date(student.servicePaidAt).toLocaleString()
+            : t('adminStudents.paidToggleHint')
+        }
+      >
+        {t('adminStudents.badgePaid')}
+      </Badge>
+    );
+  };
+
+  const toggleServicePaid = async (student: AdminStudent) => {
+    const next = !student.servicePaid;
+    setPaidToggleBusyId(student.id);
+    setError(null);
+    try {
+      const { student: updated } = await apiFetchJson<{ student: AdminStudent }>(
+        `/api/admin/students/${student.id}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ servicePaid: next }),
+        },
+      );
+      setStudents((prev) =>
+        prev.map((s) =>
+          s.id === student.id
+            ? {
+                ...s,
+                servicePaid: updated.servicePaid ?? next,
+                servicePaidAt: updated.servicePaidAt ?? (next ? new Date().toISOString() : null),
+              }
+            : s,
+        ),
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('adminStudents.errorPaidToggle'));
+    } finally {
+      setPaidToggleBusyId(null);
     }
   };
 
@@ -535,6 +592,16 @@ export default function AdminStudentsPage() {
                 <SelectItem value="Online">Online</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={servicePaidFilter} onValueChange={setServicePaidFilter}>
+              <SelectTrigger className="w-full sm:w-40">
+                <SelectValue placeholder={t('adminStudents.filterPaidPlaceholder')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('adminStudents.filterAllPaid')}</SelectItem>
+                <SelectItem value="true">{t('adminStudents.filterPaid')}</SelectItem>
+                <SelectItem value="false">{t('adminStudents.filterNotPaid')}</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardHeader>
 
@@ -555,7 +622,7 @@ export default function AdminStudentsPage() {
             </div>
           ) : students.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              {searchQuery || statusFilter !== 'all' || sourceFilter !== 'all'
+              {searchQuery || statusFilter !== 'all' || sourceFilter !== 'all' || servicePaidFilter !== 'all'
                 ? t('adminStudents.emptyFiltered')
                 : t('adminStudents.emptyNone')}
             </div>
@@ -655,7 +722,12 @@ export default function AdminStudentsPage() {
                     <TableCell className="text-[#4B5563] whitespace-nowrap">{student.phone || '—'}</TableCell>
                     <TableCell className="text-[#4B5563] whitespace-nowrap">{student.targetDegree || '—'}</TableCell>
                     <TableCell className="text-[#4B5563] whitespace-nowrap">{student.targetField || '—'}</TableCell>
-                    <TableCell>{getSourceBadge(student)}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {getSourceBadge(student)}
+                        {getServicePaidBadge(student)}
+                      </div>
+                    </TableCell>
                     <TableCell>{getStatusBadge(student.status)}</TableCell>
                     {/* Phase 145: payment column — colored badge +
                         a one-line per-currency outstanding/paid
@@ -751,6 +823,16 @@ export default function AdminStudentsPage() {
                               {t('adminSendEmail.sendEmail')}
                             </DropdownMenuItem>
                           )}
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() => void toggleServicePaid(student)}
+                            disabled={paidToggleBusyId === student.id}
+                          >
+                            <DollarSign className="w-4 h-4 mr-2" />
+                            {student.servicePaid
+                              ? t('adminStudents.actionClearPaid')
+                              : t('adminStudents.actionMarkPaid')}
+                          </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-red-600 cursor-pointer"
                             onClick={() => handleDeleteStudent(student)}

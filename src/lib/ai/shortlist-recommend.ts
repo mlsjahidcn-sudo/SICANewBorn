@@ -97,7 +97,7 @@ export function buildContext(programs: CandidateProgram[], universitySlugByProgr
 
 export function buildSystemPrompt(): string {
   return [
-    'You are advising a study-abance agency in China. An advisor has a student profile and a list of REAL programs taken from the agency database.',
+    'You are advising a study-abroad agency in China. An advisor has a student profile and a list of REAL programs taken from the agency database.',
     '',
     'Your ONLY job is to RANK and EXPLAIN the programs in that list for this specific student.',
     '',
@@ -107,6 +107,7 @@ export function buildSystemPrompt(): string {
     '3. NEVER state a tuition figure, acceptance rate, scholarship amount, or ranking number unless it appears verbatim in the list.',
     '4. NEVER invent an application deadline, ranking, or employment statistic.',
     '5. Do not add universities to make the list look more balanced. If the list is thin, work with what is there.',
+    '6. If the student named preferred universities, soft-boost matching candidates from the list (higher rank / Target when a genuine fit). Prefer them when quality is comparable — never invent a program just because a preferred school was named, and never drop a better non-preferred fit solely to force a preference.',
     '',
     'Assign each pick a placement role from exactly: Reach, Target, Safety.',
     '  - Reach: ambitious, a real chance but not likely',
@@ -129,6 +130,8 @@ export function buildUserPrompt(args: {
   studentProfile: string;
   intake: string;
   context: RecommendationContext;
+  /** Soft-boost only — never expand the candidate set. Cap applied by caller. */
+  preferredUniversities?: string[];
 }): string {
   const rows = args.context.promptRows
     .map(
@@ -139,11 +142,26 @@ export function buildUserPrompt(args: {
     )
     .join('\n');
 
+  const prefs = (args.preferredUniversities ?? [])
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .slice(0, 12);
+
+  const prefsBlock =
+    prefs.length > 0
+      ? [
+          '',
+          'PREFERRED UNIVERSITIES (soft boost — match by slug or name against the candidate list only; do not invent programs):',
+          prefs.map((p) => `- ${p}`).join('\n'),
+        ]
+      : [];
+
   return [
     `INTAKE: ${args.intake}`,
     '',
     'STUDENT PROFILE:',
     args.studentProfile,
+    ...prefsBlock,
     '',
     `CANDIDATE PROGRAMS (${args.context.promptRows.length} real records from the database — this is the complete set you may use):`,
     rows,

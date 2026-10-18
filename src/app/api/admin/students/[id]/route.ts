@@ -156,6 +156,13 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
     const { dbRow, extraUpdates } = mapStudentToDb(body);
 
+    // Phase 182: stamp / clear service_paid_at when the Paid triage
+    // flag flips. The mapper only writes the boolean — the timestamp
+    // is server-owned so clients can't forge a paid_at in the past.
+    if (typeof body.servicePaid === 'boolean') {
+      dbRow.service_paid_at = body.servicePaid ? new Date().toISOString() : null;
+    }
+
     // H1: track whether we have ANYTHING to write (fixed columns or
     // extra JSONB). The old code checked only dbRow and 400ed on
     // extra-only payloads — silent regression when a caller PATCHes
