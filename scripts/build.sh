@@ -28,7 +28,21 @@ echo "Installing dependencies..."
 # so the build is self-contained. `npm ci` is the lockfile-locked
 # equivalent of pnpm's `--prefer-frozen-lockfile` — fails the build
 # if package-lock.json doesn't match package.json (catch drift).
-npm ci --no-audit --no-fund
+#
+# Phase 176: `--include=dev` is REQUIRED on the Hostinger builder.
+# The platform loads the project's `.env` into the build environment
+# BEFORE running the install, and the production `.env` sets
+# `NODE_ENV=production`. npm treats that as `--omit=dev`, so a plain
+# `npm ci` skips devDependencies entirely — typescript, @types/react
+# and @types/node all go missing. Next.js then reacts by installing
+# them itself in the middle of the build:
+#   "It looks like you're trying to use TypeScript but do not have
+#    the required package(s) installed." → "Installing devDependencies
+#    (npm): - @types/react" → a THIRD npm install, mid-build.
+# That worked, but it needs registry access during the build and
+# silently mutates node_modules while Next is reading it. Forcing dev
+# deps keeps the build hermetic and one-shot.
+npm ci --no-audit --no-fund --include=dev
 
 # Copy the pdf.js worker into public/ so the admin document viewer
 # can render PDFs without involving the bundler. Wired into

@@ -28,7 +28,11 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci --no-audit --no-fund
+        # Phase 176: --include=dev keeps this in lockstep with
+        # scripts/build.sh. If NODE_ENV=production ever leaks into the
+        # runner env, npm would skip devDependencies and the Typecheck
+        # step below would fail with "Cannot find module 'typescript'".
+        run: npm ci --no-audit --no-fund --include=dev
 
       - name: Lint
         run: npm run lint:build

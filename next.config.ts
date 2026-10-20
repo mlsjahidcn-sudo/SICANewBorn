@@ -213,14 +213,42 @@ const baseConfig: NextConfig = {
   experimental: {
     optimizeCss: true,
     optimizePackageImports: ['lucide-react', 'react-icons'],
-    // S59: reduce the static-export worker count from 9 → 4 to
-    // ease pressure on Supabase's connection pool during the
-    // build. 9 workers all querying at once was the root cause
-    // of per-page spikes past 60s on Railway. Build wall time is
-    // roughly the same (4 workers × ~90s effective per page ≈
-    // 9 × ~40s), but individual pages now stay well under the
-    // 180s timeout from `staticPageGenerationTimeout` above.
+    // S59: reduce the static-export concurrency from the Next default
+    // (8) to 4 to ease pressure on Supabase's connection pool during
+    // the build. Many pages all querying at once was the root cause
+    // of per-page spikes past 60s on Railway. NOTE: this is the
+    // PER-WORKER concurrency (next/dist/export/worker.js:233), so
+    // total concurrent page renders = `cpus` (below) × this value.
+    // Before Phase 176 the worker count was whatever the builder's
+    // CPU count implied, so on a 64-CPU box the real total was
+    // 63 × 4 = 252 concurrent renders, not 4.
     staticGenerationMaxConcurrency: 4,
+    // Phase 176: cap the build's worker-process count.
+    //
+    // Next derives it from `os.cpus().length - 1`
+    // (next/dist/build/index.js → getNumberOfWorkers) and reuses that
+    // ONE number for both "Collecting page data" AND "Generating
+    // static pages". The Hostinger build container reports 64 CPUs,
+    // so Next spawned 63 worker CHILD PROCESSES. Each one loads
+    // @next/swc, whose Rust runtime starts its own tokio thread pool
+    // — so the build tried to create ~4,000 threads, hit the
+    // container's pid limit, and `spawn` failed with EAGAIN:
+    //   "OS can't spawn worker thread: Resource temporarily
+    //    unavailable (os error 11)" → fatal runtime error → SIGABRT
+    //   → "Next.js build worker exited with code: null".
+    //
+    // Setting `cpus` explicitly takes the user-override branch of
+    // getNumberOfWorkers, so the count no longer depends on how many
+    // CPUs the builder happens to expose. This key is read by
+    // NOTHING outside the build (verified by grep across
+    // next/dist) — no effect on runtime, static generation semantics
+    // or image optimization.
+    //
+    // 2 worker processes ≈ 150 threads in the worst case (no CPU
+    // quota) and keeps memory well under a small build container's
+    // ceiling. Total page-render concurrency becomes 2 × 4 = 8.
+    // Raise it with NEXT_BUILD_WORKERS on a beefier builder.
+    cpus: Number(process.env.NEXT_BUILD_WORKERS) || 2,
   },
 };
 
