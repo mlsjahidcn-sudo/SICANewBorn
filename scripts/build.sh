@@ -30,6 +30,12 @@ echo "Installing dependencies..."
 # if package-lock.json doesn't match package.json (catch drift).
 npm ci --no-audit --no-fund
 
+# Copy the pdf.js worker into public/ so the admin document viewer
+# can render PDFs without involving the bundler. Wired into
+# `postinstall` too, but re-run it here in case the install ran with
+# --ignore-scripts. The script is a no-op when pdfjs-dist is absent.
+node scripts/copy-pdf-worker.mjs
+
 # Phase 67: bundle analysis opt-in. Set ANALYZE=true to generate
 # interactive treemaps + sunbursts of every chunk in the bundle —
 # useful for finding tree-shaking misses. Off by default because

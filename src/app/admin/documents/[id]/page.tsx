@@ -1,22 +1,36 @@
 'use client';
 
 /**
- * Phase 2: /admin/documents/[id] — single document review.
- * Shows the student, the file, the application link (if any),
- * and the three action buttons: Approve / Reject / Move back
- * to Pending. Reject requires a reason — the same reason is
- * surfaced in the student's portal + notification inbox.
+ * /admin/documents/[id] — single document review (standalone page).
+ *
+ * This page is the deep-linkable "full record + audit trail" view.
+ * It is kept alongside the in-app modal viewer (see
+ * `src/components/admin/document-viewer.tsx`) because:
+ *   - it can be linked to directly,
+ *   - it shows the complete metadata + audit history in one screen,
+ *   - it is where an admin ends up after clicking "Full details".
+ *
+ * It uses the same rendering engine as the modal — pdf.js with real
+ * zoom / page navigation / rotation — instead of the old raw
+ * `<iframe>` + `<img>` previews.
+ *
+ * Back navigation: the `?from=` query param records where the admin
+ * came from (`student:<uuid>` / `partner:<uuid>` / `application:<uuid>`
+ * / `queue`). The back button then returns them to that exact list
+ * with the right tab open, instead of always dropping them on the
+ * global review queue.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
   ArrowLeft,
   FileCheck,
   FileX,
   Clock,
   ExternalLink,
+  Download,
   AlertCircle,
   Loader2,
   GraduationCap,
@@ -31,8 +45,16 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Spinner } from '@/components/ui/spinner';
 import { ToastProvider, useToast } from '@/components/admin/toast';
+import { DocumentPreview } from '@/components/admin/document-preview';
+import { DocumentToolbar } from '@/components/admin/document-toolbar';
 import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
+import {
+  clampZoom,
+  formatFileSize,
+  originHref,
+  parseOrigin,
+} from '@/lib/document-viewer-origin';
 
 type DocStatus = 'Pending' | 'Verified' | 'Rejected';
 
@@ -124,9 +146,13 @@ function formatDate(iso: string | null | undefined): string {
 function AdminDocumentDetailInner() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useI18n();
   const { addToast } = useToast();
   const docId = params.id as string;
+
+  // Where the admin came from — drives the back button.
+  const origin = useMemo(() => parseOrigin(searchParams.get('from')), [searchParams]);
 
   const [doc, setDoc] = useState<AdminDocument | null>(null);
   const [loading, setLoading] = useState(true);
@@ -141,6 +167,55 @@ function AdminDocumentDetailInner() {
   // re-fetched whenever the doc id changes.
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [signedUrlLoading, setSignedUrlLoading] = useState(false);
+
+  // Viewer state — zoom, rotation and page navigation for the
+  // pdf.js / image preview.
+  const [zoom, setZoom] = useState(1);
+  const [rotation, setRotation] = useState(0);
+  const [pageNumber, setPageNumber] = useState(1);
+  const [pageCount, setPageCount] = useState(0);
+  const [contentSize, setContentSize] = useState<{ width: number; height: number } | null>(null);
+  const [containerSize, setContainerSize] = useState<{ width: number; height: number } | null>(null);
+
+  const fitWidthScale = useMemo(() => {
+    if (!contentSize || !containerSize || contentSize.width <= 0) return 1;
+    return clampZoom((containerSize.width - 48) / contentSize.width);
+  }, [contentSize, containerSize]);
+
+  const fitPageScale = useMemo(() => {
+    if (!contentSize || !containerSize || contentSize.width <= 0) return 1;
+    const byWidth = (containerSize.width - 48) / contentSize.width;
+    const byHeight = (containerSize.height - 48) / contentSize.height;
+    return clampZoom(Math.min(byWidth, byHeight));
+  }, [contentSize, containerSize]);
+
+  const openInNewWindow = useCallback(() => {
+    if (!signedUrl) return;
+    const win = window.open(signedUrl, '_blank', 'noopener');
+    if (!win) {
+      addToast(t('adminDocViewer.popupBlocked'), 'error');
+    }
+  }, [signedUrl, addToast, t]);
+
+  const downloadFile = useCallback(async () => {
+    if (!signedUrl) return;
+    const fileName = doc?.file_name || 'document';
+    try {
+      const res = await fetch(signedUrl);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = objectUrl;
+      anchor.download = fileName;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      openInNewWindow();
+    }
+  }, [signedUrl, doc?.file_name, openInNewWindow]);
 
   const fetchDoc = useCallback(async () => {
     setLoading(true);
@@ -228,9 +303,12 @@ function AdminDocumentDetailInner() {
   if (error || !doc) {
     return (
       <div className="space-y-4">
-        <Link href="/admin/documents" className="inline-flex items-center gap-2 text-[#1B2A4A]">
+        <Link
+          href={originHref(origin)}
+          className="inline-flex items-center gap-2 text-[#1B2A4A]"
+        >
           <ArrowLeft className="w-4 h-4" />
-          {t('adminDocs.detailBackToList')}
+          {t('adminDocViewer.backToQueue')}
         </Link>
         <Card className="rounded-none border-red-200 bg-red-50">
           <CardContent className="p-6 text-red-700 flex items-center gap-3">
@@ -246,15 +324,54 @@ function AdminDocumentDetailInner() {
 
   const StatusIcon = doc.status ? STATUS_ICONS[doc.status] : Clock;
 
+  /**
+   * Origin-aware back label. When the admin came from a student or a
+   * partner student we name them, so "back" is unambiguous; otherwise
+   * it points at the review queue.
+   */
+  const originBackLabel = (() => {
+    if (!origin) return t('adminDocViewer.backToQueue');
+    if (origin.kind === 'student') {
+      const name = doc.student
+        ? [doc.student.first_name, doc.student.last_name].filter(Boolean).join(' ') ||
+          doc.student.email ||
+          ''
+        : '';
+      return name
+        ? t('adminDocViewer.backToStudentDocs', { name })
+        : t('adminDocViewer.backToQueue');
+    }
+    if (origin.kind === 'partner') {
+      const name = doc.partnerStudent?.student_name || '';
+      return name
+        ? t('adminDocViewer.backToPartnerDocs', { name })
+        : t('adminDocViewer.backToQueue');
+    }
+    if (origin.kind === 'application') return t('adminDocViewer.backToApplication');
+    return t('adminDocViewer.backToQueue');
+  })();
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Link href="/admin/documents" className="p-2 hover:bg-gray-100 inline-flex">
+        <Link
+          href={originHref(origin)}
+          className="p-2 hover:bg-gray-100 inline-flex"
+          aria-label={originBackLabel}
+        >
           <ArrowLeft className="w-5 h-5 text-[#1B2A4A]" />
         </Link>
         <div className="flex-1">
           <h1 className="text-2xl font-bold text-[#1B2A4A]">{doc.name}</h1>
           <p className="text-sm text-[#4B5563] mt-1">{doc.category}</p>
+          {/* Visible, origin-aware back link. Without the ?from= param
+              this falls back to "Back to the review queue". */}
+          <Link
+            href={originHref(origin)}
+            className="inline-block mt-1 text-xs text-[#1B2A4A] hover:underline"
+          >
+            {originBackLabel}
+          </Link>
         </div>
         {doc.status && (
           <Badge className={`rounded-none ${STATUS_STYLES[doc.status]}`}>
@@ -319,7 +436,9 @@ function AdminDocumentDetailInner() {
                     raw `doc.file_url` is a storage path, not a
                     public URL — opening it directly 404s. */}
                 {signedUrlLoading && !signedUrl ? (
-                  <span className="text-[#4B5563] text-xs italic">Loading preview…</span>
+                  <span className="text-[#4B5563] text-xs italic">
+                    {t('adminDocViewer.loading')}
+                  </span>
                 ) : signedUrl ? (
                   <a
                     href={signedUrl}
@@ -331,56 +450,56 @@ function AdminDocumentDetailInner() {
                     <ExternalLink className="w-3 h-3" />
                   </a>
                 ) : (
-                  <span className="text-[#4B5563] text-xs italic">Preview unavailable</span>
+                  <span className="text-[#4B5563] text-xs italic">
+                    {t('adminDocViewer.errorSignedUrl')}
+                  </span>
                 )}
               </div>
-              {doc.file_type?.startsWith('image/') && signedUrl && (
-                <div className="border border-gray-200 p-2 bg-gray-50">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={signedUrl}
-                    alt={doc.name}
-                    className="max-w-full max-h-96 mx-auto"
+
+              {/* The preview uses the same engine as the in-app modal
+                  viewer (pdf.js for PDFs, a zoom/pan viewer for
+                  images) instead of the old raw <iframe> + <img>. */}
+              <div className="border border-gray-200 bg-gray-50">
+                <DocumentToolbar
+                  zoom={zoom}
+                  onZoomChange={(z) => setZoom(clampZoom(z))}
+                  rotation={rotation}
+                  onRotationChange={setRotation}
+                  pageNumber={pageNumber}
+                  pageCount={pageCount}
+                  onPageChange={setPageNumber}
+                  fitWidthScale={fitWidthScale}
+                  fitPageScale={fitPageScale}
+                  onDownload={() => void downloadFile()}
+                  onOpenExternal={openInNewWindow}
+                  exportDisabled={!signedUrl}
+                />
+                <div className="h-[560px]">
+                  <DocumentPreview
+                    fileType={doc.file_type}
+                    fileName={doc.file_name}
+                    url={signedUrl}
+                    scale={zoom}
+                    rotation={rotation}
+                    pageNumber={pageNumber}
+                    onPageCountChange={setPageCount}
+                    onPageMetrics={setContentSize}
+                    onContainerSize={setContainerSize}
+                    onNaturalSize={setContentSize}
+                    onOpenExternal={openInNewWindow}
+                    openExternalLabel={t('adminDocViewer.openInNewWindow')}
+                    unsupportedTitle={t('adminDocViewer.unsupportedTitle')}
+                    unsupportedBody={t('adminDocViewer.unsupportedBody')}
+                    fallbackNotice={t('adminDocViewer.fallbackNotice')}
                   />
                 </div>
-              )}
-              {doc.file_type === 'application/pdf' && signedUrl && (
-                <div className="border border-gray-200 bg-gray-50">
-                  <iframe
-                    src={signedUrl}
-                    title={doc.name}
-                    className="w-full h-[500px]"
-                  />
-                </div>
-              )}
+              </div>
+
               <div className="flex items-center gap-2">
-                {signedUrl ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    asChild
-                    className="rounded-none"
-                  >
-                    <a href={signedUrl} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="w-4 h-4 mr-1" />
-                      {t('adminDocs.detailOpenFile')}
-                    </a>
-                  </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled
-                    className="rounded-none"
-                  >
-                    <ExternalLink className="w-4 h-4 mr-1" />
-                    {t('adminDocs.detailOpenFile')}
-                  </Button>
-                )}
                 {doc.file_name && (
                   <span className="text-xs text-[#4B5563]">
                     {doc.file_name}
-                    {doc.file_size ? ` · ${(doc.file_size / 1024).toFixed(0)} KB` : ''}
+                    {doc.file_size ? ` · ${formatFileSize(doc.file_size)}` : ''}
                   </span>
                 )}
               </div>

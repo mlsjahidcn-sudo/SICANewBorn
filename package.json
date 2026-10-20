@@ -15,7 +15,8 @@
     "validate": "npm run ts-check & npm run lint:build & npm run i18n:check & wait",
     "i18n:check": "tsx scripts/i18n-zh-gaps.ts",
     "i18n:gaps": "tsx scripts/i18n-zh-gaps.ts",
-    "i18n:missing": "tsx scripts/i18n-missing-keys.ts"
+    "i18n:missing": "tsx scripts/i18n-missing-keys.ts",
+    "postinstall": "node scripts/copy-pdf-worker.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -57,6 +58,7 @@
     "input-otp": "^1.4.2",
     "lucide-react": "^0.468.0",
     "next": "16.3.6",
+    "pdfjs-dist": "^4.10.38",
     "react": "19.2.3",
     "react-day-picker": "^9.13.0",
     "react-dev-inspector": "^2.0.1",

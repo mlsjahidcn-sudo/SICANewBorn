@@ -28,9 +28,14 @@ export async function GET(
 
   try {
     const service = buildServiceClient();
+    // The admin document viewer needs the file metadata (type, size,
+    // rejection reason) to render the right preview + badge without a
+    // second round-trip per row.
     const { data, error } = await service
       .from('student_documents')
-      .select('id, name, category, file_name, status, uploaded_at')
+      .select(
+        'id, name, category, file_name, file_type, file_size, status, uploaded_at, verified_at, rejection_reason, application_id, partner_application_id',
+      )
       .eq('partner_student_id', id)
       .order('uploaded_at', { ascending: false });
 

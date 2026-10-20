@@ -9,6 +9,11 @@ DEPLOY_RUN_PORT="${DEPLOY_RUN_PORT:-${PORT}}"
 
 cd "${COZE_WORKSPACE_PATH}"
 
+# Copy the pdf.js worker into public/ (admin document viewer).
+# Also wired into `postinstall`; re-run here so `npm run dev` works
+# on a clone where the install ran with --ignore-scripts.
+node scripts/copy-pdf-worker.mjs
+
 # Phase 93: `ss` is Linux-only — macOS dev machines don't have it.
 # Prefer ss when present, fall back to lsof (macOS/both).
 port_pids() {

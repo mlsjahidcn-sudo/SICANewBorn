@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -27,6 +27,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { DocumentFilters, type DocumentStatusFilter } from '@/components/admin/document-filters';
+import { DocumentViewer } from '@/components/admin/document-viewer';
 import {
   Dialog,
   DialogContent,
@@ -54,6 +56,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
+import { useUrlState } from '@/hooks/use-url-state';
 import type { PartnerStudent } from '@/lib/partner-student-mapper';
 import type { PartnerStudentNote } from '@/lib/partner-student-note-mapper';
 import type { PartnerApplication } from '@/lib/partner-application-mapper';
@@ -64,6 +67,9 @@ type PartnerDocument = {
   category: string;
   status: 'Pending' | 'Verified' | 'Rejected';
   file_name?: string;
+  file_type?: string | null;
+  file_size?: number | null;
+  rejection_reason?: string | null;
   uploaded_at: string;
 };
 
@@ -78,13 +84,48 @@ export default function AdminPartnerStudentDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
-  const [activeTab, setActiveTab] = useState('overview');
+  // The active tab lives in the URL so a refresh, a shared link and
+  // the browser's back button all land on the same tab. Before this
+  // the tab was plain component state, so the browser's back button
+  // after opening a document dropped the admin on Overview.
+  const PARTNER_TAB_VALUES = ['overview', 'applications', 'documents', 'notes'] as const;
+  type PartnerTabValue = (typeof PARTNER_TAB_VALUES)[number];
+  const [activeTab, setActiveTab] = useUrlState<PartnerTabValue>('tab', 'overview', {
+    searchParams,
+    coerce: (raw) =>
+      (PARTNER_TAB_VALUES as readonly string[]).includes(raw)
+        ? (raw as PartnerTabValue)
+        : undefined,
+  });
   const [notes, setNotes] = useState('');
   const [isSavingNotes, setIsSavingNotes] = useState(false);
 
   const [applications, setApplications] = useState<PartnerApplication[]>([]);
   const [documents, setDocuments] = useState<PartnerDocument[]>([]);
   const [tabLoading, setTabLoading] = useState<{ [k: string]: boolean }>({});
+  // Documents tab filters + the in-app viewer.
+  const [docStatusFilter, setDocStatusFilter] = useState<DocumentStatusFilter>('all');
+  const [docSearch, setDocSearch] = useState('');
+  const [viewerDocId, setViewerDocId] = useState<string | null>(null);
+  const [viewerOpen, setViewerOpen] = useState(false);
+
+  const openViewer = useCallback((docId: string) => {
+    setViewerDocId(docId);
+    setViewerOpen(true);
+  }, []);
+
+  const visibleDocuments = useMemo(() => {
+    const needle = docSearch.trim().toLowerCase();
+    return documents.filter((doc) => {
+      if (docStatusFilter !== 'all' && doc.status !== docStatusFilter) return false;
+      if (!needle) return true;
+      return (
+        doc.name.toLowerCase().includes(needle) ||
+        (doc.file_name || '').toLowerCase().includes(needle) ||
+        (doc.category || '').toLowerCase().includes(needle)
+      );
+    });
+  }, [documents, docStatusFilter, docSearch]);
   // Phase 62 (UX gap 2): partner_student_notes activity feed surfaced
   // as read-only on the admin detail page. Loaded lazily on Notes tab open.
   const [partnerNotes, setPartnerNotes] = useState<PartnerStudentNote[]>([]);
@@ -154,6 +195,18 @@ export default function AdminPartnerStudentDetailPage() {
     },
     [studentId],
   );
+
+  // Deep link support: `?tab=documents` (or applications) must load
+  // its data on mount — Tabs' onValueChange never fires for the
+  // initial render.
+  const initialTabLoaded = useRef(false);
+  useEffect(() => {
+    if (initialTabLoaded.current) return;
+    initialTabLoaded.current = true;
+    if (activeTab === 'applications' || activeTab === 'documents') {
+      void loadTab(activeTab);
+    }
+  }, [activeTab, loadTab]);
 
   const saveNotes = async () => {
     if (!student) return;
@@ -473,7 +526,7 @@ export default function AdminPartnerStudentDetailPage() {
       </Card>
 
       <Tabs value={activeTab} onValueChange={(v) => {
-        setActiveTab(v);
+        setActiveTab(v as PartnerTabValue);
         if (v === 'applications') loadTab('applications');
         if (v === 'documents') loadTab('documents');
         // Phase 62 (UX gap 2): lazy-load the partner notes feed on first
@@ -582,30 +635,54 @@ export default function AdminPartnerStudentDetailPage() {
             </Card>
           ) : (
             <div className="space-y-3">
-              {documents.map((doc) => (
-                <Card key={doc.id}>
-                  <CardContent className="py-4 flex items-center justify-between">
-                    <div>
-                      <div className="font-medium flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-gray-400" />
-                        {doc.name}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {doc.category} · {doc.file_name || '—'}
-                      </div>
-                      <Badge className={`mt-2 ${docStatusColors[doc.status] || 'bg-gray-100 text-gray-800'}`}>
-                        {doc.status}
-                      </Badge>
-                    </div>
-                    <Link href={`/admin/documents/${doc.id}`}>
-                      <Button variant="outline" size="sm">
+              <DocumentFilters
+                status={docStatusFilter}
+                onStatusChange={setDocStatusFilter}
+                search={docSearch}
+                onSearchChange={setDocSearch}
+              />
+              {visibleDocuments.length === 0 ? (
+                <div className="py-10 text-center text-sm text-gray-500">
+                  {t('adminDocViewer.noResults')}
+                </div>
+              ) : (
+                visibleDocuments.map((doc) => (
+                  <Card key={doc.id}>
+                    <CardContent className="py-4 flex items-center justify-between gap-4">
+                      <button
+                        type="button"
+                        onClick={() => openViewer(doc.id)}
+                        className="min-w-0 flex-1 text-left"
+                      >
+                        <div className="font-medium flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-gray-400" />
+                          {doc.name}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {doc.category} · {doc.file_name || '—'}
+                        </div>
+                        {doc.rejection_reason && (
+                          <div className="text-xs text-red-600 mt-1">
+                            {doc.rejection_reason}
+                          </div>
+                        )}
+                        <Badge className={`mt-2 ${docStatusColors[doc.status] || 'bg-gray-100 text-gray-800'}`}>
+                          {doc.status}
+                        </Badge>
+                      </button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-none shrink-0"
+                        onClick={() => openViewer(doc.id)}
+                      >
                         <Eye className="w-4 h-4 mr-2" />
-                        {t('adminPartnerStudentDetail.viewDocument')}
+                        {t('adminDocViewer.viewButton')}
                       </Button>
-                    </Link>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                ))
+              )}
             </div>
           )}
         </TabsContent>
@@ -759,6 +836,17 @@ export default function AdminPartnerStudentDetailPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <DocumentViewer
+        open={viewerOpen}
+        documentId={viewerDocId}
+        origin={{ kind: 'partner', id: studentId }}
+        onOpenChange={(next) => {
+          setViewerOpen(next);
+          if (!next) setViewerDocId(null);
+        }}
+        onChanged={() => void loadTab('documents')}
+      />
     </div>
   );
 }

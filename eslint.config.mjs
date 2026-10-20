@@ -86,6 +86,12 @@ const eslintConfig = defineConfig([
     '.open-next/**',
     '.opencode/**',
     '.wrangler/**',
+    // pdf.js runtime assets — copied out of node_modules by
+    // scripts/copy-pdf-worker.mjs (the admin document viewer serves
+    // the worker + CMap tables from /public). Third-party minified
+    // build artifacts, not source.
+    'public/pdf.worker.min.mjs',
+    'public/pdfjs/**',
     // Script files (CommonJS):
     'scripts/**/*.js',
   ]),

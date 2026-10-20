@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
   ArrowLeft, CheckCircle, XCircle, Mail, FileText, Calendar,
   AlertCircle, Edit, RefreshCw, GraduationCap, BookOpen, Trash2,
@@ -18,6 +18,7 @@ import { NotesTab } from '../_components/notes-tab';
 import { apiFetch, apiFetchJson } from '@/lib/api-client';
 import { APPLICATION_STATUSES, type ApplicationStatus } from '@/lib/application-mapper';
 import { useI18n } from '@/lib/i18n';
+import { useUrlState } from '@/hooks/use-url-state';
 import type { ApplicationEnrollment } from '@/lib/application-history-mapper';
 import { EnrollmentCard } from '../_components/enrollment-card';
 import { TimelineTab } from '../_components/timeline-tab';
@@ -71,8 +72,19 @@ type AdminAction = Extract<ApplicationStatus, 'Accepted' | 'Rejected' | 'Withdra
 export default function AdminApplicationDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const id = params.id as string;
   const { t } = useI18n();
+
+  // The active tab lives in the URL so a refresh, a shared link and
+  // the browser's back button all land on the same tab.
+  const APP_TAB_VALUES = ['overview', 'documents', 'notes', 'timeline'] as const;
+  type AppTabValue = (typeof APP_TAB_VALUES)[number];
+  const [activeTab, setActiveTab] = useUrlState<AppTabValue>('tab', 'overview', {
+    searchParams,
+    coerce: (raw) =>
+      (APP_TAB_VALUES as readonly string[]).includes(raw) ? (raw as AppTabValue) : undefined,
+  });
 
   const [app, setApp] = useState<AdminApplication | null>(null);
   const [enrollment, setEnrollment] = useState<ApplicationEnrollment | null>(null);
@@ -341,7 +353,7 @@ export default function AdminApplicationDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main */}
         <div className="lg:col-span-2 space-y-6">
-          <Tabs defaultValue="overview">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as AppTabValue)}>
             <TabsList>
               <TabsTrigger value="overview">{t('adminAppDetail.tabOverview')}</TabsTrigger>
               <TabsTrigger value="documents">

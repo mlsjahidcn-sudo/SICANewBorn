@@ -3,24 +3,21 @@
 import { useEffect, useState } from 'react';
 import {
   AlertCircle,
-  CheckCircle,
-  Clock,
-  Download as DownloadIcon,
-  ExternalLink,
+  Eye,
   Loader2,
   Upload as UploadIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { apiFetch, apiFetchJson } from '@/lib/api-client';
+import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 import {
   STUDENT_DOC_CATEGORIES,
   type StudentDocCategory,
 } from '@/lib/admin-document-categories';
 import { AdminDocUploadDialog } from './admin-doc-upload-dialog';
-import type { DocumentStatus, StudentDocument } from '@/lib/student-data';
+import { DocumentViewer } from '@/components/admin/document-viewer';
+import type { DocumentStatus } from '@/lib/student-data';
 
 interface JoinedStudent {
   id: string;
@@ -76,9 +73,19 @@ export function DocumentsTab({
   const { t } = useI18n();
   const [docs, setDocs] = useState<AdminDocRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [actionPending, setActionPending] = useState<string | null>(null);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+
+  // In-app document viewer. Opening a document must not navigate away
+  // — the admin stays on the application with its tab and scroll
+  // position. The viewer owns approve / reject / move-to-pending.
+  const [viewerDocId, setViewerDocId] = useState<string | null>(null);
+  const [viewerOpen, setViewerOpen] = useState(false);
+
+  const openViewer = (docId: string) => {
+    setViewerDocId(docId);
+    setViewerOpen(true);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -99,41 +106,6 @@ export function DocumentsTab({
       cancelled = true;
     };
   }, [applicationId, reloadKey]);
-
-  const handleStatus = async (
-    doc: AdminDocRow,
-    status: 'Pending' | 'Verified' | 'Rejected',
-    rejectionReason?: string,
-  ) => {
-    setActionPending(doc.id);
-    try {
-      const body: Record<string, unknown> = { status };
-      if (status === 'Rejected') {
-        body.rejectionReason = rejectionReason || 'Rejected by admin';
-      }
-      await apiFetch(`/api/admin/documents/${doc.id}`, {
-        method: 'PATCH',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      setReloadKey((n) => n + 1);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Action failed');
-    } finally {
-      setActionPending(null);
-    }
-  };
-
-  const openSigned = async (doc: AdminDocRow) => {
-    try {
-      const r = await apiFetchJson<{ url: string }>(
-        `/api/admin/documents/${doc.id}/download-url`,
-      );
-      window.open(r.url, '_blank', 'noopener');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to get download URL');
-    }
-  };
 
   if (error) {
     return (
@@ -202,14 +174,16 @@ export function DocumentsTab({
               : doc.partnerStudent?.student_name
                 ? `Partner: ${doc.partnerStudent.student_name}`
                 : 'Unknown';
-          const isPdf =
-            doc.file_type === 'application/pdf' || /\.pdf$/i.test(doc.file_name || '');
           return (
             <li
               key={doc.id}
               className="p-3 flex items-center justify-between gap-4"
             >
-              <div className="flex-1 min-w-0">
+              <button
+                type="button"
+                onClick={() => openViewer(doc.id)}
+                className="flex-1 min-w-0 text-left"
+              >
                 <div className="flex items-center gap-2">
                   <span className="font-medium text-sm text-[#1F2937] truncate">
                     {doc.name}
@@ -241,57 +215,18 @@ export function DocumentsTab({
                     {doc.rejection_reason}
                   </div>
                 )}
-              </div>
+              </button>
               <div className="flex items-center gap-2 shrink-0">
-                {doc.file_url && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => openSigned(doc)}
-                    title="Open in new tab"
-                  >
-                    {isPdf ? (
-                      <DownloadIcon className="h-4 w-4" />
-                    ) : (
-                      <ExternalLink className="h-4 w-4" />
-                    )}
-                  </Button>
-                )}
-                {doc.status !== 'Verified' && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-green-700 border-green-200 hover:bg-green-50"
-                    disabled={actionPending === doc.id}
-                    onClick={() => handleStatus(doc, 'Verified')}
-                  >
-                    <CheckCircle className="h-4 w-4" />
-                  </Button>
-                )}
-                {doc.status !== 'Rejected' && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-red-700 border-red-200 hover:bg-red-50"
-                    disabled={actionPending === doc.id}
-                    onClick={() =>
-                      handleStatus(doc, 'Rejected', 'Rejected by admin')
-                    }
-                  >
-                    <AlertCircle className="h-4 w-4" />
-                  </Button>
-                )}
-                {doc.status !== 'Pending' && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={actionPending === doc.id}
-                    onClick={() => handleStatus(doc, 'Pending')}
-                    title="Move back to pending"
-                  >
-                    <Clock className="h-4 w-4" />
-                  </Button>
-                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-none"
+                  onClick={() => openViewer(doc.id)}
+                  title={t('adminDocViewer.openInNewWindow')}
+                >
+                  <Eye className="h-4 w-4 mr-1" />
+                  {t('adminDocViewer.viewButton')}
+                </Button>
               </div>
             </li>
           );
@@ -306,6 +241,17 @@ export function DocumentsTab({
           onUploaded={() => setReloadKey((n) => n + 1)}
         />
       )}
+
+      <DocumentViewer
+        open={viewerOpen}
+        documentId={viewerDocId}
+        origin={{ kind: 'application', id: applicationId }}
+        onOpenChange={(next) => {
+          setViewerOpen(next);
+          if (!next) setViewerDocId(null);
+        }}
+        onChanged={() => setReloadKey((n) => n + 1)}
+      />
     </div>
   );
 }

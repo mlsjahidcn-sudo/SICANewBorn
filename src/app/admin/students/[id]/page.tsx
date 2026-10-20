@@ -9,13 +9,13 @@
  * values stay untranslated (DB round-trip); only human-readable
  * chrome (labels, banners, empty states, note copy) translates.
  */
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import EducationHistoryEditor from '../_components/education-history-editor';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft, Edit, AlertCircle, FileText, FileCheck, FileX, Clock,
-  Plus, Mail, RefreshCw, Trash2, DollarSign,
+  Plus, Mail, RefreshCw, Trash2, DollarSign, Eye,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
@@ -24,8 +24,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
+import { DocumentFilters, type DocumentStatusFilter } from '@/components/admin/document-filters';
+import { DocumentViewer } from '@/components/admin/document-viewer';
 import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
+import { useUrlState } from '@/hooks/use-url-state';
 import type { AdminStudent } from '@/lib/student-mapper';
 import { mapStudentName } from '@/lib/student-mapper';
 
@@ -42,6 +45,8 @@ interface StudentDocument {
   category: string;
   file_url: string;
   file_name?: string;
+  file_type?: string | null;
+  file_size?: number | null;
   status: DocumentStatus;
   uploaded_at: string;
   verified_at?: string;
@@ -113,12 +118,27 @@ export default function AdminStudentDetailPage() {
   // Phase 122a: ?tab= deep link — the students list's application-count
   // badge links here with ?tab=applications. Invalid/missing values
   // fall through to the Overview default.
+  //
+  // The tab is URL-synced AND controlled. Before this the page used
+  // `defaultValue={initialTab}`, which meant the URL was read once at
+  // mount and never written back — so the browser's back button after
+  // opening a document dropped the admin on the Overview tab instead
+  // of the Documents tab they came from.
   const searchParams = useSearchParams();
-  const TAB_VALUES = ['overview', 'documents', 'applications', 'notes', 'activity'] as const;
-  const tabParam = searchParams.get('tab');
-  const initialTab = (TAB_VALUES as readonly string[]).includes(tabParam ?? '')
-    ? (tabParam as (typeof TAB_VALUES)[number])
-    : 'overview';
+  const TAB_VALUES = [
+    'overview',
+    'documents',
+    'applications',
+    'education',
+    'notes',
+    'activity',
+  ] as const;
+  type TabValue = (typeof TAB_VALUES)[number];
+  const [activeTab, setActiveTab] = useUrlState<TabValue>('tab', 'overview', {
+    searchParams,
+    coerce: (raw) =>
+      (TAB_VALUES as readonly string[]).includes(raw) ? (raw as TabValue) : undefined,
+  });
   // Fire the lazy load for the deep-linked tab exactly once on mount
   // (Tabs' onValueChange only runs on user clicks, so a deep link to
   // documents/applications/activity would otherwise render an empty tab).
@@ -134,6 +154,32 @@ export default function AdminStudentDetailPage() {
   const [applications, setApplications] = useState<StudentApplication[]>([]);
   const [activity, setActivity] = useState<ActivityEvent[]>([]);
   const [tabLoading, setTabLoading] = useState<{ [k: string]: boolean }>({});
+
+  // Documents tab filters + the in-app viewer. Opening a document must
+  // not navigate away — the admin keeps this student's page, tab and
+  // filters.
+  const [docStatusFilter, setDocStatusFilter] = useState<DocumentStatusFilter>('all');
+  const [docSearch, setDocSearch] = useState('');
+  const [viewerDocId, setViewerDocId] = useState<string | null>(null);
+  const [viewerOpen, setViewerOpen] = useState(false);
+
+  const openViewer = useCallback((docId: string) => {
+    setViewerDocId(docId);
+    setViewerOpen(true);
+  }, []);
+
+  const visibleDocuments = useMemo(() => {
+    const needle = docSearch.trim().toLowerCase();
+    return documents.filter((doc) => {
+      if (docStatusFilter !== 'all' && doc.status !== docStatusFilter) return false;
+      if (!needle) return true;
+      return (
+        doc.name.toLowerCase().includes(needle) ||
+        (doc.file_name || '').toLowerCase().includes(needle) ||
+        (doc.category || '').toLowerCase().includes(needle)
+      );
+    });
+  }, [documents, docStatusFilter, docSearch]);
 
   // Load student
   const loadStudent = useCallback(async () => {
@@ -194,10 +240,14 @@ export default function AdminStudentDetailPage() {
   useEffect(() => {
     if (initialTabLoaded.current) return;
     initialTabLoaded.current = true;
-    if (initialTab === 'documents' || initialTab === 'applications' || initialTab === 'activity') {
-      void loadTab(initialTab);
+    if (
+      activeTab === 'documents' ||
+      activeTab === 'applications' ||
+      activeTab === 'activity'
+    ) {
+      void loadTab(activeTab);
     }
-  }, [initialTab, loadTab]);
+  }, [activeTab, loadTab]);
 
   if (isLoading) {
     return (
@@ -361,13 +411,17 @@ export default function AdminStudentDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Tabs */}
-      <Tabs defaultValue={initialTab} onValueChange={(v) => {
-        if (v === 'documents') loadTab('documents');
-        if (v === 'applications') loadTab('applications');
-        if (v === 'activity') loadTab('activity');
-      }}>
-        <TabsList className="grid w-full grid-cols-5">
+      {/* Tabs — controlled so the active tab lives in the URL */}
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => {
+          setActiveTab(v as TabValue);
+          if (v === 'documents') loadTab('documents');
+          if (v === 'applications') loadTab('applications');
+          if (v === 'activity') loadTab('activity');
+        }}
+      >
+        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6">
           <TabsTrigger value="overview">{t('adminStudentDetail.tabOverview')}</TabsTrigger>
           <TabsTrigger value="documents">{t('adminStudentDetail.tabDocuments')}</TabsTrigger>
           <TabsTrigger value="applications">{t('adminStudentDetail.tabApplications')}</TabsTrigger>
@@ -459,7 +513,7 @@ export default function AdminStudentDetailPage() {
         {/* Documents */}
         <TabsContent value="documents" className="space-y-6">
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 space-y-4">
               {tabLoading.documents ? (
                 <div className="space-y-3">
                   {[1,2,3].map(i => <div key={i} className="h-12 bg-gray-100 rounded animate-pulse" />)}
@@ -471,40 +525,69 @@ export default function AdminStudentDetailPage() {
                   <p className="text-xs mt-1">{t('adminStudentDetail.docsEmptyHint')}</p>
                 </div>
               ) : (
-                <div className="divide-y">
-                  {documents.map((doc) => (
-                    <Link
-                      key={doc.id}
-                      href={`/admin/documents/${doc.id}`}
-                      className="flex items-center gap-4 py-3 hover:bg-gray-50 -mx-3 px-3 rounded transition-colors"
-                    >
-                      {doc.status === 'Verified' ? (
-                        <FileCheck className="h-5 w-5 text-green-600" />
-                      ) : doc.status === 'Rejected' ? (
-                        <FileX className="h-5 w-5 text-red-600" />
-                      ) : (
-                        <FileText className="h-5 w-5 text-gray-400" />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{doc.name}</p>
-                        <p className="text-xs text-gray-500">
-                          {doc.category} • {doc.file_name || 'no file'} •{' '}
-                          {t('adminStudentDetail.docUploadedOn', {
-                            date: new Date(doc.uploaded_at).toLocaleDateString(),
-                          })}
-                        </p>
-                        {doc.rejection_reason && (
-                          <p className="text-xs text-red-600 mt-1">
-                            {t('adminStudentDetail.docRejectedWith', { reason: doc.rejection_reason })}
-                          </p>
-                        )}
-                      </div>
-                      <Badge className={docStatusColor[doc.status] || 'bg-gray-100'}>
-                        {doc.status}
-                      </Badge>
-                    </Link>
-                  ))}
-                </div>
+                <>
+                  <DocumentFilters
+                    status={docStatusFilter}
+                    onStatusChange={setDocStatusFilter}
+                    search={docSearch}
+                    onSearchChange={setDocSearch}
+                  />
+
+                  {visibleDocuments.length === 0 ? (
+                    <div className="py-10 text-center text-sm text-gray-500">
+                      {t('adminDocViewer.noResults')}
+                    </div>
+                  ) : (
+                    <div className="divide-y">
+                      {visibleDocuments.map((doc) => (
+                        <div
+                          key={doc.id}
+                          className="flex items-center gap-4 py-3 hover:bg-gray-50 -mx-3 px-3 transition-colors"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => openViewer(doc.id)}
+                            className="flex flex-1 min-w-0 items-center gap-4 text-left"
+                          >
+                            {doc.status === 'Verified' ? (
+                              <FileCheck className="h-5 w-5 shrink-0 text-green-600" />
+                            ) : doc.status === 'Rejected' ? (
+                              <FileX className="h-5 w-5 shrink-0 text-red-600" />
+                            ) : (
+                              <FileText className="h-5 w-5 shrink-0 text-gray-400" />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm truncate">{doc.name}</p>
+                              <p className="text-xs text-gray-500">
+                                {doc.category} • {doc.file_name || 'no file'} •{' '}
+                                {t('adminStudentDetail.docUploadedOn', {
+                                  date: new Date(doc.uploaded_at).toLocaleDateString(),
+                                })}
+                              </p>
+                              {doc.rejection_reason && (
+                                <p className="text-xs text-red-600 mt-1">
+                                  {t('adminStudentDetail.docRejectedWith', { reason: doc.rejection_reason })}
+                                </p>
+                              )}
+                            </div>
+                          </button>
+                          <Badge className={docStatusColor[doc.status] || 'bg-gray-100'}>
+                            {doc.status}
+                          </Badge>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-none shrink-0"
+                            onClick={() => openViewer(doc.id)}
+                          >
+                            <Eye className="mr-1 h-4 w-4" />
+                            {t('adminDocViewer.viewButton')}
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
@@ -615,6 +698,17 @@ export default function AdminStudentDetailPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <DocumentViewer
+        open={viewerOpen}
+        documentId={viewerDocId}
+        origin={{ kind: 'student', id: studentId }}
+        onOpenChange={(next) => {
+          setViewerOpen(next);
+          if (!next) setViewerDocId(null);
+        }}
+        onChanged={() => void loadTab('documents')}
+      />
     </div>
   );
 }

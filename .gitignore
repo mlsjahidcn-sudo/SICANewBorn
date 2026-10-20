@@ -180,3 +180,9 @@ Desktop.ini
 
 # Mimosa security-scan hook state
 .mimosa/
+
+# pdf.js runtime assets — copied out of node_modules by
+# scripts/copy-pdf-worker.mjs (wired into `postinstall` +
+# scripts/build.sh + scripts/dev.sh). Build artifacts, not source.
+public/pdf.worker.min.mjs
+public/pdfjs/

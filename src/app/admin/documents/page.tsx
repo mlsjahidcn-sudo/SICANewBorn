@@ -18,6 +18,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import {
   Search,
   FileCheck,
@@ -45,8 +46,10 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Spinner } from '@/components/ui/spinner';
 import { ToastProvider, useToast } from '@/components/admin/toast';
+import { DocumentViewer } from '@/components/admin/document-viewer';
 import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
+import { useUrlState } from '@/hooks/use-url-state';
 
 type DocStatus = 'Pending' | 'Verified' | 'Rejected';
 
@@ -162,10 +165,19 @@ function formatDate(iso: string | null | undefined): string {
 function AdminDocumentsPageInner() {
   const { t } = useI18n();
   const { addToast } = useToast();
+  const searchParams = useSearchParams();
 
-  const [statusFilter, setStatusFilter] = useState<DocStatus | 'all'>('Pending');
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  // Filters live in the URL so a refresh, a shared link and the
+  // browser's back button all land on the same view.
+  const [statusFilter, setStatusFilter] = useUrlState<DocStatus | 'all'>('status', 'Pending', {
+    searchParams,
+    coerce: (raw) =>
+      raw === 'Pending' || raw === 'Verified' || raw === 'Rejected' || raw === 'all'
+        ? (raw as DocStatus | 'all')
+        : undefined,
+  });
+  const [search, setSearch] = useUrlState<string>('search', '', { searchParams });
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
   const [page, setPage] = useState(1);
   const [docs, setDocs] = useState<AdminDocument[]>([]);
   const [total, setTotal] = useState(0);
@@ -177,6 +189,16 @@ function AdminDocumentsPageInner() {
   const [bulkOpen, setBulkOpen] = useState<null | 'approve' | 'reject'>(null);
   const [bulkReason, setBulkReason] = useState('');
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
+
+  // In-app document viewer. Opening a document must NOT navigate away —
+  // the admin stays on the queue with their filters and page intact.
+  const [viewerDocId, setViewerDocId] = useState<string | null>(null);
+  const [viewerOpen, setViewerOpen] = useState(false);
+
+  const openViewer = useCallback((docId: string) => {
+    setViewerDocId(docId);
+    setViewerOpen(true);
+  }, []);
 
   // Debounce search so each keystroke doesn't fire a request
   useEffect(() => {
@@ -400,7 +422,13 @@ function AdminDocumentsPageInner() {
                           )}
                         </td>
                         <td className="px-3 py-3">
-                          <div className="font-medium text-[#1B2A4A]">{doc.name}</div>
+                          <button
+                            type="button"
+                            onClick={() => openViewer(doc.id)}
+                            className="text-left font-medium text-[#1B2A4A] hover:text-[#9B1B30] hover:underline"
+                          >
+                            {doc.name}
+                          </button>
                           {doc.file_name && (
                             <div className="text-xs text-[#4B5563] mt-0.5">
                               {doc.file_name}
@@ -424,13 +452,24 @@ function AdminDocumentsPageInner() {
                         </td>
                         <td className="px-3 py-3 text-[#4B5563] text-xs">{formatDate(doc.uploaded_at)}</td>
                         <td className="px-3 py-3 text-right">
-                          <Link
-                            href={`/admin/documents/${doc.id}`}
-                            className="text-[#1B2A4A] hover:text-[#9B1B30] inline-flex items-center"
-                            aria-label="View details"
-                          >
-                            <ChevronRight className="w-4 h-4" />
-                          </Link>
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="rounded-none"
+                              onClick={() => openViewer(doc.id)}
+                            >
+                              <Eye className="mr-1 w-4 h-4" />
+                              {t('adminDocViewer.viewButton')}
+                            </Button>
+                            <Link
+                              href={`/admin/documents/${doc.id}?from=queue`}
+                              className="text-[#1B2A4A] hover:text-[#9B1B30] inline-flex items-center"
+                              aria-label="View details"
+                            >
+                              <ChevronRight className="w-4 h-4" />
+                            </Link>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -553,6 +592,17 @@ function AdminDocumentsPageInner() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <DocumentViewer
+        open={viewerOpen}
+        documentId={viewerDocId}
+        origin={{ kind: 'queue', id: null }}
+        onOpenChange={(next) => {
+          setViewerOpen(next);
+          if (!next) setViewerDocId(null);
+        }}
+        onChanged={() => void fetchList()}
+      />
     </div>
   );
 }
