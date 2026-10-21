@@ -219,10 +219,13 @@ export function WebinarSignupForm({ countryOptions }: Props) {
 
           <div className="grid sm:grid-cols-2 gap-5">
             <div>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1">
+              <label htmlFor="webinar-first-name" className="block text-sm font-medium text-[#1F2937] mb-1">
                 {t('webinar.form.firstName')} *
               </label>
               <input
+                id="webinar-first-name"
+                name="firstName"
+                autoComplete="given-name"
                 type="text"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
@@ -232,10 +235,13 @@ export function WebinarSignupForm({ countryOptions }: Props) {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1">
+              <label htmlFor="webinar-last-name" className="block text-sm font-medium text-[#1F2937] mb-1">
                 {t('webinar.form.lastName')} *
               </label>
               <input
+                id="webinar-last-name"
+                name="lastName"
+                autoComplete="family-name"
                 type="text"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
@@ -246,10 +252,14 @@ export function WebinarSignupForm({ countryOptions }: Props) {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#1F2937] mb-1">
+            <label htmlFor="webinar-email" className="block text-sm font-medium text-[#1F2937] mb-1">
               {t('webinar.form.email')} *
             </label>
             <input
+              id="webinar-email"
+              name="email"
+              autoComplete="email"
+              inputMode="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -259,10 +269,14 @@ export function WebinarSignupForm({ countryOptions }: Props) {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#1F2937] mb-1">
+            <label htmlFor="webinar-whatsapp" className="block text-sm font-medium text-[#1F2937] mb-1">
               {t('webinar.form.whatsapp')} *
             </label>
             <input
+              id="webinar-whatsapp"
+              name="whatsapp"
+              autoComplete="tel"
+              inputMode="tel"
               type="tel"
               value={whatsapp}
               onChange={(e) => setWhatsapp(e.target.value)}
@@ -274,10 +288,13 @@ export function WebinarSignupForm({ countryOptions }: Props) {
             <p className="mt-1 text-xs text-[#4B5563]">{t('webinar.form.whatsappHelp')}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#1F2937] mb-1">
+            <label htmlFor="webinar-country" className="block text-sm font-medium text-[#1F2937] mb-1">
               {t('webinar.form.country')}
             </label>
             <select
+              id="webinar-country"
+              name="country"
+              autoComplete="country-name"
               value={country}
               onChange={(e) => setCountry(e.target.value)}
               onFocus={() => onFieldFocus('country')}
@@ -323,10 +340,13 @@ export function WebinarSignupForm({ countryOptions }: Props) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[#1F2937] mb-1">
+            <label htmlFor="webinar-notes" className="block text-sm font-medium text-[#1F2937] mb-1">
               {t('webinar.form.notes')}
             </label>
             <textarea
+              id="webinar-notes"
+              name="notes"
+              autoComplete="off"
               rows={4}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
