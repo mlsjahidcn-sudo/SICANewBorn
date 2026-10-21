@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DocumentsTab } from '../_components/documents-tab';
+import { MissingDocumentsRequest } from '@/components/admin/missing-documents-request';
 import { NotesTab } from '../_components/notes-tab';
 import { apiFetch, apiFetchJson } from '@/lib/api-client';
 import { APPLICATION_STATUSES, type ApplicationStatus } from '@/lib/application-mapper';
@@ -445,7 +446,20 @@ export default function AdminApplicationDetailPage() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="documents">
+            <TabsContent value="documents" className="space-y-4">
+              <div className="flex justify-end">
+                <MissingDocumentsRequest
+                  key={app.id}
+                  studentName={app.studentName}
+                  studentEmail={app.studentEmail}
+                  applicationNumber={app.applicationNumber}
+                  university={app.university}
+                  program={app.program}
+                  intake={app.intake}
+                  studentHasPortal={Boolean(app.studentId)}
+                  allowPartner={app.source === 'Partner'}
+                />
+              </div>
               <DocumentsTab
                 applicationId={app.id}
                 studentId={app.studentId || null}

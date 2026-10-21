@@ -29,6 +29,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DocumentFilters, type DocumentStatusFilter } from '@/components/admin/document-filters';
 import { DocumentViewer } from '@/components/admin/document-viewer';
+import { MissingDocumentsRequest } from '@/components/admin/missing-documents-request';
 import {
   Dialog,
   DialogContent,
@@ -625,6 +626,20 @@ export default function AdminPartnerStudentDetailPage() {
         </TabsContent>
 
         <TabsContent value="documents" className="space-y-4">
+          <div className="flex justify-end">
+            <MissingDocumentsRequest
+              key={studentId}
+              studentName={student.studentName}
+              studentEmail={student.studentEmail}
+              studentPhone={student.studentPhone}
+              partnerName={student.partnerName}
+              university={student.targetUniversity}
+              program={student.targetProgram}
+              studentHasPortal={Boolean(student.linkedStudentProfileId)}
+              allowPartner
+              defaultRecipient="partner"
+            />
+          </div>
           {tabLoading.documents ? (
             <div className="h-32 bg-gray-100 animate-pulse rounded" />
           ) : documents.length === 0 ? (

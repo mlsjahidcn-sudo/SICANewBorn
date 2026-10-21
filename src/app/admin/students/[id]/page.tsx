@@ -26,6 +26,7 @@ import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { DocumentFilters, type DocumentStatusFilter } from '@/components/admin/document-filters';
 import { DocumentViewer } from '@/components/admin/document-viewer';
+import { MissingDocumentsRequest } from '@/components/admin/missing-documents-request';
 import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 import { useUrlState } from '@/hooks/use-url-state';
@@ -512,6 +513,16 @@ export default function AdminStudentDetailPage() {
 
         {/* Documents */}
         <TabsContent value="documents" className="space-y-6">
+          <div className="flex justify-end">
+            <MissingDocumentsRequest
+              key={studentId}
+              studentName={fullName}
+              studentEmail={student.email}
+              studentPhone={(typeof student.extra?.whatsapp === 'string' && student.extra.whatsapp) || student.phone}
+              studentHasPortal={!student.isOffline}
+              allowPartner={student.source === 'Partner'}
+            />
+          </div>
           <Card>
             <CardContent className="pt-6 space-y-4">
               {tabLoading.documents ? (

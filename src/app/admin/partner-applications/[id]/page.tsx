@@ -15,6 +15,8 @@ import {
 import type { ApplicationEnrollment } from '@/lib/application-history-mapper';
 
 import { Button } from '@/components/ui/button';
+import { MissingDocumentsRequest } from '@/components/admin/missing-documents-request';
+import type { MissingDocumentCategory } from '@/lib/missing-document-message';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -45,6 +47,7 @@ import {
   PartnerApplicationStatus,
   PartnerApplicationDecision,
   PartnerApplicationPriority,
+  type DocumentsRequestEvent,
 } from '@/lib/partner-application-mapper';
 
 // S27: this is the only page in the system where the admin can
@@ -106,15 +109,6 @@ export default function AdminPartnerApplicationDetailPage() {
   const [assignCatalogLoading, setAssignCatalogLoading] = useState(false);
   const [selectedUniversitySlug, setSelectedUniversitySlug] = useState('');
   const [selectedProgramSlug, setSelectedProgramSlug] = useState('');
-
-  // Phase 76: document-request modal state
-  const [showDocRequestModal, setShowDocRequestModal] = useState(false);
-  const [docRequestCategories, setDocRequestCategories] = useState<
-    Array<'passport' | 'transcript' | 'english_test' | 'photo' | 'other'>
-  >([]);
-  const [docRequestMessage, setDocRequestMessage] = useState('');
-  const [isRequestingDocs, setIsRequestingDocs] = useState(false);
-  const [docRequestError, setDocRequestError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!applicationId) return;
@@ -212,38 +206,14 @@ export default function AdminPartnerApplicationDetailPage() {
     }
   }, [app, applicationId, adminNotes]);
 
-  // Phase 76: submit a new "request documents" event. Appends to
-  // the documents_requested JSONB array on the server, which is
-  // hydrated back into app.documentsRequested on the next load().
-  const submitDocRequest = useCallback(async () => {
-    if (!app) return;
-    if (docRequestCategories.length === 0) return;
-    setIsRequestingDocs(true);
-    setDocRequestError(null);
-    try {
-      await apiFetchJson(
-        `/api/admin/partner-applications/${applicationId}/request-documents`,
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            categories: docRequestCategories,
-            message: docRequestMessage || undefined,
-          }),
-        },
-      );
-      // Re-fetch the app to get the updated documents_requested array
-      await load();
-      setShowDocRequestModal(false);
-      setDocRequestCategories([]);
-      setDocRequestMessage('');
-    } catch (err) {
-      setDocRequestError(
-        err instanceof Error ? err.message : t('adminPartnerApp.errorRequestFailed'),
-      );
-    } finally {
-      setIsRequestingDocs(false);
-    }
-  }, [app, applicationId, docRequestCategories, docRequestMessage, load, t]);
+  // Keep the existing application request history as an explicit save action.
+  const saveDocRequest = async (request: { categories: MissingDocumentCategory[]; message: string }): Promise<void> => {
+    const response = await apiFetchJson<{ documents_requested: DocumentsRequestEvent[] }>(
+      `/api/admin/partner-applications/${applicationId}/request-documents`,
+      { method: 'POST', body: JSON.stringify(request) },
+    );
+    setApp((previous) => previous ? { ...previous, documentsRequested: response.documents_requested } : previous);
+  };
 
   // Phase 54: open the assignment modal and load the live catalog.
   const openAssignModal = useCallback(async () => {
@@ -925,7 +895,7 @@ export default function AdminPartnerApplicationDetailPage() {
           be missing) or the partner portal. */}
       <Card className="rounded-none border-gray-200 mt-6">
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <CardTitle className="text-base flex items-center gap-2">
                 Documents
@@ -943,14 +913,20 @@ export default function AdminPartnerApplicationDetailPage() {
                 {t('adminPartnerApp.documentsSubtitle')}
               </p>
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setShowDocRequestModal(true)}
-              className="rounded-none"
-            >
-              {t('adminPartnerApp.requestButton')}
-            </Button>
+            <MissingDocumentsRequest
+              key={app.id}
+              studentName={app.studentName || app.studentEmail || ''}
+              studentEmail={app.studentEmail}
+              studentPhone={app.studentPhone}
+              applicationNumber={app.applicationNumber}
+              university={app.university}
+              program={app.program}
+              intake={app.intake}
+              studentHasPortal={false}
+              allowPartner
+              defaultRecipient={app.source === 'public_form' ? 'student' : 'partner'}
+              onSave={saveDocRequest}
+            />
           </div>
         </CardHeader>
         <CardContent className="space-y-4 text-sm">
@@ -986,7 +962,7 @@ export default function AdminPartnerApplicationDetailPage() {
                       ))}
                     </div>
                     {r.message && (
-                      <p className="text-sm text-gray-700 mt-1">{r.message}</p>
+                      <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{r.message}</p>
                     )}
                     <p className="text-xs text-gray-500 mt-1">
                       {t('adminPartnerApp.requestedBy')}{' '}
@@ -1012,83 +988,7 @@ export default function AdminPartnerApplicationDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Phase 76: Document-request modal */}
-      <Dialog open={showDocRequestModal} onOpenChange={setShowDocRequestModal}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t('adminPartnerApp.requestTitle')}</DialogTitle>
-            <DialogDescription>
-              {t('adminPartnerApp.requestBody')}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            {(['passport', 'transcript', 'english_test', 'photo', 'other'] as const).map(
-              (cat) => (
-                <label
-                  key={cat}
-                  className="flex items-center gap-2 text-sm cursor-pointer"
-                >
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4"
-                    checked={docRequestCategories.includes(cat)}
-                    onChange={(e) => {
-                      setDocRequestCategories((prev) =>
-                        e.target.checked
-                          ? [...prev, cat]
-                          : prev.filter((c) => c !== cat),
-                      );
-                    }}
-                  />
-                  {t(
-                    `adminPartnerApp.requestCategory${cat.charAt(0).toUpperCase()}${cat.slice(1).replace(/_([a-z])/g, (_, x) => x.toUpperCase())}` as 'adminPartnerApp.requestCategoryPassport' | 'adminPartnerApp.requestCategoryTranscript' | 'adminPartnerApp.requestCategoryEnglishTest' | 'adminPartnerApp.requestCategoryPhoto' | 'adminPartnerApp.requestCategoryOther',
-                  )}
-                </label>
-              ),
-            )}
-            <div className="pt-2">
-              <Label>{t('adminPartnerApp.requestMessage')}</Label>
-              <Textarea
-                value={docRequestMessage}
-                onChange={(e) => setDocRequestMessage(e.target.value)}
-                rows={3}
-                maxLength={1000}
-                placeholder={t('adminPartnerApp.requestMessagePh')}
-              />
-            </div>
-            {docRequestError && (
-              <p className="text-sm text-red-600 bg-red-50 p-2 rounded">
-                {docRequestError}
-              </p>
-            )}
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowDocRequestModal(false)}
-              disabled={isRequestingDocs}
-            >
-              {t('adminApiKeys.cancel')}
-            </Button>
-            <Button
-              onClick={submitDocRequest}
-              disabled={
-                isRequestingDocs || docRequestCategories.length === 0
-              }
-              className="bg-[#9B1B30] hover:bg-[#7A1526] text-white"
-            >
-              {isRequestingDocs ? (
-                <>
-                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                  {t('adminPartnerApp.requestSending')}
-                </>
-              ) : (
-                t('adminPartnerApp.requestSubmit')
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
     </div>
   );
 }

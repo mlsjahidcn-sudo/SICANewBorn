@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
  * Body:
  *   - categories: string[] — one or more of: passport, transcript,
  *     english_test, photo, other
- *   - message: string (optional) — short message from admin, e.g.
+ *   - message: string (optional, max 6000) — generated or edited message, e.g.
  *     "Please upload your passport and most recent transcript"
  *
  * Behavior:
@@ -29,7 +29,7 @@ const RequestPayload = z.object({
     .array(z.enum(['passport', 'transcript', 'english_test', 'photo', 'other']))
     .min(1, 'Select at least one document category')
     .max(5),
-  message: z.string().max(1000).optional(),
+  message: z.string().max(6000).optional(),
 });
 
 export async function POST(
