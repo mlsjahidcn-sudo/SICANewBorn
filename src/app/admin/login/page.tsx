@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/lib/auth-context';
 import { SicaLogo } from '@/components/sica-logo';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { PasswordRecoveryForm } from '@/components/auth/password-recovery-form';
 import Link from 'next/link';
 import { Eye, EyeOff, LogIn } from 'lucide-react';
 import { getPostLoginRedirectPath } from '@/lib/auth-redirect';
@@ -14,6 +15,8 @@ export default function AdminLoginPage() {
   const { signIn, user, isConfigured } = useAuth();
   const { t } = useI18n();
   const router = useRouter();
+  const isResetFlow = useSearchParams().get('reset') === '1';
+  const [forgotMode, setForgotMode] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -23,14 +26,14 @@ export default function AdminLoginPage() {
   const [redirecting, setRedirecting] = useState(false);
 
   useEffect(() => {
-    if (user && !redirecting) {
+    if (!isResetFlow && user && !redirecting) {
       setRedirecting(true);
       // Use the shared role-based redirect so a partner or student who
       // happened to land on the admin login form still goes to the right
       // portal instead of getting an auth wall.
       router.replace(getPostLoginRedirectPath(user));
     }
-  }, [user, router, redirecting]);
+  }, [user, router, redirecting, isResetFlow]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,6 +68,13 @@ export default function AdminLoginPage() {
               {t('adminAuth.configMissing')}
             </div>
           )}
+          {isResetFlow || forgotMode ? (
+            <PasswordRecoveryForm portal="admin" mode={isResetFlow ? 'reset' : 'request'} initialEmail={email} onBack={() => {
+              setForgotMode(false);
+              setError('');
+              if (isResetFlow) router.replace('/admin/login');
+            }} />
+          ) : (
           <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm">
@@ -109,6 +119,12 @@ export default function AdminLoginPage() {
               </div>
             </div>
 
+            <div className="flex justify-end">
+              <button type="button" className="text-sm text-[#9B1B30] hover:underline font-medium" onClick={() => { setForgotMode(true); setError(''); }}>
+                {t('passwordRecovery.forgotLink')}
+              </button>
+            </div>
+
             <button
               type="submit"
               disabled={loading}
@@ -124,6 +140,7 @@ export default function AdminLoginPage() {
               )}
             </button>
           </form>
+          )}
 
           <div className="mt-6 text-center text-sm text-[#4B5563]">
             {t('adminAuth.noAccount')}{' '}
