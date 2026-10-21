@@ -30,6 +30,7 @@ import { useUrlState } from '@/hooks/use-url-state';
 import { track } from '@/lib/analytics';
 import { GetStartedCta } from '@/components/GetStartedCta';
 import { SearchableSelect } from '@/components/ui/searchable-select';
+import { ProgramTable } from './program-table';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -62,7 +63,7 @@ export interface UniversityOption {
 }
 
 type SortKey = 'default' | 'relevance' | 'tuition' | 'name';
-type ViewMode = 'grid' | 'list';
+type ViewMode = 'table' | 'cards';
 
 interface ProgramsClientProps {
   initialResult: ProgramQueryResult;
@@ -127,7 +128,10 @@ export default function ProgramsClient({
   // the next page. The RSC renders the first page, so there is no
   // mount fetch.
   const [rows, setRows] = useState<Program[]>(initialResult.programs);
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  // The table is the default: 2,513 programs in cards is a scrolling
+  // marathon, and the table's columns are what a student actually
+  // compares (university / degree / tuition / intake).
+  const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
 
   const skipFirstFetch = useRef(true);
@@ -533,12 +537,13 @@ export default function ProgramsClient({
 
   // ── Filter controls (shared by the desktop row + the mobile sheet) ────
   const filterControls = (
-    <>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label htmlFor="prog-degree" className="mb-1 block text-xs font-medium text-gray-500">
-            {t('prog.degree')}
-          </label>
+    /* A compact grid, not six stacked rows: the desktop filter panel
+       used to push the first result row ~600px down the page. */
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div>
+        <label htmlFor="prog-degree" className="mb-1 block text-xs font-medium text-gray-500">
+          {t('prog.degree')}
+        </label>
           <select
             id="prog-degree"
             value={degreeFilter}
@@ -556,10 +561,10 @@ export default function ProgramsClient({
             ))}
           </select>
         </div>
-        <div>
-          <label htmlFor="prog-language" className="mb-1 block text-xs font-medium text-gray-500">
-            {t('prog.language')}
-          </label>
+      <div>
+        <label htmlFor="prog-language" className="mb-1 block text-xs font-medium text-gray-500">
+          {t('prog.language')}
+        </label>
           <select
             id="prog-language"
             value={languageFilter}
@@ -576,10 +581,9 @@ export default function ProgramsClient({
               </option>
             ))}
           </select>
-        </div>
       </div>
 
-      <div className="mt-3">
+      <div>
         <label htmlFor="prog-discipline" className="mb-1 block text-xs font-medium text-gray-500">
           {t('prog.discipline')}
         </label>
@@ -604,7 +608,7 @@ export default function ProgramsClient({
       {/* PF-4b: the city filter. A program inherits its university's
           city, so the server resolves the city to university slugs. */}
       {facets.city.length > 0 && (
-        <div className="mt-3">
+        <div>
           <label htmlFor="prog-city" className="mb-1 block text-xs font-medium text-gray-500">
             {t('prog.city')}
           </label>
@@ -627,7 +631,7 @@ export default function ProgramsClient({
         </div>
       )}
 
-      <div className="mt-3">
+      <div className="sm:col-span-2">
         <label className="mb-1 block text-xs font-medium text-gray-500">{t('prog.university')}</label>
         <SearchableSelect
           value={universityFilter}
@@ -645,57 +649,58 @@ export default function ProgramsClient({
         />
       </div>
 
-      <label
-        className="mt-3 inline-flex items-center gap-2 border border-gray-200 bg-white px-3 py-2.5 text-sm cursor-pointer hover:border-[#9B1B30] transition-colors rounded-none"
-        title={t('filter.scholarshipOnly')}
-      >
-        <input
-          type="checkbox"
-          checked={scholarshipOnly === '1'}
-          onChange={(e) => {
-            setScholarshipOnly(e.target.checked ? '1' : '');
-            fireFilterChange('scholarship', e.target.checked ? '1' : null);
-          }}
-          className="h-4 w-4 accent-[#9B1B30]"
-        />
-        <Award className="h-4 w-4 text-[#9B1B30]" />
-        <span className="text-[#1B2A4A] font-medium">{t('prog.scholarshipOnly')}</span>
-        <span className="text-xs text-gray-500">({facets.scholarship.yes})</span>
-      </label>
+      <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
+        <label
+          className="inline-flex items-center gap-2 border border-gray-200 bg-white px-3 py-2.5 text-sm cursor-pointer hover:border-[#9B1B30] transition-colors rounded-none"
+          title={t('filter.scholarshipOnly')}
+        >
+          <input
+            type="checkbox"
+            checked={scholarshipOnly === '1'}
+            onChange={(e) => {
+              setScholarshipOnly(e.target.checked ? '1' : '');
+              fireFilterChange('scholarship', e.target.checked ? '1' : null);
+            }}
+            className="h-4 w-4 accent-[#9B1B30]"
+          />
+          <Award className="h-4 w-4 text-[#9B1B30]" />
+          <span className="text-[#1B2A4A] font-medium">{t('prog.scholarshipOnly')}</span>
+          <span className="text-xs text-gray-500">({facets.scholarship.yes})</span>
+        </label>
 
-      {/* PF-4b: a one-click "English-taught" toggle — the single most
-          asked question on the site, and one click instead of two
-          dropdowns (language + a manual read of the label). */}
-      <label
-        className="mt-3 ml-2 inline-flex items-center gap-2 border border-gray-200 bg-white px-3 py-2.5 text-sm cursor-pointer hover:border-[#9B1B30] transition-colors rounded-none"
-        title={t('prog.englishTaught')}
-      >
-        <input
-          type="checkbox"
-          checked={languageFilter === 'English'}
-          onChange={(e) => {
-            setLanguageFilter(e.target.checked ? 'English' : '');
-            fireFilterChange('englishTaught', e.target.checked ? '1' : null);
-          }}
-          className="h-4 w-4 accent-[#9B1B30]"
-        />
-        <Globe className="h-4 w-4 text-[#1B2A4A]" />
-        <span className="text-[#1B2A4A] font-medium">{t('prog.englishTaught')}</span>
-        <span className="text-xs text-gray-500">
-          ({facets.language.find((f) => f.value === 'English')?.count ?? 0})
-        </span>
-      </label>
+        {/* PF-4b: a one-click "English-taught" toggle — the single most
+            asked question on the site, and one click instead of two
+            dropdowns (language + a manual read of the label). */}
+        <label
+          className="inline-flex items-center gap-2 border border-gray-200 bg-white px-3 py-2.5 text-sm cursor-pointer hover:border-[#9B1B30] transition-colors rounded-none"
+          title={t('prog.englishTaught')}
+        >
+          <input
+            type="checkbox"
+            checked={languageFilter === 'English'}
+            onChange={(e) => {
+              setLanguageFilter(e.target.checked ? 'English' : '');
+              fireFilterChange('englishTaught', e.target.checked ? '1' : null);
+            }}
+            className="h-4 w-4 accent-[#9B1B30]"
+          />
+          <Globe className="h-4 w-4 text-[#1B2A4A]" />
+          <span className="text-[#1B2A4A] font-medium">{t('prog.englishTaught')}</span>
+          <span className="text-xs text-gray-500">
+            ({facets.language.find((f) => f.value === 'English')?.count ?? 0})
+          </span>
+        </label>
+      </div>
 
       {/* PF-2: the normalized facets. Rendered only when the catalogue
           has the derived columns — before the migration these controls
           would be filters that silently do nothing. */}
       {facets.normalized.available && (
         <>
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="prog-intake" className="mb-1 block text-xs font-medium text-gray-500">
-                {t('prog.intakeSeason')}
-              </label>
+          <div>
+            <label htmlFor="prog-intake" className="mb-1 block text-xs font-medium text-gray-500">
+              {t('prog.intakeSeason')}
+            </label>
               <select
                 id="prog-intake"
                 value={intakeFilter}
@@ -734,9 +739,8 @@ export default function ProgramsClient({
                 ))}
               </select>
             </div>
-          </div>
 
-          <div className="mt-3 grid grid-cols-2 gap-3">
+            {facets.normalized.tuitionAvailable && (
             <div>
               <label htmlFor="prog-tuition" className="mb-1 block text-xs font-medium text-gray-500">
                 {t('prog.tuitionBand')}
@@ -761,6 +765,8 @@ export default function ProgramsClient({
                 })}
               </select>
             </div>
+            )}
+            {facets.normalized.durationAvailable && (
             <div>
               <label htmlFor="prog-duration" className="mb-1 block text-xs font-medium text-gray-500">
                 {t('prog.durationBand')}
@@ -785,10 +791,10 @@ export default function ProgramsClient({
                 })}
               </select>
             </div>
-          </div>
+            )}
         </>
       )}
-    </>
+    </div>
   );
 
   return (
@@ -883,25 +889,25 @@ export default function ProgramsClient({
                 )}
               </select>
 
-              {/* PF-5: grid ⇄ list */}
+              {/* PF-5: table ⇄ cards */}
               <div className="hidden sm:flex items-center border border-gray-200">
                 <button
                   type="button"
-                  onClick={() => setViewMode('grid')}
-                  aria-label={t('prog.viewGrid')}
-                  aria-pressed={viewMode === 'grid'}
-                  className={`px-2.5 py-2.5 ${viewMode === 'grid' ? 'bg-[#1B2A4A] text-white' : 'bg-white text-gray-500 hover:text-[#1B2A4A]'}`}
+                  onClick={() => setViewMode('table')}
+                  aria-label={t('prog.viewTable')}
+                  aria-pressed={viewMode === 'table'}
+                  className={`px-2.5 py-2.5 ${viewMode === 'table' ? 'bg-[#1B2A4A] text-white' : 'bg-white text-gray-500 hover:text-[#1B2A4A]'}`}
                 >
-                  <LayoutGrid className="h-4 w-4" />
+                  <List className="h-4 w-4" />
                 </button>
                 <button
                   type="button"
-                  onClick={() => setViewMode('list')}
-                  aria-label={t('prog.viewList')}
-                  aria-pressed={viewMode === 'list'}
-                  className={`px-2.5 py-2.5 ${viewMode === 'list' ? 'bg-[#1B2A4A] text-white' : 'bg-white text-gray-500 hover:text-[#1B2A4A]'}`}
+                  onClick={() => setViewMode('cards')}
+                  aria-label={t('prog.viewCards')}
+                  aria-pressed={viewMode === 'cards'}
+                  className={`px-2.5 py-2.5 ${viewMode === 'cards' ? 'bg-[#1B2A4A] text-white' : 'bg-white text-gray-500 hover:text-[#1B2A4A]'}`}
                 >
-                  <List className="h-4 w-4" />
+                  <LayoutGrid className="h-4 w-4" />
                 </button>
               </div>
             </div>
@@ -1004,13 +1010,23 @@ export default function ProgramsClient({
               </>
             )}
           </div>
+        ) : viewMode === 'table' ? (
+          /* The dense table view — 2,513 programs read as a list of
+             facts, not 24 screens of cards. */
+          <div style={{ opacity: isPending ? 0.6 : 1, transition: 'opacity 150ms ease' }}>
+            <ProgramTable
+              programs={rows}
+              universityBySlug={uniBySlug}
+              locale={locale}
+              t={t}
+              fromQuery={fromQuery}
+              searchQuery={searchQuery}
+              matchedUniversitySlugs={result.matchedUniversitySlugs}
+            />
+          </div>
         ) : (
           <div
-            className={
-              viewMode === 'grid'
-                ? 'grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
-                : 'flex flex-col gap-3'
-            }
+            className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
             style={{ opacity: isPending ? 0.6 : 1, transition: 'opacity 150ms ease' }}
           >
             {rows.map((program: Program, idx) => {
@@ -1040,12 +1056,6 @@ export default function ProgramsClient({
                     <h3 className="mt-1.5 text-base font-bold leading-snug text-[#1B2A4A] transition-colors group-hover:text-[#9B1B30]">
                       {locale === 'zh' ? program.nameCn : program.name}
                     </h3>
-
-                    {viewMode === 'list' && program.description && (
-                      <p className="mt-1.5 line-clamp-2 text-xs text-gray-500">
-                        {locale === 'zh' ? program.descriptionCn : program.description}
-                      </p>
-                    )}
 
                     <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
                       <span className={`inline-block px-2 py-0.5 text-[11px] font-semibold ${degreeColor(program.degree)}`}>
@@ -1124,20 +1134,9 @@ export default function ProgramsClient({
                   onClick={() =>
                     track('program_click', { slug: program.slug, position: idx, locale })
                   }
-                  className={
-                    viewMode === 'grid'
-                      ? 'group flex flex-col border border-gray-200 bg-white transition-all duration-150 hover:border-[#9B1B30]/40 hover:shadow-lg'
-                      : 'group flex flex-row border border-gray-200 bg-white transition-all duration-150 hover:border-[#9B1B30]/40 hover:shadow-lg'
-                  }
+                  className="group flex flex-col border border-gray-200 bg-white transition-all duration-150 hover:border-[#9B1B30]/40 hover:shadow-lg"
                 >
-                  {viewMode === 'grid' ? (
-                    card
-                  ) : (
-                    <>
-                      <div className="w-1 shrink-0 bg-[#9B1B30]" />
-                      <div className="flex min-w-0 flex-1 flex-col justify-center p-4">{card}</div>
-                    </>
-                  )}
+                  {card}
                 </Link>
               );
             })}

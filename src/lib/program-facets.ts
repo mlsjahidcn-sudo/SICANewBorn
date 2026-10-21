@@ -83,6 +83,16 @@ export interface ProgramFacets {
    */
   normalized: {
     available: boolean;
+    /**
+     * The columns exist, but did the BACKFILL actually run? The first
+     * version of the migration extracted the regex capture group
+     * instead of the whole match, so `tuition_amount` stayed empty and
+     * `duration_years` was written wrong. A facet whose band counts
+     * are all zero is exactly that symptom, so the control is hidden
+     * rather than shown as a filter that can never match anything.
+     */
+    tuitionAvailable: boolean;
+    durationAvailable: boolean;
     /** Intake season: September / March / Both / Unknown. */
     intakeSeason: ProgramFacet[];
     /** Intake year: 2026, 2027, … */
@@ -356,20 +366,34 @@ function normalizedFacets(rows: FacetRow[]): ProgramFacets['normalized'] {
   if (!available) {
     return {
       available: false,
+      tuitionAvailable: false,
+      durationAvailable: false,
       intakeSeason: [],
       intakeYear: [],
       tuition: [],
       duration: [],
     };
   }
+  const tuition = countBands(rows, (r) => r.tuition_amount, TUITION_BANDS);
+  const duration = countBands(rows, (r) => r.duration_years, DURATION_BANDS);
+  const tuitionAvailable = tuition.some((f) => f.count > 0);
   return {
     available: true,
+    // A facet with no rows in any band means the backfill did not run
+    // (or ran wrong) — do not offer a filter that can never match.
+    tuitionAvailable,
+    // The tuition + duration backfills come from the SAME statement
+    // block, and the broken first version wrote a wrong duration for
+    // the rows it did touch (0.5 for "2.5 years"). So the duration
+    // facet waits for the tuition one: when the tuition backfill has
+    // produced nothing, the duration values cannot be trusted either.
+    durationAvailable: tuitionAvailable && duration.some((f) => f.count > 0),
     intakeSeason: countFacetValues(rows, (r) => r.intake_season ?? null),
     intakeYear: countFacetValues(rows, (r) =>
       r.intake_year == null ? null : String(r.intake_year),
     ),
-    tuition: countBands(rows, (r) => r.tuition_amount, TUITION_BANDS),
-    duration: countBands(rows, (r) => r.duration_years, DURATION_BANDS),
+    tuition,
+    duration,
   };
 }
 
