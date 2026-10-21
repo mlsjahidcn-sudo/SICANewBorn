@@ -107,6 +107,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
 function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const { user, loading, signOut } = useAuth();
+  const userId = user?.id;
   const { t } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
@@ -130,7 +131,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   // student/partner from seeing the admin shell + children for a
   // single frame while the redirect effect fires.
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !userId) {
       const isAuthPage = pathname === '/admin/login' || pathname === '/admin/register';
       if (!isAuthPage) {
         router.push('/admin/login');
@@ -138,10 +139,12 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
       setRoleGate('unknown');
       return;
     }
-    if (loading || !user) {
+    if (loading || !userId) {
       setRoleGate('unknown');
       return;
     }
+    // Key this check to account identity, not the user object that token
+    // refreshes replace, so returning to a tab preserves mounted page state.
     // User signed in — confirm they're an admin before rendering
     // the shell. The auth context's `user` only proves a valid
     // JWT; the role lives in admin_profiles. We use apiFetch
@@ -184,7 +187,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [user, loading, pathname, router, signOut]);
+  }, [userId, loading, pathname, router, signOut]);
 
   const isAuthPage = pathname === '/admin/login' || pathname === '/admin/register';
 

@@ -102,17 +102,21 @@ export default function StudentNotificationsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [retryNonce, setRetryNonce] = useState(0);
   const pendingNavRef = useRef<string | null>(null);
+  const loadedQueryRef = useRef<string | null>(null);
 
   // Main list fetch
   useEffect(() => {
     const controller = new AbortController();
     let cancelled = false;
-    setIsLoading(true);
     setError(null);
 
     const params = new URLSearchParams({ limit: String(limit), page: String(page) });
     if (filter === 'unread') params.set('unread', 'true');
     if (typeFilter !== 'all') params.set('type', typeFilter);
+    const queryKey = params.toString();
+    // Focus/poll refreshes keep the current inbox (including an empty one)
+    // visible. A different filter/page still gets its initial loading state.
+    setIsLoading(loadedQueryRef.current !== queryKey);
 
     (async () => {
       try {
@@ -126,6 +130,7 @@ export default function StudentNotificationsPage() {
           signal: controller.signal,
         });
         if (!cancelled) {
+          loadedQueryRef.current = queryKey;
           setNotifications(data.notifications);
           setUnreadCount(data.unreadCount);
           setTotal(data.total || 0);

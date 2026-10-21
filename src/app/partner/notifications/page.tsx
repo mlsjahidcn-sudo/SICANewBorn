@@ -85,6 +85,7 @@ export default function PartnerNotificationsPage() {
   // Track the in-flight click so the row's navigate doesn't double-fire
   // (we mark-read first, then navigate).
   const pendingNavRef = useRef<string | null>(null);
+  const loadedQueryRef = useRef<string | null>(null);
 
   // -----------------------------------------------------------------
   // Main list fetch
@@ -92,11 +93,14 @@ export default function PartnerNotificationsPage() {
   useEffect(() => {
     const controller = new AbortController();
     let cancelled = false;
-    setIsLoading(true);
     setError(null);
 
     const params = new URLSearchParams({ limit: '50' });
     if (filter === 'unread') params.set('unread', 'true');
+    const queryKey = params.toString();
+    // Focus/poll refreshes keep the current inbox (including an empty one)
+    // visible. A different filter/page still gets its initial loading state.
+    setIsLoading(loadedQueryRef.current !== queryKey);
 
     (async () => {
       try {
@@ -107,6 +111,7 @@ export default function PartnerNotificationsPage() {
           signal: controller.signal,
         });
         if (!cancelled) {
+          loadedQueryRef.current = queryKey;
           setNotifications(data.notifications);
           setUnreadCount(data.unreadCount);
         }

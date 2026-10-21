@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase-browser';
 import type { User, Session } from '@supabase/supabase-js';
+import { isDeepEqual } from '@/lib/object-equal';
 
 export type SignUpRole = 'student' | 'admin' | 'super_admin' | 'partner';
 
@@ -36,6 +37,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const client = supabase;
+    let active = true;
+    let authRevision = 0;
+    const applySession = (nextSession: Session | null): void => {
+      if (!active) return;
+      // Supabase emits SIGNED_IN again when a tab becomes visible. Keep
+      // unchanged snapshots stable so user-dependent effects do not refetch
+      // and access gates do not unmount the page. Refreshed tokens and real
+      // user changes must still reach consumers.
+      const nextUser = nextSession?.user ?? null;
+      setSession((current) => isDeepEqual(current, nextSession) ? current : nextSession);
+      setUser((current) => isDeepEqual(current, nextUser) ? current : nextUser);
+      setLoading(false);
+    };
 
     // Safety timeout — never let the layout's loading spinner stay up
     // forever. getSession() reads from localStorage and should resolve
@@ -48,27 +62,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, 5_000);
 
     const getSession = async () => {
+      const revision = authRevision;
       try {
         const { data: { session } } = await client.auth.getSession();
-        setSession(session);
-        setUser(session?.user ?? null);
+        // A sign-out/account change may arrive while the initial read is pending.
+        if (revision === authRevision) applySession(session);
       } catch {
         // Swallow — the user simply isn't signed in
       } finally {
         clearTimeout(safety);
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
 
     getSession();
 
     const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
+      authRevision += 1;
+      clearTimeout(safety);
+      applySession(session);
     });
 
     return () => {
+      active = false;
       clearTimeout(safety);
       subscription.unsubscribe();
     };
