@@ -251,3 +251,124 @@ describe('F9 — the homepage links its money pages in-body', () => {
     expect(home).toContain('/china-university-application-deadlines');
   });
 });
+
+/**
+ * G4–G6 — SEO/AEO structure follow-up (2026-10-18).
+ *
+ * G4: Organization.sameAs stays empty until real profile URLs exist;
+ *     footer must not reintroduce bare social-platform homepages.
+ * G5: /success-stories is an RSC shell + client island (Phase 92
+ *     pattern); scholarships/[slug] + universities/compare stay RSC.
+ * G6: cookie-locale crawler behavior is documented; no /zh/ path
+ *     routing; Phase 184 self-canonical for zh is preserved.
+ */
+
+describe('G4 — Organization.sameAs stays empty without verified profiles', () => {
+  const structured = readFileSync(join(SRC, 'lib/structured-data.ts'), 'utf-8');
+  const footer = readFileSync(join(SRC, 'components/footer.tsx'), 'utf-8');
+
+  it('emits an empty sameAs array (no fabricated social profiles)', () => {
+    // After comments are stripped, the Organization schema must still
+    // declare `sameAs: []` — never a populated list of platform
+    // homepages. A non-empty array here without real handles is the
+    // exact E-E-A-T regression Phase 145 / G4 exist to prevent.
+    const code = stripComments(structured);
+    expect(code).toMatch(/sameAs:\s*\[\s*\]/);
+  });
+
+  it('does not put bare social-platform homepages in footer hrefs', () => {
+    // Comments may mention the removed URLs; only live href= attributes
+    // count. WhatsApp wa.me is fine — it is a verified contact channel.
+    const code = stripComments(footer);
+    const bareHomepages = [
+      /href=["']https?:\/\/(www\.)?instagram\.com\/?["']/,
+      /href=["']https?:\/\/(www\.)?facebook\.com\/?["']/,
+      /href=["']https?:\/\/(www\.)?youtube\.com\/?["']/,
+      /href=["']https?:\/\/(www\.)?linkedin\.com\/?["']/,
+      /href=["']https?:\/\/(www\.)?twitter\.com\/?["']/,
+      /href=["']https?:\/\/(www\.)?x\.com\/?["']/,
+    ];
+    for (const pattern of bareHomepages) {
+      expect(code).not.toMatch(pattern);
+    }
+  });
+
+  it('does not put bare social-platform homepages in sameAs values', () => {
+    const code = stripComments(structured);
+    expect(code).not.toMatch(/instagram\.com\/?['"]/);
+    expect(code).not.toMatch(/facebook\.com\/?['"]/);
+    expect(code).not.toMatch(/youtube\.com\/?['"]/);
+    expect(code).not.toMatch(/linkedin\.com\/?['"]/);
+  });
+});
+
+describe('G5 — public catalog/detail surfaces ship as RSC + client island', () => {
+  it('/success-stories page.tsx is an async RSC shell (no use client)', () => {
+    const page = readFileSync(join(SRC, 'app/success-stories/page.tsx'), 'utf-8');
+    const code = stripComments(page);
+    expect(code).not.toMatch(/['"]use client['"]/);
+    expect(code).toMatch(/export\s+default\s+async\s+function\s+SuccessStoriesPage/);
+    expect(code).toContain("from './success-stories-client'");
+    expect(code).toContain('initialNotices');
+    expect(code).toContain('loadInitialNotices');
+  });
+
+  it('/success-stories client island owns interactivity', () => {
+    const client = readFileSync(
+      join(SRC, 'app/success-stories/success-stories-client.tsx'),
+      'utf-8'
+    );
+    expect(client).toMatch(/^['"]use client['"]/);
+    expect(client).toContain('initialNotices');
+    expect(client).toContain('skipInitialFetch');
+  });
+
+  it('/scholarships/[slug] stays RSC + ScholarshipDetailClient island', () => {
+    const page = readFileSync(join(SRC, 'app/scholarships/[slug]/page.tsx'), 'utf-8');
+    const code = stripComments(page);
+    expect(code).not.toMatch(/['"]use client['"]/);
+    expect(code).toContain('ScholarshipDetailClient');
+    expect(code).toContain('getScholarshipBySlug');
+  });
+
+  it('/universities/compare stays RSC + ComparePicker island', () => {
+    const page = readFileSync(join(SRC, 'app/universities/compare/page.tsx'), 'utf-8');
+    const code = stripComments(page);
+    expect(code).not.toMatch(/['"]use client['"]/);
+    expect(code).toContain('ComparePicker');
+    expect(code).toContain('getAllUniversities');
+  });
+});
+
+describe('G6 — cookie-locale crawler behavior stays documented; no /zh/ routes', () => {
+  const alternates = readFileSync(join(SRC, 'lib/alternates.ts'), 'utf-8');
+
+  it('documents that crawlers do not persist the locale cookie', () => {
+    // The G6 block exists so a future "fix" that invents /zh/ paths
+    // has to delete this warning first. Assert the key claims stay.
+    expect(alternates).toMatch(/G6/);
+    // Phrase may wrap across JSDoc lines (`do NOT persist\n * cookies`).
+    expect(alternates).toMatch(/do NOT persist[\s\S]*?cookies/i);
+    expect(alternates).toMatch(/\?lang=zh/);
+    expect(alternates).toMatch(/Do NOT invent[\s\S]*?\/zh\//i);
+  });
+
+  it('keeps Phase 184 self-canonical for zh (no English-canonical trap)', () => {
+    const code = stripComments(alternates);
+    // zh canonical must be the zhUrl, not the bare absolute path.
+    expect(code).toMatch(/canonical:\s*locale\s*===\s*['"]zh['"]\s*\?\s*zhUrl\s*:\s*absolute/);
+    expect(code).toMatch(/zh:\s*zhUrl/);
+    expect(code).toMatch(/['"]x-default['"]\s*:\s*absolute/);
+  });
+
+  it('does not introduce /zh/ path-prefix locale routing in app routes', () => {
+    // A /zh/... App Router segment would fight the cookie + ?lang=
+    // contract. Guard the filesystem, not just the docs.
+    const appDir = join(SRC, 'app');
+    const zhDirs = readdirSync(appDir).filter((entry) => {
+      const full = join(appDir, entry);
+      return statSync(full).isDirectory() && /^(zh|en)$/i.test(entry);
+    });
+    expect(zhDirs).toEqual([]);
+  });
+});

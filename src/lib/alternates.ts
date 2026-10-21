@@ -43,6 +43,35 @@ import { getServerLocale } from './server-t';
  * `getServerT()`, which calls the same cached, request-scoped
  * `getServerLocale()`. No page becomes dynamic that wasn't already.
  *
+ * ─────────────────────────────────────────────────────────────────
+ * G6 — cookie-locale vs crawler discovery (docs only; no /zh/ routes)
+ * ─────────────────────────────────────────────────────────────────
+ * Returning visitors who set `sica-locale=zh` via the language picker
+ * get Chinese HTML on EVERY subsequent request to the bare path
+ * (`/about`, `/programs`, …) because `getServerLocale()` reads the
+ * cookie. That is correct UX for humans.
+ *
+ * Crawlers (Googlebot, Bingbot, most LLM fetchers) do NOT persist
+ * cookies across URL discoveries. They follow links and hreflang
+ * alternates. For them:
+ *   - the bare path always renders English (no cookie → default `en`)
+ *   - the Chinese version is ONLY reachable via `?lang=zh` (hreflang
+ *     `zh` + self-canonical from Phase 184)
+ *
+ * So the cookie path and the crawler path diverge by design:
+ *   human with zh cookie → bare `/about` is Chinese
+ *   crawler discovering `/about` → English; discovers Chinese via
+ *     hreflang `zh` → `/about?lang=zh`
+ *
+ * Do NOT invent `/zh/about`-style path routing to "fix" this. A
+ * path-prefix locale would double the URL surface, break every
+ * existing share link, and fight the Phase 184 self-canonical
+ * contract. The `?lang=` query + cookie sync is the product choice;
+ * crawlers get a clean alternate cluster; returning humans get a
+ * sticky locale. Both are intentional.
+ *
+ * Guarded by `seo-audit-2026-10-17.test.ts` → "G6 — cookie-locale".
+ *
  * @param canonical - A relative path (e.g. `/about`) or absolute URL
  *   (e.g. `https://studyinchina.academy/news/hello`). Query strings are
  *   stripped before building the alternates.

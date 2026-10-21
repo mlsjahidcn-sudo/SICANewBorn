@@ -40,13 +40,24 @@ export function getOrganizationSchema() {
       addressRegion: 'Guangdong',
       addressCountry: 'CN',
     },
-    sameAs: [
-      // Intentionally empty. The footer used to link bare
-      // https://www.instagram.com/ etc.; those were removed in Phase
-      // 145 because a homepage-only social link is a low-trust
-      // sameAs. Only real profile URLs belong here — and the footer
-      // currently has none (WhatsApp only).
-    ],
+    // ─────────────────────────────────────────────────────────────
+    // G4 / Phase 145 — sameAs stays EMPTY until real profiles exist
+    // ─────────────────────────────────────────────────────────────
+    // Google and answer engines treat Organization.sameAs as an
+    // entity-identity signal. A bare homepage like
+    // https://www.instagram.com/ (no handle) is worse than omitting
+    // the field: it looks like unverified social proof and dilutes
+    // E-E-A-T. Phase 145 stripped those from the footer; G4 locks the
+    // schema to the same rule.
+    //
+    // When Jahid supplies REAL profile URLs (e.g.
+    // https://www.instagram.com/studyinchina.academy/), add them
+    // HERE and re-enable matching footer icons in the same commit.
+    // Until then: empty array. WhatsApp (wa.me/…) is a contact
+    // channel, not a sameAs profile — do not put it here.
+    //
+    // Guarded by `seo-audit-2026-10-17.test.ts` → "G4 — sameAs".
+    sameAs: [],
     knowsAbout: [
       'Chinese universities',
       'Tsinghua University',

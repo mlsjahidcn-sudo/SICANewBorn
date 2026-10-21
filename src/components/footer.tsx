@@ -191,18 +191,18 @@ export function Footer() {
 
             {/* Social icons */}
             <div className="mt-6">
-              {/* <!-- [verify] Jahid: provide real Instagram/Facebook/YouTube/LinkedIn profile URLs — the bare-homepage links below hurt E-E-A-T signals. Until then only WhatsApp is rendered. --> */}
+              {/* <!-- [verify] Jahid: provide real Instagram/Facebook/YouTube/LinkedIn profile URLs — bare homepages hurt E-E-A-T. Until then only WhatsApp. Keep Organization.sameAs empty in structured-data.ts (G4) in the same commit as any re-add. --> */}
               <p className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold mb-3">
                 {t('footer.connectTitle')}
               </p>
               <div className="flex items-center gap-2">
                 {/* WhatsApp is the de facto contact channel for the CN
-                    market. Only social with a verified handle. The other
-                    icons (Instagram / Facebook / YouTube / LinkedIn) used
-                    to render here but linked to bare homepages
-                    (https://www.instagram.com/ etc.) which Google treats
-                    as a low-trust E-E-A-T signal. Removed in Phase 145;
-                    re-add once Jahid supplies real profile URLs. */}
+                    market — the only social with a verified handle.
+                    Instagram / Facebook / YouTube / LinkedIn icons used
+                    to render here linked to bare platform homepages
+                    (no profile path). Removed in Phase 145; G4 keeps
+                    Organization.sameAs [] until real profile URLs land
+                    in BOTH the footer AND structured-data.ts together. */}
                 <a
                   href="https://wa.me/8617325764171"
                   target="_blank"
