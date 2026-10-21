@@ -153,24 +153,31 @@ const baseConfig: NextConfig = {
   // Next.js and Google Analytics scripts:
   //
   //   • script-src allows 'self' + inline ('unsafe-inline'+) +
-  //     googletagmanager.com (gtag.js loader). Next.js ships a
-  //     hydration bootstrap and a few Next-dev-only scripts that
-  //     are inlined; the next-script nonce machinery is opt-in
-  //     and we don't need it for the SICA pages because we have
-  //     no third-party widgets that require it. We add
-  //     'unsafe-eval' because Next.js' RSC streaming + the
-  //     development error overlay both rely on eval-shaped
-  //     string transforms at runtime — tightening this to
-  //     'unsafe-eval' off breaks production rendering. frame-src
-  //     is restricted to SICA's own origin + the GA host; the
-  //     WhatsApp / Resend / Supabase integrations never embed
-  //     cross-origin iframes.
+  //     googletagmanager.com (gtag.js loader) +
+  //     static.cloudflareinsights.com (Cloudflare Web Analytics
+  //     beacon). Next.js ships a hydration bootstrap and a few
+  //     Next-dev-only scripts that are inlined; the next-script
+  //     nonce machinery is opt-in and we don't need it for the
+  //     SICA pages because we have no third-party widgets that
+  //     require it. We add 'unsafe-eval' because Next.js' RSC
+  //     streaming + the development error overlay both rely on
+  //     eval-shaped string transforms at runtime — tightening
+  //     this to 'unsafe-eval' off breaks production rendering.
+  //     frame-src is restricted to SICA's own origin + the GA
+  //     host; the WhatsApp / Resend / Supabase integrations
+  //     never embed cross-origin iframes.
   //   • style-src allows 'self' + inline (Tailwind 4 ships CSS
   //     custom properties through inline <style> at runtime).
   //   • img-src / media-src allow the CDN hosts we proxy
   //     (cdn.urongda.com, static-data.gaokao.cn, supabase storage
-  //      signed URLs, the static seed image host).
-  //   • connect-src allows SICA's API surface + GA + Supabase.
+  //      signed URLs, the static seed image host) plus GA's
+  //     image-pixel fallback hosts (*.google-analytics.com,
+  //     *.googletagmanager.com).
+  //   • connect-src allows SICA's API surface + Supabase + GA.
+  //     The *.analytics.google.com wildcard does not match the
+  //     bare host analytics.google.com, so that host is listed
+  //     explicitly, along with *.g.doubleclick.net, www.google.com
+  //     (gtag transport) and cloudflareinsights.com.
   //   • frame-ancestors 'self' (paired with X-Frame-Options).
   //   • base-uri 'self' so an injected <base> can't reframe
   //     relative URLs.
@@ -194,12 +201,12 @@ const baseConfig: NextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.googletagmanager.com",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.googletagmanager.com https://static.cloudflareinsights.com",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob: https://cdn.urongda.com https://static-data.gaokao.cn https://images.unsplash.com https://studyinchina.csc.edu.cn https://i.imgur.com https://*.supabase.co",
+              "img-src 'self' data: blob: https://cdn.urongda.com https://static-data.gaokao.cn https://images.unsplash.com https://studyinchina.csc.edu.cn https://i.imgur.com https://*.supabase.co https://*.google-analytics.com https://*.googletagmanager.com",
               "media-src 'self' https://*.supabase.co",
               "font-src 'self' data:",
-              "connect-src 'self' https://*.supabase.co https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com",
+              "connect-src 'self' https://*.supabase.co https://*.google-analytics.com https://*.analytics.google.com https://analytics.google.com https://*.g.doubleclick.net https://www.google.com https://cloudflareinsights.com https://*.googletagmanager.com",
               "frame-src 'self' https://*.googletagmanager.com",
               "frame-ancestors 'self'",
               "base-uri 'self'",
