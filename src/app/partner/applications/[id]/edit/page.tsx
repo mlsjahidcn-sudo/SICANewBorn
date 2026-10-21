@@ -251,6 +251,7 @@ export default function PartnerEditApplicationPage() {
         // Section 6 — program & application
         university: formData.university.trim(),
         program: formData.program.trim(),
+        programSlug: formData.notInCatalog ? '' : formData.programSlug.trim(),
         intake: formData.intake.trim() || null,
         degree: formData.degree || null,
         hasStudiedInChina: formData.hasStudiedInChina,

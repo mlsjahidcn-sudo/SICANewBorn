@@ -56,24 +56,15 @@ interface StudentDocument {
 
 interface StudentApplication {
   id: string;
-  student_id: string;
-  program_id?: string;
-  university_slug?: string;
-  status: ApplicationStatus;
-  target_degree?: string;
-  target_intake?: string;
-  created_at: string;
-  application_number?: string;
-  // Phase 77: human-readable student name derived from the parent
-  // student_profiles row (falls back to email local-part, then "—").
-  // The page already knows which student this is, so this is mostly
-  // defensive — if the bridge ever links multiple students, the
-  // admin can still tell which row belongs to whom.
+  status: ApplicationStatus | 'In Review';
+  university?: string | null;
+  program?: string | null;
+  degree?: string | null;
+  intake?: string | null;
+  createdAt: string;
+  applicationNumber?: string | null;
   studentName?: string;
-  // Phase 62 (Bug 1): distinguishes partner-sourced rows in the merged
-  // feed. 'partner' = from partner_applications via the bridge column,
-  // undefined = direct student_applications row.
-  surface?: 'student' | 'partner';
+  surface: 'student' | 'partner';
 }
 
 interface ActivityEvent {
@@ -632,7 +623,7 @@ export default function AdminStudentDetailPage() {
                     >
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm flex items-center gap-2">
-                          {app.application_number || app.id.slice(0, 8)}
+                          {app.applicationNumber || app.id.slice(0, 8)}
                           {app.surface === 'partner' && (
                             <span className="text-[10px] uppercase tracking-wide bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded">
                               {t('adminStudentDetail.appSurfacePartner')}
@@ -640,11 +631,11 @@ export default function AdminStudentDetailPage() {
                           )}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {app.target_degree || '—'} • {app.target_intake || '—'} • {app.university_slug || '—'}
+                          {app.degree || '—'} • {app.intake || '—'} • {app.university || '—'}
                         </p>
                         <p className="text-xs text-gray-400 mt-1">
                           {t('adminStudentDetail.appCreatedOn', {
-                            date: new Date(app.created_at).toLocaleString(),
+                            date: new Date(app.createdAt).toLocaleString(),
                           })}
                         </p>
                       </div>

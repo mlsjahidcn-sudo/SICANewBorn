@@ -48,8 +48,14 @@ jobs:
       # above cannot see those — from its point of view the key simply
       # doesn't exist — and t() falls back to rendering the key itself,
       # so it ships as a raw string in the UI instead of failing a build.
+      - name: i18n parity
+        run: npm run i18n:check
+
       - name: i18n missing keys
         run: npm run i18n:missing
 
-      - name: Build
-        run: npx next build
+      - name: Build app (Hostinger webpack configuration)
+        run: npm run build:app
+
+      - name: Build custom server
+        run: npm run build:server

@@ -84,13 +84,13 @@ if [ "${ANALYZE:-false}" = "true" ]; then
   # `npm ci` step and finds react / react-dom. Without this, the
   # Hostinger build dies with `Cannot find module 'react'` even
   # though package.json + package-lock.json are correct.
-  ANALYZE=true ./node_modules/.bin/next build --webpack
+  ANALYZE=true npm run build:app
 else
   echo "Building the Next.js project (webpack)..."
-  ./node_modules/.bin/next build --webpack
+  npm run build:app
 fi
 
 echo "Bundling server with tsup..."
-npx tsup src/server.ts --format cjs --platform node --target node20 --outDir dist --no-splitting --no-minify
+npm run build:server
 
 echo "Build completed successfully!"

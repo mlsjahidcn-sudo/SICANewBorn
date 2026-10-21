@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSupabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-server';
+import { buildServiceClient, getServerEnv } from '@/lib/supabase-auth';
 
 /**
  * GET /api/health
@@ -23,7 +23,8 @@ import { getSupabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-se
  *
  * HTTP status:
  *   - 200 when status=ok
- *   - 503 when status=degraded (any failed check)
+ *   - 503 when the DB is unavailable or required DB configuration is missing
+ *   - Optional integrations are reported separately and do not determine readiness.
  *
  * No auth — uptime monitors need to hit it unauthenticated.
  * The endpoint refuses to expose secrets: only boolean env presence.
@@ -33,31 +34,33 @@ export const runtime = 'nodejs';
 
 const DB_PROBE_TIMEOUT_MS = 2000;
 
-// Cheapest possible round-trip against the live DB. Uses
-// `partner_applications` (smallest table that's always present
-// + RLS-permissive for the service-role key) so we don't depend
-// on row count. limit(1) keeps it O(1) regardless of growth.
+// A bounded read verifies access without counting the whole table.
 async function probeDb(): Promise<'ok' | 'down' | 'skipped' | 'timeout'> {
-  if (!isSupabaseServerConfigured()) return 'skipped';
-  const supabase = getSupabaseServer();
-  if (!supabase) return 'skipped';
-
-  const probe = supabase
-    .from('partner_applications')
-    .select('id', { count: 'exact', head: true })
-    .limit(1);
-
+  const { url, anonKey, serviceKey } = getServerEnv();
+  if (!url || !anonKey || !serviceKey) return 'skipped';
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const controller = new AbortController();
   try {
+    const probe = buildServiceClient()
+      .from('partner_applications')
+      .select('id', { head: true })
+      .limit(1)
+      .abortSignal(controller.signal);
     const result = await Promise.race([
       probe,
-      new Promise<{ timeout: true }>((resolve) =>
-        setTimeout(() => resolve({ timeout: true }), DB_PROBE_TIMEOUT_MS),
-      ),
+      new Promise<{ timeout: true }>((resolve) => {
+        timer = setTimeout(() => {
+          resolve({ timeout: true });
+          controller.abort();
+        }, DB_PROBE_TIMEOUT_MS);
+      }),
     ]);
     if ('timeout' in result) return 'timeout';
-    return 'ok';
+    return result.error ? 'down' : 'ok';
   } catch {
     return 'down';
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
   }
 }
 
@@ -66,29 +69,16 @@ function envPresence(name: string): boolean {
   return typeof v === 'string' && v.length > 0;
 }
 
-/**
- * Some secrets are stored under COZE_-prefixed names in this
- * project (carried over from the original Vercel/Coze deploy
- * conventions). Accept either prefix so the health readout
- * stays honest — otherwise a fully-working deploy looks
- * half-configured to the uptime monitor.
- */
-function supabaseServerKeyPresent(): boolean {
-  return (
-    envPresence('SUPABASE_SERVICE_ROLE_KEY') ||
-    envPresence('COZE_SUPABASE_SERVICE_ROLE_KEY')
-  );
-}
-
 export async function GET(): Promise<NextResponse> {
-  const [dbStatus] = await Promise.all([probeDb()]);
+  const { url, anonKey, serviceKey } = getServerEnv();
+  const dbStatus = await probeDb();
 
   const checks = {
     db: dbStatus,
     env: {
-      SUPABASE_URL: envPresence('NEXT_PUBLIC_SUPABASE_URL'),
-      SUPABASE_ANON_KEY: envPresence('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
-      SUPABASE_SERVICE_ROLE_KEY: supabaseServerKeyPresent(),
+      SUPABASE_URL: Boolean(url),
+      SUPABASE_ANON_KEY: Boolean(anonKey),
+      SUPABASE_SERVICE_ROLE_KEY: Boolean(serviceKey),
       RESEND_API_KEY: envPresence('RESEND_API_KEY'),
       SENTRY_DSN: envPresence('SENTRY_DSN'),
       // Newsletter cron secrets — these being set means the
@@ -97,13 +87,11 @@ export async function GET(): Promise<NextResponse> {
       // secured?"
       NEWS_CRON_SECRET: envPresence('NEWS_CRON_SECRET'),
       DRIP_CRON_SECRET: envPresence('DRIP_CRON_SECRET'),
+      FAQ_CRON_SECRET: envPresence('FAQ_CRON_SECRET'),
     },
   };
 
-  // 'skipped' on the DB check (not configured → return null for
-  // upmon purposes) is treated as healthy so missing env doesn't
-  // page the on-call during a deploy with half-set vars.
-  const healthy = dbStatus === 'ok' || dbStatus === 'skipped';
+  const healthy = dbStatus === 'ok';
 
   return NextResponse.json(
     {
@@ -113,6 +101,6 @@ export async function GET(): Promise<NextResponse> {
       version: (process.env.RAILWAY_GIT_COMMIT_SHA ?? 'dev').slice(0, 7),
       checks,
     },
-    { status: healthy ? 200 : 503 },
+    { status: healthy ? 200 : 503, headers: { 'Cache-Control': 'no-store' } },
   );
 }

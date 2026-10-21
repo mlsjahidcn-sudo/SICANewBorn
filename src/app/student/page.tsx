@@ -25,18 +25,8 @@ import {
 } from 'lucide-react';
 import { StudentDashboardSkeleton } from '@/components/student/skeletons';
 import { computeBasicProfileCompletion } from '@/lib/student-profile-completion';
-
-// Real DB shapes (subset of fields we display)
-interface StudentApplication {
-  id: string;
-  university_name: string;
-  university_name_cn?: string | null;
-  program_name: string;
-  program_name_cn?: string | null;
-  intake: string;
-  status: string;
-  created_at: string;
-}
+import type { StudentApplication } from '@/lib/application-mapper';
+import type { StudentApplicationStats } from '@/lib/dashboard-stats';
 
 interface StudentDocument {
   id: string;
@@ -51,14 +41,12 @@ interface StudentDocument {
 const STATUS_COLOR: Record<string, string> = {
   Accepted: 'bg-green-100 text-green-800',
   Rejected: 'bg-red-100 text-red-800',
-  'In Review': 'bg-blue-100 text-blue-800',
+  'Under Review': 'bg-blue-100 text-blue-800',
   Draft: 'bg-gray-100 text-gray-700',
   Submitted: 'bg-blue-100 text-blue-800',
   Pending: 'bg-yellow-100 text-yellow-800',
   Verified: 'bg-green-100 text-green-800',
 };
-
-const PENDING_STATUSES = new Set(['Submitted', 'In Review', 'Pending']);
 
 export default function StudentDashboardPage() {
   const { t, locale } = useI18n();
@@ -67,6 +55,7 @@ export default function StudentDashboardPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [applications, setApplications] = useState<StudentApplication[]>([]);
   const [documents, setDocuments] = useState<StudentDocument[]>([]);
+  const [stats, setStats] = useState<StudentApplicationStats>({ total: 0, pending: 0, accepted: 0, documentsRequested: 0, drafts: 0 });
   // Phase 4A: profile-aware greeting and progress context.
   // Phase 94: extended so the basic-profile completion banner can
   // check the same fields the profile page's meter tracks.
@@ -106,16 +95,11 @@ export default function StudentDashboardPage() {
     let cancelled = false;
     (async () => {
       try {
-        const [appsRes, docsRes, notifsRes, profileRes] = await Promise.all([
-          // Phase 97: the list API returns { applications, total, ... }
-          // (Phase 1.1 pagination envelope) — NOT { data: [...] }. The
-          // old `appsRes.data` read was always undefined, so the
-          // Total/Pending/Accepted stat cards, the recent-applications
-          // card, and the docs-needed/draft banners rendered empty for
-          // every student.
+        const [appsRes, statsRes, docsRes, notifsRes, profileRes] = await Promise.all([
           apiFetchJson<{ applications: StudentApplication[] }>(
-            '/api/student/applications',
+            '/api/student/applications?limit=2',
           ),
+          apiFetchJson<StudentApplicationStats>('/api/student/applications/stats'),
           apiFetchJson<{ data: StudentDocument[] }>('/api/student/documents'),
           apiFetchJson<{ notifications: StudentNotifSummary[] }>(
             '/api/student/notifications?limit=3',
@@ -126,6 +110,7 @@ export default function StudentDashboardPage() {
         ]);
         if (cancelled) return;
         setApplications(appsRes.applications || []);
+        setStats(statsRes);
         setDocuments(docsRes.data || []);
         setLatestNotifs(notifsRes.notifications || []);
         setProfile(profileRes.data || null);
@@ -142,14 +127,13 @@ export default function StudentDashboardPage() {
     };
   }, [authLoading, user]);
 
-  // Derive stats from real data
-  const totalApplications = applications.length;
-  const pendingApplications = applications.filter((a) => PENDING_STATUSES.has(a.status)).length;
-  const acceptedOffers = applications.filter((a) => a.status === 'Accepted').length;
+  // Counts cover all applications; the list above is only the two most recent.
+  const totalApplications = stats.total;
+  const pendingApplications = stats.pending;
+  const acceptedOffers = stats.accepted;
   const totalDocuments = documents.length;
-  // Phase 2: action-needed breakdown for the dashboard banner
-  const docsNeeded = applications.filter((a) => a.status === 'Documents Requested');
-  const resumableDrafts = applications.filter((a) => a.status === 'Draft');
+  const docsNeeded = stats.documentsRequested;
+  const resumableDrafts = stats.drafts;
   const recentApplications = applications.slice(0, 2);
   const recentDocuments = documents.slice(0, 3);
 
@@ -212,31 +196,26 @@ export default function StudentDashboardPage() {
 
   // Phase 4A: pick the single most urgent next action for the student.
   const nextAction = (() => {
-    const docsRequested = applications.filter((a) => a.status === 'Documents Requested');
-    if (docsRequested.length > 0) {
+    if (docsNeeded > 0) {
       return {
         type: 'documents' as const,
-        count: docsRequested.length,
+        count: docsNeeded,
         href: '/student/applications',
         label: t('student.nextActionDocuments'),
       };
     }
-    const drafts = applications.filter((a) => a.status === 'Draft');
-    if (drafts.length > 0) {
+    if (resumableDrafts > 0) {
       return {
         type: 'draft' as const,
-        count: drafts.length,
+        count: resumableDrafts,
         href: '/student/applications',
         label: t('student.nextActionDraft'),
       };
     }
-    const pending = applications.filter((a) =>
-      ['Submitted', 'Under Review'].includes(a.status),
-    );
-    if (pending.length > 0) {
+    if (pendingApplications > 0) {
       return {
         type: 'pending' as const,
-        count: pending.length,
+        count: pendingApplications,
         href: '/student/applications',
         label: t('student.nextActionPending'),
       };
@@ -318,13 +297,13 @@ export default function StudentDashboardPage() {
           items from the sidebar badge in the body so the student
           doesn't miss them. Urgent (Documents Requested) outranks
           resumable (Draft). */}
-      {docsNeeded.length > 0 && (
+      {docsNeeded > 0 && (
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 border-l-4 border-[#9B1B30] bg-red-50 rounded-none">
           <AlertCircle className="h-5 w-5 text-[#9B1B30] flex-shrink-0" />
           <div className="flex-1">
             <p className="font-semibold text-[#1B2A4A]">
-              {docsNeeded.length} application{docsNeeded.length === 1 ? '' : 's'}{' '}
-              need{docsNeeded.length === 1 ? 's' : ''} documents from you
+              {docsNeeded} application{docsNeeded === 1 ? '' : 's'}{' '}
+              need{docsNeeded === 1 ? 's' : ''} documents from you
             </p>
             <p className="text-sm text-gray-700 mt-0.5">
               SICA is waiting on uploaded files before they can continue reviewing your application.
@@ -338,13 +317,13 @@ export default function StudentDashboardPage() {
           </Link>
         </div>
       )}
-      {resumableDrafts.length > 0 && docsNeeded.length === 0 && (
+      {resumableDrafts > 0 && docsNeeded === 0 && (
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 border-l-4 border-[#D4A853] bg-[#FAF6E8] rounded-none">
           <FileText className="h-5 w-5 text-[#9B1B30] flex-shrink-0" />
           <div className="flex-1">
             <p className="font-semibold text-[#1B2A4A]">
-              You have {resumableDrafts.length} unsent draft
-              {resumableDrafts.length === 1 ? '' : 's'}
+              You have {resumableDrafts} unsent draft
+              {resumableDrafts === 1 ? '' : 's'}
             </p>
             <p className="text-sm text-gray-700 mt-0.5">
               Pick up where you left off — your progress is saved.
@@ -365,7 +344,7 @@ export default function StudentDashboardPage() {
 
       {/* Empty-docs nudge — primary ask after signup. Below docs-requested /
           draft urgency banners so those keep priority. */}
-      {totalDocuments === 0 && docsNeeded.length === 0 && (
+      {totalDocuments === 0 && docsNeeded === 0 && (
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 border-l-4 border-[#9B1B30] bg-red-50 rounded-none">
           <FileText className="h-5 w-5 text-[#9B1B30] flex-shrink-0" />
           <div className="flex-1">
@@ -387,7 +366,7 @@ export default function StudentDashboardPage() {
 
       {/* Softer prefs nudge — only when docs exist but preferred universities
           are still empty (docs-first path is complete enough to advise). */}
-      {totalDocuments > 0 && prefsEmpty && docsNeeded.length === 0 && (
+      {totalDocuments > 0 && prefsEmpty && docsNeeded === 0 && (
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 border-l-4 border-[#1B2A4A] bg-[#F3F4F6] rounded-none">
           <GraduationCap className="h-5 w-5 text-[#1B2A4A] flex-shrink-0" />
           <div className="flex-1">
@@ -572,14 +551,14 @@ export default function StudentDashboardPage() {
                 <div key={app.id} className="flex items-start justify-between p-4 bg-[#F3F4F6] rounded-lg">
                   <div className="flex-1">
                     <h4 className="font-medium text-[#1B2A4A]">
-                      {locale === 'zh' && app.university_name_cn
-                        ? app.university_name_cn
-                        : app.university_name}
+                      {locale === 'zh' && app.universityNameCn
+                        ? app.universityNameCn
+                        : app.university}
                     </h4>
                     <p className="text-sm text-[#4B5563]">
-                      {locale === 'zh' && app.program_name_cn
-                        ? app.program_name_cn
-                        : app.program_name}
+                      {locale === 'zh' && app.programNameCn
+                        ? app.programNameCn
+                        : app.program}
                     </p>
                     <div className="flex items-center gap-2 mt-2">
                       <Calendar className="h-3 w-3 text-[#4B5563]" />
@@ -596,7 +575,7 @@ export default function StudentDashboardPage() {
                       <Progress
                         value={getProgressForStatus(app.status)}
                         className="h-1.5"
-                        aria-label={`${app.university_name} ${getProgressLabel(app.status)}`}
+                        aria-label={`${app.university} ${getProgressLabel(app.status)}`}
                       />
                     </div>
                   </div>

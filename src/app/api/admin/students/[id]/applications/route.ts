@@ -49,43 +49,38 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     const [studentAppsRes, partnerAppsRes] = await Promise.all([
       service
         .from('student_applications')
-        .select('*')
+        .select('id, application_number, status, university_name, program_name, degree, intake, created_at')
         .eq('student_id', id)
         .order('created_at', { ascending: false }),
       service
         .from('partner_applications')
-        .select('*')
+        .select('id, application_number, status, university, program, degree, intake, created_at')
         .eq('linked_student_profile_id', id)
+        .is('archived_at', null)
         .order('created_at', { ascending: false }),
     ]);
 
-    // Phase 62 (Bug 1): partner_applications uses different field names
-    // (university/program/degree/intake) than student_applications
-    // (university_slug/program_id/target_degree/target_intake) which the
-    // admin UI reads. Map partner rows to the same shape so the UI sees a
-    // unified field set without caring about the source.
+    // Both surfaces return the same explicit display fields. Database column
+    // names differ, so never pass raw rows through to the detail page.
     const normalizedPartnerApps = (partnerAppsRes.data || []).map((row: Record<string, unknown>) => ({
-      ...row,
-      surface: 'partner' as const,
-      university_slug: (row.university as string | undefined) ?? null,
-      program_id: (row.program as string | undefined) ?? null,
-      target_degree: (row.degree as string | undefined) ?? null,
-      target_intake: (row.intake as string | undefined) ?? null,
+      id: row.id, applicationNumber: row.application_number, status: row.status,
+      university: row.university, program: row.program, degree: row.degree,
+      intake: row.intake, createdAt: row.created_at, surface: 'partner' as const,
       studentName,
     }));
-
     const studentAppsWithName = (studentAppsRes.data || []).map((row: Record<string, unknown>) => ({
-      ...row,
+      id: row.id, applicationNumber: row.application_number, status: row.status,
+      university: row.university_name, program: row.program_name, degree: row.degree,
+      intake: row.intake, createdAt: row.created_at, surface: 'student' as const,
       studentName,
     }));
 
     const data = [...studentAppsWithName, ...normalizedPartnerApps].sort(
       (a, b) =>
-        new Date((b as { created_at?: string }).created_at || 0).getTime() -
-        new Date((a as { created_at?: string }).created_at || 0).getTime(),
+        new Date(String(b.createdAt || '')).getTime() -
+        new Date(String(a.createdAt || '')).getTime(),
     );
     const error = studentAppsRes.error || partnerAppsRes.error || studentRes.error;
-
 
     if (error) {
       console.error('[admin/students/:id/applications GET] supabase error:', error);

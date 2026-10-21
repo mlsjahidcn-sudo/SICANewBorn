@@ -30,40 +30,18 @@ export async function GET(request: NextRequest) {
     // payload to count 6 buckets. Replaced with per-bucket `count:
     // 'exact'` queries — same answer, 0-byte payload for the JS side.
     // 7 buckets in parallel.
-    const archivedQ = auth.supabase
-      .from('partner_students')
-      .select('id', { count: 'exact', head: true })
-      .not('archived_at', 'is', null);
-
-    const newQ = auth.supabase
-      .from('partner_students')
-      .select('id', { count: 'exact', head: true })
-      .is('archived_at', null)
-      .eq('status', 'New');
-
-    const inProgressQ = auth.supabase
-      .from('partner_students')
-      .select('id', { count: 'exact', head: true })
-      .is('archived_at', null)
-      .eq('status', 'In Progress');
-
-    const appliedQ = auth.supabase
-      .from('partner_students')
-      .select('id', { count: 'exact', head: true })
-      .is('archived_at', null)
-      .eq('status', 'Applied');
-
-    const acceptedQ = auth.supabase
-      .from('partner_students')
-      .select('id', { count: 'exact', head: true })
-      .is('archived_at', null)
-      .eq('status', 'Accepted');
-
-    const rejectedQ = auth.supabase
-      .from('partner_students')
-      .select('id', { count: 'exact', head: true })
-      .is('archived_at', null)
-      .eq('status', 'Rejected');
+    const scoped = () => {
+      const query = auth.supabase.from('partner_students')
+        .select('id', { count: 'exact', head: true })
+        .eq('partner_id', auth.partnerId);
+      return auth.role === 'member' ? query.eq('created_by_user_id', auth.user.id) : query;
+    };
+    const archivedQ = scoped().not('archived_at', 'is', null);
+    const newQ = scoped().is('archived_at', null).eq('status', 'New');
+    const inProgressQ = scoped().is('archived_at', null).eq('status', 'In Progress');
+    const appliedQ = scoped().is('archived_at', null).eq('status', 'Applied');
+    const acceptedQ = scoped().is('archived_at', null).eq('status', 'Accepted');
+    const rejectedQ = scoped().is('archived_at', null).eq('status', 'Rejected');
 
     const [archivedRes, newRes, inProgressRes, appliedRes, acceptedRes, rejectedRes] =
       await Promise.all([archivedQ, newQ, inProgressQ, appliedQ, acceptedQ, rejectedQ]);

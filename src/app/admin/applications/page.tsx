@@ -291,6 +291,7 @@ export default function AdminApplicationsPage() {
 
   // Delete dialog
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [applicationToDelete, setApplicationToDelete] = useState<Application | null>(null);
 
   // S31: bulk-selection state. The set is keyed by app id. We
@@ -483,6 +484,7 @@ export default function AdminApplicationsPage() {
 
   const confirmDelete = async () => {
     if (!applicationToDelete) return;
+    setDeleteError(null);
     setIsDeleting(true);
     try {
       // S28: partner CRM rows live in a separate table and are
@@ -492,7 +494,13 @@ export default function AdminApplicationsPage() {
         applicationToDelete.surface === 'partner'
           ? `/api/admin/partner-applications/${applicationToDelete.id}`
           : `/api/admin/applications/${applicationToDelete.id}`;
-      await apiFetch(deleteHref, { method: 'DELETE' });
+      const response = await apiFetch(deleteHref, { method: 'DELETE' });
+      if (!response.ok) {
+        const body: unknown = await response.json().catch(() => null);
+        const message = body && typeof body === 'object' && 'error' in body && typeof body.error === 'string'
+          ? body.error : 'Failed to delete application';
+        throw new Error(message);
+      }
       setApplications((prev) => prev.filter((a) => a.id !== applicationToDelete.id));
       setTotal((prev) => Math.max(0, prev - 1));
       setDeleteDialogOpen(false);
@@ -500,13 +508,14 @@ export default function AdminApplicationsPage() {
       // Refresh counts since one just got removed
       fetchCounts();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to cancel application');
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete application');
     } finally {
       setIsDeleting(false);
     }
   };
 
   const handleDelete = (application: Application) => {
+    setDeleteError(null);
     setApplicationToDelete(application);
     setDeleteDialogOpen(true);
   };
@@ -1731,6 +1740,7 @@ export default function AdminApplicationsPage() {
               Are you sure you want to delete this application from {applicationToDelete?.studentName}? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
+          {deleteError && <p role="alert" className="text-sm text-red-700">{deleteError}</p>}
           <DialogFooter>
             <Button
               variant="ghost"

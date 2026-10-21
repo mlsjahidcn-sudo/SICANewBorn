@@ -29,6 +29,7 @@ import {
   getPartnerApplicationPriorityLabel,
 } from '@/lib/partner-enum-labels';
 import type { PartnerDocument, PartnerDocStatus } from '@/lib/partner-doc-mapper';
+import type { PartnerApplicationStats } from '@/lib/dashboard-stats';
 
 interface PartnerStudent {
   id: string;
@@ -81,14 +82,6 @@ interface TeamListResponse {
   team: TeamMember[];
 }
 
-const ACTIVE_APPLICATION_STATUSES = new Set([
-  'Draft',
-  'Submitted',
-  'Under Review',
-  'Documents Requested',
-  'In Progress',
-]);
-
 const DOC_STATUS_STYLES: Record<PartnerDocStatus, string> = {
   Pending: 'bg-amber-100 text-amber-800',
   Verified: 'bg-emerald-100 text-emerald-800',
@@ -106,9 +99,7 @@ export default function PartnerDashboard() {
   // any dashboard stat that should reflect "the whole org" must use these
   // totals — never `students.length` / `applications.length`.
   const [totalStudents, setTotalStudents] = useState(0);
-  const [totalApplications, setTotalApplications] = useState(0);
-  const [studentCountCapped, setStudentCountCapped] = useState(false);
-  const [appCountCapped, setAppCountCapped] = useState(false);
+  const [applicationStats, setApplicationStats] = useState<PartnerApplicationStats>({ active: 0, accepted: 0 });
   // Team count is owner-only (the team GET 403s for non-owner members).
   // Fetched independently so a 403 here doesn't fail-soft the rest of
   // the dashboard — members simply don't see the team card.
@@ -123,22 +114,11 @@ export default function PartnerDashboard() {
     let cancelled = false;
     (async () => {
       try {
-        // Both endpoints return { ..., total, page, limit, totalPages }
-        // where `total` is from Supabase's `count: 'exact'`. The response
-        // arrays are capped at limit=100 (the API's hard max). Dashboard
-        // cards use `total` so the counts stay correct past 100 rows; the
-        // status breakdowns (active / accepted) and the "Recent" lists
-        // work off the capped slice, which is fine — the active count is
-        // a directional signal, and "Recent 3" is always the latest 3.
-        //
-        // The team fetch is in a separate Promise.all block so a 403
-        // (non-owner member) doesn't short-circuit the rest of the load
-        // via Promise.all's fail-fast behavior. We catch + log it
-        // locally and keep `team: null` to mean "not an owner / not
-        // available", which the card render uses to hide the card.
+        // Lists supply recent rows; statistics are counted across the full scoped dataset.
         const dataPromise = Promise.all([
           apiFetchJson<PaginatedStudents>('/api/partner/students?limit=100'),
           apiFetchJson<PaginatedApplications>('/api/partner/applications?limit=100'),
+          apiFetchJson<PartnerApplicationStats>('/api/partner/applications/stats'),
         ]);
         const teamPromise = apiFetchJson<TeamListResponse>('/api/partner/team').then(
           (res) => ({ ok: true as const, res }),
@@ -153,18 +133,13 @@ export default function PartnerDashboard() {
           attentionPromise,
         ]);
         if (cancelled) return;
-        const [studentsRes, appsRes] = dataRes;
+        const [studentsRes, appsRes, statsRes] = dataRes;
         const studentsList = Array.isArray(studentsRes?.students) ? studentsRes.students : [];
         const appsList = Array.isArray(appsRes?.applications) ? appsRes.applications : [];
         setStudents(studentsList);
         setApplications(appsList);
         setTotalStudents(studentsRes?.total ?? studentsList.length);
-        setTotalApplications(appsRes?.total ?? appsList.length);
-        // Flag the status breakdowns as lower-bound estimates when the
-        // fetched slice doesn't cover the full org. The headline totals
-        // stay exact because they come from the API's count.
-        setStudentCountCapped((studentsRes?.total ?? studentsList.length) > studentsList.length);
-        setAppCountCapped((appsRes?.total ?? appsList.length) > appsList.length);
+        setApplicationStats(statsRes);
         if (teamRes.ok) {
           setTeam(Array.isArray(teamRes.res?.team) ? teamRes.res.team : []);
         }
@@ -197,14 +172,8 @@ export default function PartnerDashboard() {
     };
   }, [t]);
 
-  // Derive stats from real data. The headline counts use the server-side
-  // `total` (exact count, not capped at 100). Status breakdowns still
-  // come from the fetched slice — if the org has more than 100 rows the
-  // hint text flags it as a lower-bound estimate.
-  const activeApplications = applications.filter((a) =>
-    ACTIVE_APPLICATION_STATUSES.has(a.status || ''),
-  ).length;
-  const acceptedApplications = applications.filter((a) => a.status === 'Accepted').length;
+  const activeApplications = applicationStats.active;
+  const acceptedApplications = applicationStats.accepted;
   // Phase I: urgent/high-priority applications surfaced in the
   // attention panel. The source list is the same 100-row slice the
   // dashboard already loads — good enough for a directional signal.
@@ -341,14 +310,7 @@ export default function PartnerDashboard() {
           <CardContent>
             <div className="text-2xl font-bold text-[#1B2A4A]">{activeApplications}</div>
             <p className="text-sm text-[#4B5563] mt-1">{t('partnerDashboard.activeApplicationsHint')}</p>
-            {appCountCapped && (
-              <p className="text-xs text-amber-700 mt-1">
-                {t('partnerDashboard.statusBreakdownCapped', {
-                  shown: applications.length,
-                  total: totalApplications,
-                })}
-              </p>
-            )}
+
             <Button asChild variant="outline" size="sm" className="mt-4 w-full rounded-none">
               <Link href="/partner/applications" className="flex items-center justify-center">
                 {t('partnerDashboard.viewApplications')} <ChevronRight className="ml-1 h-4 w-4" />
@@ -370,14 +332,7 @@ export default function PartnerDashboard() {
           <CardContent>
             <div className="text-2xl font-bold text-[#1B2A4A]">{acceptedApplications}</div>
             <p className="text-sm text-[#4B5563] mt-1">{t('partnerDashboard.acceptedHint')}</p>
-            {appCountCapped && (
-              <p className="text-xs text-amber-700 mt-1">
-                {t('partnerDashboard.statusBreakdownCapped', {
-                  shown: applications.length,
-                  total: totalApplications,
-                })}
-              </p>
-            )}
+
           </CardContent>
         </Card>
 

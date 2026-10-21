@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireTeamMember, getServerEnv } from '@/lib/supabase-auth';
+import { PARTNER_ACTIVE_STATUSES } from '@/lib/dashboard-stats';
 
 /**
  * GET /api/partner/applications/stats
  *
  * Server-side breakdown for the partner's applications.
  * Returns exact counts (no row cap):
- *   { total, inReview, submitted, accepted, urgent, archived }
+ *   { total, active, inReview, submitted, accepted, urgent, archived }
  *
  * Auth: requireTeamMember. Uses the per-request authed client (RLS
  * scopes to this partner).
@@ -29,9 +30,10 @@ export async function GET(request: NextRequest) {
     // counting in JS. For a partner with 10k rows this is a 10k-row
     // network payload to count a single bucket. Replaced with
     // per-bucket `count: 'exact'` queries — same answer, 0-byte
-    // payload for the JS side. 6 buckets in parallel.
+    // payload for the JS side. 7 buckets in parallel.
     //
     // Buckets:
+    //   active = Draft + Submitted + In Review
     //   inReview = Submitted + In Review (cross-taxonomy)
     //   submitted = Submitted only
     //   accepted = Accepted
@@ -56,6 +58,7 @@ export async function GET(request: NextRequest) {
         .not('archived_at', 'is', null);
 
     const totalActiveQ = basePartner();
+    const activeQ = basePartner().in('status', [...PARTNER_ACTIVE_STATUSES]);
     const archivedQ = basePartnerArchived();
     const inReviewQ = auth.supabase
       .from('partner_applications')
@@ -85,6 +88,7 @@ export async function GET(request: NextRequest) {
     // Phase 1 continued: team members only see rows they created.
     if (auth.role === 'member') {
       totalActiveQ.eq('created_by_user_id', auth.user.id);
+      activeQ.eq('created_by_user_id', auth.user.id);
       archivedQ.eq('created_by_user_id', auth.user.id);
       inReviewQ.eq('created_by_user_id', auth.user.id);
       submittedQ.eq('created_by_user_id', auth.user.id);
@@ -92,10 +96,10 @@ export async function GET(request: NextRequest) {
       urgentQ.eq('created_by_user_id', auth.user.id);
     }
 
-    const [totalRes, archivedRes, inReviewRes, submittedRes, acceptedRes, urgentRes] =
-      await Promise.all([totalActiveQ, archivedQ, inReviewQ, submittedQ, acceptedQ, urgentQ]);
+    const [totalRes, archivedRes, inReviewRes, submittedRes, acceptedRes, urgentRes, activeRes] =
+      await Promise.all([totalActiveQ, archivedQ, inReviewQ, submittedQ, acceptedQ, urgentQ, activeQ]);
 
-    const firstError = [totalRes, archivedRes, inReviewRes, submittedRes, acceptedRes, urgentRes]
+    const firstError = [totalRes, archivedRes, inReviewRes, submittedRes, acceptedRes, urgentRes, activeRes]
       .find((r) => r.error);
     if (firstError?.error) {
       console.error('[partner/applications/stats GET] count error:', firstError.error.message);
@@ -105,6 +109,7 @@ export async function GET(request: NextRequest) {
     const total = (totalRes.count || 0) + (archivedRes.count || 0);
     return NextResponse.json({
       total,
+      active: activeRes.count || 0,
       inReview: inReviewRes.count || 0,
       submitted: submittedRes.count || 0,
       accepted: acceptedRes.count || 0,
