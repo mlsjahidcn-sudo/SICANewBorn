@@ -5,6 +5,10 @@ import { X, MessageCircle, GraduationCap, Newspaper, Calendar, FileText, ArrowRi
 import { usePathname } from 'next/navigation';
 import { track } from '@/lib/analytics';
 import { WHATSAPP_GROUP_URL as WHATSAPP_GROUP_URL_BASE } from '@/lib/contact';
+import {
+  WEBINAR_PROMO_DISMISS_KEY,
+  isOnPublicPath,
+} from '@/components/webinar-promo-popup';
 
 /**
  * WhatsAppGroupPopup — site-wide join-our-WhatsApp-group popup.
@@ -46,6 +50,27 @@ export function isOnTargetPath(pathname: string | null): boolean {
   return false;
 }
 
+/**
+ * At most one popup at a time.
+ *
+ * The webinar promo (top of the screen) and this popup (bottom of
+ * the screen) are both on screen on `/` + `/universities*` at 390px
+ * width, which covers most of the viewport. The promo wins: this
+ * popup stays out of the way until the visitor dismisses (or clicks
+ * through) the promo, then appears on the next page view.
+ *
+ * `promoDismissed` is the sessionStorage flag of the promo
+ * (`sica_webinar_promo_dismissed`) — false means the promo is
+ * still on screen.
+ */
+export function isWebinarPromoOnScreen(
+  pathname: string | null,
+  promoDismissed: boolean,
+): boolean {
+  if (!isOnPublicPath(pathname)) return false;
+  return !promoDismissed;
+}
+
 export function WhatsAppGroupPopup() {
   const pathname = usePathname();
   const [visible, setVisible] = useState(false);
@@ -65,6 +90,20 @@ export function WhatsAppGroupPopup() {
       // sessionStorage unavailable — proceed to show.
     }
     if (!isOnTargetPath(pathname)) return;
+
+    // Never stack on top of the webinar promo: while the promo is
+    // eligible on this page and hasn't been dismissed yet, it owns
+    // the screen. This popup returns on a later page view (after
+    // the visitor dismisses or clicks the promo).
+    let promoDismissed = false;
+    try {
+      promoDismissed =
+        window.sessionStorage.getItem(WEBINAR_PROMO_DISMISS_KEY) === '1';
+    } catch {
+      // sessionStorage unavailable — the promo can't read its flag
+      // either, so assume it is on screen and stay out of the way.
+    }
+    if (isWebinarPromoOnScreen(pathname, promoDismissed)) return;
 
     // Two parallel triggers: 3s delay OR scroll >50% of viewport
     // (whichever lands first). The setVisible callback is shared so

@@ -23,6 +23,15 @@ describe('isOnPublicPath', () => {
     expect(isOnPublicPath('/api/health')).toBe(false);
   });
 
+  it('denies the conversion pages (consultation, contact, apply, assessment, get-started)', () => {
+    expect(isOnPublicPath('/counselling')).toBe(false);
+    expect(isOnPublicPath('/counselling/lookup')).toBe(false);
+    expect(isOnPublicPath('/contact')).toBe(false);
+    expect(isOnPublicPath('/apply')).toBe(false);
+    expect(isOnPublicPath('/assessment')).toBe(false);
+    expect(isOnPublicPath('/get-started')).toBe(false);
+  });
+
   it('rejects null/empty', () => {
     expect(isOnPublicPath(null)).toBe(false);
     expect(isOnPublicPath('')).toBe(false);

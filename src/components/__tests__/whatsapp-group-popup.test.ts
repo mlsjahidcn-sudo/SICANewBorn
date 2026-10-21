@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { isOnTargetPath } from '@/components/whatsapp-group-popup';
+import {
+  isOnTargetPath,
+  isWebinarPromoOnScreen,
+} from '@/components/whatsapp-group-popup';
 
 describe('WhatsAppGroupPopup path filter', () => {
   it('shows on home', () => {
@@ -57,5 +60,30 @@ describe('WhatsAppGroupPopup path filter', () => {
     // through (it doesn't, since we require the segment after /universities).
     expect(isOnTargetPath('/universitiesly')).toBe(false);
     expect(isOnTargetPath('/universities-archive')).toBe(false);
+  });
+});
+
+describe('WhatsAppGroupPopup vs webinar promo (one popup at a time)', () => {
+  it('holds back while the webinar promo is on screen', () => {
+    expect(isWebinarPromoOnScreen('/', false)).toBe(true);
+    expect(isWebinarPromoOnScreen('/universities', false)).toBe(true);
+    expect(isWebinarPromoOnScreen('/universities/tsinghua-university', false)).toBe(
+      true,
+    );
+  });
+
+  it('lets the popup through once the visitor dismissed the promo', () => {
+    expect(isWebinarPromoOnScreen('/', true)).toBe(false);
+    expect(isWebinarPromoOnScreen('/universities', true)).toBe(false);
+    expect(isWebinarPromoOnScreen('/universities/tsinghua-university', true)).toBe(
+      false,
+    );
+  });
+
+  it('does not hold back on pages where the promo never renders', () => {
+    expect(isWebinarPromoOnScreen('/counselling', false)).toBe(false);
+    expect(isWebinarPromoOnScreen('/contact', false)).toBe(false);
+    expect(isWebinarPromoOnScreen('/thank-you', false)).toBe(false);
+    expect(isWebinarPromoOnScreen('/admin', false)).toBe(false);
   });
 });

@@ -8,7 +8,12 @@ import { track } from '@/lib/analytics';
 import { useI18n } from '@/lib/i18n';
 import { WEBINAR_CONFIG, isWebinarSessionUpcoming } from '@/lib/webinar-config';
 
-const DISMISS_KEY = 'sica_webinar_promo_dismissed';
+/**
+ * sessionStorage key for "the visitor closed the webinar promo".
+ * Exported so the WhatsApp-group popup can tell whether the promo
+ * still owns the screen on the current page.
+ */
+export const WEBINAR_PROMO_DISMISS_KEY = 'sica_webinar_promo_dismissed';
 
 /**
  * Visitor-facing promo popup for the current webinar session.
@@ -38,7 +43,9 @@ export function WebinarPromoPopup() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
-      setDismissed(window.sessionStorage.getItem(DISMISS_KEY) === '1');
+      setDismissed(
+        window.sessionStorage.getItem(WEBINAR_PROMO_DISMISS_KEY) === '1',
+      );
     } catch {
       // sessionStorage unavailable — show the popup.
     }
@@ -68,7 +75,7 @@ export function WebinarPromoPopup() {
   const dismiss = (source: 'close_button' | 'cta_click') => {
     try {
       if (typeof window !== 'undefined') {
-        window.sessionStorage.setItem(DISMISS_KEY, '1');
+        window.sessionStorage.setItem(WEBINAR_PROMO_DISMISS_KEY, '1');
       }
     } catch {
       /* best effort */
@@ -173,6 +180,11 @@ export function WebinarPromoPopup() {
  * Denylist path filter — true when the popup may render.
  * Portals are also gated by ClientLayout; webinar landing +
  * thank-you are excluded so we don't distract on conversion.
+ *
+ * The conversion pages (counselling, contact, apply, assessment,
+ * get-started) are excluded too: their whole job is the signup /
+ * booking, and a promo card on top of the hero or the submit
+ * button costs more than the click it wins.
  */
 export function isOnPublicPath(pathname: string | null): boolean {
   if (!pathname) return false;
@@ -181,6 +193,11 @@ export function isOnPublicPath(pathname: string | null): boolean {
   if (pathname.startsWith('/student')) return false;
   if (pathname.startsWith('/webinar-2027-intake-csc')) return false;
   if (pathname.startsWith('/thank-you')) return false;
+  if (pathname.startsWith('/counselling')) return false;
+  if (pathname.startsWith('/contact')) return false;
+  if (pathname.startsWith('/apply')) return false;
+  if (pathname.startsWith('/assessment')) return false;
+  if (pathname.startsWith('/get-started')) return false;
   if (pathname.startsWith('/api/')) return false;
   return true;
 }
