@@ -6,10 +6,8 @@ import { useI18n } from '@/lib/i18n';
 import {
   degreeTypes,
   languages,
-  programDisciplines,
   degreeTypesCn,
   languagesCn,
-  programDisciplinesCn,
   type Program,
 } from '@/lib/data';
 import {
@@ -23,12 +21,30 @@ import {
   X,
   Building2,
   Loader2,
+  LayoutGrid,
+  List,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useUrlState } from '@/hooks/use-url-state';
 import { track } from '@/lib/analytics';
 import { GetStartedCta } from '@/components/GetStartedCta';
+import { SearchableSelect } from '@/components/ui/searchable-select';
+import { Button } from '@/components/ui/button';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 import type { ProgramQueryResult } from '@/lib/program-query';
+import {
+  PROGRAM_FACET_NONE,
+  type ProgramFacet,
+  type ProgramFacets,
+} from '@/lib/program-facets';
+import { DURATION_BANDS, TUITION_BANDS, findBand } from '@/lib/program-facet-bands';
 
 /**
  * Lightweight university shape for the filter dropdown + card labels.
@@ -45,18 +61,22 @@ export interface UniversityOption {
   nameCn: string;
 }
 
-type SortKey = 'default' | 'tuition' | 'name';
+type SortKey = 'default' | 'relevance' | 'tuition' | 'name';
+type ViewMode = 'grid' | 'list';
 
 interface ProgramsClientProps {
   initialResult: ProgramQueryResult;
   universityOptions: UniversityOption[];
   pageSize: number;
+  /** PF-1: the filter vocabulary + counts, read from the live table. */
+  facets: ProgramFacets;
 }
 
 export default function ProgramsClient({
   initialResult,
   universityOptions,
   pageSize,
+  facets,
 }: ProgramsClientProps) {
   const { t, locale } = useI18n();
   const searchParams = useSearchParams();
@@ -69,17 +89,29 @@ export default function ProgramsClient({
   // previous PAGE, not the previous filter state. Reload restores.
   const [searchQuery, setSearchQuery] = useUrlState('q', '' as string, {
     searchParams,
+    // PF-8: the URL write is debounced to match the fetch debounce, so
+    // the address bar and the request land together instead of the URL
+    // churning on every keystroke.
+    debounceMs: 250,
   });
   const [degreeFilter, setDegreeFilter] = useUrlState('degree', '' as string, { searchParams });
   const [languageFilter, setLanguageFilter] = useUrlState('lang', '' as string, { searchParams });
   const [disciplineFilter, setDisciplineFilter] = useUrlState('disc', '' as string, { searchParams });
   const [universityFilter, setUniversityFilter] = useUrlState('uni', '' as string, { searchParams });
+  // PF-4b: the city filter — the site's biggest missing intent.
+  const [cityFilter, setCityFilter] = useUrlState('city', '' as string, { searchParams });
   const [scholarshipOnly, setScholarshipOnly] = useUrlState('scholarship', '' as string, {
     searchParams,
     coerce: (raw) => (raw === '1' ? '1' : ''),
   });
   const [sortBy, setSortBy] = useUrlState<SortKey>('sort', 'default' as SortKey, { searchParams });
   const [pageParam, setPageParam] = useUrlState('page', '' as string, { searchParams });
+  // PF-2: the normalized facets. Only rendered when the catalogue has
+  // the derived columns (the migration has been applied).
+  const [intakeFilter, setIntakeFilter] = useUrlState('intake', '' as string, { searchParams });
+  const [intakeYearFilter, setIntakeYearFilter] = useUrlState('year', '' as string, { searchParams });
+  const [tuitionFilter, setTuitionFilter] = useUrlState('tuition', '' as string, { searchParams });
+  const [durationFilter, setDurationFilter] = useUrlState('duration', '' as string, { searchParams });
 
   const currentPage = Math.max(1, parseInt(pageParam || '1', 10) || 1);
 
@@ -90,21 +122,110 @@ export default function ProgramsClient({
   const [result, setResult] = useState<ProgramQueryResult>(initialResult);
   const [isPending, setIsPending] = useState(false);
 
-  // Skip the mount fetch — the RSC already rendered this exact query.
+  // PF-5: "Load more" accumulates pages. `rows` holds everything loaded
+  // so far; a filter change replaces it with page 1, "Load more" appends
+  // the next page. The RSC renders the first page, so there is no
+  // mount fetch.
+  const [rows, setRows] = useState<Program[]>(initialResult.programs);
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+
   const skipFirstFetch = useRef(true);
 
-  const buildQuery = useCallback(() => {
-    const sp = new URLSearchParams();
-    if (searchQuery) sp.set('search', searchQuery);
-    if (degreeFilter) sp.set('degree', degreeFilter);
-    if (languageFilter) sp.set('language', languageFilter);
-    if (disciplineFilter) sp.set('discipline', disciplineFilter);
-    if (universityFilter) sp.set('university', universityFilter);
-    if (scholarshipOnly === '1') sp.set('scholarship', '1');
-    if (sortBy && sortBy !== 'default') sp.set('sort', sortBy);
-    if (currentPage > 1) sp.set('page', String(currentPage));
-    return sp.toString();
-  }, [searchQuery, degreeFilter, languageFilter, disciplineFilter, universityFilter, scholarshipOnly, sortBy, currentPage]);
+  const buildQuery = useCallback(
+    (page: number) => {
+      const sp = new URLSearchParams();
+      if (searchQuery) sp.set('search', searchQuery);
+      if (degreeFilter) sp.set('degree', degreeFilter);
+      if (languageFilter) sp.set('language', languageFilter);
+      if (disciplineFilter) sp.set('discipline', disciplineFilter);
+      if (universityFilter) sp.set('university', universityFilter);
+      if (cityFilter) sp.set('city', cityFilter);
+      if (scholarshipOnly === '1') sp.set('scholarship', '1');
+      if (intakeFilter) sp.set('intake', intakeFilter);
+      if (intakeYearFilter) sp.set('year', intakeYearFilter);
+      // PF-2: the bands travel as numeric bounds, not as a band key, so
+      // the server never has to know the band table.
+      const tuition = findBand(TUITION_BANDS, tuitionFilter);
+      if (tuition) {
+        if (tuition.min !== null) sp.set('tuition_min', String(tuition.min));
+        if (tuition.max !== null) sp.set('tuition_max', String(tuition.max));
+      }
+      const duration = findBand(DURATION_BANDS, durationFilter);
+      if (duration) {
+        if (duration.min !== null) sp.set('duration_min', String(duration.min));
+        if (duration.max !== null) sp.set('duration_max', String(duration.max));
+      }
+      // PF-3: always send the sort. "default" is a real ordering now
+      // (featured first, then name) — it used to be silently "name",
+      // which made the control lie about what it did.
+      if (sortBy) sp.set('sort', sortBy);
+      if (page > 1) sp.set('page', String(page));
+      sp.set('limit', String(pageSize));
+      return sp.toString();
+    },
+    [
+      searchQuery,
+      degreeFilter,
+      languageFilter,
+      disciplineFilter,
+      universityFilter,
+      cityFilter,
+      scholarshipOnly,
+      intakeFilter,
+      intakeYearFilter,
+      tuitionFilter,
+      durationFilter,
+      sortBy,
+      pageSize,
+    ],
+  );
+
+  // The filter set without the page — a change here invalidates every
+  // loaded page, so the effect below resets to page 1.
+  const filterKey = useMemo(
+    () =>
+      [
+        searchQuery,
+        degreeFilter,
+        languageFilter,
+        disciplineFilter,
+        universityFilter,
+        cityFilter,
+        scholarshipOnly,
+        intakeFilter,
+        intakeYearFilter,
+        tuitionFilter,
+        durationFilter,
+        sortBy,
+      ].join('|'),
+    [
+      searchQuery,
+      degreeFilter,
+      languageFilter,
+      disciplineFilter,
+      universityFilter,
+      cityFilter,
+      scholarshipOnly,
+      intakeFilter,
+      intakeYearFilter,
+      tuitionFilter,
+      durationFilter,
+      sortBy,
+    ],
+  );
+
+  const fetchPage = useCallback(
+    async (page: number, append: boolean, signal: AbortSignal) => {
+      const res = await fetch(`/api/programs?${buildQuery(page)}`, { signal });
+      if (!res.ok) throw new Error(`programs fetch failed: ${res.status}`);
+      const json = (await res.json()) as ProgramQueryResult;
+      setResult(json);
+      setRows((prev) => (append ? [...prev, ...json.programs] : json.programs));
+      return json;
+    },
+    [buildQuery],
+  );
 
   useEffect(() => {
     if (skipFirstFetch.current) {
@@ -112,17 +233,16 @@ export default function ProgramsClient({
       return;
     }
 
-    const qs = buildQuery();
     const controller = new AbortController();
     // Debounce so a burst of keystrokes is one request, not one per key.
     const timer = setTimeout(async () => {
       setIsPending(true);
       try {
-        const res = await fetch(`/api/programs?${qs}`, { signal: controller.signal });
-        if (!res.ok) throw new Error(`programs fetch failed: ${res.status}`);
-        const json = (await res.json()) as ProgramQueryResult;
-        // Ignore a response that lost the race to a newer request.
-        setResult(json);
+        // A filter change invalidates every loaded page — page 7 of the
+        // old result set is meaningless against the new one — so the
+        // list restarts at page 1.
+        await fetchPage(1, false, controller.signal);
+        setPageParam('');
       } catch (err) {
         if ((err as Error)?.name === 'AbortError') return;
         // Leave the previous results on screen rather than blanking the
@@ -137,13 +257,34 @@ export default function ProgramsClient({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [buildQuery]);
+  }, [filterKey, fetchPage, setPageParam]);
 
-  // Any filter change invalidates the current page — page 7 of the old
-  // result set is meaningless against the new one.
-  const resetPage = useCallback(() => setPageParam(''), [setPageParam]);
+  const total = result.total;
+  const totalPages = result.totalPages;
+  const hasMore = currentPage < totalPages;
 
-  const { programs, total, totalPages, matchedUniversitySlugs } = result;
+  // ── PF-1: facet vocabulary ─────────────────────────────────────────────
+  // The options come from the live table (with counts), not from the
+  // hardcoded seed arrays. The seed arrays survive only as the
+  // Chinese label lookup for degree/language (those two vocabularies
+  // are in sync with the DB) and as the no-DB fallback.
+  const facetToUrl = useCallback(
+    (v: string) => (v === '' ? PROGRAM_FACET_NONE : v),
+    [],
+  );
+
+  const facetLabel = useCallback(
+    (f: ProgramFacet, kind: 'degree' | 'language' | 'discipline') => {
+      if (f.value === '') return t('prog.notPublished');
+      if (locale !== 'zh') return f.value;
+      if (kind === 'discipline') return f.labelCn || f.value;
+      const list = kind === 'degree' ? degreeTypes : languages;
+      const cn = kind === 'degree' ? degreeTypesCn : languagesCn;
+      const idx = (list as readonly string[]).indexOf(f.value);
+      return idx >= 0 ? cn[idx] : f.value;
+    },
+    [locale, t],
+  );
 
   const uniBySlug = useMemo(() => {
     const m = new Map<string, UniversityOption>();
@@ -151,22 +292,39 @@ export default function ProgramsClient({
     return m;
   }, [universityOptions]);
 
-  const localDegrees = locale === 'zh' ? degreeTypesCn : degreeTypes;
-  const localLanguages = locale === 'zh' ? languagesCn : languages;
-  const localDisciplines = locale === 'zh' ? programDisciplinesCn : programDisciplines;
+  const universityFacetCount = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const f of facets.university) m.set(f.value, f.count);
+    return m;
+  }, [facets]);
 
-  const degreeColor = (degree: string) => {
-    switch (degree) {
-      case 'Bachelor':
-        return 'bg-blue-50 text-blue-800';
-      case 'Master':
-        return 'bg-purple-50 text-purple-800';
-      case 'PhD':
-        return 'bg-amber-50 text-amber-800';
-      default:
-        return 'bg-gray-50 text-gray-800';
-    }
-  };
+  const universitySearchOptions = useMemo(
+    () =>
+      universityOptions.map((u) => ({
+        value: u.slug,
+        label: locale === 'zh' ? u.nameCn : u.name,
+        sublabel: `${universityFacetCount.get(u.slug) ?? 0} ${t('prog.programs')}`,
+      })),
+    [universityOptions, universityFacetCount, locale, t],
+  );
+
+  const selectedUniversityLabel = useMemo(() => {
+    if (!universityFilter) return '';
+    const u = uniBySlug.get(universityFilter);
+    if (!u) return universityFilter;
+    return locale === 'zh' ? u.nameCn : u.name;
+  }, [universityFilter, uniBySlug, locale]);
+
+  /** PF-2: the intake season label (the DB value is a fixed enum). */
+  const intakeSeasonLabel = useCallback(
+    (value: string) => {
+      if (value === 'September') return t('prog.intakeSeptember');
+      if (value === 'March') return t('prog.intakeMarch');
+      if (value === 'Both') return t('prog.intakeBoth');
+      return t('prog.notPublished');
+    },
+    [t],
+  );
 
   // ── Active filter pills ────────────────────────────────────────────────
   const activeFilters: { key: string; label: string; clear: () => void }[] = [];
@@ -178,31 +336,76 @@ export default function ProgramsClient({
     });
   }
   if (degreeFilter) {
-    const idx = degreeTypes.indexOf(degreeFilter as (typeof degreeTypes)[number]);
-    const label = idx >= 0 ? (locale === 'zh' ? degreeTypesCn[idx] : degreeFilter) : degreeFilter;
-    activeFilters.push({ key: 'degree', label: `${t('prog.degree')}: ${label}`, clear: () => setDegreeFilter('') });
+    const f = facets.degree.find((x) => facetToUrl(x.value) === degreeFilter);
+    activeFilters.push({
+      key: 'degree',
+      label: `${t('prog.degree')}: ${f ? facetLabel(f, 'degree') : degreeFilter}`,
+      clear: () => setDegreeFilter(''),
+    });
   }
   if (languageFilter) {
-    const idx = languages.indexOf(languageFilter as (typeof languages)[number]);
-    const label = idx >= 0 ? (locale === 'zh' ? languagesCn[idx] : languageFilter) : languageFilter;
-    activeFilters.push({ key: 'lang', label: `${t('prog.language')}: ${label}`, clear: () => setLanguageFilter('') });
+    const f = facets.language.find((x) => facetToUrl(x.value) === languageFilter);
+    activeFilters.push({
+      key: 'lang',
+      label: `${t('prog.language')}: ${f ? facetLabel(f, 'language') : languageFilter}`,
+      clear: () => setLanguageFilter(''),
+    });
   }
   if (disciplineFilter) {
-    const idx = programDisciplines.indexOf(disciplineFilter as (typeof programDisciplines)[number]);
-    const label = idx >= 0 ? (locale === 'zh' ? programDisciplinesCn[idx] : disciplineFilter) : disciplineFilter;
+    const f = facets.discipline.find((x) => facetToUrl(x.value) === disciplineFilter);
     activeFilters.push({
       key: 'disc',
-      label: `${t('prog.allDisciplines').replace('All ', '').replace('所有', '')}: ${label}`,
+      label: `${t('prog.discipline')}: ${f ? facetLabel(f, 'discipline') : disciplineFilter}`,
       clear: () => setDisciplineFilter(''),
     });
   }
   if (universityFilter) {
-    const uni = uniBySlug.get(universityFilter);
-    const label = uni ? (locale === 'zh' ? uni.nameCn : uni.name) : universityFilter;
-    activeFilters.push({ key: 'uni', label: `${t('prog.university')}: ${label}`, clear: () => setUniversityFilter('') });
+    activeFilters.push({
+      key: 'uni',
+      label: `${t('prog.university')}: ${selectedUniversityLabel}`,
+      clear: () => setUniversityFilter(''),
+    });
+  }
+  if (cityFilter) {
+    const f = facets.city.find((x) => x.value === cityFilter);
+    activeFilters.push({
+      key: 'city',
+      label: `${t('prog.city')}: ${f ? (locale === 'zh' ? f.labelCn || f.value : f.value) : cityFilter}`,
+      clear: () => setCityFilter(''),
+    });
   }
   if (scholarshipOnly === '1') {
     activeFilters.push({ key: 'scholarship', label: t('filter.scholarship'), clear: () => setScholarshipOnly('') });
+  }
+  if (intakeFilter) {
+    activeFilters.push({
+      key: 'intake',
+      label: `${t('prog.intakeSeason')}: ${intakeSeasonLabel(intakeFilter)}`,
+      clear: () => setIntakeFilter(''),
+    });
+  }
+  if (intakeYearFilter) {
+    activeFilters.push({
+      key: 'year',
+      label: `${t('prog.intakeYear')}: ${intakeYearFilter}`,
+      clear: () => setIntakeYearFilter(''),
+    });
+  }
+  if (tuitionFilter) {
+    const band = findBand(TUITION_BANDS, tuitionFilter);
+    activeFilters.push({
+      key: 'tuition',
+      label: `${t('prog.tuitionBand')}: ${band ? t(band.labelKey) : tuitionFilter}`,
+      clear: () => setTuitionFilter(''),
+    });
+  }
+  if (durationFilter) {
+    const band = findBand(DURATION_BANDS, durationFilter);
+    activeFilters.push({
+      key: 'duration',
+      label: `${t('prog.durationBand')}: ${band ? t(band.labelKey) : durationFilter}`,
+      clear: () => setDurationFilter(''),
+    });
   }
 
   const clearAll = useCallback(() => {
@@ -211,9 +414,27 @@ export default function ProgramsClient({
     setLanguageFilter('');
     setDisciplineFilter('');
     setUniversityFilter('');
+    setCityFilter('');
     setScholarshipOnly('');
+    setIntakeFilter('');
+    setIntakeYearFilter('');
+    setTuitionFilter('');
+    setDurationFilter('');
     setPageParam('');
-  }, [setSearchQuery, setDegreeFilter, setLanguageFilter, setDisciplineFilter, setUniversityFilter, setScholarshipOnly, setPageParam]);
+  }, [
+    setSearchQuery,
+    setDegreeFilter,
+    setLanguageFilter,
+    setDisciplineFilter,
+    setUniversityFilter,
+    setCityFilter,
+    setScholarshipOnly,
+    setIntakeFilter,
+    setIntakeYearFilter,
+    setTuitionFilter,
+    setDurationFilter,
+    setPageParam,
+  ]);
 
   const hasAnyFilter = activeFilters.length > 0;
 
@@ -221,19 +442,353 @@ export default function ProgramsClient({
   // user can tell WHY a row appeared instead of guessing.
   const matchedUniLabels = useMemo(
     () =>
-      matchedUniversitySlugs
+      result.matchedUniversitySlugs
         .map((s) => uniBySlug.get(s))
         .filter((u): u is UniversityOption => Boolean(u))
         .map((u) => (locale === 'zh' ? u.nameCn : u.name)),
-    [matchedUniversitySlugs, uniBySlug, locale],
+    [result.matchedUniversitySlugs, uniBySlug, locale],
   );
 
+  // ── PF-6: the filter query the detail page should return to ──────────
+  // Same short param names the URL already uses (the server accepts
+  // both spellings), minus the paging params.
+  const fromQuery = useMemo(() => {
+    const sp = new URLSearchParams();
+    if (searchQuery) sp.set('q', searchQuery);
+    if (degreeFilter) sp.set('degree', degreeFilter);
+    if (languageFilter) sp.set('lang', languageFilter);
+    if (disciplineFilter) sp.set('disc', disciplineFilter);
+    if (universityFilter) sp.set('uni', universityFilter);
+    if (cityFilter) sp.set('city', cityFilter);
+    if (scholarshipOnly === '1') sp.set('scholarship', '1');
+    if (intakeFilter) sp.set('intake', intakeFilter);
+    if (intakeYearFilter) sp.set('year', intakeYearFilter);
+    if (tuitionFilter) sp.set('tuition', tuitionFilter);
+    if (durationFilter) sp.set('duration', durationFilter);
+    if (sortBy) sp.set('sort', sortBy);
+    return sp.toString();
+  }, [
+    searchQuery,
+    degreeFilter,
+    languageFilter,
+    disciplineFilter,
+    universityFilter,
+    cityFilter,
+    scholarshipOnly,
+    intakeFilter,
+    intakeYearFilter,
+    tuitionFilter,
+    durationFilter,
+    sortBy,
+  ]);
+
   const goToPage = useCallback(
-    (p: number) => {
+    async (p: number) => {
       setPageParam(p > 1 ? String(p) : '');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setIsPending(true);
+      try {
+        await fetchPage(p, false, new AbortController().signal);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch (err) {
+        console.error('[programs] page change failed:', err);
+      } finally {
+        setIsPending(false);
+      }
     },
-    [setPageParam],
+    [fetchPage, setPageParam],
+  );
+
+  const loadMore = useCallback(async () => {
+    const next = currentPage + 1;
+    setIsPending(true);
+    try {
+      await fetchPage(next, true, new AbortController().signal);
+      setPageParam(String(next));
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    } catch (err) {
+      console.error('[programs] load more failed:', err);
+    } finally {
+      setIsPending(false);
+    }
+  }, [currentPage, fetchPage, setPageParam]);
+
+  // ── PF-7: filter + search analytics ────────────────────────────────────
+  // The event map already had `search_performed` / `filter_change` with
+  // `surface: 'programs'`, but the page never fired them — so the one
+  // surface that needs funnel data had none.
+  const fireFilterChange = useCallback(
+    (filter: string, value: string | null) => {
+      track('filter_change', { surface: 'programs', filter, value, locale });
+    },
+    [locale],
+  );
+
+  const onSearchChange = useCallback(
+    (value: string) => {
+      setSearchQuery(value);
+      track('search_performed', { surface: 'programs', term: value.trim().toLowerCase(), locale });
+    },
+    [setSearchQuery, locale],
+  );
+
+  // ── Filter controls (shared by the desktop row + the mobile sheet) ────
+  const filterControls = (
+    <>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label htmlFor="prog-degree" className="mb-1 block text-xs font-medium text-gray-500">
+            {t('prog.degree')}
+          </label>
+          <select
+            id="prog-degree"
+            value={degreeFilter}
+            onChange={(e) => {
+              setDegreeFilter(e.target.value);
+              fireFilterChange('degree', e.target.value || null);
+            }}
+            className="w-full rounded-none border border-gray-200 bg-white px-3 py-2.5 text-sm focus:border-[#9B1B30] focus:outline-none"
+          >
+            <option value="">{t('prog.allDegrees')}</option>
+            {facets.degree.map((f) => (
+              <option key={f.value} value={facetToUrl(f.value)}>
+                {facetLabel(f, 'degree')} ({f.count})
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="prog-language" className="mb-1 block text-xs font-medium text-gray-500">
+            {t('prog.language')}
+          </label>
+          <select
+            id="prog-language"
+            value={languageFilter}
+            onChange={(e) => {
+              setLanguageFilter(e.target.value);
+              fireFilterChange('language', e.target.value || null);
+            }}
+            className="w-full rounded-none border border-gray-200 bg-white px-3 py-2.5 text-sm focus:border-[#9B1B30] focus:outline-none"
+          >
+            <option value="">{t('prog.allLanguages')}</option>
+            {facets.language.map((f) => (
+              <option key={f.value} value={facetToUrl(f.value)}>
+                {facetLabel(f, 'language')} ({f.count})
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="mt-3">
+        <label htmlFor="prog-discipline" className="mb-1 block text-xs font-medium text-gray-500">
+          {t('prog.discipline')}
+        </label>
+        <select
+          id="prog-discipline"
+          value={disciplineFilter}
+          onChange={(e) => {
+            setDisciplineFilter(e.target.value);
+            fireFilterChange('discipline', e.target.value || null);
+          }}
+          className="w-full rounded-none border border-gray-200 bg-white px-3 py-2.5 text-sm focus:border-[#9B1B30] focus:outline-none"
+        >
+          <option value="">{t('prog.allDisciplines')}</option>
+          {facets.discipline.map((f) => (
+            <option key={f.value} value={facetToUrl(f.value)}>
+              {facetLabel(f, 'discipline')} ({f.count})
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* PF-4b: the city filter. A program inherits its university's
+          city, so the server resolves the city to university slugs. */}
+      {facets.city.length > 0 && (
+        <div className="mt-3">
+          <label htmlFor="prog-city" className="mb-1 block text-xs font-medium text-gray-500">
+            {t('prog.city')}
+          </label>
+          <select
+            id="prog-city"
+            value={cityFilter}
+            onChange={(e) => {
+              setCityFilter(e.target.value);
+              fireFilterChange('city', e.target.value || null);
+            }}
+            className="w-full rounded-none border border-gray-200 bg-white px-3 py-2.5 text-sm focus:border-[#9B1B30] focus:outline-none"
+          >
+            <option value="">{t('prog.allCities')}</option>
+            {facets.city.map((f) => (
+              <option key={f.value} value={f.value}>
+                {locale === 'zh' ? f.labelCn || f.value : f.value} ({f.count})
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      <div className="mt-3">
+        <label className="mb-1 block text-xs font-medium text-gray-500">{t('prog.university')}</label>
+        <SearchableSelect
+          value={universityFilter}
+          onChange={(value) => {
+            setUniversityFilter(value);
+            fireFilterChange('university', value || null);
+          }}
+          options={universitySearchOptions}
+          placeholder={t('filter.allUniversities')}
+          emptyText={t('prog.noMatches')}
+          searchPlaceholder={t('prog.searchUniversities')}
+          clearValue=""
+          clearLabel={t('filter.allUniversities')}
+          locale={locale}
+        />
+      </div>
+
+      <label
+        className="mt-3 inline-flex items-center gap-2 border border-gray-200 bg-white px-3 py-2.5 text-sm cursor-pointer hover:border-[#9B1B30] transition-colors rounded-none"
+        title={t('filter.scholarshipOnly')}
+      >
+        <input
+          type="checkbox"
+          checked={scholarshipOnly === '1'}
+          onChange={(e) => {
+            setScholarshipOnly(e.target.checked ? '1' : '');
+            fireFilterChange('scholarship', e.target.checked ? '1' : null);
+          }}
+          className="h-4 w-4 accent-[#9B1B30]"
+        />
+        <Award className="h-4 w-4 text-[#9B1B30]" />
+        <span className="text-[#1B2A4A] font-medium">{t('prog.scholarshipOnly')}</span>
+        <span className="text-xs text-gray-500">({facets.scholarship.yes})</span>
+      </label>
+
+      {/* PF-4b: a one-click "English-taught" toggle — the single most
+          asked question on the site, and one click instead of two
+          dropdowns (language + a manual read of the label). */}
+      <label
+        className="mt-3 ml-2 inline-flex items-center gap-2 border border-gray-200 bg-white px-3 py-2.5 text-sm cursor-pointer hover:border-[#9B1B30] transition-colors rounded-none"
+        title={t('prog.englishTaught')}
+      >
+        <input
+          type="checkbox"
+          checked={languageFilter === 'English'}
+          onChange={(e) => {
+            setLanguageFilter(e.target.checked ? 'English' : '');
+            fireFilterChange('englishTaught', e.target.checked ? '1' : null);
+          }}
+          className="h-4 w-4 accent-[#9B1B30]"
+        />
+        <Globe className="h-4 w-4 text-[#1B2A4A]" />
+        <span className="text-[#1B2A4A] font-medium">{t('prog.englishTaught')}</span>
+        <span className="text-xs text-gray-500">
+          ({facets.language.find((f) => f.value === 'English')?.count ?? 0})
+        </span>
+      </label>
+
+      {/* PF-2: the normalized facets. Rendered only when the catalogue
+          has the derived columns — before the migration these controls
+          would be filters that silently do nothing. */}
+      {facets.normalized.available && (
+        <>
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="prog-intake" className="mb-1 block text-xs font-medium text-gray-500">
+                {t('prog.intakeSeason')}
+              </label>
+              <select
+                id="prog-intake"
+                value={intakeFilter}
+                onChange={(e) => {
+                  setIntakeFilter(e.target.value);
+                  fireFilterChange('intake', e.target.value || null);
+                }}
+                className="w-full rounded-none border border-gray-200 bg-white px-3 py-2.5 text-sm focus:border-[#9B1B30] focus:outline-none"
+              >
+                <option value="">{t('prog.allIntakes')}</option>
+                {facets.normalized.intakeSeason.map((f) => (
+                  <option key={f.value} value={f.value}>
+                    {intakeSeasonLabel(f.value)} ({f.count})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="prog-intake-year" className="mb-1 block text-xs font-medium text-gray-500">
+                {t('prog.intakeYear')}
+              </label>
+              <select
+                id="prog-intake-year"
+                value={intakeYearFilter}
+                onChange={(e) => {
+                  setIntakeYearFilter(e.target.value);
+                  fireFilterChange('year', e.target.value || null);
+                }}
+                className="w-full rounded-none border border-gray-200 bg-white px-3 py-2.5 text-sm focus:border-[#9B1B30] focus:outline-none"
+              >
+                <option value="">{t('prog.allIntakes')}</option>
+                {facets.normalized.intakeYear.map((f) => (
+                  <option key={f.value} value={f.value}>
+                    {f.value} ({f.count})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="prog-tuition" className="mb-1 block text-xs font-medium text-gray-500">
+                {t('prog.tuitionBand')}
+              </label>
+              <select
+                id="prog-tuition"
+                value={tuitionFilter}
+                onChange={(e) => {
+                  setTuitionFilter(e.target.value);
+                  fireFilterChange('tuition', e.target.value || null);
+                }}
+                className="w-full rounded-none border border-gray-200 bg-white px-3 py-2.5 text-sm focus:border-[#9B1B30] focus:outline-none"
+              >
+                <option value="">{t('prog.allTuitionBands')}</option>
+                {TUITION_BANDS.map((band) => {
+                  const f = facets.normalized.tuition.find((x) => x.value === band.value);
+                  return (
+                    <option key={band.value} value={band.value}>
+                      {t(band.labelKey)} ({f?.count ?? 0})
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="prog-duration" className="mb-1 block text-xs font-medium text-gray-500">
+                {t('prog.durationBand')}
+              </label>
+              <select
+                id="prog-duration"
+                value={durationFilter}
+                onChange={(e) => {
+                  setDurationFilter(e.target.value);
+                  fireFilterChange('duration', e.target.value || null);
+                }}
+                className="w-full rounded-none border border-gray-200 bg-white px-3 py-2.5 text-sm focus:border-[#9B1B30] focus:outline-none"
+              >
+                <option value="">{t('prog.allDurations')}</option>
+                {DURATION_BANDS.map((band) => {
+                  const f = facets.normalized.duration.find((x) => x.value === band.value);
+                  return (
+                    <option key={band.value} value={band.value}>
+                      {t(band.labelKey)} ({f?.count ?? 0})
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+          </div>
+        </>
+      )}
+    </>
   );
 
   return (
@@ -254,18 +809,16 @@ export default function ProgramsClient({
         </div>
       </section>
 
-      <section className="bg-white border-b border-gray-200 py-5">
+      <section className="sticky top-16 z-30 bg-white border-b border-gray-200 py-4">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          {/* Row 1 — search, mobile filter trigger, sort, view toggle */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  resetPage();
-                }}
+                onChange={(e) => onSearchChange(e.target.value)}
                 placeholder={t('prog.searchProgramsOrUniversities')}
                 aria-label={t('prog.searchProgramsOrUniversities')}
                 className="w-full rounded-none border border-gray-200 bg-[#FAFAF8] py-2.5 pl-10 pr-4 text-sm focus:border-[#9B1B30] focus:outline-none focus:ring-1 focus:ring-[#9B1B30]"
@@ -277,103 +830,93 @@ export default function ProgramsClient({
                 />
               )}
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <select
-                value={degreeFilter}
-                onChange={(e) => {
-                  setDegreeFilter(e.target.value);
-                  resetPage();
-                }}
-                className="rounded-none border border-gray-200 bg-white px-3 py-2.5 text-sm focus:border-[#9B1B30] focus:outline-none"
-              >
-                <option value="">{t('prog.allDegrees')}</option>
-                {degreeTypes.map((d, i) => (
-                  <option key={d} value={d}>
-                    {localDegrees[i]}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={languageFilter}
-                onChange={(e) => {
-                  setLanguageFilter(e.target.value);
-                  resetPage();
-                }}
-                className="rounded-none border border-gray-200 bg-white px-3 py-2.5 text-sm focus:border-[#9B1B30] focus:outline-none"
-              >
-                <option value="">{t('prog.allLanguages')}</option>
-                {languages.map((l, i) => (
-                  <option key={l} value={l}>
-                    {localLanguages[i]}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={disciplineFilter}
-                onChange={(e) => {
-                  setDisciplineFilter(e.target.value);
-                  resetPage();
-                }}
-                className="rounded-none border border-gray-200 bg-white px-3 py-2.5 text-sm focus:border-[#9B1B30] focus:outline-none"
-              >
-                <option value="">{t('prog.allDisciplines')}</option>
-                {programDisciplines.map((d, i) => (
-                  <option key={d} value={d}>
-                    {localDisciplines[i]}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={universityFilter}
-                onChange={(e) => {
-                  setUniversityFilter(e.target.value);
-                  resetPage();
-                }}
-                className="rounded-none border border-gray-200 bg-white px-3 py-2.5 text-sm focus:border-[#9B1B30] focus:outline-none max-w-[180px]"
-                title={t('filter.allUniversities')}
-              >
-                <option value="">{t('filter.allUniversities')}</option>
-                {universityOptions.map((u) => (
-                  <option key={u.slug} value={u.slug}>
-                    {locale === 'zh' ? u.nameCn : u.name}
-                  </option>
-                ))}
-              </select>
-              <label
-                className="inline-flex items-center gap-2 px-3 py-2.5 border border-gray-200 bg-white text-sm cursor-pointer hover:border-[#9B1B30] transition-colors rounded-none"
-                title={t('filter.scholarshipOnly')}
-              >
-                <input
-                  type="checkbox"
-                  checked={scholarshipOnly === '1'}
-                  onChange={(e) => {
-                    setScholarshipOnly(e.target.checked ? '1' : '');
-                    resetPage();
-                  }}
-                  className="h-4 w-4 accent-[#9B1B30]"
-                />
-                <Award className="h-4 w-4 text-[#9B1B30]" />
-                <span className="text-[#1B2A4A] font-medium">{t('prog.scholarshipOnly')}</span>
-              </label>
+
+            <div className="flex items-center gap-2">
+              {/* PF-4a: on mobile the controls live in a sheet — six
+                  wrapping selects used to become a tall stack. */}
+              <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
+                <SheetTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="rounded-none border-gray-200 lg:hidden"
+                    aria-label={t('prog.filters')}
+                  >
+                    <SlidersHorizontal className="h-4 w-4" />
+                    {t('prog.filters')}
+                    {hasAnyFilter && (
+                      <span className="ml-1 bg-[#9B1B30] px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                        {activeFilters.length}
+                      </span>
+                    )}
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto">
+                  <SheetHeader>
+                    <SheetTitle>{t('prog.filters')}</SheetTitle>
+                  </SheetHeader>
+                  <div className="px-4 pb-6">{filterControls}</div>
+                </SheetContent>
+              </Sheet>
+
               <select
                 value={sortBy}
-                onChange={(e) => {
-                  setSortBy(e.target.value as SortKey);
-                  resetPage();
-                }}
+                onChange={(e) => setSortBy(e.target.value as SortKey)}
+                aria-label={t('prog.sortBy')}
                 className="rounded-none border border-gray-200 bg-white px-3 py-2.5 text-sm focus:border-[#9B1B30] focus:outline-none"
               >
-                <option value="default">{t('prog.sortBy')}: {t('prog.default')}</option>
-                <option value="tuition">{t('prog.sortBy')}: {t('prog.tuition')}</option>
-                <option value="name">{t('prog.sortBy')}: {t('prog.name')}</option>
+                <option value="default">
+                  {t('prog.sortBy')}: {t('prog.default')}
+                </option>
+                <option value="relevance">
+                  {t('prog.sortBy')}: {t('prog.sortRelevance')}
+                </option>
+                <option value="tuition">
+                  {t('prog.sortBy')}: {t('prog.tuition')}
+                </option>
+                <option value="name">
+                  {t('prog.sortBy')}: {t('prog.name')}
+                </option>
+                {facets.normalized.available && (
+                  <option value="intake">
+                    {t('prog.sortBy')}: {t('prog.sortIntake')}
+                  </option>
+                )}
               </select>
+
+              {/* PF-5: grid ⇄ list */}
+              <div className="hidden sm:flex items-center border border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('grid')}
+                  aria-label={t('prog.viewGrid')}
+                  aria-pressed={viewMode === 'grid'}
+                  className={`px-2.5 py-2.5 ${viewMode === 'grid' ? 'bg-[#1B2A4A] text-white' : 'bg-white text-gray-500 hover:text-[#1B2A4A]'}`}
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('list')}
+                  aria-label={t('prog.viewList')}
+                  aria-pressed={viewMode === 'list'}
+                  className={`px-2.5 py-2.5 ${viewMode === 'list' ? 'bg-[#1B2A4A] text-white' : 'bg-white text-gray-500 hover:text-[#1B2A4A]'}`}
+                >
+                  <List className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           </div>
 
-          <div className="mt-3 flex items-center gap-2 text-sm text-gray-500">
+          {/* Row 2 — the filter controls, desktop only */}
+          <div className="mt-3 hidden lg:block">{filterControls}</div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500">
             <span>
               {total} {t('prog.results')}
             </span>
+            {rows.length > 0 && total > rows.length && (
+              <span className="text-xs">{t('prog.showing', { shown: rows.length, total })}</span>
+            )}
             {/* Phase 173: tell the user a university matched, so a widened
                 result set doesn't look like a broken filter. */}
             {matchedUniLabels.length > 0 && (
@@ -395,7 +938,6 @@ export default function ProgramsClient({
                   type="button"
                   onClick={() => {
                     f.clear();
-                    resetPage();
                   }}
                   className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-[#9B1B30]/10 text-[#9B1B30] border border-[#9B1B30]/30 rounded-none hover:bg-[#9B1B30]/20 transition-colors"
                   title={t('filter.clear')}
@@ -417,58 +959,73 @@ export default function ProgramsClient({
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {programs.length === 0 ? (
+        {rows.length === 0 ? (
           <div className="py-20 text-center border border-dashed border-gray-200 bg-white">
             <Filter className="mx-auto h-10 w-10 text-gray-300" />
             <h3 className="mt-4 text-lg font-semibold text-[#1B2A4A]">{t('prog.noResults')}</h3>
             <p className="mt-2 text-sm text-gray-500 max-w-md mx-auto">{t('filter.suggestion')}</p>
             {hasAnyFilter && (
-              <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
-                <button
-                  type="button"
-                  onClick={clearAll}
-                  className="rounded-none bg-[#1B2A4A] hover:bg-[#26345A] text-white font-semibold h-10 px-6 text-sm"
-                >
-                  {t('filter.resetFilters')}
-                </button>
-                <Link
-                  href="/programs"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    clearAll();
-                  }}
-                  className="text-sm text-gray-600 hover:text-[#9B1B30] underline underline-offset-2"
-                >
-                  {t('prog.orClickHere')}
-                </Link>
-              </div>
+              <>
+                {/* PF-4b: the filters are the problem, so offer them
+                    back one at a time — the only honest suggestion when
+                    the counts are global rather than per-combination. */}
+                <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+                  {activeFilters.map((f) => (
+                    <button
+                      key={`empty-${f.key}`}
+                      type="button"
+                      onClick={() => f.clear()}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-[#9B1B30]/10 text-[#9B1B30] border border-[#9B1B30]/30 rounded-none hover:bg-[#9B1B30]/20 transition-colors"
+                    >
+                      {f.label}
+                      <X className="h-3 w-3" />
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={clearAll}
+                    className="rounded-none bg-[#1B2A4A] hover:bg-[#26345A] text-white font-semibold h-10 px-6 text-sm"
+                  >
+                    {t('filter.resetFilters')}
+                  </button>
+                  <Link
+                    href="/programs"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      clearAll();
+                    }}
+                    className="text-sm text-gray-600 hover:text-[#9B1B30] underline underline-offset-2"
+                  >
+                    {t('prog.orClickHere')}
+                  </Link>
+                </div>
+              </>
             )}
           </div>
         ) : (
           <div
-            className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+            className={
+              viewMode === 'grid'
+                ? 'grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                : 'flex flex-col gap-3'
+            }
             style={{ opacity: isPending ? 0.6 : 1, transition: 'opacity 150ms ease' }}
           >
-            {programs.map((program: Program, idx) => {
+            {rows.map((program: Program, idx) => {
               const uni = uniBySlug.get(program.universitySlug);
               // Did this row match because of the university, or the
               // program name? Only meaningful while a term is active.
               const matchedViaUniversity =
                 searchQuery !== '' &&
-                matchedUniversitySlugs.length > 0 &&
-                matchedUniversitySlugs.includes(program.universitySlug) &&
+                result.matchedUniversitySlugs.length > 0 &&
+                result.matchedUniversitySlugs.includes(program.universitySlug) &&
                 !program.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
                 !(program.nameCn ?? '').toLowerCase().includes(searchQuery.toLowerCase());
 
-              return (
-                <Link
-                  key={program.slug}
-                  href={`/programs/${program.slug}`}
-                  onClick={() =>
-                    track('program_click', { slug: program.slug, position: idx, locale })
-                  }
-                  className="group flex flex-col border border-gray-200 bg-white transition-all duration-150 hover:border-[#9B1B30]/40 hover:shadow-lg"
-                >
+              const card = (
+                <>
                   <div className="h-1 bg-[#9B1B30]" />
 
                   <div className="flex flex-1 flex-col p-4">
@@ -483,6 +1040,12 @@ export default function ProgramsClient({
                     <h3 className="mt-1.5 text-base font-bold leading-snug text-[#1B2A4A] transition-colors group-hover:text-[#9B1B30]">
                       {locale === 'zh' ? program.nameCn : program.name}
                     </h3>
+
+                    {viewMode === 'list' && program.description && (
+                      <p className="mt-1.5 line-clamp-2 text-xs text-gray-500">
+                        {locale === 'zh' ? program.descriptionCn : program.description}
+                      </p>
+                    )}
 
                     <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
                       <span className={`inline-block px-2 py-0.5 text-[11px] font-semibold ${degreeColor(program.degree)}`}>
@@ -500,6 +1063,11 @@ export default function ProgramsClient({
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium text-[#9B1B30] bg-[#9B1B30]/10">
                           <Award className="h-3 w-3" />
                           {t('prog.scholarship')}
+                        </span>
+                      )}
+                      {program.discipline && (
+                        <span className="inline-block px-2 py-0.5 text-[11px] font-medium text-gray-600 bg-gray-50">
+                          {locale === 'zh' ? program.disciplineCn || program.discipline : program.discipline}
                         </span>
                       )}
                     </div>
@@ -546,50 +1114,92 @@ export default function ProgramsClient({
                       <ArrowRight className="h-4 w-4 shrink-0" />
                     </span>
                   </div>
+                </>
+              );
+
+              return (
+                <Link
+                  key={program.slug}
+                  href={`/programs/${program.slug}${fromQuery ? `?from=${encodeURIComponent(fromQuery)}` : ''}`}
+                  onClick={() =>
+                    track('program_click', { slug: program.slug, position: idx, locale })
+                  }
+                  className={
+                    viewMode === 'grid'
+                      ? 'group flex flex-col border border-gray-200 bg-white transition-all duration-150 hover:border-[#9B1B30]/40 hover:shadow-lg'
+                      : 'group flex flex-row border border-gray-200 bg-white transition-all duration-150 hover:border-[#9B1B30]/40 hover:shadow-lg'
+                  }
+                >
+                  {viewMode === 'grid' ? (
+                    card
+                  ) : (
+                    <>
+                      <div className="w-1 shrink-0 bg-[#9B1B30]" />
+                      <div className="flex min-w-0 flex-1 flex-col justify-center p-4">{card}</div>
+                    </>
+                  )}
                 </Link>
               );
             })}
           </div>
         )}
 
-        {totalPages > 1 && (
-          <nav className="mt-8 flex items-center justify-center gap-1" aria-label={t('prog.pagination')}>
-            <button
-              onClick={() => goToPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1 || isPending}
-              className="rounded-none border border-gray-200 px-3 py-2 text-sm disabled:opacity-40 hover:border-[#9B1B30] hover:text-[#9B1B30] transition-colors"
-            >
-              &larr;
-            </button>
-            {pageNumbers(currentPage, totalPages).map((p, i) =>
-              p === '…' ? (
-                <span key={`gap-${i}`} className="px-2 text-sm text-gray-400">
-                  …
-                </span>
-              ) : (
-                <button
-                  key={p}
-                  onClick={() => goToPage(p as number)}
-                  disabled={isPending}
-                  aria-current={p === currentPage ? 'page' : undefined}
-                  className={`rounded-none border px-3 py-2 text-sm transition-colors ${
-                    p === currentPage
-                      ? 'border-[#9B1B30] bg-[#9B1B30] text-white'
-                      : 'border-gray-200 hover:border-[#9B1B30] hover:text-[#9B1B30]'
-                  }`}
-                >
-                  {p}
-                </button>
-              ),
+        {/* PF-5: load more instead of 105 page buttons. The page count
+            is kept as an escape hatch for power users. */}
+        {rows.length > 0 && (
+          <div className="mt-8 flex flex-col items-center gap-3">
+            {hasMore && (
+              <button
+                type="button"
+                onClick={loadMore}
+                disabled={isPending}
+                className="inline-flex items-center gap-2 rounded-none border border-[#1B2A4A] px-6 py-3 text-sm font-semibold text-[#1B2A4A] transition-colors hover:bg-[#1B2A4A] hover:text-white disabled:opacity-40"
+              >
+                {isPending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+                {t('prog.loadMore')}
+              </button>
             )}
-            <button
-              onClick={() => goToPage(Math.min(totalPages, currentPage + 1))}
-              disabled={currentPage === totalPages || isPending}
-              className="rounded-none border border-gray-200 px-3 py-2 text-sm disabled:opacity-40 hover:border-[#9B1B30] hover:text-[#9B1B30] transition-colors"
-            >
-              &rarr;
-            </button>
-          </nav>
+            {!hasMore && <p className="text-xs text-gray-400">{t('prog.noMoreResults')}</p>}
+            {totalPages > 1 && (
+              <nav className="flex items-center justify-center gap-1" aria-label={t('prog.pagination')}>
+                <button
+                  onClick={() => goToPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1 || isPending}
+                  className="rounded-none border border-gray-200 px-3 py-2 text-sm disabled:opacity-40 hover:border-[#9B1B30] hover:text-[#9B1B30] transition-colors"
+                >
+                  &larr;
+                </button>
+                {pageNumbers(currentPage, totalPages).map((p, i) =>
+                  p === '…' ? (
+                    <span key={`gap-${i}`} className="px-2 text-sm text-gray-400">
+                      …
+                    </span>
+                  ) : (
+                    <button
+                      key={p}
+                      onClick={() => goToPage(p as number)}
+                      disabled={isPending}
+                      aria-current={p === currentPage ? 'page' : undefined}
+                      className={`rounded-none border px-3 py-2 text-sm transition-colors ${
+                        p === currentPage
+                          ? 'border-[#9B1B30] bg-[#9B1B30] text-white'
+                          : 'border-gray-200 hover:border-[#9B1B30] hover:text-[#9B1B30]'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  ),
+                )}
+                <button
+                  onClick={() => goToPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages || isPending}
+                  className="rounded-none border border-gray-200 px-3 py-2 text-sm disabled:opacity-40 hover:border-[#9B1B30] hover:text-[#9B1B30] transition-colors"
+                >
+                  &rarr;
+                </button>
+              </nav>
+            )}
+          </div>
         )}
       </section>
     </main>
@@ -614,4 +1224,18 @@ function pageNumbers(current: number, total: number, window = 2): (number | '…
     out.push(total);
   }
   return out;
+}
+
+/** Degree badge colour — unchanged from the pre-PF-1 card. */
+function degreeColor(degree: string) {
+  switch (degree) {
+    case 'Bachelor':
+      return 'bg-blue-50 text-blue-800';
+    case 'Master':
+      return 'bg-purple-50 text-purple-800';
+    case 'PhD':
+      return 'bg-amber-50 text-amber-800';
+    default:
+      return 'bg-gray-50 text-gray-800';
+  }
 }

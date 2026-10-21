@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-server';
 import { universities as staticUniversities, programs as staticPrograms, scholarships as staticScholarships } from '@/lib/data';
 import { cities, COUNTRIES } from '@/lib/seo-data';
@@ -7,6 +8,41 @@ import { SITE_URL } from '@/lib/site-url';
 interface SitemapEntry {
   slug: string;
   updated_at?: string;
+  discipline?: string;
+}
+
+/**
+ * PF-6: fetch EVERY row of a catalogue table, in PostgREST-sized pages.
+ *
+ * The sitemap used to read the catalogue with a single un-limited
+ * `.select('slug, updated_at')`. PostgREST caps a response at
+ * `max-rows` (1,000 on this project), so the query silently returned
+ * exactly 1,000 program rows: 1,513 of the 2,513 live program pages
+ * never reached the sitemap and were only discoverable by paging the
+ * listing. A cap that looks like data is the worst kind of bug — there
+ * is no error, just a quietly truncated list.
+ *
+ * Paging fixes it: keep asking for the next window until a short page
+ * comes back.
+ */
+const SITEMAP_PAGE_SIZE = 1000;
+
+async function fetchAllCatalogRows(
+  supabase: SupabaseClient,
+  table: 'programs' | 'scholarships' | 'universities',
+  columns = 'slug, updated_at',
+): Promise<SitemapEntry[] | null> {
+  const rows: SitemapEntry[] = [];
+  for (let offset = 0; ; offset += SITEMAP_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from(table)
+      .select(columns)
+      .range(offset, offset + SITEMAP_PAGE_SIZE - 1);
+    if (error || !data || data.length === 0) break;
+    rows.push(...(data as unknown as SitemapEntry[]));
+    if (data.length < SITEMAP_PAGE_SIZE) break;
+  }
+  return rows.length > 0 ? rows : null;
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -267,15 +303,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       const supabase = getSupabaseServer();
       if (supabase) {
         const [u, p, s] = await Promise.all([
-          supabase.from('universities').select('slug, updated_at'),
-          supabase.from('programs').select('slug, updated_at'),
-          supabase.from('scholarships').select('slug, updated_at'),
+          fetchAllCatalogRows(supabase, 'universities'),
+          fetchAllCatalogRows(supabase, 'programs', 'slug, updated_at, discipline'),
+          fetchAllCatalogRows(supabase, 'scholarships'),
         ]);
         // Type the dynamic fetches — they may return error objects in
         // some Supabase SDK versions, but we only read .data.
-        if (u.data && u.data.length > 0) universities = u.data as SitemapEntry[];
-        if (p.data && p.data.length > 0) programs = p.data as SitemapEntry[];
-        if (s.data && s.data.length > 0) scholarships = s.data as SitemapEntry[];
+        if (u && u.length > 0) universities = u as SitemapEntry[];
+        if (p && p.length > 0) programs = p as SitemapEntry[];
+        if (s && s.length > 0) scholarships = s as SitemapEntry[];
       }
     } catch {
       // Phase 145: an RLS / network / 5xx from any of the three
@@ -303,7 +339,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     changeFrequency: 'weekly',
     priority: 0.8,
   }));
-
   const scholarshipUrls: MetadataRoute.Sitemap = scholarships.map((entry: SitemapEntry) => ({
     url: `${SITE_URL}/scholarships/${entry.slug}`,
     ...(entry.updated_at ? { lastModified: new Date(entry.updated_at) } : {}),
@@ -366,10 +401,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ]);
 
   // /majors per-discipline pages — the /majors index lives in seoHubPages.
-  // (lowercased, hyphens). Build from the programs list to stay in
-  // sync with the page's own slugifyDiscipline.
+  // (lowercased, hyphens). The /majors/[discipline] route generates its
+  // own params from the LIVE catalogue, so the sitemap has to list the
+  // live disciplines too — listing only the 8 from the 45-row static
+  // seed left 70+ real discipline pages undiscoverable.
   const DISCIPLINE_SLUGS = Array.from(
-    new Set(allPrograms.map((p) => p.discipline.toLowerCase().replace(/\s+/g, '-'))),
+    new Set(
+      (programs.length > 0 && programs[0].discipline !== undefined
+        ? programs.map((p) => p.discipline)
+        : allPrograms.map((p) => p.discipline)
+      )
+        .filter((d): d is string => Boolean(d))
+        .map((d) => d.toLowerCase().replace(/\s+/g, '-')),
+    ),
   );
   const majorUrls: MetadataRoute.Sitemap = DISCIPLINE_SLUGS.map((d) => ({
     url: `${SITE_URL}/majors/${d}`,

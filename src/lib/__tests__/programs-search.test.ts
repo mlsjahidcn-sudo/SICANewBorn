@@ -16,6 +16,7 @@ import {
 } from '@/lib/program-search';
 import { queryPrograms, parseProgramQueryParams } from '@/lib/program-query';
 import { programSchema } from '@/lib/validators/program';
+import { PROGRAM_FACET_NONE } from '@/lib/program-facets';
 
 const UNIVERSITIES = [
   { slug: 'tsinghua-university', name: 'Tsinghua University', nameCn: '清华大学' },
@@ -148,7 +149,9 @@ describe('parseProgramQueryParams', () => {
   it('applies sane defaults', () => {
     const p = parseProgramQueryParams(new URLSearchParams());
     expect(p.page).toBe(1);
-    expect(p.sort).toBe('name');
+    // PF-3: `default` is a REAL ordering now (featured first, then
+    // name) — it used to mean "name", which made the control lie.
+    expect(p.sort).toBe('default');
     expect(p.scholarshipOnly).toBe(false);
     expect(p.featured).toBe(false);
     expect(p.includeArchived).toBe(false);
@@ -199,10 +202,27 @@ describe('parseProgramQueryParams', () => {
     expect(parseProgramQueryParams(new URLSearchParams('limit=99999')).limit).toBe(500);
   });
 
-  it('treats sort=default as name ordering (the page sends it, the API never did)', () => {
+  it('treats sort=default as its own ordering (featured first, then name)', () => {
     expect(parseProgramQueryParams(new URLSearchParams('sort=default')).sort).toBe('default');
-    // 'default' is not tuition/featured_rank, so queryPrograms falls
-    // through to ORDER BY name — deterministic rather than arbitrary.
+    // PF-3: 'default' now orders by is_featured → featured_rank → name
+    // instead of silently falling through to ORDER BY name.
+  });
+
+  it('accepts the PF-3 relevance sort', () => {
+    expect(parseProgramQueryParams(new URLSearchParams('sort=relevance')).sort).toBe('relevance');
+  });
+
+  /**
+   * PF-1: the "not published" (NULL) bucket travels through the URL as
+   * a sentinel, because an empty value would be dropped by the URL
+   * state helper and by every filter dropdown's "all" option.
+   */
+  it('carries the not-published sentinel through the query params', () => {
+    const p = parseProgramQueryParams(
+      new URLSearchParams('discipline=__none__&degree=__none__'),
+    );
+    expect(p.discipline).toBe(PROGRAM_FACET_NONE);
+    expect(p.degree).toBe(PROGRAM_FACET_NONE);
   });
 });
 

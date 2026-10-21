@@ -123,3 +123,54 @@ export function programMatchesSearch(
   if ((program.nameCn ?? '').toLowerCase().includes(needle)) return true;
   return universitySlugs.includes(program.universitySlug);
 }
+
+/** Minimal program shape the relevance ranker needs. */
+export interface RelevanceMatchable {
+  name: string;
+  nameCn: string;
+  universitySlug: string;
+}
+
+/**
+ * Rank programs by how well they match a search term (PF-3).
+ *
+ * PostgREST can not order by an expression, so the `relevance` sort
+ * pulls a bounded candidate window and ranks it here. The buckets, in
+ * order:
+ *
+ *   0 — exact name match              ("Nursing" → "Nursing")
+ *   1 — name starts with the term     ("Nursing" → "Nursing Science")
+ *   2 — name contains the term        ("Nursing" → "Bachelor of Nursing")
+ *   3 — Chinese name contains it      (中文名命中)
+ *   4 — matched through the university
+ *   5 — no match (kept for stability)
+ *
+ * Ties inside a bucket keep the incoming order (the DB path feeds
+ * name-sorted rows in, so ties stay alphabetical).
+ *
+ * Pure on purpose — the DB path and the static-fallback path both
+ * funnel through it, which is what keeps the two in parity.
+ */
+export function rankByRelevance<T extends RelevanceMatchable>(
+  programs: readonly T[],
+  term: string,
+  universitySlugs: readonly string[],
+): T[] {
+  const needle = term.trim().toLowerCase();
+  if (!needle) return [...programs];
+
+  const score = (p: T): number => {
+    const name = (p.name ?? '').toLowerCase();
+    if (name === needle) return 0;
+    if (name.startsWith(needle)) return 1;
+    if (name.includes(needle)) return 2;
+    if ((p.nameCn ?? '').toLowerCase().includes(needle)) return 3;
+    if (universitySlugs.includes(p.universitySlug)) return 4;
+    return 5;
+  };
+
+  return [...programs]
+    .map((p, i) => ({ p, i, s: score(p) }))
+    .sort((a, b) => (a.s - b.s) || (a.i - b.i))
+    .map((entry) => entry.p);
+}

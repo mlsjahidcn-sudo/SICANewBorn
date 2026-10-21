@@ -3,10 +3,12 @@ import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import { getProgramBySlug } from '@/lib/program-queries';
 import { getUniversityBySlug } from '@/lib/university-queries';
+import { queryPrograms } from '@/lib/program-query';
 import { getServerLocale, t } from '@/lib/server-t';
 import { buildLanguageAlternates } from '@/lib/alternates';
 import { SITE_URL } from '@/lib/site-url';
 import ProgramDetailClient from './_components/program-detail-client';
+import type { Program } from '@/lib/data';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,11 +42,17 @@ export async function generateMetadata({ params }: ProgramPageProps): Promise<Me
   };
 }
 
-export default async function ProgramDetailPage({ params }: ProgramPageProps) {
+export default async function ProgramDetailPage({
+  params,
+  searchParams,
+}: ProgramPageProps & {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { slug } = await params;
-  const [program, locale] = await Promise.all([
+  const [program, locale, sp] = await Promise.all([
     getProgramBySlug(slug),
     getServerLocale(),
+    searchParams,
   ]);
 
   if (!program) {
@@ -56,6 +64,16 @@ export default async function ProgramDetailPage({ params }: ProgramPageProps) {
     : null;
   const universityName = university ? university.name : 'the partner university';
   const faqSchema = buildProgramFaqSchema(program, universityName);
+
+  // PF-6: the listing passes its filter query along, so the detail page
+  // can send the visitor back to the exact result set they came from
+  // instead of the unfiltered directory.
+  const rawFrom = sp.from;
+  const fromQuery = typeof rawFrom === 'string' ? rawFrom : '';
+
+  // PF-6: related programs (same university first, then same
+  // discipline). 2,513 program pages had no links to each other.
+  const relatedPrograms = await getRelatedPrograms(program);
 
   const displayName =
     locale === 'zh' && program.nameCn ? program.nameCn : program.name;
@@ -113,7 +131,43 @@ export default async function ProgramDetailPage({ params }: ProgramPageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
       />
-      <ProgramDetailClient program={program} university={university} />
+      <ProgramDetailClient
+        program={program}
+        university={university}
+        relatedPrograms={relatedPrograms}
+        fromQuery={fromQuery}
+      />
     </>
   );
+}
+
+/**
+ * PF-6: related programs for the detail page.
+ *
+ * Same university first (the strongest signal — a student looking at
+ * "BSc Computer Science, Tsinghua" usually wants a sibling program at
+ * the same school), then the same discipline anywhere. Both come
+ * through `queryPrograms`, the one query module the finder and the API
+ * share, so the related list obeys exactly the same visibility rules
+ * (no archived, no unpublished rows).
+ */
+async function getRelatedPrograms(program: Program): Promise<Program[]> {
+  const [sameUni, sameDiscipline] = await Promise.all([
+    program.universitySlug
+      ? queryPrograms({ university: program.universitySlug, limit: 6 })
+      : Promise.resolve({ programs: [] as Program[] }),
+    program.discipline
+      ? queryPrograms({ discipline: program.discipline, limit: 6 })
+      : Promise.resolve({ programs: [] as Program[] }),
+  ]);
+
+  const seen = new Set<string>([program.slug]);
+  const out: Program[] = [];
+  for (const p of [...sameUni.programs, ...sameDiscipline.programs]) {
+    if (seen.has(p.slug)) continue;
+    seen.add(p.slug);
+    out.push(p);
+    if (out.length >= 4) break;
+  }
+  return out;
 }

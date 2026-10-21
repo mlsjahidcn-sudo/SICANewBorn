@@ -8,6 +8,8 @@ import { requireAdmin } from '@/lib/supabase-auth';
 // DB column is university_slug; the canonical mapper fixes that.
 import { mapProgramFromDb, slugify } from '@/lib/catalog-mappers';
 import { invalidateLiveCatalogCache } from '@/lib/ai/live-data-context';
+import { invalidateProgramFacetsCache } from '@/lib/program-facets';
+import { invalidateProgramQueryCache } from '@/lib/program-query';
 
 /**
  * POST /api/programs/bulk
@@ -147,6 +149,8 @@ export async function POST(request: Request) {
       revalidateTag(CACHE_TAGS.programs, 'default');
       // Phase 121: the chatbot's RAG catalog has its own 5-min cache.
       invalidateLiveCatalogCache();
+      invalidateProgramFacetsCache();
+      invalidateProgramQueryCache();
     }
     // skipped = (rows we tried to upsert) - (rows that actually inserted).
     // This is a tight approximation: it counts both in-batch

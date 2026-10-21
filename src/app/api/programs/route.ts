@@ -9,10 +9,11 @@ import { requireAdmin } from '@/lib/supabase-auth';
 // this route and the /programs RSC can't drift apart again (they had —
 // the client searched `description` too, and `sort=default` only existed
 // client-side). This route is now a thin HTTP adapter over it.
-import { parseProgramQueryParams, queryPrograms } from '@/lib/program-query';
+import { parseProgramQueryParams, queryPrograms, invalidateProgramQueryCache } from '@/lib/program-query';
 // Track 1.3 U2: DB mappers consolidated into src/lib/catalog-mappers.ts.
 import { mapProgramFromDb, mapProgramToDb } from '@/lib/catalog-mappers';
 import { invalidateLiveCatalogCache } from '@/lib/ai/live-data-context';
+import { invalidateProgramFacetsCache } from '@/lib/program-facets';
 
 /**
  * GET /api/programs — public catalogue query.
@@ -65,6 +66,8 @@ export async function POST(request: Request) {
     revalidateTag(CACHE_TAGS.program(String(data.slug)), 'default');
     // Phase 121: the chatbot's RAG catalog has its own 5-min cache.
     invalidateLiveCatalogCache();
+    invalidateProgramFacetsCache();
+    invalidateProgramQueryCache();
     // Phase 72: fire program.created webhook
     return NextResponse.json({ program: mapProgramFromDb(data) }, { status: 201 });
   } catch {

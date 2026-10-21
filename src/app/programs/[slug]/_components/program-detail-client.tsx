@@ -22,9 +22,18 @@ type TabKey = 'overview' | 'requirements' | 'curriculum' | 'tuition';
 interface ProgramDetailClientProps {
   program: Program;
   university: University | null;
+  /** PF-6: sibling programs (same university, then same discipline). */
+  relatedPrograms: Program[];
+  /** PF-6: the filter query the visitor arrived with, if any. */
+  fromQuery: string;
 }
 
-export default function ProgramDetailClient({ program, university }: ProgramDetailClientProps) {
+export default function ProgramDetailClient({
+  program,
+  university,
+  relatedPrograms,
+  fromQuery,
+}: ProgramDetailClientProps) {
   const { t, locale } = useI18n();
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
 
@@ -54,7 +63,10 @@ export default function ProgramDetailClient({ program, university }: ProgramDeta
               {t('nav.home')}
             </Link>
             <ChevronRight className="h-3.5 w-3.5" />
-            <Link href="/programs" className="hover:text-[#9B1B30] transition-colors">
+            <Link
+              href={fromQuery ? `/programs?${fromQuery}` : '/programs'}
+              className="hover:text-[#9B1B30] transition-colors"
+            >
               {t('prog.title')}
             </Link>
             <ChevronRight className="h-3.5 w-3.5" />
@@ -387,6 +399,49 @@ export default function ProgramDetailClient({ program, university }: ProgramDeta
           </div>
         </div>
       </section>
+
+      {/* PF-6: related programs — same university first, then same
+          discipline. 2,513 program pages had no links to each other. */}
+      {relatedPrograms.length > 0 && (
+        <section className="border-t border-gray-200 bg-white py-10">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="flex items-end justify-between gap-4">
+              <h2 className="text-xl font-bold text-[#1B2A4A]">{t('prog.relatedPrograms')}</h2>
+              <Link
+                href={fromQuery ? `/programs?${fromQuery}` : '/programs'}
+                className="shrink-0 text-sm font-semibold text-[#9B1B30] hover:underline underline-offset-2"
+              >
+                {t('prog.backToResults')}
+              </Link>
+            </div>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {relatedPrograms.map((p) => (
+                <Link
+                  key={p.slug}
+                  href={`/programs/${p.slug}${fromQuery ? `?from=${encodeURIComponent(fromQuery)}` : ''}`}
+                  onClick={() => track('program_click', { slug: p.slug, position: 0, locale })}
+                  className="group flex flex-col border border-gray-200 bg-white p-4 transition-all duration-150 hover:border-[#9B1B30]/40 hover:shadow-md"
+                >
+                  <h3 className="text-sm font-bold leading-snug text-[#1B2A4A] group-hover:text-[#9B1B30]">
+                    {locale === 'zh' ? p.nameCn : p.name}
+                  </h3>
+                  <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-[#1B2A4A]/70">
+                    {p.degree}
+                    {p.language && p.language !== 'To be confirmed' ? ` · ${p.language}` : ''}
+                  </p>
+                  <p className="mt-2 line-clamp-2 text-xs text-gray-500">
+                    {locale === 'zh' ? p.descriptionCn : p.description}
+                  </p>
+                  <span className="mt-3 flex items-center gap-1 text-xs font-semibold text-[#9B1B30]">
+                    {t('prog.viewDetails')}
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Reciprocal news widget */}
       <div className="bg-[#FAFAF8] py-10">

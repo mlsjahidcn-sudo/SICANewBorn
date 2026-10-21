@@ -9,6 +9,8 @@ import { requireAdmin } from '@/lib/supabase-auth';
 // Track 1.3 U2: DB mappers consolidated into src/lib/catalog-mappers.ts.
 import { mapProgramFromDb, mapProgramToDb } from '@/lib/catalog-mappers';
 import { invalidateLiveCatalogCache } from '@/lib/ai/live-data-context';
+import { invalidateProgramFacetsCache } from '@/lib/program-facets';
+import { invalidateProgramQueryCache } from '@/lib/program-query';
 // Track 1.3 U4 #1: cascade delete helpers.
 import { isForceDelete, summarizeCascade } from '@/lib/cascade-delete';
 
@@ -90,6 +92,8 @@ export async function PUT(
     revalidateTag(CACHE_TAGS.program(slug), 'default');
     // Phase 121: the chatbot's RAG catalog has its own 5-min cache.
     invalidateLiveCatalogCache();
+    invalidateProgramFacetsCache();
+    invalidateProgramQueryCache();
     // Phase 72: fire program.updated webhook
     return NextResponse.json({ program: mapProgramFromDb(data) });
   } catch {
@@ -199,6 +203,8 @@ export async function DELETE(
   revalidateTag(CACHE_TAGS.programs, 'default');
     revalidateTag(CACHE_TAGS.program(slug), 'default');
     invalidateLiveCatalogCache();
+    invalidateProgramFacetsCache();
+    invalidateProgramQueryCache();
     // Phase 72: fire program.deleted webhook
     return NextResponse.json({
       success: true,
@@ -260,6 +266,8 @@ export async function PATCH(
     revalidateTag(CACHE_TAGS.programs, 'default');
     revalidateTag(CACHE_TAGS.program(slug), 'default');
     invalidateLiveCatalogCache();
+    invalidateProgramFacetsCache();
+    invalidateProgramQueryCache();
     return NextResponse.json({ program: mapProgramFromDb(data) });
   }
 
@@ -277,6 +285,8 @@ export async function PATCH(
     revalidateTag(CACHE_TAGS.programs, 'default');
     revalidateTag(CACHE_TAGS.program(slug), 'default');
     invalidateLiveCatalogCache();
+    invalidateProgramFacetsCache();
+    invalidateProgramQueryCache();
     return NextResponse.json({ program: mapProgramFromDb(data) });
   }
 
@@ -311,6 +321,8 @@ export async function PATCH(
   revalidateTag(CACHE_TAGS.programs, 'default');
     revalidateTag(CACHE_TAGS.program(slug), 'default');
     invalidateLiveCatalogCache();
+    invalidateProgramFacetsCache();
+    invalidateProgramQueryCache();
     return NextResponse.json({ program: mapProgramFromDb(data) });
 }
 

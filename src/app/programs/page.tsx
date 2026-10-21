@@ -9,6 +9,7 @@ import {
   queryPrograms,
   DEFAULT_PROGRAM_PAGE_SIZE,
 } from '@/lib/program-query';
+import { getProgramFacets } from '@/lib/program-facets';
 import ProgramsClient, { type UniversityOption } from './_components/programs-client';
 import { buildItemListSchema, buildBreadcrumbSchema } from '@/lib/catalog-schema';
 
@@ -43,9 +44,14 @@ export default async function ProgramsPage({
     if (typeof v === 'string') sp.set(k, v);
   }
 
-  const [initialResult, universityOptions] = await Promise.all([
+  const [initialResult, universityOptions, facets] = await Promise.all([
     queryPrograms(parseProgramQueryParams(sp)),
     getUniversityOptions(),
+    // PF-1: the filter vocabulary + counts, read from the live table.
+    // Fetched on the server so the first paint already shows the real
+    // options (and their counts) — no client round trip, no flash of
+    // an empty filter.
+    getProgramFacets(),
   ]);
 
   // Built from the same page of results handed to the client, so the
@@ -76,6 +82,7 @@ export default async function ProgramsPage({
       <ProgramsClient
         initialResult={initialResult}
         universityOptions={universityOptions}
+        facets={facets}
         pageSize={DEFAULT_PROGRAM_PAGE_SIZE}
       />
     </>
@@ -86,8 +93,25 @@ export default async function ProgramsPage({
  * Only `slug` / `name` / `nameCn` are needed to render the university
  * dropdown and the card label, so that's all we send. Falls back to the
  * static seed when Supabase isn't configured.
+ *
+ * PF-8: memoized for an hour. The finder page is dynamic (it reads
+ * `searchParams`), so without this every request pulled all 152
+ * universities out of the database for a dropdown that changes a few
+ * times a week.
  */
+let universityOptionsCache: { at: number; value: UniversityOption[] } | null = null;
+const UNIVERSITY_OPTIONS_TTL_MS = 60 * 60 * 1000;
+
 async function getUniversityOptions(): Promise<UniversityOption[]> {
+  if (universityOptionsCache && Date.now() - universityOptionsCache.at < UNIVERSITY_OPTIONS_TTL_MS) {
+    return universityOptionsCache.value;
+  }
+  const value = await fetchUniversityOptions();
+  universityOptionsCache = { at: Date.now(), value };
+  return value;
+}
+
+async function fetchUniversityOptions(): Promise<UniversityOption[]> {
   if (isSupabaseServerConfigured() && supabaseServer) {
     try {
       const { data, error } = await supabaseServer
