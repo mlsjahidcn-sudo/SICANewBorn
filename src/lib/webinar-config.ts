@@ -44,7 +44,7 @@ export interface WebinarStaticConfig {
   /** ISO timestamp (Asia/Shanghai) — what the countdown timer
    *  counts down to + what the email body renders as the date. */
   sessionDateIso: string;
-  /** Human-readable time string (e.g. "14:00 Beijing Time"). */
+  /** Human-readable time string (e.g. "21:00 Beijing Time"). */
   sessionTimeDisplay: string;
   /** IANA tz the date is in (for the local-time email rendering). */
   sessionTimezone: string;
@@ -62,9 +62,9 @@ export interface WebinarStaticConfig {
  * public page picks it up automatically.
  */
 export const WEBINAR_CONFIG: WebinarStaticConfig = {
-  // Wednesday 22 October 2026, 14:00 Asia/Shanghai = 06:00 UTC
-  sessionDateIso: '2026-10-22T06:00:00.000Z',
-  sessionTimeDisplay: '14:00 Beijing Time',
+  // Thursday 22 October 2026, 21:00 Asia/Shanghai = 13:00 UTC
+  sessionDateIso: '2026-10-22T13:00:00.000Z',
+  sessionTimeDisplay: '21:00 Beijing Time',
   sessionTimezone: 'Asia/Shanghai',
   joinUrl: 'https://studyinchina.academy/webinar-room',
   label: '2027 Intake + CSC Scholarship webinar',

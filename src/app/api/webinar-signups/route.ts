@@ -167,6 +167,7 @@ export async function POST(request: NextRequest) {
       joinLink: WEBINAR_CONFIG.joinUrl,
       webinarDate: formatWebinarDate(WEBINAR_CONFIG.sessionDateIso) || null,
       webinarTime: WEBINAR_CONFIG.sessionTimeDisplay,
+      webinarDateIso: WEBINAR_CONFIG.sessionDateIso,
       // Phase 141: pass the captured country so the email
       // can render the webinar time in the student's local
       // timezone alongside China time.

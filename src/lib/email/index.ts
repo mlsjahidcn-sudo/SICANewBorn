@@ -1130,6 +1130,8 @@ export async function sendWebinarConfirmation(params: {
   joinLink?: string | null;
   webinarDate?: string | null;
   webinarTime?: string | null;
+  /** Full session timestamp for converting the start time to the recipient's timezone. */
+  webinarDateIso?: string | null;
   /** English country name from the signup form. Used to
    *  compute the per-recipient local time. Unknown / null
    *  falls back to China-time-only rendering. */
@@ -1143,9 +1145,9 @@ export async function sendWebinarConfirmation(params: {
   // doesn't poison the rest of the pipeline — the try/catch
   // lives inside formatTimeInZone + the helper returns null.
   let webinarTimeLocal: string;
-  if (params.webinarDate && params.studentCountry) {
+  if (params.webinarDateIso && params.studentCountry) {
     const tz = getTimezoneForCountry(params.studentCountry);
-    const localLine = tz ? formatTimeInZone(params.webinarDate, tz, locale) : null;
+    const localLine = tz ? formatTimeInZone(params.webinarDateIso, tz, locale) : null;
     if (localLine && tz) {
       const approxNote = isMultiTimezoneCountry(params.studentCountry)
         ? ', approximate — confirm local time'
