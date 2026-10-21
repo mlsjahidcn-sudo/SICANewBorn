@@ -3,6 +3,8 @@ import { buildLanguageAlternates } from "@/lib/alternates";
 import Link from 'next/link';
 import { Users, Eye, Heart, Globe, Building, GraduationCap, Award, Clock } from 'lucide-react';
 import { getServerT } from '@/lib/server-t';
+import { getCatalogCounts } from '@/lib/data-fetcher';
+import { formatCount, getStat } from '@/lib/site-stats';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getServerT();
@@ -28,9 +30,29 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function AboutPage() {
   const t = await getServerT();
 
+  // The "Partner Universities" figure is a COUNT, not a marketing
+  // claim, so it is derived from the live catalogue rather than
+  // hardcoded in the translation table (it read "200+" there while
+  // the catalogue actually held 152 — the same drift the homepage
+  // "By the Numbers" band had). The other three figures (students
+  // helped, years of experience, countries served) are curated
+  // claims and stay in the translation table.
+  const counts = await getCatalogCounts();
+
   const stats = [
-    { icon: Users, value: t('about.statsStudents'), label: t('about.statsStudentsLabel') },
-    { icon: Building, value: t('about.statsUniversities'), label: t('about.statsUniversitiesLabel') },
+    {
+      icon: Users,
+      // One source of truth: the same site-stats value the homepage
+      // band uses. It used to be a second hardcoded '5,000+' living
+      // in the translation table, free to drift from the other one.
+      value: getStat('studentsHelped') || t('about.statsStudents'),
+      label: t('about.statsStudentsLabel'),
+    },
+    {
+      icon: Building,
+      value: counts.universities > 0 ? formatCount(counts.universities) : '—',
+      label: t('about.statsUniversitiesLabel'),
+    },
     { icon: Clock, value: t('about.statsYears'), label: t('about.statsYearsLabel') },
     { icon: Globe, value: t('about.statsCountries'), label: t('about.statsCountriesLabel') },
   ];

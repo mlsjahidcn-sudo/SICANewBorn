@@ -2,8 +2,6 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useI18n } from '@/lib/i18n';
-import { Header } from '@/components/header';
-import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -224,11 +222,20 @@ export function ApplyForm() {
   }
 
   // Success view
+  //
+  // Phase A1 (footer/apply audit): this component used to render its
+  // OWN <Header /> and <Footer /> shell while `ClientLayout` ALSO
+  // renders both for every non-portal route — so /apply shipped a
+  // duplicated header AND a duplicated footer. The shell now comes
+  // from ClientLayout only; this component renders page content.
+  //
+  // `min-h-full` (not `min-h-screen`) so the warm-white background
+  // fills the <main> area ClientLayout gives us instead of adding a
+  // full extra viewport of scroll below the footer.
   if (success) {
     return (
-      <div className="min-h-screen bg-[#FAFAF8] flex flex-col">
-        <Header />
-        <main className="flex-1">
+      <div className="min-h-full bg-[#FAFAF8] flex flex-col">
+        <div className="flex-1">
           <div ref={formTopRef} className="max-w-2xl mx-auto px-4 py-12">
             <div className="bg-white border-2 border-[#9B1B30] p-8 text-center">
               <div className="mx-auto w-16 h-16 bg-[#9B1B30] rounded-full flex items-center justify-center mb-4">
@@ -256,8 +263,7 @@ export function ApplyForm() {
               <p className="text-xs text-gray-500">{t('apply.successNextSteps')}</p>
             </div>
           </div>
-        </main>
-        <Footer />
+        </div>
       </div>
     );
   }
@@ -271,10 +277,11 @@ export function ApplyForm() {
   ] as const;
 
   return (
-    <div className="min-h-screen bg-[#FAFAF8] flex flex-col">
-      <Header />
-
-      <main className="flex-1 pb-32 md:pb-12">
+    <div className="min-h-full bg-[#FAFAF8] flex flex-col">
+      {/* pb: the mobile submit bar is `sticky` now (not `fixed`), so
+          it occupies its own space in the flow — the old pb-32 only
+          existed to give a fixed bar clearance. */}
+      <div className="flex-1 pb-4 md:pb-12">
         <div ref={formTopRef} className="max-w-3xl mx-auto px-4 py-8">
           {/* Hero */}
           <div className="mb-8 text-center">
@@ -296,7 +303,7 @@ export function ApplyForm() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-3">
+          <form id="apply-form" onSubmit={handleSubmit} className="space-y-3">
             {/* Honeypot — visually hidden via opacity-0 + absolute positioning.
                 Real screen readers (browsers) skip it because aria-hidden.
                 Bots that auto-fill every visible field will fill this. */}
@@ -554,32 +561,46 @@ export function ApplyForm() {
               </Button>
             </div>
 
-            {/* Mobile sticky submit */}
-            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3 z-30">
-              <Button
-                type="submit"
-                disabled={submitting || !form.studentName.trim()}
-                className="w-full bg-[#9B1B30] hover:bg-[#7A1526] text-white"
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    {t('apply.submitting')}
-                  </>
-                ) : (
-                  t('apply.submit')
-                )}
-              </Button>
-            </div>
+            {/* Mobile sticky submit — rendered OUTSIDE the <form> and
+                wired to it with the HTML `form="apply-form"` attribute.
+
+                It used to be `position: fixed` and lived inside the
+                form. A fixed bar is pinned to the viewport for the
+                whole page, so at the bottom of the page it covered
+                the footer's legal links (Privacy Policy / Terms of
+                Use) — measured overlap of 61px on a 390px viewport.
+
+                `sticky bottom-0` pins it to the viewport while the
+                form is in view and lets it scroll away with the end
+                of the form, so the footer below is never covered.
+                Living outside the form also lets it span the full
+                viewport width instead of the form's max-w-3xl
+                column. */}
           </form>
         </div>
-      </main>
 
-      <Footer />
+        {/* Mobile sticky submit bar — full-bleed, outside the form. */}
+        <div className="md:hidden sticky bottom-0 z-30 bg-white border-t border-gray-200 p-3">
+          <Button
+            type="submit"
+            form="apply-form"
+            disabled={submitting || !form.studentName.trim()}
+            className="w-full bg-[#9B1B30] hover:bg-[#7A1526] text-white"
+          >
+            {submitting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                {t('apply.submitting')}
+              </>
+            ) : (
+              t('apply.submit')
+            )}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
-
 function StatusDot({ status }: { status: 'done' | 'partial' | 'empty' }) {
   if (status === 'done') {
     return <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />;

@@ -30,6 +30,7 @@
  */
 import { cache } from 'react';
 import { fetchProgramRows } from './program-rows';
+import { hasProgramsStatusColumns } from './program-query';
 import { supabaseServer, isSupabaseServerConfigured } from './supabase-server';
 import {
   universities as staticUniversities,
@@ -384,6 +385,82 @@ export const getAllPrograms = cache(
         }
       }
       return staticPrograms;
+    });
+  },
+);
+
+/**
+ * Live row counts for the three public catalog tables.
+ *
+ * Why this exists: the homepage "By the Numbers" band and the
+ * footer's trust micro-stats used to show a HARDCODED "200+ programs"
+ * while the live catalog actually held ~2,075 programs and 152
+ * universities. The comment in `src/app/page.tsx` claimed the number
+ * was "derived from the live DB count at render time" — it was not.
+ * The number was a stale guess, and the other four stats were blank
+ * strings, so the band collapsed to a single lonely stat.
+ *
+ * These three counts are FACTS about the catalogue, not marketing
+ * claims: they cannot be wrong, because they are counted from the
+ * same tables the catalogue pages read. That is why they are derived
+ * rather than curated.
+ *
+ * The genuinely marketing figures — students helped, admission rate,
+ * visa rate, countries served — stay in `src/lib/site-stats.ts` and
+ * stay hidden until a human supplies a verified number. The rule from
+ * Phase 148 holds: never show a guess; show a count or show nothing.
+ *
+ * `head: true` + `count: 'exact'` means PostgREST returns the row
+ * count without transferring a single row. Three of those per minute
+ * (the 60s process cache) is the entire cost of this helper.
+ */
+export interface CatalogCounts {
+  universities: number;
+  programs: number;
+  scholarships: number;
+}
+
+export const getCatalogCounts = cache(
+  async (): Promise<CatalogCounts> => {
+    // Static seed fallback — used when Supabase is unconfigured
+    // (e.g. a fresh clone with no .env) so the band still renders
+    // with real, if smaller, numbers.
+    const fallback: CatalogCounts = {
+      universities: staticUniversities.length,
+      programs: staticPrograms.length,
+      scholarships: staticScholarships.length,
+    };
+
+    return cachedProcess('catalog:counts', async () => {
+      if (!isSupabaseServerConfigured() || !supabaseServer) return fallback;
+      try {
+        // Programs: count the same rows the public catalogue shows —
+        // published and not archived — so the stat matches what a
+        // visitor can actually browse. The status columns only exist
+        // after the Phase 128a migration, so the same probe the
+        // catalogue query uses decides whether to filter.
+        let programQuery = supabaseServer
+          .from('programs')
+          .select('id', { count: 'exact', head: true });
+        if (await hasProgramsStatusColumns()) {
+          programQuery = programQuery.eq('is_published', true).is('archived_at', null);
+        }
+
+        const [u, p, s] = await Promise.all([
+          supabaseServer.from('universities').select('id', { count: 'exact', head: true }),
+          programQuery,
+          supabaseServer.from('scholarships').select('id', { count: 'exact', head: true }),
+        ]);
+        return {
+          universities: u.count ?? fallback.universities,
+          programs: p.count ?? fallback.programs,
+          scholarships: s.count ?? fallback.scholarships,
+        };
+      } catch {
+        // A transient DB failure must not blank the band — fall back
+        // to the static seed counts rather than rendering nothing.
+        return fallback;
+      }
     });
   },
 );

@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServer } from '@/lib/supabase-server';
 import { getAIProvider } from '@/lib/ai/provider';
 import { buildBlogSystemPrompt, buildBlogUserPrompt } from '@/lib/ai/blog-prompts';
+import { getCatalogCounts } from '@/lib/data-fetcher';
 import { extractJsonObject, normalizeBlogPayload } from '@/lib/ai/blog-sanitize';
 import { captureAIError } from '@/lib/ai/with-capture';
 
@@ -280,6 +281,9 @@ async function generateOne(
               language,
               tone: topic.tone,
               targetKeyword: topic.target_keyword,
+              // Live catalogue count so the AI never states a stale
+              // figure in a published post.
+              universityCount: (await getCatalogCounts()).universities,
             }),
           },
           {

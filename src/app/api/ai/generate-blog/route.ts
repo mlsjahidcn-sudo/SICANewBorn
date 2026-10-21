@@ -4,6 +4,7 @@ import { captureAIError } from '@/lib/ai/with-capture';
 import { checkAdminAIRateLimit } from '@/lib/ai/admin-ai-rate-limit';
 import { requireAdmin } from '@/lib/supabase-auth';
 import { buildBlogSystemPrompt, buildBlogUserPrompt } from '@/lib/ai/blog-prompts';
+import { getCatalogCounts } from '@/lib/data-fetcher';
 import { extractJsonObject, normalizeBlogPayload } from '@/lib/ai/blog-sanitize';
 
 /**
@@ -72,6 +73,8 @@ export async function POST(request: NextRequest) {
       language,
       tone,
       targetKeyword,
+      // Live catalogue count so the AI never states a stale figure.
+      universityCount: (await getCatalogCounts()).universities,
     });
     const userPrompt = buildBlogUserPrompt({ topic, category, targetKeyword });
 

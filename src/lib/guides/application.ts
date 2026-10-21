@@ -141,7 +141,7 @@ export const applicationGuide: LocalizedGuide = {
             type: 'h3',
             text: '3. Agents and consultants (like SICA)',
             body:
-              'Licensed education agencies can help you compile documents, apply to multiple programs, and handle scholarship applications. SICA works with students across 40+ countries and has relationships with 9+ top Chinese universities.',
+              'Licensed education agencies can help you compile documents, apply to multiple programs, and handle scholarship applications. SICA works with students across 40+ countries and lists 150+ Chinese universities in its catalogue, from 985 and Double First-Class institutions to specialised medical, agricultural and design schools.',
           },
           {
             type: 'callout',

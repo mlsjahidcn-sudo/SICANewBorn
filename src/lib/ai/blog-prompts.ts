@@ -23,6 +23,15 @@ export interface BlogSystemPromptOptions {
   language: 'en' | 'zh' | 'both';
   tone: string;
   targetKeyword: string;
+  /**
+   * Live count of universities in the SICA catalogue. Passed in by
+   * the caller (both prompt builders are server-side) so the AI
+   * never states a stale figure — it used to be hardcoded as
+   * "50+ Chinese universities" while the catalogue actually held
+   * 152, so published posts carried a number the site itself
+   * contradicted.
+   */
+  universityCount?: number;
 }
 
 export function buildBlogSystemPrompt(opts: BlogSystemPromptOptions): string {
@@ -121,7 +130,11 @@ Respond with ONLY a valid JSON object (no markdown code blocks, no preamble) wit
 ## Voice and tone
 - Tone: ${opts.tone}
 - Author: "SICA Editorial Team" (third-person / institutional voice)
-- SICA facts: based in Guangzhou, China; helps students from 30+ countries apply to 50+ Chinese universities
+- SICA facts: based in Guangzhou, China; helps students from 30+ countries apply to ${
+    opts.universityCount && opts.universityCount > 0
+      ? opts.universityCount
+      : '150+'
+  } Chinese universities. Use ONLY the university count given here — never invent a different one.
 - The "About SICA" knowledge from the chatbot prompt is your reference (we don't repeat it here)
 
 ## Content rules

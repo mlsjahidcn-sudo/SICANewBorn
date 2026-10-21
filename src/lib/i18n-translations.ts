@@ -203,7 +203,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'quick.top': 'Top Universities',
     'quick.top.desc': 'Access China\'s most prestigious institutions',
     'quick.diverse': 'Diverse Programs',
-    'quick.diverse.desc': '1000+ programs in English & Chinese',
+    'quick.diverse.desc': '{{count}}+ programs in English & Chinese',
     'quick.scholarships': 'Scholarships',
     'quick.scholarships.desc': 'Funding options for every student',
     'quick.support': 'Support Services',
@@ -386,7 +386,6 @@ export const translations: Record<Locale, Record<string, string>> = {
     'about.storyDesc': 'Founded with the belief that every student deserves access to world-class education, SICA has grown from a small consulting office to a trusted partner for thousands of international students. Our team of experienced consultants, many of whom have studied abroad themselves, understand the challenges and opportunities of studying in a foreign country.',
     'about.statsStudents': '5,000+',
     'about.statsStudentsLabel': 'Students Helped',
-    'about.statsUniversities': '200+',
     'about.statsUniversitiesLabel': 'Partner Universities',
     'about.statsYears': '10+',
     'about.statsYearsLabel': 'Years of Experience',
@@ -698,7 +697,6 @@ export const translations: Record<Locale, Record<string, string>> = {
     'footer.visaGuide': 'Visa Guide',
     'footer.scholarshipGuide': 'Scholarship Guide',
     'footer.livingGuide': 'Living in China Guide',
-    'footer.careerSupport': 'Career Support',
     'footer.privacy': 'Privacy Policy',
     'footer.terms': 'Terms of Use',
     'footer.rights': 'All rights reserved.',
@@ -715,8 +713,28 @@ export const translations: Record<Locale, Record<string, string>> = {
     'footer.apiDocs': 'API Docs',
     'footer.trustUniversities': 'Partner universities',
     'footer.trustPlacement': 'Admission success',
-    'footer.trustFollowers': 'Followers',
-    'footer.connectTitle': 'Follow us',
+    // Phase A+B (footer IA): the social row lost four icons in Phase
+    // 145 (they linked to bare homepages — a low-trust E-E-A-T
+    // signal), so a "Follow us" heading over one lone WhatsApp icon
+    // read as broken. The heading now describes what the row
+    // actually is: a way to reach a human.
+    'footer.connectTitle': 'Chat with us',
+    'footer.whatsappCta': 'Chat on WhatsApp',
+    // Phase A+B: new footer columns + the contact-strip eyebrow.
+    // `footer.email` exists because `footer.contact` ("Contact Us")
+    // was doing double duty — the /contact page link AND the label
+    // above the email address, which read wrong.
+    'footer.email': 'Email',
+    'footer.getStarted': 'Get Started',
+    'footer.portals': 'Portals',
+    'footer.successStories': 'Success Stories',
+    // Legal pages — /privacy and /terms. The full documents live in
+    // src/lib/legal-docs.ts (bilingual module, not UI strings); these
+    // keys are only the <meta> descriptions.
+    'legal.privacy.description':
+      'How SICA collects, uses, stores and protects your personal information, and what you can ask us to do with it.',
+    'legal.terms.description':
+      'The terms that govern your use of studyinchina.academy and the advisory services SICA provides.',
     // Student Portal
     'student.welcomeBack': 'Welcome back',
     'student.manageApplications': 'Manage your applications and documents',
@@ -4764,8 +4782,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'common.china': 'China',
     'home.stats.partnerUniversities': 'Partner Universities',
     'home.stats.programsAvailable': 'Programs Available',
+    'home.stats.scholarshipsListed': 'Scholarships Listed',
     'home.stats.countriesRepresented': 'Countries Represented',
-    'home.stats.studentsHelped': 'Students Helped',
+    'home.stats.studentsHelped': 'Successful Admissions',
     'home.stats.admissionRate': 'Admission Rate',
     'home.stats.visaSuccessRate': 'Visa Success Rate',
     'home.trustBadge': 'Trusted by students at China\'s top universities',
@@ -5681,7 +5700,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'quick.top': '顶尖大学',
     'quick.top.desc': '进入中国最负盛名的学府',
     'quick.diverse': '多元项目',
-    'quick.diverse.desc': '1000+ 英文及中文授课项目',
+    'quick.diverse.desc': '{{count}}+ 英文及中文授课项目',
     'quick.scholarships': '奖学金',
     'quick.scholarships.desc': '为每位学生提供资助选择',
     'quick.support': '支持服务',
@@ -5863,7 +5882,6 @@ export const translations: Record<Locale, Record<string, string>> = {
     'about.storyDesc': 'SICA 基于每个学生都应获得世界一流教育机会的信念而成立，从一个小型咨询办公室发展成为数千名国际学生的可信赖伙伴。我们的经验丰富的顾问团队，许多人自己有留学经历，深刻理解在异国他乡学习的挑战与机遇。',
     'about.statsStudents': '5,000+',
     'about.statsStudentsLabel': '服务学生',
-    'about.statsUniversities': '200+',
     'about.statsUniversitiesLabel': '合作大学',
     'about.statsYears': '10+',
     'about.statsYearsLabel': '年经验',
@@ -6147,7 +6165,6 @@ export const translations: Record<Locale, Record<string, string>> = {
     'footer.visaGuide': '签证指南',
     'footer.scholarshipGuide': '奖学金指南',
     'footer.livingGuide': '中国生活指南',
-    'footer.careerSupport': '就业支持',
     'footer.privacy': '隐私政策',
     'footer.terms': '使用条款',
     'footer.rights': '保留所有权利。',
@@ -6164,8 +6181,27 @@ export const translations: Record<Locale, Record<string, string>> = {
     'footer.apiDocs': 'API 文档',
     'footer.trustUniversities': '合作院校',
     'footer.trustPlacement': '录取成功率',
-    'footer.trustFollowers': '关注者',
-    'footer.connectTitle': '关注我们',
+    // Phase A+B (footer IA)：原标题为「关注我们」，但四个社交图标
+    // 已在 Phase 145 移除（此前指向平台首页，被视为低可信度的
+    // E-E-A-T 信号），只剩一个 WhatsApp 图标时该标题显得残缺。
+    // 注意：此处不能与 `footer.contact`（「联系我们」，Get Started
+    // 栏里的 /contact 链接）同字，否则同一屏会出现两个「联系我们」。
+    'footer.connectTitle': '在线咨询',
+    'footer.whatsappCta': '通过 WhatsApp 咨询',
+    // Phase A+B：新增页脚栏目与联系方式条目标签。
+    // `footer.email` 的存在是因为 `footer.contact`（「联系我们」）
+    // 同时被用于 /contact 页面链接和邮箱地址上方的标签，读起来不对。
+    'footer.email': '邮箱',
+    'footer.getStarted': '开始申请',
+    'footer.portals': '登录入口',
+    'footer.successStories': '录取通知书',
+    // 法律页面 —— /privacy 与 /terms。完整正文位于
+    // src/lib/legal-docs.ts（中英双语模块，非界面字符串），
+    // 这里仅提供 <meta> 描述。
+    'legal.privacy.description':
+      'SICA 如何收集、使用、保存和保护您的个人信息，以及您可以要求我们如何处理这些信息。',
+    'legal.terms.description':
+      '适用于您使用 studyinchina.academy 以及 SICA 咨询服务的各项条款。',
     // Student Portal
     'student.welcomeBack': '欢迎回来',
     'student.manageApplications': '管理你的申请和文档',
@@ -10068,8 +10104,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'common.china': '中国',
     'home.stats.partnerUniversities': '合作大学',
     'home.stats.programsAvailable': '可选项目',
+    'home.stats.scholarshipsListed': '收录奖学金',
     'home.stats.countriesRepresented': '覆盖国家',
-    'home.stats.studentsHelped': '帮助学生',
+    'home.stats.studentsHelped': '成功录取',
     'home.stats.admissionRate': '录取率',
     'home.stats.visaSuccessRate': '签证通过率',
     'home.trustBadge': '中国顶尖大学的学生信赖之选',

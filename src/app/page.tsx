@@ -30,9 +30,9 @@ import {
   Clock,
   Trophy,
 } from 'lucide-react';
-import { getFeaturedUniversities, getFeaturedPrograms } from '@/lib/data-fetcher';
+import { getFeaturedUniversities, getFeaturedPrograms, getCatalogCounts } from '@/lib/data-fetcher';
 import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
-import { getStat } from '@/lib/site-stats';
+import { getStat, formatCount, formatCountValue } from '@/lib/site-stats';
 import { VideoTestimonials } from '@/components/VideoTestimonials';
 import { ConsultationActivity } from '@/components/ConsultationActivity';
 import dynamic from 'next/dynamic';
@@ -79,7 +79,7 @@ export default async function HomePage() {
   // homepage RSC doesn't block on each sequential DB round-trip.
   // The translation function and structured data both need the
   // locale, so we fetch it once and build the helpers inline.
-  const [t, liveUnis, featuredPrograms, latestNews, latestAdmissions, serviceSchema] = await Promise.all([
+  const [t, liveUnis, featuredPrograms, latestNews, latestAdmissions, serviceSchema, counts] = await Promise.all([
     getServerT(),
     // The home page only needs the top 8 ranked universities (3 for
     // the hero cards + 8 for the logo strip). The old code fetched
@@ -92,6 +92,9 @@ export default async function HomePage() {
     fetchLatestNews(),
     fetchLatestAdmissions(),
     getServiceSchema(),
+    // Live catalogue row counts for the "By the Numbers" band. Three
+    // head-count queries, cached for 60s per process.
+    getCatalogCounts(),
   ]);
 
   const featured = liveUnis.slice(0, 3);
@@ -259,7 +262,12 @@ export default async function HomePage() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             { icon: GraduationCap, label: t('quick.top'), desc: t('quick.top.desc') },
-            { icon: BookOpen, label: t('quick.diverse'), desc: t('quick.diverse.desc') },
+            {
+              icon: BookOpen,
+              label: t('quick.diverse'),
+              // Live programme count, not a hardcoded "1000+".
+              desc: t('quick.diverse.desc', { count: formatCountValue(counts.programs) }),
+            },
             {
               icon: Award,
               label: t('quick.scholarships'),
@@ -363,36 +371,83 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* By the Numbers — site-wide stat source of truth lives in
-          src/lib/site-stats.ts. The 5 spec fields (partnerUniversities,
-          countriesServed, studentsHelped, admissionRate, visaRate) are
-          TODO placeholders; we hide any stat whose value is empty
-          rather than show a guess. The "programs" stat is derived from
-          the live DB count at render time (it's not a curated number),
-          so it stays hard-coded. */}
+      {/* By the Numbers — two kinds of number live here, and the
+          difference matters.
+
+          1. COUNTS (derived, never wrong): the number of
+             universities / programmes / scholarships in the live
+             catalogue, counted from the same tables the catalogue
+             pages read (`getCatalogCounts`). These are facts, so
+             they can't be stale.
+
+          2. CLAIMS (curated, human-verified): students helped,
+             admission rate, visa rate, countries served. These live
+             in `src/lib/site-stats.ts` and are EMPTY until a human
+             supplies a verified figure — an empty value hides the
+             stat rather than showing a guess (Phase 148 rule).
+
+          This used to render a single hardcoded "200+" while the
+          catalogue actually held ~2,075 programmes and 152
+          universities: a stale guess, and a band with one lonely
+          number in it. The comment here claimed the figure was
+          "derived from the live DB count" — it never was. */}
       {(() => {
         const stats = [
-          { value: getStat('partnerUniversities'), label: t('home.stats.partnerUniversities') },
-          { value: getStat('countriesServed'), label: t('home.stats.countriesRepresented') },
-          { value: getStat('studentsHelped'), label: t('home.stats.studentsHelped') },
-          { value: getStat('admissionRate'), label: t('home.stats.admissionRate') },
-          { value: getStat('visaRate'), label: t('home.stats.visaSuccessRate') },
-          { value: `200+`, label: t('home.stats.programsAvailable') },
+          {
+            value: getStat('partnerUniversities') || formatCount(counts.universities),
+            label: t('home.stats.partnerUniversities'),
+          },
+          {
+            value: getStat('countriesServed'),
+            label: t('home.stats.countriesRepresented'),
+          },
+          {
+            value: getStat('studentsHelped'),
+            label: t('home.stats.studentsHelped'),
+          },
+          {
+            value: getStat('admissionRate'),
+            label: t('home.stats.admissionRate'),
+          },
+          {
+            value: getStat('visaRate'),
+            label: t('home.stats.visaSuccessRate'),
+          },
+          {
+            value: formatCount(counts.programs),
+            label: t('home.stats.programsAvailable'),
+          },
+          {
+            value: formatCount(counts.scholarships),
+            label: t('home.stats.scholarshipsListed'),
+          },
         ].filter((s) => s.value && s.value.trim().length > 0);
         if (stats.length === 0) return null;
         return (
           <section className="bg-[#1B2A4A] text-white">
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
+              {/* `.stat-band` owns the column count: 2-up on mobile,
+                  the real stat count from `lg` up. The count is passed
+                  in as the --stat-cols custom property because it is
+                  dynamic. An odd count leaves the last cell alone on
+                  its row — `col-span-2` centres it. */}
               <div
-                className="grid gap-6 lg:gap-8 text-center"
-                style={{ gridTemplateColumns: `repeat(${stats.length}, minmax(0, 1fr))` }}
+                className="stat-band grid gap-6 sm:gap-8 text-center"
+                style={{ '--stat-cols': String(stats.length) } as React.CSSProperties}
               >
-                {stats.map((stat) => (
-                  <div key={stat.label}>
-                    <div className="text-4xl sm:text-5xl font-extrabold text-[#D4A853]">
+                {stats.map((stat, i) => (
+                  <div
+                    key={stat.label}
+                    className={
+                      stats.length % 2 === 1 && i === stats.length - 1
+                        ? 'col-span-2 min-w-0'
+                        : 'min-w-0'
+                    }
+                  >
+                    <div className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#D4A853] tracking-tight">
                       {stat.value}
                     </div>
-                    <div className="mt-2 text-xs sm:text-sm text-gray-300 uppercase tracking-wider">
+                    <div className="mt-2 text-[11px] sm:text-sm text-gray-300 uppercase tracking-wider">
                       {stat.label}
                     </div>
                   </div>

@@ -38,7 +38,20 @@ export interface SiteStats {
 export const SITE_STATS: SiteStats = {
   partnerUniversities: '',
   countriesServed: '',
-  studentsHelped: '',
+  // Owner-supplied figure (2026-10-21). "5,000+ successful
+  // admissions" — the same claim the About page has carried since
+  // the site launched, now moved here so the homepage band and the
+  // About page read ONE source of truth instead of two copies that
+  // can drift.
+  //
+  // Note for context, not a blocker: the `student_applications` +
+  // `partner_applications` tables currently hold ~32 rows, i.e. the
+  // platform's own tracking started later than the business. This
+  // figure describes the whole business to date, not the rows this
+  // database has seen. It is a business claim, not a derived count —
+  // which is exactly why it lives in this file and not in
+  // `getCatalogCounts()`.
+  studentsHelped: '5,000+',
   admissionRate: '',
   visaRate: '',
 };
@@ -60,4 +73,41 @@ export function getStat(key: keyof SiteStats): string {
  */
 export function countFilledStats(): number {
   return Object.values(SITE_STATS).filter((v) => v && v.trim().length > 0).length;
+}
+
+/**
+ * Format a live catalogue count for display.
+ *
+ * 2075 → "2,000+" · 152 → "150+" · 10 → "10+"
+ *
+ * Rounds DOWN to a readable boundary and appends "+", so the result is
+ * always a true lower bound on the real count (there really are at
+ * least 2,000 programmes) and it matches the "+" style of the curated
+ * stats sitting next to it in the band.
+ *
+ * Used by the homepage "By the Numbers" band and the footer trust
+ * micro-stats for the three counts that are DERIVED from the live
+ * catalogue (universities / programmes / scholarships). Those are
+ * facts rather than marketing claims, so they are counted rather
+ * than curated — see `getCatalogCounts()` in `src/lib/data-fetcher.ts`.
+ *
+ * Returns '' for a non-positive or non-finite count so the caller can
+ * hide the stat rather than render "0+".
+ */
+export function formatCount(n: number): string {
+  const v = formatCountValue(n);
+  return v ? `${v}+` : '';
+}
+
+/**
+ * Same rounding as `formatCount` but WITHOUT the "+" suffix — for
+ * translation strings that supply their own suffix, e.g.
+ * "{{count}}+ programs in English & Chinese" (2075 → "2,400+").
+ */
+export function formatCountValue(n: number): string {
+  if (!Number.isFinite(n) || n <= 0) return '';
+  if (n < 10) return `${n}`;
+  if (n < 1000) return `${Math.floor(n / 10) * 10}`;
+  if (n < 1_000_000) return (Math.floor(n / 100) * 100).toLocaleString('en-US');
+  return `${Math.floor(n / 100_000) * 100}`;
 }

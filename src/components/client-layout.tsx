@@ -8,6 +8,7 @@ import { WhatsAppGroupPopup } from '@/components/whatsapp-group-popup';
 import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import type { Locale } from '@/lib/i18n-translations';
+import type { CatalogCounts } from '@/lib/data-fetcher';
 
 /**
  * Phase 67: dynamic-import the floating/overlay widgets so they
@@ -53,9 +54,14 @@ const WebinarPromoPopup = dynamic(
 export function ClientLayout({
   children,
   initialLocale,
+  catalogCounts,
 }: {
   children: React.ReactNode;
   initialLocale: Locale;
+  /** Live catalogue row counts (universities / programs / scholarships),
+   *  read once in the server root layout. The footer is a client
+   *  component, so it can't query the DB itself. */
+  catalogCounts: CatalogCounts;
 }) {
   const pathname = usePathname();
   const isAdmin = pathname.startsWith('/admin');
@@ -72,7 +78,7 @@ export function ClientLayout({
         <CscaPrepBanner />
         <Header />
         <main className="flex-1">{children}</main>
-        <Footer />
+        <Footer counts={catalogCounts} />
         <Chatbot />
         <WhatsAppFloat />
         <StickyContact />

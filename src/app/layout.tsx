@@ -9,6 +9,7 @@ import { getOrganizationSchema, getWebsiteSchema, getEditorialTeamSchema } from 
 import type { Locale } from '@/lib/i18n-translations';
 
 import { SITE_URL } from '@/lib/site-url';
+import { getCatalogCounts } from '@/lib/data-fetcher';
 
 const baseMetadata: Metadata = {
   title: {
@@ -100,6 +101,13 @@ export default async function RootLayout({
   const isDev = process.env.COZE_PROJECT_ENV === 'DEV';
   const initialLocale = await readLocaleCookie();
 
+  // Live catalogue counts for the footer's trust micro-stats. Three
+  // head-count queries, cached 60s per server process, so this is
+  // ~3 queries/minute regardless of traffic. The layout is the only
+  // server component above the client-only ClientLayout, so this is
+  // where the counts have to be read if the footer is to show them.
+  const catalogCounts = await getCatalogCounts();
+
   // JSON-LD for SEO (Organization + WebSite + Editorial Team). Service
   // schema is added on relevant pages (e.g. home) so it can be
   // locale-aware. The Editorial Team entity is the author for all
@@ -148,7 +156,9 @@ export default async function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: editorialTeamJsonLd }}
         />
-        <ClientLayout initialLocale={initialLocale}>{children}</ClientLayout>
+        <ClientLayout initialLocale={initialLocale} catalogCounts={catalogCounts}>
+          {children}
+        </ClientLayout>
         {/* Google Analytics 4 — env-gated. Set
             NEXT_PUBLIC_GA_MEASUREMENT_ID (G-XXXXXXXXXX) in your env
             to go live. The component is from @next/third-parties/google

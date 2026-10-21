@@ -186,3 +186,30 @@ body {
   @apply font-sans;
   background-color: #FAFAF8;
 }
+
+/* ─────────────────────────────────────────────────────────────────
+   Homepage "By the Numbers" band — responsive column count.
+   ─────────────────────────────────────────────────────────────────
+   The number of stats is dynamic (a stat with no value is hidden
+   entirely), so the column count can't be a Tailwind class — it is
+   passed in as the --stat-cols custom property.
+
+   It CANNOT be an inline `gridTemplateColumns` either: an inline
+   style applies at every breakpoint, so 4 stats landed in 4 columns
+   on a 390px phone — 72px each, narrower than the numbers
+   themselves ("5,000+" measured 133px inside a 72px cell, so every
+   cell overflowed).
+
+   So: 2-up on mobile and tablet, the real count from `lg` up. An odd
+   count leaves one cell short on the last row; the markup gives that
+   last cell `col-span-2` so it centres instead of hanging in the
+   left half. */
+.stat-band {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (min-width: 1024px) {
+  .stat-band {
+    grid-template-columns: repeat(var(--stat-cols, 4), minmax(0, 1fr));
+  }
+}

@@ -43,6 +43,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/contact`, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${SITE_URL}/assessment`, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${SITE_URL}/success-stories`, changeFrequency: 'monthly', priority: 0.6 },
+    // Phase A+B (footer audit): the footer linked Privacy Policy +
+    // Terms of Use as `href="#"` — dead links that the newsletter's
+    // own copy pointed at. Both are now real pages.
+    { url: `${SITE_URL}/privacy`, changeFrequency: 'yearly', priority: 0.2 },
+    { url: `${SITE_URL}/terms`, changeFrequency: 'yearly', priority: 0.2 },
     // Phase 57: /get-started is the influencer-traffic sales
     // landing page. Phase 147: removed from the sitemap + noindexed
     // (it shows paid package prices); paid traffic reaches it via
