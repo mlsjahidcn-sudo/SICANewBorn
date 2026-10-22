@@ -4363,6 +4363,13 @@ export const translations: Record<Locale, Record<string, string>> = {
     'consultationActivity.statsBadge': 'Real consultations · With consent',
     'consultationActivity.cardEyebrow': 'Live',
     'consultationActivity.dateLabel': 'Session on {{date}}',
+    'consultationActivity.compactEyebrow': 'Consultation activities',
+    'consultationActivity.compactTitle': 'Real conversations with SICA',
+    'consultationActivity.sessionType': 'Online consultation',
+    'consultationActivity.previous': 'Previous consultation',
+    'consultationActivity.next': 'Next consultation',
+    'consultationActivity.pause': 'Pause slideshow',
+    'consultationActivity.play': 'Play slideshow',
     // Phase 159: corrected the activity metadata after the user
     // pointed out which screenshot shows Carlos. The Oct 13 shot
     // (carlos-deep-dive-session.jpg) actually shows Carlos +
@@ -9758,6 +9765,13 @@ export const translations: Record<Locale, Record<string, string>> = {
     'consultationActivity.statsBadge': '真实咨询 · 经本人授权',
     'consultationActivity.cardEyebrow': '实况',
     'consultationActivity.dateLabel': '咨询时间：{{date}}',
+    'consultationActivity.compactEyebrow': '咨询活动',
+    'consultationActivity.compactTitle': '与 SICA 的真实交流',
+    'consultationActivity.sessionType': '在线咨询',
+    'consultationActivity.previous': '上一张咨询截图',
+    'consultationActivity.next': '下一张咨询截图',
+    'consultationActivity.pause': '暂停轮播',
+    'consultationActivity.play': '播放轮播',
     // Phase 159: 修正活动截图元数据——10/13 的截图确实是 Carlos +
     // Jahid,作为 Carlos 咨询使用;10/9 的截图是 SICA 团队的内部
     // 备课通话(只显示 SICA 员工),如实标注。文件名同步重命名

@@ -4,6 +4,7 @@ import { getServerT } from '@/lib/server-t';
 import { getActiveConsultationShots } from '@/lib/consultation-activity';
 import type { Locale } from '@/lib/i18n-translations';
 import { cookies } from 'next/headers';
+import { ConsultationActivityCarousel } from '@/components/ConsultationActivityCarousel';
 
 /**
  * ConsultationActivity — admin-managed "live activity in progress"
@@ -20,8 +21,7 @@ import { cookies } from 'next/headers';
  * Mounted on:
  *   - /counselling (the consultation page) — full-width section
  *     between "how it works" and the booking wizard
- *   - / (homepage) — compact 2-image strip at the end of the
- *     social-proof section so it doesn't push LCP
+ *   - / (homepage) — compact auto-advancing carousel
  *
  * The whole point of moving this out of a hardcoded array (Phase 158
  * mistake) is so admins can upload + caption + toggle shots without
@@ -32,7 +32,7 @@ import { cookies } from 'next/headers';
 
 export interface ConsultationActivityProps {
   /** `full` (consultation page) shows eyebrow + section title + 2-up grid.
-   *  `compact` (homepage) hides the header for a tighter rhythm. */
+   *  `compact` (homepage) shows a small auto-advancing carousel. */
   variant?: 'full' | 'compact';
 }
 
@@ -51,6 +51,24 @@ export async function ConsultationActivity({
   // component; either can decide to expose it or not, but the
   // component itself stays the same.
   if (shots.length === 0) return null;
+
+  if (!isFull) {
+    return (
+      <ConsultationActivityCarousel
+        shots={shots}
+        labels={{
+          eyebrow: t('consultationActivity.compactEyebrow'),
+          title: t('consultationActivity.compactTitle'),
+          book: t('consultationCta.ctaPrimary'),
+          session: t('consultationActivity.sessionType'),
+          previous: t('consultationActivity.previous'),
+          next: t('consultationActivity.next'),
+          pause: t('consultationActivity.pause'),
+          play: t('consultationActivity.play'),
+        }}
+      />
+    );
+  }
 
   const eyebrowText = t('consultationActivity.eyebrow');
   const title = t('consultationActivity.title');

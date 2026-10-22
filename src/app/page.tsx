@@ -692,11 +692,8 @@ export default async function HomePage() {
           about a specific school. */}
       <VideoTestimonials location="home" />
 
-      {/* Phase 157: live 1:1 consultation activity proof — the
-          "we ran actual calls this week" signal that complements
-          (not duplicates) the VideoTestimonials section above.
-          Compact variant hides the section header to keep the
-          homepage rhythm tight; the cards carry the captions. */}
+      {/* Compact consultation carousel, sourced from the same
+          admin-managed screenshots as the counselling page. */}
       <ConsultationActivity variant="compact" />
 
       {/* S38: Latest from SICA News — server-rendered teaser row.
