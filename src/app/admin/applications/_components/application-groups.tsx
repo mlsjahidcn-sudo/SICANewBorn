@@ -35,6 +35,7 @@ import { useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight, Layers, Plus, Users } from 'lucide-react';
 import {
   ALLOWED_STUDENT_STATUSES,
+  ALLOWED_PARTNER_STATUSES,
   statusColorClass,
 } from '@/lib/application-status';
 import {
@@ -54,7 +55,7 @@ interface RowApp extends GroupableApplication {
 export interface ApplicationGroupsProps {
   applications: RowApp[];
   onOpenRow: (app: { id: string; surface: string }) => void;
-  onSetStatus: (id: string, status: string) => void;
+  onSetStatus: (id: string, status: string, surface: 'student' | 'partner') => void;
   settingStatusFor: string | null;
   /** Phase 180: open the shortlist builder in append mode for an
    *  existing campaign. Routed through the page rather than handled
@@ -229,10 +230,10 @@ export default function ApplicationGroups({
                 <ul className="bg-[#FAFAF8] border-t border-gray-100">
                   {group.items.map((item) => {
                     const row = item as RowApp;
-                    const busy = settingStatusFor === row.id;
+                    const busy = settingStatusFor === `${row.surface}:${row.id}`;
                     return (
                       <li
-                        key={row.id}
+                        key={`${row.surface}:${row.id}`}
                         className="flex flex-wrap items-center gap-3 px-4 py-2 pl-11 border-b border-gray-100 last:border-b-0"
                       >
                         {row.campaignRole && ROLE_LABEL[row.campaignRole] && (
@@ -262,11 +263,11 @@ export default function ApplicationGroups({
                         <select
                           value={row.status}
                           disabled={busy}
-                          onChange={(e) => onSetStatus(row.id, e.target.value)}
+                          onChange={(e) => onSetStatus(row.id, e.target.value, row.surface)}
                           aria-label={`Status for ${row.university} — ${row.program}`}
                           className="text-xs border border-gray-300 px-2 py-1 bg-white disabled:opacity-50 max-w-[180px]"
                         >
-                          {STATUS_OPTIONS.map((s) => (
+                          {(row.surface === 'partner' ? ALLOWED_PARTNER_STATUSES : STATUS_OPTIONS).map((s) => (
                             <option key={s} value={s}>
                               {s}
                             </option>
@@ -275,7 +276,7 @@ export default function ApplicationGroups({
                       </li>
                     );
                   })}
-                  <li className="pl-11 py-2 border-t border-gray-100">
+                  {group.campaignId && <li className="pl-11 py-2 border-t border-gray-100">
                     <button
                       type="button"
                       onClick={() => onAddTarget(group.campaignId!)}
@@ -284,7 +285,7 @@ export default function ApplicationGroups({
                       <Plus className="w-3.5 h-3.5" />
                       Add another target to this shortlist
                     </button>
-                  </li>
+                  </li>}
                 </ul>
               )}
             </li>

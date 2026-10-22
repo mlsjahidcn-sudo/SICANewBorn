@@ -2,7 +2,7 @@
 
 Date: 22 October 2026 (Asia/Dhaka)  
 Scope: admin Students and Applications lists, create/edit/detail flows, unified partner applications, related APIs, documents, notes, payments, and lifecycle actions.  
-Status: review and proposed implementation plan. No application behavior or production data changed.
+Status: findings F1–F10 implemented. The additive database migration is applied; application code requires deployment. The broader ownership/follow-up/reporting roadmap below remains future enhancement work.
 
 The first release should make results, actions, and note visibility trustworthy. The next release should connect the existing features into a daily admissions workspace. Most of the underlying capabilities already exist; the main gaps are inconsistent query behavior, disconnected workflows, and insufficient ownership/follow-up tools.
 
@@ -194,3 +194,35 @@ Create migrations through the repository's Supabase workflow. New tables/functio
 ## Recommended first increment
 
 Start with the note visibility/save repair and the unified application query/export/count repair. These remove the highest-impact risks and give every later queue a reliable foundation. Then fix selection/action semantics and replace the capped pickers before investing in new dashboards or broader visual redesign.
+
+
+## Implementation outcome — 22 October 2026
+
+| Finding | Implemented repair |
+| --- | --- |
+| F1 | Student and partner private notes have separate service-only, RLS-protected tables. Existing shared messages remain explicitly student/partner-visible; legacy content was not silently reclassified. Internal timeline entries are filtered on the student API. Bulk notes append atomically to private storage. |
+| F2 | One server query layer reads all database pages, then filters, sorts, counts and paginates the complete population. Grouped pagination keeps complete groups together. Priority uses an explicit rank and ties have stable record keys. |
+| F3 | Lists, counts and exports share filtering and archive rules. Native review-status aliases remain visible. Selected actions/export use surface-aware identity. CSV honors active filters, reports truncation and neutralizes spreadsheet formulas. Enrollment/payment filters explicitly exclude unsupported partner rows. |
+| F4 | Single and bulk removal now use the same reversible archive RPC, retaining workflow status and writing an audit event. The Archived view supports restore. Existing Withdrawn records retain their original meaning. Routine application controls no longer permanently delete records. |
+| F5 | Notes use the checked request wrapper, retain drafts after rejection, and confirm success only after the server succeeds. |
+| F6 | Student select-all uses the asynchronously loaded visible rows. Selection scope is reconciled on page/filter/sort changes. |
+| F7 | Student edits send changed fields, including explicit clears. A service-only RPC locks and merges JSONB atomically and checks the original update timestamp; stale edits return HTTP 409. |
+| F8 | Activity uses `message`/`is_read`, fails visibly on query errors, and detail tabs offer retry instead of presenting failed loads as empty data. |
+| F9 | Application badges count applications, and student application counts exclude archived records consistently while reading all pages. |
+| F10 | Admin application pickers search/page the eligible live catalog and student records remotely, hydrate selected values, and show errors/retry. Legacy student-list consumers page through the API instead of assuming 500 records were returned. |
+
+Grouped partner actions now use the partner endpoint and its native status vocabulary. Campaign append actions are shown only for actual campaigns. Existing document viewer behavior and student/partner storage remain intact.
+
+Database migration: `supabase/migrations/20261022102607_admin_management_repairs.sql`, recorded in production project `wbzdwwvtbaftjxecgdxk` as version `20261022102607`. It adds archive metadata, private note tables, archive auditing, and restricted mutation functions. It does not rewrite existing messages, decisions, applications, or payments.
+
+Verification:
+
+- The migration and permission/workflow regression SQL passed on isolated PostgreSQL and in a rolled-back transaction against the production schema. Generated fixture identities were confirmed absent afterwards; production still had 87 students and 31 student applications.
+- Student/authenticated roles cannot read either private-note table or execute the admin mutation RPCs. Advisor results for the new tables are informational RLS-without-policy notices: these tables intentionally have no applicant grants or policies and are reached only through authenticated admin server routes.
+- A read-only smoke check running the repaired code against production returned all **32 application records**, with **20 on page 1 and 12 on page 2**, all unique. It returned **31 Online applications** rather than the previous 84-profile badge count. Program page 11 returned 50 records beyond the old first-500 window; the eligible public catalog then contained 5,140 records (excluding unpublished/archived entries).
+- The complete validation gate passed: TypeScript, lint, EN/ZH parity and missing-key checks, and 118 suites / 1,307 tests. Two additional grouped-action regression cases cover partner vocabulary/routing and suppression of campaign actions on legacy groups.
+- Application and custom-server builds passed. The final grouped-action source changes are included in the final application build.
+
+Deployment: the database prerequisite is already applied. Deploy the application code to activate the repaired admin flows; no new environment variables are required.
+
+Implementation choice: the unified query uses complete paged reads and a server-side merge, avoiding a new public database view and silent row caps. This is correct at the verified 5,000+ fixture scale, but its work grows with the application population. A database query/RPC can replace the internal implementation later without changing the shared filter contract.

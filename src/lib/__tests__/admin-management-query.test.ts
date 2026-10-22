@@ -6,6 +6,7 @@ vi.mock('@/lib/supabase-auth', () => ({ requireAdmin: mocks.auth, buildServiceCl
 import { GET as list } from '@/app/api/admin/applications/route';
 import { GET as counts } from '@/app/api/admin/applications/counts/route';
 import { GET as exportCsv } from '@/app/api/admin/applications/export/route';
+import { POST as bulk } from '@/app/api/admin/applications/bulk/route';
 import { DELETE as archive } from '@/app/api/admin/applications/[id]/route';
 import { DELETE as archivePartner } from '@/app/api/admin/partner-applications/[id]/route';
 import { GET as studentActivity } from '@/app/api/admin/students/[id]/activity/route';
@@ -98,6 +99,20 @@ describe('complete unified application query', () => {
 });
 
 describe('admin mutations and activity integrity', () => {
+  it('bulk archive honors the explicit surface when two tables have the same ID', async () => {
+    const db = database({ student_applications: [student(1)], partner_applications: [partner({ id: 's1' })] }); mocks.service.mockReturnValue(db);
+    const response = await bulk(new NextRequest('http://localhost', { method: 'POST', body: JSON.stringify({ action: 'delete', targets: [{ id: 's1', surface: 'partner' }] }) }));
+    expect((await response.json()).updated).toBe(1);
+    expect(db.rpc).toHaveBeenCalledWith('admin_archive_application', expect.objectContaining({ p_id: 's1', p_surface: 'partner', p_archive: true }));
+  });
+  it('bulk notes append to private storage on both surfaces', async () => {
+    const db = database({ student_applications: [student(1)], partner_applications: [partner()] }); mocks.service.mockReturnValue(db);
+    const response = await bulk(new NextRequest('http://localhost', { method: 'POST', body: JSON.stringify({ action: 'note', value: 'Private fixture', targets: [{ id: 's1', surface: 'student' }, { id: 'p1', surface: 'partner' }] }) }));
+    expect((await response.json()).updated).toBe(2);
+    expect(db.rpc).toHaveBeenCalledWith('admin_append_application_note', expect.objectContaining({ p_surface: 'student', p_content: expect.stringContaining('Private fixture') }));
+    expect(db.rpc).toHaveBeenCalledWith('admin_append_application_note', expect.objectContaining({ p_surface: 'partner', p_content: expect.stringContaining('Private fixture') }));
+  });
+
   it.each([['student', archive], ['partner', archivePartner]] as const)('single %s removal calls the reversible, audited archive function', async (surface, route) => {
     const db = database({}); mocks.service.mockReturnValue(db);
     const response = await route(new NextRequest('http://localhost', { method: 'DELETE' }), { params: Promise.resolve({ id: 'application' }) });

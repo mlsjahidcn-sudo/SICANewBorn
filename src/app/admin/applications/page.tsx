@@ -336,7 +336,7 @@ export default function AdminApplicationsPage() {
     useState<StudentFeePaymentChannel>('offline');
   const [bulkMarkPaidMethod, setBulkMarkPaidMethod] = useState<string>('');
   const [bulkMarkPaidDate, setBulkMarkPaidDate] = useState<string>(
-    new Date().toISOString().slice(0, 10),
+    '',
   );
   // Phase 32: when the result dialog has failures, the admin
   // can sort the failure list by "Errors" vs "All IDs" via a
@@ -692,10 +692,10 @@ export default function AdminApplicationsPage() {
   // status change in a grouped card can only ever touch the target
   // whose dropdown the advisor actually used.
   const handleSetTargetStatus = useCallback(
-    async (id: string, status: string) => {
-      setSettingStatusFor(id);
+    async (id: string, status: string, surface: 'student' | 'partner') => {
+      setSettingStatusFor(`${surface}:${id}`);
       try {
-        await apiFetchJson(`/api/admin/applications/${id}`, {
+        await apiFetchJson(`/api/admin/${surface === 'partner' ? 'partner-applications' : 'applications'}/${id}`, {
           method: 'PATCH',
           body: JSON.stringify({ status }),
         });
@@ -1525,11 +1525,11 @@ export default function AdminApplicationsPage() {
                           <td className="px-6 py-4">
                             <Badge
                               className={`${
-                                STATUS_DISPLAY[application.status as ApplicationStatus]?.color ??
+                                STATUS_DISPLAY[(application.status === 'In Review' ? 'Under Review' : application.status) as ApplicationStatus]?.color ??
                                 'bg-gray-100 text-gray-800'
                               } rounded-none border`}
                             >
-                              {STATUS_DISPLAY[application.status as ApplicationStatus]?.label ??
+                              {STATUS_DISPLAY[(application.status === 'In Review' ? 'Under Review' : application.status) as ApplicationStatus]?.label ??
                                 application.status}
                             </Badge>
                           </td>
