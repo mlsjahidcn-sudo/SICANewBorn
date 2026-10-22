@@ -100,6 +100,7 @@ export default function AdminPartnerApplicationDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSavingStatus, setIsSavingStatus] = useState(false);
   const [isSavingNotes, setIsSavingNotes] = useState(false);
+  const [savedInternalNotes, setSavedInternalNotes] = useState('');
   const [adminNotes, setAdminNotes] = useState('');
   // Phase 54: assign university/program modal state
   const [showAssign, setShowAssign] = useState(false);
@@ -117,6 +118,7 @@ export default function AdminPartnerApplicationDetailPage() {
     try {
       const res = await apiFetchJson<{
         application: PartnerApplication;
+        internalNotes?: string;
         linkedStudentApplication?: {
           id: string;
           applicationNumber: string | null;
@@ -127,7 +129,8 @@ export default function AdminPartnerApplicationDetailPage() {
         enrollment?: ApplicationEnrollment | null;
       }>(`/api/admin/partner-applications/${applicationId}`);
       setApp(res.application);
-      setAdminNotes(res.application.notes ?? '');
+      setAdminNotes(res.internalNotes || '');
+      setSavedInternalNotes(res.internalNotes || '');
       // Phase 107 Batch 7: surface the linked enrollment state.
       setLinkedStudentApplication(res.linkedStudentApplication ?? null);
       setEnrollment(res.enrollment ?? null);
@@ -191,14 +194,15 @@ export default function AdminPartnerApplicationDetailPage() {
     setIsSavingNotes(true);
     setError(null);
     try {
-      const res = await apiFetchJson<{ application: PartnerApplication }>(
+      const res = await apiFetchJson<{ application: PartnerApplication; internalNotes?: string }>(
         `/api/admin/partner-applications/${applicationId}`,
         {
           method: 'PATCH',
-          body: JSON.stringify({ notes: adminNotes }),
+          body: JSON.stringify({ internal_notes: adminNotes }),
         },
       );
       setApp(res.application);
+      setSavedInternalNotes(res.internalNotes || '');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save notes.');
     } finally {
@@ -851,6 +855,7 @@ export default function AdminPartnerApplicationDetailPage() {
         </Card>
       )}
 
+      {app.notes && <Card className="rounded-none"><CardHeader><CardTitle>{t('adminManagement.sharedPartnerNotes')}</CardTitle></CardHeader><CardContent className="whitespace-pre-wrap">{app.notes}</CardContent></Card>}
       {/* Admin notes — internal only. The partner has their own
           "Internal Notes" field which is separate. */}
       <Card className="rounded-none">
@@ -872,7 +877,7 @@ export default function AdminPartnerApplicationDetailPage() {
           <div className="flex justify-end mt-2">
             <Button
               onClick={saveNotes}
-              disabled={isSavingNotes || adminNotes === (app.notes ?? '')}
+              disabled={isSavingNotes || adminNotes === savedInternalNotes}
               size="sm"
               className="rounded-none bg-[#1B2A4A] hover:bg-[#26345A] text-white"
             >

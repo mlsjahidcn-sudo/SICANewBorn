@@ -1,3 +1,4 @@
+import { collectRows } from '@/lib/admin-application-query';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, buildServiceClient, getServerEnv } from '@/lib/supabase-auth';
 import { mapStudentFromDb, parseSource, parseStatus, STUDENT_SORTABLE_FIELDS } from '@/lib/student-mapper';
@@ -119,29 +120,12 @@ export async function GET(request: NextRequest) {
     const studentAppCounts = new Map<string, number>();
     const partnerAppCounts = new Map<string, number>();
     if (studentIds.length > 0) {
-      const [studentAppsRes, partnerAppsRes] = await Promise.all([
-        service.from('student_applications').select('student_id').in('student_id', studentIds),
-        service
-          .from('partner_applications')
-          .select('linked_student_profile_id')
-          .in('linked_student_profile_id', studentIds),
+      const [studentApps, partnerApps] = await Promise.all([
+        collectRows<{ student_id: string }>((from, to) => service.from('student_applications').select('id, student_id').in('student_id', studentIds).is('archived_at', null).order('id').range(from, to)),
+        collectRows<{ linked_student_profile_id: string }>((from, to) => service.from('partner_applications').select('id, linked_student_profile_id').in('linked_student_profile_id', studentIds).is('archived_at', null).order('id').range(from, to)),
       ]);
-      if (studentAppsRes.error) {
-        console.error('[admin/students/export] student app count error:', studentAppsRes.error);
-      } else {
-        for (const row of studentAppsRes.data || []) {
-          const sid = (row as { student_id?: string | null }).student_id;
-          if (sid) studentAppCounts.set(sid, (studentAppCounts.get(sid) || 0) + 1);
-        }
-      }
-      if (partnerAppsRes.error) {
-        console.error('[admin/students/export] partner app count error:', partnerAppsRes.error);
-      } else {
-        for (const row of partnerAppsRes.data || []) {
-          const sid = (row as { linked_student_profile_id?: string | null }).linked_student_profile_id;
-          if (sid) partnerAppCounts.set(sid, (partnerAppCounts.get(sid) || 0) + 1);
-        }
-      }
+      for (const row of studentApps) studentAppCounts.set(row.student_id, (studentAppCounts.get(row.student_id) || 0) + 1);
+      for (const row of partnerApps) partnerAppCounts.set(row.linked_student_profile_id, (partnerAppCounts.get(row.linked_student_profile_id) || 0) + 1);
     }
 
     const truncated = students.length > MAX_EXPORT_ROWS;

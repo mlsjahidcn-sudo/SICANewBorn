@@ -1,3 +1,4 @@
+import { archiveApplication } from '@/lib/admin-application-actions';
 import { NextRequest, NextResponse } from 'next/server';
 import { buildServiceClient, getServerEnv, requireAdmin } from '@/lib/supabase-auth';
 import { insertTimelineEvent } from '@/lib/timeline';
@@ -172,11 +173,15 @@ export async function GET(
       }
     }
 
+    const { data: privateNote, error: noteError } = await service.from('partner_application_internal_notes').select('content').eq('application_id', id).maybeSingle();
+    if (noteError) return NextResponse.json({ error: noteError.message }, { status: 500 });
+
     return NextResponse.json({
       application: mapPartnerApplicationFromDb({
         ...(data as Record<string, unknown>),
         created_by_email: createdByEmail,
       } as Parameters<typeof mapPartnerApplicationFromDb>[0]),
+      internalNotes: privateNote?.content || '',
       linkedStudentApplication,
       enrollment,
     });
@@ -207,6 +212,14 @@ export async function PATCH(
   }
   try {
     const body = await request.json();
+    if (body?.action === 'restoreArchive') { await archiveApplication(buildServiceClient(), id, 'partner', false, auth.user.id); return NextResponse.json({ success: true }); }
+    if (typeof body?.internal_notes === 'string') {
+      if (body.internal_notes.length > 8000) return NextResponse.json({ error: 'Internal notes exceed 8000 characters' }, { status: 400 });
+      const { error } = await buildServiceClient().from('partner_application_internal_notes').upsert({ application_id: id, content: body.internal_notes, updated_by: auth.user.id, updated_at: new Date().toISOString() });
+      if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+      return GET(request, { params: Promise.resolve({ id }) });
+    }
+
 
     // S27: the admin can write any field. The mapper validates the
     // closed-set enums (gender, marital, education, etc.) and throws
@@ -417,18 +430,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'Missing id' }, { status: 400 });
   }
   try {
-    const service = buildServiceClient();
-    const { error, count } = await service
-      .from('partner_applications')
-      .delete({ count: 'exact' })
-      .eq('id', id);
-    if (error) {
-      console.error('[admin/partner-applications/:id DELETE] supabase error:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-    if (!count) {
-      return NextResponse.json({ error: 'Application not found' }, { status: 404 });
-    }
+    await archiveApplication(buildServiceClient(), id, 'partner', true, auth.user.id);
     return new NextResponse(null, { status: 204 });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';

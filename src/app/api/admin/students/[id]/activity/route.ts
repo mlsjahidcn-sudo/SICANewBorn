@@ -61,7 +61,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
         .eq('linked_student_profile_id', id),
       service
         .from('student_notifications')
-        .select('id, title, body, type, created_at, read')
+        .select('id, title, message, type, created_at, is_read')
         .eq('student_id', id)
         .order('created_at', { ascending: false })
         .limit(50),
@@ -95,6 +95,8 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
         : Promise.resolve({ data: [], error: null }),
     ]);
 
+    const failure = profileRes.error || appsRes.error || partnerAppsRes.error || notifRes.error || studentTimelineRes.error || partnerTimelineRes.error;
+    if (failure) return NextResponse.json({ error: failure.message }, { status: 500 });
     const profile = profileRes.data;
     const timeline = [
       ...((studentTimelineRes.data || []) as Array<{
@@ -117,10 +119,10 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     const notifications = (notifRes.data || []) as Array<{
       id: string;
       title: string;
-      body: string;
+      message: string;
       type: string;
       created_at: string;
-      read: boolean;
+      is_read: boolean;
     }>;
 
     // Normalize to a common shape
@@ -174,9 +176,9 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       events.push({
         id: n.id,
         type: 'notification',
-        message: n.title || n.body || n.type,
+        message: n.title || n.message || n.type,
         timestamp: n.created_at,
-        meta: { type: n.type, read: n.read },
+        meta: { type: n.type, read: n.is_read },
       });
     }
 

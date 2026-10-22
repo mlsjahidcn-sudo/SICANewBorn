@@ -9,7 +9,7 @@
  * values stay untranslated (DB round-trip); only human-readable
  * chrome (labels, banners, empty states, note copy) translates.
  */
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import EducationHistoryEditor from '../_components/education-history-editor';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -134,7 +134,7 @@ export default function AdminStudentDetailPage() {
   // Fire the lazy load for the deep-linked tab exactly once on mount
   // (Tabs' onValueChange only runs on user clicks, so a deep link to
   // documents/applications/activity would otherwise render an empty tab).
-  const initialTabLoaded = useRef(false);
+
 
   const [student, setStudent] = useState<AdminStudent | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -145,6 +145,7 @@ export default function AdminStudentDetailPage() {
   const [documents, setDocuments] = useState<StudentDocument[]>([]);
   const [applications, setApplications] = useState<StudentApplication[]>([]);
   const [activity, setActivity] = useState<ActivityEvent[]>([]);
+  const [tabErrors, setTabErrors] = useState<Record<string, string>>({});
   const [tabLoading, setTabLoading] = useState<{ [k: string]: boolean }>({});
 
   // Documents tab filters + the in-app viewer. Opening a document must
@@ -200,6 +201,7 @@ export default function AdminStudentDetailPage() {
   const loadTab = useCallback(
     async (tab: 'documents' | 'applications' | 'activity') => {
       setTabLoading((prev) => ({ ...prev, [tab]: true }));
+      setTabErrors(prev => ({ ...prev, [tab]: '' }));
       try {
         if (tab === 'documents') {
           const { documents } = await apiFetchJson<{ documents: StudentDocument[] }>(
@@ -218,20 +220,17 @@ export default function AdminStudentDetailPage() {
           setActivity(activity);
         }
       } catch (err) {
-        // Tab errors are non-fatal — just log
-        console.error(`[admin/student detail] failed to load ${tab}:`, err);
+        setTabErrors(prev => ({ ...prev, [tab]: err instanceof Error ? err.message : t('common.error') }));
       } finally {
         setTabLoading((prev) => ({ ...prev, [tab]: false }));
       }
     },
-    [studentId],
+    [studentId, t],
   );
 
   // Phase 122a: deep-linked tab lazy load (runs once — Tabs'
   // onValueChange doesn't fire for the initial render).
   useEffect(() => {
-    if (initialTabLoaded.current) return;
-    initialTabLoaded.current = true;
     if (
       activeTab === 'documents' ||
       activeTab === 'applications' ||
@@ -408,9 +407,7 @@ export default function AdminStudentDetailPage() {
         value={activeTab}
         onValueChange={(v) => {
           setActiveTab(v as TabValue);
-          if (v === 'documents') loadTab('documents');
-          if (v === 'applications') loadTab('applications');
-          if (v === 'activity') loadTab('activity');
+
         }}
       >
         <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6">
@@ -504,6 +501,7 @@ export default function AdminStudentDetailPage() {
 
         {/* Documents */}
         <TabsContent value="documents" className="space-y-6">
+          {tabErrors.documents && <div role="alert" className="border border-red-200 p-3 text-red-700">{tabErrors.documents}<Button variant="outline" onClick={() => void loadTab('documents')}>{t('common.retry')}</Button></div>}
           <div className="flex justify-end">
             <MissingDocumentsRequest
               key={studentId}
@@ -520,7 +518,7 @@ export default function AdminStudentDetailPage() {
                 <div className="space-y-3">
                   {[1,2,3].map(i => <div key={i} className="h-12 bg-gray-100 rounded animate-pulse" />)}
                 </div>
-              ) : documents.length === 0 ? (
+              ) : !tabErrors.documents && documents.length === 0 ? (
                 <div className="text-center py-12 text-gray-500">
                   <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                   <p>{t('adminStudentDetail.docsEmpty')}</p>
@@ -597,13 +595,14 @@ export default function AdminStudentDetailPage() {
 
         {/* Applications */}
         <TabsContent value="applications" className="space-y-6">
+          {tabErrors.applications && <div role="alert" className="border border-red-200 p-3 text-red-700">{tabErrors.applications}<Button variant="outline" onClick={() => void loadTab('applications')}>{t('common.retry')}</Button></div>}
           <Card>
             <CardContent className="pt-6">
               {tabLoading.applications ? (
                 <div className="space-y-3">
                   {[1,2,3].map(i => <div key={i} className="h-16 bg-gray-100 rounded animate-pulse" />)}
                 </div>
-              ) : applications.length === 0 ? (
+              ) : !tabErrors.applications && applications.length === 0 ? (
                 <div className="text-center py-12 text-gray-500">
                   <FileCheck className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                   <p>{t('adminStudentDetail.appsEmpty')}</p>
@@ -671,13 +670,14 @@ export default function AdminStudentDetailPage() {
 
         {/* Activity */}
         <TabsContent value="activity" className="space-y-6">
+          {tabErrors.activity && <div role="alert" className="border border-red-200 p-3 text-red-700">{tabErrors.activity}<Button variant="outline" onClick={() => void loadTab('activity')}>{t('common.retry')}</Button></div>}
           <Card>
             <CardContent className="pt-6">
               {tabLoading.activity ? (
                 <div className="space-y-3">
                   {[1,2,3,4].map(i => <div key={i} className="h-10 bg-gray-100 rounded animate-pulse" />)}
                 </div>
-              ) : activity.length === 0 ? (
+              ) : !tabErrors.activity && activity.length === 0 ? (
                 <div className="text-center py-12 text-gray-500">
                   <Clock className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                   <p>{t('adminStudentDetail.activityEmpty')}</p>

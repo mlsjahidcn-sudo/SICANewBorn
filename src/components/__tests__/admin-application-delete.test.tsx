@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 const mocks = vi.hoisted(() => ({ api: vi.fn(), raw: vi.fn() }));
 vi.mock('@/lib/api-client', () => ({ apiFetchJson: mocks.api, apiFetch: mocks.raw }));
-vi.mock('@/hooks/use-student-list', () => ({ useStudentList: () => ({ students: [], isLoading: false, error: null }) }));
+vi.mock('@/components/admin/remote-search-select', () => ({ RemoteSearchSelect: () => null }));
 vi.mock('@/lib/i18n', () => {
   const t = (key: string): string => key;
   return { useI18n: () => ({ t }) };
@@ -26,7 +26,7 @@ beforeEach(() => {
 async function openDelete(): Promise<HTMLElement> {
   render(<ApplicationsPage />);
   await screen.findByText('Amina');
-  fireEvent.click(screen.getByText('Delete', { exact: true }));
+  fireEvent.click(screen.getByText('adminManagement.archive', { exact: true }));
   return screen.findByRole('dialog');
 }
 describe('admin application delete', () => {
@@ -36,7 +36,7 @@ describe('admin application delete', () => {
   ])('retains the row and shows an actionable error for HTTP %s', async (status, body, message) => {
     mocks.raw.mockResolvedValue(new Response(body ? JSON.stringify(body) : 'not json', { status }));
     const dialog = await openDelete();
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'adminManagement.archive' }));
     expect(await within(dialog).findByRole('alert')).toHaveTextContent(message);
     expect(mocks.raw).toHaveBeenCalledWith('/api/admin/applications/a1', { method: 'DELETE' });
     expect(screen.getByText('Amina')).toBeInTheDocument();
@@ -45,7 +45,7 @@ describe('admin application delete', () => {
   it('removes the row only after a successful response, including HTTP 204', async () => {
     mocks.raw.mockResolvedValue(new Response(null, { status: 204 }));
     const dialog = await openDelete();
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'adminManagement.archive' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(screen.queryByText('Amina')).not.toBeInTheDocument();
   });

@@ -155,6 +155,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     }
 
     const { dbRow, extraUpdates } = mapStudentToDb(body);
+    if (typeof body.passportNumber === 'string') extraUpdates.passportNumber = body.passportNumber;
 
     // Phase 182: stamp / clear service_paid_at when the Paid triage
     // flag flips. The mapper only writes the boolean — the timestamp
@@ -176,62 +177,25 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       );
     }
 
-    // If we have extra updates, merge them into the dbRow's `extra`
-    // column. We do this server-side because the mapper doesn't know
-    // how to do JSONB || merge — it just gives us the deltas.
-    let extraDelta: Record<string, unknown> | undefined;
-    if (hasExtra) {
-      extraDelta = extraUpdates;
-    }
-
-    // Strip the deprecated delete calls — the mapper never sets these
-    // keys (N1). Defensive: refuse attempts to write them.
-    delete dbRow.id;
-    delete dbRow.user_id;
-    delete dbRow.created_at;
-
+    if (body.firstName !== undefined && (typeof body.firstName !== 'string' || !body.firstName.trim())) return NextResponse.json({ error: 'First name is required' }, { status: 400 });
+    if (body.expectedUpdatedAt !== undefined && body.expectedUpdatedAt !== null && (typeof body.expectedUpdatedAt !== 'string' || !Number.isFinite(Date.parse(body.expectedUpdatedAt)))) return NextResponse.json({ error: 'Invalid student version' }, { status: 400 });
+    delete dbRow.id; delete dbRow.user_id; delete dbRow.created_at;
     const service = buildServiceClient();
-
-    // JSONB merge: read current extra, merge in JS, write back. (Race:
-    // a concurrent PATCH to a different extra field is lost — see the
-    // audit M9. Low priority at SICA's admin scale.)
-    if (extraDelta !== undefined) {
-      const { data: current, error: readErr } = await service
-        .from('student_profiles')
-        .select('extra')
-        .eq('id', id)
-        .maybeSingle();
-      if (readErr) {
-        return NextResponse.json({ error: readErr.message }, { status: 500 });
-      }
-      dbRow.extra = {
-        ...((current?.extra as object) || {}),
-        ...extraDelta,
-      };
-    }
-
-    if (Object.keys(dbRow).length === 0) {
-      // Edge case: only extra updates — dbRow.extra is set above but
-      // the fixed-column keys are empty. Don't write an empty UPDATE.
-      // (The mapStudentToDb split ensures dbRow has only fixed-col keys.)
-    }
-
-    const { data, error } = await service
-      .from('student_profiles')
-      .update(dbRow)
-      .eq('id', id)
-      .select('*')
-      .single();
+    const { data, error } = await service.rpc('admin_patch_student', {
+      p_id: id, p_updates: dbRow, p_extra: extraUpdates,
+      p_expected_updated_at: body.expectedUpdatedAt ?? null,
+    });
 
     if (error) {
       console.error('[admin/students/:id PATCH] supabase error:', error);
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ error: error.message }, { status: error.code === '40001' ? 409 : error.code === 'P0002' ? 404 : 400 });
     }
     if (!data) {
       return NextResponse.json({ error: 'Student not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ student: mapStudentFromDb(data) });
+    const updatedStudent = Array.isArray(data) ? data[0] : data;
+    return NextResponse.json({ student: mapStudentFromDb(updatedStudent) });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[admin/students/:id PATCH] unhandled:', err);

@@ -1,5 +1,7 @@
 'use client';
 
+import { RemoteSearchSelect } from '@/components/admin/remote-search-select';
+
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ChevronRight, Check, User, FileText, GraduationCap, AlertCircle, Upload as UploadIcon } from 'lucide-react';
@@ -32,8 +34,6 @@ import { AdminDocUploadDialog } from '../_components/admin-doc-upload-dialog';
 // /admin/document-types pages). If we ever add admin UIs for
 // those, they'll need the same treatment.
 import type { University, Program } from '@/lib/data';
-import { SearchableSelect } from '@/components/ui/searchable-select';
-import { useStudentList } from '@/hooks/use-student-list';
 import { apiFetchJson } from '@/lib/api-client';
 import type { AdminStudent } from '@/lib/student-mapper';
 import type { DocumentStatus, StudentDocument } from '@/lib/student-data';
@@ -74,7 +74,7 @@ export default function AdminNewApplicationPage() {
   // Phase 21: also surface `isLoading` so the typeahead can show
   // a "Loading students..." placeholder instead of a confusing
   // empty popover between mount and the API response settling.
-  const { students, isLoading: studentsLoading } = useStudentList();
+
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -108,9 +108,9 @@ export default function AdminNewApplicationPage() {
   // `dataLoading` flag the page can show in the dropdown placeholders.
   const [universities, setUniversities] = useState<University[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
-  const [dataLoading, setDataLoading] = useState(true);
-  const [filteredPrograms, setFilteredPrograms] = useState<Program[]>([]);
-  const [filteredUniversities, setFilteredUniversities] = useState<University[]>([]);
+
+
+
 
   const [formData, setFormData] = useState<FormData>({
     studentId: null,
@@ -141,69 +141,6 @@ export default function AdminNewApplicationPage() {
     leadType: null,
   });
 
-  // Phase 20: fetch the live university + program catalog on mount.
-  // The two endpoints are independent — run in parallel; one
-  // failing shouldn't block the other. Limit=500 covers the
-  // realistic catalog size (the live DB has 27 universities +
-  // 149 programs as of Phase 3 — well under the cap).
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const [u, p] = await Promise.all([
-          apiFetchJson<{ universities: University[] }>('/api/universities?limit=500'),
-          apiFetchJson<{ programs: Program[] }>('/api/programs?limit=500'),
-        ]);
-        if (cancelled) return;
-        setUniversities(u.universities || []);
-        setPrograms(p.programs || []);
-      } catch (err) {
-        if (cancelled) return;
-        // Soft fail — the dropdowns will just show empty. Admin
-        // can retry by reloading the page. Better than a hard
-        // error blocking the whole wizard.
-        console.error('[admin/applications/new] failed to load catalog:', err);
-      } finally {
-        if (!cancelled) setDataLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // Filter programs when degree changes
-  useEffect(() => {
-    if (formData.degree) {
-      const filtered = programs.filter(p => p.degree === formData.degree);
-      setFilteredPrograms(filtered);
-      setFormData(prev => ({
-        ...prev,
-        program: '',
-        university: ''
-      }));
-    } else {
-      setFilteredPrograms(programs);
-    }
-  }, [formData.degree, programs]);
-
-  // Filter universities when program changes
-  useEffect(() => {
-    if (formData.program) {
-      const selectedProgram = programs.find(p => p.slug === formData.program);
-      if (selectedProgram) {
-        const filtered = universities.filter(u => u.slug === selectedProgram.universitySlug);
-        setFilteredUniversities(filtered);
-        setFormData(prev => ({
-          ...prev,
-          university: selectedProgram.universitySlug
-        }));
-      }
-    } else {
-      setFilteredUniversities(universities);
-    }
-  }, [formData.program, programs, universities]);
-
   // Load student documents when student is selected
   useEffect(() => {
     if (!formData.studentId) {
@@ -219,14 +156,16 @@ export default function AdminNewApplicationPage() {
       return;
     }
 
-    const student = students.find(s => s.id === formData.studentId);
-    setSelectedStudent(student ?? null);
+
 
     let cancelled = false;
     setStudentDocumentsLoading(true);
 
     (async () => {
       try {
+        const profile = await apiFetchJson<{ student: AdminStudent }>(`/api/admin/students/${formData.studentId}`);
+        if (cancelled) return;
+        setSelectedStudent(profile.student);
         const res = await apiFetchJson<{ documents: Array<Record<string, unknown>> }>(
           `/api/admin/students/${formData.studentId}/documents`,
         );
@@ -271,7 +210,7 @@ export default function AdminNewApplicationPage() {
     return () => {
       cancelled = true;
     };
-  }, [formData.studentId, students]);
+  }, [formData.studentId]);
 
   // Phase 107 Batch 5: lead auto-detection. When the admin types a
   // non-empty applicantEmail and no studentId is set, we probe the
@@ -413,14 +352,10 @@ export default function AdminNewApplicationPage() {
         // High | Urgent); default is Normal.
         priority: formData.priority,
         personalStatement: formData.personalStatement,
-        // C4: the form's `notes` field is the same Textarea for
-        // both student-visible additional_notes AND admin-only
-        // admin_notes. Mapping it to BOTH meant the student saw
-        // whatever the admin typed. The form has no separate
-        // "internal notes" field, so the safe default is to only
-        // send additional_notes (visible to student). The admin
-        // can write admin-only notes from the application detail
-        // page after creation, where the field is properly
+        // This wizard field is student-visible. Private team notes
+        // are stored separately from the application detail page;
+        // never duplicate this value into the private channel.
+        // The field is properly
         // separated.
         additionalNotes: formData.notes,
       };
@@ -591,18 +526,10 @@ export default function AdminNewApplicationPage() {
                           share a name. The popover filters on
                           name / email / nationality as the admin
                           types. */}
-                      <SearchableSelect
-                        value={formData.studentId || ''}
-                        onChange={(value) => handleChange('studentId', value || null)}
-                        placeholder="Select a student..."
-                        searchPlaceholder="Search by name, email, or nationality..."
-                        emptyText="No students match your search."
-                        loading={studentsLoading}
-                        options={students.map((s) => ({
-                          value: s.id,
-                          label: `${s.firstName} ${s.lastName}`,
-                          sublabel: [s.email, s.nationality].filter(Boolean).join(' · '),
-                        }))}
+                      <RemoteSearchSelect<{ id: string }>
+                        url="/api/admin/application-options?kind=student" value={formData.studentId || ''}
+                        placeholder={t('adminManagement.selectStudent')}
+                        onChange={value => handleChange('studentId', value || null)}
                       />
                       <p className="text-xs text-[#4B5563] mt-1">
                         Select an existing student, OR fill in the manual fields below for a lead without an account.
@@ -1017,7 +944,7 @@ export default function AdminNewApplicationPage() {
                         <Label className="text-[#1F2937]">Degree Level *</Label>
                         <Select 
                           value={formData.degree} 
-                          onValueChange={(value) => handleChange('degree', value)}
+                          onValueChange={(value) => setFormData(prev => ({ ...prev, degree: value, program: '', university: '' }))}
                         >
                           <SelectTrigger className="rounded-none mt-1">
                             <SelectValue placeholder="Select degree..." />
@@ -1053,43 +980,15 @@ export default function AdminNewApplicationPage() {
 
                     <div>
                       <Label className="text-[#1F2937]">Program *</Label>
-                      <Select
-                        value={formData.program}
-                        onValueChange={(value) => handleChange('program', value)}
-                        // Phase 20: gate the dropdown on the live
-                        // catalog fetch. Without this the admin
-                        // sees a flash of "no programs" between
-                        // mount and the API response settling.
-                        disabled={!formData.degree || dataLoading}
-                      >
-                        <SelectTrigger className="rounded-none mt-1">
-                          <SelectValue
-                            placeholder={
-                              dataLoading
-                                ? 'Loading catalog...'
-                                : formData.degree
-                                  ? 'Select program...'
-                                  : 'First select degree level'
-                            }
-                          />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {filteredPrograms.map(program => (
-                            <SelectItem key={program.slug} value={program.slug}>
-                              {program.name}
-                            </SelectItem>
-                          ))}
-                          {/* Empty-state inside the dropdown so the
-                              admin gets feedback when their filter
-                              has no matches (e.g. no programs for
-                              the chosen degree). */}
-                          {filteredPrograms.length === 0 && !dataLoading && formData.degree && (
-                            <div className="px-2 py-3 text-xs text-[#4B5563] text-center">
-                              No programs found for this degree level.
-                            </div>
-                          )}
-                        </SelectContent>
-                      </Select>
+                      <RemoteSearchSelect<{ program: Program; university: University }>
+                        url={`/api/admin/application-options?kind=program&degree=${encodeURIComponent(formData.degree)}`}
+                        value={formData.program} disabled={!formData.degree} placeholder={t('adminManagement.selectProgram')}
+                        onChange={(value, record) => {
+                          if (!record) return;
+                          setPrograms([record.program]); setUniversities([record.university]);
+                          setFormData(prev => ({ ...prev, program: value, university: record.program.universitySlug }));
+                        }}
+                      />
                     </div>
 
                     {getSelectedProgram() && (

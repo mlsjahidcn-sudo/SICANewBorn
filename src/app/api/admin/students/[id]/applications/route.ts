@@ -51,6 +51,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
         .from('student_applications')
         .select('id, application_number, status, university_name, program_name, degree, intake, created_at')
         .eq('student_id', id)
+        .is('archived_at', null)
         .order('created_at', { ascending: false }),
       service
         .from('partner_applications')

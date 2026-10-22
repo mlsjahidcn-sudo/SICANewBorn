@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Plus, Eye, Trash2, MoreHorizontal, ArrowUpRight, ArrowDownRight, Minus, RefreshCw, AlertCircle, Search, Users, Building2, UserPlus, CheckSquare, Square, X, StickyNote, Flag, Download, CalendarClock, Layers, List, Loader2, ChevronUp, ChevronDown, ChevronsUpDown, DollarSign } from 'lucide-react';
@@ -16,7 +16,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { ListPageSkeleton } from '@/components/partner/skeletons';
-import { useStudentList } from '@/hooks/use-student-list';
+import { RemoteSearchSelect } from '@/components/admin/remote-search-select';
 import { apiFetch, apiFetchJson } from '@/lib/api-client';
 import { downloadCsvViaApi } from '@/lib/download-csv';
 import { APPLICATION_STATUSES, ApplicationStatus } from '@/lib/application-mapper';
@@ -46,6 +46,7 @@ interface Application {
   source: 'Online' | 'Admin' | 'Partner' | 'Partner CRM';
   surface: 'student' | 'partner';
   applicationNumber?: string;
+  archivedAt?: string | null;
   // Phase 33: partner-CRM-only fields, populated for surface='partner'
   // rows and null for surface='student' rows. The unified table shows
   // these columns only when `surface === 'partner'` (driven by
@@ -84,6 +85,7 @@ interface Application {
 }
 
 const PAGE_SIZE = 20;
+const applicationKey = (app: { surface: string; id: string }): string => `${app.surface}:${app.id}`;
 
 /**
  * Single source of truth for how each application status is rendered:
@@ -140,7 +142,7 @@ const SOURCE_TABS: { value: SourceTab; label: string; shortLabel: string; icon: 
 export default function AdminApplicationsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { students } = useStudentList();
+
   const { t } = useI18n();
 
   // S34: cohort filter, sourced from the URL on mount. The
@@ -207,7 +209,9 @@ export default function AdminApplicationsPage() {
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>(searchParams.get('status') || 'all');
-  const [studentFilter, setStudentFilter] = useState<string>('all');
+  const [studentFilter, setStudentFilter] = useState<string>(searchParams.get('student') || 'all');
+  const [archiveFilter, setArchiveFilter] = useState('active');
+  const [exportWarning, setExportWarning] = useState('');
   // Phase 107 Batch 4: two new filter chips. 'all' = no filter;
   // 'with-decision' / 'no-decision' filter student_applications.decision;
   // 'enrolled' / 'not-enrolled' filter student_applications.enrolled_at.
@@ -343,6 +347,46 @@ export default function AdminApplicationsPage() {
   // rows fail with the same reason. Default 'list'.
   const [bulkResultView, setBulkResultView] = useState<'list' | 'grouped'>('list');
 
+  const queryString = useMemo(() => {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(PAGE_SIZE),
+    });
+    // Phase 33: in partnerOnly mode, surface=partner is sent so
+    // the API returns only partner_applications rows (no
+    // student_applications join work). This both speeds the
+    // query and guarantees the partner-only columns render
+    // correctly. The Partner tab badge stays accurate because
+    // the counts endpoint also respects surface filtering
+    // server-side.
+    if (partnerOnly) {
+      params.set('surface', 'partner');
+    } else if (activeTab !== 'all') {
+      params.set('source', activeTab);
+    }
+    if (searchQuery.trim()) params.set('search', searchQuery.trim());
+    if (statusFilter !== 'all') params.set('status', statusFilter);
+    if (studentFilter !== 'all') params.set('student', studentFilter);
+    if (intakeFilter) params.set('intake', intakeFilter);
+    // Phase 107 Batch 4: decision + enrollment filters.
+    if (decisionFilter === 'with') params.set('hasDecision', 'true');
+    if (decisionFilter === 'without') params.set('hasDecision', 'false');
+    if (enrolledFilter === 'enrolled') params.set('enrolled', 'true');
+    if (enrolledFilter === 'not-enrolled') params.set('enrolled', 'false');
+    // Phase 145: payment status filter. Only sent when not 'all'
+    // so the API behaves identically for the unfiltered case.
+    if (paymentFilter !== 'all') params.set('paymentStatus', paymentFilter);
+    // Phase 182: offline-pay channel filter.
+    if (paymentChannelFilter === 'offline') params.set('paymentChannel', 'offline');
+    // Phase 122b: server-side sort.
+    params.set('archive', archiveFilter);
+    if (viewMode === 'grouped') params.set('grouped', 'true');
+    params.set('sort', sortBy);
+    params.set('order', sortOrder);
+
+    return params.toString();
+  }, [page, partnerOnly, activeTab, searchQuery, statusFilter, studentFilter, intakeFilter, decisionFilter, enrolledFilter, paymentFilter, paymentChannelFilter, sortBy, sortOrder, archiveFilter, viewMode]);
+
   // -----------------------------------------------------------------
   // Fetch the per-source counts ONCE on mount so the tab badges can
   // show numbers. Independent of the main list fetch so a slow list
@@ -399,47 +443,13 @@ export default function AdminApplicationsPage() {
     setIsLoading(true);
     setError(null);
 
-    const params = new URLSearchParams({
-      page: String(page),
-      limit: String(PAGE_SIZE),
-    });
-    // Phase 33: in partnerOnly mode, surface=partner is sent so
-    // the API returns only partner_applications rows (no
-    // student_applications join work). This both speeds the
-    // query and guarantees the partner-only columns render
-    // correctly. The Partner tab badge stays accurate because
-    // the counts endpoint also respects surface filtering
-    // server-side.
-    if (partnerOnly) {
-      params.set('surface', 'partner');
-    } else if (activeTab !== 'all') {
-      params.set('source', activeTab);
-    }
-    if (searchQuery.trim()) params.set('search', searchQuery.trim());
-    if (statusFilter !== 'all') params.set('status', statusFilter);
-    if (studentFilter !== 'all') params.set('student', studentFilter);
-    if (intakeFilter) params.set('intake', intakeFilter);
-    // Phase 107 Batch 4: decision + enrollment filters.
-    if (decisionFilter === 'with') params.set('hasDecision', 'true');
-    if (decisionFilter === 'without') params.set('hasDecision', 'false');
-    if (enrolledFilter === 'enrolled') params.set('enrolled', 'true');
-    if (enrolledFilter === 'not-enrolled') params.set('enrolled', 'false');
-    // Phase 145: payment status filter. Only sent when not 'all'
-    // so the API behaves identically for the unfiltered case.
-    if (paymentFilter !== 'all') params.set('paymentStatus', paymentFilter);
-    // Phase 182: offline-pay channel filter.
-    if (paymentChannelFilter === 'offline') params.set('paymentChannel', 'offline');
-    // Phase 122b: server-side sort.
-    params.set('sort', sortBy);
-    params.set('order', sortOrder);
-
     // Safety timeout — never let the page hang on a stalled network call.
     timeoutId = setTimeout(() => controller.abort(), 15_000);
 
     (async () => {
       try {
         const data = await apiFetchJson<{ applications: Application[]; total: number; page: number; totalPages: number }>(
-          `/api/admin/applications?${params.toString()}`,
+          `/api/admin/applications?${queryString}`,
           { signal: controller.signal },
         );
         if (!cancelled) {
@@ -464,7 +474,7 @@ export default function AdminApplicationsPage() {
       controller.abort();
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [page, searchQuery, statusFilter, studentFilter, activeTab, intakeFilter, partnerOnly, retryNonce, decisionFilter, enrolledFilter, paymentFilter, paymentChannelFilter, sortBy, sortOrder]);
+  }, [queryString, retryNonce]);
 
   // Debounce search — wait 300ms after the user stops typing before firing
   useEffect(() => {
@@ -478,7 +488,7 @@ export default function AdminApplicationsPage() {
   // which could render empty because the partner surface has few pages.
   useEffect(() => {
     setPage(1);
-  }, [activeTab, statusFilter, studentFilter, searchQuery, intakeFilter, partnerOnly, paymentFilter, paymentChannelFilter]);
+  }, [activeTab, statusFilter, studentFilter, searchQuery, intakeFilter, partnerOnly, paymentFilter, paymentChannelFilter, decisionFilter, enrolledFilter, archiveFilter, viewMode]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -494,7 +504,7 @@ export default function AdminApplicationsPage() {
         applicationToDelete.surface === 'partner'
           ? `/api/admin/partner-applications/${applicationToDelete.id}`
           : `/api/admin/applications/${applicationToDelete.id}`;
-      const response = await apiFetch(deleteHref, { method: 'DELETE' });
+      const response = await apiFetch(deleteHref, applicationToDelete.archivedAt ? { method: 'PATCH', body: JSON.stringify({ action: 'restoreArchive' }) } : { method: 'DELETE' });
       if (!response.ok) {
         const body: unknown = await response.json().catch(() => null);
         const message = body && typeof body === 'object' && 'error' in body && typeof body.error === 'string'
@@ -529,24 +539,13 @@ export default function AdminApplicationsPage() {
     setIsExporting(true);
     setError(null);
     try {
-      const params = new URLSearchParams();
-      if (partnerOnly) {
-        params.set('surface', 'partner');
-      } else if (activeTab !== 'all') {
-        params.set('source', activeTab);
-      }
-      if (statusFilter !== 'all') params.set('status', statusFilter);
-      if (searchQuery.trim()) params.set('search', searchQuery.trim());
-      if (intakeFilter) params.set('intake', intakeFilter);
-      // Phase 107 Batch 4: propagate decision + enrollment filters
-      if (decisionFilter === 'with') params.set('hasDecision', 'true');
-      if (decisionFilter === 'without') params.set('hasDecision', 'false');
-      if (enrolledFilter === 'enrolled') params.set('enrolled', 'true');
-      if (enrolledFilter === 'not-enrolled') params.set('enrolled', 'false');
-      await downloadCsvViaApi(
+      const params = new URLSearchParams(queryString);
+      params.delete('page'); params.delete('limit'); params.delete('grouped');
+      const download = await downloadCsvViaApi(
         `/api/admin/applications/export${params.toString() ? `?${params}` : ''}`,
         `sica-applications-${new Date().toISOString().slice(0, 10)}.csv`,
       );
+      setExportWarning(download.truncated ? t('adminManagement.exportTruncated') : '');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to export applications');
     } finally {
@@ -559,7 +558,7 @@ export default function AdminApplicationsPage() {
     setIsExporting(true);
     setError(null);
     try {
-      const params = new URLSearchParams({ ids: Array.from(selectedIds).join(',') });
+      const params = new URLSearchParams({ keys: applications.filter(a => selectedIds.has(applicationKey(a))).map(a => `${a.surface}:${a.id}`).join(',') });
       if (intakeFilter) params.set('intake', intakeFilter);
       if (decisionFilter === 'with') params.set('hasDecision', 'true');
       if (decisionFilter === 'without') params.set('hasDecision', 'false');
@@ -600,40 +599,23 @@ export default function AdminApplicationsPage() {
   // and bulk-acting on it would surprise the admin.
   useEffect(() => {
     setSelectedIds(new Set());
-  }, [activeTab, statusFilter, studentFilter, searchQuery, intakeFilter]);
+  }, [activeTab, statusFilter, studentFilter, searchQuery, intakeFilter, archiveFilter, paymentFilter, paymentChannelFilter, decisionFilter, enrolledFilter, page, sortBy, sortOrder, viewMode]);
 
-  // Client-side safety filter: even after the API call, double-check the
-  // active source matches the row. Cheap and makes tab switching feel
+  // The server owns filtering across both surfaces.
+  //   // active source matches the row. Cheap and makes tab switching feel
   // instant if the user navigates before the refetch lands.
   //
   // S28: the "Partner" tab covers BOTH source='Partner' and
   // source='Partner CRM' (the partner_applications rows). They're
   // unified in the UI but link to different detail pages.
-  const filteredApplications = applications.filter((app) => {
-    const matchesSource =
-      activeTab === 'all' ||
-      app.source === activeTab ||
-      (activeTab === 'Partner' && app.source === 'Partner CRM');
-    const matchesStatus = statusFilter === 'all' || app.status === statusFilter;
-    const matchesStudent =
-      studentFilter === 'all' ||
-      // Partner CRM rows have no student_id — they don't match a
-      // student filter.
-      (app.studentId !== null && app.studentId === studentFilter);
-    const matchesSearch =
-      !searchQuery ||
-      app.studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      app.studentEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      app.university.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSource && matchesStatus && matchesStudent && matchesSearch;
-  });
+  const filteredApplications = applications;
 
   // S31: bulk action handlers (continued). Now that
   // `filteredApplications` is in scope, we can implement the
   // select-all-visible toggle and the bulk runner.
   const toggleSelectAllVisible = useCallback(() => {
     setSelectedIds((prev) => {
-      const visibleIds = filteredApplications.map((a) => a.id);
+      const visibleIds = filteredApplications.map(applicationKey);
       const allSelected = visibleIds.length > 0 && visibleIds.every((id) => prev.has(id));
       const next = new Set(prev);
       if (allSelected) {
@@ -647,7 +629,7 @@ export default function AdminApplicationsPage() {
 
   const runBulk = useCallback(
     async (
-      action: 'status' | 'priority' | 'note' | 'delete' | 'markPaid',
+      action: 'status' | 'priority' | 'note' | 'delete' | 'restoreArchive' | 'markPaid',
       value?: string | Record<string, unknown>,
     ) => {
       if (selectedIds.size === 0) return;
@@ -657,7 +639,7 @@ export default function AdminApplicationsPage() {
           '/api/admin/applications/bulk',
           {
             method: 'POST',
-            body: JSON.stringify({ ids: Array.from(selectedIds), action, value }),
+            body: JSON.stringify({ targets: applications.filter(a => selectedIds.has(applicationKey(a))).map(a => ({ id: a.id, surface: a.surface })), action, value }),
           },
         );
         setBulkResultDialog({ open: true, action, updated: res.updated, failed: res.failed || [] });
@@ -675,7 +657,7 @@ export default function AdminApplicationsPage() {
         setBulkRunning(false);
       }
     },
-    [selectedIds, fetchCounts],
+    [selectedIds, applications, fetchCounts],
   );
 
   const handleBulkResync = useCallback(async () => {
@@ -689,7 +671,7 @@ export default function AdminApplicationsPage() {
         unresolvedReasons: string[];
       }>('/api/admin/applications/resync', {
         method: 'POST',
-        body: JSON.stringify({ ids: Array.from(selectedIds) }),
+        body: JSON.stringify({ ids: applications.filter(a => a.surface === 'student' && selectedIds.has(applicationKey(a))).map(a => a.id) }),
       });
       setResyncResult(res);
       setSelectedIds(new Set());
@@ -702,7 +684,7 @@ export default function AdminApplicationsPage() {
     } finally {
       setResyncRunning(false);
     }
-  }, [selectedIds, fetchCounts]);
+  }, [selectedIds, applications, fetchCounts]);
 
   // Phase 176: per-target quick status from inside a collapsed
   // shortlist. This PATCHes exactly ONE application id — never a
@@ -1107,25 +1089,14 @@ export default function AdminApplicationsPage() {
                 />
               </div>
               <div className="flex gap-2">
-                <Select value={studentFilter} onValueChange={setStudentFilter}>
-                  <SelectTrigger className="w-[180px] rounded-none">
-                    <SelectValue placeholder="All Students" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Students</SelectItem>
-                    {students
-                      .map(student => {
-                        const fullName = `${student.firstName ?? ''} ${student.lastName ?? ''}`.trim();
-                        const label = fullName || student.email || student.id.slice(0, 8);
-                        return { id: student.id, label };
-                      })
-                      .filter(({ label }) => label.length > 0)
-                      .map(({ id, label }) => (
-                        <SelectItem key={id} value={id}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
+                <RemoteSearchSelect<{ id: string }>
+                  url="/api/admin/application-options?kind=student" value={studentFilter}
+                  onChange={setStudentFilter} placeholder={t('adminManagement.selectStudent')}
+                  clearValue="all" clearLabel={t('adminManagement.allStudents')}
+                />
+                <Select value={archiveFilter} onValueChange={setArchiveFilter}>
+                  <SelectTrigger className="w-[180px] rounded-none"><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="active">{t('adminManagement.activeApplications')}</SelectItem><SelectItem value="archived">{t('adminManagement.archivedApplications')}</SelectItem></SelectContent>
                 </Select>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger className="w-[180px] rounded-none">
@@ -1285,9 +1256,9 @@ export default function AdminApplicationsPage() {
                       <Checkbox
                         checked={
                           filteredApplications.length > 0 &&
-                          filteredApplications.every((a) => selectedIds.has(a.id))
+                          filteredApplications.every((a) => selectedIds.has(applicationKey(a)))
                             ? true
-                            : filteredApplications.some((a) => selectedIds.has(a.id))
+                            : filteredApplications.some((a) => selectedIds.has(applicationKey(a)))
                             ? 'indeterminate'
                             : false
                         }
@@ -1426,7 +1397,7 @@ export default function AdminApplicationsPage() {
                         application.surface === 'partner'
                           ? `/admin/partner-applications/${application.id}`
                           : `/admin/applications/${application.id}`;
-                      const isSelected = selectedIds.has(application.id);
+                      const isSelected = selectedIds.has(applicationKey(application));
                       return (
                         <tr
                           key={application.id}
@@ -1438,7 +1409,7 @@ export default function AdminApplicationsPage() {
                           <td className="px-4 py-4 w-10" onClick={(e) => e.stopPropagation()}>
                             <Checkbox
                               checked={isSelected}
-                              onCheckedChange={() => toggleSelected(application.id)}
+                              onCheckedChange={() => toggleSelected(applicationKey(application))}
                               aria-label={`Select ${application.studentName || 'application'}`}
                             />
                           </td>
@@ -1674,7 +1645,7 @@ export default function AdminApplicationsPage() {
                                     onClick={() => handleDelete(application)}
                                   >
                                     <Trash2 className="w-4 h-4 mr-2" />
-                                    Delete
+                                    {application.archivedAt ? t('adminManagement.restore') : t('adminManagement.archive')}
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
@@ -1706,7 +1677,7 @@ export default function AdminApplicationsPage() {
       {!isLoading && totalPages > 1 && (
         <div className="flex items-center justify-between">
           <div className="text-sm text-[#4B5563]">
-            Showing {(page - 1) * PAGE_SIZE + 1}-{Math.min(page * PAGE_SIZE, total)} of {total}
+            {viewMode === 'grouped' ? 'Groups' : 'Showing'} {(page - 1) * PAGE_SIZE + 1}-{Math.min(page * PAGE_SIZE, total)} of {total}
           </div>
           <div className="flex gap-2">
             <Button
@@ -1731,13 +1702,15 @@ export default function AdminApplicationsPage() {
         </div>
       )}
 
+      {exportWarning && <p role="status" className="text-amber-800">{exportWarning}</p>}
+      {(paymentFilter !== 'all' || paymentChannelFilter !== 'all' || enrolledFilter !== 'all') && <p className="text-sm text-gray-600">{t('adminManagement.studentOnlyFilters')}</p>}
       {/* Delete dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="rounded-none max-w-md">
           <DialogHeader>
-            <DialogTitle>Delete Application</DialogTitle>
+            <DialogTitle>{applicationToDelete?.archivedAt ? t('adminManagement.restore') : t('adminManagement.archive')}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this application from {applicationToDelete?.studentName}? This action cannot be undone.
+              {t('adminManagement.archiveHint')} {applicationToDelete?.studentName}
             </DialogDescription>
           </DialogHeader>
           {deleteError && <p role="alert" className="text-sm text-red-700">{deleteError}</p>}
@@ -1754,7 +1727,7 @@ export default function AdminApplicationsPage() {
               onClick={confirmDelete}
               disabled={isDeleting}
             >
-              {isDeleting ? <><Spinner size="sm" className="text-white mr-2" /> Deleting…</> : 'Delete'}
+              {isDeleting ? <Spinner size="sm" /> : applicationToDelete?.archivedAt ? t('adminManagement.restore') : t('adminManagement.archive')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1804,7 +1777,7 @@ export default function AdminApplicationsPage() {
                   // row's current status so the admin can edit
                   // without having to re-type.
                   const firstId = Array.from(selectedIds)[0];
-                  const firstApp = applications.find((a) => a.id === firstId);
+                  const firstApp = applications.find((a) => applicationKey(a) === firstId);
                   setBulkStatus(firstApp?.status || 'Under Review');
                   setBulkStatusDialogOpen(true);
                 }}
@@ -1858,13 +1831,13 @@ export default function AdminApplicationsPage() {
                 size="sm"
                 className="rounded-none text-red-600 border-red-200 hover:bg-red-50"
                 onClick={() => {
-                  if (window.confirm(`Delete ${selectedIds.size} application(s)? This cannot be undone.`)) {
-                    runBulk('delete');
+                  if (window.confirm(t(archiveFilter === 'archived' ? 'adminManagement.restoreConfirm' : 'adminManagement.archiveConfirm'))) {
+                    runBulk(archiveFilter === 'archived' ? 'restoreArchive' : 'delete');
                   }
                 }}
                 disabled={bulkRunning}
               >
-                <Trash2 size={14} className="mr-1.5" /> Delete
+                <Trash2 size={14} className="mr-1.5" /> {archiveFilter === 'archived' ? t('adminManagement.restore') : t('adminManagement.archive')}
               </Button>
               {/* S33 / Phase 77: Export selected. Routes through
                   apiFetch + a Blob download (now that window.open
@@ -1901,7 +1874,8 @@ export default function AdminApplicationsPage() {
               {bulkResultDialog.action === 'status' && 'Status updated on the selected applications.'}
               {bulkResultDialog.action === 'priority' && 'Priority updated on the selected applications.'}
               {bulkResultDialog.action === 'note' && 'Note appended to the selected applications.'}
-              {bulkResultDialog.action === 'delete' && 'Selected applications deleted.'}
+              {bulkResultDialog.action === 'delete' && t('adminManagement.archivedResult')}
+              {bulkResultDialog.action === 'restoreArchive' && t('adminManagement.restoredResult')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">

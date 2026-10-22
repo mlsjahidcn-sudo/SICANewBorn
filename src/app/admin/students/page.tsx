@@ -160,7 +160,7 @@ export default function AdminStudentsPage() {
   // be bulk-acted on invisibly.
   useEffect(() => {
     setSelectedIds(new Set());
-  }, [statusFilter, sourceFilter, servicePaidFilter, searchQuery, page]);
+  }, [statusFilter, sourceFilter, servicePaidFilter, searchQuery, page, sort, order]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -196,7 +196,7 @@ export default function AdminStudentsPage() {
       if (allSelected) return new Set();
       return new Set(students.map((s) => s.id));
     });
-  }, []);
+  }, [students]);
 
   const runBulkStatus = async () => {
     if (selectedIds.size === 0) return;
@@ -271,7 +271,6 @@ export default function AdminStudentsPage() {
   };
 
   const closeManageDialog = () => {
-    if (isDeleting) return;
     setDeleteDialogOpen(false);
     setStudentToDelete(null);
     setManageStep('manage');

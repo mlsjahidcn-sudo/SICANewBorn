@@ -1,3 +1,4 @@
+import { isInternalNote } from '@/lib/application-history-mapper';
 // ─────────────────────────────────────────────────────────────────
 // PHASE 179: this route now reads/writes through the SERVICE-ROLE
 // client, not the caller's anon+token client.
@@ -121,8 +122,8 @@ export async function GET(
     return NextResponse.json({
       application: mapApplicationForStudent(application),
       documents: docsRes.data || [],
-      timeline: timelineRes.data || [],
-      stageHistory: stageRes.data || [],
+      timeline: (timelineRes.data || []).filter(row => !isInternalNote(row.notes)),
+      stageHistory: (stageRes.data || []).filter(row => !isInternalNote(row.note)),
     });
   } catch (error) {
     console.error('[Student Application GET]', error);

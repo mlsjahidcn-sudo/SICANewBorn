@@ -25,7 +25,7 @@ import { apiFetch } from '@/lib/api-client';
 export async function downloadCsvViaApi(
   url: string,
   fallbackFilename: string,
-): Promise<void> {
+): Promise<{ truncated: boolean; rowCount: number }> {
   const res = await apiFetch(url, { headers: { Accept: 'text/csv' } });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
@@ -44,4 +44,5 @@ export async function downloadCsvViaApi(
   a.click();
   a.remove();
   URL.revokeObjectURL(objectUrl);
+  return { truncated: res.headers.get('X-Truncated') === 'true', rowCount: Number(res.headers.get('X-Row-Count') || 0) };
 }

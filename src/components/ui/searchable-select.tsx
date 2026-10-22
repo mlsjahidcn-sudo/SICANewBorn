@@ -64,6 +64,8 @@ export interface SearchableSelectProps {
   /** When the user is in a slow connection, the list might still be
    * loading. Show a small inline hint instead of an empty popover. */
   loading?: boolean;
+  onSearchChange?: (search: string) => void;
+  searchValue?: string;
 }
 
 export function SearchableSelect({
@@ -78,6 +80,8 @@ export function SearchableSelect({
   disabled,
   className,
   loading,
+  onSearchChange,
+  searchValue,
 }: SearchableSelectProps) {
   const [open, setOpen] = React.useState(false);
   const selected = options.find((o) => o.value === value);
@@ -132,10 +136,12 @@ export function SearchableSelect({
         className="w-[--radix-popover-trigger-width] p-0 rounded-none"
         align="start"
       >
-        <Command shouldFilter>
+        <Command shouldFilter={!onSearchChange}>
           <div className="flex items-center border-b border-gray-200 px-3">
             <Search className="h-4 w-4 text-gray-400 shrink-0" />
             <CommandInput
+              value={searchValue}
+              onValueChange={onSearchChange}
               placeholder={searchPlaceholder}
               className="border-0 focus:ring-0"
             />

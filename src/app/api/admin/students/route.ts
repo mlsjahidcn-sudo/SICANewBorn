@@ -1,3 +1,4 @@
+import { collectRows } from '@/lib/admin-application-query';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, buildServiceClient, getServerEnv } from '@/lib/supabase-auth';
 import { mapStudentFromDb, mapStudentToDb, parseSource, parseStatus } from '@/lib/student-mapper';
@@ -143,31 +144,13 @@ export async function GET(request: NextRequest) {
     // failing the list).
     const studentIds = students.map((s) => s.id);
     if (studentIds.length > 0) {
-      const [studentAppsRes, partnerAppsRes] = await Promise.all([
-        service.from('student_applications').select('student_id').in('student_id', studentIds),
-        service
-          .from('partner_applications')
-          .select('linked_student_profile_id')
-          .in('linked_student_profile_id', studentIds),
+      const [studentApps, partnerApps] = await Promise.all([
+        collectRows<{ student_id: string }>((from, to) => service.from('student_applications').select('id, student_id').in('student_id', studentIds).is('archived_at', null).order('id').range(from, to)),
+        collectRows<{ linked_student_profile_id: string }>((from, to) => service.from('partner_applications').select('id, linked_student_profile_id').in('linked_student_profile_id', studentIds).is('archived_at', null).order('id').range(from, to)),
       ]);
       const counts = new Map<string, number>();
-      if (studentAppsRes.error) {
-        console.error('[admin/students GET] student app count error:', studentAppsRes.error);
-      } else {
-        for (const row of studentAppsRes.data || []) {
-          const sid = (row as { student_id?: string | null }).student_id;
-          if (sid) counts.set(sid, (counts.get(sid) || 0) + 1);
-        }
-      }
-      if (partnerAppsRes.error) {
-        console.error('[admin/students GET] partner app count error:', partnerAppsRes.error);
-      } else {
-        for (const row of partnerAppsRes.data || []) {
-          const sid = (row as { linked_student_profile_id?: string | null })
-            .linked_student_profile_id;
-          if (sid) counts.set(sid, (counts.get(sid) || 0) + 1);
-        }
-      }
+      for (const row of studentApps) counts.set(row.student_id, (counts.get(row.student_id) || 0) + 1);
+      for (const row of partnerApps) counts.set(row.linked_student_profile_id, (counts.get(row.linked_student_profile_id) || 0) + 1);
       for (const s of students) {
         s.applicationCount = counts.get(s.id) || 0;
       }

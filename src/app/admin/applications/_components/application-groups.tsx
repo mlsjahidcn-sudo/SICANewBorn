@@ -209,7 +209,7 @@ export default function ApplicationGroups({
                 <div className="shrink-0 flex items-center gap-2">
                   {group.uniformStatus ? (
                     <span
-                      className={`px-2 py-0.5 text-xs border {statusColorClass(group.uniformStatus)}`}
+                      className={`px-2 py-0.5 text-xs border ${statusColorClass(group.uniformStatus)}`}
                     >
                       {group.uniformStatus}
                     </span>

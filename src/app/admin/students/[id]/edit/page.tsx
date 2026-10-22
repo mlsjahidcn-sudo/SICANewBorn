@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Check, Loader2, ChevronRight, ChevronLeft, AlertCircle, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -64,6 +64,8 @@ export default function AdminStudentEditPage() {
 
   // Form state — covers all fields the API supports (fixed + extra).
   // initial state is empty; we populate from the GET response in useEffect.
+  const original = useRef<Record<string, string>>({});
+  const version = useRef<string | null>(null);
   const [formData, setFormData] = useState<Record<string, string>>({});
 
   // Load the student on mount / id change
@@ -95,6 +97,8 @@ export default function AdminStudentEditPage() {
           student.passportIssueDate ?? flat.passportIssueDate ?? '';
         flat.passportExpiryDate =
           student.passportExpiryDate ?? flat.passportExpiryDate ?? '';
+        original.current = { ...flat };
+        version.current = student.updatedAt;
         setFormData(flat);
       })
       .catch((err) => {
@@ -268,15 +272,17 @@ export default function AdminStudentEditPage() {
       const payload: Record<string, unknown> = {};
       const extra: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(formData)) {
-        if (value === '' || value === null || value === undefined) continue;
+        if (value === original.current[key]) continue;
         if ((FIXED_FIELDS as readonly string[]).includes(key)) {
-          payload[key] = value;
+          payload[key] = key === 'dateOfBirth' && value === '' ? null : value;
         } else {
           extra[key] = value;
         }
       }
       if (Object.keys(extra).length > 0) payload.extra = extra;
 
+      if (Object.keys(payload).length === 0) { router.push(`/admin/students/${studentId}`); return; }
+      payload.expectedUpdatedAt = version.current;
       await apiFetchJson(`/api/admin/students/${studentId}`, {
         method: 'PATCH',
         body: JSON.stringify(payload),

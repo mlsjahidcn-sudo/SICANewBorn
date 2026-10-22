@@ -1,3 +1,4 @@
+import { archiveApplication } from '@/lib/admin-application-actions';
 import { NextRequest, NextResponse } from 'next/server';
 import { ALLOWED_STUDENT_STATUSES, ALLOWED_PARTNER_STATUSES } from '@/lib/application-status';
 import { requireAdmin, buildServiceClient, getServerEnv } from '@/lib/supabase-auth';
@@ -93,7 +94,7 @@ export const dynamic = 'force-dynamic';
 
 const ALLOWED_PRIORITIES = ['Low', 'Normal', 'High', 'Urgent'] as const;
 
-const ALLOWED_ACTIONS = ['status', 'priority', 'note', 'delete', 'markPaid'] as const;
+const ALLOWED_ACTIONS = ['status', 'priority', 'note', 'delete', 'restoreArchive', 'markPaid'] as const;
 type BulkAction = (typeof ALLOWED_ACTIONS)[number];
 
 export async function POST(request: NextRequest) {
@@ -107,7 +108,9 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const ids: unknown = body.ids;
+    const targets: Array<{ id: string; surface: 'student' | 'partner' }> = Array.isArray(body.targets) ? body.targets.filter((target: unknown): target is { id: string; surface: 'student' | 'partner' } => Boolean(target && typeof target === 'object' && 'id' in target && typeof target.id === 'string' && 'surface' in target && (target.surface === 'student' || target.surface === 'partner'))) : [];
+    if (Array.isArray(body.targets) && targets.length !== body.targets.length) return NextResponse.json({ error: 'Invalid application selection' }, { status: 400 });
+    const ids: unknown = targets.length ? targets.map(target => target.id) : body.ids;
     const action: unknown = body.action;
     const value: unknown = body.value;
 
@@ -137,7 +140,7 @@ export async function POST(request: NextRequest) {
           { status: 400 },
         );
       }
-    } else if (action !== 'delete' && (typeof value !== 'string' || value.trim() === '')) {
+    } else if (action !== 'delete' && action !== 'restoreArchive' && (typeof value !== 'string' || value.trim() === '')) {
       return NextResponse.json(
         { error: 'value is required and must be a non-empty string' },
         { status: 400 },
@@ -163,7 +166,7 @@ export async function POST(request: NextRequest) {
     let updated = 0;
     const failed: Array<{ id: string; error: string }> = [];
 
-    for (const id of ids) {
+    for (const [index, id] of ids.entries()) {
       if (typeof id !== 'string' || !id) {
         failed.push({ id: String(id), error: 'Invalid id' });
         continue;
@@ -173,20 +176,22 @@ export async function POST(request: NextRequest) {
         // in a single round trip per row to keep the code simple;
         // for v1 the page is constrained to one page (~15-30 rows
         // visible at a time) and the second probe is cheap.
-        const [{ data: studentRow }, { data: partnerRow }] = await Promise.all([
-          service.from('student_applications').select('id, status, student_id, university_name, program_name, degree, degree_level, intake, application_number, applicant_email, applicant_name, priority, notes, admin_notes').eq('id', id).maybeSingle(),
+        const [{ data: studentRow, error: studentReadError }, { data: partnerRow, error: partnerReadError }] = await Promise.all([
+          service.from('student_applications').select('id, status, student_id, university_name, program_name, degree, degree_level, intake, application_number, applicant_email, applicant_name, priority, admin_notes').eq('id', id).maybeSingle(),
           service.from('partner_applications').select('id, status, partner_id, student_name, student_email, university, program, intake, degree, application_number, priority, notes, submitted_at').eq('id', id).maybeSingle(),
         ]);
+
+        if (studentReadError || partnerReadError) throw new Error(studentReadError?.message || partnerReadError?.message || 'Unable to read application');
 
         // Surface is just for routing; the type of `studentRow`/
         // `partnerRow` doesn't narrow across the surface check
         // (TS keeps them as `T | null`), so each branch below
         // re-checks the relevant row before dereferencing.
-        const surface: 'student' | 'partner' | null = studentRow
+        const surface: 'student' | 'partner' | null = targets[index]?.surface ?? (studentRow
           ? 'student'
           : partnerRow
           ? 'partner'
-          : null;
+          : null);
         if (!surface) {
           failed.push({ id, error: 'Application not found in either table' });
           continue;
@@ -205,16 +210,8 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        if (action === 'delete') {
-          // Use the matching DELETE endpoint logic inline. The
-          // partner_admin endpoint sets a 204; student does too.
-          if (surface === 'partner') {
-            const { error: delErr } = await service.from('partner_applications').delete().eq('id', id);
-            if (delErr) throw new Error(delErr.message);
-          } else {
-            const { error: delErr } = await service.from('student_applications').delete().eq('id', id);
-            if (delErr) throw new Error(delErr.message);
-          }
+        if (action === 'delete' || action === 'restoreArchive') {
+          await archiveApplication(service, id, surface, action === 'delete', auth.user.id);
           updated++;
           continue;
         }
@@ -546,23 +543,8 @@ export async function POST(request: NextRequest) {
           //   {existing}\n\n[Bulk YYYY-MM-DD HH:MM] {value}
           const stamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
           const bulkLine = `[Bulk ${stamp}] ${value}`;
-          if (surface === 'student') {
-            const existing = (studentRow as { notes?: string | null }).notes || '';
-            const merged = existing ? `${existing}\n\n${bulkLine}` : bulkLine;
-            const { error: updErr } = await service
-              .from('student_applications')
-              .update({ notes: merged })
-              .eq('id', id);
-            if (updErr) throw new Error(updErr.message);
-          } else {
-            const existing = (partnerRow as { notes?: string | null }).notes || '';
-            const merged = existing ? `${existing}\n\n${bulkLine}` : bulkLine;
-            const { error: updErr } = await service
-              .from('partner_applications')
-              .update({ notes: merged })
-              .eq('id', id);
-            if (updErr) throw new Error(updErr.message);
-          }
+          const { error: noteError } = await service.rpc('admin_append_application_note', { p_id: id, p_surface: surface, p_content: bulkLine, p_actor: auth.user.id });
+          if (noteError) throw new Error(noteError.message);
           updated++;
           continue;
         }

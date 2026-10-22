@@ -1,3 +1,4 @@
+import { archiveApplication } from '@/lib/admin-application-actions';
 import { NextRequest, NextResponse } from 'next/server';
 import { ALLOWED_STUDENT_STATUSES } from '@/lib/application-status';
 import { requireAdmin, buildServiceClient, getServerEnv } from '@/lib/supabase-auth';
@@ -101,9 +102,12 @@ export async function GET(
       paymentAggregate = computePaymentAggregateForApp([]);
     }
 
+    const { data: privateNote, error: noteError } = await service.from('application_internal_notes').select('content').eq('application_id', id).maybeSingle();
+    if (noteError) return NextResponse.json({ error: noteError.message }, { status: 500 });
+    // The private table is never selected by applicant/partner APIs.
     // Normalize to the same shape the list endpoint returns
     return NextResponse.json({
-      application: mapApplicationFromDb(data),
+      application: { ...mapApplicationFromDb(data), internalNotes: privateNote?.content || '' },
       payment: paymentAggregate,
     });
   } catch (err) {
@@ -127,6 +131,19 @@ export async function PATCH(
 
   try {
     const body = await request.json();
+    if (!body || typeof body !== 'object' || Array.isArray(body)) return NextResponse.json({ error: 'Invalid application update' }, { status: 400 });
+
+    if (body?.action === 'restoreArchive') {
+      await archiveApplication(buildServiceClient(), id, 'student', false, auth.user.id);
+      return NextResponse.json({ success: true });
+    }
+    if (Object.prototype.hasOwnProperty.call(body, 'internal_notes')) {
+      if (typeof body.internal_notes !== 'string' || body.internal_notes.length > 8000) return NextResponse.json({ error: 'Internal notes must be text of at most 8000 characters' }, { status: 400 });
+      const service = buildServiceClient();
+      const { error } = await service.from('application_internal_notes').upsert({ application_id: id, content: body.internal_notes, updated_by: auth.user.id, updated_at: new Date().toISOString() });
+      if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+      if (Object.keys(body).length === 1) return NextResponse.json({ success: true });
+    }
 
     // Phase 109 Batch 5: restore action. Companion to the DELETE
     // handler that sets status='Withdrawn'. Restoring re-opens the
@@ -271,7 +288,7 @@ export async function PATCH(
       await insertTimelineEvent(service, {
         application_id: id,
         status: newStatus,
-        notes: body.notes || `Status changed to ${newStatus} by admin.`,
+        notes: body.internal === true ? `Status changed to ${newStatus} by admin.` : body.notes || `Status changed to ${newStatus} by admin.`,
         created_by: auth.user.id,
       });
 
@@ -410,19 +427,8 @@ export async function DELETE(
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
 
   try {
-    // "Cancel" via status='Withdrawn' — preserves the row for audit.
-    const service = buildServiceClient();
-    const { data, error } = await service
-      .from('student_applications')
-      .update({ status: 'Withdrawn', reviewed_at: new Date().toISOString() })
-      .eq('id', id)
-      .select('id, status, reviewed_at')
-      .single();
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
-    }
-    return NextResponse.json({ success: true, application: data });
+    await archiveApplication(buildServiceClient(), id, 'student', true, auth.user.id);
+    return NextResponse.json({ success: true });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     return NextResponse.json({ error: message }, { status: 500 });
