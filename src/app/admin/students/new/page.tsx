@@ -38,6 +38,7 @@ import {
   type TranscriptLevel,
   type TranscriptOcrResult,
 } from '@/components/admin/ocr-upload-modal';
+import { PreferredUniversitiesField } from '@/components/admin/preferred-universities-field';
 
 // Fields that map to fixed columns in student_profiles.
 // Everything else goes to the `extra` JSONB blob.
@@ -209,11 +210,15 @@ export default function AdminAddStudentPage() {
     targetDegree: '',
     targetField: '',
     targetIntake: '',
-    preferredUniversities: '',
 
     // Notes
     notes: ''
   });
+
+  // Preferred universities are catalog slugs (string[]) — same contract as
+  // student self-profile + the edit page. Kept out of formData so the
+  // string-typed Record doesn't coerce the array.
+  const [preferredUniversities, setPreferredUniversities] = useState<string[]>([]);
 
   // Accept (name, value) directly so both <Input onChange={e => ...}> and
   // <Select onValueChange={value => ...}> can call it without faking a ChangeEvent.
@@ -387,23 +392,15 @@ export default function AdminAddStudentPage() {
     const extra: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(formData)) {
       if (value === '' || value === null || value === undefined) continue;
-      // Phase 88: convert the comma-separated preferredUniversities
-      // string into the TEXT[] the mapper expects. Stays as a single
-      // input on the UI to avoid dragging in a multi-select component.
-      if (key === 'preferredUniversities' && typeof value === 'string') {
-        const arr = value
-          .split(',')
-          .map((s) => s.trim())
-          .filter((s) => s.length > 0);
-        if (arr.length > 0) payload.preferredUniversities = arr;
-        continue;
-      }
       if ((FIXED_FIELDS as readonly string[]).includes(key)) {
         payload[key] = value;
       } else {
         extra[key] = value;
       }
     }
+    // Preferred universities come from the slug multi-select (not formData).
+    // Always send so an empty clear is explicit for the mapper.
+    payload.preferredUniversities = preferredUniversities;
     if (Object.keys(extra).length > 0) payload.extra = extra;
     // Default source to 'Admin' for the "Add Offline Student" flow
     if (!payload.source) payload.source = 'Admin';
@@ -1117,7 +1114,7 @@ export default function AdminAddStudentPage() {
                     </div>
                   </div>
 
-                  {/* Phase 88: targetField + preferredUniversities inputs. */}
+                  {/* targetField + preferredUniversities (catalog slug multi-select). */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                     <div>
                       <Label htmlFor="targetField" className="text-[#1B2A4A]">
@@ -1132,19 +1129,12 @@ export default function AdminAddStudentPage() {
                         className="mt-2"
                       />
                     </div>
-                    <div>
-                      <Label htmlFor="preferredUniversities" className="text-[#1B2A4A]">
-                        {t('adminStudentForm.fieldPreferredUniversities')}
-                      </Label>
-                      <Input
-                        id="preferredUniversities"
-                        name="preferredUniversities"
-                        value={formData.preferredUniversities}
-                        onChange={(e) => handleInputChange(e.target.name, e.target.value)}
-                        placeholder={t('adminStudentForm.placeholderPreferredUniversities')}
-                        className="mt-2"
-                      />
-                    </div>
+                  </div>
+                  <div className="mt-6">
+                    <PreferredUniversitiesField
+                      value={preferredUniversities}
+                      onChange={setPreferredUniversities}
+                    />
                   </div>
                 </div>
 
@@ -1332,7 +1322,7 @@ export default function AdminAddStudentPage() {
                     </Card>
                   )}
 
-                  {(formData.hskLevel || formData.ieltsScore || formData.toeflScore || formData.targetDegree || formData.targetField || formData.preferredUniversities) && (
+                  {(formData.hskLevel || formData.ieltsScore || formData.toeflScore || formData.targetDegree || formData.targetField || preferredUniversities.length > 0) && (
                     <Card>
                       <CardHeader>
                         <CardTitle className="text-[#1B2A4A]">{t('adminStudentForm.reviewCardLanguageTargetNew')}</CardTitle>
@@ -1357,10 +1347,10 @@ export default function AdminAddStudentPage() {
                           {formData.targetIntake && (
                             <div><span className="text-[#4B5563]">{t('adminStudentForm.reviewLabelTargetIntake')}</span> <span className="font-medium">{formData.targetIntake}</span></div>
                           )}
-                          {formData.preferredUniversities && (
+                          {preferredUniversities.length > 0 && (
                             <div className="col-span-2">
                               <span className="text-[#4B5563]">{t('adminStudentForm.reviewLabelPreferredUniversities')}</span>{' '}
-                              <span className="font-medium">{formData.preferredUniversities}</span>
+                              <span className="font-medium">{preferredUniversities.join(', ')}</span>
                             </div>
                           )}
                         </div>

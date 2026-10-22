@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Plus, Eye, Trash2, MoreHorizontal, ArrowUpRight, ArrowDownRight, Minus, RefreshCw, AlertCircle, Search, Users, Building2, UserPlus, CheckSquare, Square, X, StickyNote, Flag, Download, CalendarClock, Layers, List, Loader2, ChevronUp, ChevronDown, ChevronsUpDown, DollarSign } from 'lucide-react';
@@ -15,11 +15,17 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { ListPageSkeleton } from '@/components/partner/skeletons';
 import { useStudentList } from '@/hooks/use-student-list';
 import { apiFetch, apiFetchJson } from '@/lib/api-client';
 import { downloadCsvViaApi } from '@/lib/download-csv';
 import { APPLICATION_STATUSES, ApplicationStatus } from '@/lib/application-mapper';
+import {
+  buildProgramSelectOptions,
+  buildUniversitySelectOptions,
+} from '@/lib/catalog-select-options';
+import type { Program, University } from '@/lib/data';
 import { parseIntakeFilter, getCanonicalCohorts } from '@/lib/intake-normalize';
 import { APPLICATION_PAYMENT_STATUSES, APPLICATION_PAYMENT_STATUS_DISPLAY, type ApplicationPaymentStatus } from '@/lib/payment-aggregate';
 import {
@@ -141,7 +147,7 @@ export default function AdminApplicationsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { students } = useStudentList();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
 
   // S34: cohort filter, sourced from the URL on mount. The
   // cohort dashboard's "View applications" link is
@@ -222,6 +228,14 @@ export default function AdminApplicationsPage() {
   // Phase 182: offline-pay channel filter. Independent of
   // paymentFilter — an app can be Paid + Offline pay.
   const [paymentChannelFilter, setPaymentChannelFilter] = useState<'all' | 'offline'>('all');
+  // Catalog slug filters (SearchableSelect). Empty string = all.
+  // API accepts slug OR free-text name; we send the slug so partner
+  // rows still match via the humanized-name fallback.
+  const [universityFilter, setUniversityFilter] = useState('');
+  const [programFilter, setProgramFilter] = useState('');
+  const [catalogUniversities, setCatalogUniversities] = useState<University[]>([]);
+  const [catalogPrograms, setCatalogPrograms] = useState<Program[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(true);
 
   // Phase 176: flat vs grouped view. 'flat' is the default and is
   // deliberately the ONLY mode that renders the original table —
@@ -387,6 +401,67 @@ export default function AdminApplicationsPage() {
     fetchCounts();
   }, [fetchCounts]);
 
+  // Catalog for university/program SearchableSelect filters.
+  // Same endpoints the new-app wizard uses — admin-added schools
+  // appear immediately. Soft-fail leaves the filters empty rather
+  // than blocking the list.
+  useEffect(() => {
+    let cancelled = false;
+    setCatalogLoading(true);
+    Promise.all([
+      apiFetchJson<{ universities?: University[] } | University[]>(
+        '/api/universities?limit=500',
+      ),
+      apiFetchJson<{ programs?: Program[] } | Program[]>(
+        '/api/programs?limit=500',
+      ),
+    ])
+      .then(([uniRes, progRes]) => {
+        if (cancelled) return;
+        const unis = Array.isArray(uniRes)
+          ? uniRes
+          : (uniRes.universities ?? []);
+        const progs = Array.isArray(progRes)
+          ? progRes
+          : (progRes.programs ?? []);
+        setCatalogUniversities(unis);
+        setCatalogPrograms(progs);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCatalogUniversities([]);
+          setCatalogPrograms([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setCatalogLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const universityFilterOptions = useMemo(
+    () =>
+      buildUniversitySelectOptions({
+        universities: catalogUniversities,
+        locale: locale === 'zh' ? 'zh' : 'en',
+      }),
+    [catalogUniversities, locale],
+  );
+
+  const programFilterOptions = useMemo(
+    () =>
+      buildProgramSelectOptions({
+        programs: catalogPrograms,
+        universities: catalogUniversities,
+        universitySlugFilter: universityFilter || null,
+        locale: locale === 'zh' ? 'zh' : 'en',
+        atLabel: (name) => t('partnerAppForm.programSublabelAt', { name }),
+      }),
+    [catalogPrograms, catalogUniversities, universityFilter, locale, t],
+  );
+
   // -----------------------------------------------------------------
   // Main list fetch. Re-runs on tab change, page change, or any filter
   // change. Source is taken from activeTab (not a dropdown filter).
@@ -429,6 +504,8 @@ export default function AdminApplicationsPage() {
     if (paymentFilter !== 'all') params.set('paymentStatus', paymentFilter);
     // Phase 182: offline-pay channel filter.
     if (paymentChannelFilter === 'offline') params.set('paymentChannel', 'offline');
+    if (universityFilter) params.set('university', universityFilter);
+    if (programFilter) params.set('program', programFilter);
     // Phase 122b: server-side sort.
     params.set('sort', sortBy);
     params.set('order', sortOrder);
@@ -464,7 +541,7 @@ export default function AdminApplicationsPage() {
       controller.abort();
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [page, searchQuery, statusFilter, studentFilter, activeTab, intakeFilter, partnerOnly, retryNonce, decisionFilter, enrolledFilter, paymentFilter, paymentChannelFilter, sortBy, sortOrder]);
+  }, [page, searchQuery, statusFilter, studentFilter, activeTab, intakeFilter, partnerOnly, retryNonce, decisionFilter, enrolledFilter, paymentFilter, paymentChannelFilter, universityFilter, programFilter, sortBy, sortOrder]);
 
   // Debounce search — wait 300ms after the user stops typing before firing
   useEffect(() => {
@@ -478,7 +555,17 @@ export default function AdminApplicationsPage() {
   // which could render empty because the partner surface has few pages.
   useEffect(() => {
     setPage(1);
-  }, [activeTab, statusFilter, studentFilter, searchQuery, intakeFilter, partnerOnly, paymentFilter, paymentChannelFilter]);
+  }, [activeTab, statusFilter, studentFilter, searchQuery, intakeFilter, partnerOnly, paymentFilter, paymentChannelFilter, universityFilter, programFilter]);
+
+  // Clear program filter when it no longer exists under the selected
+  // university (options are narrowed by universitySlugFilter).
+  useEffect(() => {
+    if (!programFilter || !universityFilter) return;
+    const stillValid = catalogPrograms.some(
+      (p) => p.slug === programFilter && p.universitySlug === universityFilter,
+    );
+    if (!stillValid) setProgramFilter('');
+  }, [universityFilter, programFilter, catalogPrograms]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -543,6 +630,8 @@ export default function AdminApplicationsPage() {
       if (decisionFilter === 'without') params.set('hasDecision', 'false');
       if (enrolledFilter === 'enrolled') params.set('enrolled', 'true');
       if (enrolledFilter === 'not-enrolled') params.set('enrolled', 'false');
+      if (universityFilter) params.set('university', universityFilter);
+      if (programFilter) params.set('program', programFilter);
       await downloadCsvViaApi(
         `/api/admin/applications/export${params.toString() ? `?${params}` : ''}`,
         `sica-applications-${new Date().toISOString().slice(0, 10)}.csv`,
@@ -1209,13 +1298,52 @@ export default function AdminApplicationsPage() {
                     <SelectItem value="offline">{t('adminApps.filterOfflinePay')}</SelectItem>
                   </SelectContent>
                 </Select>
+                {/* Catalog university / program SearchableSelects —
+                    logos + typeahead; program options narrow when
+                    a university is selected. */}
+                <div className="w-[220px]">
+                  <SearchableSelect
+                    value={universityFilter}
+                    onChange={(v) => {
+                      setUniversityFilter(v);
+                      setPage(1);
+                    }}
+                    options={universityFilterOptions}
+                    placeholder={t('adminApps.filterUniversityPlaceholder')}
+                    searchPlaceholder={t('adminApps.filterUniversitySearch')}
+                    emptyText={t('adminApps.filterUniversityEmpty')}
+                    clearValue=""
+                    clearLabel={t('adminApps.filterUniversityClear')}
+                    loading={catalogLoading}
+                    locale={locale === 'zh' ? 'zh' : 'en'}
+                    className="rounded-none"
+                  />
+                </div>
+                <div className="w-[260px]">
+                  <SearchableSelect
+                    value={programFilter}
+                    onChange={(v) => {
+                      setProgramFilter(v);
+                      setPage(1);
+                    }}
+                    options={programFilterOptions}
+                    placeholder={t('adminApps.filterProgramPlaceholder')}
+                    searchPlaceholder={t('adminApps.filterProgramSearch')}
+                    emptyText={t('adminApps.filterProgramEmpty')}
+                    clearValue=""
+                    clearLabel={t('adminApps.filterProgramClear')}
+                    loading={catalogLoading}
+                    locale={locale === 'zh' ? 'zh' : 'en'}
+                    className="rounded-none"
+                  />
+                </div>
               </div>
             </div>
             {/* Phase 107 Batch 4: decision + enrollment filter chips.
                 Each chip is a toggle button; clicking the active
                 chip resets to 'all'. The chips mirror the existing
                 cohort pill UX (visible when non-default). */}
-            {(decisionFilter !== 'all' || enrolledFilter !== 'all' || paymentFilter !== 'all' || paymentChannelFilter !== 'all') && (
+            {(decisionFilter !== 'all' || enrolledFilter !== 'all' || paymentFilter !== 'all' || paymentChannelFilter !== 'all' || !!universityFilter || !!programFilter) && (
               <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-gray-100">
                 {decisionFilter !== 'all' && (
                   <span className="inline-flex items-center gap-1 bg-blue-50 border border-blue-200 px-2.5 py-1 text-xs text-blue-800">
@@ -1264,6 +1392,44 @@ export default function AdminApplicationsPage() {
                       onClick={() => setPaymentChannelFilter('all')}
                       className="ml-1 text-amber-700 hover:text-amber-900"
                       aria-label={t('adminApps.clearOfflinePayFilter')}
+                    >
+                      <X size={12} />
+                    </button>
+                  </span>
+                )}
+                {universityFilter && (
+                  <span className="inline-flex items-center gap-1 bg-[#1B2A4A]/5 border border-[#1B2A4A]/20 px-2.5 py-1 text-xs text-[#1B2A4A]">
+                    {t('adminApps.filterUniversityPill', {
+                      name:
+                        universityFilterOptions.find((o) => o.value === universityFilter)?.label
+                        ?? universityFilter,
+                    })}
+                    <button
+                      onClick={() => {
+                        setUniversityFilter('');
+                        setPage(1);
+                      }}
+                      className="ml-1 text-[#1B2A4A] hover:opacity-70"
+                      aria-label={t('adminApps.clearUniversityFilter')}
+                    >
+                      <X size={12} />
+                    </button>
+                  </span>
+                )}
+                {programFilter && (
+                  <span className="inline-flex items-center gap-1 bg-[#9B1B30]/5 border border-[#9B1B30]/20 px-2.5 py-1 text-xs text-[#9B1B30]">
+                    {t('adminApps.filterProgramPill', {
+                      name:
+                        programFilterOptions.find((o) => o.value === programFilter)?.label
+                        ?? programFilter,
+                    })}
+                    <button
+                      onClick={() => {
+                        setProgramFilter('');
+                        setPage(1);
+                      }}
+                      className="ml-1 text-[#9B1B30] hover:opacity-70"
+                      aria-label={t('adminApps.clearProgramFilter')}
                     >
                       <X size={12} />
                     </button>
@@ -1393,7 +1559,9 @@ export default function AdminApplicationsPage() {
                                 !searchInput &&
                                 statusFilter === 'all' &&
                                 studentFilter === 'all' &&
-                                !intakeFilter
+                                !intakeFilter &&
+                                !universityFilter &&
+                                !programFilter
                               }
                               onClick={() => {
                                 setSearchInput('');
@@ -1401,6 +1569,8 @@ export default function AdminApplicationsPage() {
                                 setStatusFilter('all');
                                 setStudentFilter('all');
                                 setIntakeFilter(null);
+                                setUniversityFilter('');
+                                setProgramFilter('');
                                 // Strip the ?intake= from the URL too
                                 if (typeof window !== 'undefined') {
                                   const url = new URL(window.location.href);

@@ -67,8 +67,12 @@ export interface AdminApplication {
   studentPassportNumber: string;
   isLinked: boolean;
   university: string;
+  /** Catalog slug stored in student_applications.university_id. */
+  universityId: string;
   universityNameCn: string | null;
   program: string;
+  /** Catalog slug stored in student_applications.program_id (nullable). */
+  programId: string | null;
   programNameCn: string | null;
   degree: string;
   intake: string;
@@ -178,8 +182,10 @@ export function mapApplicationFromDb(row: RawApp): AdminApplication {
     studentPassportNumber: isLinked ? row.student!.passport_number || '' : '',
     isLinked,
     university: row.university_name,
+    universityId: row.university_id,
     universityNameCn: row.university_name_cn,
     program: row.program_name,
+    programId: row.program_id,
     programNameCn: row.program_name_cn,
     degree: row.degree,
     intake: row.intake,

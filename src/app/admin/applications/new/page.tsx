@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ChevronRight, Check, User, FileText, GraduationCap, AlertCircle, Upload as UploadIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { degreeLevels, intendedIntakes, documentTypes } from '@/lib/data';
 import { useI18n } from '@/lib/i18n';
 import { AdminDocUploadDialog } from '../_components/admin-doc-upload-dialog';
-// Phase 20: universidades + programs were imported from the static
+// Phase 20: universities + programs were imported from the static
 // `data.ts` fallback (the 9-school / 17-program set shipped with
 // the repo). Any school or program an admin added through
 // /admin/universities or /admin/programs was invisible here —
@@ -33,6 +33,7 @@ import { AdminDocUploadDialog } from '../_components/admin-doc-upload-dialog';
 // those, they'll need the same treatment.
 import type { University, Program } from '@/lib/data';
 import { SearchableSelect } from '@/components/ui/searchable-select';
+import { buildProgramSelectOptions } from '@/lib/catalog-select-options';
 import { useStudentList } from '@/hooks/use-student-list';
 import { apiFetchJson } from '@/lib/api-client';
 import type { AdminStudent } from '@/lib/student-mapper';
@@ -79,6 +80,9 @@ export default function AdminNewApplicationPage() {
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<AdminStudent | null>(null);
+  // Phase C: when the selected student has preferredUniversities,
+  // default the program picker to those schools (toggleable).
+  const [filterByPreferredUnis, setFilterByPreferredUnis] = useState(false);
   // Phase 124: inline email capture for offline students created
   // without one (Phase 90 made email optional on Add Offline Student).
   // Those rows store student_profiles.email = '' — the info card used
@@ -99,7 +103,7 @@ export default function AdminNewApplicationPage() {
     Array<{ id: string; name: string; fileName?: string }>
   >([]);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   // Phase 20: live catalog. Was `useState(programs)` /
   // `useState(universities)` reading the static `data.ts` fallback
   // (the 9-school / 17-program set). Admin-added schools + programs
@@ -109,8 +113,6 @@ export default function AdminNewApplicationPage() {
   const [universities, setUniversities] = useState<University[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
-  const [filteredPrograms, setFilteredPrograms] = useState<Program[]>([]);
-  const [filteredUniversities, setFilteredUniversities] = useState<University[]>([]);
 
   const [formData, setFormData] = useState<FormData>({
     studentId: null,
@@ -172,42 +174,44 @@ export default function AdminNewApplicationPage() {
     };
   }, []);
 
-  // Filter programs when degree changes
-  useEffect(() => {
-    if (formData.degree) {
-      const filtered = programs.filter(p => p.degree === formData.degree);
-      setFilteredPrograms(filtered);
-      setFormData(prev => ({
-        ...prev,
-        program: '',
-        university: ''
-      }));
-    } else {
-      setFilteredPrograms(programs);
-    }
-  }, [formData.degree, programs]);
+  const preferredUniSlugs = useMemo(() => {
+    const prefs = selectedStudent?.preferredUniversities ?? [];
+    return prefs.map((s) => s.trim()).filter((s) => s.length > 0);
+  }, [selectedStudent]);
 
-  // Filter universities when program changes
-  useEffect(() => {
-    if (formData.program) {
-      const selectedProgram = programs.find(p => p.slug === formData.program);
-      if (selectedProgram) {
-        const filtered = universities.filter(u => u.slug === selectedProgram.universitySlug);
-        setFilteredUniversities(filtered);
-        setFormData(prev => ({
-          ...prev,
-          university: selectedProgram.universitySlug
-        }));
-      }
-    } else {
-      setFilteredUniversities(universities);
-    }
-  }, [formData.program, programs, universities]);
+  // Soft degree filter (S23 pattern): empty degree = full catalog;
+  // when degree is set, options narrow. Preferred-uni filter (Phase C)
+  // further narrows when the toggle is on. Typing a university name
+  // still filters via cmdk on the sublabel.
+  const programOptions = useMemo(
+    () =>
+      buildProgramSelectOptions({
+        programs,
+        universities,
+        degreeFilter: formData.degree || null,
+        universitySlugFilters:
+          filterByPreferredUnis && preferredUniSlugs.length > 0
+            ? preferredUniSlugs
+            : null,
+        locale: locale === 'zh' ? 'zh' : 'en',
+        atLabel: (name) => t('partnerAppForm.programSublabelAt', { name }),
+      }),
+    [
+      programs,
+      universities,
+      formData.degree,
+      filterByPreferredUnis,
+      preferredUniSlugs,
+      locale,
+      t,
+    ],
+  );
 
   // Load student documents when student is selected
   useEffect(() => {
     if (!formData.studentId) {
       setSelectedStudent(null);
+      setFilterByPreferredUnis(false);
       setStudentDocuments([]);
       setInlineEmail('');
       setInlineEmailError(null);
@@ -221,6 +225,35 @@ export default function AdminNewApplicationPage() {
 
     const student = students.find(s => s.id === formData.studentId);
     setSelectedStudent(student ?? null);
+
+    // Phase C: prefill degree/intake from the student profile when the
+    // wizard fields are still empty, and turn on preferred-uni filter
+    // when the student has preferred universities on file.
+    if (student) {
+      const prefs = (student.preferredUniversities ?? [])
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+      setFilterByPreferredUnis(prefs.length > 0);
+
+      const profileDegree = student.targetDegree?.trim() || '';
+      const profileIntake = student.targetIntake?.trim() || '';
+      const degreeOk =
+        profileDegree &&
+        (degreeLevels as readonly string[]).includes(profileDegree);
+      const intakeOk =
+        profileIntake &&
+        (intendedIntakes as readonly string[]).includes(profileIntake);
+
+      if (degreeOk || intakeOk) {
+        setFormData((prev) => ({
+          ...prev,
+          degree: prev.degree || (degreeOk ? profileDegree : prev.degree),
+          intake: prev.intake || (intakeOk ? profileIntake : prev.intake),
+        }));
+      }
+    } else {
+      setFilterByPreferredUnis(false);
+    }
 
     let cancelled = false;
     setStudentDocumentsLoading(true);
@@ -342,6 +375,32 @@ export default function AdminNewApplicationPage() {
       // the lead attribution — the back-link no longer applies.
       if (field === 'studentId' && value) {
         return { ...prev, studentId: String(value), leadId: null, leadType: null };
+      }
+      // Soft degree change: only clear the program if it no longer
+      // matches the new degree. Empty degree keeps the pick.
+      if (field === 'degree') {
+        const nextDegree = String(value);
+        const selected = programs.find((p) => p.slug === prev.program);
+        const keepProgram =
+          !nextDegree || !selected || selected.degree === nextDegree;
+        return {
+          ...prev,
+          degree: nextDegree,
+          program: keepProgram ? prev.program : '',
+          university: keepProgram ? prev.university : '',
+        };
+      }
+      // Program pick stamps university (+ degree if empty) from
+      // the catalog row so the submit payload stays consistent.
+      if (field === 'program') {
+        const slug = String(value);
+        const selected = programs.find((p) => p.slug === slug);
+        return {
+          ...prev,
+          program: slug,
+          university: selected?.universitySlug || '',
+          degree: prev.degree || selected?.degree || '',
+        };
       }
       return { ...prev, [field]: value };
     });
@@ -1052,44 +1111,78 @@ export default function AdminNewApplicationPage() {
                     </div>
 
                     <div>
-                      <Label className="text-[#1F2937]">Program *</Label>
-                      <Select
-                        value={formData.program}
-                        onValueChange={(value) => handleChange('program', value)}
-                        // Phase 20: gate the dropdown on the live
-                        // catalog fetch. Without this the admin
-                        // sees a flash of "no programs" between
-                        // mount and the API response settling.
-                        disabled={!formData.degree || dataLoading}
-                      >
-                        <SelectTrigger className="rounded-none mt-1">
-                          <SelectValue
-                            placeholder={
-                              dataLoading
-                                ? 'Loading catalog...'
-                                : formData.degree
-                                  ? 'Select program...'
-                                  : 'First select degree level'
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <Label className="text-[#1F2937]">Program *</Label>
+                        {preferredUniSlugs.length > 0 && (
+                          <button
+                            type="button"
+                            className="text-xs text-[#1B2A4A] underline underline-offset-2 hover:text-[#9B1B30]"
+                            onClick={() =>
+                              setFilterByPreferredUnis((prev) => !prev)
                             }
-                          />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {filteredPrograms.map(program => (
-                            <SelectItem key={program.slug} value={program.slug}>
-                              {program.name}
-                            </SelectItem>
-                          ))}
-                          {/* Empty-state inside the dropdown so the
-                              admin gets feedback when their filter
-                              has no matches (e.g. no programs for
-                              the chosen degree). */}
-                          {filteredPrograms.length === 0 && !dataLoading && formData.degree && (
-                            <div className="px-2 py-3 text-xs text-[#4B5563] text-center">
-                              No programs found for this degree level.
-                            </div>
-                          )}
-                        </SelectContent>
-                      </Select>
+                          >
+                            {filterByPreferredUnis
+                              ? t('adminApps.preferredUnisFilterOff')
+                              : t('adminApps.preferredUnisFilterOn')}
+                          </button>
+                        )}
+                      </div>
+                      {filterByPreferredUnis && preferredUniSlugs.length > 0 && (
+                        <p className="mt-1 text-xs text-amber-800 bg-amber-50 border border-amber-200 px-2 py-1">
+                          {t('adminApps.preferredUnisHint', {
+                            count: preferredUniSlugs.length,
+                          })}
+                        </p>
+                      )}
+                      {(formData.degree || formData.intake) &&
+                        selectedStudent &&
+                        ((selectedStudent.targetDegree &&
+                          formData.degree === selectedStudent.targetDegree) ||
+                          (selectedStudent.targetIntake &&
+                            formData.intake === selectedStudent.targetIntake)) && (
+                          <p className="mt-1 text-xs text-[#4B5563]">
+                            {t('adminApps.prefillFromProfile')}
+                          </p>
+                        )}
+                      <div className="mt-1">
+                        <SearchableSelect
+                          value={formData.program}
+                          onChange={(value) => handleChange('program', value)}
+                          options={programOptions}
+                          // Soft degree gating: picker works with or
+                          // without a degree — degree only narrows
+                          // options when set (S23). Still gated on
+                          // catalog load so admins don't see a flash
+                          // of "no programs" before the API settles.
+                          disabled={dataLoading}
+                          loading={dataLoading}
+                          placeholder={
+                            dataLoading
+                              ? 'Loading catalog...'
+                              : programOptions.length === 0
+                                ? filterByPreferredUnis && preferredUniSlugs.length > 0
+                                  ? 'No programs at preferred universities'
+                                  : formData.degree
+                                    ? 'No programs for this degree level'
+                                    : 'No programs in catalog'
+                                : 'Search program or university...'
+                          }
+                          emptyText={
+                            filterByPreferredUnis && preferredUniSlugs.length > 0
+                              ? 'No programs at this student’s preferred universities.'
+                              : formData.degree
+                                ? 'No programs found for this degree level.'
+                                : 'No matching programs.'
+                          }
+                          searchPlaceholder="Type a program or university name…"
+                          locale={locale === 'zh' ? 'zh' : 'en'}
+                        />
+                      </div>
+                      {!formData.degree && !dataLoading && programOptions.length > 0 && (
+                        <p className="mt-1 text-xs text-[#4B5563]">
+                          Tip: pick a degree first to narrow the list, or search by university name.
+                        </p>
+                      )}
                     </div>
 
                     {getSelectedProgram() && (

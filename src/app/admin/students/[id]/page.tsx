@@ -102,7 +102,7 @@ const appStatusColor: Record<ApplicationStatus, string> = {
 };
 
 export default function AdminStudentDetailPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const params = useParams();
   const router = useRouter();
   const studentId = params.id as string;
@@ -146,6 +146,11 @@ export default function AdminStudentDetailPage() {
   const [applications, setApplications] = useState<StudentApplication[]>([]);
   const [activity, setActivity] = useState<ActivityEvent[]>([]);
   const [tabLoading, setTabLoading] = useState<{ [k: string]: boolean }>({});
+  // Catalog for preferred-university badges (name + logo). Soft-fail
+  // empty so historical free-text prefs still render as plain chips.
+  const [uniCatalog, setUniCatalog] = useState<
+    Array<{ slug: string; name: string; nameCn?: string | null; logo?: string | null }>
+  >([]);
 
   // Documents tab filters + the in-app viewer. Opening a document must
   // not navigate away — the admin keeps this student's page, tab and
@@ -195,6 +200,31 @@ export default function AdminStudentDetailPage() {
   useEffect(() => {
     loadStudent();
   }, [loadStudent]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/universities?limit=500&sort=name')
+      .then((r) => r.json())
+      .then(
+        (d: {
+          universities?: Array<{
+            slug: string;
+            name: string;
+            nameCn?: string | null;
+            logo?: string | null;
+          }>;
+        }) => {
+          if (cancelled) return;
+          setUniCatalog(d.universities ?? []);
+        },
+      )
+      .catch(() => {
+        if (!cancelled) setUniCatalog([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Load a tab's data lazily
   const loadTab = useCallback(
@@ -475,25 +505,69 @@ export default function AdminStudentDetailPage() {
                     <Row label={t('adminStudentDetail.fieldToefl')} value={student.extra?.toeflScore as string | undefined} />
                   </div>
                 </div>
-                {/* Phase 88: render preferred_universities as badges. Was
-                    previously dropped by the mapper — students who set
-                    preferred universities via /student/profile or via the
-                    partner-link endpoint had them in the DB but invisible
-                    to the admin. */}
+                {/* Phase 88 + Phase C: preferred_universities as name+logo
+                    badges. Stored as catalog slugs (student self-profile /
+                    admin create-edit); historical free-text names that
+                    don't resolve stay as plain chips. */}
                 {student.preferredUniversities.length > 0 && (
                   <div className="mt-4">
                     <span className="text-gray-500 text-sm">
                       {t('adminStudentDetail.fieldPreferredUniversities')}
                     </span>
                     <div className="flex flex-wrap gap-2 mt-2">
-                      {student.preferredUniversities.map((u) => (
-                        <Badge
-                          key={u}
-                          className="bg-[#1B2A4A] text-white hover:bg-[#1B2A4A]"
-                        >
-                          {u}
-                        </Badge>
-                      ))}
+                      {student.preferredUniversities.map((entry) => {
+                        const match =
+                          uniCatalog.find((u) => u.slug === entry) ??
+                          uniCatalog.find(
+                            (u) =>
+                              u.name.toLowerCase() === entry.toLowerCase() ||
+                              (u.nameCn ?? '').toLowerCase() ===
+                                entry.toLowerCase(),
+                          );
+                        const label = match
+                          ? locale === 'zh' && match.nameCn
+                            ? match.nameCn
+                            : match.name
+                          : entry;
+                        const logo = match?.logo ?? null;
+                        const href = match
+                          ? `/universities/${match.slug}`
+                          : null;
+                        const chip = (
+                          <Badge
+                            key={entry}
+                            className="bg-[#1B2A4A] text-white hover:bg-[#1B2A4A] inline-flex items-center gap-1.5"
+                          >
+                            {logo ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={logo}
+                                alt=""
+                                className="h-4 w-4 object-contain bg-white"
+                                onError={(e) => {
+                                  (
+                                    e.currentTarget as HTMLImageElement
+                                  ).style.display = 'none';
+                                }}
+                              />
+                            ) : null}
+                            {label}
+                          </Badge>
+                        );
+                        return href ? (
+                          <Link
+                            key={entry}
+                            href={href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="hover:opacity-90"
+                          >
+                            {chip}
+                          </Link>
+                        ) : (
+                          chip
+                        );
+                      })}
                     </div>
                   </div>
                 )}

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Check, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Check, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { SearchableSelect } from '@/components/ui/searchable-select';
+import {
+  buildProgramSelectOptions,
+  buildUniversitySelectOptions,
+} from '@/lib/catalog-select-options';
+import type { Program, University } from '@/lib/data';
 import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 import { PageContainer } from '@/components/admin/page-container';
@@ -49,7 +55,11 @@ interface AdminApplication {
   studentEmail: string;
   isLinked: boolean;
   university: string;
+  /** Catalog slug from student_applications.university_id. */
+  universityId?: string;
   program: string;
+  /** Catalog slug from student_applications.program_id. */
+  programId?: string | null;
   degree: string;
   intake: string;
   status: string;
@@ -57,9 +67,6 @@ interface AdminApplication {
   applicationNumber?: string;
   createdAt: string;
   notes?: string;
-  // Phase 109 Batch 4: surface the full set of admin-managed fields
-  // from the API. The detail page already reads these; the edit page
-  // can now write them too.
   priority?: string;
   personalStatement?: string | null;
   additionalNotes?: string | null;
@@ -76,18 +83,26 @@ export default function AdminApplicationEditPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const catalogLocale = locale === 'zh' ? 'zh' : 'en';
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [universities, setUniversities] = useState<University[]>([]);
+  const [programs, setPrograms] = useState<Program[]>([]);
+  /** True when the loaded row's uni/program don't resolve to the live catalog. */
+  const [notInCatalog, setNotInCatalog] = useState(false);
 
   const [formData, setFormData] = useState<{
     status: string;
     priority: string;
     university: string;
+    universitySlug: string;
     program: string;
+    programSlug: string;
     degree: string;
     intake: string;
     personalStatement: string;
@@ -103,7 +118,9 @@ export default function AdminApplicationEditPage() {
     status: 'Submitted',
     priority: 'Normal',
     university: '',
+    universitySlug: '',
     program: '',
+    programSlug: '',
     degree: '',
     intake: '',
     personalStatement: '',
@@ -123,17 +140,61 @@ export default function AdminApplicationEditPage() {
   useEffect(() => {
     const controller = new AbortController();
     setIsLoading(true);
+    setCatalogLoading(true);
     setError(null);
     setNotFound(false);
-    apiFetchJson<{ application: AdminApplication }>(`/api/admin/applications/${id}`, {
-      signal: controller.signal,
-    })
-      .then(({ application }) => {
+
+    Promise.all([
+      apiFetchJson<{ application: AdminApplication }>(`/api/admin/applications/${id}`, {
+        signal: controller.signal,
+      }),
+      apiFetchJson<{ universities: University[] }>('/api/universities?limit=500', {
+        signal: controller.signal,
+      }).catch(() => ({ universities: [] as University[] })),
+      apiFetchJson<{ programs: Program[] }>('/api/programs?limit=500', {
+        signal: controller.signal,
+      }).catch(() => ({ programs: [] as Program[] })),
+    ])
+      .then(([appRes, uniRes, progRes]) => {
+        if (controller.signal.aborted) return;
+        const application = appRes.application;
+        const uniList = uniRes.universities || [];
+        const progList = progRes.programs || [];
+        setUniversities(uniList);
+        setPrograms(progList);
+
+        // Prefer slug (universityId / programId), fall back to display name
+        // for legacy free-text rows that never stored a catalog slug.
+        const matchedUni =
+          (application.universityId
+            ? uniList.find((u) => u.slug === application.universityId)
+            : undefined) ??
+          uniList.find(
+            (u) =>
+              u.name === application.university ||
+              u.nameCn === application.university,
+          );
+
+        const matchedProgram =
+          (application.programId
+            ? progList.find((p) => p.slug === application.programId)
+            : undefined) ??
+          progList.find(
+            (p) =>
+              p.name === application.program ||
+              p.nameCn === application.program,
+          );
+
+        const resolvedInCatalog = Boolean(matchedUni && matchedProgram);
+        setNotInCatalog(!resolvedInCatalog);
+
         setFormData({
           status: application.status,
           priority: application.priority || 'Normal',
-          university: application.university,
-          program: application.program,
+          university: matchedUni?.name || application.university,
+          universitySlug: matchedUni?.slug || application.universityId || '',
+          program: matchedProgram?.name || application.program,
+          programSlug: matchedProgram?.slug || application.programId || '',
           degree: application.degree,
           intake: application.intake,
           personalStatement: application.personalStatement || '',
@@ -157,25 +218,108 @@ export default function AdminApplicationEditPage() {
         else setError(err.message || 'Failed to load application');
       })
       .finally(() => {
-        if (!controller.signal.aborted) setIsLoading(false);
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+          setCatalogLoading(false);
+        }
       });
     return () => controller.abort();
   }, [id]);
+
+  const universityOptions = useMemo(
+    () =>
+      buildUniversitySelectOptions({
+        universities,
+        locale: catalogLocale,
+      }),
+    [universities, catalogLocale],
+  );
+
+  // When a university is selected, narrow programs to that school.
+  // Soft degree filter: empty degree = all programs at the uni.
+  const programOptions = useMemo(
+    () =>
+      buildProgramSelectOptions({
+        programs,
+        universities,
+        degreeFilter: formData.degree || null,
+        universitySlugFilter: formData.universitySlug || null,
+        locale: catalogLocale,
+        atLabel: (name) => t('partnerAppForm.programSublabelAt', { name }),
+      }),
+    [
+      programs,
+      universities,
+      formData.degree,
+      formData.universitySlug,
+      catalogLocale,
+      t,
+    ],
+  );
+
+  const handleUniversityChange = (slug: string) => {
+    const selected = universities.find((u) => u.slug === slug);
+    setNotInCatalog(false);
+    setFormData((prev) => {
+      const programStillValid =
+        prev.programSlug &&
+        programs.some(
+          (p) =>
+            p.slug === prev.programSlug &&
+            p.universitySlug === slug,
+        );
+      return {
+        ...prev,
+        universitySlug: slug,
+        university: selected?.name || '',
+        // Clear program if it doesn't belong to the newly picked uni.
+        ...(programStillValid
+          ? {}
+          : { programSlug: '', program: '' }),
+      };
+    });
+  };
+
+  const handleProgramChange = (slug: string) => {
+    const selected = programs.find((p) => p.slug === slug);
+    setNotInCatalog(false);
+    if (!selected) {
+      setFormData((prev) => ({ ...prev, programSlug: slug, program: '' }));
+      return;
+    }
+    const uni = universities.find((u) => u.slug === selected.universitySlug);
+    setFormData((prev) => ({
+      ...prev,
+      programSlug: slug,
+      program: selected.name,
+      universitySlug: selected.universitySlug || prev.universitySlug,
+      university: uni?.name || prev.university,
+      degree: prev.degree || selected.degree || '',
+    }));
+  };
 
   const handleSave = async () => {
     setIsSaving(true);
     setError(null);
     try {
-      // PATCH payload — only sends fields the API's whitelist accepts.
-      // The server strips unknown fields; we still keep the payload
-      // tight for clarity.
+      // Prefer catalog display names when we have a resolved slug so
+      // university_name / program_name stay in sync with the picker.
+      const uniName =
+        universities.find((u) => u.slug === formData.universitySlug)?.name ||
+        formData.university;
+      const progName =
+        programs.find((p) => p.slug === formData.programSlug)?.name ||
+        formData.program;
+
       await apiFetchJson(`/api/admin/applications/${id}`, {
         method: 'PATCH',
         body: JSON.stringify({
           status: formData.status,
           priority: formData.priority,
-          university_name: formData.university,
-          program_name: formData.program,
+          university_id: formData.universitySlug || formData.university,
+          university_name: uniName,
+          program_id: formData.programSlug || null,
+          program_name: progName,
           degree: formData.degree,
           intake: formData.intake,
           personal_statement: formData.personalStatement || null,
@@ -235,6 +379,24 @@ export default function AdminApplicationEditPage() {
         <Badge className="bg-[#1B2A4A] text-white">{t('adminAppEdit.title')}</Badge>
       </div>
 
+      {notInCatalog && (
+        <Card className="rounded-none border-amber-200 bg-amber-50">
+          <CardContent className="p-4 text-sm text-amber-800">
+            <strong className="font-semibold">{t('adminAppEdit.notInCatalogTitle')}</strong>
+            <p className="mt-1">{t('adminAppEdit.notInCatalogBody')}</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-3 rounded-none border-amber-300"
+              onClick={() => setNotInCatalog(false)}
+            >
+              {t('adminAppEdit.switchToCatalog')}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>{t('adminAppEdit.sectionDetails')}</CardTitle>
@@ -243,19 +405,59 @@ export default function AdminApplicationEditPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="university">University *</Label>
-              <Input
-                id="university"
-                value={formData.university}
-                onChange={(e) => setFormData({ ...formData, university: e.target.value })}
-              />
+              {notInCatalog ? (
+                <Input
+                  id="university"
+                  value={formData.university}
+                  onChange={(e) =>
+                    setFormData({ ...formData, university: e.target.value, universitySlug: '' })
+                  }
+                />
+              ) : (
+                <SearchableSelect
+                  value={formData.universitySlug}
+                  onChange={handleUniversityChange}
+                  options={universityOptions}
+                  loading={catalogLoading}
+                  locale={catalogLocale}
+                  placeholder={
+                    catalogLoading ? 'Loading catalog...' : 'Search universities…'
+                  }
+                  emptyText="No universities match"
+                  searchPlaceholder="Type a university name"
+                />
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="program">Program *</Label>
-              <Input
-                id="program"
-                value={formData.program}
-                onChange={(e) => setFormData({ ...formData, program: e.target.value })}
-              />
+              {notInCatalog ? (
+                <Input
+                  id="program"
+                  value={formData.program}
+                  onChange={(e) =>
+                    setFormData({ ...formData, program: e.target.value, programSlug: '' })
+                  }
+                />
+              ) : (
+                <SearchableSelect
+                  value={formData.programSlug}
+                  onChange={handleProgramChange}
+                  options={programOptions}
+                  loading={catalogLoading}
+                  locale={catalogLocale}
+                  placeholder={
+                    catalogLoading
+                      ? 'Loading catalog...'
+                      : programOptions.length === 0
+                        ? formData.universitySlug
+                          ? 'No programs for this university'
+                          : 'Search programs…'
+                        : 'Search programs or university…'
+                  }
+                  emptyText="No programs match"
+                  searchPlaceholder="Type a program or university name"
+                />
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="degree">Degree *</Label>
