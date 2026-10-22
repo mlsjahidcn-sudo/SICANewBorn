@@ -14,6 +14,9 @@ import {
   Search,
   Filter,
   Globe,
+  Clock,
+  Banknote,
+  CalendarDays,
   Award,
   X,
   Building2,
@@ -25,7 +28,6 @@ import { useUrlState } from '@/hooks/use-url-state';
 import { track } from '@/lib/analytics';
 import { GetStartedCta } from '@/components/GetStartedCta';
 import { SearchableSelect } from '@/components/ui/searchable-select';
-import { ProgramTable } from './program-table';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -980,18 +982,106 @@ export default function ProgramsClient({
             )}
           </div>
         ) : (
-          /* The dense table — 2,513 programs read as a list of facts,
-             not 24 screens of cards. */
-          <div style={{ opacity: isPending ? 0.6 : 1, transition: 'opacity 150ms ease' }}>
-            <ProgramTable
-              programs={rows}
-              universityBySlug={uniBySlug}
-              locale={locale}
-              t={t}
-              fromQuery={fromQuery}
-              searchQuery={searchQuery}
-              matchedUniversitySlugs={result.matchedUniversitySlugs}
-            />
+          /* The card grid. Compact on purpose: the old card was ~260px
+             tall (a university line, a 3-icon meta block and a footer
+             bar), which turned a 24-row page into 24 screens of
+             scrolling. This one is ~150px and carries the same facts. */
+          <div
+            className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+            style={{ opacity: isPending ? 0.6 : 1, transition: 'opacity 150ms ease' }}
+          >
+            {rows.map((program: Program, idx) => {
+              const uni = uniBySlug.get(program.universitySlug);
+              const duration = locale === 'zh' ? program.durationCn : program.duration;
+              const intake = locale === 'zh' ? program.intakeCn : program.intake;
+              // Did this row match because of the university, or the
+              // program name? Only meaningful while a term is active.
+              const matchedViaUniversity =
+                searchQuery !== '' &&
+                result.matchedUniversitySlugs.length > 0 &&
+                result.matchedUniversitySlugs.includes(program.universitySlug) &&
+                !program.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+                !(program.nameCn ?? '').toLowerCase().includes(searchQuery.toLowerCase());
+
+              return (
+                <Link
+                  key={program.slug}
+                  href={`/programs/${program.slug}${fromQuery ? `?from=${encodeURIComponent(fromQuery)}` : ''}`}
+                  onClick={() =>
+                    track('program_click', { slug: program.slug, position: idx, locale })
+                  }
+                  className="group flex flex-col border border-gray-200 bg-white transition-all duration-150 hover:border-[#9B1B30]/40 hover:shadow-md"
+                >
+                  <div className="h-0.5 bg-[#9B1B30]" />
+                  <div className="flex flex-1 flex-col p-3.5">
+                    {/* Degree + discipline on one line — the two facts a
+                        student scans for first. */}
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <span className={`inline-block shrink-0 px-1.5 py-0.5 text-[10px] font-semibold leading-4 ${degreeColor(program.degree)}`}>
+                        {locale === 'zh'
+                          ? degreeTypesCn[degreeTypes.indexOf(program.degree)]
+                          : program.degree}
+                      </span>
+                      {program.discipline && (
+                        <span className="truncate text-[11px] text-gray-500">
+                          {locale === 'zh' ? program.disciplineCn || program.discipline : program.discipline}
+                        </span>
+                      )}
+                      {program.scholarshipAvailable && (
+                        <Award className="ml-auto h-3.5 w-3.5 shrink-0 text-[#9B1B30]" aria-label={t('prog.scholarship')} />
+                      )}
+                    </div>
+
+                    <h3 className="mt-1.5 line-clamp-2 min-w-0 text-sm font-bold leading-snug text-[#1B2A4A] transition-colors group-hover:text-[#9B1B30]">
+                      {locale === 'zh' ? program.nameCn : program.name}
+                    </h3>
+
+                    <p className="mt-1 flex min-w-0 items-center gap-1 text-[11px] text-gray-500">
+                      <Building2 className="h-3 w-3 shrink-0 text-[#1B2A4A]" />
+                      <span className="min-w-0 truncate">
+                        {uni ? (locale === 'zh' ? uni.nameCn : uni.name) : program.universitySlug}
+                      </span>
+                    </p>
+
+                    {matchedViaUniversity && (
+                      <p className="mt-1 flex items-center gap-1 text-[11px] font-medium text-[#9B1B30]">
+                        <Search className="h-3 w-3 shrink-0" />
+                        {t('prog.matchedViaUniversity')}
+                      </p>
+                    )}
+
+                    {/* One wrapped meta line instead of the old 3-icon
+                        block + footer bar. */}
+                    <dl className="mt-auto flex flex-wrap items-center gap-x-2.5 gap-y-1 border-t border-gray-100 pt-2 text-[11px] text-gray-600">
+                      <span className="inline-flex items-center gap-1">
+                        <Globe className="h-3 w-3 shrink-0 text-[#1B2A4A]" />
+                        {locale === 'zh'
+                          ? languagesCn[languages.indexOf(program.language)] || program.language
+                          : program.language}
+                      </span>
+                      {duration && (
+                        <span className="inline-flex items-center gap-1">
+                          <Clock className="h-3 w-3 shrink-0 text-[#1B2A4A]" />
+                          {locale === 'zh' ? program.durationCn : program.duration}
+                        </span>
+                      )}
+                      {program.tuition && (
+                        <span className="inline-flex items-center gap-1">
+                          <Banknote className="h-3 w-3 shrink-0 text-[#1B2A4A]" />
+                          {compactTuition(program.tuition)}
+                        </span>
+                      )}
+                      {intake && (
+                        <span className="inline-flex items-center gap-1" title={intake}>
+                          <CalendarDays className="h-3 w-3 shrink-0 text-[#1B2A4A]" />
+                          {shortenIntake(intake, locale)}
+                        </span>
+                      )}
+                    </dl>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         )}
 
@@ -1055,6 +1145,44 @@ export default function ProgramsClient({
       </section>
     </main>
   );
+}
+
+/** Degree badge colour. */
+function degreeColor(degree: string) {
+  switch (degree) {
+    case 'Bachelor':
+      return 'bg-blue-50 text-blue-800';
+    case 'Master':
+      return 'bg-purple-50 text-purple-800';
+    case 'PhD':
+      return 'bg-amber-50 text-amber-800';
+    default:
+      return 'bg-gray-50 text-gray-800';
+  }
+}
+
+/**
+ * The tuition column is free text ("CNY 31,000/year (2026)", "¥16,000-24,000
+ * /year"). The card shows the currency + the first figure; the full string
+ * stays in the tooltip.
+ */
+function compactTuition(value: string): string {
+  const coded = value.match(/(CNY|RMB|USD|EUR)\s*([\d,]+(?:\.\d+)?)/i);
+  if (coded) return `${coded[1].toUpperCase()} ${coded[2]}`;
+  const symbol = value.match(/[¥$€]\s*([\d,]+(?:\.\d+)?)/);
+  if (symbol) return symbol[0].replace(/\s+/g, '');
+  return value.length > 18 ? `${value.slice(0, 17)}…` : value;
+}
+
+/** "September 2027 (2026 catalogue)" → "Sep 2027" — the card has no room
+ *  for the catalogue suffix. */
+function shortenIntake(value: string, locale: 'en' | 'zh'): string {
+  if (locale === 'zh') return value;
+  const shortened = value
+    .replace(/September/gi, 'Sep')
+    .replace(/March/gi, 'Mar')
+    .replace(/Autumn/gi, 'Fall');
+  return shortened.length > 22 ? `${shortened.slice(0, 21)}…` : shortened;
 }
 
 /**

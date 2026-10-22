@@ -355,16 +355,6 @@ export const translations: Record<Locale, Record<string, string>> = {
     'prog.city': 'City',
     'prog.allCities': 'All cities',
     'prog.englishTaught': 'English-taught',
-    // The dense table view (column headers + the view toggle)
-    'prog.colProgram': 'Program',
-    'prog.colUniversity': 'University',
-    'prog.colLanguage': 'Language',
-    'prog.colDuration': 'Duration',
-    'prog.colTuition': 'Tuition',
-    'prog.colIntake': 'Intake',
-    'prog.colScholarship': 'Scholarship',
-    'prog.colScholarshipShort': 'Yes',
-    'prog.tableCaption': 'Program listing',
     // Filter system (shared between /universities and /programs)
     'filter.activeFilters': 'Active filters',
     'filter.clearAll': 'Clear all',
@@ -5898,16 +5888,6 @@ export const translations: Record<Locale, Record<string, string>> = {
     'prog.city': '城市',
     'prog.allCities': '所有城市',
     'prog.englishTaught': '英文授课',
-    // 紧凑表格视图（列标题 + 视图切换）
-    'prog.colProgram': '项目',
-    'prog.colUniversity': '大学',
-    'prog.colLanguage': '授课语言',
-    'prog.colDuration': '学制',
-    'prog.colTuition': '学费',
-    'prog.colIntake': '入学时间',
-    'prog.colScholarship': '奖学金',
-    'prog.colScholarshipShort': '有',
-    'prog.tableCaption': '项目列表',
     // Filter system
     'filter.activeFilters': '当前筛选',
     'filter.clearAll': '清除全部',
