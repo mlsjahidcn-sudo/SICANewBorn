@@ -17,6 +17,7 @@
  * Static (revalidate = 3600) so the route is cached at the edge.
  */
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import {
   GraduationCap,
   Globe2,
@@ -285,6 +286,32 @@ export default async function WebinarPage() {
               );
             })}
           </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="webinar-activity-title" className="bg-[#FAFAF8] border-b border-gray-200 py-14 lg:py-20">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-10">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9B1B30]">
+              {t('webinar.activity.eyebrow')}
+            </p>
+            <h2 id="webinar-activity-title" className="mt-3 text-3xl font-bold text-[#1B2A4A]">
+              {t('webinar.activity.title')}
+            </h2>
+          </div>
+          <figure className="bg-white border border-gray-200">
+            <Image
+              src="/webinars/sica-live-webinar.png"
+              alt={t('webinar.activity.imageAlt')}
+              width={3290}
+              height={1694}
+              sizes="(max-width: 1152px) 100vw, 1088px"
+              className="w-full h-auto"
+            />
+            <figcaption className="p-5 sm:p-6 text-sm text-[#4B5563] leading-relaxed">
+              {t('webinar.activity.caption')}
+            </figcaption>
+          </figure>
         </div>
       </section>
 
