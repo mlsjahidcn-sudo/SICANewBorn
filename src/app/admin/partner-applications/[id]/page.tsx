@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft, Calendar, Building, Mail, Phone, Globe, Hash, Flag,
-  CheckCircle2, XCircle, Loader2, Link2, Pencil, GraduationCap,
+  CheckCircle2, XCircle, Loader2, Link2, Pencil, GraduationCap, Plus,
 } from 'lucide-react';
 // Phase 107 Batch 7: render the linked student_application's
 // enrollment row as a read-only summary. Partner CRM is intentionally
@@ -15,18 +15,11 @@ import {
 import type { ApplicationEnrollment } from '@/lib/application-history-mapper';
 
 import { Button } from '@/components/ui/button';
+import { PartnerApplicationTargetDialog } from '@/components/admin/partner-application-target-dialog';
 import { MissingDocumentsRequest } from '@/components/admin/missing-documents-request';
 import type { MissingDocumentCategory } from '@/lib/missing-document-message';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
@@ -35,10 +28,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { SearchableSelect } from '@/components/ui/searchable-select';
 import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
-import type { University, Program } from '@/lib/data';
 import {
   PARTNER_APPLICATION_STATUSES,
   PARTNER_APPLICATION_DECISIONS,
@@ -102,14 +93,8 @@ export default function AdminPartnerApplicationDetailPage() {
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [savedInternalNotes, setSavedInternalNotes] = useState('');
   const [adminNotes, setAdminNotes] = useState('');
-  // Phase 54: assign university/program modal state
   const [showAssign, setShowAssign] = useState(false);
-  const [universities, setUniversities] = useState<University[]>([]);
-  const [programs, setPrograms] = useState<Program[]>([]);
-  const [assignLoading, setAssignLoading] = useState(false);
-  const [assignCatalogLoading, setAssignCatalogLoading] = useState(false);
-  const [selectedUniversitySlug, setSelectedUniversitySlug] = useState('');
-  const [selectedProgramSlug, setSelectedProgramSlug] = useState('');
+  const [showCreate, setShowCreate] = useState(false);
 
   const load = useCallback(async () => {
     if (!applicationId) return;
@@ -219,77 +204,54 @@ export default function AdminPartnerApplicationDetailPage() {
     setApp((previous) => previous ? { ...previous, documentsRequested: response.documents_requested } : previous);
   };
 
-  // Phase 54: open the assignment modal and load the live catalog.
-  const openAssignModal = useCallback(async () => {
-    setShowAssign(true);
-    setAssignCatalogLoading(true);
-    setSelectedUniversitySlug('');
-    setSelectedProgramSlug('');
-    try {
-      const [u, p] = await Promise.all([
-        apiFetchJson<{ universities: University[] }>('/api/universities?limit=200').catch(
-          () => ({ universities: [] }),
-        ),
-        apiFetchJson<{ programs: Program[] }>('/api/programs?limit=500').catch(
-          () => ({ programs: [] }),
-        ),
-      ]);
-      setUniversities(u.universities || []);
-      setPrograms(p.programs || []);
-      // Pre-select the current university/program if they exist in the catalog.
-      if (app?.university) {
-        const matchedUni = (u.universities || []).find((x) => x.name === app.university);
-        if (matchedUni) {
-          setSelectedUniversitySlug(matchedUni.slug);
-        }
-      }
-      if (app?.program) {
-        const matchedProg = (p.programs || []).find((x) => x.name === app.program);
-        if (matchedProg) {
-          setSelectedProgramSlug(matchedProg.slug);
-        }
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load catalog.');
-    } finally {
-      setAssignCatalogLoading(false);
-    }
-  }, [app]);
-
-  const closeAssignModal = useCallback(() => {
+  const handleAssign = useCallback(async (target: {
+    universityName: string;
+    programName: string;
+    programSlug: string;
+    degree: string;
+  }) => {
+    const res = await apiFetchJson<{ application: PartnerApplication }>(
+      `/api/admin/partner-applications/${applicationId}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({
+          university: target.universityName,
+          program: target.programName,
+          programSlug: target.programSlug,
+          degree: target.degree,
+        }),
+      },
+    );
+    setApp(res.application);
     setShowAssign(false);
-    setSelectedUniversitySlug('');
-    setSelectedProgramSlug('');
-  }, []);
+  }, [applicationId]);
 
-  const handleAssign = useCallback(async () => {
-    if (!app || !selectedProgramSlug) return;
-    const picked = programs.find((p) => p.slug === selectedProgramSlug);
-    if (!picked) return;
-    const uni = universities.find((u) => u.slug === picked.universitySlug);
-    setAssignLoading(true);
-    setError(null);
-    try {
-      const res = await apiFetchJson<{ application: PartnerApplication }>(
-        `/api/admin/partner-applications/${applicationId}`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({
-            university: uni?.name ?? picked.universitySlug,
-            program: picked.name,
-            degree: picked.degree,
-            intake: picked.intake,
-          }),
-        },
-      );
-      setApp(res.application);
-      closeAssignModal();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to assign university/program.');
-    } finally {
-      setAssignLoading(false);
+  const handleCreateAnother = useCallback(async (target: {
+    universityName: string;
+    programName: string;
+    programSlug: string;
+    degree: string;
+    intake: string | null;
+  }) => {
+    if (!app?.studentId) {
+      throw new Error('This application is not linked to a partner student.');
     }
-  }, [app, applicationId, closeAssignModal, programs, selectedProgramSlug, universities]);
+    const res = await apiFetchJson<{ application: PartnerApplication }>(
+      '/api/admin/partner-applications',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          studentId: app.studentId,
+          university: target.universityName,
+          program: target.programName,
+          programSlug: target.programSlug,
+          degree: target.degree,
+          intake: target.intake,
+        }),
+      },
+    );
+    router.push(`/admin/partner-applications/${res.application.id}`);
+  }, [app, router]);
 
   if (isLoading) {
     return (
@@ -360,88 +322,20 @@ export default function AdminPartnerApplicationDetailPage() {
         </Card>
       )}
 
-      {/* Phase 54: admin modal for assigning a catalog university/program
-          to applications created without one. */}
-      <Dialog open={showAssign} onOpenChange={setShowAssign}>
-        <DialogContent className="rounded-none max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Assign university / program</DialogTitle>
-            <DialogDescription>
-              Pick a program from the live catalog. The university, degree and
-              intake will be filled in automatically.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div>
-              <Label>University</Label>
-              <SearchableSelect
-                value={selectedUniversitySlug}
-                onChange={(value) => {
-                  setSelectedUniversitySlug(value);
-                  setSelectedProgramSlug('');
-                }}
-                options={universities.map((u) => ({
-                  value: u.slug,
-                  label: u.name,
-                }))}
-                placeholder={assignCatalogLoading ? 'Loading…' : 'Select a university'}
-                emptyText="No universities found"
-                searchPlaceholder="Search universities…"
-                loading={assignCatalogLoading}
-              />
-            </div>
-            <div>
-              <Label>Program</Label>
-              <SearchableSelect
-                value={selectedProgramSlug}
-                onChange={setSelectedProgramSlug}
-                options={programs
-                  .filter(
-                    (p) =>
-                      !selectedUniversitySlug || p.universitySlug === selectedUniversitySlug,
-                  )
-                  .map((p) => ({
-                    value: p.slug,
-                    label: p.name,
-                    sublabel: `${p.degree} · ${p.language}`,
-                  }))}
-                placeholder={assignCatalogLoading ? 'Loading…' : 'Select a program'}
-                emptyText={
-                  selectedUniversitySlug
-                    ? 'No programs for this university'
-                    : 'Select a university first'
-                }
-                searchPlaceholder="Search programs…"
-                disabled={!selectedUniversitySlug || assignCatalogLoading}
-                loading={assignCatalogLoading}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={closeAssignModal}
-              disabled={assignLoading}
-              className="rounded-none"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleAssign}
-              disabled={assignLoading || !selectedProgramSlug}
-              className="rounded-none bg-[#1B2A4A] hover:bg-[#26345A] text-white"
-            >
-              {assignLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving…
-                </>
-              ) : (
-                'Save assignment'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <PartnerApplicationTargetDialog
+        open={showAssign}
+        onOpenChange={setShowAssign}
+        mode="assign"
+        onSubmit={handleAssign}
+      />
+      {app.studentId && (
+        <PartnerApplicationTargetDialog
+          open={showCreate}
+          onOpenChange={setShowCreate}
+          mode="create"
+          onSubmit={handleCreateAnother}
+        />
+      )}
 
       {/* Workflow control — the only place in the system that can
           move an application through the pipeline. */}
@@ -584,16 +478,27 @@ export default function AdminPartnerApplicationDetailPage() {
               label="Updated"
               value={app.updatedAt ? new Date(app.updatedAt).toLocaleString() : null}
             />
-            <div className="pt-2">
+            <div className="pt-2 flex flex-wrap gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={openAssignModal}
+                onClick={() => setShowAssign(true)}
                 className="rounded-none"
               >
                 <Pencil className="mr-2 h-3 w-3" />
-                {app.university && app.program ? 'Re-assign university / program' : 'Assign university / program'}
+                {app.university && app.program ? t('adminPartnerAppTarget.reassign') : t('adminPartnerAppTarget.assign')}
               </Button>
+              {app.studentId && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowCreate(true)}
+                  className="rounded-none"
+                >
+                  <Plus className="mr-2 h-3 w-3" />
+                  {t('adminPartnerAppTarget.addAnother')}
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>

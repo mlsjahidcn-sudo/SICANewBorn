@@ -95,6 +95,8 @@ export const PARTNER_APPLICATION_DEGREES = [
   'Master',
   'PhD',
   'Chinese Language',
+  'Foundation',
+  'Non-degree',
 ] as const;
 export type PartnerApplicationDegree = (typeof PARTNER_APPLICATION_DEGREES)[number];
 

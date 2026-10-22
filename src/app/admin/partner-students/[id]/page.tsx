@@ -14,6 +14,7 @@ import {
   Calendar,
   FileText,
   Eye,
+  Plus,
   CheckCircle2,
   AlertCircle,
   Trash2,
@@ -55,6 +56,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { PartnerApplicationTargetDialog } from '@/components/admin/partner-application-target-dialog';
 import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 import { useUrlState } from '@/hooks/use-url-state';
@@ -102,6 +104,7 @@ export default function AdminPartnerStudentDetailPage() {
   const [isSavingNotes, setIsSavingNotes] = useState(false);
 
   const [applications, setApplications] = useState<PartnerApplication[]>([]);
+  const [showCreateApplication, setShowCreateApplication] = useState(false);
   const [documents, setDocuments] = useState<PartnerDocument[]>([]);
   const [tabLoading, setTabLoading] = useState<{ [k: string]: boolean }>({});
   // Documents tab filters + the in-app viewer.
@@ -587,6 +590,37 @@ export default function AdminPartnerStudentDetailPage() {
         </TabsContent>
 
         <TabsContent value="applications" className="space-y-4">
+          <div className="flex justify-end">
+            <Button
+              onClick={() => setShowCreateApplication(true)}
+              className="rounded-none bg-[#1B2A4A] hover:bg-[#26345A] text-white"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              {t('adminPartnerAppTarget.addApplication')}
+            </Button>
+          </div>
+          <PartnerApplicationTargetDialog
+            open={showCreateApplication}
+            onOpenChange={setShowCreateApplication}
+            mode="create"
+            onSubmit={async (target) => {
+              const res = await apiFetchJson<{ application: PartnerApplication }>(
+                '/api/admin/partner-applications',
+                {
+                  method: 'POST',
+                  body: JSON.stringify({
+                    studentId,
+                    university: target.universityName,
+                    program: target.programName,
+                    programSlug: target.programSlug,
+                    degree: target.degree,
+                    intake: target.intake,
+                  }),
+                },
+              );
+              router.push(`/admin/partner-applications/${res.application.id}`);
+            }}
+          />
           {tabLoading.applications ? (
             <div className="h-32 bg-gray-100 animate-pulse rounded" />
           ) : applications.length === 0 ? (

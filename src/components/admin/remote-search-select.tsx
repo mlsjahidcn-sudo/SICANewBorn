@@ -5,9 +5,9 @@ import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 interface RemoteOption<T> extends SearchableSelectOption { record: T }
-export function RemoteSearchSelect<T>({ url, value, onChange, placeholder, clearValue, clearLabel, disabled }: {
+export function RemoteSearchSelect<T>({ url, value, onChange, placeholder, clearValue, clearLabel, disabled, container }: {
   url: string; value: string; onChange: (value: string, record?: T) => void; placeholder: string;
-  clearValue?: string; clearLabel?: string; disabled?: boolean;
+  clearValue?: string; clearLabel?: string; disabled?: boolean; container?: HTMLElement | null;
 }): React.ReactNode {
   const { t } = useI18n();
   const [search, setSearch] = useState(''); const [page, setPage] = useState(1);
@@ -32,7 +32,7 @@ export function RemoteSearchSelect<T>({ url, value, onChange, placeholder, clear
   useEffect(() => { setPage(1); setSearch(''); setOptions([]); }, [url]);
   // Hydrate a deep-linked student, including one outside the current search page.
   useEffect(() => {
-    if (!value || value === clearValue || selected?.value === value || options.some(o => o.value === value) || !url.includes('kind=student')) return;
+    if (!value || value === clearValue || selected?.value === value || options.some(o => o.value === value)) return;
     const controller = new AbortController();
     apiFetchJson<{ options: RemoteOption<T>[] }>(`${url}&value=${encodeURIComponent(value)}`, { signal: controller.signal })
       .then(data => { if (!controller.signal.aborted && data.options[0]) { setSelected(data.options[0]); setOptions(prev => [...data.options, ...prev.filter(o => o.value !== value)]); } })
@@ -41,7 +41,7 @@ export function RemoteSearchSelect<T>({ url, value, onChange, placeholder, clear
   }, [value, clearValue, options, url, t, selected]);
   const visible = selected && selected.value === value && !options.some(o => o.value === selected.value) ? [selected, ...options] : options;
   return <div className="min-w-0">
-    <SearchableSelect value={value} options={visible} placeholder={placeholder} searchPlaceholder={t('adminManagement.searchOptions')} clearValue={clearValue} clearLabel={clearLabel} disabled={disabled} loading={loading} searchValue={search} onSearchChange={text => { setPage(1); setSearch(text); }} onChange={next => { const option = visible.find(o => o.value === next); setSelected(option); onChange(next, option?.record); }} />
+    <SearchableSelect value={value} options={visible} placeholder={placeholder} searchPlaceholder={t('adminManagement.searchOptions')} clearValue={clearValue} clearLabel={clearLabel} disabled={disabled} loading={loading} searchValue={search} container={container} onSearchChange={text => { setPage(1); setSearch(text); }} onChange={next => { const option = visible.find(o => o.value === next); setSelected(option); onChange(next, option?.record); }} />
     {error && <p role="alert" className="text-sm text-red-700">{error} <Button variant="link" onClick={() => setRetry(n => n + 1)}>{t('common.retry')}</Button></p>}
     {hasMore && <Button variant="link" disabled={loading} onClick={() => setPage(p => p + 1)}>{t('adminManagement.moreOptions')}</Button>}
   </div>;

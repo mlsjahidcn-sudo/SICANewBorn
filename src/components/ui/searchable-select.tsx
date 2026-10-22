@@ -66,6 +66,8 @@ export interface SearchableSelectProps {
   loading?: boolean;
   onSearchChange?: (search: string) => void;
   searchValue?: string;
+  /** Portal target. Pass a node inside an open dialog so the list stays clickable. */
+  container?: HTMLElement | null;
 }
 
 export function SearchableSelect({
@@ -82,6 +84,7 @@ export function SearchableSelect({
   loading,
   onSearchChange,
   searchValue,
+  container,
 }: SearchableSelectProps) {
   const [open, setOpen] = React.useState(false);
   const selected = options.find((o) => o.value === value);
@@ -133,6 +136,7 @@ export function SearchableSelect({
         </Button>
       </PopoverTrigger>
       <PopoverContent
+        container={container}
         className="w-[--radix-popover-trigger-width] p-0 rounded-none"
         align="start"
       >
