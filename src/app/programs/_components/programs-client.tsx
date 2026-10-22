@@ -14,15 +14,10 @@ import {
   Search,
   Filter,
   Globe,
-  Clock,
-  Banknote,
-  ArrowRight,
   Award,
   X,
   Building2,
   Loader2,
-  LayoutGrid,
-  List,
   SlidersHorizontal,
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
@@ -63,7 +58,6 @@ export interface UniversityOption {
 }
 
 type SortKey = 'default' | 'relevance' | 'tuition' | 'name';
-type ViewMode = 'table' | 'cards';
 
 interface ProgramsClientProps {
   initialResult: ProgramQueryResult;
@@ -128,10 +122,6 @@ export default function ProgramsClient({
   // the next page. The RSC renders the first page, so there is no
   // mount fetch.
   const [rows, setRows] = useState<Program[]>(initialResult.programs);
-  // The table is the default: 2,513 programs in cards is a scrolling
-  // marathon, and the table's columns are what a student actually
-  // compares (university / degree / tuition / intake).
-  const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
 
   const skipFirstFetch = useRef(true);
@@ -889,27 +879,6 @@ export default function ProgramsClient({
                 )}
               </select>
 
-              {/* PF-5: table ⇄ cards */}
-              <div className="hidden sm:flex items-center border border-gray-200">
-                <button
-                  type="button"
-                  onClick={() => setViewMode('table')}
-                  aria-label={t('prog.viewTable')}
-                  aria-pressed={viewMode === 'table'}
-                  className={`px-2.5 py-2.5 ${viewMode === 'table' ? 'bg-[#1B2A4A] text-white' : 'bg-white text-gray-500 hover:text-[#1B2A4A]'}`}
-                >
-                  <List className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setViewMode('cards')}
-                  aria-label={t('prog.viewCards')}
-                  aria-pressed={viewMode === 'cards'}
-                  className={`px-2.5 py-2.5 ${viewMode === 'cards' ? 'bg-[#1B2A4A] text-white' : 'bg-white text-gray-500 hover:text-[#1B2A4A]'}`}
-                >
-                  <LayoutGrid className="h-4 w-4" />
-                </button>
-              </div>
             </div>
           </div>
 
@@ -1010,9 +979,9 @@ export default function ProgramsClient({
               </>
             )}
           </div>
-        ) : viewMode === 'table' ? (
-          /* The dense table view — 2,513 programs read as a list of
-             facts, not 24 screens of cards. */
+        ) : (
+          /* The dense table — 2,513 programs read as a list of facts,
+             not 24 screens of cards. */
           <div style={{ opacity: isPending ? 0.6 : 1, transition: 'opacity 150ms ease' }}>
             <ProgramTable
               programs={rows}
@@ -1023,123 +992,6 @@ export default function ProgramsClient({
               searchQuery={searchQuery}
               matchedUniversitySlugs={result.matchedUniversitySlugs}
             />
-          </div>
-        ) : (
-          <div
-            className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-            style={{ opacity: isPending ? 0.6 : 1, transition: 'opacity 150ms ease' }}
-          >
-            {rows.map((program: Program, idx) => {
-              const uni = uniBySlug.get(program.universitySlug);
-              // Did this row match because of the university, or the
-              // program name? Only meaningful while a term is active.
-              const matchedViaUniversity =
-                searchQuery !== '' &&
-                result.matchedUniversitySlugs.length > 0 &&
-                result.matchedUniversitySlugs.includes(program.universitySlug) &&
-                !program.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-                !(program.nameCn ?? '').toLowerCase().includes(searchQuery.toLowerCase());
-
-              const card = (
-                <>
-                  <div className="h-1 bg-[#9B1B30]" />
-
-                  <div className="flex flex-1 flex-col p-4">
-                    {/* University first: it is now a primary search axis
-                        (Phase 173) and was previously buried under the
-                        program name where nobody scanned for it. */}
-                    <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#1B2A4A]/70">
-                      <Building2 className="h-3.5 w-3.5 shrink-0 text-[#1B2A4A]" />
-                      <span className="truncate">{uni ? (locale === 'zh' ? uni.nameCn : uni.name) : program.universitySlug}</span>
-                    </p>
-
-                    <h3 className="mt-1.5 text-base font-bold leading-snug text-[#1B2A4A] transition-colors group-hover:text-[#9B1B30]">
-                      {locale === 'zh' ? program.nameCn : program.name}
-                    </h3>
-
-                    <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-                      <span className={`inline-block px-2 py-0.5 text-[11px] font-semibold ${degreeColor(program.degree)}`}>
-                        {locale === 'zh'
-                          ? degreeTypesCn[degreeTypes.indexOf(program.degree)]
-                          : program.degree}
-                      </span>
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium text-gray-600 bg-gray-50">
-                        <Globe className="h-3 w-3 text-[#1B2A4A]" />
-                        {locale === 'zh'
-                          ? languagesCn[languages.indexOf(program.language)]
-                          : program.language}
-                      </span>
-                      {program.scholarshipAvailable && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium text-[#9B1B30] bg-[#9B1B30]/10">
-                          <Award className="h-3 w-3" />
-                          {t('prog.scholarship')}
-                        </span>
-                      )}
-                      {program.discipline && (
-                        <span className="inline-block px-2 py-0.5 text-[11px] font-medium text-gray-600 bg-gray-50">
-                          {locale === 'zh' ? program.disciplineCn || program.discipline : program.discipline}
-                        </span>
-                      )}
-                    </div>
-
-                    {matchedViaUniversity && (
-                      <p className="mt-2.5 flex items-center gap-1 text-[11px] font-medium text-[#9B1B30]">
-                        <Search className="h-3 w-3 shrink-0" />
-                        {t('prog.matchedViaUniversity')}
-                      </p>
-                    )}
-
-                    {/* Dense single meta line replaces the previous
-                        three-icon block — same facts, ~40% less height. */}
-                    <dl className="mt-auto grid grid-cols-3 gap-1 border-t border-gray-100 pt-2.5 text-[11px] text-gray-600">
-                      <div>
-                        <dt className="flex items-center gap-1 text-gray-400">
-                          <Clock className="h-3 w-3 shrink-0 text-[#1B2A4A]" />
-                          {t('prog.duration')}
-                        </dt>
-                        <dd className="mt-0.5 truncate font-medium">
-                          {locale === 'zh' ? program.durationCn : program.duration}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="flex items-center gap-1 text-gray-400">
-                          <Banknote className="h-3 w-3 shrink-0 text-[#1B2A4A]" />
-                          {t('prog.tuition')}
-                        </dt>
-                        <dd className="mt-0.5 truncate font-medium">{program.tuition || '—'}</dd>
-                      </div>
-                      <div>
-                        <dt className="flex items-center gap-1 text-gray-400">
-                          <Globe className="h-3 w-3 shrink-0 text-[#1B2A4A]" />
-                          {t('prog.intake')}
-                        </dt>
-                        <dd className="mt-0.5 truncate font-medium">
-                          {locale === 'zh' ? program.intakeCn : program.intake}
-                        </dd>
-                      </div>
-                    </dl>
-
-                    <span className="mt-3 flex items-center justify-between border-t border-gray-100 pt-2.5 text-sm font-semibold text-[#9B1B30] transition-all group-hover:gap-1">
-                      {t('prog.viewDetails')}
-                      <ArrowRight className="h-4 w-4 shrink-0" />
-                    </span>
-                  </div>
-                </>
-              );
-
-              return (
-                <Link
-                  key={program.slug}
-                  href={`/programs/${program.slug}${fromQuery ? `?from=${encodeURIComponent(fromQuery)}` : ''}`}
-                  onClick={() =>
-                    track('program_click', { slug: program.slug, position: idx, locale })
-                  }
-                  className="group flex flex-col border border-gray-200 bg-white transition-all duration-150 hover:border-[#9B1B30]/40 hover:shadow-lg"
-                >
-                  {card}
-                </Link>
-              );
-            })}
           </div>
         )}
 
@@ -1223,18 +1075,4 @@ function pageNumbers(current: number, total: number, window = 2): (number | '…
     out.push(total);
   }
   return out;
-}
-
-/** Degree badge colour — unchanged from the pre-PF-1 card. */
-function degreeColor(degree: string) {
-  switch (degree) {
-    case 'Bachelor':
-      return 'bg-blue-50 text-blue-800';
-    case 'Master':
-      return 'bg-purple-50 text-purple-800';
-    case 'PhD':
-      return 'bg-amber-50 text-amber-800';
-    default:
-      return 'bg-gray-50 text-gray-800';
-  }
 }
