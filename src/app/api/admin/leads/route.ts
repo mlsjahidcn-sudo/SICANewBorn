@@ -44,6 +44,7 @@
  *   - created_at, updated_at
  */
 import { NextRequest, NextResponse } from 'next/server';
+import { applyLeadReportQueue } from '@/lib/lead-report-queue';
 import { getSupabaseServer } from '@/lib/supabase-server';
 import { requireAdmin } from '@/lib/supabase-auth';
 import { fetchLastEmailSentAt } from '@/lib/admin/last-email-lookup';
@@ -105,6 +106,8 @@ export async function GET(request: NextRequest) {
   const from = (searchParams.get('from') || '').trim();
   const to = (searchParams.get('to') || '').trim();
   const q = (searchParams.get('q') || '').trim();
+  const queue = searchParams.get('queue') || '';
+  const queueNow = Date.now();
   const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10) || 50, MAX_LIMIT);
   const offset = parseInt(searchParams.get('offset') || '0', 10) || 0;
 
@@ -136,6 +139,7 @@ export async function GET(request: NextRequest) {
       .from(tableFor(t))
       .select('*', { count: 'exact', head: true });
     if (status) builder.eq('status', status);
+    applyLeadReportQueue(builder, t, queue, queueNow);
     if (country) builder.ilike('country', `%${country}%`);
     if (assigneeFilter === 'unassigned') {
       builder.is('assigned_to', null);
@@ -164,6 +168,7 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false });
 
     if (status) builder.eq('status', status);
+    applyLeadReportQueue(builder, t, queue, queueNow);
     if (country) builder.ilike('country', `%${country}%`);
     if (assigneeFilter === 'unassigned') {
       builder.is('assigned_to', null);

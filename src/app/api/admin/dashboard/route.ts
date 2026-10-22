@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, buildServiceClient, getServerEnv } from '@/lib/supabase-auth';
 import { mapApplicationFromDb, type RawApp } from '@/lib/application-mapper';
+import { parseReportRange, ReportInputError } from '@/lib/admin-reporting';
+import { loadDashboardAnalytics } from '@/lib/admin-dashboard-report';
 
 /**
  * GET /api/admin/dashboard
@@ -19,7 +21,7 @@ import { mapApplicationFromDb, type RawApp } from '@/lib/application-mapper';
  *
  * Auth: any admin (requireAdmin). Service-role client.
  */
-export async function GET(request: NextRequest) {
+export async function GET(request: NextRequest): Promise<NextResponse> {
   if (!getServerEnv().serviceKey) {
     return NextResponse.json({ error: 'Supabase not configured' }, { status: 503 });
   }
@@ -28,6 +30,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const service = buildServiceClient();
+    const range = parseReportRange(new URL(request.url).searchParams);
 
     // 7-day cutoff for "this week" deltas
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -52,6 +55,7 @@ export async function GET(request: NextRequest) {
       leadUnassignedRes,
       leadNeedsFollowupRes,
       recentLeadHistoryRes,
+      analytics,
     ] = await Promise.all([
       service.from('universities').select('id', { count: 'exact', head: true }),
       service.from('programs').select('id', { count: 'exact', head: true }),
@@ -112,13 +116,14 @@ export async function GET(request: NextRequest) {
       service
         .from('partner_applications')
         .select('*')
+        .is('archived_at', null)
         .order('created_at', { ascending: false })
         .limit(6),
 
       // Last 6 application timeline events
       service
         .from('application_timeline')
-        .select('id, application_id, status, notes, created_at, created_by')
+        .select('id, application_id, partner_application_id, status, notes, created_at, created_by')
         .order('created_at', { ascending: false })
         .limit(6),
 
@@ -174,7 +179,10 @@ export async function GET(request: NextRequest) {
           .select('id', { count: 'exact', head: true })
           .is('assigned_to', null)
           .neq('status', 'Rejected'),
-      ]).then((rs) => rs.reduce((a, r) => a + (r.count ?? 0), 0)),
+      ]).then((rs) => {
+        for (const result of rs) if (result.error || result.count === null) throw new Error(result.error?.message || 'Lead count unavailable.');
+        return rs.reduce((a, r) => a + (r.count ?? 0), 0);
+      }),
 
       // Needs follow-up: lead exists, status not 'Resolved'/'Spam'/'Accepted'/'Rejected'/'Qualified',
       // AND (last_contacted_at is null OR last_contacted_at < 1 day ago)
@@ -198,7 +206,10 @@ export async function GET(request: NextRequest) {
           .in('status', ['Pending', 'Reviewed', 'Contacted'])
           .or(`last_contacted_at.is.null,last_contacted_at.lt.${oneDayAgo}`)
           .lt('created_at', oneDayAgo),
-      ]).then((rs) => rs.reduce((a, r) => a + (r.count ?? 0), 0)),
+      ]).then((rs) => {
+        for (const result of rs) if (result.error || result.count === null) throw new Error(result.error?.message || 'Follow-up count unavailable.');
+        return rs.reduce((a, r) => a + (r.count ?? 0), 0);
+      }),
 
       // Last 6 lead_history events (any action, any lead)
       service
@@ -206,7 +217,12 @@ export async function GET(request: NextRequest) {
         .select('id, lead_type, lead_id, action, admin_id, note, created_at')
         .order('created_at', { ascending: false })
         .limit(6),
+      loadDashboardAnalytics(service, range),
     ]);
+
+    for (const result of [uniRes, progRes, scholRes, studentsTotalRes, studentsRecentRes, appsTotalRes, appsRecentRes, appsLeadsRes, appsActiveRes, partnerAppsTotalRes, partnerAppsRecentRes, partnerAppsActiveRes, recentAppsRes, recentPartnerAppsRes, recentTimelineRes, recentStudentsRes, recentPartnerStudentsRes, leadContactTotalRes, leadContactRecentRes, leadChatTotalRes, leadChatRecentRes, leadAssessTotalRes, leadAssessRecentRes, recentLeadHistoryRes]) {
+      if (result.error) throw new Error(result.error.message);
+    }
 
     // Normalize the recent applications to the AdminApplication shape
     const recentStudentApplications = ((recentAppsRes.data || []) as RawApp[]).map(
@@ -254,7 +270,8 @@ export async function GET(request: NextRequest) {
 
     type TimelineRow = {
       id: string;
-      application_id: string;
+      application_id: string | null;
+      partner_application_id: string | null;
       status: string;
       notes: string | null;
       created_at: string;
@@ -283,7 +300,7 @@ export async function GET(request: NextRequest) {
         type: 'application',
         message: t.notes || `Application status: ${t.status}`,
         timestamp: t.created_at,
-        meta: { application_id: t.application_id, status: t.status },
+        meta: { application_id: t.application_id, partner_application_id: t.partner_application_id, status: t.status },
       });
     }
     for (const s of (recentStudentsRes.data || []) as StudentRow[]) {
@@ -291,9 +308,9 @@ export async function GET(request: NextRequest) {
       events.push({
         id: s.id,
         type: 'student',
-        message: `New ${s.source.toLowerCase()} registration: ${name}`,
+        message: `New ${(s.source || 'Online').toLowerCase()} registration: ${name}`,
         timestamp: s.created_at,
-        meta: { student_id: s.id, source: s.source },
+        meta: { student_id: s.id, source: s.source, name },
       });
     }
     type PartnerStudentRow = {
@@ -312,7 +329,7 @@ export async function GET(request: NextRequest) {
         type: 'student',
         message: `New partner CRM student from ${partnerName}: ${name}`,
         timestamp: s.created_at,
-        meta: { partner_student_id: s.id, source: 'Partner CRM' },
+        meta: { partner_student_id: s.id, source: 'Partner CRM', name, partnerName },
       });
     }
     type LeadHistoryRow = {
@@ -351,6 +368,8 @@ export async function GET(request: NextRequest) {
     const needsFollowupTotal = Number(leadNeedsFollowupRes) || 0;
 
     return NextResponse.json({
+      analytics,
+      generatedAt: new Date().toISOString(),
       stats: {
         universities: uniRes.count ?? 0,
         programs: progRes.count ?? 0,
@@ -383,6 +402,6 @@ export async function GET(request: NextRequest) {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[admin/dashboard GET] unhandled:', err);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: err instanceof ReportInputError ? message : 'Dashboard reporting is unavailable. Please retry.' }, { status: err instanceof ReportInputError ? 400 : 503 });
   }
 }

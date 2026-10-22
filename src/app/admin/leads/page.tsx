@@ -15,7 +15,7 @@
  * untranslated (Phase 37 precedent: DB enum round-trip contract).
  */
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
@@ -133,6 +133,7 @@ const STATUS_OPTIONS: Record<LeadType, string[]> = {
 
 export default function LeadsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useI18n();
   const [leads, setLeads] = useState<UnifiedLead[]>([]);
   const [counts, setCounts] = useState({ contact: 0, chat: 0, assessment: 0, total: 0 });
@@ -143,7 +144,8 @@ export default function LeadsPage() {
   const [typeFilter, setTypeFilter] = useState<LeadType | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [countryFilter, setCountryFilter] = useState('');
-  const [assigneeFilter, setAssigneeFilter] = useState('all');
+  const [assigneeFilter, setAssigneeFilter] = useState(searchParams.get('assignee') || 'all');
+  const [queueFilter, setQueueFilter] = useState(['unassigned', 'followup'].includes(searchParams.get('queue') || '') ? searchParams.get('queue') || '' : '');
   const [tierFilter, setTierFilter] = useState<'all' | 'cold' | 'warm' | 'hot'>('all');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
@@ -193,6 +195,7 @@ export default function LeadsPage() {
     setLoadError(null);
     try {
       const params = new URLSearchParams();
+      if (queueFilter) params.set('queue', queueFilter);
       if (typeFilter !== 'all') params.set('type', typeFilter);
       if (statusFilter !== 'all') params.set('status', statusFilter);
       if (countryFilter.trim()) params.set('country', countryFilter.trim());
@@ -209,7 +212,7 @@ export default function LeadsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [typeFilter, statusFilter, countryFilter, assigneeFilter, fromDate, toDate, q, t]);
+  }, [typeFilter, statusFilter, countryFilter, assigneeFilter, fromDate, toDate, q, queueFilter, t]);
 
   useEffect(() => {
     load();
@@ -219,7 +222,7 @@ export default function LeadsPage() {
   // leads that don't match the current view.
   useEffect(() => {
     setSelected(new Set());
-  }, [statusFilter, countryFilter, assigneeFilter, tierFilter, fromDate, toDate, q]);
+  }, [statusFilter, countryFilter, assigneeFilter, tierFilter, fromDate, toDate, q, queueFilter]);
 
   // Client-side tier filter (the API doesn't filter by tier; we apply
   // it here so the list page stays in sync with the badge UI).
@@ -273,6 +276,7 @@ export default function LeadsPage() {
 
   const exportCsv = () => {
     const params = new URLSearchParams();
+    if (queueFilter) params.set('queue', queueFilter);
     if (typeFilter !== 'all') params.set('type', typeFilter);
     if (statusFilter !== 'all') params.set('status', statusFilter);
     if (countryFilter.trim()) params.set('country', countryFilter.trim());
@@ -360,6 +364,10 @@ export default function LeadsPage() {
 
   return (
     <div className="space-y-6">
+      {queueFilter && <div className="flex items-center justify-between border border-[#1B2A4A]/15 bg-white p-3 text-sm text-[#1B2A4A]">
+        <span>{t(queueFilter === 'followup' ? 'adminDashboard.needsFollowup' : 'adminDashboard.unassignedLeads')}</span>
+        <button type="button" className="underline" onClick={() => { setQueueFilter(''); const url = new URL(window.location.href); url.searchParams.delete('queue'); window.history.replaceState({}, '', url); }}>{t('adminLeads.clearFilters')}</button>
+      </div>}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-[#1B2A4A]">{t('adminLeads.title')}</h1>

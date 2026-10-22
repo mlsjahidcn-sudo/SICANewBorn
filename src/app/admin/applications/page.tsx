@@ -206,7 +206,7 @@ export default function AdminApplicationsPage() {
   // Filter state
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>(searchParams.get('status') || 'all');
   const [studentFilter, setStudentFilter] = useState<string>('all');
   // Phase 107 Batch 4: two new filter chips. 'all' = no filter;
   // 'with-decision' / 'no-decision' filter student_applications.decision;

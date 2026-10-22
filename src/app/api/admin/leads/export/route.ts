@@ -15,6 +15,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServer } from '@/lib/supabase-server';
 import { requireAdmin } from '@/lib/supabase-auth';
+import { applyLeadReportQueue } from '@/lib/lead-report-queue';
 
 export const dynamic = 'force-dynamic';
 
@@ -81,6 +82,7 @@ export async function GET(request: NextRequest) {
   const tasks = callTables.map(async (t) => {
     const builder = supabase.from(tableFor(t)).select('*');
     if (status) builder.eq('status', status);
+    applyLeadReportQueue(builder, t, searchParams.get('queue') || '');
     if (country) builder.ilike('country', `%${country}%`);
     const { data, error } = await builder;
     if (error) throw new Error(`[${t}] ${error.message}`);

@@ -1,469 +1,587 @@
 'use client';
-
-import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useAuth } from '@/lib/auth-context';
 import {
-  GraduationCap, BookOpen, Award, FileText, Users, TrendingUp,
-  ArrowUpRight, Clock, Loader2, AlertCircle, UserPlus, Activity,
-  Inbox, AlertTriangle, MessageCircle, MessageSquare, ClipboardList,
+  ArrowUpRight,
+  ArrowRight,
+  FileText,
+  UserPlus,
+  Inbox,
+  CalendarCheck,
+  GraduationCap,
+  BookOpen,
+  Award,
+  Activity,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { apiFetchJson } from '@/lib/api-client';
-import { StatusBadge } from '@/components/admin/status-badge';
+import { PageContainer } from '@/components/admin/page-container';
+import {
+  MetricTile,
+  ReportPanel,
+  ReportingToolbar,
+  ReportingError,
+  ReportLoading,
+  ReportingTrend,
+} from '@/components/admin/reporting-ui';
 import { useI18n } from '@/lib/i18n';
+import { useAdminReport, useReportingFilters } from '@/hooks/use-admin-report';
+import type { DashboardAnalytics } from '@/lib/admin-dashboard-report';
 
-interface StatCardProps {
-  title: string;
-  value: string | number;
-  subtitle: string;
-  icon: React.ElementType;
-  trend?: string;
-}
-
-function StatCard({ title, value, subtitle, icon: Icon, trend }: StatCardProps) {
-  return (
-    <div className="bg-white border border-gray-200 p-5 hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm text-[#4B5563] mb-1">{title}</p>
-          <p className="text-2xl font-bold text-[#1F2937]">{value}</p>
-          <p className="text-xs text-[#4B5563] mt-1">{subtitle}</p>
-        </div>
-        <div className="w-10 h-10 bg-[#1B2A4A]/10 flex items-center justify-center flex-shrink-0">
-          <Icon size={20} className="text-[#1B2A4A]" />
-        </div>
-      </div>
-      {trend && (
-        <div className="flex items-center gap-1 mt-3 text-xs text-green-600">
-          <TrendingUp size={12} />
-          <span>{trend}</span>
-        </div>
-      )}
-    </div>
-  );
-}
-
-interface AdminApplication {
+interface RecentApplication {
   id: string;
-  studentId: string | null;
   studentName: string;
-  studentEmail: string;
-  isLinked: boolean;
   university: string;
   program: string;
-  degree: string;
-  intake: string;
   status: string;
   applicationNumber: string | null;
   createdAt: string;
   surface?: 'student' | 'partner';
 }
-
 interface ActivityEvent {
   id: string;
   type: 'application' | 'student' | 'lead';
   message: string;
   timestamp: string;
-  meta?: Record<string, unknown>;
+  meta?: {
+    student_id?: string;
+    partner_student_id?: string;
+    application_id?: string;
+    partner_application_id?: string;
+    name?: string;
+    lead_id?: string;
+    lead_type?: string;
+  };
 }
-
-interface DashboardData {
+interface DashboardReport {
+  analytics: DashboardAnalytics;
+  generatedAt: string;
   stats: {
     universities: number;
     programs: number;
     scholarships: number;
-    students: number;
-    studentsLast7d: number;
-    applications: number;
-    applicationsLast7d: number;
-    leads: number;          // unlinked applications
-    activeApplications: number;
-    // Lead workflow (Phase 2.1)
-    leadsContact: number;
-    leadsContactLast7d: number;
-    leadsChat: number;
-    leadsChatLast7d: number;
-    leadsAssessment: number;
-    leadsAssessmentLast7d: number;
     leadsUnassigned: number;
     leadsNeedsFollowup: number;
   };
-  recentApplications: AdminApplication[];
+  recentApplications: RecentApplication[];
   recentActivity: ActivityEvent[];
 }
 
-const statusDisplay: Record<string, { label: string; color: string }> = {
-  Draft: { label: 'Draft', color: 'bg-gray-100 text-gray-800' },
-  Submitted: { label: 'Submitted', color: 'bg-blue-100 text-blue-800' },
-  'Under Review': { label: 'Under Review', color: 'bg-yellow-100 text-yellow-800' },
-  'Documents Requested': { label: 'Docs Needed', color: 'bg-purple-100 text-purple-800' },
-  'Decision Made': { label: 'Decision', color: 'bg-orange-100 text-orange-800' },
-  Accepted: { label: 'Accepted', color: 'bg-green-100 text-green-800' },
-  Rejected: { label: 'Rejected', color: 'bg-red-100 text-red-800' },
-  Withdrawn: { label: 'Withdrawn', color: 'bg-gray-100 text-gray-800' },
+const APPLICATION_STATUS_KEYS: Record<string, string> = {
+  'Decision Made': 'adminReporting.decisionMade',
+  Draft: 'studentApps.filterDraft',
+  Submitted: 'studentApps.filterSubmitted',
+  'Under Review': 'studentApps.filterInReview',
+  'In Review': 'studentApps.filterInReview',
+  'Documents Requested': 'studentApps.filterDocumentsRequested',
+  Accepted: 'studentApps.filterAccepted',
+  Rejected: 'studentApps.filterRejected',
+  Withdrawn: 'studentApps.filterWithdrawn',
+  'Withdrawal Requested': 'partnerAppStatus.withdrawalrequested',
 };
-
-export default function AdminDashboardPage() {
-  const { user } = useAuth();
+function ApplicationStatus({ status }: { status: string }): React.JSX.Element {
   const { t } = useI18n();
-  const [mounted, setMounted] = useState(false);
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
-    const controller = new AbortController();
-    setIsLoading(true);
-    setError(null);
-    apiFetchJson<DashboardData>('/api/admin/dashboard', { signal: controller.signal })
-      .then(setData)
-      .catch((err) => {
-        if (err.name !== 'AbortError') {
-          setError(err.message || 'Failed to load dashboard');
-        }
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setIsLoading(false);
-      });
-    return () => controller.abort();
-  }, [mounted]);
-
-  if (!mounted || isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="h-8 w-48 bg-gray-200 rounded animate-pulse" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-28 bg-gray-100 rounded animate-pulse" />
-          ))}
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 h-96 bg-gray-100 rounded animate-pulse" />
-          <div className="space-y-6">
-            <div className="h-32 bg-gray-100 rounded animate-pulse" />
-            <div className="h-48 bg-gray-100 rounded animate-pulse" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error || !data) {
-    return (
-      <div className="space-y-6">
-        <Card className="border-red-200 bg-red-50">
-          <div className="p-6">
-            <div className="flex items-start gap-2">
-              <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
-              <div>
-                <h3 className="font-semibold text-red-800">{t('adminDashboard.failedToLoad')}</h3>
-                <p className="text-red-700 text-sm mt-1">{error || 'Unknown error'}</p>
-                <Button size="sm" variant="outline" onClick={() => window.location.reload()} className="mt-3">
-                  {t('adminDashboard.retry')}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </Card>
-      </div>
-    );
-  }
-
-  const s = data.stats;
-
   return (
-    <div className="space-y-6">
-      {/* Welcome */}
-      <div>
-        <h1 className="text-2xl font-bold text-[#1F2937]">
-          {t('adminDashboard.welcomeBack', {
-            name: user?.user_metadata?.full_name || t('adminDashboard.welcomeFallback'),
-          })}
-        </h1>
-        <p className="text-[#4B5563] text-sm mt-1">
-          {t('adminDashboard.overviewBlurb')}
-        </p>
-      </div>
-
-      {/* Stats Grid — 8 cards now (real data) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title={t('adminDashboard.statStudents')}
-          value={s.students.toLocaleString()}
-          subtitle={t('adminDashboard.statStudentsSub', { n: s.studentsLast7d })}
-          icon={Users}
-        />
-        <StatCard
-          title={t('adminDashboard.statApplications')}
-          value={s.applications.toLocaleString()}
-          subtitle={t('adminDashboard.statApplicationsSub', {
-            active: s.activeApplications,
-            unlinked: s.leads,
-          })}
-          icon={FileText}
-        />
-        <StatCard
-          title={t('adminDashboard.statUniversities')}
-          value={s.universities.toLocaleString()}
-          subtitle={t('adminDashboard.statUniversitiesSub')}
-          icon={GraduationCap}
-        />
-        <StatCard
-          title={t('adminDashboard.statPrograms')}
-          value={s.programs.toLocaleString()}
-          subtitle={t('adminDashboard.statProgramsSub', { n: s.scholarships })}
-          icon={BookOpen}
-        />
-      </div>
-
-      {/* Two Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Applications */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white border border-gray-200">
-            <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="font-semibold text-[#1F2937]">{t('adminDashboard.recentApplications')}</h2>
-              <Link
-                href="/admin/applications"
-                className="text-sm text-[#9B1B30] font-medium hover:underline flex items-center gap-1"
-              >
-                {t('adminDashboard.viewAll')} <ArrowUpRight size={14} />
-              </Link>
-            </div>
-            <div className="overflow-x-auto">
-              {data.recentApplications.length === 0 ? (
-                <div className="p-12 text-center text-gray-500">
-                  <FileText className="w-10 h-10 mx-auto mb-2 text-gray-300" />
-                  <p>{t('adminDashboard.noApplicationsYet')}</p>
-                  <Link
-                    href="/admin/applications/new"
-                    className="text-sm text-[#9B1B30] hover:underline mt-2 inline-block"
-                  >
-                    {t('adminDashboard.addFirstApplication')}
-                  </Link>
-                </div>
-              ) : (
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-[#F3F4F6]">
-                      <th className="text-left text-xs font-medium text-[#4B5563] px-5 py-3">{t('adminDashboard.colApplicant')}</th>
-                      <th className="text-left text-xs font-medium text-[#4B5563] px-5 py-3">{t('adminDashboard.colProgram')}</th>
-                      <th className="text-left text-xs font-medium text-[#4B5563] px-5 py-3">{t('adminDashboard.colUniversity')}</th>
-                      <th className="text-left text-xs font-medium text-[#4B5563] px-5 py-3">{t('adminDashboard.colDate')}</th>
-                      <th className="text-left text-xs font-medium text-[#4B5563] px-5 py-3">{t('adminDashboard.colStatus')}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {data.recentApplications.map((app) => {
-                      const s = statusDisplay[app.status] || { label: app.status, color: 'bg-gray-100 text-gray-800' };
-                      return (
-                        <tr key={app.id} className="hover:bg-[#FAFAF8] transition-colors">
-                          <td className="px-5 py-3 text-sm font-medium text-[#1F2937]">
-                            <Link
-                              href={
-                                app.surface === 'partner'
-                                  ? `/admin/partner-applications/${app.id}`
-                                  : `/admin/applications/${app.id}`
-                              }
-                              className="hover:underline"
-                            >
-                              {app.studentName}
-                            </Link>
-                            {app.surface === 'partner' && (
-                              <span className="ml-2 text-xs text-purple-700 font-normal">{t('adminDashboard.partnerAppHint')}</span>
-                            )}
-                            {!app.isLinked && app.surface !== 'partner' && (
-                              <span className="ml-2 text-xs text-[#9B1B30] font-normal">{t('adminDashboard.noAccountHint')}</span>
-                            )}
-                          </td>
-                          <td className="px-5 py-3 text-sm text-[#4B5563]">
-                            {app.program}
-                            {app.applicationNumber && (
-                              <span className="ml-1 text-xs text-gray-400">{app.applicationNumber}</span>
-                            )}
-                          </td>
-                          <td className="px-5 py-3 text-sm text-[#4B5563]">{app.university}</td>
-                          <td className="px-5 py-3 text-sm text-[#4B5563]">
-                            {new Date(app.createdAt).toLocaleDateString()}
-                          </td>
-                          <td className="px-5 py-3">
-                            <span className={`text-xs px-2 py-1 rounded ${s.color}`}>
-                              {s.label}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </div>
-
-          {/* Lead pipeline (Phase 2.1) */}
-          <div className="bg-white border border-gray-200">
-            <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="font-semibold text-[#1F2937] flex items-center gap-2">
-                <Inbox size={16} className="text-[#1B2A4A]" />
-                {t('adminDashboard.leadPipeline')}
-              </h2>
-              <Link
-                href="/admin/leads"
-                className="text-sm text-[#9B1B30] font-medium hover:underline flex items-center gap-1"
-              >
-                {t('adminDashboard.viewAllLeads')} <ArrowUpRight size={14} />
-              </Link>
-            </div>
-            <div className="p-5">
-              <div className="grid grid-cols-3 gap-4 mb-4">
-                <Link
-                  href="/admin/leads?type=contact"
-                  className="border border-gray-200 p-4 hover:border-[#1B2A4A] transition-colors"
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <MessageSquare size={14} className="text-[#1B2A4A]" />
-                    <span className="text-xs text-gray-500">{t('adminDashboard.leadContactForm')}</span>
-                  </div>
-                  <p className="text-2xl font-bold text-[#1F2937]">
-                    {s.leadsContact.toLocaleString()}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    {t('adminDashboard.in7d', { n: s.leadsContactLast7d })}
-                  </p>
-                </Link>
-                <Link
-                  href="/admin/leads?type=chat"
-                  className="border border-gray-200 p-4 hover:border-[#9B1B30] transition-colors"
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <MessageCircle size={14} className="text-[#9B1B30]" />
-                    <span className="text-xs text-gray-500">{t('adminDashboard.leadChat')}</span>
-                  </div>
-                  <p className="text-2xl font-bold text-[#1F2937]">
-                    {s.leadsChat.toLocaleString()}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    {t('adminDashboard.in7d', { n: s.leadsChatLast7d })}
-                  </p>
-                </Link>
-                <Link
-                  href="/admin/leads?type=assessment"
-                  className="border border-gray-200 p-4 hover:border-[#D4A853] transition-colors"
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <ClipboardList size={14} className="text-[#D4A853]" />
-                    <span className="text-xs text-gray-500">{t('adminDashboard.leadAssessment')}</span>
-                  </div>
-                  <p className="text-2xl font-bold text-[#1F2937]">
-                    {s.leadsAssessment.toLocaleString()}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    {t('adminDashboard.in7d', { n: s.leadsAssessmentLast7d })}
-                  </p>
-                </Link>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Link
-                  href="/admin/leads?assignee=unassigned"
-                  className="flex items-center justify-between p-3 bg-[#9B1B30]/5 border border-[#9B1B30]/20 hover:bg-[#9B1B30]/10 transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <UserPlus size={14} className="text-[#9B1B30]" />
-                    <span className="text-sm text-[#1F2937]">{t('adminDashboard.unassignedLeads')}</span>
-                  </div>
-                  <span className="text-lg font-bold text-[#9B1B30]">
-                    {s.leadsUnassigned.toLocaleString()}
-                  </span>
-                </Link>
-                <Link
-                  href="/admin/leads?type=all"
-                  className="flex items-center justify-between p-3 bg-[#D4A853]/5 border border-[#D4A853]/20 hover:bg-[#D4A853]/10 transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle size={14} className="text-[#D4A853]" />
-                    <span className="text-sm text-[#1F2937]">{t('adminDashboard.needsFollowup')}</span>
-                  </div>
-                  <span className="text-lg font-bold text-[#1B2A4A]">
-                    {s.leadsNeedsFollowup.toLocaleString()}
-                  </span>
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Actions & Activity */}
-        <div className="space-y-6">
-          {/* Quick Actions */}
-          <div className="bg-white border border-gray-200 p-5">
-            <h2 className="font-semibold text-[#1F2937] mb-4">{t('adminDashboard.quickActions')}</h2>
-            <div className="space-y-2">
-              {[
-                { label: t('adminDashboard.quickAddOfflineStudent'), icon: UserPlus, href: '/admin/students/new' },
-                { label: t('adminDashboard.quickAddApplication'), icon: FileText, href: '/admin/applications/new' },
-                { label: t('adminDashboard.quickAddUniversity'), icon: GraduationCap, href: '/admin/universities/new' },
-                { label: t('adminDashboard.quickAddProgram'), icon: BookOpen, href: '/admin/programs/new' },
-                { label: t('adminDashboard.quickAddScholarship'), icon: Award, href: '/admin/scholarships/new' },
-              ].map((action) => {
-                const Icon = action.icon;
-                return (
-                  <Link
-                    key={action.label}
-                    href={action.href}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-[#1F2937] hover:bg-[#F3F4F6] transition-colors text-left"
-                  >
-                    <Icon size={16} className="text-[#1B2A4A]" />
-                    {action.label}
-                    <ArrowUpRight size={14} className="ml-auto text-gray-400" />
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Recent Activity (real) */}
-          <div className="bg-white border border-gray-200 p-5">
-            <h2 className="font-semibold text-[#1F2937] mb-4 flex items-center gap-2">
-              <Activity size={16} className="text-[#1B2A4A]" />
-              {t('adminDashboard.recentActivity')}
-            </h2>
-            {data.recentActivity.length === 0 ? (
-              <div className="text-center text-sm text-gray-500 py-4">
-                {t('adminDashboard.noActivityYet')}
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {data.recentActivity.map((event) => (
-                  <div key={`${event.type}-${event.id}`} className="flex items-start gap-3">
-                    {event.type === 'student' ? (
-                      <UserPlus size={14} className="text-green-600 mt-0.5 flex-shrink-0" />
-                    ) : event.type === 'lead' ? (
-                      <Inbox size={14} className="text-[#9B1B30] mt-0.5 flex-shrink-0" />
-                    ) : (
-                      <FileText size={14} className="text-blue-600 mt-0.5 flex-shrink-0" />
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm text-[#1F2937] truncate">{event.message}</p>
-                      <p className="text-xs text-[#4B5563]">
-                        {new Date(event.timestamp).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
+    <span
+      className={`inline-block whitespace-nowrap border px-2 py-1 text-[10px] font-medium ${status === 'Rejected' || status === 'Documents Requested' ? 'border-[#9B1B30]/20 bg-[#9B1B30]/5 text-[#9B1B30]' : 'border-[#1B2A4A]/15 bg-[#1B2A4A]/5 text-[#1B2A4A]'}`}
+    >
+      {APPLICATION_STATUS_KEYS[status]
+        ? t(APPLICATION_STATUS_KEYS[status])
+        : status}
+    </span>
   );
 }
 
-// Card import (re-using shadcn card shape for the error state)
-import { Card } from '@/components/ui/card';
+export default function AdminDashboardPage(): React.JSX.Element {
+  const { t, locale } = useI18n();
+  const { filters, ready, query, update } = useReportingFilters();
+  const report = useAdminReport<DashboardReport>(
+    ready ? `/api/admin/dashboard?${query}` : null,
+  );
+  const data = report.data;
+  const analytics = data?.analytics;
+  const formatDate = (value: string): string =>
+    new Date(value).toLocaleString(locale === 'zh' ? 'zh-CN' : 'en-GB', {
+      timeZone: 'Asia/Shanghai',
+      month: 'short',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  const appLink = (application: RecentApplication): string =>
+    application.surface === 'partner'
+      ? `/admin/partner-applications/${application.id}`
+      : `/admin/applications/${application.id}`;
+  const activityLink = (event: ActivityEvent): string => {
+    if (event.meta?.student_id)
+      return `/admin/students/${event.meta.student_id}`;
+    if (event.meta?.partner_student_id)
+      return `/admin/partner-students/${event.meta.partner_student_id}`;
+    if (event.meta?.partner_application_id)
+      return `/admin/partner-applications/${event.meta.partner_application_id}`;
+    if (event.meta?.application_id)
+      return `/admin/applications/${event.meta.application_id}`;
+    if (event.meta?.lead_type === 'webinar_signup')
+      return '/admin/webinar-signups';
+    if (event.meta?.lead_id && event.meta?.lead_type)
+      return `/admin/leads/${event.meta.lead_id}?type=${event.meta.lead_type}`;
+    return '/admin/applications';
+  };
+  const activityLabel = (event: ActivityEvent): string => {
+    if (event.meta?.name)
+      return t(
+        event.meta.partner_student_id
+          ? 'adminReporting.partnerStudentCreated'
+          : 'adminReporting.studentCreated',
+        { name: event.meta.name },
+      );
+    if (event.type === 'lead')
+      return t('adminReporting.leadActivity', {
+        source:
+          event.meta?.lead_type === 'webinar_signup'
+            ? t('adminReporting.webinars')
+            : event.meta?.lead_type === 'contact'
+              ? t('adminReporting.contactSource')
+              : event.meta?.lead_type === 'chat'
+                ? t('adminReporting.chatSource')
+                : event.meta?.lead_type === 'assessment'
+                  ? t('adminReporting.assessmentSource')
+                  : '—',
+      });
+    return event.message;
+  };
+  return (
+    <PageContainer width="wide">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9B1B30]">
+            SICA / {t('adminNav.dashboard')}
+          </p>
+          <h1 className="text-2xl font-semibold tracking-tight text-[#1B2A4A] sm:text-3xl">
+            {t('adminReporting.dashboardTitle')}
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm text-gray-500">
+            {t('adminReporting.dashboardSubtitle')}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/admin/students/new"
+            className="inline-flex items-center gap-2 border border-gray-200 bg-white px-3 py-2.5 text-xs font-medium text-[#1B2A4A] hover:bg-gray-50"
+          >
+            <UserPlus className="size-3.5" />
+            {t('adminDashboard.quickAddOfflineStudent')}
+          </Link>
+          <Link
+            href="/admin/applications/new"
+            className="inline-flex items-center gap-2 bg-[#9B1B30] px-3 py-2.5 text-xs font-medium text-white hover:bg-[#7A1526]"
+          >
+            <FileText className="size-3.5 text-white" />
+            {t('adminDashboard.quickAddApplication')}
+          </Link>
+        </div>
+      </div>
+      <div className="border border-[#1B2A4A]/12 bg-white p-4 sm:p-5">
+        <ReportingToolbar
+          filters={filters}
+          update={update}
+          refresh={report.refresh}
+          loading={report.loading}
+          generatedAt={data?.generatedAt}
+          range={analytics?.range}
+        />
+      </div>
+      <ReportingError
+        error={report.error}
+        stale={!!data}
+        retry={report.refresh}
+      />
+      {!data && !report.error && <ReportLoading />}
+      {data && analytics && (
+        <>
+          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+            <MetricTile
+              label={t('adminReporting.leads')}
+              value={analytics.metrics.leads.current}
+              comparison={analytics.metrics.leads}
+              subtitle={t('adminReporting.leadHint')}
+              accent
+            />
+            <MetricTile
+              label={t('adminReporting.applications')}
+              value={analytics.metrics.applications.current}
+              comparison={analytics.metrics.applications}
+            />
+            <MetricTile
+              label={t('adminReporting.accounts')}
+              value={analytics.metrics.accounts.current}
+              comparison={analytics.metrics.accounts}
+              subtitle={t('adminReporting.accountHint')}
+            />
+            <MetricTile
+              label={t('adminReporting.webinars')}
+              value={analytics.metrics.webinars.current}
+              comparison={analytics.metrics.webinars}
+            />
+          </div>
+          <div className="grid gap-5 xl:grid-cols-3">
+            <ReportPanel
+              title={t('adminReporting.attention')}
+              description={t('adminReporting.currentQueues')}
+              className="xl:order-2"
+            >
+              <div className="divide-y divide-gray-100 px-5">
+                {[
+                  {
+                    label: t('adminDashboard.unassignedLeads'),
+                    value: data.stats.leadsUnassigned,
+                    href: '/admin/leads?queue=unassigned',
+                    icon: UserPlus,
+                  },
+                  {
+                    label: t('adminDashboard.needsFollowup'),
+                    value: data.stats.leadsNeedsFollowup,
+                    href: '/admin/leads?queue=followup',
+                    icon: Inbox,
+                  },
+                  {
+                    label: t('adminReporting.submitted'),
+                    value: analytics.submitted,
+                    href: '/admin/applications?status=Submitted',
+                    icon: FileText,
+                  },
+                  {
+                    label: t('adminReporting.pendingConsultations'),
+                    value: analytics.pendingConsultations,
+                    href: '/admin/counselling?status=Pending',
+                    icon: CalendarCheck,
+                  },
+                ].map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="flex items-center gap-3 py-4 text-xs text-[#1B2A4A] hover:text-[#9B1B30]"
+                  >
+                    <item.icon
+                      aria-hidden="true"
+                      className="size-4 shrink-0 text-[#1B2A4A]"
+                    />
+                    <span className="flex-1">{item.label}</span>
+                    <strong
+                      className={`text-xl font-semibold tabular-nums ${item.value ? 'text-[#9B1B30]' : 'text-gray-400'}`}
+                    >
+                      {item.value.toLocaleString()}
+                    </strong>
+                    <ArrowUpRight className="size-3.5 text-gray-400" />
+                  </Link>
+                ))}
+              </div>
+            </ReportPanel>
+            <ReportPanel
+              title={t('adminReporting.activityTrend')}
+              description={t('adminReporting.trendDescription')}
+              className="xl:order-1 xl:col-span-2"
+            >
+              <ReportingTrend
+                data={analytics.trend}
+                series={[
+                  {
+                    key: 'leads',
+                    label: t('adminReporting.leads'),
+                    color: '#1B2A4A',
+                  },
+                  {
+                    key: 'applications',
+                    label: t('adminReporting.applications'),
+                    color: '#9B1B30',
+                  },
+                  {
+                    key: 'previousApplications',
+                    label: t('adminReporting.previousApplications'),
+                    color: '#9CA3AF',
+                    dashed: true,
+                  },
+                ]}
+              />
+            </ReportPanel>
+          </div>
+          <div className="grid gap-5 xl:grid-cols-3">
+            <ReportPanel
+              title={t('adminDashboard.recentApplications')}
+              description={t('adminReporting.latestRecords')}
+              className="xl:col-span-2"
+              action={
+                <Link
+                  href="/admin/applications"
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#9B1B30] hover:underline"
+                >
+                  {t('adminDashboard.viewAll')}
+                  <ArrowUpRight className="size-3" />
+                </Link>
+              }
+            >
+              {data.recentApplications.length === 0 ? (
+                <p className="p-10 text-center text-xs text-gray-500">
+                  {t('adminDashboard.noApplicationsYet')}
+                </p>
+              ) : (
+                <>
+                  <div className="hidden overflow-x-auto md:block">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-[#FAFAF8] text-[10px] uppercase tracking-wider text-gray-500">
+                        <tr>
+                          <th className="px-5 py-3 font-medium">
+                            {t('adminDashboard.colApplicant')}
+                          </th>
+                          <th className="px-5 py-3 font-medium">
+                            {t('adminDashboard.colProgram')}
+                          </th>
+                          <th className="px-5 py-3 font-medium">
+                            {t('adminDashboard.colStatus')}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {data.recentApplications.map((application) => (
+                          <tr
+                            key={`${application.surface}-${application.id}`}
+                            className="hover:bg-gray-50"
+                          >
+                            <td className="max-w-48 px-5 py-4">
+                              <Link
+                                href={appLink(application)}
+                                className="block truncate font-semibold text-[#1B2A4A] hover:underline"
+                              >
+                                {application.studentName}
+                              </Link>
+                              <p className="mt-1 text-[10px] text-gray-500">
+                                {t(
+                                  application.surface === 'partner'
+                                    ? 'adminReporting.sourcePartner'
+                                    : 'adminReporting.sourceStudent',
+                                )}{' '}
+                                ·{' '}
+                                {application.applicationNumber ||
+                                  formatDate(application.createdAt)}
+                              </p>
+                            </td>
+                            <td className="max-w-60 px-5 py-4">
+                              <p
+                                className="truncate text-[#1B2A4A]"
+                                title={application.program}
+                              >
+                                {application.program}
+                              </p>
+                              <p
+                                className="mt-1 truncate text-[11px] text-gray-500"
+                                title={application.university}
+                              >
+                                {application.university}
+                              </p>
+                            </td>
+                            <td className="px-5 py-4">
+                              <ApplicationStatus status={application.status} />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="divide-y divide-gray-100 md:hidden">
+                    {data.recentApplications.map((application) => (
+                      <Link
+                        key={`${application.surface}-${application.id}`}
+                        href={appLink(application)}
+                        className="block p-4"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <strong className="text-sm font-semibold text-[#1B2A4A]">
+                            {application.studentName}
+                          </strong>
+                          <ApplicationStatus status={application.status} />
+                        </div>
+                        <p className="mt-2 line-clamp-1 text-xs text-gray-600">
+                          {application.program}
+                        </p>
+                        <p className="mt-1 text-[11px] text-gray-500">
+                          {application.university}
+                        </p>
+                        <p className="mt-2 text-[10px] text-gray-400">
+                          {t(
+                            application.surface === 'partner'
+                              ? 'adminReporting.sourcePartner'
+                              : 'adminReporting.sourceStudent',
+                          )}{' '}
+                          · {formatDate(application.createdAt)}
+                        </p>
+                      </Link>
+                    ))}
+                  </div>
+                </>
+              )}
+            </ReportPanel>
+            <ReportPanel
+              title={t('adminReporting.webinarOverview')}
+              description={`${analytics.range.from} – ${analytics.range.to}`}
+            >
+              <div className="p-5">
+                <p className="text-4xl font-semibold tracking-tight text-[#1B2A4A] tabular-nums">
+                  {analytics.webinar.total.toLocaleString()}
+                </p>
+                <p className="mt-1 text-xs text-gray-500">
+                  {t('adminReporting.registrations')}
+                </p>
+                <dl className="mt-6 space-y-4 text-xs">
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-gray-500">
+                      {t('adminReporting.attended')}
+                    </dt>
+                    <dd className="font-semibold tabular-nums text-[#1B2A4A]">
+                      {analytics.webinar.attended.toLocaleString()}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-gray-500">
+                      {t('adminReporting.awaiting')}
+                    </dt>
+                    <dd className="font-semibold tabular-nums text-[#1B2A4A]">
+                      {analytics.webinar.awaiting.toLocaleString()}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-gray-500">
+                      {t('adminReporting.attendanceRate')}
+                    </dt>
+                    <dd className="font-semibold tabular-nums text-[#1B2A4A]">
+                      {analytics.webinar.attendanceRate === null
+                        ? '—'
+                        : `${Math.round(analytics.webinar.attendanceRate)}%`}
+                    </dd>
+                  </div>
+                </dl>
+                <p className="mt-3 text-[10px] leading-relaxed text-gray-400">
+                  {t('adminReporting.rateHint')}
+                </p>
+                <Link
+                  href={`/admin/webinar-signups?${query}`}
+                  className="mt-6 inline-flex items-center gap-2 border-t border-gray-100 pt-4 text-xs font-semibold text-[#9B1B30] hover:underline"
+                >
+                  {t('adminReporting.openWebinars')}
+                  <ArrowRight className="size-3.5" />
+                </Link>
+              </div>
+            </ReportPanel>
+          </div>
+          <div className="grid gap-5 xl:grid-cols-3">
+            <ReportPanel
+              title={t('adminReporting.recentActivity')}
+              className="xl:col-span-2"
+              action={
+                <Activity
+                  aria-hidden="true"
+                  className="size-4 text-[#1B2A4A]"
+                />
+              }
+            >
+              <div className="divide-y divide-gray-100 px-5">
+                {!data.recentActivity.length && (
+                  <p className="py-8 text-center text-xs text-gray-500">
+                    {t('adminReporting.emptyActivity')}
+                  </p>
+                )}
+                {data.recentActivity.map((event) => (
+                  <Link
+                    key={`${event.type}-${event.id}`}
+                    href={activityLink(event)}
+                    className="flex items-start gap-3 py-3.5 hover:bg-gray-50"
+                  >
+                    <span className="mt-1.5 size-1.5 shrink-0 bg-[#1B2A4A]" />
+                    <div className="min-w-0">
+                      <p className="truncate text-xs text-[#1B2A4A]">
+                        {activityLabel(event)}
+                      </p>
+                      <p className="mt-1 text-[10px] text-gray-500">
+                        {formatDate(event.timestamp)}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </ReportPanel>
+            <ReportPanel title={t('adminReporting.quickActions')}>
+              <div className="space-y-1 p-3">
+                {[
+                  {
+                    href: '/admin/students/new',
+                    label: t('adminDashboard.quickAddOfflineStudent'),
+                    icon: UserPlus,
+                  },
+                  {
+                    href: '/admin/applications/new',
+                    label: t('adminDashboard.quickAddApplication'),
+                    icon: FileText,
+                  },
+                  {
+                    href: '/admin/universities/new',
+                    label: t('adminDashboard.quickAddUniversity'),
+                    icon: GraduationCap,
+                  },
+                  {
+                    href: '/admin/programs/new',
+                    label: t('adminDashboard.quickAddProgram'),
+                    icon: BookOpen,
+                  },
+                  {
+                    href: '/admin/scholarships/new',
+                    label: t('adminDashboard.quickAddScholarship'),
+                    icon: Award,
+                  },
+                ].map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="flex items-center gap-3 px-2 py-2.5 text-xs text-[#1B2A4A] hover:bg-gray-50"
+                  >
+                    <item.icon className="size-4" />
+                    <span className="flex-1">{item.label}</span>
+                    <ArrowUpRight className="size-3 text-gray-400" />
+                  </Link>
+                ))}
+              </div>
+            </ReportPanel>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-7 gap-y-3 border border-[#1B2A4A]/12 bg-white px-5 py-4 text-xs">
+            <span className="font-semibold text-[#1B2A4A]">
+              {t('adminReporting.catalog')}
+            </span>
+            {[
+              {
+                label: t('adminDashboard.statUniversities'),
+                count: data.stats.universities,
+                href: '/admin/universities',
+              },
+              {
+                label: t('adminDashboard.statPrograms'),
+                count: data.stats.programs,
+                href: '/admin/programs',
+              },
+              {
+                label: t('adminNav.scholarships'),
+                count: data.stats.scholarships,
+                href: '/admin/scholarships',
+              },
+            ].map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="text-gray-500 hover:text-[#1B2A4A]"
+              >
+                <strong className="mr-2 font-semibold tabular-nums text-[#1B2A4A]">
+                  {item.count.toLocaleString()}
+                </strong>
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        </>
+      )}
+    </PageContainer>
+  );
+}

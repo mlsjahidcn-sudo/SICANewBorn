@@ -1,102 +1,72 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/supabase-auth';
-import { trackServer } from '@/lib/analytics';
-
+import {
+  parseWebinarIds,
+  updateWebinarStatus,
+} from '@/lib/webinar-report-server';
+import { isWebinarStatus } from '@/lib/webinar-report';
+import { ReportInputError } from '@/lib/admin-reporting';
 export const dynamic = 'force-dynamic';
-
-const VALID_STATUSES = ['Registered', 'Attended', 'No-Show', 'Cancelled'] as const;
-type WebinarStatus = (typeof VALID_STATUSES)[number];
-
-interface PatchBody {
-  status?: WebinarStatus;
-}
-
-/**
- * Phase 140 + 143: admin status flip on a webinar signup.
- *
- * Phase 140 added the flip Registered → Attended / No-Show /
- * Cancelled path the staff needs to operate the webinar.
- * Phase 143 layers on:
- *   - activity log row into `lead_history` (the polymorphic
- *     contract — Phase S29 — extended in
- *     database/2026-10-08_webinar_analytics_history.sql to
- *     accept `lead_type='webinar_signup'`),
- *   - GA4 event `webinar_signup_status_changed` fired via
- *     `trackServer()` so the audit shows up in the dashboard
- *     even when the staff uses curl/Postman.
- */
-export async function PATCH(
+type Context = { params: Promise<{ id: string }> };
+export async function GET(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> },
-) {
+  context: Context,
+): Promise<NextResponse> {
   const auth = await requireAdmin(request);
-  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
-
-  const { id: paramsId } = await context.params;
-
-  let body: PatchBody;
+  if (!auth.ok)
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
   try {
-    body = (await request.json()) as PatchBody;
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-  }
-
-  if (!body.status || !(VALID_STATUSES as readonly string[]).includes(body.status)) {
+    const { id } = await context.params;
+    parseWebinarIds([id]);
+    const { data, error } = await auth.supabase
+      .from('lead_history')
+      .select('id,action,from_value,to_value,note,created_at')
+      .eq('lead_type', 'webinar_signup')
+      .eq('lead_id', id)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (error) throw new Error('History unavailable.');
+    return NextResponse.json({ history: data || [] });
+  } catch (error) {
     return NextResponse.json(
-      { error: `status must be one of ${VALID_STATUSES.join('|')}` },
-      { status: 400 },
+      {
+        error:
+          error instanceof ReportInputError
+            ? error.message
+            : 'History is unavailable.',
+      },
+      { status: error instanceof ReportInputError ? 400 : 503 },
     );
   }
-
-  // Phase 143: capture the old status so we can write a
-  // from_value/to_value pair to lead_history. Phase 140's
-  // SELECT id, status only returned the post-update row.
-  const { data: existing, error: readErr } = await auth.supabase
-    .from('webinar_signups')
-    .select('id, status')
-    .eq('id', paramsId)
-    .maybeSingle();
-  if (readErr || !existing) {
-    console.error('[PATCH /api/admin/webinar-signups/[id]] lookup failed:', readErr);
-    return NextResponse.json({ error: 'Signup not found' }, { status: 404 });
+}
+export async function PATCH(
+  request: NextRequest,
+  context: Context,
+): Promise<NextResponse> {
+  const auth = await requireAdmin(request);
+  if (!auth.ok)
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  try {
+    const { id } = await context.params;
+    parseWebinarIds([id]);
+    const body: unknown = await request.json();
+    const status =
+      body && typeof body === 'object'
+        ? (body as Record<string, unknown>).status
+        : null;
+    if (!isWebinarStatus(status))
+      throw new ReportInputError('Invalid registration status.');
+    await updateWebinarStatus(auth.supabase, id, status, auth.user.id);
+    return NextResponse.json({ id, status });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Update unavailable.' },
+      {
+        status:
+          error instanceof ReportInputError || error instanceof SyntaxError
+            ? 400
+            : 503,
+      },
+    );
   }
-  const oldStatus = (existing.status as WebinarStatus) ?? 'Registered';
-
-  const { data, error } = await auth.supabase
-    .from('webinar_signups')
-    .update({ status: body.status })
-    .eq('id', paramsId)
-    .select('id, status')
-    .single();
-
-  if (error) {
-    console.error('[PATCH /api/admin/webinar-signups/[id]] update failed:', error);
-    return NextResponse.json({ error: 'Failed to update status' }, { status: 500 });
-  }
-
-  // Phase 143: best-effort activity log + GA4 event. Log failure
-  // is a warning, never a 500 — the status flip already
-  // succeeded. Event fire is also best-effort.
-  if (oldStatus !== body.status) {
-    try {
-      await auth.supabase.from('lead_history').insert({
-        lead_type: 'webinar_signup',
-        lead_id: paramsId,
-        admin_id: auth.user.id,
-        action: 'status_changed',
-        from_value: oldStatus,
-        to_value: body.status,
-      });
-    } catch (histErr) {
-      console.warn('[PATCH /api/admin/webinar-signups/[id]] lead_history insert failed:', histErr);
-    }
-    trackServer('webinar_signup_status_changed', {
-      locale: 'en',
-      signup_id: paramsId,
-      old_status: oldStatus,
-      new_status: body.status,
-    });
-  }
-
-  return NextResponse.json({ id: data.id, status: data.status });
 }
