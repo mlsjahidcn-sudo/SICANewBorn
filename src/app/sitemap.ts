@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-server';
 import { universities as staticUniversities, programs as staticPrograms, scholarships as staticScholarships } from '@/lib/data';
 import { cities, COUNTRIES } from '@/lib/seo-data';
+import { slugify } from '@/lib/catalog-mappers';
 
 import { SITE_URL } from '@/lib/site-url';
 import { PUBLIC_WEBINAR_ENABLED } from '@/lib/webinar-config';
@@ -411,7 +412,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         : allPrograms.map((p) => p.discipline)
       )
         .filter((d): d is string => Boolean(d))
-        .map((d) => d.toLowerCase().replace(/\s+/g, '-')),
+        .map(slugify),
     ),
   );
   const majorUrls: MetadataRoute.Sitemap = DISCIPLINE_SLUGS.map((d) => ({

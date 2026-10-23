@@ -27,6 +27,7 @@ import { useSearchParams } from 'next/navigation';
 import { useUrlState } from '@/hooks/use-url-state';
 import { track } from '@/lib/analytics';
 import { GetStartedCta } from '@/components/GetStartedCta';
+import { pageNumbers } from '@/lib/pagination';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Button } from '@/components/ui/button';
 import {
@@ -1183,24 +1184,4 @@ function shortenIntake(value: string, locale: 'en' | 'zh'): string {
     .replace(/March/gi, 'Mar')
     .replace(/Autumn/gi, 'Fall');
   return shortened.length > 22 ? `${shortened.slice(0, 21)}…` : shortened;
-}
-
-/**
- * Windowed page list with ellipses. The catalogue is large enough that
- * rendering one button per page is wasteful once `totalPages` climbs.
- */
-function pageNumbers(current: number, total: number, window = 2): (number | '…')[] {
-  const out: (number | '…')[] = [];
-  const from = Math.max(1, current - window);
-  const to = Math.min(total, current + window);
-  if (from > 1) {
-    out.push(1);
-    if (from > 2) out.push('…');
-  }
-  for (let p = from; p <= to; p++) out.push(p);
-  if (to < total) {
-    if (to < total - 1) out.push('…');
-    out.push(total);
-  }
-  return out;
 }

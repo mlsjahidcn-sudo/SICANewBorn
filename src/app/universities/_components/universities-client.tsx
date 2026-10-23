@@ -13,6 +13,7 @@ import UniversityLogo from '@/components/university-logo';
 import { useUrlState } from '@/hooks/use-url-state';
 import { track } from '@/lib/analytics';
 import { GetStartedCta } from '@/components/GetStartedCta';
+import { pageNumbers } from '@/lib/pagination';
 
 const RATING_OPTIONS = [
   { value: 0, label: 'Any' },
@@ -464,7 +465,7 @@ export default function UniversitiesClient({ initialUniversities }: Universities
         )}
 
         {totalPages > 1 && (
-          <div className="mt-8 flex items-center justify-center gap-2">
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
             <button
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
@@ -472,10 +473,15 @@ export default function UniversitiesClient({ initialUniversities }: Universities
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+            {pageNumbers(currentPage, totalPages).map((page, i) => page === '…' ? (
+              <span key={`gap-${i}`} className="px-2 text-sm text-gray-400">
+                …
+              </span>
+            ) : (
               <button
                 key={page}
                 onClick={() => setCurrentPage(page)}
+                aria-current={currentPage === page ? 'page' : undefined}
                 className={`flex h-9 w-9 items-center justify-center rounded-none text-sm font-medium ${
                   currentPage === page
                     ? 'bg-[#9B1B30] text-white'

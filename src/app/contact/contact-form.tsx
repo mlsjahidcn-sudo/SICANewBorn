@@ -164,24 +164,29 @@ export function ContactForm({ formTitle, labels, successMessages }: Props) {
 
           <div className="grid sm:grid-cols-2 gap-5">
             <div>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1">
+              <label htmlFor="contact-name" className="block text-sm font-medium text-[#1F2937] mb-1">
                 {labels.name} *
               </label>
               <input
+                id="contact-name"
                 type="text"
                 name="name"
+                autoComplete="name"
                 required
                 className="w-full border border-gray-300 px-4 py-2.5 text-sm text-[#1F2937] bg-white rounded-none focus:border-[#9B1B30] focus:outline-none focus:ring-1 focus:ring-[#9B1B30]"
                 placeholder="John Smith"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1">
+              <label htmlFor="contact-email" className="block text-sm font-medium text-[#1F2937] mb-1">
                 {labels.email} *
               </label>
               <input
+                id="contact-email"
                 type="email"
                 name="email"
+                autoComplete="email"
+                inputMode="email"
                 required
                 className="w-full border border-gray-300 px-4 py-2.5 text-sm text-[#1F2937] bg-white rounded-none focus:border-[#9B1B30] focus:outline-none focus:ring-1 focus:ring-[#9B1B30]"
                 placeholder="john@example.com"
@@ -190,21 +195,25 @@ export function ContactForm({ formTitle, labels, successMessages }: Props) {
           </div>
           <div className="grid sm:grid-cols-2 gap-5">
             <div>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1">
+              <label htmlFor="contact-phone" className="block text-sm font-medium text-[#1F2937] mb-1">
                 {labels.phone}
               </label>
               <input
+                id="contact-phone"
                 type="tel"
                 name="phone"
+                autoComplete="tel"
+                inputMode="tel"
                 className="w-full border border-gray-300 px-4 py-2.5 text-sm text-[#1F2937] bg-white rounded-none focus:border-[#9B1B30] focus:outline-none focus:ring-1 focus:ring-[#9B1B30]"
                 placeholder="+1 234 567 890"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1">
+              <label htmlFor="contact-subject" className="block text-sm font-medium text-[#1F2937] mb-1">
                 {labels.subject} *
               </label>
               <select
+                id="contact-subject"
                 name="subject"
                 required
                 defaultValue="general"
@@ -219,11 +228,13 @@ export function ContactForm({ formTitle, labels, successMessages }: Props) {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#1F2937] mb-1">
+            <label htmlFor="contact-message" className="block text-sm font-medium text-[#1F2937] mb-1">
               {labels.message} *
             </label>
             <textarea
+              id="contact-message"
               name="message"
+              autoComplete="off"
               required
               rows={5}
               className="w-full border border-gray-300 px-4 py-2.5 text-sm text-[#1F2937] bg-white rounded-none focus:border-[#9B1B30] focus:outline-none focus:ring-1 focus:ring-[#9B1B30] resize-vertical"

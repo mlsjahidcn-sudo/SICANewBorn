@@ -5,12 +5,12 @@ import { ArrowRight, GraduationCap, ChevronRight, MapPin, Clock, Banknote, Globe
 import { getAllUniversities, getAllPrograms, type Program, type University } from '@/lib/data-fetcher';
 import { getServerLocale, t } from '@/lib/server-t';
 import { buildLanguageAlternates } from '@/lib/alternates';
+import { slugify } from '@/lib/catalog-mappers';
 
 import { SITE_URL } from '@/lib/site-url';
 // URL slug ↔ discipline. Slugs are URL-safe variants of the
 // `discipline` field on each program. The mapping is computed from
-// the live DB at build time (see slugifyDiscipline).
-const slugifyDiscipline = (s: string) => s.toLowerCase().replace(/\s+/g, '-');
+// the live DB at build time (see slugify).
 
 // Render on demand with ISR — reads the live DB so newly-added
 // programs / disciplines show up automatically. Cached at the
@@ -24,7 +24,7 @@ async function getDisciplines() {
 
 export async function generateStaticParams() {
   const disciplines = await getDisciplines();
-  return disciplines.map((d) => ({ discipline: slugifyDiscipline(d) }));
+  return disciplines.map((d) => ({ discipline: slugify(d) }));
 }
 
 export async function generateMetadata({
@@ -37,7 +37,7 @@ export async function generateMetadata({
     getDisciplines(),
     getServerLocale(),
   ]);
-  const discipline = disciplines.find((d) => slugifyDiscipline(d) === disciplineSlug);
+  const discipline = disciplines.find((d) => slugify(d) === disciplineSlug);
   if (!discipline) {
     return { title: t(locale, 'seo.dynamic.notFoundTitle') };
   }
@@ -75,7 +75,7 @@ export default async function MajorPage({
     getAllPrograms(),
     getAllUniversities(),
   ]);
-  const discipline = disciplines.find((d) => slugifyDiscipline(d) === disciplineSlug);
+  const discipline = disciplines.find((d) => slugify(d) === disciplineSlug);
   if (!discipline) notFound();
 
   // All programs in this discipline, with the parent university

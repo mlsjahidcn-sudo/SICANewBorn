@@ -135,6 +135,13 @@ describe('scholarship mappers', () => {
 });
 
 describe('slugify', () => {
+  it('normalizes discipline punctuation while preserving existing slugs', () => {
+    expect(slugify('Art & Design')).toBe('art-design');
+    expect(slugify('Business/Humanities')).toBe('business-humanities');
+    expect(slugify('Engineering/Science')).toBe('engineering-science');
+    expect(slugify('Computer Science')).toBe('computer-science');
+  });
+
   it('produces lowercase kebab-case', () => {
     expect(slugify('BSc in Computer Science')).toBe('bsc-in-computer-science');
     expect(slugify('  --Weird  Name!! ')).toBe('weird-name');

@@ -13,7 +13,6 @@ import {
   Users,
   UserPlus,
   FileText,
-  Globe,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { SicaLogo } from '@/components/sica-logo';
@@ -300,7 +299,7 @@ export function Footer({ counts }: { counts: CatalogCounts }) {
             </ul>
           </div>
 
-          {/* Portals — the three logins + developer docs */}
+          {/* Portals — the three logins */}
           <div>
             <FooterColumnTitle>{t('footer.portals')}</FooterColumnTitle>
             <ul className="space-y-2.5">
@@ -312,9 +311,6 @@ export function Footer({ counts }: { counts: CatalogCounts }) {
               </FooterLink>
               <FooterLink href="/admin/login" icon={<FileText className="h-3.5 w-3.5" />}>
                 {t('nav.adminPortal')}
-              </FooterLink>
-              <FooterLink href="/api-docs" icon={<Globe className="h-3.5 w-3.5" />}>
-                {t('footer.apiDocs')}
               </FooterLink>
             </ul>
           </div>

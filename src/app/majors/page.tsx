@@ -4,8 +4,7 @@ import { ArrowRight, GraduationCap, ChevronRight } from 'lucide-react';
 import { getAllPrograms } from '@/lib/data-fetcher';
 import { buildLanguageAlternates } from '@/lib/alternates';
 import { buildPageOpenGraph } from '@/lib/page-opengraph';
-
-const slugifyDiscipline = (s: string) => s.toLowerCase().replace(/\s+/g, '-');
+import { slugify } from '@/lib/catalog-mappers';
 
 // Render on demand with ISR — reads the live DB so newly-added
 // programs / disciplines show up automatically. Cached at the
@@ -84,7 +83,7 @@ export default async function MajorsIndexPage() {
           {disciplines.map((d) => (
             <Link
               key={d}
-              href={`/majors/${slugifyDiscipline(d)}`}
+              href={`/majors/${slugify(d)}`}
               className="group flex items-center justify-between gap-3 bg-white border-2 border-gray-200 hover:border-[#9B1B30] p-5 transition-colors"
             >
               <div>
