@@ -17,7 +17,7 @@ interface NotesPayload {
   };
 }
 
-export function NotesTab({ applicationId }: { applicationId: string }) {
+export function NotesTab({ applicationId, onSaved }: { applicationId: string; onSaved?: () => void }) {
   const { t } = useI18n();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -26,10 +26,13 @@ export function NotesTab({ applicationId }: { applicationId: string }) {
   const [internalNotes, setInternalNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setLoaded(false);
     setError(null);
     apiFetchJson<NotesPayload>(`/api/admin/applications/${applicationId}`)
       .then((d) => {
@@ -37,6 +40,7 @@ export function NotesTab({ applicationId }: { applicationId: string }) {
         setAdditionalNotes(d.application.additionalNotes || '');
         setAdminNotes(d.application.adminNotes || '');
         setInternalNotes(d.application.internalNotes || '');
+        setLoaded(true);
       })
       .catch((err) => {
         if (!cancelled) {
@@ -49,9 +53,10 @@ export function NotesTab({ applicationId }: { applicationId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [applicationId, t]);
+  }, [applicationId, retry, t]);
 
   const handleSave = async () => {
+    if (!loaded || saving) return;
     setSaving(true);
     setError(null);
     setSavedAt(null);
@@ -68,6 +73,7 @@ export function NotesTab({ applicationId }: { applicationId: string }) {
         }),
       });
       setSavedAt(new Date().toLocaleTimeString());
+      onSaved?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : t('adminAppDetail.notesError'));
     } finally {
@@ -84,29 +90,38 @@ export function NotesTab({ applicationId }: { applicationId: string }) {
     );
   }
 
+  if (!loaded) {
+    return <div role="alert" className="flex flex-wrap items-center gap-3 border p-4 text-sm">
+      <AlertCircle className="size-4 text-[#1B2A4A]" />
+      <span>{error}</span>
+      <Button variant="outline" size="sm" onClick={() => setRetry(n => n + 1)}>{t('common.retry')}</Button>
+    </div>;
+  }
+
   return (
     <div className="space-y-4">
       <Card className="rounded-none">
         <CardContent className="pt-6 space-y-2">
           <label htmlFor="internal-team-note" className="block text-sm font-medium">{t('adminManagement.internalNotes')}</label>
           <p className="text-xs text-gray-500">{t('adminManagement.internalNotesHint')}</p>
-          <textarea id="internal-team-note" value={internalNotes} onChange={e => setInternalNotes(e.target.value)} rows={6} maxLength={8000} className="w-full p-3 rounded-none border border-gray-300 text-sm" />
+          <textarea id="internal-team-note" value={internalNotes} onChange={e => { setInternalNotes(e.target.value); setSavedAt(null); }} rows={6} maxLength={8000} className="w-full p-3 rounded-none border border-gray-300 text-sm" />
         </CardContent>
       </Card>
       <Card>
         <CardContent className="pt-6 space-y-2">
-          <label className="block text-sm font-medium text-[#1F2937]">
+          <label htmlFor="application-additional-notes" className="block text-sm font-medium text-[#1F2937]">
             {t('adminAppDetail.notesAdditionalLabel')}
           </label>
           <p className="text-xs text-gray-500 mb-2">
             {t('adminAppDetail.notesAdditionalHint')}
           </p>
           <textarea
+            id="application-additional-notes"
             value={additionalNotes}
-            onChange={(e) => setAdditionalNotes(e.target.value)}
+            onChange={(e) => { setAdditionalNotes(e.target.value); setSavedAt(null); }}
             rows={6}
             maxLength={2000}
-            className="w-full px-3 py-2 rounded-md border border-gray-300 bg-white text-sm"
+            className="w-full px-3 py-2 rounded-none border border-gray-300 bg-white text-sm"
           />
           <p className="text-xs text-gray-500">
             {additionalNotes.length} / 2000
@@ -116,18 +131,19 @@ export function NotesTab({ applicationId }: { applicationId: string }) {
 
       <Card>
         <CardContent className="pt-6 space-y-2">
-          <label className="block text-sm font-medium text-[#1F2937]">
+          <label htmlFor="application-student-message" className="block text-sm font-medium text-[#1F2937]">
             {t('adminAppDetail.notesAdminLabel')}
           </label>
           <p className="text-xs text-gray-500 mb-2">
             {t('adminAppDetail.notesAdminHint')}
           </p>
           <textarea
+            id="application-student-message"
             value={adminNotes}
-            onChange={(e) => setAdminNotes(e.target.value)}
+            onChange={(e) => { setAdminNotes(e.target.value); setSavedAt(null); }}
             rows={6}
             maxLength={4000}
-            className="w-full px-3 py-2 rounded-md border border-gray-300 bg-white text-sm"
+            className="w-full px-3 py-2 rounded-none border border-gray-300 bg-white text-sm"
           />
           <p className="text-xs text-gray-500">
             {adminNotes.length} / 4000

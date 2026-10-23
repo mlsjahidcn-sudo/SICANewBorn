@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft, Calendar, Building, Mail, Phone, Globe, Hash, Flag,
@@ -30,6 +30,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
+import { applicationDetailHref, applicationReturnTo } from '@/lib/admin-application-navigation';
 import {
   PARTNER_APPLICATION_STATUSES,
   PARTNER_APPLICATION_DECISIONS,
@@ -72,6 +73,8 @@ const PRIORITY_VARIANTS: Record<PartnerApplicationPriority, string> = {
 export default function AdminPartnerApplicationDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnTo = applicationReturnTo(searchParams.get('returnTo') ?? '/admin/applications?surface=partner');
   const applicationId = params.id as string;
   const { t } = useI18n();
 
@@ -250,8 +253,8 @@ export default function AdminPartnerApplicationDetailPage() {
         }),
       },
     );
-    router.push(`/admin/partner-applications/${res.application.id}`);
-  }, [app, router]);
+    router.push(applicationDetailHref(res.application.id, 'partner', returnTo));
+  }, [app, router, returnTo]);
 
   if (isLoading) {
     return (
@@ -270,7 +273,7 @@ export default function AdminPartnerApplicationDetailPage() {
             Update the back-link here so the user lands on the
             unified partner-only view, not the redirect hop. */}
         <Link
-          href="/admin/applications?surface=partner"
+          href={returnTo}
           className="inline-flex items-center gap-2 text-[#1B2A4A]"
         >
           <ArrowLeft className="w-4 h-4" /> Back to Partner Pipeline
@@ -294,7 +297,8 @@ export default function AdminPartnerApplicationDetailPage() {
             partner-only view, not the now-redirecting standalone
             list page. */}
         <Link
-          href="/admin/applications?surface=partner"
+          href={returnTo}
+          aria-label={t('adminAppReview.back')}
           className="p-2 hover:bg-gray-100 inline-flex"
         >
           <ArrowLeft className="w-5 h-5 text-[#1B2A4A]" />
@@ -569,7 +573,7 @@ export default function AdminPartnerApplicationDetailPage() {
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[#4B5563] min-w-32">Linked application:</span>
               <Link
-                href={`/admin/applications/${linkedStudentApplication.id}`}
+                href={applicationDetailHref(linkedStudentApplication.id, 'student', returnTo)}
                 className="text-[#1B2A4A] hover:underline font-medium"
               >
                 {linkedStudentApplication.applicationNumber ||

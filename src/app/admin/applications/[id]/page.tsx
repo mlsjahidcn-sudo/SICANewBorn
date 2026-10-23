@@ -1,753 +1,264 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import {
-  ArrowLeft, CheckCircle, XCircle, Mail, FileText, Calendar,
-  AlertCircle, Edit, RefreshCw, GraduationCap, BookOpen, Trash2,
-  Clock,
-} from 'lucide-react';
+import { ArrowLeft, ArrowRight, Edit, Loader2, RefreshCw, RotateCcw, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Field as FormField, FieldDescription, FieldLabel } from '@/components/ui/field';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DocumentsTab } from '../_components/documents-tab';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { PageContainer } from '@/components/admin/page-container';
+import { ApplicationStatusDialog, type ApplicationStatusOptions } from '@/components/admin/application-status-dialog';
 import { MissingDocumentsRequest } from '@/components/admin/missing-documents-request';
+import { DocumentsTab } from '../_components/documents-tab';
 import { NotesTab } from '../_components/notes-tab';
+import { TimelineTab } from '../_components/timeline-tab';
+import { EnrollmentCard } from '../_components/enrollment-card';
+import { ApplicationPaymentCard } from '../_components/application-payment-card';
 import { apiFetch, apiFetchJson } from '@/lib/api-client';
-import { APPLICATION_STATUSES, type ApplicationStatus } from '@/lib/application-mapper';
+import { APPLICATION_STATUSES, type AdminApplication, type ApplicationStatus } from '@/lib/application-mapper';
+import type { ApplicationEnrollment } from '@/lib/application-history-mapper';
+import type { PaymentAggregate } from '@/lib/payment-aggregate';
+import { applicationReturnTo, applicationDetailHref } from '@/lib/admin-application-navigation';
+import { statusColorClass } from '@/lib/application-status';
 import { useI18n } from '@/lib/i18n';
 import { useUrlState } from '@/hooks/use-url-state';
-import type { ApplicationEnrollment } from '@/lib/application-history-mapper';
-import { EnrollmentCard } from '../_components/enrollment-card';
-import { TimelineTab } from '../_components/timeline-tab';
 
-interface AdminApplication {
-  id: string;
-  studentId: string | null;
-  studentName: string;
-  studentEmail: string;
-  studentPassportNumber?: string;
-  isLinked: boolean;
-  university: string;
-  program: string;
-  degree: string;
-  intake: string;
-  status: string;
-  source: 'Admin' | 'Partner' | 'Online';
-  applicationNumber?: string;
-  createdAt: string;
-  notes?: string;
-  // Phase 107 — lead attribution + enrollment
-  leadId?: string | null;
-  leadType?: 'chat_lead' | 'student_assessment' | 'contact_submission' | null;
-  enrolledAt?: string | null;
-}
+interface ReviewApplication extends AdminApplication { archivedAt?: string | null }
+interface DetailResponse { application: ReviewApplication; payment: PaymentAggregate | null; paymentError?: string | null }
+const TAB_VALUES = ['overview', 'documents', 'notes', 'timeline'] as const;
+type AppTab = (typeof TAB_VALUES)[number];
 
-/**
- * Phase 32 fix: the previous version declared `'Approved'` as a status
- * here, but the DB enum + the PATCH route's allow-list (in
- * `/api/admin/applications/[id]/route.ts`) only accept `'Accepted'`.
- * Pressing Approve/Reject/Withdraw was sending an invalid status and
- * getting 400'd by the API. Now we import APPLICATION_STATUSES from
- * the canonical mapper so this file can't drift again.
- */
-const statusDisplay: Record<ApplicationStatus, { label: string; color: string }> = {
-  Draft: { label: 'Draft', color: 'bg-gray-100 text-gray-800' },
-  Submitted: { label: 'Submitted', color: 'bg-blue-100 text-blue-800' },
-  'Under Review': { label: 'Under Review', color: 'bg-yellow-100 text-yellow-800' },
-  'Documents Requested': { label: 'Documents Requested', color: 'bg-purple-100 text-purple-800' },
-  'Decision Made': { label: 'Decision Made', color: 'bg-orange-100 text-orange-800' },
-  Accepted: { label: 'Accepted', color: 'bg-green-100 text-green-800' },
-  Rejected: { label: 'Rejected', color: 'bg-red-100 text-red-800' },
-  Withdrawn: { label: 'Withdrawn', color: 'bg-gray-100 text-gray-800' },
+const NEXT_STEP: Record<string, { hint: string; label: string; tab?: AppTab; status?: ApplicationStatus; edit?: boolean; enrollment?: boolean }> = {
+  Draft: { hint: 'draftHint', label: 'editApplication', edit: true },
+  Submitted: { hint: 'submittedHint', label: 'startReview', status: 'Under Review' },
+  'Under Review': { hint: 'reviewHint', label: 'reviewDocuments', tab: 'documents' },
+  'Documents Requested': { hint: 'requestedHint', label: 'reviewDocuments', tab: 'documents' },
+  'Decision Made': { hint: 'decisionHint', label: 'changeStatus' },
+  Accepted: { hint: 'acceptedHint', label: 'reviewEnrollment', enrollment: true },
+  Rejected: { hint: 'rejectedHint', label: 'reviewNotes', tab: 'notes' },
+  Withdrawn: { hint: 'withdrawnHint', label: 'reopen', status: 'Submitted' },
 };
 
-// Sidebar action set: the only status transitions this page surfaces.
-// 'Submitted' / 'Under Review' apps show the three decision buttons;
-// any other status shows the read-only current-state badge.
-type AdminAction = Extract<ApplicationStatus, 'Accepted' | 'Rejected' | 'Withdrawn'>;
-
-export default function AdminApplicationDetailPage() {
-  const params = useParams();
+export default function AdminApplicationDetailPage(): React.ReactNode {
+  const { id: routeId } = useParams();
+  const id = String(routeId);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const id = params.id as string;
-  const { t } = useI18n();
-
-  // The active tab lives in the URL so a refresh, a shared link and
-  // the browser's back button all land on the same tab.
-  const APP_TAB_VALUES = ['overview', 'documents', 'notes', 'timeline'] as const;
-  type AppTabValue = (typeof APP_TAB_VALUES)[number];
-  const [activeTab, setActiveTab] = useUrlState<AppTabValue>('tab', 'overview', {
-    searchParams,
-    coerce: (raw) =>
-      (APP_TAB_VALUES as readonly string[]).includes(raw) ? (raw as AppTabValue) : undefined,
+  const returnTo = applicationReturnTo(searchParams.get('returnTo'));
+  const { t, locale } = useI18n();
+  const [activeTab, setActiveTab] = useUrlState<AppTab>('tab', 'overview', {
+    searchParams, coerce: raw => TAB_VALUES.includes(raw as AppTab) ? raw as AppTab : undefined,
   });
-
-  const [app, setApp] = useState<AdminApplication | null>(null);
+  const [visitedTabs, setVisitedTabs] = useState<Set<AppTab>>(() => new Set([activeTab]));
+  const changeTab = (tab: AppTab): void => { setVisitedTabs(prev => new Set([...prev, tab])); setActiveTab(tab); };
+  const [app, setApp] = useState<ReviewApplication | null>(null);
+  const [payment, setPayment] = useState<PaymentAggregate | null>(null);
   const [enrollment, setEnrollment] = useState<ApplicationEnrollment | null>(null);
-  // Phase 145: payment aggregate surfaced by the detail API. The
-  // sidebar Payment card reads this; null while loading or if the
-  // request failed (we still render the card with a fallback).
-  const [payment, setPayment] = useState<{
-    status: 'paid' | 'partial' | 'unpaid' | 'overdue' | 'none';
-    totalByCurrency: Record<string, number>;
-    paidByCurrency: Record<string, number>;
-    outstandingByCurrency: Record<string, number>;
-    feeCount: number;
-    lastPaidAt: string | null;
-  } | null>(null);
+  const [enrollmentError, setEnrollmentError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<AdminAction | null>(null);
-  const [notifyApplicant, setNotifyApplicant] = useState(true);
-  const [applicantNote, setApplicantNote] = useState('');
-
-  // Phase 177: catalog re-sync (finding B). `university_name` /
-  // `program_name` are snapshots taken when the row was created; a
-  // catalog rename leaves them stale forever. This button re-reads the
-  // live catalog and writes back only the fields that differ.
-  const [isResyncing, setIsResyncing] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<string>('');
+  const [confirmStatus, setConfirmStatus] = useState<ApplicationStatus | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
+  const [updating, setUpdating] = useState(false);
+  const [lifecycleOpen, setLifecycleOpen] = useState(false);
+  const [lifecycleError, setLifecycleError] = useState<string | null>(null);
+  const [lifecyclePending, setLifecyclePending] = useState(false);
+  const [resyncing, setResyncing] = useState(false);
   const [resyncNote, setResyncNote] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const requestId = useRef(0);
+  const controller = useRef<AbortController | null>(null);
+  // Keep navigation outside the fetch callback's dependency list: a URL-only
+  // tab change must not reload the entire application or discard a note draft.
+  const navigation = useRef({ router, returnTo });
+  useEffect(() => { navigation.current = { router, returnTo }; }, [router, returnTo]);
 
-
-  const load = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    setNotFound(false);
+  const load = useCallback(async (): Promise<void> => {
+    const current = ++requestId.current;
+    controller.current?.abort();
+    const abort = new AbortController(); controller.current = abort;
+    setIsLoading(true); setError(null); setNotFound(false);
     try {
-      const { application, payment: paymentAggregate } = await apiFetchJson<{
-        application: AdminApplication;
-        // Phase 145: payment aggregate. Shape mirrors the
-        // /api/admin/applications GET row's `payment` field —
-        // see src/lib/payment-aggregate.ts. The endpoint fills a
-        // 'none' default on error so we always get a value.
-        payment: {
-          status: 'paid' | 'partial' | 'unpaid' | 'overdue' | 'none';
-          totalByCurrency: Record<string, number>;
-          paidByCurrency: Record<string, number>;
-          outstandingByCurrency: Record<string, number>;
-          feeCount: number;
-          lastPaidAt: string | null;
-        };
-      }>(`/api/admin/applications/${id}`);
-      setApp(application);
-      setPayment(paymentAggregate);
-
-      // Phase 107 — fetch the enrollment row in parallel; the timeline
-      // tab is lazy-loaded on first activation so we don't pay for it on
-      // every page mount.
-      try {
-        const enr = await apiFetchJson<{ enrollment: ApplicationEnrollment | null }>(
-          `/api/admin/applications/${id}/enrollment`,
-        ).catch(() => null);
-        if (enr && (enr as { enrollment: ApplicationEnrollment | null }).enrollment) {
-          setEnrollment((enr as { enrollment: ApplicationEnrollment }).enrollment);
-        } else {
-          setEnrollment(null);
-        }
-      } catch {
-        setEnrollment(null);
-      }
-    } catch (err) {
-      const e = err as { status?: number; message?: string };
-      if (e.status === 404) {
-        // Phase 62 (Bug 7): the route only queries student_applications.
-        // If the id belongs to a partner_applications row (the unified
-        // list correctly routes those to /admin/partner-applications/[id],
-        // but direct-URL navigation lands here), redirect instead of
-        // showing a misleading 404.
+      const [detail, enrollmentResult] = await Promise.allSettled([
+        apiFetchJson<DetailResponse>(`/api/admin/applications/${id}`, { signal: abort.signal }),
+        apiFetchJson<{ enrollment: ApplicationEnrollment | null }>(`/api/admin/applications/${id}/enrollment`, { signal: abort.signal }),
+      ]);
+      if (current !== requestId.current || abort.signal.aborted) return;
+      if (detail.status === 'rejected') throw detail.reason;
+      setApp(detail.value.application);
+      setSelectedStatus(detail.value.application.status);
+      setPayment(detail.value.paymentError ? null : detail.value.payment ?? null);
+      setEnrollmentError(enrollmentResult.status === 'rejected');
+      setEnrollment(enrollmentResult.status === 'fulfilled' ? enrollmentResult.value.enrollment : null);
+    } catch (failure) {
+      if (current !== requestId.current || abort.signal.aborted) return;
+      const detailError = failure as { status?: number; message?: string };
+      if (detailError.status === 404) {
         try {
-          const probe = await apiFetch(`/api/admin/partner-applications/${id}`);
+          const probe = await apiFetch(`/api/admin/partner-applications/${id}`, { signal: abort.signal });
+          if (current !== requestId.current || abort.signal.aborted) return;
           if (probe.ok) {
-            router.replace(`/admin/partner-applications/${id}`);
+            navigation.current.router.replace(applicationDetailHref(id, 'partner', navigation.current.returnTo));
             return;
           }
-        } catch {
-          // fall through to setNotFound
-        }
+        } catch { /* Show the original not-found result. */ }
         setNotFound(true);
-      } else setError(e.message || 'Failed to load application');
+      } else setError(detailError.message || 'Could not load application');
     } finally {
-      setIsLoading(false);
+      if (current === requestId.current && !abort.signal.aborted) setIsLoading(false);
     }
-  }, [id, router]);
+  }, [id]);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    setApp(null); setVisitedTabs(new Set([activeTab])); setFeedback(null);
+    void load();
+    return () => { requestId.current += 1; controller.current?.abort(); };
+    // Tab changes preserve the application and its in-progress note draft.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, load]);
 
-  const handleResync = useCallback(async () => {
-    if (!app) return;
-    setIsResyncing(true);
-    setResyncNote(null);
+  const openStatus = (status: ApplicationStatus): void => { setStatusError(null); setConfirmStatus(status); };
+  const saveStatus = async (options: ApplicationStatusOptions): Promise<void> => {
+    if (!app || updating) return;
+    setUpdating(true); setStatusError(null);
     try {
-      const res = await apiFetchJson<{
-        updated: number;
-        alreadyCurrent: number;
-        withUnresolved: number;
-        unresolvedReasons: string[];
-      }>('/api/admin/applications/resync', {
-        method: 'POST',
-        body: JSON.stringify({ id: app.id }),
+      await apiFetchJson(`/api/admin/applications/${app.id}`, {
+        method: 'PATCH', body: JSON.stringify({ status: confirmStatus, notify_applicant: options.notifyApplicant,
+          applicant_note: options.applicantNote || undefined, notes: options.internalNote || undefined, internal: true }),
       });
-      if (res.updated > 0) {
-        await load();
-        setResyncNote(
-          `Updated ${res.updated} field${res.updated === 1 ? '' : 's'} from the catalog.`,
-        );
-      } else if (res.withUnresolved > 0) {
-        setResyncNote(
-          `Nothing to update — ${res.unresolvedReasons[0] ?? 'this application has no catalog slug'}.`,
-        );
-      } else {
-        setResyncNote('Already matches the catalog.');
+      setApp(prev => prev ? { ...prev, status: confirmStatus ?? prev.status } : prev);
+      setConfirmStatus(null); setFeedback(t('adminAppReview.statusSaved')); setRefreshKey(n => n + 1);
+      await load();
+    } catch (failure) { setStatusError(failure instanceof Error ? failure.message : 'Could not update status'); }
+    finally { setUpdating(false); }
+  };
+
+  const saveLifecycle = async (): Promise<void> => {
+    if (!app || lifecyclePending) return;
+    setLifecyclePending(true); setLifecycleError(null);
+    try {
+      const response = await apiFetch(`/api/admin/applications/${app.id}`, app.archivedAt
+        ? { method: 'PATCH', body: JSON.stringify({ action: 'restoreArchive' }) } : { method: 'DELETE' });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({})) as { error?: string };
+        throw new Error(body.error || 'Could not save application');
       }
-    } catch (e) {
-      setResyncNote(e instanceof Error ? e.message : 'Re-sync failed');
-    } finally {
-      setIsResyncing(false);
-    }
-  }, [app, load]);
+      setLifecycleOpen(false);
+      if (app.archivedAt) { await load(); setFeedback(t('adminAppReview.recoverySaved')); }
+      else router.push(returnTo);
+    } catch (failure) { setLifecycleError(failure instanceof Error ? failure.message : 'Could not save application'); }
+    finally { setLifecyclePending(false); }
+  };
 
-  const handleStatusChange = useCallback(
-    async (newStatus: AdminAction) => {
-      if (!app) return;
-      setIsUpdating(true);
-      try {
-        await apiFetch(`/api/admin/applications/${app.id}`, {
-          method: 'PATCH',
-          body: JSON.stringify({
-            status: newStatus,
-            notify_applicant: notifyApplicant,
-            applicant_note: applicantNote || undefined,
-          }),
-        });
-        setApp((prev) => (prev ? { ...prev, status: newStatus } : prev));
-        setConfirmAction(null);
-        setApplicantNote('');
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to update status');
-      } finally {
-        setIsUpdating(false);
-      }
-    },
-    [app, notifyApplicant, applicantNote],
-  );
+  const resync = async (): Promise<void> => {
+    if (!app || resyncing) return;
+    setResyncing(true); setResyncNote(null);
+    try {
+      const result = await apiFetchJson<{ updated: number; withUnresolved: number }>('/api/admin/applications/resync', { method: 'POST', body: JSON.stringify({ id: app.id }) });
+      setResyncNote(t(result.updated > 0 ? 'adminAppReview.syncUpdated' : result.withUnresolved > 0 ? 'adminAppReview.syncUnresolved' : 'adminAppReview.syncCurrent'));
+      if (result.updated > 0) await load();
+    } catch (failure) { setResyncNote(failure instanceof Error ? failure.message : 'Catalog sync failed'); }
+    finally { setResyncing(false); }
+  };
 
-  if (isLoading) {
-    return (
-      <div className="p-8 text-center text-[#4B5563]">
-        <RefreshCw className="w-5 h-5 inline-block animate-spin mr-2" />
-        Loading application...
-      </div>
-    );
-  }
+  const back = <Button variant="ghost" className="rounded-none self-start" onClick={() => router.push(returnTo)}><ArrowLeft data-icon="inline-start" />{t('adminAppReview.back')}</Button>;
+  if (isLoading && !app) return <PageContainer width="default">{back}<Skeleton className="h-24 w-full" /><div className="grid gap-5 lg:grid-cols-3"><Skeleton className="h-96 lg:col-span-2" /><Skeleton className="h-72" /></div></PageContainer>;
+  if (notFound || !app) return <PageContainer width="default">{back}<Alert className="rounded-none" variant="destructive"><AlertTitle>{notFound ? 'Application not found' : t('common.error')}</AlertTitle><AlertDescription>{error}<Button variant="outline" onClick={() => void load()}>{t('common.retry')}</Button></AlertDescription></Alert></PageContainer>;
 
-  if (notFound) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => router.push('/admin/applications')}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Applications
-          </Button>
-        </div>
-        <Card>
-          <CardContent className="pt-6 text-center py-12">
-            <AlertCircle className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-            <h3 className="text-lg font-semibold mb-2">Application Not Found</h3>
-            <p className="text-gray-500 mb-4">This application may have been deleted.</p>
-            <Button onClick={() => router.push('/admin/applications')}>Back to Applications</Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const blocked = Boolean(app.archivedAt) || updating || isLoading;
+  const next = NEXT_STEP[app.status] ?? NEXT_STEP['Under Review'];
+  const date = (value: string | null | undefined): string => value && !Number.isNaN(Date.parse(value)) ? new Date(value).toLocaleString(locale === 'zh' ? 'zh-CN' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' }) : t('adminAppReview.notRecorded');
+  const editHref = `/admin/applications/${app.id}/edit?${new URLSearchParams({ returnTo })}`;
+  const takeNextStep = (): void => {
+    if (next.edit) router.push(editHref);
+    else if (next.status) openStatus(next.status);
+    else if (next.tab) changeTab(next.tab);
+    else document.getElementById(next.enrollment ? 'application-enrollment' : 'application-status')?.focus();
+  };
 
-  if (!app) {
-    return (
-      <Card className="border-red-200 bg-red-50">
-        <CardContent className="pt-4 pb-4">
-          <p className="text-red-800 text-sm"><strong>Error:</strong> {error || 'Unknown error'}</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const status: { label: string; color: string } = (
-    (APPLICATION_STATUSES as readonly string[]).includes(app.status)
-      ? statusDisplay[app.status as ApplicationStatus]
-      : null
-  ) ?? { label: app.status, color: 'bg-gray-100 text-gray-800' };
-
-  const leadTypeLabel = app.leadType
-    ? app.leadType === 'chat_lead'
-      ? t('adminAppDetail.leadFromChat')
-      : app.leadType === 'student_assessment'
-        ? t('adminAppDetail.leadFromAssessment')
-        : t('adminAppDetail.leadFromContact')
-    : null;
-
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => router.push('/admin/applications')}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-2xl font-bold text-[#1F2937]">
-                {app.applicationNumber || app.id.slice(0, 8)}
-              </h1>
-              <Badge className={status.color}>{status.label}</Badge>
-              {app.enrolledAt && (
-                <Badge className="bg-green-700 text-white">
-                  <CheckCircle className="w-3 h-3 mr-1 inline" />
-                  Enrolled
-                </Badge>
-              )}
-            </div>
-            <p className="text-[#4B5563] text-sm mt-1">
-              {app.studentName} · {app.university} · {app.program}
-            </p>
-            {leadTypeLabel && (
-              <p className="text-xs text-[#4B5563] mt-1">
-                <span className="inline-flex items-center px-1.5 py-0.5 bg-blue-50 text-blue-800 text-xs font-medium">
-                  {leadTypeLabel}
-                </span>
-              </p>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={load} disabled={isLoading}>
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Refresh
-          </Button>
-          <Button
-            className="bg-[#1B2A4A] hover:bg-[#152138]"
-            onClick={() => router.push(`/admin/applications/${app.id}/edit`)}
-          >
-            <Edit className="w-4 h-4 mr-2" />
-            Edit
-          </Button>
+  return <PageContainer width="default">
+    {back}
+    <header className="flex flex-wrap items-start justify-between gap-4">
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t('adminAppReview.reviewTitle')}</p>
+        <h1 className="mt-1 break-words text-2xl font-semibold tracking-tight text-[#1B2A4A]">{app.studentName}</h1>
+        <p className="mt-2 break-words text-sm text-muted-foreground">{app.university} · {app.program}</p>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <Badge variant="outline" className={`rounded-none ${statusColorClass(app.status)}`}>{app.status}</Badge>
+          <span className="font-mono text-xs text-muted-foreground">{app.applicationNumber || app.id.slice(0, 8)}</span>
+          {app.intake && <span className="text-xs text-muted-foreground">{app.intake}</span>}
+          <Badge variant="secondary" className="rounded-none">{app.source}</Badge>
         </div>
       </div>
-
-      {error && (
-        <Card className="border-red-200 bg-red-50">
-          <CardContent className="pt-4 pb-4">
-            <p className="text-red-800 text-sm"><strong>Error:</strong> {error}</p>
-          </CardContent>
-        </Card>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main */}
-        <div className="lg:col-span-2 space-y-6">
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as AppTabValue)}>
-            <TabsList>
-              <TabsTrigger value="overview">{t('adminAppDetail.tabOverview')}</TabsTrigger>
-              <TabsTrigger value="documents">
-                <FileText className="h-3 w-3 mr-1 inline" />
-                {t('adminAppDetail.tabDocuments')}
-              </TabsTrigger>
-              <TabsTrigger value="notes">
-                <Edit className="h-3 w-3 mr-1 inline" />
-                {t('adminAppDetail.tabNotes')}
-              </TabsTrigger>
-              <TabsTrigger value="timeline">
-                <Clock className="h-3 w-3 mr-1 inline" />
-                {t('adminAppDetail.tabTimeline')}
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="overview" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Mail className="w-5 h-5 text-[#1B2A4A]" />
-                    Applicant Information
-                    {!app.isLinked && (
-                      <Badge className="bg-[#9B1B30] text-white text-xs ml-2">No account yet</Badge>
-                    )}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                    <Field label="Name" value={app.studentName} icon={<FileText className="w-4 h-4" />} />
-                    <Field label="Email" value={app.studentEmail || '—'} icon={<Mail className="w-4 h-4" />} />
-                    <Field label="Passport Number" value={app.studentPassportNumber || '—'} icon={<FileText className="w-4 h-4" />} />
-                    <Field label="Source" value={app.source} icon={<User2Icon className="w-4 h-4" />} />
-                    <Field label="Created" value={new Date(app.createdAt).toLocaleString()} icon={<Calendar className="w-4 h-4" />} />
-                  </div>
-                  {!app.isLinked && (
-                    <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded text-xs text-amber-900">
-                      This application was created for a lead who hasn't signed up yet. Once they create an account, link this application to their <code>student_profiles</code> row via the future "claim" flow.
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <GraduationCap className="w-5 h-5 text-[#1B2A4A]" />
-                    Application Details
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                    <Field label="University" value={app.university} icon={<BookOpen className="w-4 h-4" />} />
-                    <Field label="Program" value={app.program} icon={<BookOpen className="w-4 h-4" />} />
-
-                    {/* Phase 177: re-sync the snapshot against the live
-                        catalog. Safe to press repeatedly — a row that
-                        already matches reports "Already matches". */}
-                    <div className="sm:col-span-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="rounded-none"
-                        onClick={handleResync}
-                        disabled={isResyncing}
-                      >
-                        <RefreshCw
-                          className={`w-4 h-4 mr-2 ${isResyncing ? 'animate-spin' : ''}`}
-                        />
-                        Re-sync names from catalog
-                      </Button>
-                      {resyncNote && (
-                        <div className="mt-1 text-xs text-[#4B5563]">{resyncNote}</div>
-                      )}
-                    </div>
-                    <Field label="Degree" value={app.degree} />
-                    <Field label="Intake" value={app.intake} />
-                  </div>
-                  {app.notes && (
-                    <>
-                      <Separator className="my-4" />
-                      <div>
-                        <div className="text-xs text-[#4B5563] mb-1">Admin Notes</div>
-                        <div className="text-sm text-[#1F2937] whitespace-pre-wrap">{app.notes}</div>
-                      </div>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="documents" className="space-y-4">
-              <div className="flex justify-end">
-                <MissingDocumentsRequest
-                  key={app.id}
-                  studentName={app.studentName}
-                  studentEmail={app.studentEmail}
-                  applicationNumber={app.applicationNumber}
-                  university={app.university}
-                  program={app.program}
-                  intake={app.intake}
-                  studentHasPortal={Boolean(app.studentId)}
-                  allowPartner={app.source === 'Partner'}
-                />
-              </div>
-              <DocumentsTab
-                applicationId={app.id}
-                studentId={app.studentId || null}
-              />
-            </TabsContent>
-
-            <TabsContent value="notes">
-              <NotesTab applicationId={app.id} />
-            </TabsContent>
-
-            <TabsContent value="timeline">
-              <TimelineTab applicationId={app.id} />
-            </TabsContent>
-          </Tabs>
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Status Actions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {['Submitted', 'Under Review'].includes(app.status) ? (
-                <div className="space-y-2">
-                  <Button
-                    className="w-full bg-green-600 hover:bg-green-700"
-                    onClick={() => setConfirmAction('Accepted')}
-                    disabled={isUpdating}
-                  >
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Approve
-                  </Button>
-                  <Button
-                    className="w-full bg-red-600 hover:bg-red-700"
-                    onClick={() => setConfirmAction('Rejected')}
-                    disabled={isUpdating}
-                  >
-                    <XCircle className="w-4 h-4 mr-2" />
-                    Reject
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => setConfirmAction('Withdrawn')}
-                    disabled={isUpdating}
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Withdraw
-                  </Button>
-                </div>
-              ) : app.status === 'Withdrawn' ? (
-                <div className="space-y-2">
-                  <div className="text-center text-sm text-[#4B5563] mb-2">
-                    Current status: <Badge className={status.color}>{status.label}</Badge>
-                  </div>
-                  <Button
-                    className="w-full"
-                    onClick={async () => {
-                      setIsUpdating(true);
-                      try {
-                        await apiFetchJson(
-                          `/api/admin/applications/${app.id}`,
-                          {
-                            method: 'PATCH',
-                            headers: { 'content-type': 'application/json' },
-                            body: JSON.stringify({ action: 'restore' }),
-                          },
-                        );
-                        await load();
-                      } catch (err) {
-                        setError(
-                          err instanceof Error ? err.message : 'Restore failed',
-                        );
-                      } finally {
-                        setIsUpdating(false);
-                      }
-                    }}
-                    disabled={isUpdating}
-                  >
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Restore from Withdrawn
-                  </Button>
-                </div>
-              ) : (
-                <div className="text-center text-sm text-[#4B5563]">
-                  Current status: <Badge className={status.color}>{status.label}</Badge>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <EnrollmentCard
-            applicationId={app.id}
-            status={app.status}
-            enrollment={enrollment}
-            onChanged={load}
-          />
-
-          {/* Phase 145: payment summary card. Reads the
-              `payment` aggregate the detail API now returns and
-              shows outstanding + paid totals per currency + a
-              link to /admin/fees?applicationId=<id> for the
-              full fee history. The card stays visible when
-              payment.status === 'none' so the admin sees "No
-              fee set up yet" + a one-click "Create fee" link
-              to /admin/fees/new?applicationId=<id>. */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Payment</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {payment ? (
-                <div className="space-y-3">
-                  <Badge
-                    className={`${
-                      payment.status === 'paid'
-                        ? 'bg-green-100 text-green-800'
-                        : payment.status === 'partial'
-                          ? 'bg-amber-100 text-amber-800'
-                          : payment.status === 'overdue'
-                            ? 'bg-red-200 text-red-900'
-                            : payment.status === 'unpaid'
-                              ? 'bg-red-100 text-red-800'
-                              : 'bg-gray-100 text-gray-600'
-                    } rounded-none border`}
-                  >
-                    {payment.status === 'paid'
-                      ? 'Paid'
-                      : payment.status === 'partial'
-                        ? 'Partial'
-                        : payment.status === 'overdue'
-                          ? 'Overdue'
-                          : payment.status === 'unpaid'
-                            ? 'Unpaid'
-                            : 'No fee set'}
-                  </Badge>
-                  {payment.feeCount > 0 ? (
-                    <>
-                      <div className="space-y-1 text-sm">
-                        {Object.keys(payment.totalByCurrency).map((currency) => (
-                          <div
-                            key={currency}
-                            className="flex items-center justify-between gap-3"
-                          >
-                            <span className="text-[#4B5563]">{currency}</span>
-                            <span className="font-mono text-[#1B2A4A]">
-                              Paid {payment.paidByCurrency[currency]?.toFixed(2) ?? '0.00'} /{' '}
-                              {payment.totalByCurrency[currency]?.toFixed(2) ?? '0.00'}
-                            </span>
-                          </div>
-                        ))}
-                        {Object.keys(payment.outstandingByCurrency).filter(
-                          (c) => (payment.outstandingByCurrency[c] ?? 0) > 0,
-                        ).length > 0 && (
-                          <div className="pt-2 border-t border-gray-100">
-                            {Object.entries(payment.outstandingByCurrency)
-                              .filter(([, v]) => v > 0)
-                              .map(([currency, amount]) => (
-                                <div
-                                  key={`out-${currency}`}
-                                  className="flex items-center justify-between gap-3 text-xs"
-                                >
-                                  <span className="text-[#6B7280]">Outstanding</span>
-                                  <span className="font-mono text-red-700">
-                                    {amount.toFixed(2)} {currency}
-                                  </span>
-                                </div>
-                              ))}
-                          </div>
-                        )}
-                      </div>
-                      <Link
-                        href={`/admin/fees?applicationId=${app.id}`}
-                        className="block text-xs text-[#1B2A4A] hover:underline pt-1"
-                      >
-                        View fee history →
-                      </Link>
-                    </>
-                  ) : (
-                    <div className="space-y-2">
-                      <p className="text-xs text-[#4B5563]">
-                        No fee rows are attached to this application yet.
-                      </p>
-                      <Link
-                        href={`/admin/fees/new?applicationId=${app.id}`}
-                        className="block text-xs text-[#1B2A4A] hover:underline"
-                      >
-                        Create first fee →
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-xs text-[#4B5563]">Loading payment summary…</div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+      <div className="flex flex-wrap gap-2">
+        <Button variant="outline" className="rounded-none" onClick={() => { void load(); setRefreshKey(n => n + 1); }} disabled={isLoading}><RefreshCw data-icon="inline-start" className={isLoading ? 'animate-spin' : ''} />{t('adminAppReview.refresh')}</Button>
+        <Button className="rounded-none bg-[#1B2A4A] text-white hover:bg-[#152138]" onClick={() => router.push(editHref)} disabled={blocked}><Edit data-icon="inline-start" />{t('adminAppReview.edit')}</Button>
+        <Button variant="outline" className="rounded-none" disabled={isLoading || lifecyclePending} onClick={() => { setLifecycleError(null); setLifecycleOpen(true); }}>
+          {app.archivedAt ? <RotateCcw data-icon="inline-start" /> : <Trash2 data-icon="inline-start" />}{t(app.archivedAt ? 'adminAppReview.restore' : 'adminAppReview.delete')}
+        </Button>
       </div>
-
-      {/* Confirm dialog */}
-      {confirmAction && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <Card className="max-w-md w-full">
-            <CardHeader>
-              <CardTitle>
-                {confirmAction === 'Accepted' && 'Accept Application'}
-                {confirmAction === 'Rejected' && 'Reject Application'}
-                {confirmAction === 'Withdrawn' && 'Withdraw Application'}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-[#4B5563] mb-4">
-                Change status of <strong>{app.studentName}</strong>'s application to <strong>{confirmAction}</strong>?
-                This will be recorded in the audit timeline.
-              </p>
-              <label className="flex items-start gap-2 mb-3 text-sm">
-                <input
-                  type="checkbox"
-                  checked={notifyApplicant}
-                  onChange={(e) => setNotifyApplicant(e.target.checked)}
-                  className="mt-1"
-                />
-                <span>
-                  <span className="font-medium text-[#1F2937]">Email applicant</span>
-                  <span className="block text-xs text-gray-500">
-                    Sends a status-update email via Resend.
-                  </span>
-                </span>
-              </label>
-              {notifyApplicant && (
-                <div className="mb-4">
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Optional note (shown in the email)
-                  </label>
-                  <textarea
-                    value={applicantNote}
-                    onChange={(e) => setApplicantNote(e.target.value)}
-                    rows={3}
-                    className="w-full border border-gray-300 px-3 py-2 text-sm"
-                    placeholder="e.g. We need your passport scan by next Friday"
-                  />
-                </div>
-              )}
-              <div className="flex justify-end gap-2">
-                <Button variant="ghost" onClick={() => setConfirmAction(null)} disabled={isUpdating}>
-                  Cancel
-                </Button>
-                <Button
-                  className={
-                    confirmAction === 'Accepted' ? 'bg-green-600 hover:bg-green-700' :
-                    confirmAction === 'Rejected' ? 'bg-red-600 hover:bg-red-700' :
-                    'bg-gray-600 hover:bg-gray-700'
-                  }
-                  onClick={() => handleStatusChange(confirmAction)}
-                  disabled={isUpdating}
-                >
-                  {isUpdating ? 'Updating...' : `Confirm: ${confirmAction}`}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+    </header>
+    {feedback && <Alert role="status" className="rounded-none"><AlertDescription>{feedback}</AlertDescription></Alert>}
+    {error && <Alert variant="destructive" className="rounded-none"><AlertTitle>{t('adminAppReview.refreshFailed')}</AlertTitle><AlertDescription>{error}<Button variant="outline" size="sm" onClick={() => void load()}>{t('common.retry')}</Button></AlertDescription></Alert>}
+    {app.archivedAt ? <Alert className="rounded-none"><AlertTitle>{t('adminAppReview.archived')}</AlertTitle><AlertDescription>{t('adminAppReview.archivedHint')}</AlertDescription></Alert> : <Card className="rounded-none gap-3 py-4 shadow-none border-l-2 border-l-[#9B1B30]">
+      <CardHeader><CardTitle className="text-sm">{t('adminAppReview.nextStep')}</CardTitle></CardHeader>
+      <CardContent className="flex flex-wrap items-center justify-between gap-4"><p className="max-w-prose text-sm text-muted-foreground">{t(`adminAppReview.${next.hint}`)}</p><Button variant="outline" className="rounded-none" disabled={blocked} onClick={takeNextStep}>{t(`adminAppReview.${next.label}`)}<ArrowRight data-icon="inline-end" /></Button></CardContent>
+    </Card>}
+    <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
+      <div className="min-w-0">
+        <Tabs value={activeTab} onValueChange={value => changeTab(value as AppTab)}>
+          <TabsList className="grid h-auto w-full grid-cols-2 rounded-none sm:grid-cols-4">
+            {TAB_VALUES.map(tab => <TabsTrigger key={tab} className="rounded-none py-2.5" value={tab}>{t(`adminAppDetail.tab${tab === 'timeline' ? 'Timeline' : tab[0].toUpperCase() + tab.slice(1)}`)}</TabsTrigger>)}
+          </TabsList>
+          <TabsContent value="overview" className="mt-3 flex flex-col gap-4">
+            <Card className="rounded-none gap-4 py-5 shadow-none"><CardHeader><CardTitle className="text-base">{t('adminAppReview.applicantInfo')}</CardTitle></CardHeader><CardContent className="flex flex-col gap-4">
+              <dl className="grid gap-4 sm:grid-cols-2"><Field label={t('adminAppReview.name')} value={app.studentName} /><Field label={t('adminAppReview.email')} value={app.studentEmail} /><Field label={t('adminAppReview.passport')} value={app.studentPassportNumber} /><Field label={t('adminAppReview.source')} value={app.source} /></dl>
+              {app.studentId ? <Link href={`/admin/students/${app.studentId}`} className="text-sm text-[#1B2A4A] underline underline-offset-4">{t('adminAppReview.viewStudent')}</Link> : <p className="text-sm text-muted-foreground">{t('adminAppReview.noProfile')}</p>}
+            </CardContent></Card>
+            <Card className="rounded-none gap-4 py-5 shadow-none"><CardHeader><CardTitle className="text-base">{t('adminAppReview.applicationInfo')}</CardTitle></CardHeader><CardContent className="flex flex-col gap-5">
+              <dl className="grid gap-4 sm:grid-cols-2"><Field label={t('adminAppReview.university')} value={app.university} /><Field label={t('adminAppReview.program')} value={app.program} /><Field label={t('adminAppReview.degree')} value={app.degree} /><Field label={t('adminAppReview.intake')} value={app.intake} /><Field label={t('adminAppReview.decision')} value={app.decision} /><Field label={t('adminAppReview.submitted')} value={date(app.submittedAt)} /><Field label={t('adminAppReview.created')} value={date(app.createdAt)} /><Field label={t('adminAppReview.updated')} value={date(app.updatedAt)} /></dl>
+              <Button variant="outline" size="sm" className="rounded-none self-start" disabled={blocked || resyncing} onClick={() => void resync()}><RefreshCw data-icon="inline-start" className={resyncing ? 'animate-spin' : ''} />{t('adminAppReview.resync')}</Button>
+              {resyncNote && <p role="status" className="text-sm text-muted-foreground">{resyncNote}</p>}
+              {app.personalStatement && <dl><Field label={t('adminAppReview.personalStatement')} value={app.personalStatement} /></dl>}
+              {app.additionalNotes && <dl><Field label={t('adminAppReview.applicantNotes')} value={app.additionalNotes} /></dl>}
+              {app.adminNotes && <dl><Field label={t('adminAppReview.studentMessage')} value={app.adminNotes} /></dl>}
+            </CardContent></Card>
+          </TabsContent>
+          <TabsContent value="documents" className="mt-3 flex flex-col gap-4">
+            {!app.archivedAt && <div className="flex justify-end"><MissingDocumentsRequest studentName={app.studentName} studentEmail={app.studentEmail} applicationNumber={app.applicationNumber} university={app.university} program={app.program} intake={app.intake} studentHasPortal={Boolean(app.studentId)} allowPartner={app.source === 'Partner'} /></div>}
+            <DocumentsTab applicationId={app.id} studentId={app.studentId} />
+          </TabsContent>
+          {visitedTabs.has('notes') && <TabsContent value="notes" forceMount className="mt-3 data-[state=inactive]:hidden"><NotesTab applicationId={app.id} onSaved={() => void load()} /></TabsContent>}
+          <TabsContent value="timeline" className="mt-3"><TimelineTab applicationId={app.id} refreshKey={refreshKey} /></TabsContent>
+        </Tabs>
+      </div>
+      <aside className="flex min-w-0 flex-col gap-4">
+        <Card className="rounded-none gap-4 py-4 shadow-none"><CardHeader><CardTitle className="text-sm">{t('adminAppReview.status')}</CardTitle></CardHeader><CardContent className="flex flex-col gap-3">
+          <FormField><FieldLabel htmlFor="application-status" className="sr-only">{t('adminAppReview.status')}</FieldLabel><Select value={selectedStatus} onValueChange={setSelectedStatus} disabled={blocked}><SelectTrigger id="application-status" className="w-full rounded-none"><SelectValue /></SelectTrigger><SelectContent><SelectGroup>{APPLICATION_STATUSES.map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}</SelectGroup></SelectContent></Select><FieldDescription>{t('adminAppReview.statusHint')}</FieldDescription></FormField>
+          <Button className="rounded-none bg-[#9B1B30] text-white hover:bg-[#7A1526]" disabled={blocked || selectedStatus === app.status} onClick={() => openStatus(selectedStatus as ApplicationStatus)}>{t('adminAppReview.changeStatus')}</Button>
+        </CardContent></Card>
+        <div id="application-enrollment" tabIndex={-1}>
+          {isLoading ? <Skeleton className="h-28" /> : enrollmentError ? <Alert className="rounded-none"><AlertTitle>{t('adminAppReview.enrollmentUnavailable')}</AlertTitle><AlertDescription>{t('adminAppReview.enrollmentUnknown')}<Button variant="outline" size="sm" onClick={() => void load()}>{t('common.retry')}</Button></AlertDescription></Alert> : <EnrollmentCard applicationId={app.id} status={app.archivedAt ? 'Archived' : app.status} enrollment={enrollment} onChanged={load} />}
         </div>
-      )}
+        {isLoading ? <Skeleton className="h-40" /> : <ApplicationPaymentCard payment={payment} onRetry={() => void load()} />}
+      </aside>
     </div>
-  );
+    {confirmStatus && <ApplicationStatusDialog studentName={app.studentName} university={app.university} program={app.program} currentStatus={app.status} nextStatus={confirmStatus} surface="student" pending={updating} error={statusError} onClose={() => setConfirmStatus(null)} onConfirm={saveStatus} />}
+    <Dialog open={lifecycleOpen} onOpenChange={open => { if (!lifecyclePending) setLifecycleOpen(open); }}><DialogContent className="rounded-none" showCloseButton={!lifecyclePending}><DialogHeader><DialogTitle>{t(app.archivedAt ? 'adminAppReview.restore' : 'adminAppReview.delete')}</DialogTitle><DialogDescription>{t(app.archivedAt ? 'adminAppReview.restoreHint' : 'adminAppReview.deleteHint')}</DialogDescription></DialogHeader><p className="break-words text-sm">{app.studentName} · {app.university} · {app.program} · {app.intake}</p>{lifecycleError && <Alert variant="destructive" className="rounded-none"><AlertDescription>{lifecycleError}</AlertDescription></Alert>}<DialogFooter><Button variant="outline" disabled={lifecyclePending} onClick={() => setLifecycleOpen(false)}>{t('common.cancel')}</Button><Button disabled={lifecyclePending} onClick={() => void saveLifecycle()}>{lifecyclePending && <Loader2 data-icon="inline-start" className="animate-spin" />}{t(app.archivedAt ? 'adminAppReview.restore' : 'adminAppReview.delete')}</Button></DialogFooter></DialogContent></Dialog>
+  </PageContainer>;
 }
 
-function Field({ label, value, icon }: { label: string; value: string; icon?: React.ReactNode }) {
-  return (
-    <div className="flex items-start gap-2">
-      {icon && <span className="text-[#1B2A4A] mt-0.5">{icon}</span>}
-      <div>
-        <div className="text-xs text-[#4B5563]">{label}</div>
-        <div className="font-medium text-[#1F2937]">{value}</div>
-      </div>
-    </div>
-  );
-}
-
-function User2Icon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <path d="14 19a6 6 0 0 0-12 0" />
-      <circle cx="8" cy="9" r="4" />
-      <path d="22 19a6 6 0 0 0-6-5 4 4 0 0 0-1 5" />
-      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
-  );
+function Field({ label, value }: { label: string; value: string | null | undefined }): React.ReactNode {
+  const { t } = useI18n();
+  return <div className="min-w-0"><dt className="text-xs text-muted-foreground">{label}</dt><dd className="mt-1 break-words whitespace-pre-wrap text-sm font-medium">{value || t('adminAppReview.notRecorded')}</dd></div>;
 }

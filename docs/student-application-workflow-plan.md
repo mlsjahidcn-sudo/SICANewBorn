@@ -4,6 +4,27 @@ Date: 23 October 2026 (Asia/Dhaka)
 
 Scope: improve the admin's daily work on student applications first, then the corresponding student experience. This is a focused continuation of [the existing admin review](admin-students-applications-enhancement-plan.md), rather than a replacement for its completed fixes. The remaining phases below are proposed work, not implemented features.
 
+## Implemented review-workspace release — 23 October 2026
+
+This release is implemented locally. It requires deployment; no database migration is needed for these changes.
+
+| Confirmed issue | Fix in this release |
+| --- | --- |
+| Detail status changes used unchecked `apiFetch`, so HTTP failures could show a new status without a saved change | Checked requests, an accessible confirmation dialog, visible error/retry, and retained note drafts |
+| Grouped status dropdowns wrote immediately | Preview the student, program and before/after status; confirm before writing; student notification settings match the existing API, while partner changes retain their automatic notification behavior |
+| Detail controls covered only Accepted / Rejected / Withdrawn and left other stages without useful actions | Complete canonical student status selector and a suggested next step for every current stage |
+| Fee-query errors became a successful “no fees” aggregate; enrollment read errors became “not enrolled” | Unknown-state warnings and retry; do not offer enrollment creation from a failed read |
+| Timeline tried to map already-camelCase API rows as database rows | Use the normalized API response directly; retain actor, transitions and timestamps; add retry and refresh after changes |
+| A failed notes load left an editable blank form | Retry-only error state until existing notes load; retain unsaved note content when changing detail tabs |
+| Returning from detail reset filters, page and group expansion; clearing some filters left URL state behind | Serialize list controls together, preserve a validated list return URL through detail/edit, retain expansion, and reset the page only after an actual filter or sort change |
+| Flat student/partner rows used an ID-only React key | Use `(surface, id)` for row identity |
+| Detail used an absent `notes` field, omitting actual student-facing notes | Show the mapped applicant notes and message-to-student fields with explicit labels; keep private team notes in their own tab |
+| Fee links promised an application-filtered history although fee management ignores that parameter | Link explicitly to fee management; application-scoped fee drill-through remains separate follow-up work |
+
+The detail page now has a student-first header, compact metadata, suggested next action, responsive review tabs, status controls, enrollment/payment sections and recoverable Delete/Restore. New review and confirmation copy is provided in English and Chinese. Archived application details cannot be edited or advanced through status/enrollment controls until restored.
+
+The remaining roadmap covers saved document-request persistence, advisor assignment/follow-up tasks, fee drill-through and student-portal reliability. Those features are not included in this release. The student/partner schemas, authorization model, native status vocabularies and existing mail delivery behavior remain in use.
+
 ## Target experience
 
 An advisor opens Applications, sees one expandable student/shortlist overview, and immediately understands the applications, intakes, outstanding requirements, and next action. Opening an application provides a compact review workspace. Students see the same applicant-facing status and instructions, without internal notes or administrative controls.
@@ -84,3 +105,10 @@ For the later phases, define a shared action/query contract before adding databa
 Tests should cover both surfaces, linked/unlinked students, same UUID in different tables, multiple intakes, multiple pages, archive/restore, native status values, permission failures and note visibility. Exercise actual page components for confirmations, errors and context retention. Verify the authenticated admin/student experience with representative accounts before release; local fixture rendering does not establish production parity.
 
 Suggested order: individual deletion controls → admin header/review summary → saved document requests and communication → advisor/tasks → student list reliability and draft recovery. Each release should pass TypeScript, lint and relevant regression tests, followed by a production build for application changes.
+
+## Validation for the review-workspace release
+
+- Full workspace suite: 128 files / 1,392 tests passed. The added regression coverage exercises failed/successful status changes, internal versus email notes, payment/enrollment error states, draft retention across tabs, normalized timeline rows, full list-context round trips, validated return destinations and the admin detail API's authorization/error behavior.
+- TypeScript, lint and the Next.js production app build pass. English/Chinese parity reports zero missing or orphan keys; the referenced-key check passes. Final focused regression run: 4 files / 22 tests passed after the navigation and refresh-failure refinements.
+- Real local browser rendering with fixture responses: 1440, 1024, 768 and 390px, no horizontal document overflow and no page JavaScript exceptions. The confirmation was also rendered and inspected. The temporary preview route was removed afterward.
+- No production student records or live status updates were used during verification. Authenticated production UI/API parity and actual email delivery remain deployment smoke checks.

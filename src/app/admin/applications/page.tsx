@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Plus, Eye, Trash2, MoreHorizontal, ArrowUpRight, ArrowDownRight, Minus, RefreshCw, AlertCircle, Search, Users, Building2, UserPlus, CheckSquare, Square, X, StickyNote, Flag, Download, CalendarClock, Layers, List, Loader2, ChevronUp, ChevronDown, ChevronsUpDown, DollarSign, SlidersHorizontal } from 'lucide-react';
@@ -32,7 +32,9 @@ import {
   type StudentFeePaymentChannel,
 } from '@/lib/student-fee-mapper';
 import ApplicationGroups from './_components/application-groups';
+import { applicationListHref, applicationDetailHref, readApplicationListLocation } from '@/lib/admin-application-navigation';
 import { groupApplications } from '@/lib/application-grouping';
+import { ApplicationStatusDialog, type ApplicationStatusOptions } from '@/components/admin/application-status-dialog';
 import { useI18n } from '@/lib/i18n';
 
 interface Application {
@@ -169,6 +171,7 @@ export default function AdminApplicationsPage() {
   const searchParams = useSearchParams();
 
   const { t } = useI18n();
+  const initialLocation = readApplicationListLocation(searchParams);
 
   // S34: cohort filter, sourced from the URL on mount. The
   // cohort dashboard's "View applications" link is
@@ -214,7 +217,7 @@ export default function AdminApplicationsPage() {
   // API ignores source=Partner when surface=partner, but keeping
   // the state consistent makes the tab badge logic still work).
   const [activeTab, setActiveTab] = useState<SourceTab>(
-    initialSurface === 'partner' ? 'Partner' : 'all',
+    initialSurface === 'partner' ? 'Partner' : initialLocation.source,
   );
 
   // Retry counter — bumping it forces the main fetch useEffect to re-run
@@ -225,17 +228,17 @@ export default function AdminApplicationsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [applications, setApplications] = useState<Application[]>([]);
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(initialLocation.page);
   const [error, setError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
   // Filter state
-  const [searchInput, setSearchInput] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>(searchParams.get('status') || 'all');
-  const [studentFilter, setStudentFilter] = useState<string>(searchParams.get('student') || 'all');
-  const [archiveFilter, setArchiveFilter] = useState('active');
+  const [searchInput, setSearchInput] = useState(initialLocation.search);
+  const [searchQuery, setSearchQuery] = useState(initialLocation.search);
+  const [statusFilter, setStatusFilter] = useState<string>(initialLocation.status);
+  const [studentFilter, setStudentFilter] = useState<string>(initialLocation.student);
+  const [archiveFilter, setArchiveFilter] = useState<'active' | 'archived'>(initialLocation.archive);
   // The student picker's selected name, captured alongside the id so
   // the filter state line can name the student instead of printing a
   // uuid. Empty until the admin picks somebody.
@@ -245,24 +248,27 @@ export default function AdminApplicationsPage() {
   // 'with-decision' / 'no-decision' filter student_applications.decision;
   // 'enrolled' / 'not-enrolled' filter student_applications.enrolled_at.
   // Partner rows are unaffected by either filter.
-  const [decisionFilter, setDecisionFilter] = useState<'all' | 'with' | 'without'>('all');
-  const [enrolledFilter, setEnrolledFilter] = useState<'all' | 'enrolled' | 'not-enrolled'>('all');
+  const [decisionFilter, setDecisionFilter] = useState<'all' | 'with' | 'without'>(initialLocation.decision);
+  const [enrolledFilter, setEnrolledFilter] = useState<'all' | 'enrolled' | 'not-enrolled'>(initialLocation.enrolled);
   // Phase 145: payment filter chip. 'all' = no filter. Apps with
   // 'none' payment status (no fee rows) are EXCLUDED from every
   // value so they don't pollute the cohort counts. Partner rows
   // always pass through (no fee link yet).
-  const [paymentFilter, setPaymentFilter] = useState<'all' | ApplicationPaymentStatus>('all');
+  const [paymentFilter, setPaymentFilter] = useState<'all' | ApplicationPaymentStatus>(initialLocation.payment);
   // Phase 182: offline-pay channel filter. Independent of
   // paymentFilter — an app can be Paid + Offline pay.
-  const [paymentChannelFilter, setPaymentChannelFilter] = useState<'all' | 'offline'>('all');
+  const [paymentChannelFilter, setPaymentChannelFilter] = useState<'all' | 'offline'>(initialLocation.channel);
 
   const [showMoreFilters, setShowMoreFilters] = useState(false);
 
   // Group applications on arrival; the flat table keeps bulk actions and sorting.
-  const [viewMode, setViewMode] = useState<'flat' | 'grouped'>('grouped');
+  const [viewMode, setViewMode] = useState<'flat' | 'grouped'>(initialLocation.view);
+  const [expandedGroups, setExpandedGroups] = useState(initialLocation.expanded);
   // Which row is mid-status-update, so only that row's select shows a
   // spinner. Keyed by application id.
   const [settingStatusFor, setSettingStatusFor] = useState<string | null>(null);
+  const [statusTarget, setStatusTarget] = useState<{ application: Application; status: string } | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
 
   // Phase 177: bulk catalog re-sync. Fixes finding B (stale name
   // snapshots) across a whole selection in one pass instead of
@@ -281,8 +287,8 @@ export default function AdminApplicationsPage() {
   // cycles desc → asc → back to the default.
   const [sortBy, setSortBy] = useState<
     'createdAt' | 'updatedAt' | 'studentName' | 'status' | 'priority' | 'university'
-  >('createdAt');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  >(initialLocation.sort);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(initialLocation.order);
   const handleSort = (column: typeof sortBy) => {
     if (sortBy !== column) {
       setSortBy(column);
@@ -413,6 +419,15 @@ export default function AdminApplicationsPage() {
     return params.toString();
   }, [page, partnerOnly, activeTab, searchQuery, statusFilter, studentFilter, intakeFilter, decisionFilter, enrolledFilter, paymentFilter, paymentChannelFilter, sortBy, sortOrder, archiveFilter, viewMode]);
 
+  const listHref = applicationListHref({
+    source: activeTab, search: searchQuery, status: statusFilter, student: studentFilter,
+    archive: archiveFilter, decision: decisionFilter, enrolled: enrolledFilter, payment: paymentFilter,
+    channel: paymentChannelFilter, view: viewMode, sort: sortBy, order: sortOrder, page, expanded: expandedGroups,
+  }, intakeFilter, partnerOnly);
+  useEffect(() => {
+    if (`${window.location.pathname}${window.location.search}` !== listHref) window.history.replaceState({}, '', listHref);
+  }, [listHref]);
+
   // -----------------------------------------------------------------
   // Fetch the per-source counts ONCE on mount so the tab badges can
   // show numbers. Independent of the main list fetch so a slow list
@@ -486,8 +501,7 @@ export default function AdminApplicationsPage() {
         if (!cancelled) {
           const message = err instanceof Error ? err.message : 'Failed to load applications';
           setError(message);
-          setApplications([]);
-          setTotal(0);
+          // Preserve the last successful page; the error banner identifies it as stale.
         }
       } finally {
         if (timeoutId) clearTimeout(timeoutId);
@@ -508,13 +522,14 @@ export default function AdminApplicationsPage() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  // Reset to page 1 when tab or filters change. Phase 77: `partnerOnly`
-  // was missing — deep-linking into `?surface=partner` (e.g. from an
-  // admin partner-app detail back-link) while on page 3 kept page 3,
-  // which could render empty because the partner surface has few pages.
+  // Returning from a detail page preserves its original page. Only a real
+  // filter/sort change resets pagination, never the first mount.
+  const paginationScope = JSON.stringify([activeTab, statusFilter, studentFilter, searchQuery, intakeFilter,
+    partnerOnly, paymentFilter, paymentChannelFilter, decisionFilter, enrolledFilter, archiveFilter, viewMode, sortBy, sortOrder]);
+  const previousScope = useRef(paginationScope);
   useEffect(() => {
-    setPage(1);
-  }, [activeTab, statusFilter, studentFilter, searchQuery, intakeFilter, partnerOnly, paymentFilter, paymentChannelFilter, decisionFilter, enrolledFilter, archiveFilter, viewMode]);
+    if (previousScope.current !== paginationScope) { previousScope.current = paginationScope; setPage(1); }
+  }, [paginationScope]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -829,34 +844,46 @@ export default function AdminApplicationsPage() {
   // status change in a grouped card can only ever touch the target
   // whose dropdown the advisor actually used.
   const handleSetTargetStatus = useCallback(
-    async (id: string, status: string, surface: 'student' | 'partner') => {
-      setSettingStatusFor(`${surface}:${id}`);
+    (id: string, status: string, surface: 'student' | 'partner') => {
+      const application = applications.find(row => row.id === id && row.surface === surface);
+      if (!application || application.status === status || application.archivedAt) return;
+      setStatusError(null);
+      setStatusTarget({ application, status });
+    }, [applications],
+  );
+
+  const confirmTargetStatus = async (options: ApplicationStatusOptions): Promise<void> => {
+      if (!statusTarget || settingStatusFor) return;
+      const { application, status } = statusTarget;
+      const { id, surface } = application;
+      setSettingStatusFor(applicationKey(application));
+      setStatusError(null);
       try {
         await apiFetchJson(`/api/admin/${surface === 'partner' ? 'partner-applications' : 'applications'}/${id}`, {
           method: 'PATCH',
-          body: JSON.stringify({ status }),
+          body: JSON.stringify(surface === 'partner' ? { status } : {
+            status, notify_applicant: options.notifyApplicant,
+            applicant_note: options.applicantNote || undefined,
+            notes: options.internalNote || undefined, internal: true,
+          }),
         });
+        setApplications(previous => previous.map(row => applicationKey(row) === applicationKey(application) ? { ...row, status } : row));
+        setStatusTarget(null);
         setRetryNonce((n) => n + 1);
         fetchCounts();
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Could not update status');
+        setStatusError(err instanceof Error ? err.message : 'Could not update status');
       } finally {
         setSettingStatusFor(null);
       }
-    },
-    [fetchCounts],
-  );
+  };
 
   // Phase 176: open one application from a grouped card. Mirrors the
   // href the flat table builds — partner rows live under a different
   // route tree, so a grouped partner row must too.
   const handleOpenRow = useCallback((app: { id: string; surface: string }) => {
-    router.push(
-      app.surface === 'partner'
-        ? `/admin/partner-applications/${app.id}`
-        : `/admin/applications/${app.id}`,
-    );
-  }, [router]);
+    router.push(applicationDetailHref(app.id, app.surface, listHref));
+  }, [router, listHref]);
 
   // Count for the active tab — prefer the badge count from /counts,
   // fall back to `total` from the list (which the API already filtered).
@@ -1189,6 +1216,10 @@ export default function AdminApplicationsPage() {
       )}
 
       {/* Error state (fatal — the list itself failed) */}
+      {error && !isLoading && applications.length > 0 && <div role="alert" className="flex flex-wrap items-center gap-3 border border-red-200 bg-red-50 p-4 text-sm">
+        <span>{t('adminAppReview.refreshFailed')} {error}</span>
+        <Button variant="outline" size="sm" onClick={() => setRetryNonce(n => n + 1)}>{t('common.retry')}</Button>
+      </div>}
       {error && !isLoading && applications.length === 0 && (
         <div className="border border-red-200 bg-red-50 p-6 text-center">
           <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-2" />
@@ -1266,7 +1297,7 @@ export default function AdminApplicationsPage() {
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <span className="text-xs font-medium text-[#4B5563]">Archive</span>
-                  <Select value={archiveFilter} onValueChange={setArchiveFilter}>
+                  <Select value={archiveFilter} onValueChange={value => setArchiveFilter(value as 'active' | 'archived')}>
                     <SelectTrigger aria-label="Archive" className="w-full data-[size=default]:h-10 rounded-none border-gray-300">
                       <SelectValue />
                     </SelectTrigger>
@@ -1525,14 +1556,11 @@ export default function AdminApplicationsPage() {
                       // admin page (where status controls live);
                       // student application rows go to the existing
                       // student-app detail page.
-                      const detailsHref =
-                        application.surface === 'partner'
-                          ? `/admin/partner-applications/${application.id}`
-                          : `/admin/applications/${application.id}`;
+                      const detailsHref = applicationDetailHref(application.id, application.surface, listHref);
                       const isSelected = selectedIds.has(applicationKey(application));
                       return (
                         <tr
-                          key={application.id}
+                          key={applicationKey(application)}
                           className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
                             isSelected ? 'bg-[#9B1B30]/5' : ''
                           }`}
@@ -1792,6 +1820,8 @@ export default function AdminApplicationsPage() {
               ) : (
                 <ApplicationGroups
                   applications={filteredApplications}
+                  expandedKeys={expandedGroups}
+                  onExpandedChange={setExpandedGroups}
                   onOpenRow={handleOpenRow}
                   onDeleteRow={(row) => {
                     const application = applications.find((item) => applicationKey(item) === applicationKey(row));
@@ -1844,6 +1874,18 @@ export default function AdminApplicationsPage() {
       {exportWarning && <p role="status" className="text-amber-800">{exportWarning}</p>}
       {(paymentFilter !== 'all' || paymentChannelFilter !== 'all' || enrolledFilter !== 'all') && <p className="text-sm text-gray-600">{t('adminManagement.studentOnlyFilters')}</p>}
       {/* Delete dialog */}
+      {statusTarget && <ApplicationStatusDialog
+        studentName={statusTarget.application.studentName}
+        university={statusTarget.application.university}
+        program={statusTarget.application.program}
+        currentStatus={statusTarget.application.status}
+        nextStatus={statusTarget.status}
+        surface={statusTarget.application.surface}
+        pending={settingStatusFor !== null}
+        error={statusError}
+        onClose={() => setStatusTarget(null)}
+        onConfirm={confirmTargetStatus}
+      />}
       <Dialog open={deleteDialogOpen} onOpenChange={(open) => { if (!isDeleting) setDeleteDialogOpen(open); }}>
         <DialogContent className="rounded-none max-w-md">
           <DialogHeader>

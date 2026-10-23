@@ -13,12 +13,11 @@
 import React, { useEffect, useState } from 'react';
 import { Clock, AlertCircle, ArrowRight, Loader2 } from 'lucide-react';
 import { apiFetchJson } from '@/lib/api-client';
+import { Button } from '@/components/ui/button';
 import { useI18n } from '@/lib/i18n';
 import {
-  mapStageHistoryFromDb,
   isInternalNote,
   mergeTimelineForAdmin,
-  type StageHistoryDbRow,
   type StageHistoryRow,
   type UnifiedTimelineEvent,
 } from '@/lib/application-history-mapper';
@@ -34,27 +33,26 @@ interface TimelineResponse {
   }>;
 }
 
-export function TimelineTab({ applicationId }: { applicationId: string }) {
+export function TimelineTab({ applicationId, refreshKey = 0 }: { applicationId: string; refreshKey?: number }) {
   const { t } = useI18n();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [events, setEvents] = useState<UnifiedTimelineEvent[]>([]);
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setError(null);
     (async () => {
       try {
         const res = await apiFetchJson<TimelineResponse>(
           `/api/admin/applications/${applicationId}/timeline`,
         );
         if (cancelled) return;
-        // Re-normalize the response into StageHistoryRow[] (already done
-        // server-side; we re-apply here for type safety) and merge.
-        const stage = (res.stageHistory ?? []).map((r) =>
-          mapStageHistoryFromDb(r as unknown as StageHistoryDbRow),
-        );
+        // The API has already mapped these rows to camelCase.
         const merged = mergeTimelineForAdmin(
-          stage,
+          res.stageHistory ?? [],
           (res.timelineNotes ?? []).map((n) => ({
             id: n.id,
             status: n.status,
@@ -74,7 +72,7 @@ export function TimelineTab({ applicationId }: { applicationId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [applicationId, t]);
+  }, [applicationId, refreshKey, retry, t]);
 
   if (loading) {
     return (
@@ -87,9 +85,10 @@ export function TimelineTab({ applicationId }: { applicationId: string }) {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 text-sm flex items-start gap-2">
+      <div role="alert" className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 text-sm flex flex-wrap items-start gap-2">
         <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
         <span>{error}</span>
+        <Button variant="outline" size="sm" onClick={() => setRetry(n => n + 1)}>{t('common.retry')}</Button>
       </div>
     );
   }

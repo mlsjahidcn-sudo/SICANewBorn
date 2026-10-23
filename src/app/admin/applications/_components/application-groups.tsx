@@ -63,6 +63,8 @@ export interface ApplicationGroupsProps {
   onOpenRow: (app: { id: string; surface: string }) => void;
   onDeleteRow: (app: { id: string; surface: 'student' | 'partner' }) => void;
   deletingKey: string | null;
+  expandedKeys?: string[];
+  onExpandedChange?: (keys: string[]) => void;
   onSetStatus: (id: string, status: string, surface: 'student' | 'partner') => void;
   settingStatusFor: string | null;
   /** Clear every filter. The grouped view's empty state offers the
@@ -114,6 +116,8 @@ export default function ApplicationGroups({
   onOpenRow,
   onDeleteRow,
   deletingKey,
+  expandedKeys,
+  onExpandedChange,
   onSetStatus,
   settingStatusFor,
   onResetFilters,
@@ -124,14 +128,13 @@ export default function ApplicationGroups({
 
   // Collapse by default: a grouped view that starts fully expanded is
   // just a taller flat list, which defeats the point.
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const toggle = (key: string) =>
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
+  const [localExpanded, setLocalExpanded] = useState<Set<string>>(new Set());
+  const expanded = expandedKeys ? new Set(expandedKeys) : localExpanded;
+  const toggle = (key: string): void => {
+    const next = new Set(expanded);
+    if (next.has(key)) next.delete(key); else next.add(key);
+    if (onExpandedChange) onExpandedChange([...next]); else setLocalExpanded(next);
+  };
 
   const renderDeleteAction = (row: RowApp): React.ReactNode => (
     <Button
@@ -292,7 +295,7 @@ export default function ApplicationGroups({
                 <ul id={`application-group-${group.key}`} className="bg-[#FAFAF8] border-t border-gray-100">
                   {group.items.map((item) => {
                     const row = item as RowApp;
-                    const busy = settingStatusFor === `${row.surface}:${row.id}` || deletingKey === `${row.surface}:${row.id}`;
+                    const busy = Boolean(row.archivedAt) || settingStatusFor === `${row.surface}:${row.id}` || deletingKey === `${row.surface}:${row.id}`;
                     return (
                       <li
                         key={`${row.surface}:${row.id}`}

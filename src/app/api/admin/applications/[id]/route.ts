@@ -5,7 +5,7 @@ import { requireAdmin, buildServiceClient, getServerEnv } from '@/lib/supabase-a
 import { insertTimelineEvent } from '@/lib/timeline';
 import { mapApplicationFromDb } from '@/lib/application-mapper';
 import { notifyApplicantOnStatusChange } from '@/lib/email';
-import { computePaymentAggregateForApp } from '@/lib/payment-aggregate';
+import { computePaymentAggregateForApp, type PaymentAggregate } from '@/lib/payment-aggregate';
 
 const ALLOWED_STATUSES = ALLOWED_STUDENT_STATUSES;
 
@@ -51,7 +51,7 @@ function studentNotificationMessage(
 /**
  * GET    /api/admin/applications/[id]
  * PATCH  /api/admin/applications/[id]  — update status, notes, etc.
- * DELETE /api/admin/applications/[id]  — cancel (status='Withdrawn')
+ * DELETE /api/admin/applications/[id]  — recoverable archive
  */
 export async function GET(
   request: NextRequest,
@@ -84,10 +84,9 @@ export async function GET(
     // Phase 145: surface the payment aggregate on the detail page
     // so the sidebar can render "Outstanding: ¥X / Paid: ¥Y" +
     // a "Record payment" link to /admin/fees/new?applicationId=.
-    // Same one round-trip pattern as the list endpoint (re-uses
-    // the new partial index). On error we fall back to 'none' —
-    // the page still loads, the badge just reads "No fee set".
-    let paymentAggregate;
+    // A failed read is unknown, never evidence that no fee exists.
+    let paymentAggregate: PaymentAggregate | null = null;
+    let paymentError: string | null = null;
     try {
       const { data: feeRows, error: feeErr } = await service
         .from('student_fees')
@@ -95,11 +94,13 @@ export async function GET(
         .eq('application_id', id);
       if (feeErr) {
         console.error('[admin/applications/[id] GET] fee fetch failed:', feeErr);
+        paymentError = 'Payment summary could not be loaded';
+      } else {
+        paymentAggregate = computePaymentAggregateForApp(feeRows || []);
       }
-      paymentAggregate = computePaymentAggregateForApp(feeRows || []);
     } catch (feeCatchErr) {
       console.error('[admin/applications/[id] GET] payment aggregate unhandled:', feeCatchErr);
-      paymentAggregate = computePaymentAggregateForApp([]);
+      paymentError = 'Payment summary could not be loaded';
     }
 
     const { data: privateNote, error: noteError } = await service.from('application_internal_notes').select('content').eq('application_id', id).maybeSingle();
@@ -107,8 +108,9 @@ export async function GET(
     // The private table is never selected by applicant/partner APIs.
     // Normalize to the same shape the list endpoint returns
     return NextResponse.json({
-      application: { ...mapApplicationFromDb(data), internalNotes: privateNote?.content || '' },
+      application: { ...mapApplicationFromDb(data), archivedAt: data.archived_at ?? null, internalNotes: privateNote?.content || '' },
       payment: paymentAggregate,
+      paymentError,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';

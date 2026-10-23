@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Check, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
@@ -15,6 +15,7 @@ import { Separator } from '@/components/ui/separator';
 import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 import { PageContainer } from '@/components/admin/page-container';
+import { applicationReturnTo, applicationDetailHref } from '@/lib/admin-application-navigation';
 
 const STATUS_OPTIONS = [
   { value: 'Draft', label: 'Draft' },
@@ -76,6 +77,9 @@ export default function AdminApplicationEditPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
+  const searchParams = useSearchParams();
+  const returnTo = applicationReturnTo(searchParams.get('returnTo'));
+  const detailHref = applicationDetailHref(id, 'student', returnTo);
   const { t } = useI18n();
 
   const [isLoading, setIsLoading] = useState(true);
@@ -189,7 +193,7 @@ export default function AdminApplicationEditPage() {
           applicant_nationality: formData.applicantNationality || null,
         }),
       });
-      router.push(`/admin/applications/${id}`);
+      router.push(detailHref);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save');
     } finally {
@@ -209,7 +213,7 @@ export default function AdminApplicationEditPage() {
   if (notFound) {
     return (
       <div className="space-y-4">
-        <Button variant="ghost" onClick={() => router.push('/admin/applications')}>
+        <Button variant="ghost" onClick={() => router.push(returnTo)}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Applications
         </Button>
@@ -228,7 +232,7 @@ export default function AdminApplicationEditPage() {
   return (
     <PageContainer width="narrow">
       <div className="flex items-center justify-between">
-        <Button variant="ghost" onClick={() => router.push(`/admin/applications/${id}`)}>
+        <Button variant="ghost" onClick={() => router.push(detailHref)}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           {t('adminAppEdit.backToApplication')}
         </Button>
@@ -445,7 +449,7 @@ export default function AdminApplicationEditPage() {
       )}
 
       <div className="flex justify-end gap-3">
-        <Button variant="ghost" onClick={() => router.push(`/admin/applications/${id}`)} disabled={isSaving}>
+        <Button variant="ghost" onClick={() => router.push(detailHref)} disabled={isSaving}>
           Cancel
         </Button>
         <Button onClick={handleSave} disabled={isSaving} className="bg-[#9B1B30] hover:bg-[#7A1526]">
