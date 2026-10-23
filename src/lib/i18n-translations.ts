@@ -12,6 +12,9 @@ export type Locale = 'en' | 'zh';
 
 export const translations: Record<Locale, Record<string, string>> = {
   en: {
+    'studentMarkdown.download': 'Download student info (.md)',
+    'studentMarkdown.downloading': 'Preparing download…',
+    'studentMarkdown.error': 'Could not download student information. Please retry.',
     "adminAppReview.payment": "Payment",
     "adminAppReview.paid": "Paid",
     "adminAppReview.outstanding": "Outstanding",
@@ -5799,6 +5802,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     // is the eyebrow that sits before it.
   },
   zh: {
+    'studentMarkdown.download': '下载学生资料 (.md)',
+    'studentMarkdown.downloading': '正在准备下载…',
+    'studentMarkdown.error': '无法下载学生资料，请重试。',
     "adminAppReview.payment": "付款",
     "adminAppReview.paid": "已付",
     "adminAppReview.outstanding": "待付",

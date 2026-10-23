@@ -18,6 +18,7 @@ import {
   Plus, Mail, RefreshCw, Trash2, DollarSign, Eye,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { StudentMarkdownDownload } from '@/components/admin/student-markdown-download';
 import { Spinner } from '@/components/ui/spinner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -327,14 +328,15 @@ export default function AdminStudentDetailPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-4">
           <Button variant="ghost" onClick={() => router.push('/admin/students')}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             {t('adminStudentDetail.backToStudents')}
           </Button>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <StudentMarkdownDownload kind="student" id={studentId} />
           <Button variant="outline" onClick={loadStudent}>
             <RefreshCw className="h-4 h-4 mr-2" />
             {t('adminStudents.buttonRefresh')}

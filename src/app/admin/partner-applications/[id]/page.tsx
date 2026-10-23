@@ -15,6 +15,7 @@ import {
 import type { ApplicationEnrollment } from '@/lib/application-history-mapper';
 
 import { Button } from '@/components/ui/button';
+import { StudentMarkdownDownload } from '@/components/admin/student-markdown-download';
 import { PartnerApplicationTargetDialog } from '@/components/admin/partner-application-target-dialog';
 import { MissingDocumentsRequest } from '@/components/admin/missing-documents-request';
 import type { MissingDocumentCategory } from '@/lib/missing-document-message';
@@ -318,6 +319,7 @@ export default function AdminPartnerApplicationDetailPage() {
             )}
           </p>
         </div>
+        <StudentMarkdownDownload kind="partner-application" id={applicationId} />
       </div>
 
       {error && (

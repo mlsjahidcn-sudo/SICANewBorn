@@ -22,6 +22,7 @@ import {
   Unlink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { StudentMarkdownDownload } from '@/components/admin/student-markdown-download';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -419,7 +420,8 @@ export default function AdminPartnerStudentDetailPage() {
             {t('adminPartnerStudentDetail.backToList')}
           </Button>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <StudentMarkdownDownload kind="partner-student" id={studentId} />
           <Button variant="outline" onClick={loadStudent}>
             <RefreshCw className="h-4 w-4 mr-2" />
             {t('adminPartnerStudentDetail.buttonRefresh')}

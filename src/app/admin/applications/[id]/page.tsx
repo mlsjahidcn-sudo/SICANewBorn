@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, ArrowRight, Edit, Loader2, RefreshCw, RotateCcw, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { StudentMarkdownDownload } from '@/components/admin/student-markdown-download';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -201,6 +202,7 @@ export default function AdminApplicationDetailPage(): React.ReactNode {
         </div>
       </div>
       <div className="flex flex-wrap gap-2">
+        <StudentMarkdownDownload kind="student-application" id={app.id} />
         <Button variant="outline" className="rounded-none" onClick={() => { void load(); setRefreshKey(n => n + 1); }} disabled={isLoading}><RefreshCw data-icon="inline-start" className={isLoading ? 'animate-spin' : ''} />{t('adminAppReview.refresh')}</Button>
         <Button className="rounded-none bg-[#1B2A4A] text-white hover:bg-[#152138]" onClick={() => router.push(editHref)} disabled={blocked}><Edit data-icon="inline-start" />{t('adminAppReview.edit')}</Button>
         <Button variant="outline" className="rounded-none" disabled={isLoading || lifecyclePending} onClick={() => { setLifecycleError(null); setLifecycleOpen(true); }}>
