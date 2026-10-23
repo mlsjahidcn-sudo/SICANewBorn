@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({ api: vi.fn(), raw: vi.fn() }));
 vi.mock('@/lib/api-client', () => ({ apiFetchJson: mocks.api, apiFetch: mocks.raw }));
@@ -9,7 +10,15 @@ import StudentEditPage from '@/app/admin/students/[id]/edit/page';
 import { NotesTab } from '@/app/admin/applications/_components/notes-tab';
 import { RemoteSearchSelect } from '@/components/admin/remote-search-select';
 
-beforeEach(() => { cleanup(); vi.clearAllMocks(); });
+beforeEach(() => {
+  cleanup(); vi.clearAllMocks();
+  Element.prototype.scrollIntoView = vi.fn();
+  vi.stubGlobal('ResizeObserver', class {
+    observe() { return undefined; }
+    unobserve() { return undefined; }
+    disconnect() { return undefined; }
+  });
+});
 describe('admin management controls', () => {
   it('selects the current asynchronously loaded student rows, then clears all', async () => {
     mocks.api.mockImplementation(async (url: string) => url.includes('/stats') ? { total: 1, active: 1 } : { students: [{ id: 's1', firstName: 'Amina', lastName: 'Ali', email: 'amina@example.test', source: 'Online', status: 'Active', createdAt: '2026-10-21', preferredUniversities: [] }], total: 1 });
@@ -52,12 +61,15 @@ describe('admin management controls', () => {
   it('loads more remote picker options without a fixed global record cap', async () => {
     mocks.api.mockImplementation(async (url: string) => ({ options: [{ value: url.includes('page=2') ? 'after-100' : 'first', label: url.includes('page=2') ? 'Beyond first page' : 'First record', record: { id: 'fixture' } }], hasMore: !url.includes('page=2') }));
     const onChange = vi.fn(); render(<RemoteSearchSelect url="/api/admin/application-options?kind=student" value="" placeholder="Select" onChange={onChange} />);
+    expect(screen.queryByRole('button', { name: 'adminManagement.moreOptions' })).not.toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole('combobox'));
     fireEvent.click(await screen.findByRole('button', { name: 'adminManagement.moreOptions' }));
     await waitFor(() => expect(mocks.api).toHaveBeenCalledWith(expect.stringContaining('page=2'), expect.anything()));
   });
   it('displays a remote picker error with retry', async () => {
     mocks.api.mockRejectedValueOnce(new Error('Options unavailable')).mockResolvedValue({ options: [], hasMore: false });
     render(<RemoteSearchSelect url="/api/admin/application-options?kind=student" value="" placeholder="Select" onChange={() => {}} />);
+    await userEvent.setup().click(screen.getByRole('combobox'));
     expect(await screen.findByRole('alert')).toHaveTextContent('Options unavailable'); fireEvent.click(screen.getByRole('button', { name: 'common.retry' }));
     await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
   });

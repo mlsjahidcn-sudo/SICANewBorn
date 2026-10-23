@@ -40,7 +40,29 @@ describe('groupKeyFor', () => {
     expect(groupKeyFor(app({ id: 'a', studentId: 's1' }))).toBe('student:s1');
   });
 
-  it('falls back to the row id when there is no student either', () => {
+  it('keys a partner row on its partner_students id', () => {
+    // partner_applications has no campaign_id column at all, so an
+    // unbridged partner row had no key of its own before this.
+    expect(groupKeyFor(app({ id: 'a', partnerStudentId: 'p1' }))).toBe('partner:p1');
+  });
+
+  it('prefers the partner student id over the applicant email', () => {
+    expect(
+      groupKeyFor(app({ id: 'a', partnerStudentId: 'p1', studentEmail: 'a@b.test' })),
+    ).toBe('partner:p1');
+  });
+
+  it('keys an unlinked row on its normalised email', () => {
+    expect(groupKeyFor(app({ id: 'a', studentEmail: '  Amina@Example.test ' }))).toBe(
+      'applicant:amina@example.test',
+    );
+  });
+
+  it('treats a blank email as no identity at all', () => {
+    expect(groupKeyFor(app({ id: 'a', studentEmail: '   ' }))).toBe('app:a');
+  });
+
+  it('falls back to the row id when there is no identity either', () => {
     expect(groupKeyFor(app({ id: 'a' }))).toBe('app:a');
   });
 });
@@ -177,6 +199,67 @@ describe('groupApplications', () => {
   });
 });
 
+describe('partner and applicant identity', () => {
+  it('groups one partner student’s applications together', () => {
+    // The reported bug: two partner applications for the same
+    // partner_students row each rendered as their own "SINGLE" card,
+    // because partner_applications has no campaign_id and the row was
+    // not bridged to a student profile.
+    const groups = groupApplications([
+      app({ id: '1', partnerStudentId: 'ps1', studentEmail: 'amuni@example.test' }),
+      app({ id: '2', partnerStudentId: 'ps1', studentEmail: 'amuni@example.test' }),
+    ]);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].kind).toBe('partner');
+    expect(groups[0].partnerStudentId).toBe('ps1');
+    expect(groups[0].items).toHaveLength(2);
+  });
+
+  it('keeps two different partner students in separate groups', () => {
+    // Same email, different partner_students row. The FK wins, so two
+    // applicants are never merged just because an email was reused.
+    const groups = groupApplications([
+      app({ id: '1', partnerStudentId: 'ps1', studentEmail: 'shared@example.test' }),
+      app({ id: '2', partnerStudentId: 'ps2', studentEmail: 'shared@example.test' }),
+    ]);
+    expect(groups).toHaveLength(2);
+    expect(groups.every((g) => g.kind === 'partner')).toBe(true);
+  });
+
+  it('groups manual entries that share an applicant email', () => {
+    const groups = groupApplications([
+      app({ id: '1', studentEmail: 'amina@example.test' }),
+      app({ id: '2', studentEmail: 'AMINA@example.test' }),
+    ]);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].kind).toBe('applicant');
+    expect(groups[0].studentEmail).toBe('amina@example.test');
+  });
+
+  it('keeps a bridged partner row with the student it is linked to', () => {
+    // The Phase A/D bridge: a partner application linked to a student
+    // profile keys on that profile, so it groups with the student
+    // portal's own applications.
+    const groups = groupApplications([
+      app({ id: '1', studentId: 's1' }),
+      app({ id: '2', studentId: 's1' }),
+    ]);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].kind).toBe('student');
+  });
+
+  it('never mixes two identities into one group', () => {
+    const groups = groupApplications([
+      app({ id: '1', partnerStudentId: 'ps1' }),
+      app({ id: '2', partnerStudentId: 'ps2' }),
+      app({ id: '3', studentEmail: 'x@y.test' }),
+      app({ id: '4', studentEmail: 'z@y.test' }),
+      app({ id: '5' }),
+    ]);
+    expect(groups).toHaveLength(5);
+  });
+});
+
 describe('counting helpers', () => {
   const mixed = groupApplications([
     app({ id: '1', studentId: 's1', campaignId: 'c1' }),
@@ -198,5 +281,16 @@ describe('counting helpers', () => {
   it('both are zero-safe', () => {
     expect(collapsibleCount([])).toBe(0);
     expect(groupedRowCount([])).toBe(0);
+  });
+
+  it('counts partner and applicant groups as collapsible', () => {
+    const groups = groupApplications([
+      app({ id: '1', partnerStudentId: 'ps1' }),
+      app({ id: '2', partnerStudentId: 'ps1' }),
+      app({ id: '3', studentEmail: 'a@b.test' }),
+      app({ id: '4', studentEmail: 'a@b.test' }),
+    ]);
+    expect(collapsibleCount(groups)).toBe(2);
+    expect(groupedRowCount(groups)).toBe(4);
   });
 });

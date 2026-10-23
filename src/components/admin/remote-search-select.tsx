@@ -40,9 +40,15 @@ export function RemoteSearchSelect<T>({ url, value, onChange, placeholder, clear
     return () => controller.abort();
   }, [value, clearValue, options, url, t, selected]);
   const visible = selected && selected.value === value && !options.some(o => o.value === selected.value) ? [selected, ...options] : options;
+  // Pagination and errors belong to the open list, not the parent layout: as
+  // in-flow siblings they grew the filter bar's grid cell under the trigger.
+  // Undefined, not an empty fragment — a fragment is always truthy, which would
+  // make the popover render a bordered band with nothing in it.
+  const footer = error || hasMore ? <>
+    {error && <p role="alert" className="text-red-700">{error} <Button variant="link" size="sm" className="h-auto p-0" onClick={() => setRetry(n => n + 1)}>{t('common.retry')}</Button></p>}
+    {hasMore && <Button variant="link" size="sm" className="h-auto p-0" disabled={loading} onClick={() => setPage(p => p + 1)}>{t('adminManagement.moreOptions')}</Button>}
+  </> : undefined;
   return <div className="min-w-0">
-    <SearchableSelect value={value} options={visible} placeholder={placeholder} searchPlaceholder={t('adminManagement.searchOptions')} clearValue={clearValue} clearLabel={clearLabel} disabled={disabled} loading={loading} searchValue={search} container={container} onSearchChange={text => { setPage(1); setSearch(text); }} onChange={next => { const option = visible.find(o => o.value === next); setSelected(option); onChange(next, option?.record); }} />
-    {error && <p role="alert" className="text-sm text-red-700">{error} <Button variant="link" onClick={() => setRetry(n => n + 1)}>{t('common.retry')}</Button></p>}
-    {hasMore && <Button variant="link" disabled={loading} onClick={() => setPage(p => p + 1)}>{t('adminManagement.moreOptions')}</Button>}
+    <SearchableSelect value={value} options={visible} placeholder={placeholder} searchPlaceholder={t('adminManagement.searchOptions')} clearValue={clearValue} clearLabel={clearLabel} disabled={disabled} loading={loading} searchValue={search} container={container} footer={footer} onSearchChange={text => { setPage(1); setSearch(text); }} onChange={next => { const option = visible.find(o => o.value === next); setSelected(option); onChange(next, option?.record); }} />
   </div>;
 }

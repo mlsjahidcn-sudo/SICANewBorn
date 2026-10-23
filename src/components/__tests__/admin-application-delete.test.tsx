@@ -26,6 +26,8 @@ beforeEach(() => {
 async function openDelete(): Promise<HTMLElement> {
   render(<ApplicationsPage />);
   await screen.findByText('Amina');
+  fireEvent.click(screen.getByRole('button', { name: 'Flat' }));
+  await screen.findByText('adminManagement.archive', { exact: true });
   fireEvent.click(screen.getByText('adminManagement.archive', { exact: true }));
   return screen.findByRole('dialog');
 }

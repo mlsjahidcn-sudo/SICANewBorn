@@ -87,6 +87,16 @@ describe('complete unified application query', () => {
     const result = paginateAdminApplications(rows, new URLSearchParams('grouped=true&limit=20'));
     expect(result.total).toBe(1); expect(result.applications).toHaveLength(45);
   });
+  it('maps the partner student identity and keeps different intakes together across pages', async () => {
+    const rows = await loadAdminApplications(database({ partner_applications: Array.from({ length: 25 }, (_, i) => partner({
+      id: `p${i}`, linked_student_profile_id: null, student_id: 'partner-student',
+      intake: i % 2 ? '2027 Spring' : '2027 Fall',
+    })) }));
+    const result = paginateAdminApplications(rows, new URLSearchParams('grouped=true&limit=20'));
+    expect(result.total).toBe(1);
+    expect(result.applications).toHaveLength(25);
+    expect(result.applications.every(row => row.partnerStudentId === 'partner-student')).toBe(true);
+  });
   it('fails closed on partial database failure and rejects invalid filters', async () => {
     await expect(collectRows(async () => ({ data: null, error: { message: 'DB unavailable' } }))).rejects.toThrow('DB unavailable');
     mocks.service.mockReturnValue(database({}));

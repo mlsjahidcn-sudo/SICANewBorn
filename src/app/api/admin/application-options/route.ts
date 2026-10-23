@@ -26,12 +26,18 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       const { data, count, error } = await q.range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
       if (error) throw new Error(error.message);
       return NextResponse.json({
-        options: (data || []).map(row => ({
-          value: row.id,
-          label: [row.first_name, row.last_name].filter(Boolean).join(' ') || row.email || row.id,
-          sublabel: row.email || '',
-          record: { id: row.id },
-        })),
+        options: (data || []).map(row => {
+          // The name travels with the record so a caller that stores
+          // the id (the applications filter) can also name the
+          // student in its own UI without a second lookup.
+          const name = [row.first_name, row.last_name].filter(Boolean).join(' ') || row.email || row.id;
+          return {
+            value: row.id,
+            label: name,
+            sublabel: row.email || '',
+            record: { id: row.id, name },
+          };
+        }),
         hasMore: value ? false : page * PAGE_SIZE < (count || 0),
       });
     }

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Plus, Eye, Trash2, MoreHorizontal, ArrowUpRight, ArrowDownRight, Minus, RefreshCw, AlertCircle, Search, Users, Building2, UserPlus, CheckSquare, Square, X, StickyNote, Flag, Download, CalendarClock, Layers, List, Loader2, ChevronUp, ChevronDown, ChevronsUpDown, DollarSign } from 'lucide-react';
+import { Plus, Eye, Trash2, MoreHorizontal, ArrowUpRight, ArrowDownRight, Minus, RefreshCw, AlertCircle, Search, Users, Building2, UserPlus, CheckSquare, Square, X, StickyNote, Flag, Download, CalendarClock, Layers, List, Loader2, ChevronUp, ChevronDown, ChevronsUpDown, DollarSign, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -20,6 +20,11 @@ import { RemoteSearchSelect } from '@/components/admin/remote-search-select';
 import { apiFetch, apiFetchJson } from '@/lib/api-client';
 import { downloadCsvViaApi } from '@/lib/download-csv';
 import { APPLICATION_STATUSES, ApplicationStatus } from '@/lib/application-mapper';
+import {
+  buildFilterTokens,
+  type ArchiveFilter,
+  type FilterTokenKey,
+} from '@/lib/application-filter-tokens';
 import { parseIntakeFilter, getCanonicalCohorts } from '@/lib/intake-normalize';
 import { APPLICATION_PAYMENT_STATUSES, APPLICATION_PAYMENT_STATUS_DISPLAY, type ApplicationPaymentStatus } from '@/lib/payment-aggregate';
 import {
@@ -102,6 +107,22 @@ const STATUS_DISPLAY: Record<ApplicationStatus, { label: string; color: string }
   Accepted: { label: 'Approved', color: 'bg-green-100 text-green-800' },
   Rejected: { label: 'Rejected', color: 'bg-red-100 text-red-800' },
   Withdrawn: { label: 'Withdrawn', color: 'bg-gray-100 text-gray-800' },
+};
+
+/** The filter dropdown stores the raw DB status; the state line shows
+ *  the same word the admin reads in the table. Unknown values fall
+ *  through unchanged rather than throwing on a missing key. */
+const statusFilterLabel = (value: string): string =>
+  value in STATUS_DISPLAY ? STATUS_DISPLAY[value as ApplicationStatus].label : value;
+
+/** The cohort filter is seeded from ?intake=, so clearing it has to
+ *  clear the URL too or a refresh re-applies it. replaceState keeps
+ *  the browser back-stack clean. */
+const stripIntakeFromUrl = () => {
+  if (typeof window === 'undefined') return;
+  const url = new URL(window.location.href);
+  url.searchParams.delete('intake');
+  window.history.replaceState({}, '', url.toString());
 };
 
 const sourceColors: Record<string, string> = {
@@ -211,6 +232,10 @@ export default function AdminApplicationsPage() {
   const [statusFilter, setStatusFilter] = useState<string>(searchParams.get('status') || 'all');
   const [studentFilter, setStudentFilter] = useState<string>(searchParams.get('student') || 'all');
   const [archiveFilter, setArchiveFilter] = useState('active');
+  // The student picker's selected name, captured alongside the id so
+  // the filter state line can name the student instead of printing a
+  // uuid. Empty until the admin picks somebody.
+  const [studentFilterName, setStudentFilterName] = useState('');
   const [exportWarning, setExportWarning] = useState('');
   // Phase 107 Batch 4: two new filter chips. 'all' = no filter;
   // 'with-decision' / 'no-decision' filter student_applications.decision;
@@ -227,13 +252,10 @@ export default function AdminApplicationsPage() {
   // paymentFilter — an app can be Paid + Offline pay.
   const [paymentChannelFilter, setPaymentChannelFilter] = useState<'all' | 'offline'>('all');
 
-  // Phase 176: flat vs grouped view. 'flat' is the default and is
-  // deliberately the ONLY mode that renders the original table —
-  // sorting, bulk-select and CSV export all live inside it, and the
-  // risk table in the plan says to leave them alone. The grouped
-  // view is additive: a separate component, its own rows, no shared
-  // state with the flat one.
-  const [viewMode, setViewMode] = useState<'flat' | 'grouped'>('flat');
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
+
+  // Group applications on arrival; the flat table keeps bulk actions and sorting.
+  const [viewMode, setViewMode] = useState<'flat' | 'grouped'>('grouped');
   // Which row is mid-status-update, so only that row's select shows a
   // spinner. Keyed by application id.
   const [settingStatusFor, setSettingStatusFor] = useState<string | null>(null);
@@ -627,6 +649,110 @@ export default function AdminApplicationsPage() {
     });
   }, [filteredApplications]);
 
+  /**
+   * Reset every filter, not just the four that used to have chips.
+   * The old "Reset filters" button in the empty state cleared the
+   * search, status, student and cohort — leaving the archive scope,
+   * the decision / enrollment / payment / channel filters and the
+   * sort order applied, so "reset" could still land the admin on an
+   * empty list.
+   */
+  const clearAllFilters = useCallback(() => {
+    setSearchInput('');
+    setSearchQuery('');
+    setStatusFilter('all');
+    setStudentFilter('all');
+    setStudentFilterName('');
+    setArchiveFilter('active');
+    setDecisionFilter('all');
+    setEnrolledFilter('all');
+    setPaymentFilter('all');
+    setPaymentChannelFilter('all');
+    setIntakeFilter(null);
+    if (typeof window !== 'undefined') {
+      // The page seeds three filters from the URL, so clearing them
+      // has to clear the URL too or a refresh re-applies them.
+      const url = new URL(window.location.href);
+      url.searchParams.delete('intake');
+      url.searchParams.delete('student');
+      url.searchParams.delete('status');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, []);
+  /**
+   * The filter state line: every filter that is currently narrowing
+   * the list, in one place, each one removable. The old chip row only
+   * rendered for four of the nine filters, so an admin could not tell
+   * from the filter bar which slice of the pipeline they were looking
+   * at — the search, student, status and archive filters left no
+   * visible trace at all.
+   */
+  const filterTokens = useMemo(() => {
+    const tokens = buildFilterTokens(
+      {
+        search: searchQuery,
+        studentId: studentFilter,
+        studentName: studentFilterName,
+        archive: archiveFilter as ArchiveFilter,
+        status: statusFilter,
+        decision: decisionFilter,
+        enrolled: enrolledFilter,
+        payment: paymentFilter,
+        channel: paymentChannelFilter,
+        cohort: intakeFilter,
+        cohortLabel: intakeFilterLabel ?? '',
+      },
+      {
+        archived: t('adminManagement.archivedApplications'),
+        status: statusFilterLabel,
+        decision: (v) => (v === 'with' ? 'Has decision' : 'No decision yet'),
+        enrolled: (v) => (v === 'enrolled' ? 'Enrolled' : 'Not enrolled'),
+        payment: (v) => APPLICATION_PAYMENT_STATUS_DISPLAY[v as ApplicationPaymentStatus].label,
+        offlinePay: t('adminApps.filterOfflinePay'),
+      },
+    );
+    // Keyed by the token key, so a new filter cannot ship without a
+    // way to switch it off.
+    const clearers: Record<FilterTokenKey, () => void> = {
+      search: () => {
+        setSearchInput('');
+        setSearchQuery('');
+      },
+      student: () => {
+        setStudentFilter('all');
+        setStudentFilterName('');
+      },
+      archive: () => setArchiveFilter('active'),
+      status: () => setStatusFilter('all'),
+      decision: () => setDecisionFilter('all'),
+      enrolled: () => setEnrolledFilter('all'),
+      payment: () => setPaymentFilter('all'),
+      channel: () => setPaymentChannelFilter('all'),
+      cohort: () => {
+        setIntakeFilter(null);
+        stripIntakeFromUrl();
+      },
+    };
+    return tokens.map((token) => ({ ...token, clear: clearers[token.key] }));
+  }, [
+    searchQuery,
+    studentFilter,
+    studentFilterName,
+    archiveFilter,
+    statusFilter,
+    decisionFilter,
+    enrolledFilter,
+    paymentFilter,
+    paymentChannelFilter,
+    intakeFilter,
+    intakeFilterLabel,
+    t,
+  ]);
+
+  const secondaryFilterCount = filterTokens.filter((token) =>
+    ['student', 'archive', 'decision', 'enrolled', 'payment', 'channel'].includes(token.key),
+  ).length;
+
   const runBulk = useCallback(
     async (
       action: 'status' | 'priority' | 'note' | 'delete' | 'restoreArchive' | 'markPaid',
@@ -741,7 +867,7 @@ export default function AdminApplicationsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           {/* Phase 33: in partnerOnly mode the page title flips to
               "Partner Pipeline" + subtitle surfaces that the
@@ -768,7 +894,7 @@ export default function AdminApplicationsPage() {
             )}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* S33: Export to CSV. Respects the current filter set
               (status, source, search, tab) so the export matches
               what the admin sees on screen. Capped at 1000 rows
@@ -785,8 +911,7 @@ export default function AdminApplicationsPage() {
             {isExporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
             {isExporting ? 'Exporting…' : 'Export CSV'}
           </Button>
-          {/* Phase 176: flat / grouped toggle. Flat stays the default
-              so nothing changes for anyone who doesn't reach for it. */}
+          {/* Both views use the same filters and export scope. */}
           <div
             className="flex border border-gray-300"
             role="group"
@@ -829,7 +954,7 @@ export default function AdminApplicationsPage() {
             New Shortlist
           </Button>
           <Button
-            className="bg-[#9B1B30] hover:bg-[#7A1526] text-white"
+            className="bg-[#9B1B30] hover:bg-[#7A1526] text-white rounded-none"
             onClick={() => router.push('/admin/applications/new')}
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -952,8 +1077,8 @@ export default function AdminApplicationsPage() {
           status/priority join at 5000) — we surface a tiny
           "5000+?" hint on the relevant cards. */}
       {counts && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="rounded-none">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <Card className="rounded-none gap-2 py-4 shadow-none">
             <CardHeader className="pb-2">
               <CardTitle className="text-xs uppercase tracking-wider text-[#4B5563] font-normal">
                 Total in {SOURCE_TABS.find((t) => t.value === activeTab)?.shortLabel}
@@ -961,44 +1086,44 @@ export default function AdminApplicationsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-[#1B2A4A]">{getActiveCount()}</div>
-              <p className="text-xs text-gray-500 mt-0.5">All statuses, all time</p>
+              <p className="text-xs text-gray-500 mt-0.5">All applications</p>
             </CardContent>
           </Card>
-          <Card className="rounded-none">
+          <Card className="rounded-none gap-2 py-4 shadow-none">
             <CardHeader className="pb-2">
               <CardTitle className="text-xs uppercase tracking-wider text-[#4B5563] font-normal">
                 Awaiting Review
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">
+              <div className="text-2xl font-bold text-[#1B2A4A]">
                 {counts.submitted ?? 0}
                 {counts.perStatusCapped && counts.submitted >= 5000 && (
-                  <span className="text-xs text-amber-600 ml-1">5000+?</span>
+                  <span className="text-xs text-[#6B7280] ml-1">5000+?</span>
                 )}
               </div>
-              <p className="text-xs text-gray-500 mt-0.5">Status = Submitted (both taxonomies)</p>
+              <p className="text-xs text-gray-500 mt-0.5">Ready for review</p>
             </CardContent>
           </Card>
-          <Card className="rounded-none">
+          <Card className="rounded-none gap-2 py-4 shadow-none">
             <CardHeader className="pb-2">
               <CardTitle className="text-xs uppercase tracking-wider text-[#4B5563] font-normal">
                 In Review
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">
+              <div className="text-2xl font-bold text-[#1B2A4A]">
                 {counts.inReview ?? 0}
                 {counts.perStatusCapped && counts.inReview >= 5000 && (
-                  <span className="text-xs text-amber-600 ml-1">5000+?</span>
+                  <span className="text-xs text-[#6B7280] ml-1">5000+?</span>
                 )}
               </div>
               <p className="text-xs text-gray-500 mt-0.5">
-                Under Review (student) + In Review (partner)
+                Currently being reviewed
               </p>
             </CardContent>
           </Card>
-          <Card className="rounded-none">
+          <Card className="rounded-none gap-2 py-4 shadow-none">
             <CardHeader className="pb-2">
               <CardTitle className="text-xs uppercase tracking-wider text-[#4B5563] font-normal">
                 Urgent
@@ -1008,10 +1133,10 @@ export default function AdminApplicationsPage() {
               <div className="text-2xl font-bold text-[#9B1B30]">
                 {counts.urgent ?? 0}
                 {counts.perStatusCapped && counts.urgent >= 5000 && (
-                  <span className="text-xs text-amber-600 ml-1">5000+?</span>
+                  <span className="text-xs text-[#6B7280] ml-1">5000+?</span>
                 )}
               </div>
-              <p className="text-xs text-gray-500 mt-0.5">Priority = Urgent or High</p>
+              <p className="text-xs text-gray-500 mt-0.5">High or urgent priority</p>
             </CardContent>
           </Card>
         </div>
@@ -1037,9 +1162,7 @@ export default function AdminApplicationsPage() {
               // Strip the ?intake= from the URL too, so a refresh
               // doesn't re-apply the cohort. replaceState avoids
               // filling the browser back-stack.
-              const url = new URL(window.location.href);
-              url.searchParams.delete('intake');
-              window.history.replaceState({}, '', url.toString());
+              stripIntakeFromUrl();
             }}
           >
             <X size={14} className="mr-1" /> Clear cohort
@@ -1076,173 +1199,188 @@ export default function AdminApplicationsPage() {
 
       {/* Filters + table (only when we have something to show or are loading) */}
       {!error || applications.length > 0 ? (
-        <Card className="rounded-none border-0 shadow-sm">
-          <CardHeader className="pb-3">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <Card className="rounded-none border border-gray-200 shadow-none gap-0 py-0">
+          <CardHeader className="gap-0 p-4 sm:p-5">
+            <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-3 lg:grid-cols-[minmax(0,1fr)_190px_auto]">
+              <div className="relative min-w-0 col-span-2 lg:col-span-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#1B2A4A]" />
                 <Input
-                  placeholder="Search by student name, email, or university..."
+                  aria-label="Search applications"
+                  placeholder="Search name, email, university…"
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
-                  className="rounded-none pl-9"
+                  className="rounded-none pl-9 h-10 border-gray-300"
                 />
               </div>
-              <div className="flex gap-2">
-                <RemoteSearchSelect<{ id: string }>
-                  url="/api/admin/application-options?kind=student" value={studentFilter}
-                  onChange={setStudentFilter} placeholder={t('adminManagement.selectStudent')}
-                  clearValue="all" clearLabel={t('adminManagement.allStudents')}
-                />
-                <Select value={archiveFilter} onValueChange={setArchiveFilter}>
-                  <SelectTrigger className="w-[180px] rounded-none"><SelectValue /></SelectTrigger>
-                  <SelectContent><SelectItem value="active">{t('adminManagement.activeApplications')}</SelectItem><SelectItem value="archived">{t('adminManagement.archivedApplications')}</SelectItem></SelectContent>
-                </Select>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[180px] rounded-none">
-                    <SelectValue placeholder="All Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    {APPLICATION_STATUSES.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {STATUS_DISPLAY[s].label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger aria-label="Application status" className="w-full data-[size=default]:h-10 rounded-none border-gray-300">
+                  <SelectValue placeholder="All statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All statuses</SelectItem>
+                  {APPLICATION_STATUSES.map((s) => (
+                    <SelectItem key={s} value={s}>{STATUS_DISPLAY[s].label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                className="h-10 rounded-none border-gray-300 text-[#1B2A4A]"
+                onClick={() => setShowMoreFilters((open) => !open)}
+                aria-expanded={showMoreFilters}
+                aria-controls="application-more-filters"
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+                More filters
+                {secondaryFilterCount > 0 && (
+                  <span className="bg-[#1B2A4A] px-1.5 text-xs tabular-nums text-white">{secondaryFilterCount}</span>
+                )}
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform motion-reduce:transition-none ${showMoreFilters ? 'rotate-180' : ''}`} />
+              </Button>
+            </div>
+
+            <div id="application-more-filters" hidden={!showMoreFilters}>
+              <div className="mt-4 border-t border-gray-200 pt-4 grid grid-cols-1 sm:grid-cols-[repeat(2,minmax(0,1fr))] xl:grid-cols-[repeat(3,minmax(0,1fr))] gap-4">
+                <div className="flex min-w-0 flex-col gap-1.5">
+                  <span className="text-xs font-medium text-[#4B5563]">Student</span>
+                  <RemoteSearchSelect<{ id: string; name?: string }>
+                    url="/api/admin/application-options?kind=student" value={studentFilter}
+                    onChange={(value, record) => {
+                      setStudentFilter(value);
+                      setStudentFilterName(record?.name ?? '');
+                    }}
+                    placeholder={t('adminManagement.selectStudent')}
+                    clearValue="all" clearLabel={t('adminManagement.allStudents')}
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-medium text-[#4B5563]">Archive</span>
+                  <Select value={archiveFilter} onValueChange={setArchiveFilter}>
+                    <SelectTrigger aria-label="Archive" className="w-full data-[size=default]:h-10 rounded-none border-gray-300">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">{t('adminManagement.activeApplications')}</SelectItem>
+                      <SelectItem value="archived">{t('adminManagement.archivedApplications')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 {/* Phase 107 Batch 4: decision + enrollment dropdowns.
-                    'all' = no filter; the chip below shows the
+                    'all' = no filter; the state line below shows the
                     active state. */}
-                <Select
-                  value={decisionFilter}
-                  onValueChange={(v) => setDecisionFilter(v as 'all' | 'with' | 'without')}
-                >
-                  <SelectTrigger className="w-[160px] rounded-none">
-                    <SelectValue placeholder="All Decisions" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Decisions</SelectItem>
-                    <SelectItem value="with">Has decision</SelectItem>
-                    <SelectItem value="without">No decision yet</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={enrolledFilter}
-                  onValueChange={(v) =>
-                    setEnrolledFilter(v as 'all' | 'enrolled' | 'not-enrolled')
-                  }
-                >
-                  <SelectTrigger className="w-[160px] rounded-none">
-                    <SelectValue placeholder="All Enrollment" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Enrollment</SelectItem>
-                    <SelectItem value="enrolled">Enrolled</SelectItem>
-                    <SelectItem value="not-enrolled">Not enrolled</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-medium text-[#4B5563]">Decision</span>
+                  <Select
+                    value={decisionFilter}
+                    onValueChange={(v) => setDecisionFilter(v as 'all' | 'with' | 'without')}
+                  >
+                    <SelectTrigger aria-label="Decision" className="w-full data-[size=default]:h-10 rounded-none border-gray-300">
+                      <SelectValue placeholder="All Decisions" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Decisions</SelectItem>
+                      <SelectItem value="with">Has decision</SelectItem>
+                      <SelectItem value="without">No decision yet</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-medium text-[#4B5563]">Enrollment</span>
+                  <Select
+                    value={enrolledFilter}
+                    onValueChange={(v) =>
+                      setEnrolledFilter(v as 'all' | 'enrolled' | 'not-enrolled')
+                    }
+                  >
+                    <SelectTrigger aria-label="Enrollment" className="w-full data-[size=default]:h-10 rounded-none border-gray-300">
+                      <SelectValue placeholder="All Enrollment" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Enrollment</SelectItem>
+                      <SelectItem value="enrolled">Enrolled</SelectItem>
+                      <SelectItem value="not-enrolled">Not enrolled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 {/* Phase 145: payment status filter. Apps with
                     'none' payment status (no fee row) are EXCLUDED
                     from every value of this filter — they don't
                     pollute the cohort counts. */}
-                <Select
-                  value={paymentFilter}
-                  onValueChange={(v) =>
-                    setPaymentFilter(v as 'all' | ApplicationPaymentStatus)
-                  }
-                >
-                  <SelectTrigger className="w-[160px] rounded-none">
-                    <SelectValue placeholder="All Payments" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Payments</SelectItem>
-                    {(['paid', 'partial', 'unpaid', 'overdue'] as ApplicationPaymentStatus[]).map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {APPLICATION_PAYMENT_STATUS_DISPLAY[s].label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-medium text-[#4B5563]">Payment</span>
+                  <Select
+                    value={paymentFilter}
+                    onValueChange={(v) =>
+                      setPaymentFilter(v as 'all' | ApplicationPaymentStatus)
+                    }
+                  >
+                    <SelectTrigger aria-label="Payment" className="w-full data-[size=default]:h-10 rounded-none border-gray-300">
+                      <SelectValue placeholder="All Payments" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Payments</SelectItem>
+                      {(['paid', 'partial', 'unpaid', 'overdue'] as ApplicationPaymentStatus[]).map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {APPLICATION_PAYMENT_STATUS_DISPLAY[s].label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 {/* Phase 182: offline-channel filter — orthogonal to
                     paymentFilter so an app can be Paid + Offline pay. */}
-                <Select
-                  value={paymentChannelFilter}
-                  onValueChange={(v) =>
-                    setPaymentChannelFilter(v as 'all' | 'offline')
-                  }
-                >
-                  <SelectTrigger className="w-[160px] rounded-none">
-                    <SelectValue placeholder={t('adminApps.filterAllChannels')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{t('adminApps.filterAllChannels')}</SelectItem>
-                    <SelectItem value="offline">{t('adminApps.filterOfflinePay')}</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-medium text-[#4B5563]">Channel</span>
+                  <Select
+                    value={paymentChannelFilter}
+                    onValueChange={(v) =>
+                      setPaymentChannelFilter(v as 'all' | 'offline')
+                    }
+                  >
+                    <SelectTrigger aria-label="Channel" className="w-full data-[size=default]:h-10 rounded-none border-gray-300">
+                      <SelectValue placeholder={t('adminApps.filterAllChannels')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t('adminApps.filterAllChannels')}</SelectItem>
+                      <SelectItem value="offline">{t('adminApps.filterOfflinePay')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
-            {/* Phase 107 Batch 4: decision + enrollment filter chips.
-                Each chip is a toggle button; clicking the active
-                chip resets to 'all'. The chips mirror the existing
-                cohort pill UX (visible when non-default). */}
-            {(decisionFilter !== 'all' || enrolledFilter !== 'all' || paymentFilter !== 'all' || paymentChannelFilter !== 'all') && (
-              <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-gray-100">
-                {decisionFilter !== 'all' && (
-                  <span className="inline-flex items-center gap-1 bg-blue-50 border border-blue-200 px-2.5 py-1 text-xs text-blue-800">
-                    {decisionFilter === 'with' ? 'Has decision' : 'No decision yet'}
-                    <button
-                      onClick={() => setDecisionFilter('all')}
-                      className="ml-1 text-blue-700 hover:text-blue-900"
-                      aria-label="Clear decision filter"
-                    >
-                      <X size={12} />
-                    </button>
-                  </span>
-                )}
-                {enrolledFilter !== 'all' && (
-                  <span className="inline-flex items-center gap-1 bg-green-50 border border-green-200 px-2.5 py-1 text-xs text-green-800">
-                    {enrolledFilter === 'enrolled' ? 'Enrolled' : 'Not enrolled'}
-                    <button
-                      onClick={() => setEnrolledFilter('all')}
-                      className="ml-1 text-green-700 hover:text-green-900"
-                      aria-label="Clear enrollment filter"
-                    >
-                      <X size={12} />
-                    </button>
-                  </span>
-                )}
-                {paymentFilter !== 'all' && (
-                  <span
-                    className={`inline-flex items-center gap-1 ${
-                      APPLICATION_PAYMENT_STATUS_DISPLAY[paymentFilter].chipColor
-                    } px-2.5 py-1 text-xs`}
-                  >
-                    Payment: {APPLICATION_PAYMENT_STATUS_DISPLAY[paymentFilter].label}
-                    <button
-                      onClick={() => setPaymentFilter('all')}
-                      className="ml-1 opacity-70 hover:opacity-100"
-                      aria-label="Clear payment filter"
-                    >
-                      <X size={12} />
-                    </button>
-                  </span>
-                )}
-                {paymentChannelFilter !== 'all' && (
-                  <span className="inline-flex items-center gap-1 bg-amber-50 border border-amber-200 px-2.5 py-1 text-xs text-amber-800">
-                    {t('adminApps.filterOfflinePay')}
-                    <button
-                      onClick={() => setPaymentChannelFilter('all')}
-                      className="ml-1 text-amber-700 hover:text-amber-900"
-                      aria-label={t('adminApps.clearOfflinePayFilter')}
-                    >
-                      <X size={12} />
-                    </button>
-                  </span>
-                )}
-              </div>
-            )}
           </CardHeader>
+
+          {/* Applied filters remain visible when the extra controls close. */}
+          {filterTokens.length > 0 && <div className="flex flex-wrap items-center gap-x-2 gap-y-2 bg-[#F3F4F6] border-y border-gray-200 px-6 py-2 text-xs">
+            <span className="text-[#6B7280]">
+              {filterTokens.length} filter{filterTokens.length === 1 ? '' : 's'} applied
+            </span>
+            {filterTokens.map((token) => (
+              <span
+                key={token.key}
+                className="inline-flex items-center gap-1.5 border border-gray-300 bg-white px-2 py-0.5"
+              >
+                <span className="text-[#6B7280]">{token.name}</span>
+                {token.value && <span className="font-medium text-[#1B2A4A]">{token.value}</span>}
+                <button
+                  type="button"
+                  onClick={token.clear}
+                  aria-label={`Clear ${token.name.toLowerCase()} filter`}
+                  className="text-[#6B7280] hover:text-[#9B1B30] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1B2A4A]"
+                >
+                  <X size={12} />
+                </button>
+              </span>
+            ))}
+            <button
+              type="button"
+              onClick={clearAllFilters}
+              disabled={filterTokens.length === 0}
+              className="ml-auto text-[#1B2A4A] underline underline-offset-2 hover:text-[#9B1B30] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1B2A4A] disabled:text-[#9CA3AF] disabled:no-underline disabled:cursor-default"
+            >
+              Clear all
+            </button>
+          </div>}
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               {viewMode === 'flat' ? (
@@ -1360,25 +1498,8 @@ export default function AdminApplicationsPage() {
                               variant="outline"
                               size="sm"
                               className="mt-3 rounded-none"
-                              disabled={
-                                !searchInput &&
-                                statusFilter === 'all' &&
-                                studentFilter === 'all' &&
-                                !intakeFilter
-                              }
-                              onClick={() => {
-                                setSearchInput('');
-                                setSearchQuery('');
-                                setStatusFilter('all');
-                                setStudentFilter('all');
-                                setIntakeFilter(null);
-                                // Strip the ?intake= from the URL too
-                                if (typeof window !== 'undefined') {
-                                  const url = new URL(window.location.href);
-                                  url.searchParams.delete('intake');
-                                  window.history.replaceState({}, '', url.toString());
-                                }
-                              }}
+                              disabled={filterTokens.length === 0}
+                              onClick={clearAllFilters}
                             >
                               <X size={14} className="mr-1" /> Reset filters
                             </Button>
@@ -1663,6 +1784,8 @@ export default function AdminApplicationsPage() {
                   onOpenRow={handleOpenRow}
                   onSetStatus={handleSetTargetStatus}
                   settingStatusFor={settingStatusFor}
+                  onResetFilters={clearAllFilters}
+                  hasActiveFilters={filterTokens.length > 0}
                   onAddTarget={(campaignId) =>
                     router.push(`/admin/applications/shortlist?campaign=${campaignId}`)
                   }

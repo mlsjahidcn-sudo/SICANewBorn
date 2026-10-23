@@ -27,6 +27,11 @@ export interface AdminApplicationRow extends AdminApplication {
   partnerDecision?: string | null;
   partnerOrgId?: string | null;
   partnerOrgName?: string | null;
+  /** partner_applications.student_id → partner_students.id. The
+   *  partner-side identity, used to group a partner student's
+   *  applications together. Distinct from `studentId`, which points
+   *  at student_profiles.id. */
+  partnerStudentId?: string | null;
 }
 interface StudentRow extends RawApp {
   archived_at?: string | null;
@@ -34,6 +39,9 @@ interface StudentRow extends RawApp {
 }
 interface PartnerRow {
   id: string; linked_student_profile_id: string | null; partner_id: string;
+  /** FK to partner_students.id — the partner's own record of the
+   *  student this application is for. */
+  student_id: string | null;
   student_name: string; student_email: string; student_phone: string;
   nationality: string; date_of_birth: string; passport_number: string;
   university: string; program: string; degree: string; intake: string;
@@ -77,6 +85,7 @@ export async function loadAdminApplications(service: SupabaseClient): Promise<Ad
       priority: row.priority, campaignId: null, campaignRole: null, timelineVisibleToStudent: false,
       partnerPriority: row.priority, partnerDecision: row.decision,
       partnerOrgId: row.partner_id, partnerOrgName: row.partner?.company_name || null,
+      partnerStudentId: row.student_id ?? null,
       archivedAt: row.archived_at, payment: emptyPaymentAggregate(),
     })),
   ];

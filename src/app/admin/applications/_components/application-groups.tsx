@@ -10,16 +10,18 @@
  * export live inside that table and stay untouched.
  *
  * That is the whole regression strategy. The plan's risk table flags
- * "grouped view regresses flat-mode bulk/CSV" as Medium likelihood, and
- * the mitigation was "flat stays the default; grouped is additive". The
- * cheapest way to honour that is to never let the two modes share code.
+ * "grouped view regresses flat-mode bulk/CSV" as Medium likelihood.
+ * Both modes keep their own rendering and actions; grouped now opens
+ * by default so the student overview is visible on arrival.
  *
  * ── What it does show ───────────────────────────────────────────────
  * A campaign collapses to one parent row: the student, the N targets
  * with their individual statuses, and a per-target status dropdown.
- * Legacy rows with no campaign_id group by student instead, which is
- * always accurate — two applications for one student ARE that student's
- * list of schools.
+ * Rows with no campaign_id fall back to the strongest identity they
+ * carry — an admin student profile, a partner-side student, then the
+ * applicant email. partner_applications has no campaign_id column at
+ * all, so before that fallback existed every unbridged partner row
+ * rendered as its own "Single" card.
  *
  * ── The safety story ────────────────────────────────────────────────
  * A status change here PATCHes exactly one application id — the row
@@ -28,11 +30,11 @@
  * what an advisor means, and an accidental group-wide update would be
  * the worst bug this feature could have.
  *
- * Copy is inline English, matching the surrounding page (Phase 176
- * notes this file is a stopgap; the admin list's own copy is un-localised).
+ * Copy is inline English, like most of the surrounding admin page
+ * (the admin list is only partially localized).
  */
 import { useMemo, useState } from 'react';
-import { ChevronDown, ChevronRight, Layers, Plus, Users } from 'lucide-react';
+import { AtSign, Building2, ChevronDown, ChevronRight, FileText, Layers, Plus, Users, X, type LucideIcon } from 'lucide-react';
 import {
   ALLOWED_STUDENT_STATUSES,
   ALLOWED_PARTNER_STATUSES,
@@ -41,7 +43,9 @@ import {
 import {
   groupApplications,
   collapsibleCount,
+  groupedRowCount,
   type GroupableApplication,
+  type GroupKind,
 } from '@/lib/application-grouping';
 
 interface RowApp extends GroupableApplication {
@@ -57,6 +61,13 @@ export interface ApplicationGroupsProps {
   onOpenRow: (app: { id: string; surface: string }) => void;
   onSetStatus: (id: string, status: string, surface: 'student' | 'partner') => void;
   settingStatusFor: string | null;
+  /** Clear every filter. The grouped view's empty state offers the
+   *  same reset the flat table offers, so an empty result is one
+   *  click from a full list in either view mode. */
+  onResetFilters: () => void;
+  /** Whether any filter is applied — the reset stays disabled when
+   *  the list is empty for a different reason. */
+  hasActiveFilters: boolean;
   /** Phase 180: open the shortlist builder in append mode for an
    *  existing campaign. Routed through the page rather than handled
    *  here, because target picking needs the full candidate browser —
@@ -83,11 +94,24 @@ const ROLE_COLOR: Record<string, string> = {
   Safety: 'border-[#4B5563] text-[#4B5563]',
 };
 
+/** What each kind of group actually is, in the words the admin would
+ *  use. "Student" is wrong for a partner-side group and "Shortlist" is
+ *  wrong for anything the shortlist builder didn't create. */
+const GROUP_META: Record<GroupKind, { label: string; Icon: LucideIcon }> = {
+  campaign: { label: 'Shortlist', Icon: Layers },
+  student: { label: 'Student', Icon: Users },
+  partner: { label: 'Partner', Icon: Building2 },
+  applicant: { label: 'Applicant', Icon: AtSign },
+  single: { label: 'Single', Icon: FileText },
+};
+
 export default function ApplicationGroups({
   applications,
   onOpenRow,
   onSetStatus,
   settingStatusFor,
+  onResetFilters,
+  hasActiveFilters,
   onAddTarget,
 }: ApplicationGroupsProps) {
   const groups = useMemo(() => groupApplications(applications), [applications]);
@@ -106,28 +130,37 @@ export default function ApplicationGroups({
   if (applications.length === 0) {
     return (
       <div className="px-6 py-12 text-center text-[#4B5563] text-sm">
-        No applications match your current filters.
+        <p>No applications match your current filters.</p>
+        <button
+          type="button"
+          onClick={onResetFilters}
+          disabled={!hasActiveFilters}
+          className="mt-3 inline-flex items-center gap-1 text-xs text-[#1B2A4A] underline underline-offset-2 hover:text-[#9B1B30] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1B2A4A] disabled:text-[#9CA3AF] disabled:no-underline disabled:cursor-default"
+        >
+          <X size={12} /> Reset filters
+        </button>
       </div>
     );
   }
 
-  const shortlists = collapsibleCount(groups);
+  const groupCount = collapsibleCount(groups);
+  const groupedApplications = groupedRowCount(groups);
 
   return (
     <div className="w-full">
-      <div className="px-4 py-2 bg-[#F3F4F6] border-b border-gray-200 flex items-center gap-2 text-xs text-[#4B5563]">
-        <Layers className="w-3.5 h-3.5" />
-        {shortlists === 0 ? (
+      <div className="px-4 sm:px-5 py-3 bg-[#FAFAF8] border-y border-gray-200 flex flex-wrap items-center gap-2 text-xs text-[#4B5563]">
+        <Layers className="w-3.5 h-3.5 text-[#1B2A4A]" />
+        {groupCount === 0 ? (
           <span>
-            No shortlists on this page — every application is its own group. Shortlists
-            appear once you create one.
+            {applications.length} application{applications.length === 1 ? '' : 's'} on this page
           </span>
         ) : (
           <span>
-            {shortlists} shortlist{shortlists === 1 ? '' : 's'} from {applications.length}{' '}
-            application{applications.length === 1 ? '' : 's'} on this page
+            {groupCount} group{groupCount === 1 ? '' : 's'} · {groupedApplications} of{' '}
+            {applications.length} application{applications.length === 1 ? '' : 's'} grouped
           </span>
         )}
+        {groupCount > 0 && <span className="ml-auto text-[#6B7280]">Expand a student to see applications</span>}
       </div>
 
       <ul>
@@ -136,17 +169,24 @@ export default function ApplicationGroups({
           const first = group.items[0] as RowApp;
           const multi = group.kind !== 'single';
           const mixed = group.items.length > 1 && !group.uniformStatus;
+          const groupMeta = GROUP_META[group.kind];
+          const intakes = [...new Set(group.items.map((item) => (item as RowApp).intake).filter(Boolean))];
 
           return (
             <li key={group.key} className="border-b border-gray-200">
-              <div className="flex items-start gap-3 px-4 py-3 bg-white hover:bg-[#FAFAF8]">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-4 bg-white hover:bg-[#FAFAF8] transition-colors">
                 {multi ? (
                   <button
                     type="button"
                     onClick={() => toggle(group.key)}
                     aria-expanded={isExpanded}
-                    aria-label={isExpanded ? 'Collapse shortlist' : 'Expand shortlist'}
-                    className="mt-0.5 text-[#1B2A4A] shrink-0"
+                    aria-label={
+                      isExpanded
+                        ? `Collapse ${groupMeta.label.toLowerCase()} for ${first.studentName}`
+                        : `Expand ${groupMeta.label.toLowerCase()} for ${first.studentName}`
+                    }
+                    aria-controls={`application-group-${group.key}`}
+                    className="text-[#1B2A4A] shrink-0 p-1 -m-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1B2A4A]"
                   >
                     {isExpanded ? (
                       <ChevronDown className="w-4 h-4" />
@@ -158,32 +198,30 @@ export default function ApplicationGroups({
                   <span className="w-4 shrink-0" />
                 )}
 
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 basis-[12rem]">
                   {/* Parent header */}
                   <div className="flex flex-wrap items-center gap-2">
                     {multi ? (
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium border border-[#9B1B30] text-[#9B1B30]">
-                        {group.kind === 'campaign' ? (
-                          <Layers className="w-3 h-3" />
-                        ) : (
-                          <Users className="w-3 h-3" />
-                        )}
-                        {group.kind === 'campaign' ? 'Shortlist' : 'Student'}
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium border border-gray-200 text-[#4B5563]">
+                        <groupMeta.Icon className="w-3 h-3 text-[#1B2A4A]" />
+                        {groupMeta.label}
                       </span>
                     ) : (
                       <span className="text-[10px] text-[#6B7280] uppercase tracking-wide">
-                        Single
+                        Application
                       </span>
                     )}
                     <button
                       type="button"
-                      onClick={() => onOpenRow(first)}
-                      className="font-semibold text-[#1B2A4A] hover:underline text-left"
+                      onClick={() => multi ? toggle(group.key) : onOpenRow(first)}
+                      aria-expanded={multi ? isExpanded : undefined}
+                      aria-controls={multi ? `application-group-${group.key}` : undefined}
+                      className="font-semibold text-[#1B2A4A] hover:underline text-left break-words focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1B2A4A]"
                     >
                       {first.studentName}
                     </button>
-                    {first.intake && (
-                      <span className="text-xs text-[#6B7280]">{first.intake}</span>
+                    {intakes.length > 0 && (
+                      <span className="text-xs text-[#6B7280]">{intakes.length === 1 ? intakes[0] : `${intakes.length} intakes`}</span>
                     )}
                   </div>
 
@@ -207,7 +245,7 @@ export default function ApplicationGroups({
                 {/* Aggregate status. "Mixed" is honest — an advisor
                     looking at a 3-school shortlist needs to know the
                     schools are at different stages. */}
-                <div className="shrink-0 flex items-center gap-2">
+                <div className="ml-7 sm:ml-auto flex flex-wrap items-center gap-2">
                   {group.uniformStatus ? (
                     <span
                       className={`px-2 py-0.5 text-xs border ${statusColorClass(group.uniformStatus)}`}
@@ -220,14 +258,16 @@ export default function ApplicationGroups({
                     </span>
                   ) : null}
                   <span className="text-xs text-[#6B7280]">
-                    {group.items.length} target{group.items.length === 1 ? '' : 's'}
+                    {group.kind === 'campaign'
+                      ? `${group.items.length} target${group.items.length === 1 ? '' : 's'}`
+                      : `${group.items.length} application${group.items.length === 1 ? '' : 's'}`}
                   </span>
                 </div>
               </div>
 
               {/* Expanded targets */}
               {multi && isExpanded && (
-                <ul className="bg-[#FAFAF8] border-t border-gray-100">
+                <ul id={`application-group-${group.key}`} className="bg-[#FAFAF8] border-t border-gray-100">
                   {group.items.map((item) => {
                     const row = item as RowApp;
                     const busy = settingStatusFor === `${row.surface}:${row.id}`;
@@ -236,6 +276,11 @@ export default function ApplicationGroups({
                         key={`${row.surface}:${row.id}`}
                         className="flex flex-wrap items-center gap-3 px-4 py-2 pl-11 border-b border-gray-100 last:border-b-0"
                       >
+                        {row.surface === 'partner' && group.kind !== 'partner' && (
+                          <span className="px-1.5 py-0.5 text-[10px] uppercase tracking-wide border border-gray-300 text-[#6B7280]">
+                            Partner CRM
+                          </span>
+                        )}
                         {row.campaignRole && ROLE_LABEL[row.campaignRole] && (
                           <span
                             className={`px-1.5 py-0.5 text-[10px] border ${ROLE_COLOR[row.campaignRole]}`}
@@ -255,6 +300,9 @@ export default function ApplicationGroups({
                             {row.program}
                             {row.degree ? ` • ${row.degree}` : ''}
                           </span>
+                          <div className="mt-0.5 text-xs text-[#6B7280]">
+                            {[row.intake, row.applicationNumber].filter(Boolean).join(' · ')}
+                          </div>
                         </div>
 
                         {/* Per-target quick status. This is the ONLY

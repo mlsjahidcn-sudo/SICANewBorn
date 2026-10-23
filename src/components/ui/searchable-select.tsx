@@ -68,6 +68,13 @@ export interface SearchableSelectProps {
   searchValue?: string;
   /** Portal target. Pass a node inside an open dialog so the list stays clickable. */
   container?: HTMLElement | null;
+  /**
+   * Extra content pinned below the option list, inside the popover. Used by
+   * remote pickers for pagination and error/retry affordances so they stay
+   * attached to the open list instead of taking layout space in the parent
+   * (a filter bar cell would otherwise grow a link under the trigger).
+   */
+  footer?: React.ReactNode;
 }
 
 export function SearchableSelect({
@@ -85,6 +92,7 @@ export function SearchableSelect({
   onSearchChange,
   searchValue,
   container,
+  footer,
 }: SearchableSelectProps) {
   const [open, setOpen] = React.useState(false);
   const selected = options.find((o) => o.value === value);
@@ -214,6 +222,9 @@ export function SearchableSelect({
             </CommandGroup>
           </CommandList>
         </Command>
+        {footer && (
+          <div className="border-t border-gray-200 px-3 py-2 text-xs">{footer}</div>
+        )}
       </PopoverContent>
     </Popover>
   );
