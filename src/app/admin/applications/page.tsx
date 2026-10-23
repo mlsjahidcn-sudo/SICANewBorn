@@ -32,6 +32,7 @@ import {
   type StudentFeePaymentChannel,
 } from '@/lib/student-fee-mapper';
 import ApplicationGroups from './_components/application-groups';
+import { groupApplications } from '@/lib/application-grouping';
 import { useI18n } from '@/lib/i18n';
 
 interface Application {
@@ -39,6 +40,9 @@ interface Application {
   studentId: string | null;
   studentName: string;
   studentEmail: string;
+  partnerStudentId?: string | null;
+  campaignId?: string | null;
+  campaignRole?: string | null;
   university: string;
   program: string;
   degree: string;
@@ -533,12 +537,19 @@ export default function AdminApplicationsPage() {
           ? body.error : 'Failed to delete application';
         throw new Error(message);
       }
-      setApplications((prev) => prev.filter((a) => a.id !== applicationToDelete.id));
-      setTotal((prev) => Math.max(0, prev - 1));
+      const remaining = applications.filter((a) => applicationKey(a) !== applicationKey(applicationToDelete));
+      const removedCount = viewMode === 'grouped'
+        ? groupApplications(applications).length - groupApplications(remaining).length
+        : 1;
+      const nextTotal = Math.max(0, total - removedCount);
+      setApplications(remaining);
+      setTotal(nextTotal);
+      setPage((current) => Math.min(current, Math.max(1, Math.ceil(nextTotal / PAGE_SIZE))));
       setDeleteDialogOpen(false);
       setApplicationToDelete(null);
       // Refresh counts since one just got removed
       fetchCounts();
+      setRetryNonce((n) => n + 1);
     } catch (err) {
       setDeleteError(err instanceof Error ? err.message : 'Failed to delete application');
     } finally {
@@ -1766,7 +1777,7 @@ export default function AdminApplicationsPage() {
                                     onClick={() => handleDelete(application)}
                                   >
                                     <Trash2 className="w-4 h-4 mr-2" />
-                                    {application.archivedAt ? t('adminManagement.restore') : t('adminManagement.archive')}
+                                    {application.archivedAt ? 'Restore application' : 'Delete application'}
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
@@ -1782,6 +1793,11 @@ export default function AdminApplicationsPage() {
                 <ApplicationGroups
                   applications={filteredApplications}
                   onOpenRow={handleOpenRow}
+                  onDeleteRow={(row) => {
+                    const application = applications.find((item) => applicationKey(item) === applicationKey(row));
+                    if (application) handleDelete(application);
+                  }}
+                  deletingKey={isDeleting && applicationToDelete ? applicationKey(applicationToDelete) : null}
                   onSetStatus={handleSetTargetStatus}
                   settingStatusFor={settingStatusFor}
                   onResetFilters={clearAllFilters}
@@ -1828,20 +1844,28 @@ export default function AdminApplicationsPage() {
       {exportWarning && <p role="status" className="text-amber-800">{exportWarning}</p>}
       {(paymentFilter !== 'all' || paymentChannelFilter !== 'all' || enrolledFilter !== 'all') && <p className="text-sm text-gray-600">{t('adminManagement.studentOnlyFilters')}</p>}
       {/* Delete dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <Dialog open={deleteDialogOpen} onOpenChange={(open) => { if (!isDeleting) setDeleteDialogOpen(open); }}>
         <DialogContent className="rounded-none max-w-md">
           <DialogHeader>
-            <DialogTitle>{applicationToDelete?.archivedAt ? t('adminManagement.restore') : t('adminManagement.archive')}</DialogTitle>
+            <DialogTitle>{applicationToDelete?.archivedAt ? 'Restore application' : 'Delete application'}</DialogTitle>
             <DialogDescription>
-              {t('adminManagement.archiveHint')} {applicationToDelete?.studentName}
+              {applicationToDelete?.archivedAt
+                ? 'Return this application to the current applications list.'
+                : 'Move this application to Archived applications? You can restore it later.'}
             </DialogDescription>
           </DialogHeader>
+          {applicationToDelete && <div className="border border-gray-200 bg-[#FAFAF8] p-3 text-sm">
+            <p className="font-semibold text-[#1B2A4A]">{applicationToDelete.studentName}</p>
+            <p>{applicationToDelete.university} · {applicationToDelete.program}</p>
+            <p className="mt-1 text-xs text-gray-600">{[applicationToDelete.intake, applicationToDelete.applicationNumber].filter(Boolean).join(' · ')}</p>
+          </div>}
           {deleteError && <p role="alert" className="text-sm text-red-700">{deleteError}</p>}
           <DialogFooter>
             <Button
               variant="ghost"
               className="rounded-none"
               onClick={() => setDeleteDialogOpen(false)}
+              disabled={isDeleting}
             >
               Cancel
             </Button>
@@ -1850,7 +1874,7 @@ export default function AdminApplicationsPage() {
               onClick={confirmDelete}
               disabled={isDeleting}
             >
-              {isDeleting ? <Spinner size="sm" /> : applicationToDelete?.archivedAt ? t('adminManagement.restore') : t('adminManagement.archive')}
+              {isDeleting ? <><Spinner size="sm" /> Saving…</> : applicationToDelete?.archivedAt ? 'Restore application' : 'Delete application'}
             </Button>
           </DialogFooter>
         </DialogContent>

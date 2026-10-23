@@ -34,7 +34,8 @@
  * (the admin list is only partially localized).
  */
 import { useMemo, useState } from 'react';
-import { AtSign, Building2, ChevronDown, ChevronRight, FileText, Layers, Plus, Users, X, type LucideIcon } from 'lucide-react';
+import { AtSign, Building2, ChevronDown, ChevronRight, FileText, Layers, Plus, RotateCcw, Trash2, Users, X, type LucideIcon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import {
   ALLOWED_STUDENT_STATUSES,
   ALLOWED_PARTNER_STATUSES,
@@ -54,11 +55,14 @@ interface RowApp extends GroupableApplication {
   degree: string;
   intake: string;
   applicationNumber?: string;
+  archivedAt?: string | null;
 }
 
 export interface ApplicationGroupsProps {
   applications: RowApp[];
   onOpenRow: (app: { id: string; surface: string }) => void;
+  onDeleteRow: (app: { id: string; surface: 'student' | 'partner' }) => void;
+  deletingKey: string | null;
   onSetStatus: (id: string, status: string, surface: 'student' | 'partner') => void;
   settingStatusFor: string | null;
   /** Clear every filter. The grouped view's empty state offers the
@@ -108,6 +112,8 @@ const GROUP_META: Record<GroupKind, { label: string; Icon: LucideIcon }> = {
 export default function ApplicationGroups({
   applications,
   onOpenRow,
+  onDeleteRow,
+  deletingKey,
   onSetStatus,
   settingStatusFor,
   onResetFilters,
@@ -126,6 +132,21 @@ export default function ApplicationGroups({
       else next.add(key);
       return next;
     });
+
+  const renderDeleteAction = (row: RowApp): React.ReactNode => (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      className="rounded-none text-[#9B1B30] hover:bg-[#9B1B30]/5 hover:text-[#9B1B30]"
+      disabled={deletingKey === `${row.surface}:${row.id}`}
+      aria-label={`${row.archivedAt ? 'Restore' : 'Delete'} application for ${row.studentName} — ${row.university}, ${row.program}, ${row.intake}`}
+      onClick={() => onDeleteRow(row)}
+    >
+      {row.archivedAt ? <RotateCcw className="w-4 h-4 text-[#1B2A4A]" /> : <Trash2 className="w-4 h-4 text-[#1B2A4A]" />}
+      {row.archivedAt ? 'Restore' : 'Delete'}
+    </Button>
+  );
 
   if (applications.length === 0) {
     return (
@@ -262,6 +283,7 @@ export default function ApplicationGroups({
                       ? `${group.items.length} target${group.items.length === 1 ? '' : 's'}`
                       : `${group.items.length} application${group.items.length === 1 ? '' : 's'}`}
                   </span>
+                  {group.items.length === 1 && !isExpanded && renderDeleteAction(first)}
                 </div>
               </div>
 
@@ -270,7 +292,7 @@ export default function ApplicationGroups({
                 <ul id={`application-group-${group.key}`} className="bg-[#FAFAF8] border-t border-gray-100">
                   {group.items.map((item) => {
                     const row = item as RowApp;
-                    const busy = settingStatusFor === `${row.surface}:${row.id}`;
+                    const busy = settingStatusFor === `${row.surface}:${row.id}` || deletingKey === `${row.surface}:${row.id}`;
                     return (
                       <li
                         key={`${row.surface}:${row.id}`}
@@ -305,9 +327,7 @@ export default function ApplicationGroups({
                           </div>
                         </div>
 
-                        {/* Per-target quick status. This is the ONLY
-                            write action in the grouped view and it
-                            always targets exactly one id. */}
+                        {/* Each action targets one application, never its entire group. */}
                         <select
                           value={row.status}
                           disabled={busy}
@@ -321,6 +341,7 @@ export default function ApplicationGroups({
                             </option>
                           ))}
                         </select>
+                        {renderDeleteAction(row)}
                       </li>
                     );
                   })}

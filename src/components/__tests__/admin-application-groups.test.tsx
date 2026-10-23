@@ -18,6 +18,8 @@ const renderGroups = (props: Partial<React.ComponentProps<typeof ApplicationGrou
     <ApplicationGroups
       applications={applications}
       onOpenRow={vi.fn()}
+      onDeleteRow={vi.fn()}
+      deletingKey={null}
       onSetStatus={vi.fn()}
       settingStatusFor={null}
       onResetFilters={vi.fn()}
@@ -64,5 +66,20 @@ describe('grouped application actions', () => {
     renderGroups({ applications: [], onResetFilters, hasActiveFilters: true });
     fireEvent.click(screen.getByRole('button', { name: /Reset filters/ }));
     expect(onResetFilters).toHaveBeenCalled();
+  });
+  it('deletes exactly the selected application from a mixed-surface group', () => {
+    const onDeleteRow = vi.fn();
+    renderGroups({ onDeleteRow });
+    expect(screen.queryByRole('button', { name: /^Delete application/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Expand student for Amina' }));
+    fireEvent.click(screen.getByRole('button', { name: /Delete application.*Partner University/ }));
+    expect(onDeleteRow).toHaveBeenCalledOnce();
+    expect(onDeleteRow).toHaveBeenCalledWith(expect.objectContaining({ id: 'p1', surface: 'partner' }));
+  });
+  it('offers delete on a collapsed single application and restore on an archived one', () => {
+    const onDeleteRow = vi.fn();
+    renderGroups({ applications: [{ ...applications[0], archivedAt: '2026-10-23' }], onDeleteRow });
+    fireEvent.click(screen.getByRole('button', { name: /^Restore application/ }));
+    expect(onDeleteRow).toHaveBeenCalledWith(expect.objectContaining({ id: 's1', surface: 'student' }));
   });
 });
