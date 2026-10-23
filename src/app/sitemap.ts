@@ -79,6 +79,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/about`, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${SITE_URL}/contact`, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${SITE_URL}/assessment`, changeFrequency: 'monthly', priority: 0.6 },
+    // G3 (2026-10-18): public application form — conversion surface
+    // that was live but missing from the sitemap. Priority matches
+    // /assessment (both are commit-level intake funnels).
+    { url: `${SITE_URL}/apply`, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${SITE_URL}/success-stories`, changeFrequency: 'monthly', priority: 0.6 },
     // Phase A+B (footer audit): the footer linked Privacy Policy +
     // Terms of Use as `href="#"` — dead links that the newsletter's

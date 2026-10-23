@@ -29,6 +29,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { Guide, GuideBlock } from '@/lib/guides/types';
+import { resolveGuideDates } from '@/lib/guides/guide-dates';
+import { getServerLocale } from '@/lib/server-t';
 import { SITE_URL } from '@/lib/site-url';
 import { ConsultationCta } from '@/components/ConsultationCta';
 import {
@@ -258,7 +260,7 @@ export interface GuidePageProps {
  * so search engines, ChatGPT, Perplexity, and Gemini can extract the
  * FAQ answers, step lists, and metadata in a single hop.
  */
-export function GuidePage({
+export async function GuidePage({
   guide,
   pathSegment,
   urlPath,
@@ -269,6 +271,16 @@ export function GuidePage({
 }: GuidePageProps) {
   const url = `${SITE_URL}${urlPath ?? `/guides/${pathSegment}`}`;
   const resolvedUrlPath = urlPath ?? `/guides/${pathSegment}`;
+
+  // G1: Article.inLanguage must match the cookie locale so zh visitors
+  // don't get English-labelled JSON-LD. Schema.org uses BCP-47 tags.
+  const locale = await getServerLocale();
+  const inLanguage = locale === 'zh' ? 'zh-CN' : 'en';
+
+  // G2: real dates from the guide object (preferred) or the git-derived
+  // slug map. Never invent "today" — see Guide.publishedAt docs.
+  const dates = resolveGuideDates(guide);
+  const visibleDate = dates.updatedAt ?? dates.publishedAt;
 
   // Phase 146: breadcrumb segments. Always end with the current page.
   const crumbs = breadcrumbSegments(resolvedUrlPath);
@@ -310,10 +322,11 @@ export function GuidePage({
     // publication day, and `new Date()` made every guide claim it was
     // edited on every build. datePublished is recommended, not required,
     // by Google's Article spec — so omitting it costs a soft signal,
-    // while inventing it is a false claim.
-    ...(guide.publishedAt ? { datePublished: guide.publishedAt } : {}),
-    ...(guide.updatedAt ? { dateModified: guide.updatedAt } : {}),
-    inLanguage: 'en',
+    // while inventing it is a false claim. G2 fills most guides via
+    // resolveGuideDates (git first/last commit); guide fields still win.
+    ...(dates.publishedAt ? { datePublished: dates.publishedAt } : {}),
+    ...(dates.updatedAt ? { dateModified: dates.updatedAt } : {}),
+    inLanguage,
     mainEntityOfPage: { '@type': 'WebPage', '@id': url },
   };
 
@@ -321,6 +334,7 @@ export function GuidePage({
   const faqSchema = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
+    inLanguage,
     mainEntity: guide.faqs.map((f) => ({
       '@type': 'Question',
       name: f.q,
@@ -335,6 +349,7 @@ export function GuidePage({
     '@type': 'HowTo',
     name: guide.title,
     description: guide.description,
+    inLanguage,
     totalTime: 'PT30M',
     step: guide.howToSteps.map((s, i) => ({
       '@type': 'HowToStep',
@@ -443,10 +458,13 @@ export function GuidePage({
             {/* Last-updated timestamp. Visible to both users and LLM
                 crawlers (dateModified is already in the Article JSON-LD;
                 a visible date reinforces freshness for human readers
-                and gives GEO/AEO engines a clear signal). */}
-            <p className="mt-3 text-xs text-gray-400">
-              Last updated: {new Date().toISOString().slice(0, 10)}
-            </p>
+                and gives GEO/AEO engines a clear signal). G2: only
+                render when we have a real date — never stamp "today". */}
+            {visibleDate ? (
+              <p className="mt-3 text-xs text-gray-400">
+                Last updated: {visibleDate}
+              </p>
+            ) : null}
           </div>
 
           {/* Hero stats — at-a-glance numbers near the top, also useful
