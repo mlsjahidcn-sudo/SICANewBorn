@@ -3,7 +3,7 @@ import { createHash } from 'crypto';
 import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
 import { checkPublicRateLimit, isHoneypotFilled } from '@/lib/rate-limit';
 import { sendWebinarConfirmation } from '@/lib/email';
-import { formatWebinarDate, WEBINAR_CONFIG } from '@/lib/webinar-config';
+import { formatWebinarDate, PUBLIC_WEBINAR_ENABLED, WEBINAR_CONFIG } from '@/lib/webinar-config';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,6 +36,13 @@ const VALID_PROGRAM_INTERESTS = [
 type ProgramInterest = (typeof VALID_PROGRAM_INTERESTS)[number];
 
 export async function POST(request: NextRequest) {
+  if (!PUBLIC_WEBINAR_ENABLED) {
+    return NextResponse.json(
+      { error: 'Webinar registration is currently closed.' },
+      { status: 410 },
+    );
+  }
+
   const rl = checkPublicRateLimit({
     action: 'public-webinar-signups',
     request,

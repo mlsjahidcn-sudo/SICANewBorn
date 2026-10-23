@@ -18,6 +18,7 @@
  */
 import type { Metadata } from 'next';
 import Image from 'next/image';
+import { notFound } from 'next/navigation';
 import {
   GraduationCap,
   Globe2,
@@ -35,6 +36,7 @@ import { buildLanguageAlternates } from '@/lib/alternates';
 import { COUNTRIES } from '@/lib/seo-data';
 import { universities as staticUniversities } from '@/lib/data';
 import {
+  PUBLIC_WEBINAR_ENABLED,
   WEBINAR_CONFIG,
   WEBINAR_AGENDA_TRACKS,
   WEBINAR_FEATURED_UNIVERSITY_SLUGS,
@@ -56,6 +58,7 @@ const TRACK_ICONS: Record<WebinarAgendaTrack['icon'], LucideIcon> = {
 };
 
 export async function generateMetadata(): Promise<Metadata> {
+  if (!PUBLIC_WEBINAR_ENABLED) notFound();
   const t = await getServerT();
   return {
     title: t('webinar.hero.title'),
@@ -76,6 +79,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function WebinarPage() {
+  if (!PUBLIC_WEBINAR_ENABLED) notFound();
   const t = await getServerT();
 
   // Static session metadata — read once from the hardcoded module.

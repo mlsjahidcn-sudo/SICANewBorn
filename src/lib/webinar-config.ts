@@ -16,6 +16,9 @@ export function formatWebinarDate(iso: string | null): string {
   }
 }
 
+/** Controls the public webinar page, registration endpoint, and promo popup. */
+export const PUBLIC_WEBINAR_ENABLED = false;
+
 /**
  * Phase 165: hardcoded webinar configuration.
  *

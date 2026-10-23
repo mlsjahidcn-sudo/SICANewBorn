@@ -9,6 +9,7 @@ import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import type { Locale } from '@/lib/i18n-translations';
 import type { CatalogCounts } from '@/lib/data-fetcher';
+import { PUBLIC_WEBINAR_ENABLED } from '@/lib/webinar-config';
 
 /**
  * Phase 67: dynamic-import the floating/overlay widgets so they
@@ -83,7 +84,7 @@ export function ClientLayout({
         <WhatsAppFloat />
         <StickyContact />
         <ExitIntentPopup />
-        <WebinarPromoPopup />
+        {PUBLIC_WEBINAR_ENABLED && <WebinarPromoPopup />}
         <WhatsAppGroupPopup />
       </div>
     </I18nProvider>

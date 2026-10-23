@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { X, Megaphone, Calendar, Bell } from 'lucide-react';
 import { track } from '@/lib/analytics';
 import { useI18n } from '@/lib/i18n';
-import { WEBINAR_CONFIG, isWebinarSessionUpcoming } from '@/lib/webinar-config';
+import { PUBLIC_WEBINAR_ENABLED, WEBINAR_CONFIG, isWebinarSessionUpcoming } from '@/lib/webinar-config';
 
 /**
  * sessionStorage key for "the visitor closed the webinar promo".
@@ -58,7 +58,7 @@ export function WebinarPromoPopup() {
   );
 
   useEffect(() => {
-    if (!mounted || dismissed) return;
+    if (!PUBLIC_WEBINAR_ENABLED || !mounted || dismissed) return;
     if (!isOnPublicPath(pathname)) return;
     if (firedRef.current) return;
     firedRef.current = true;
@@ -69,7 +69,7 @@ export function WebinarPromoPopup() {
     }
   }, [mounted, dismissed, hasActiveSession, pathname, locale]);
 
-  if (!mounted || dismissed) return null;
+  if (!PUBLIC_WEBINAR_ENABLED || !mounted || dismissed) return null;
   if (!isOnPublicPath(pathname)) return null;
 
   const dismiss = (source: 'close_button' | 'cta_click') => {
