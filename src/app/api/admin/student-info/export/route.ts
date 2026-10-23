@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, buildServiceClient, getServerEnv } from '@/lib/supabase-auth';
 import { STUDENT_EXPORT_KINDS, buildStudentMarkdown, studentMarkdownFilename, type StudentExportKind } from '@/lib/student-markdown';
-import { loadStudentMarkdownData, StudentExportError } from '@/lib/student-markdown-data';
+import { loadStudentMarkdownData, StudentExportError, StudentExportReadError } from '@/lib/student-markdown-data';
 
 export const dynamic = 'force-dynamic';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     } });
   } catch (error) {
     if (error instanceof StudentExportError) return NextResponse.json({ error: error.message }, { status: error.status, headers: PRIVATE_HEADERS });
-    console.error('[student-info/export] Could not read complete student information');
+    console.error('[student-info/export] Could not read complete student information', error instanceof StudentExportReadError ? { resource: error.resource, code: error.code } : { code: 'UNKNOWN' });
     return NextResponse.json({ error: 'Could not export student information. Please retry.' }, { status: 500, headers: PRIVATE_HEADERS });
   }
 }

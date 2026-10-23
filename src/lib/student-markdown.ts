@@ -4,7 +4,8 @@ export type StudentExportKind = (typeof STUDENT_EXPORT_KINDS)[number];
 export type ExportRow = Record<string, unknown>;
 export interface StudentMarkdownData {
   identity: ExportRow;
-  education: ExportRow[];
+  /** Null means the newer history table is unavailable; legacy qualifications still export. */
+  education: ExportRow[] | null;
   applications: { surface: 'student' | 'partner'; record: ExportRow }[];
   documents: ExportRow[];
 }
@@ -25,7 +26,7 @@ const SECTIONS: readonly [string, readonly Field[]][] = [
   ]],
   ['Passport', [
     ['Passport number', 'passport_number', 'passportNumber'], ['Issue date', 'passport_issue_date', 'passportIssueDate'],
-    ['Expiry date', 'passport_expiry_date', 'passportExpiryDate'],
+    ['Expiry date', 'passport_expiry_date', 'passport_expiry', 'passportExpiryDate'],
   ]],
   ['Academic background', [
     ['Highest education', 'highest_education', 'highest_degree', 'highestEducation'],
@@ -119,14 +120,15 @@ export function buildStudentMarkdown(data: StudentMarkdownData, exportedAt: stri
     `- **Full name:** ${escape(fullName)}`, ''];
   for (const [title, definitions] of SECTIONS) lines.push(`## ${title}`, '', ...fields(data.identity, definitions), '');
   lines.push('## Education history', '');
-  for (const [i, row] of data.education.entries()) lines.push(`### Qualification ${i + 1}`, '', ...fields(row, [
+  if (data.education === null) lines.push('Detailed education history is unavailable. Recorded qualifications are shown under Academic background and Previously saved education details when available.', '');
+  for (const [i, row] of (data.education ?? []).entries()) lines.push(`### Qualification ${i + 1}`, '', ...fields(row, [
     ['Institution', 'institution'], ['Country', 'country'], ['Qualification', 'qualification'], ['Subject / major', 'subject'],
     ['Start date', 'start_date'], ['End / graduation date', 'end_date'], ['Currently studying', 'is_current'],
     ['Grade', 'grade'], ['Grading scale', 'grading_scale'],
   ]), '');
   const legacy = fields(data.identity, LEGACY_EDUCATION, false);
   if (legacy.length) lines.push('### Previously saved education details', '', ...legacy, '');
-  if (!data.education.length && !legacy.length) lines.push('Not provided.', '');
+  if (data.education !== null && !data.education.length && !legacy.length) lines.push('Not provided.', '');
   lines.push('## Applications', '');
   if (!data.applications.length) lines.push('No current applications recorded.', '');
   for (const [i, { surface, record }] of data.applications.entries()) {

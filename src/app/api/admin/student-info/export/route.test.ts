@@ -10,10 +10,10 @@ const PARTNER_STUDENT = '00000000-0000-0000-0000-000000000002';
 const APP = '00000000-0000-0000-0000-000000000003';
 const OTHER = '00000000-0000-0000-0000-000000000004';
 type Tables = Record<string, ExportRow[]>;
-function database(tables: Tables = {}, failureTable?: string): { from: ReturnType<typeof vi.fn> } {
+function database(tables: Tables = {}, failureTable?: string, failureCode?: string): { from: ReturnType<typeof vi.fn> } {
   return { from: vi.fn((table: string) => {
     let rows = [...(tables[table] ?? [])];
-    const result = (): { data: ExportRow[]; error: { message: string } | null } => ({ data: rows, error: table === failureTable ? { message: 'private database detail' } : null });
+    const result = (): { data: ExportRow[]; error: { message: string; code?: string } | null } => ({ data: rows, error: table === failureTable ? { message: 'private database detail', code: failureCode } : null });
     const query = {
       select: vi.fn(() => query),
       eq: vi.fn((key: string, v: unknown) => { rows = rows.filter(r => r[key] === v); return query; }),
@@ -64,6 +64,21 @@ describe('admin student Markdown download', () => {
     expect(response.status).toBe(200);
     const md = await response.text();
     for (const text of ['Lead Applicant', 'lead@example.test', 'Applicant statement', 'statement.pdf']) expect(md).toContain(text);
+  });
+  it.each(['PGRST205', '42P01'])('downloads saved profile and legacy qualifications when the education table is missing (%s)', async code => {
+    mocks.service.mockReturnValue(database({ student_profiles: [{ id: PROFILE, first_name: 'Amina', highest_education: 'Bachelor', passport_expiry: '2030-01-01', extra: { bachelorUniversityName: 'Legacy University', bachelorGPA: '3.8' } }] }, 'student_education_history', code));
+    const response = await GET(request());
+    expect(response.status).toBe(200);
+    const md = await response.text();
+    for (const expected of ['Amina', 'Bachelor', 'Legacy University', '3.8', '**Expiry date:** 2030-01-01', 'Detailed education history is unavailable']) expect(md).toContain(expected);
+    expect(md).not.toContain('private database detail');
+  });
+  it('does not turn missing required tables into a partial successful file', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    mocks.service.mockReturnValue(database({ student_profiles: [{ id: PROFILE }] }, 'student_documents', 'PGRST205'));
+    expect((await GET(request())).status).toBe(500);
+    expect(console.error).toHaveBeenCalledWith(expect.any(String), { resource: 'student_documents', code: 'PGRST205' });
+    vi.restoreAllMocks();
   });
   it('resolves partner student IDs separately from profile IDs and exports only the selected application', async () => {
     mocks.service.mockReturnValue(database({

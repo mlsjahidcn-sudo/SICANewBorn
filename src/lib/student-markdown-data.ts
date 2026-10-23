@@ -5,21 +5,28 @@ type Service = ReturnType<typeof buildServiceClient>;
 export class StudentExportError extends Error {
   constructor(message: string, public readonly status: number) { super(message); }
 }
+export class StudentExportReadError extends Error {
+  public readonly code: string;
+  constructor(public readonly resource: string, error: unknown) {
+    super(`Could not read ${resource}`);
+    this.code = error && typeof error === 'object' && 'code' in error && typeof error.code === 'string' ? error.code : 'UNKNOWN';
+  }
+}
 
 /** Read-only, FK-based lookups. Failed related reads must never become an incomplete download. */
 export async function loadStudentMarkdownData(service: Service, kind: StudentExportKind, id: string): Promise<StudentMarkdownData> {
   async function one(table: string, rowId: string, root = false): Promise<ExportRow> {
     const { data, error } = await service.from(table).select('*').eq('id', rowId).maybeSingle();
-    if (error) throw new Error(`Could not read ${table}`);
+    if (error) throw new StudentExportReadError(table, error);
     if (!data) throw new StudentExportError(root ? 'Student or application not found' : 'A linked student record is unavailable', root ? 404 : 409);
     return data as ExportRow;
   }
   type Query = { range(from: number, to: number): PromiseLike<{ data: unknown; error: unknown }> };
-  async function all(query: () => Query): Promise<ExportRow[]> {
+  async function all(resource: string, query: () => Query): Promise<ExportRow[]> {
     const rows: ExportRow[] = [];
     for (let offset = 0; ; offset += 1000) {
       const { data, error } = await query().range(offset, offset + 999);
-      if (error) throw new Error('Could not read related student information');
+      if (error) throw new StudentExportReadError(resource, error);
       const page = (data ?? []) as ExportRow[];
       rows.push(...page);
       if (page.length < 1000) return rows;
@@ -39,6 +46,17 @@ export async function loadStudentMarkdownData(service: Service, kind: StudentExp
     throw new StudentExportError('Application and student profile links do not match', 409);
   }
   const profileId = typeof linkedProfileId === 'string' ? linkedProfileId : null;
+  async function educationHistory(): Promise<ExportRow[] | null> {
+    if (!profileId) return [];
+    try {
+      return await all('student_education_history', () => service.from('student_education_history').select('*').eq('student_id', profileId).order('sort_order', { ascending: true }));
+    } catch (error) {
+      // Older deployments store education in profile columns/extra instead.
+      // Null tells the formatter to explain this fallback, rather than claim there are no qualifications.
+      if (error instanceof StudentExportReadError && ['PGRST205', '42P01'].includes(error.code)) return null;
+      throw error;
+    }
+  }
   const profile = kind === 'student' ? root : profileId ? await one('student_profiles', profileId) : null;
   const partnerStudentId = typeof partnerStudent?.id === 'string' ? partnerStudent.id : null;
   const documentFilters: string[] = [];
@@ -47,10 +65,10 @@ export async function loadStudentMarkdownData(service: Service, kind: StudentExp
   if (isApplication) documentFilters.push(`${kind === 'student-application' ? 'application_id' : 'partner_application_id'}.eq.${id}`);
 
   const [education, documents, studentApps, partnerApps] = await Promise.all([
-    profileId ? all(() => service.from('student_education_history').select('*').eq('student_id', profileId).order('sort_order', { ascending: true })) : [],
-    documentFilters.length ? all(() => service.from('student_documents').select('id, name, category, file_name, status').or(documentFilters.join(',')).order('uploaded_at', { ascending: false })) : [],
-    !isApplication && profileId ? all(() => service.from('student_applications').select('*').eq('student_id', profileId).is('archived_at', null).order('created_at', { ascending: false })) : [],
-    !isApplication && (partnerStudentId || profileId) ? all(() => {
+    educationHistory(),
+    documentFilters.length ? all('student_documents', () => service.from('student_documents').select('id, name, category, file_name, status').or(documentFilters.join(',')).order('uploaded_at', { ascending: false })) : [],
+    !isApplication && profileId ? all('student_applications', () => service.from('student_applications').select('*').eq('student_id', profileId).is('archived_at', null).order('created_at', { ascending: false })) : [],
+    !isApplication && (partnerStudentId || profileId) ? all('partner_applications', () => {
       let query = service.from('partner_applications').select('*').is('archived_at', null).order('created_at', { ascending: false });
       query = partnerStudentId ? query.eq('student_id', partnerStudentId).eq('partner_id', partnerStudent?.partner_id) : query.eq('linked_student_profile_id', profileId);
       return query;
