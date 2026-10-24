@@ -4,6 +4,8 @@ export type StudentExportKind = (typeof STUDENT_EXPORT_KINDS)[number];
 export type ExportRow = Record<string, unknown>;
 export interface StudentMarkdownData {
   identity: ExportRow;
+  /** Keep the linked partner student’s saved details separate from the canonical profile. */
+  partnerStudent?: ExportRow;
   /** Null means the newer history table is unavailable; legacy qualifications still export. */
   education: ExportRow[] | null;
   applications: { surface: 'student' | 'partner'; record: ExportRow }[];
@@ -16,6 +18,7 @@ const SECTIONS: readonly [string, readonly Field[]][] = [
     ['First / given name', 'first_name', 'firstName'], ['Family / last name', 'last_name', 'lastName'],
     ['Chinese name', 'chinese_name', 'chineseName'], ['Date of birth', 'date_of_birth', 'student_dob', 'dateOfBirth'],
     ['Gender', 'gender'], ['Nationality', 'nationality', 'applicant_nationality'],
+    ['Religion', 'religion'], ['Years of living in home country', 'years_in_home_country', 'yearsInHomeCountry'],
     ['Place of birth', 'place_of_birth', 'placeOfBirth'], ['Marital status', 'marital_status', 'maritalStatus'],
   ]],
   ['Contact information', [
@@ -54,6 +57,10 @@ const SECTIONS: readonly [string, readonly Field[]][] = [
   ['Emergency contact', [
     ['Name', 'emergency_contact_name', 'emergencyContactName'], ['Relationship', 'emergency_contact_relationship', 'emergencyContactRelationship'],
     ['Phone', 'emergency_contact_phone', 'emergencyContactPhone'], ['Email', 'emergency_contact_email', 'emergencyContactEmail'],
+  ]],
+  ['Guarantor', [
+    ['Name', 'guarantor_name', 'guarantorName'], ['Relationship', 'guarantor_relationship', 'guarantorRelationship'],
+    ['Phone', 'guarantor_phone', 'guarantorPhone'], ['Email', 'guarantor_email', 'guarantorEmail'],
   ]],
   ['Funding and sponsor', [
     ['Funding source', 'funding_source', 'fundingSource'], ['Scholarship name', 'scholarship_name', 'scholarshipName'],
@@ -119,6 +126,13 @@ export function buildStudentMarkdown(data: StudentMarkdownData, exportedAt: stri
     'Application snapshots are kept separate from the student profile; check any differences before copying.', '',
     `- **Full name:** ${escape(fullName)}`, ''];
   for (const [title, definitions] of SECTIONS) lines.push(`## ${title}`, '', ...fields(data.identity, definitions), '');
+  if (data.partnerStudent) {
+    lines.push('## Details saved on the linked partner student', '', 'These are the partner’s saved details. Check any differences from the profile above before copying.', '');
+    for (const [title, definitions] of SECTIONS) {
+      const entries = fields(data.partnerStudent, definitions, false);
+      if (entries.length) lines.push(`### ${title}`, '', ...entries, '');
+    }
+  }
   lines.push('## Education history', '');
   if (data.education === null) lines.push('Detailed education history is unavailable. Recorded qualifications are shown under Academic background and Previously saved education details when available.', '');
   for (const [i, row] of (data.education ?? []).entries()) lines.push(`### Qualification ${i + 1}`, '', ...fields(row, [

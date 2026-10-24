@@ -1,3 +1,5 @@
+import { validateStudentUniversityDetails, type StudentUniversityField } from './student-university-fields';
+
 /**
  * partner-validation.ts
  *
@@ -44,7 +46,7 @@ export const PARTNER_STUDENT_FIELD_LIMITS = {
 export type PartnerStudentFieldKey = keyof typeof PARTNER_STUDENT_FIELD_LIMITS;
 
 export interface PartnerStudentValidationError {
-  field: PartnerStudentFieldKey | 'general';
+  field: PartnerStudentFieldKey | StudentUniversityField | 'general';
   message: string;
 }
 
@@ -151,5 +153,6 @@ export function validatePartnerStudentPayload(
     }
   }
 
+  errors.push(...validateStudentUniversityDetails(body));
   return errors;
 }

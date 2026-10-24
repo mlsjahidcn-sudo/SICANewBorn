@@ -1,5 +1,7 @@
 'use client';
 
+import { StudentUniversityDetailsView } from '@/components/student-university-fields';
+
 /**
  * Admin: student detail page — banner + 5 tabs (Overview, Documents,
  * Applications, Notes, Activity).
@@ -423,6 +425,7 @@ export default function AdminStudentDetailPage() {
 
         {/* Overview */}
         <TabsContent value="overview" className="space-y-6">
+          <div className="border bg-card p-6"><StudentUniversityDetailsView student={student} /></div>
           <Card>
             <CardHeader><CardTitle>{t('adminStudentDetail.studentInfoTitle')}</CardTitle></CardHeader>
             <CardContent>

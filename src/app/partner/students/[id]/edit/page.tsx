@@ -1,5 +1,8 @@
 'use client';
 
+import { StudentUniversityFields } from '@/components/student-university-fields';
+import { studentUniversityFormValues, validateStudentUniversityDetails, type StudentUniversityFormValues } from '@/lib/student-university-fields';
+
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Save } from 'lucide-react';
@@ -27,7 +30,7 @@ import { COMMON_COUNTRIES, NATIONALITY_CUSTOM, NATIONALITY_NONE } from '@/lib/co
 // new-student form doesn't have to redeclare them.
 import type { University, Program } from '@/lib/data';
 
-interface FormData {
+interface FormData extends StudentUniversityFormValues {
   studentName: string;
   studentEmail: string;
   studentPhone: string;
@@ -119,6 +122,7 @@ export default function PartnerEditStudentPage() {
       );
       const s = res.student;
       const loaded: FormData = {
+        ...studentUniversityFormValues(s),
         studentName: s.studentName,
         studentEmail: s.studentEmail ?? '',
         studentPhone: s.studentPhone ?? '',
@@ -210,9 +214,12 @@ export default function PartnerEditStudentPage() {
       return;
     }
 
+    const fieldError = validateStudentUniversityDetails({ ...formData })[0];
+    if (fieldError) { setError(fieldError.message); return; }
     setIsSaving(true);
     try {
       const payload = {
+        ...studentUniversityFormValues(formData),
         studentName: formData.studentName.trim(),
         studentEmail: formData.studentEmail.trim() || null,
         studentPhone: formData.studentPhone.trim() || null,
@@ -384,6 +391,8 @@ export default function PartnerEditStudentPage() {
                 </div>
               </div>
             </div>
+
+            <StudentUniversityFields values={formData} onChange={(key, value) => setFormData(previous => previous ? { ...previous, [key]: value } : previous)} />
 
             <div>
               <h2 className="text-lg font-semibold text-[#1B2A4A] mb-4">{t('partnerStudentEdit.sectionTarget')}</h2>

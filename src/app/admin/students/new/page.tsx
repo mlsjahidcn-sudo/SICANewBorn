@@ -1,5 +1,8 @@
 'use client';
 
+import { StudentUniversityFields } from '@/components/student-university-fields';
+import { studentUniversityFormValues, validateStudentUniversityDetails } from '@/lib/student-university-fields';
+
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -137,6 +140,7 @@ export default function AdminAddStudentPage() {
   }, []); // mount only — the wizard's nationality state is set later
 
   const [formData, setFormData] = useState({
+    ...studentUniversityFormValues(),
     // Phase 181: visa-critical fields (step 4).
     chineseName: '',
     placeOfBirth: '',
@@ -411,6 +415,8 @@ export default function AdminAddStudentPage() {
   };
 
   const handleSave = async () => {
+    const fieldError = validateStudentUniversityDetails({ ...formData })[0];
+    if (fieldError) { setError(fieldError.message); setStep(1); return; }
     setIsSaving(true);
     setError(null);
     try {
@@ -718,6 +724,9 @@ export default function AdminAddStudentPage() {
                     </Select>
                   </div>
                 </div>
+
+                <Separator className="my-6" />
+                <StudentUniversityFields values={formData} onChange={handleInputChange} />
 
                 <Separator className="my-6" />
 
@@ -1220,8 +1229,6 @@ export default function AdminAddStudentPage() {
                         onChange={(e) => setFormData((f) => ({ ...f, sponsorOccupation: e.target.value }))} className="border border-gray-300 px-3 py-2 text-sm" />
                       <input placeholder={t('adminStudentForm.sponsorPhone')} value={formData.sponsorPhone ?? ''}
                         onChange={(e) => setFormData((f) => ({ ...f, sponsorPhone: e.target.value }))} className="border border-gray-300 px-3 py-2 text-sm" />
-                      <input placeholder={t('adminStudentForm.sponsorEmail')} value={formData.sponsorEmail ?? ''}
-                        onChange={(e) => setFormData((f) => ({ ...f, sponsorEmail: e.target.value }))} className="border border-gray-300 px-3 py-2 text-sm" />
                       <input placeholder={t('adminStudentForm.sponsorAnnualIncome')} value={formData.sponsorAnnualIncome ?? ''}
                         onChange={(e) => setFormData((f) => ({ ...f, sponsorAnnualIncome: e.target.value }))} className="border border-gray-300 px-3 py-2 text-sm" />
                     </div>

@@ -76,6 +76,7 @@ export async function loadStudentMarkdownData(service: Service, kind: StudentExp
   ]);
   return {
     identity: profile ?? selectedApplication ?? partnerStudent ?? root,
+    partnerStudent: partnerStudent && (profile || selectedApplication) ? partnerStudent : undefined,
     education,
     documents,
     applications: selectedApplication ? [{ surface: kind === 'partner-application' ? 'partner' : 'student', record: selectedApplication }] : [

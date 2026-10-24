@@ -1,3 +1,5 @@
+import { STUDENT_UNIVERSITY_COLUMNS, studentUniversityUpdates, type StudentUniversityDetails } from './student-university-fields';
+
 /**
  * partner-student-mapper.ts
  *
@@ -34,7 +36,7 @@ export const PARTNER_STUDENT_STATUSES = [
 ] as const;
 export type PartnerStudentStatus = (typeof PARTNER_STUDENT_STATUSES)[number];
 
-export interface PartnerStudent {
+export interface PartnerStudent extends StudentUniversityDetails {
   id: string;
   partnerId: string;
   studentName: string;
@@ -78,7 +80,8 @@ export function parsePartnerStudentStatus(input: unknown): PartnerStudentStatus 
 /**
  * DB row shape (snake_case) — what `supabase.from('partner_students').select('*')` returns.
  */
-interface RawPartnerStudent {
+type UniversityColumn = (typeof STUDENT_UNIVERSITY_COLUMNS)[keyof typeof STUDENT_UNIVERSITY_COLUMNS];
+interface RawPartnerStudent extends Partial<Record<UniversityColumn, string | number | null>> {
   id: string;
   partner_id: string;
   student_name: string;
@@ -107,6 +110,9 @@ interface RawPartnerStudent {
 
 export function mapPartnerStudentFromDb(row: RawPartnerStudent): PartnerStudent {
   return {
+    ...Object.fromEntries(Object.entries(STUDENT_UNIVERSITY_COLUMNS)
+      .filter(([, column]) => row[column] !== undefined)
+      .map(([key, column]) => [key, row[column] == null ? null : key === 'yearsInHomeCountry' ? Number(row[column]) : row[column]])),
     id: row.id,
     partnerId: row.partner_id,
     studentName: row.student_name,
@@ -151,6 +157,9 @@ export function mapPartnerStudentToDb(payload: Record<string, unknown>): Record<
     // admin-only data (set by the admin link-profile endpoint). Partners
     // must not write it — a guessed UUID would attach their student to
     // another person's profile in admin views.
+  }
+  for (const [key, value] of Object.entries(studentUniversityUpdates(payload))) {
+    row[STUDENT_UNIVERSITY_COLUMNS[key as keyof typeof STUDENT_UNIVERSITY_COLUMNS]] = value;
   }
   return row;
 }

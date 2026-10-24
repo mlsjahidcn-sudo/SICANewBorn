@@ -1,5 +1,8 @@
 'use client';
 
+import { StudentUniversityFields } from '@/components/student-university-fields';
+import { studentUniversityFormValues, validateStudentUniversityDetails, type StudentUniversityFormValues } from '@/lib/student-university-fields';
+
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save } from 'lucide-react';
@@ -26,7 +29,7 @@ import { COMMON_COUNTRIES, NATIONALITY_CUSTOM, NATIONALITY_NONE } from '@/lib/co
 // edit page doesn't have to redeclare them.
 import type { University, Program } from '@/lib/data';
 
-interface FormData {
+interface FormData extends StudentUniversityFormValues {
   studentName: string;
   studentEmail: string;
   studentPhone: string;
@@ -38,6 +41,7 @@ interface FormData {
 }
 
 const INITIAL: FormData = {
+  ...studentUniversityFormValues(),
   studentName: '',
   studentEmail: '',
   studentPhone: '',
@@ -148,11 +152,14 @@ export default function PartnerAddStudentPage() {
       return;
     }
 
+    const fieldError = validateStudentUniversityDetails({ ...formData })[0];
+    if (fieldError) { setError(fieldError.message); return; }
     setIsSaving(true);
     try {
 // Map to the camelCase shape the API expects. Empty strings become
         // null via the mapper, so we can just send the trimmed values.
         const payload = {
+        ...studentUniversityFormValues(formData),
           studentName: formData.studentName.trim(),
           // Phase 111d: reuse `trimmedEmail` from the validation
           // block above so the post-validation + the payload share
@@ -361,6 +368,8 @@ export default function PartnerAddStudentPage() {
                 </div>
               </div>
             </div>
+
+            <StudentUniversityFields values={formData} onChange={(key, value) => setFormData(previous => previous ? { ...previous, [key]: value } : previous)} />
 
             <div>
               <h2 className="text-lg font-semibold text-[#1B2A4A] mb-4">{t('partnerStudentNew.sectionTarget')}</h2>

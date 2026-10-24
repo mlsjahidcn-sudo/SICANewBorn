@@ -1,3 +1,5 @@
+import { STUDENT_UNIVERSITY_COLUMNS, studentUniversityUpdates, type StudentUniversityDetails } from './student-university-fields';
+
 /**
  * Student mapper — converts between DB rows (snake_case) and the
  * `AdminStudent` / student API shape (camelCase).
@@ -30,7 +32,7 @@ export { deriveStudentFullName as mapStudentName } from './application-mapper';
 
 // Re-export the AdminStudent shape from data.ts so we have a single type
 // that both server and client agree on.
-export interface AdminStudent {
+export interface AdminStudent extends StudentUniversityDetails {
   // Phase 181: visa-critical fields. Real columns, not `extra` — these
   // feed a guarantor declaration and a visa-category decision, so they
   // must be queryable and reportable.
@@ -201,6 +203,14 @@ export function mapStudentFromDb(row: Record<string, unknown>): AdminStudent {
     motherOccupation: (row.mother_occupation as string | null) ?? ((extra.motherOccupation as string | null) ?? null),
     motherPhone: (row.mother_phone as string | null) ?? ((extra.motherPhone as string | null) ?? null),
 
+    nativeLanguage: typeof extra.nativeLanguage === 'string' ? extra.nativeLanguage : null,
+    religion: typeof extra.religion === 'string' ? extra.religion : null,
+    yearsInHomeCountry: extra.yearsInHomeCountry == null || extra.yearsInHomeCountry === '' ? null : Number(extra.yearsInHomeCountry),
+    guarantorName: typeof extra.guarantorName === 'string' ? extra.guarantorName : null,
+    guarantorRelationship: typeof extra.guarantorRelationship === 'string' ? extra.guarantorRelationship : null,
+    guarantorPhone: typeof extra.guarantorPhone === 'string' ? extra.guarantorPhone : null,
+    guarantorEmail: typeof extra.guarantorEmail === 'string' ? extra.guarantorEmail : null,
+
     // Phase 89: passportIssueDate / passportExpiryDate live in the
     // `extra` JSONB blob. Surface them as top-level fields for the
     // detail page + edit form convenience.
@@ -311,6 +321,15 @@ export function mapStudentToDb(input: Partial<AdminStudent>): {
   // UI persists.
   if (input.extra) Object.assign(extraUpdates, input.extra);
 
+  for (const [key, value] of Object.entries(studentUniversityUpdates({ ...input }))) {
+    if (key === 'placeOfBirth' || key === 'maritalStatus' || key === 'sponsorEmail') {
+      dbRow[STUDENT_UNIVERSITY_COLUMNS[key]] = value;
+      // Clear legacy copies too, so clearing a fixed column cannot revive stale extra data.
+      extraUpdates[key] = value;
+    } else {
+      extraUpdates[key] = value;
+    }
+  }
   return { dbRow, extraUpdates };
 }
 

@@ -30,6 +30,20 @@ const request = (kind = 'student', id = PROFILE): NextRequest => new NextRequest
 beforeEach(() => { vi.clearAllMocks(); mocks.configured = true; mocks.auth.mockResolvedValue({ ok: true, user: { id: 'admin' } }); });
 
 describe('admin student Markdown download', () => {
+  it('includes new partner-student details even when a canonical profile is linked', async () => {
+    mocks.service.mockReturnValue(database({
+      partner_students: [{ id: PARTNER_STUDENT, partner_id: 'agency', student_name: 'Partner student', linked_student_profile_id: PROFILE,
+        place_of_birth: 'Dhaka', native_language: 'Bangla', marital_status: 'Widowed', religion: 'Recorded religion', years_in_home_country: 0,
+        sponsor_email: 'father@example.com', guarantor_name: 'Parent', guarantor_relationship: 'Father', guarantor_phone: '+88012345', guarantor_email: 'parent@example.com' }],
+      student_profiles: [{ id: PROFILE, first_name: 'Canonical', place_of_birth: 'Profile birthplace' }],
+    }));
+    const response = await GET(request('partner-student', PARTNER_STUDENT));
+    expect(response.status).toBe(200);
+    const md = await response.text();
+    expect(md).toContain('**Place of birth:** Profile birthplace');
+    const partnerSection = md.split('## Details saved on the linked partner student')[1];
+    for (const expected of ['**Place of birth:** Dhaka', '**Native language:** Bangla', '**Marital status:** Widowed', '**Religion:** Recorded religion', '**Years of living in home country:** 0', '**Sponsor email:** father@example.com', '**Name:** Parent', '**Relationship:** Father', '**Phone:** +88012345', '**Email:** parent@example.com']) expect(partnerSection).toContain(expected);
+  });
   it.each([401, 403])('returns %i before accessing any student data', async status => {
     mocks.auth.mockResolvedValue({ ok: false, error: 'Denied', status });
     const response = await GET(request());

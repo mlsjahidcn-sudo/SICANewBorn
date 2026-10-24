@@ -1,5 +1,8 @@
 'use client';
 
+import { StudentUniversityFields } from '@/components/student-university-fields';
+import { studentUniversityFormValues, validateStudentUniversityDetails } from '@/lib/student-university-fields';
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Check, Loader2, ChevronRight, ChevronLeft, AlertCircle, Sparkles } from 'lucide-react';
@@ -37,6 +40,9 @@ const FIXED_FIELDS = [
   'email',
   'phone',
   'passportNumber',
+  'placeOfBirth',
+  'maritalStatus',
+  'sponsorEmail',
   'targetDegree',
   'targetIntake',
   'source',
@@ -97,6 +103,7 @@ export default function AdminStudentEditPage() {
           student.passportIssueDate ?? flat.passportIssueDate ?? '';
         flat.passportExpiryDate =
           student.passportExpiryDate ?? flat.passportExpiryDate ?? '';
+        Object.assign(flat, studentUniversityFormValues(student));
         original.current = { ...flat };
         version.current = student.updatedAt;
         setFormData(flat);
@@ -265,6 +272,8 @@ export default function AdminStudentEditPage() {
   };
 
   const handleSave = async () => {
+    const fieldError = validateStudentUniversityDetails(formData)[0];
+    if (fieldError) { setError(fieldError.message); setCurrentStep(0); return; }
     setIsSaving(true);
     setError(null);
     try {
@@ -353,10 +362,10 @@ export default function AdminStudentEditPage() {
         {/* Step Indicator */}
         <Card>
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               {STEPS.map((step, index) => (
                 <div key={index} className="flex items-center">
-                  <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
+                  <div className={`flex shrink-0 items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
                     index < currentStep
                       ? 'bg-[#9B1B30] text-white'
                       : index === currentStep
@@ -369,7 +378,7 @@ export default function AdminStudentEditPage() {
                     {step}
                   </span>
                   {index < STEPS.length - 1 && (
-                    <div className={`mx-4 h-0.5 flex-1 ${index < currentStep ? 'bg-[#9B1B30]' : 'bg-gray-200'}`} />
+                    <div className={`hidden sm:block mx-4 h-0.5 flex-1 ${index < currentStep ? 'bg-[#9B1B30]' : 'bg-gray-200'}`} />
                   )}
                 </div>
               ))}
@@ -454,18 +463,9 @@ export default function AdminStudentEditPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="maritalStatus">{t('adminStudentForm.fieldMaritalStatus')}</Label>
-                    <Select value={v('maritalStatus')} onValueChange={(value) => handleInputChange('maritalStatus', value)}>
-                      <SelectTrigger><SelectValue placeholder={t('adminStudentForm.selectMaritalStatus')} /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Single">{t('adminStudentForm.optionSingle')}</SelectItem>
-                        <SelectItem value="Married">{t('adminStudentForm.optionMarried')}</SelectItem>
-                        <SelectItem value="Other">{t('adminStudentForm.optionOther')}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
                 </div>
+
+                <StudentUniversityFields values={formData} onChange={handleInputChange} />
 
                 <Separator />
 

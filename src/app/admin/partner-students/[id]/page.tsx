@@ -1,5 +1,7 @@
 'use client';
 
+import { StudentUniversityDetailsView } from '@/components/student-university-fields';
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -557,6 +559,7 @@ export default function AdminPartnerStudentDetailPage() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
+          <div className="border bg-card p-6"><StudentUniversityDetailsView student={student} /></div>
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

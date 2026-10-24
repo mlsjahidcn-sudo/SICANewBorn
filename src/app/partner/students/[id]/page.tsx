@@ -1,5 +1,7 @@
 'use client';
 
+import { StudentUniversityDetailsView } from '@/components/student-university-fields';
+
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Edit, Trash2, MessageSquare, Calendar, FileText, AlertTriangle, Pin, X, Plus, Download, Save } from 'lucide-react';
@@ -462,6 +464,7 @@ export default function PartnerStudentDetailPage() {
         </TabsList>
 
         <TabsContent value="overview">
+            <div className="border bg-card p-6 mb-6"><StudentUniversityDetailsView student={student} /></div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card className="rounded-none">
               <CardHeader>

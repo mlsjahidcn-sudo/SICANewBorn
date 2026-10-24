@@ -96,6 +96,13 @@ describe('mapStudentFromDb', () => {
       motherNationality: null,
       motherOccupation: null,
       motherPhone: null,
+      nativeLanguage: null,
+      religion: null,
+      yearsInHomeCountry: null,
+      guarantorName: null,
+      guarantorRelationship: null,
+      guarantorPhone: null,
+      guarantorEmail: null,
     });
   });
 

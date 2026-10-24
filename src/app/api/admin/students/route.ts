@@ -1,3 +1,4 @@
+import { validateStudentUniversityDetails } from '@/lib/student-university-fields';
 import { collectRows } from '@/lib/admin-application-query';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, buildServiceClient, getServerEnv } from '@/lib/supabase-auth';
@@ -265,6 +266,9 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
+
+    const universityFieldError = validateStudentUniversityDetails(body)[0];
+    if (universityFieldError) return NextResponse.json({ error: universityFieldError.message }, { status: 400 });
 
     // Validate required fields.
     // Email is now OPTIONAL (Phase 90) — partner-referred students

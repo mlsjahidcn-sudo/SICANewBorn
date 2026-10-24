@@ -1,3 +1,4 @@
+import { validateStudentUniversityDetails } from '@/lib/student-university-fields';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, buildServiceClient, getServerEnv } from '@/lib/supabase-auth';
 import {
@@ -116,6 +117,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     if (!body || typeof body !== 'object') {
       return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
+
+    const universityFieldError = validateStudentUniversityDetails(body)[0];
+    if (universityFieldError) return NextResponse.json({ error: universityFieldError.message }, { status: 400 });
 
     // C3: closed-taxonomy validation. Without this, an admin (or
     // a misbehaving UI) can write { status: 'Banned' } and corrupt
