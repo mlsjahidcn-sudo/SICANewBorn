@@ -50,12 +50,14 @@ interface UniversityDetailClientProps {
   university: University;
   programs: Program[];
   related: University[];
+  fromQuery?: string;
 }
 
 export default function UniversityDetailClient({
   university: uni,
   programs,
   related,
+  fromQuery = '',
 }: UniversityDetailClientProps) {
   const { t, locale } = useI18n();
   const [selectedImage, setSelectedImage] = useState(0);
@@ -87,7 +89,7 @@ export default function UniversityDetailClient({
               {t('nav.home')}
             </Link>
             <ChevronRight className="h-3.5 w-3.5" />
-            <Link href="/universities" className="hover:text-[#9B1B30] transition-colors">
+            <Link href={fromQuery ? `/universities?${fromQuery}` : '/universities'} className="hover:text-[#9B1B30] transition-colors">
               {t('nav.universities')}
             </Link>
             <ChevronRight className="h-3.5 w-3.5" />
@@ -99,6 +101,7 @@ export default function UniversityDetailClient({
       </div>
 
       {/* University Banner */}
+      {fromQuery && <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8"><Link href={`/universities?${fromQuery}`} className="text-sm font-semibold text-[#9B1B30] underline underline-offset-2">{t('catalog.backToResults')}</Link></div>}
       <section className="relative overflow-hidden bg-[#1B2A4A]">
         <div
           className="absolute inset-0 opacity-25 bg-cover bg-center"

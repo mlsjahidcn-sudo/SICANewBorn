@@ -37,6 +37,8 @@ import { VideoTestimonials } from '@/components/VideoTestimonials';
 import { ConsultationActivity } from '@/components/ConsultationActivity';
 import dynamic from 'next/dynamic';
 import { getServiceSchema } from '@/lib/structured-data';
+import { HomeCatalogSearch } from '@/components/catalog/home-catalog-search';
+import { isCatalogSearchEnabled } from '@/lib/catalog-search-server';
 
 // Phase 147 (Task 7): the hero's mid-commit CTA now points at the
 // free 10-minute consultation (/counselling) instead of the
@@ -75,6 +77,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export const revalidate = 60;
 
 export default async function HomePage() {
+  const catalogSearchEnabled = await isCatalogSearchEnabled();
   // Perf fix: run all independent data fetches in parallel so the
   // homepage RSC doesn't block on each sequential DB round-trip.
   // The translation function and structured data both need the
@@ -138,7 +141,7 @@ export default async function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceSchema) }}
       />
       {/* Hero Section */}
-      <section className="relative overflow-hidden">
+      <section className="relative isolate">
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{
@@ -146,59 +149,28 @@ export default async function HomePage() {
               'url(/hero-bg.avif)',
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#1B2A4A] via-[#1B2A4A]/95 to-[#1B2A4A]/40" />
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 lg:py-32">
-          <div className="grid lg:grid-cols-5 gap-10 lg:gap-12 items-center">
-            <div className="lg:col-span-3 max-w-2xl">
-              <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl leading-[1.05]">
+        <div className="absolute inset-0 bg-gradient-to-r from-[#1B2A4A] via-[#1B2A4A]/90 to-[#1B2A4A]/35" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#1B2A4A]/70 via-transparent to-transparent" />
+        <div className="relative mx-auto max-w-7xl px-4 pb-24 pt-12 sm:px-6 sm:pb-28 sm:pt-16 lg:px-8 lg:pt-20">
+          <div className="grid gap-10 xl:grid-cols-5 xl:gap-14 items-end">
+            <div className="max-w-2xl xl:col-span-3">
+              <h1 className="text-[2.5rem] font-extrabold tracking-[-0.035em] text-white sm:text-5xl lg:text-6xl leading-[1.08] text-balance">
                 {t('hero.title')}
                 <br />
                 <span className="text-white">{t('hero.tagline')}</span>
               </h1>
-              <p className="mt-5 text-base text-gray-300 leading-relaxed sm:text-lg max-w-xl">
+              <p className="mt-5 max-w-lg text-base leading-relaxed text-white/80 sm:text-lg text-pretty">
                 {t('hero.subtitle')}
               </p>
-              <div className="mt-8 flex flex-wrap gap-4">
-                <Link href="/universities">
-                  <Button className="bg-[#9B1B30] hover:bg-[#7A1526] text-white font-semibold px-7 py-3 text-base">
-                    {t('hero.explore')}
-                  </Button>
-                </Link>
-                {/* H1 (funnel audit): was also /universities.
-                    Two CTAs pointing at the same page is a
-                    wasted opportunity. The secondary button
-                    reads "How to Apply" — that's a question,
-                    not a browse action. The /guides/application
-                    page answers it with the actual process
-                    (documents, timeline, fees) at zero
-                    commitment. Funnel split:
-                      - /universities  : browse
-                      - /guides/application : learn
-                      - /get-started  : compare packages
-                      - /assessment    : commit (bottom CTA) */}
-                <Link href="/guides/application">
-                  <Button
-                    variant="outline"
-                    className="border-white bg-transparent text-white hover:bg-white/10 hover:text-white font-semibold px-7 py-3 text-base"
-                  >
-                    {t('hero.howToApply')}
-                  </Button>
-                </Link>
-                {/* Phase 147 (Task 7): the hero's primary conversion
-                    CTA is now the free 10-minute consultation
-                    (/counselling) — /get-started showed paid package
-                    prices and is noindexed. Keep ?from= attribution
-                    for the funnel. */}
+              {catalogSearchEnabled && <HomeCatalogSearch />}
+              <div className="mt-5">
                 <ConsultationCtaHero variant="hero" slug="home_hero" />
               </div>
             </div>
 
-            {/* Right side: 3 featured universidad cards. Hidden on
-                mobile (the hero text is enough); visible on lg+
-                where there's horizontal space. Stacks vertically
-                with a small gap so each card is distinct. */}
-            <div className="hidden lg:block lg:col-span-2 space-y-3">
-              <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/60 mb-2 flex items-center gap-2">
+            {/* Featured schools complement the search on wide screens. */}
+            <div className="hidden space-y-2.5 pb-16 xl:col-span-2 xl:block">
+              <div className="mb-4 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/80">
                 <span className="h-px w-6 bg-white/40" />
                 {t('hero.featured')}
               </div>
@@ -206,7 +178,7 @@ export default async function HomePage() {
                 <Link
                   key={u.slug}
                   href={`/universities/${u.slug}`}
-                  className="group flex items-center gap-3 bg-white/95 hover:bg-white p-3 border-2 border-transparent hover:border-[#D4A853] transition-all duration-200"
+                  className="group flex items-center gap-3 border border-white/40 bg-[#FAFAF8]/95 p-4 transition-colors duration-200 hover:border-[#9B1B30] hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#1B2A4A]"
                 >
                   {/* next/image for the 3 above-the-fold hero logos. Priority
                       hint tells Next to preload them with the document
@@ -235,7 +207,7 @@ export default async function HomePage() {
                       <h3 className="text-sm font-bold text-[#1B2A4A] group-hover:text-[#9B1B30] transition-colors truncate">
                         {u.name}
                       </h3>
-                      <span className="shrink-0 inline-flex items-center justify-center bg-[#9B1B30] text-white text-[10px] font-bold w-5 h-5">
+                      <span className="shrink-0 inline-flex items-center justify-center bg-[#D4A853]/20 text-[#1B2A4A] text-[10px] font-bold w-5 h-5">
                         {u.ranking}
                       </span>
                     </div>
@@ -249,7 +221,7 @@ export default async function HomePage() {
                       ) : null}
                     </div>
                   </div>
-                  <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-[#9B1B30] group-hover:translate-x-0.5 transition-all shrink-0" />
+                  <ArrowRight className="h-4 w-4 text-[#1B2A4A] group-hover:translate-x-0.5 transition-transform shrink-0" />
                 </Link>
               ))}
             </div>

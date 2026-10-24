@@ -62,13 +62,13 @@ function ConsultationCtaInner({
 
   if (variant === 'hero') {
     return (
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
         <Link
           href={href}
           onClick={onPrimaryClick}
-          className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#9B1B30] hover:bg-[#7A1526] text-white font-semibold uppercase tracking-wider text-sm transition-colors"
+          className="inline-flex min-h-11 items-center gap-2.5 text-sm font-medium text-white/85 underline-offset-4 transition-colors hover:text-white hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
         >
-          <CalendarClock className="h-4 w-4" />
+          <span className="flex h-7 w-7 items-center justify-center bg-white/90"><CalendarClock className="h-4 w-4 text-[#1B2A4A]" /></span>
           {t('consultationCta.ctaPrimary')}
         </Link>
         <a
@@ -76,9 +76,9 @@ function ConsultationCtaInner({
           target="_blank"
           rel="noopener noreferrer"
           onClick={onWhatsappClick}
-          className="inline-flex items-center justify-center gap-2 px-6 py-3 border-2 border-white/50 hover:border-white text-white font-semibold uppercase tracking-wider text-sm transition-colors"
+          className="inline-flex min-h-11 items-center gap-2.5 text-sm font-medium text-white/85 underline-offset-4 transition-colors hover:text-white hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
         >
-          <MessageCircle className="h-4 w-4" />
+          <span className="flex h-7 w-7 items-center justify-center bg-white/90"><MessageCircle className="h-4 w-4 text-[#1B2A4A]" /></span>
           WhatsApp
         </a>
       </div>

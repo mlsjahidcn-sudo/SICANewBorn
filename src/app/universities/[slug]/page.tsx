@@ -6,9 +6,11 @@ import { getServerLocale, t } from '@/lib/server-t';
 import { buildLanguageAlternates } from '@/lib/alternates';
 import { SITE_URL } from '@/lib/site-url';
 import UniversityDetailClient from './_components/university-detail-client';
+import { safeCatalogReturnQuery } from '@/lib/catalog-search';
 
 interface UniversityPageProps {
   params: Promise<{ slug: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
 
 // Render on-demand rather than statically generating every university
@@ -121,7 +123,9 @@ function buildFaqSchema(uni: NonNullable<Awaited<ReturnType<typeof getUniversity
   };
 }
 
-export default async function UniversityDetailPage({ params }: UniversityPageProps) {
+export default async function UniversityDetailPage({ params, searchParams }: UniversityPageProps) {
+  const sp = await searchParams;
+  const fromQuery = typeof sp?.from === 'string' ? safeCatalogReturnQuery(sp.from) : '';
   const { slug } = await params;
   const [uni, allUniversities, programs, locale] = await Promise.all([
     getUniversityBySlug(slug),
@@ -217,7 +221,7 @@ export default async function UniversityDetailPage({ params }: UniversityPagePro
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
       />
-      <UniversityDetailClient university={uni} programs={programs} related={related} />
+      <UniversityDetailClient university={uni} programs={programs} related={related} fromQuery={fromQuery} />
     </>
   );
 }

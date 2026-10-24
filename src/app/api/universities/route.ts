@@ -11,9 +11,25 @@ import { sanitizeOrTerm, parseIntParam } from '@/lib/postgrest';
 import { mapUniversityFromDb, mapUniversityToDb } from '@/lib/catalog-mappers';
 import { invalidateLiveCatalogCache } from '@/lib/ai/live-data-context';
 import { importUniversityMediaFields } from '@/lib/university-media';
+import { parseCatalogQuery } from '@/lib/catalog-search';
+import { isCatalogSearchEnabled, searchPublicCatalog, invalidateCatalogSearchCache } from '@/lib/catalog-search-server';
+import { getServerLocale } from '@/lib/server-t';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
+  if (await isCatalogSearchEnabled()) {
+    try {
+      const started = performance.now();
+      const params = new URLSearchParams(searchParams);
+      // Existing API consumers default to eight; the public finder explicitly requests 24.
+      if (!params.has('limit')) params.set('limit', '8');
+      const locale = searchParams.get('locale');
+      const result = await searchPublicCatalog(parseCatalogQuery('universities', params), locale === 'en' || locale === 'zh' ? locale : await getServerLocale());
+      return NextResponse.json(result, { headers: { 'Cache-Control': 'no-store', 'Server-Timing': `search;dur=${(performance.now() - started).toFixed(1)}` } });
+    } catch {
+      return NextResponse.json({ error: 'Catalog search is temporarily unavailable' }, { status: 503 });
+    }
+  }
   const city = searchParams.get('city');
   const discipline = searchParams.get('discipline');
   const search = searchParams.get('search');
@@ -139,6 +155,7 @@ export async function POST(request: Request) {
     revalidateTag(CACHE_TAGS.university(String(data.slug)), 'default');
     // Phase 121: the chatbot's RAG catalog has its own 5-min cache.
     invalidateLiveCatalogCache();
+    invalidateCatalogSearchCache();
     // Phase 72: fire university.created webhook (fire-and-forget;
     // the event emitter handles queueing + delivery)
     return NextResponse.json(

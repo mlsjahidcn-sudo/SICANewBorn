@@ -14,6 +14,9 @@ import { parseProgramQueryParams, queryPrograms, invalidateProgramQueryCache } f
 import { mapProgramFromDb, mapProgramToDb } from '@/lib/catalog-mappers';
 import { invalidateLiveCatalogCache } from '@/lib/ai/live-data-context';
 import { invalidateProgramFacetsCache } from '@/lib/program-facets';
+import { parseCatalogQuery } from '@/lib/catalog-search';
+import { isCatalogSearchEnabled, searchPublicCatalog, invalidateCatalogSearchCache } from '@/lib/catalog-search-server';
+import { getServerLocale } from '@/lib/server-t';
 
 /**
  * GET /api/programs — public catalogue query.
@@ -30,6 +33,20 @@ import { invalidateProgramFacetsCache } from '@/lib/program-facets';
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
+  const administrative = ['featured', 'include_archived', 'only_archived'].some((key) => searchParams.get(key) === 'true');
+  if (administrative) {
+    const auth = await requireAdmin(request);
+    if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
+  } else if (await isCatalogSearchEnabled()) {
+    try {
+      const started = performance.now();
+      const locale = searchParams.get('locale');
+      const result = await searchPublicCatalog(parseCatalogQuery('programs', searchParams), locale === 'en' || locale === 'zh' ? locale : await getServerLocale());
+      return NextResponse.json(result, { headers: { 'Cache-Control': 'no-store', 'Server-Timing': `search;dur=${(performance.now() - started).toFixed(1)}` } });
+    } catch {
+      return NextResponse.json({ error: 'Catalog search is temporarily unavailable' }, { status: 503 });
+    }
+  }
   const result = await queryPrograms(parseProgramQueryParams(searchParams));
   return NextResponse.json(result);
 }
@@ -66,6 +83,7 @@ export async function POST(request: Request) {
     revalidateTag(CACHE_TAGS.program(String(data.slug)), 'default');
     // Phase 121: the chatbot's RAG catalog has its own 5-min cache.
     invalidateLiveCatalogCache();
+    invalidateCatalogSearchCache();
     invalidateProgramFacetsCache();
     invalidateProgramQueryCache();
     // Phase 72: fire program.created webhook

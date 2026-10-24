@@ -91,9 +91,7 @@ function ProgramsPageInner() {
         // endpoint hides them by default. The merged list shows
         // every row, then a UI badge (added below) tells the
         // admin which ones are archived / unpublished.
-        const res = await fetch('/api/programs?limit=500&include_archived=true');
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
+        const data = await apiFetchJson<{ programs: Program[] }>('/api/programs?limit=500&include_archived=true');
         const dbPrograms: Program[] = data.programs || [];
         if (cancelled) return;
         const merged = mergeBySlug(dbPrograms, staticPrograms);

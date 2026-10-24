@@ -12,6 +12,10 @@ import {
 import { getProgramFacets } from '@/lib/program-facets';
 import ProgramsClient, { type UniversityOption } from './_components/programs-client';
 import { buildItemListSchema, buildBreadcrumbSchema } from '@/lib/catalog-schema';
+import { parseCatalogQuery } from '@/lib/catalog-search';
+import { catalogClientResult, isCatalogSearchEnabled, searchPublicCatalog } from '@/lib/catalog-search-server';
+import { CatalogClient } from '@/components/catalog/catalog-client';
+import { getServerLocale } from '@/lib/server-t';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getServerT();
@@ -43,6 +47,15 @@ export default async function ProgramsPage({
   for (const [k, v] of Object.entries(raw)) {
     if (typeof v === 'string') sp.set(k, v);
   }
+
+  if (await isCatalogSearchEnabled()) {
+    const query = parseCatalogQuery('programs', sp);
+    const result = await searchPublicCatalog(query, await getServerLocale()).then(catalogClientResult).catch(() => null);
+    const schema = buildItemListSchema('Study programs in China for international students', (result?.rows ?? []).map((row) => ({ name: row.name, url: `/programs/${row.slug}` })));
+    return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema).replace(/</g, '\\u003c') }} /><CatalogClient initialQuery={query} initialResult={result} /></>;
+  }
+  // This is a public page even when the original finder is selected for rollback.
+  for (const flag of ['featured', 'include_archived', 'only_archived']) sp.delete(flag);
 
   const [initialResult, universityOptions, facets] = await Promise.all([
     queryPrograms(parseProgramQueryParams(sp)),

@@ -51,7 +51,7 @@ export function Header() {
         <MainNav />
 
         {/* Right Actions */}
-        <div className="hidden lg:flex items-center gap-3 shrink-0">
+        <div className="hidden min-[1360px]:flex items-center gap-3 shrink-0">
           <button
             onClick={() => setLocale(locale === 'en' ? 'zh' : 'en')}
             className="flex items-center gap-1.5 rounded-none border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 transition-colors hover:border-[#9B1B30] hover:text-[#9B1B30]"
@@ -106,7 +106,7 @@ export function Header() {
         {/* Mobile Menu Toggle */}
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="lg:hidden p-2 text-gray-700"
+          className="min-[1360px]:hidden p-2 text-gray-700"
           aria-label={t('nav.menu.openMenu')}
           aria-expanded={mobileMenuOpen}
         >
@@ -116,7 +116,7 @@ export function Header() {
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="lg:hidden border-t border-gray-200 bg-white px-4 pb-4 pt-2">
+        <div className="min-[1360px]:hidden border-t border-gray-200 bg-white px-4 pb-4 pt-2">
           <nav className="flex flex-col gap-1">
             {mobileNavLinks.map((link) => (
               <Link

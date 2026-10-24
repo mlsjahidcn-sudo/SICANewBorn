@@ -5,6 +5,10 @@ import { getUniversities } from '@/lib/university-queries';
 import { getServerT } from '@/lib/server-t';
 import UniversitiesClient from './_components/universities-client';
 import { buildItemListSchema, buildBreadcrumbSchema } from '@/lib/catalog-schema';
+import { parseCatalogQuery } from '@/lib/catalog-search';
+import { catalogClientResult, isCatalogSearchEnabled, searchPublicCatalog } from '@/lib/catalog-search-server';
+import { CatalogClient } from '@/components/catalog/catalog-client';
+import { getServerLocale } from '@/lib/server-t';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getServerT();
@@ -16,7 +20,15 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function UniversitiesPage() {
+export default async function UniversitiesPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  if (await isCatalogSearchEnabled()) {
+    const sp = new URLSearchParams();
+    for (const [key, value] of Object.entries(await searchParams)) if (typeof value === 'string') sp.set(key, value);
+    const query = parseCatalogQuery('universities', sp);
+    const result = await searchPublicCatalog(query, await getServerLocale()).then(catalogClientResult).catch(() => null);
+    const schema = buildItemListSchema('Chinese universities for international students', (result?.rows ?? []).map((row) => ({ name: row.name, url: `/universities/${row.slug}` })));
+    return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema).replace(/</g, '\\u003c') }} /><CatalogClient initialQuery={query} initialResult={result} /></>;
+  }
   // Fetch on the server so the first paint already contains the grid
   // instead of waiting for a client-side /api/universities round-trip.
   const universities = await getUniversities({ limit: 1000 });

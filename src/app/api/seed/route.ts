@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { invalidateCatalogSearchCache } from '@/lib/catalog-search-server';
 import { supabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-server';
 import { requireAdmin } from '@/lib/supabase-auth';
 import { universities, programs, scholarships } from '@/lib/data';
@@ -139,6 +140,7 @@ export async function POST(request: NextRequest) {
     else results.scholarships++;
   }
 
+  invalidateCatalogSearchCache();
   return NextResponse.json({
     message: 'Seeding completed',
     results,

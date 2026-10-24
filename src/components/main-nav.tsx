@@ -266,7 +266,7 @@ export function MainNav() {
     // tried to re-position for content of mixed widths (some menus
     // are 280px wide, others 480px). Per-trigger positioning is the
     // simpler, more predictable layout.
-    <NavigationMenu className="hidden lg:flex" viewport={false}>
+    <NavigationMenu className="hidden min-[1360px]:flex" viewport={false}>
       <NavigationMenuList>
         {menuItems.map((item) => {
           // Compute once per item — drives both `aria-current` and the

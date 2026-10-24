@@ -5,6 +5,7 @@ import { supabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-serve
 import { checkRateLimit } from '@/lib/rate-limit';
 import { CACHE_TAGS } from '@/lib/cache';
 import { invalidateLiveCatalogCache } from '@/lib/ai/live-data-context';
+import { invalidateCatalogSearchCache } from '@/lib/catalog-search-server';
 import {
   importUniversityMediaFields,
   isExternalImageUrl,
@@ -247,6 +248,7 @@ export async function POST(request: NextRequest) {
   if (updated > 0) {
     revalidateTag(CACHE_TAGS.universities, 'default');
     invalidateLiveCatalogCache();
+    invalidateCatalogSearchCache();
   }
 
   return NextResponse.json({

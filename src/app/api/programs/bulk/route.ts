@@ -1,3 +1,4 @@
+import { invalidateCatalogSearchCache } from '@/lib/catalog-search-server';
 import { NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { supabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-server';
@@ -149,6 +150,7 @@ export async function POST(request: Request) {
       revalidateTag(CACHE_TAGS.programs, 'default');
       // Phase 121: the chatbot's RAG catalog has its own 5-min cache.
       invalidateLiveCatalogCache();
+    invalidateCatalogSearchCache();
       invalidateProgramFacetsCache();
       invalidateProgramQueryCache();
     }

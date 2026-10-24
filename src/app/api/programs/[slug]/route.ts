@@ -1,3 +1,4 @@
+import { invalidateCatalogSearchCache } from '@/lib/catalog-search-server';
 import { NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { supabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-server';
@@ -92,6 +93,7 @@ export async function PUT(
     revalidateTag(CACHE_TAGS.program(slug), 'default');
     // Phase 121: the chatbot's RAG catalog has its own 5-min cache.
     invalidateLiveCatalogCache();
+    invalidateCatalogSearchCache();
     invalidateProgramFacetsCache();
     invalidateProgramQueryCache();
     // Phase 72: fire program.updated webhook
@@ -203,6 +205,7 @@ export async function DELETE(
   revalidateTag(CACHE_TAGS.programs, 'default');
     revalidateTag(CACHE_TAGS.program(slug), 'default');
     invalidateLiveCatalogCache();
+    invalidateCatalogSearchCache();
     invalidateProgramFacetsCache();
     invalidateProgramQueryCache();
     // Phase 72: fire program.deleted webhook
@@ -266,6 +269,7 @@ export async function PATCH(
     revalidateTag(CACHE_TAGS.programs, 'default');
     revalidateTag(CACHE_TAGS.program(slug), 'default');
     invalidateLiveCatalogCache();
+    invalidateCatalogSearchCache();
     invalidateProgramFacetsCache();
     invalidateProgramQueryCache();
     return NextResponse.json({ program: mapProgramFromDb(data) });
@@ -285,6 +289,7 @@ export async function PATCH(
     revalidateTag(CACHE_TAGS.programs, 'default');
     revalidateTag(CACHE_TAGS.program(slug), 'default');
     invalidateLiveCatalogCache();
+    invalidateCatalogSearchCache();
     invalidateProgramFacetsCache();
     invalidateProgramQueryCache();
     return NextResponse.json({ program: mapProgramFromDb(data) });
@@ -321,6 +326,7 @@ export async function PATCH(
   revalidateTag(CACHE_TAGS.programs, 'default');
     revalidateTag(CACHE_TAGS.program(slug), 'default');
     invalidateLiveCatalogCache();
+    invalidateCatalogSearchCache();
     invalidateProgramFacetsCache();
     invalidateProgramQueryCache();
     return NextResponse.json({ program: mapProgramFromDb(data) });

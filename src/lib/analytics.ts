@@ -37,6 +37,10 @@ import { sendGAEvent } from '@next/third-parties/google';
  * caller's TypeScript will refuse to pass the wrong props.
  */
 export interface AnalyticsEventMap {
+  catalog_suggestion_select: { kind: 'programs' | 'universities'; position: number; locale: 'en' | 'zh' };
+  catalog_search_complete: { kind: 'programs' | 'universities'; result_count: number; query_length: number; duration_ms: number; locale: 'en' | 'zh' };
+  catalog_search_error: { kind: 'programs' | 'universities'; locale: 'en' | 'zh' };
+  catalog_results_view: { kind: 'programs' | 'universities'; result_count: number; query_length: number; locale: 'en' | 'zh' };
   /** User clicked any Apply CTA. */
   apply_click: {
     /** Which surface fired the click (sticky_bar, support_card, etc.). */

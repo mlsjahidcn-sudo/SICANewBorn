@@ -1,3 +1,4 @@
+import { invalidateCatalogSearchCache } from '@/lib/catalog-search-server';
 import { NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { supabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-server';
@@ -120,6 +121,7 @@ export async function PUT(
     revalidateTag(CACHE_TAGS.university(slug), 'default');
     // Phase 121: the chatbot's RAG catalog has its own 5-min cache.
     invalidateLiveCatalogCache();
+    invalidateCatalogSearchCache();
     // Phase 72: fire university.updated webhook
     return NextResponse.json({
       university: mapUniversityFromDb(data),
@@ -224,6 +226,7 @@ export async function DELETE(
   revalidateTag(CACHE_TAGS.universities, 'default');
   revalidateTag(CACHE_TAGS.university(slug), 'default');
   invalidateLiveCatalogCache();
+    invalidateCatalogSearchCache();
   // Phase 72: fire university.deleted webhook
   return NextResponse.json({
     success: true,
