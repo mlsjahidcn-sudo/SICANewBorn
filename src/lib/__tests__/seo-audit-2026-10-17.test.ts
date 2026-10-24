@@ -251,3 +251,67 @@ describe('F9 — the homepage links its money pages in-body', () => {
     expect(home).toContain('/china-university-application-deadlines');
   });
 });
+
+describe('G1 — Article.inLanguage must follow the cookie locale', () => {
+  const guidePage = readFileSync(
+    join(SRC, 'components/guides/guide-page.tsx'),
+    'utf-8'
+  );
+  const code = stripComments(guidePage);
+
+  it('awaits getServerLocale and maps zh → zh-CN', () => {
+    expect(code).toMatch(/await\s+getServerLocale\(\)/);
+    expect(code).toMatch(/locale\s*===\s*['"]zh['"]\s*\?\s*['"]zh-CN['"]\s*:\s*['"]en['"]/);
+  });
+
+  it('does not hardcode Article.inLanguage to English', () => {
+    // Pre-G1 every guide claimed inLanguage: 'en' regardless of the
+    // sica-locale cookie. The literal must not reappear as a schema value.
+    expect(code).not.toMatch(/inLanguage:\s*['"]en['"]/);
+    expect(code).toMatch(/inLanguage(?:,|\s*:)/);
+  });
+});
+
+describe('G2 — guide dates must be real, never fabricated "today"', () => {
+  const guidePage = readFileSync(
+    join(SRC, 'components/guides/guide-page.tsx'),
+    'utf-8'
+  );
+  const datesModule = readFileSync(
+    join(SRC, 'lib/guides/guide-dates.ts'),
+    'utf-8'
+  );
+  const code = stripComments(guidePage);
+
+  it('resolves dates via resolveGuideDates (git map + guide fields)', () => {
+    expect(code).toMatch(/resolveGuideDates\(/);
+    expect(datesModule).toMatch(/export const GUIDE_DATES/);
+    expect(datesModule).toMatch(/export function resolveGuideDates/);
+  });
+
+  it('never stamps new Date() into the hero Last-updated line', () => {
+    // Pre-G2 rendered `Last updated: {new Date().toISOString().slice(0, 10)}`
+    // which claimed every guide was edited on every request.
+    expect(code).not.toMatch(
+      /Last updated:[\s\S]{0,80}new Date\(\)\.toISOString/
+    );
+    expect(code).not.toMatch(
+      /new Date\(\)\.toISOString\(\)\.slice\(0,\s*10\)/
+    );
+  });
+
+  it('only renders the hero date when a real date is resolved', () => {
+    expect(code).toMatch(/visibleDate\s*\?\s*\(/);
+  });
+});
+
+describe('G3 — /apply must be in the sitemap', () => {
+  const sitemap = readFileSync(join(SRC, 'app/sitemap.ts'), 'utf-8');
+  const code = stripComments(sitemap);
+
+  it('emits /apply alongside the other conversion surfaces', () => {
+    expect(code).toMatch(
+      /url:\s*`\$\{SITE_URL\}\/apply`/
+    );
+  });
+});
