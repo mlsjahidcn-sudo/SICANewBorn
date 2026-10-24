@@ -141,7 +141,7 @@ export default async function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceSchema) }}
       />
       {/* Hero Section */}
-      <section className="relative isolate">
+      <section className="relative">
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{
