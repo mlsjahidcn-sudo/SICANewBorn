@@ -84,13 +84,13 @@ export function CatalogSearchBox({ query, onSearch, onKindChange, variant = 'dir
   return (
     <div className="min-w-0 text-[#1B2A4A]">
       {variant === 'hero' && categories}
-      <form onSubmit={submit} role="search" aria-label={t('catalog.searchLabel')} className="relative flex gap-2">
+      <form method="get" action={`/${query.kind}`} onSubmit={submit} role="search" aria-label={t('catalog.searchLabel')} className="relative flex gap-2">
         <div className="relative min-w-0 flex-1" onBlur={(event) => {
           if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
         }}>
           <Search className="pointer-events-none absolute left-4 top-4 h-5 w-5 text-[#1B2A4A]" aria-hidden="true" />
           <input
-            ref={input} type="search" role="combobox" value={draft} maxLength={CATALOG_QUERY_MAX}
+            ref={input} type="search" name="q" role="combobox" value={draft} maxLength={CATALOG_QUERY_MAX}
             aria-label={t('catalog.placeholder')} placeholder={t('catalog.placeholder')}
             aria-autocomplete="list" aria-expanded={visible} aria-controls={visible ? `${id}-suggestions` : undefined}
             aria-activedescendant={visible && active >= 0 ? `${id}-option-${active}` : undefined}
