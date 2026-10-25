@@ -466,6 +466,141 @@ export const getCatalogCounts = cache(
 );
 
 /**
+ * Slim home-page program card. The parent university name and city
+ * travel with the row so the card does not guess from the top-ranked
+ * university list.
+ *
+ * `programs.university_slug` is a bare string with no foreign key, so
+ * PostgREST cannot embed `universities`. The fetcher loads the program
+ * rows, then one follow-up select for those slugs only.
+ */
+export interface HomeFeaturedProgram {
+  slug: string;
+  name: string;
+  nameCn: string;
+  universitySlug: string;
+  universityName: string;
+  universityNameCn: string;
+  city: string;
+  cityCn: string;
+  degree: string;
+  discipline: string;
+  disciplineCn: string;
+  duration: string;
+  durationCn: string;
+  tuition: string;
+  scholarshipAvailable: boolean | null;
+}
+
+interface UniversityLabel {
+  name: string;
+  nameCn: string;
+  city: string;
+  cityCn: string;
+}
+
+function labelFromStatic(slug: string): UniversityLabel | undefined {
+  const uni = staticUniversities.find((row) => row.slug === slug);
+  if (!uni) return undefined;
+  return {
+    name: uni.name,
+    nameCn: uni.nameCn,
+    city: uni.city,
+    cityCn: uni.cityCn,
+  };
+}
+
+function toHomeFeaturedProgram(
+  row: {
+    slug: string;
+    name: string;
+    nameCn: string;
+    universitySlug: string;
+    degree: string;
+    discipline: string;
+    disciplineCn: string;
+    duration: string;
+    durationCn: string;
+    tuition: string;
+    scholarshipAvailable: boolean | null;
+  },
+  labels: Map<string, UniversityLabel>,
+): HomeFeaturedProgram {
+  const label = labels.get(row.universitySlug);
+  return {
+    slug: row.slug,
+    name: row.name,
+    nameCn: row.nameCn,
+    universitySlug: row.universitySlug,
+    universityName: label?.name ?? '',
+    universityNameCn: label?.nameCn ?? '',
+    city: label?.city ?? '',
+    cityCn: label?.cityCn ?? '',
+    degree: row.degree,
+    discipline: row.discipline,
+    disciplineCn: row.disciplineCn,
+    duration: row.duration,
+    durationCn: row.durationCn,
+    tuition: row.tuition,
+    scholarshipAvailable: row.scholarshipAvailable,
+  };
+}
+
+function featuredProgramsFromStatic(limit: number): HomeFeaturedProgram[] {
+  const labels = new Map<string, UniversityLabel>();
+  for (const program of staticPrograms.slice(0, limit)) {
+    const label = labelFromStatic(program.universitySlug);
+    if (label) labels.set(program.universitySlug, label);
+  }
+  return staticPrograms.slice(0, limit).map((program) =>
+    toHomeFeaturedProgram(
+      {
+        slug: program.slug,
+        name: program.name,
+        nameCn: program.nameCn,
+        universitySlug: program.universitySlug,
+        degree: program.degree,
+        discipline: program.discipline,
+        disciplineCn: program.disciplineCn,
+        duration: program.duration,
+        durationCn: program.durationCn,
+        tuition: program.tuition,
+        scholarshipAvailable: program.scholarshipAvailable,
+      },
+      labels,
+    ),
+  );
+}
+
+async function loadUniversityLabels(slugs: string[]): Promise<Map<string, UniversityLabel>> {
+  const unique = [...new Set(slugs.filter((slug) => slug.length > 0))];
+  const labels = new Map<string, UniversityLabel>();
+  for (const slug of unique) {
+    const label = labelFromStatic(slug);
+    if (label) labels.set(slug, label);
+  }
+  if (unique.length === 0 || !isSupabaseServerConfigured() || !supabaseServer) {
+    return labels;
+  }
+  const { data, error } = await supabaseServer
+    .from('universities')
+    .select('slug, name, name_cn, city, city_cn')
+    .in('slug', unique);
+  if (error || !data) return labels;
+  for (const row of data) {
+    const slug = String(row.slug ?? '');
+    if (!slug) continue;
+    labels.set(slug, {
+      name: String(row.name ?? ''),
+      nameCn: String(row.name_cn ?? ''),
+      city: String(row.city ?? ''),
+      cityCn: String(row.city_cn ?? ''),
+    });
+  }
+  return labels;
+}
+
+/**
  * Phase 128a: featured-program fetcher for the home page "Popular
  * programs" widget.
  *
@@ -488,8 +623,8 @@ export const getCatalogCounts = cache(
  * flipped a row featured.
  */
 export const getFeaturedPrograms = cache(
-  async (limit = 4): Promise<Program[]> => {
-    return cachedProcess(`programs:featured:${limit}`, async () => {
+  async (limit = 4): Promise<HomeFeaturedProgram[]> => {
+    return cachedProcess(`programs:featured:home:${limit}`, async () => {
       if (isSupabaseServerConfigured() && supabaseServer) {
         const { data, error } = await supabaseServer
           .from('programs')
@@ -503,7 +638,30 @@ export const getFeaturedPrograms = cache(
           .order('name', { ascending: true })
           .limit(limit);
         if (!error && data && data.length > 0) {
-          return data.map((row) => mapProgram(row, row.slug as string));
+          const labels = await loadUniversityLabels(
+            data.map((row) => String(row.university_slug ?? '')),
+          );
+          return data.map((row) =>
+            toHomeFeaturedProgram(
+              {
+                slug: String(row.slug ?? ''),
+                name: String(row.name ?? ''),
+                nameCn: String(row.name_cn ?? row.name ?? ''),
+                universitySlug: String(row.university_slug ?? ''),
+                degree: String(row.degree ?? ''),
+                discipline: String(row.discipline ?? ''),
+                disciplineCn: String(row.discipline_cn ?? ''),
+                duration: String(row.duration ?? ''),
+                durationCn: String(row.duration_cn ?? row.duration ?? ''),
+                tuition: String(row.tuition ?? ''),
+                scholarshipAvailable:
+                  typeof row.scholarship_available === 'boolean'
+                    ? row.scholarship_available
+                    : null,
+              },
+              labels,
+            ),
+          );
         }
         // PGRST / 427 = status columns missing (migration not yet
         // applied). Fall through to the static-fallback block below
@@ -514,12 +672,12 @@ export const getFeaturedPrograms = cache(
           (error.code === '42703' /* undefined_column */ ||
             error.code === 'PGRST204' /* column not in schema cache */)
         ) {
-          return staticPrograms.slice(0, limit);
+          return featuredProgramsFromStatic(limit);
         }
       }
       // No featured rows yet — top-N static by name so the widget
       // still renders something useful during pre-launch / dev.
-      return staticPrograms.slice(0, limit);
+      return featuredProgramsFromStatic(limit);
     });
   },
 );
