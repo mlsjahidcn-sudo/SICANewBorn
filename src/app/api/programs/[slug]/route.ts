@@ -16,21 +16,22 @@ import { invalidateProgramQueryCache } from '@/lib/program-query';
 import { isForceDelete, summarizeCascade } from '@/lib/cascade-delete';
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const { slug } = await params;
 
   if (isSupabaseServerConfigured() && supabaseServer) {
-    const { data, error } = await supabaseServer
-      .from('programs')
-      .select('*')
-      .eq('slug', slug)
-      .single();
-
-    if (!error && data) {
-      return NextResponse.json({ program: mapProgramFromDb(data) });
+    const administrative = new URL(request.url).searchParams.get('admin') === 'true';
+    if (administrative) {
+      const auth = await requireAdmin(request);
+      if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
+    let query = supabaseServer.from('programs').select('*').eq('slug', slug);
+    if (!administrative) query = query.eq('is_published', true).is('archived_at', null);
+    const { data, error } = await query.maybeSingle();
+    if (error) return NextResponse.json({ error: 'Unable to load program' }, { status: 503 });
+    return data ? NextResponse.json({ program: mapProgramFromDb(data) }) : NextResponse.json({ error: 'Program not found' }, { status: 404 });
   }
 
   const program = staticPrograms.find((p) => p.slug === slug);

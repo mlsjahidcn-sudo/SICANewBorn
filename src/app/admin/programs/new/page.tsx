@@ -1,14 +1,19 @@
 'use client';
 
+import { CatalogVerificationFields } from '@/components/admin/catalog-verification-fields';
+import type { CatalogVerification } from '@/lib/catalog-verification';
+import { catalogVerificationSchema } from '@/lib/validators/catalog-verification';
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save } from 'lucide-react';
-import { programs as staticPrograms, universities as staticUniversities, type Program } from '@/lib/data';
+import { universities as staticUniversities, type Program } from '@/lib/data';
 import { ToastProvider, useToast } from '@/components/admin/toast';
 import { apiFetch } from '@/lib/api-client';
 import { PageContainer } from '@/components/admin/page-container';
 
 interface ProgramFormData {
+  detailVerification: CatalogVerification;
   slug: string;
   name: string;
   nameCn: string;
@@ -31,6 +36,7 @@ interface ProgramFormData {
 }
 
 const defaultFormData: ProgramFormData = {
+  detailVerification: {},
   slug: '',
   name: '',
   nameCn: '',
@@ -54,6 +60,7 @@ const defaultFormData: ProgramFormData = {
 
 function programToForm(prog: Program): ProgramFormData {
   return {
+    detailVerification: prog.detailVerification ?? {},
     slug: prog.slug || '',
     name: prog.name || '',
     nameCn: prog.nameCn || '',
@@ -85,10 +92,13 @@ function ProgramFormInner({ slug }: { slug?: string }) {
 
   useEffect(() => {
     if (slug) {
-      const prog = staticPrograms.find(p => p.slug === slug);
-      if (prog) {
-        setForm(programToForm(prog));
-      }
+      let cancelled = false;
+      void apiFetch(`/api/programs/${encodeURIComponent(slug)}?admin=true`).then(async (response) => {
+        if (!response.ok) throw new Error('Unable to load program');
+        const data = await response.json() as { program: Program };
+        if (!cancelled) setForm(programToForm(data.program));
+      }).catch((error: unknown) => { if (!cancelled) addToast(error instanceof Error ? error.message : 'Unable to load program', 'error'); });
+      return () => { cancelled = true; };
     }
   }, [slug]);
 
@@ -102,6 +112,8 @@ function ProgramFormInner({ slug }: { slug?: string }) {
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
+    const evidence = catalogVerificationSchema.safeParse(form.detailVerification);
+    if (!evidence.success) { addToast(evidence.error.issues[0]?.message || 'Check the source details', 'error'); return; }
     setSaving(true);
     try {
       const payload = {
@@ -273,6 +285,8 @@ function ProgramFormInner({ slug }: { slug?: string }) {
             </div>
           </div>
         </div>
+
+        <CatalogVerificationFields record={slug && form.slug === slug ? { kind: 'programs', slug } : undefined} value={form.detailVerification} onChange={(detailVerification) => setForm((previous) => ({ ...previous, detailVerification }))} />
 
         {/* Submit */}
         <div className="flex items-center gap-4">

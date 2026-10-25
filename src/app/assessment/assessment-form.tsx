@@ -1,5 +1,8 @@
 'use client';
 
+import { SelectionSummary } from '@/components/public-detail/selection-summary';
+import { selectionQuery, type CatalogSelection } from '@/lib/catalog-selection';
+
 import { useState, useEffect, useRef, useCallback, type FormEvent, type ChangeEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Spinner } from '@/components/ui/spinner';
@@ -36,7 +39,7 @@ const getSteps = (t: (key: string, params?: Record<string, string | number>) => 
   { key: 'notes', label: t('assessment.step.submit'), icon: FileText, desc: t('assessment.step.submitDesc') },
 ] as const;
 
-export function AssessmentForm() {
+export function AssessmentForm({ selection = null, selectionError = false }: { selection?: CatalogSelection | null; selectionError?: boolean }) {
   const router = useRouter();
   const { t, locale } = useI18n();
   const STEPS = getSteps(t);
@@ -134,17 +137,6 @@ export function AssessmentForm() {
   const notesRef = useRef<HTMLTextAreaElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
-  // Pre-fill the Intended Major field when the user comes from a
-  // program page (e.g. /assessment?major=Computer+Science).
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const params = new URLSearchParams(window.location.search);
-    const major = params.get('major');
-    if (major && intendedMajorRef.current) {
-      intendedMajorRef.current.value = major;
-    }
-  }, []);
-
   // Phase 83: the wizard renders each step conditionally. When
   // the user reaches step 3, the inputs from steps 0-2 are
   // unmounted from the DOM. Reading values via `new FormData(form)`
@@ -168,8 +160,8 @@ export function AssessmentForm() {
     country: '',
     dateOfBirth: '',
     currentEducation: '',
-    intendedMajor: '',
-    targetUniversities: '',
+    intendedMajor: selection?.programName || searchParams.get('major') || '',
+    targetUniversities: selection?.universityName || '',
     notes: '',
   });
   const updateFormValue = useCallback((name: string, value: string) => {
@@ -345,6 +337,7 @@ export function AssessmentForm() {
 
 const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (selectionError) { setErrorMsg(t('detail.selectionError')); return; }
     setStatus('submitting');
     setErrorMsg('');
 
@@ -377,7 +370,9 @@ const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
       // Read directly from the still-mounted honeypot input
       // (it's outside the conditional step blocks, so it survives).
       website: honeypotEl?.value?.trim() ?? '',
-      sourcePage: window.location.pathname,
+      university: selection?.universitySlug,
+      program: selection?.programSlug,
+      sourcePage: selection?.sourcePath || '/assessment',
       ...utm,
     };
 
@@ -397,6 +392,8 @@ const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
         const body = await res.json().catch(() => ({}));
         throw new Error((body as { error?: string }).error || `Submission failed (${res.status})`);
       }
+      const accepted = await res.json() as { selection?: CatalogSelection | null };
+      if (accepted.selection) track('catalog_handoff_complete', { surface: 'assessment', university: accepted.selection.universitySlug, program: accepted.selection.programSlug, locale });
       setStatus('success');
       setSelectedFile(null);
       setUploadStatus('idle');
@@ -435,12 +432,11 @@ const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
       // feel instant, long enough to flush the network state
       // and show the inline success state to anyone watching
       // devtools.
-      const interestQs = interestParam
-        ? `&interest=${encodeURIComponent(interestParam)}${interestNameParam ? `&interestName=${encodeURIComponent(interestNameParam)}` : ''}`
-        : '';
-      const thankYouUrl = interestParam
-        ? `/thank-you?source=assessment${interestQs}`
-        : '/thank-you?source=assessment';
+      const confirmation = new URLSearchParams({ source: 'assessment' });
+      if (accepted.selection) {
+        for (const [key, value] of selectionQuery(accepted.selection)) confirmation.set(key, value);
+      }
+      const thankYouUrl = `/thank-you?${confirmation}`;
       setTimeout(() => {
         router.push(thankYouUrl);
       }, 250);
@@ -477,8 +473,10 @@ const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
 
   // ── Wizard ────────────────────────────────────────────────────
   return (
-    <div className="bg-white border border-gray-200 p-6 sm:p-8">
+    <div className="scroll-mt-24 bg-white border border-gray-200 p-6 sm:p-8" id="assessment-form">
       <h2 className="text-xl font-bold text-[#1F2937] mb-6">{t('assessment.form.title')}</h2>
+
+      <SelectionSummary selection={selection} error={selectionError} clearHref="/assessment#assessment-form" />
 
       {/* Progress indicator */}
       <ol className="flex items-center gap-2 mb-6" aria-label={t('assessment.progress', { current: currentStep + 1, total: STEPS.length, label: STEPS[currentStep].label })}>
@@ -568,22 +566,26 @@ const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
             </h3>
             <div className="grid sm:grid-cols-2 gap-5">
               <div>
-                <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('assessment.firstName')} *</label>
+                <label htmlFor="assessment-firstName" className="block text-sm font-medium text-[#1F2937] mb-1">{t('assessment.firstName')} *</label>
                 <input
                   ref={firstNameRef}
                   type="text"
                   name="firstName"
+                  id="assessment-firstName"
+                  defaultValue={formValues.firstName}
                   required
                   className="w-full border border-gray-300 px-4 py-2.5 text-sm text-[#1F2937] bg-white rounded-none focus:border-[#9B1B30] focus:outline-none focus:ring-1 focus:ring-[#9B1B30]"
                   placeholder="John"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('assessment.lastName')} *</label>
+                <label htmlFor="assessment-lastName" className="block text-sm font-medium text-[#1F2937] mb-1">{t('assessment.lastName')} *</label>
                 <input
                   ref={lastNameRef}
                   type="text"
                   name="lastName"
+                  id="assessment-lastName"
+                  defaultValue={formValues.lastName}
                   required
                   className="w-full border border-gray-300 px-4 py-2.5 text-sm text-[#1F2937] bg-white rounded-none focus:border-[#9B1B30] focus:outline-none focus:ring-1 focus:ring-[#9B1B30]"
                   placeholder="Smith"
@@ -592,22 +594,26 @@ const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
             </div>
             <div className="grid sm:grid-cols-2 gap-5 mt-5">
               <div>
-                <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('assessment.email')} *</label>
+                <label htmlFor="assessment-email" className="block text-sm font-medium text-[#1F2937] mb-1">{t('assessment.email')} *</label>
                 <input
                   ref={emailRef}
                   type="email"
                   name="email"
+                  id="assessment-email"
+                  defaultValue={formValues.email}
                   required
                   className="w-full border border-gray-300 px-4 py-2.5 text-sm text-[#1F2937] bg-white rounded-none focus:border-[#9B1B30] focus:outline-none focus:ring-1 focus:ring-[#9B1B30]"
                   placeholder="john@example.com"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('assessment.whatsapp')} *</label>
+                <label htmlFor="assessment-whatsapp" className="block text-sm font-medium text-[#1F2937] mb-1">{t('assessment.whatsapp')} *</label>
                 <input
                   ref={whatsappRef}
                   type="tel"
                   name="whatsapp"
+                  id="assessment-whatsapp"
+                  defaultValue={formValues.whatsapp}
                   required
                   className="w-full border border-gray-300 px-4 py-2.5 text-sm text-[#1F2937] bg-white rounded-none focus:border-[#9B1B30] focus:outline-none focus:ring-1 focus:ring-[#9B1B30]"
                   placeholder="+1 234 567 890"
@@ -616,22 +622,26 @@ const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
             </div>
             <div className="grid sm:grid-cols-2 gap-5 mt-5">
               <div>
-                <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('assessment.country')} *</label>
+                <label htmlFor="assessment-country" className="block text-sm font-medium text-[#1F2937] mb-1">{t('assessment.country')} *</label>
                 <input
                   ref={countryRef}
                   type="text"
                   name="country"
+                  id="assessment-country"
+                  defaultValue={formValues.country}
                   required
                   className="w-full border border-gray-300 px-4 py-2.5 text-sm text-[#1F2937] bg-white rounded-none focus:border-[#9B1B30] focus:outline-none focus:ring-1 focus:ring-[#9B1B30]"
                   placeholder="Your Country"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('assessment.dateOfBirth')} *</label>
+                <label htmlFor="assessment-dateOfBirth" className="block text-sm font-medium text-[#1F2937] mb-1">{t('assessment.dateOfBirth')} *</label>
                 <input
                   ref={dateOfBirthRef}
                   type="date"
                   name="dateOfBirth"
+                  id="assessment-dateOfBirth"
+                  defaultValue={formValues.dateOfBirth}
                   required
                   className="w-full border border-gray-300 px-4 py-2.5 text-sm text-[#1F2937] bg-white rounded-none focus:border-[#9B1B30] focus:outline-none focus:ring-1 focus:ring-[#9B1B30]"
                 />
@@ -649,12 +659,13 @@ const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
             </h3>
             <div className="grid sm:grid-cols-2 gap-5">
               <div>
-                <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('assessment.currentEducation')} *</label>
+                <label htmlFor="assessment-currentEducation" className="block text-sm font-medium text-[#1F2937] mb-1">{t('assessment.currentEducation')} *</label>
                 <select
                   ref={currentEducationRef}
                   name="currentEducation"
+                  id="assessment-currentEducation"
+                  defaultValue={formValues.currentEducation}
                   required
-                  defaultValue=""
                   className="w-full border border-gray-300 px-4 py-2.5 text-sm text-[#1F2937] bg-white rounded-none focus:border-[#9B1B30] focus:outline-none focus:ring-1 focus:ring-[#9B1B30]"
                 >
                   <option value="">{t('assessment.education.select')}</option>
@@ -665,11 +676,13 @@ const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#1F2937] mb-1">{t('assessment.intendedMajor')} *</label>
+                <label htmlFor="assessment-intendedMajor" className="block text-sm font-medium text-[#1F2937] mb-1">{t('assessment.intendedMajor')} *</label>
                 <input
                   ref={intendedMajorRef}
                   type="text"
                   name="intendedMajor"
+                  id="assessment-intendedMajor"
+                  defaultValue={formValues.intendedMajor}
                   required
                   className="w-full border border-gray-300 px-4 py-2.5 text-sm text-[#1F2937] bg-white rounded-none focus:border-[#9B1B30] focus:outline-none focus:ring-1 focus:ring-[#9B1B30]"
                   placeholder="Computer Science, Business, etc."
@@ -677,13 +690,15 @@ const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
               </div>
             </div>
             <div className="mt-5">
-              <label className="block text-sm font-medium text-[#1F2937] mb-1">
+              <label htmlFor="assessment-targetUniversities" className="block text-sm font-medium text-[#1F2937] mb-1">
                 {t('assessment.targetUniversities')}
               </label>
               <input
                 ref={targetUniversitiesRef}
                 type="text"
                 name="targetUniversities"
+                  id="assessment-targetUniversities"
+                  defaultValue={formValues.targetUniversities}
                 className="w-full border border-gray-300 px-4 py-2.5 text-sm text-[#1F2937] bg-white rounded-none focus:border-[#9B1B30] focus:outline-none focus:ring-1 focus:ring-[#9B1B30]"
                 placeholder="Tsinghua, Peking, Fudan, etc."
               />
@@ -786,6 +801,8 @@ const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
               <textarea
                 ref={notesRef}
                 name="notes"
+                  id="assessment-notes"
+                  defaultValue={formValues.notes}
                 rows={6}
                 className="w-full border border-gray-300 px-4 py-2.5 text-sm text-[#1F2937] bg-white rounded-none focus:border-[#9B1B30] focus:outline-none focus:ring-1 focus:ring-[#9B1B30] resize-vertical"
                 placeholder={t('assessment.notes.placeholder')}
@@ -843,7 +860,7 @@ const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
           ) : (
             <button
               type="submit"
-              disabled={status === 'submitting'}
+              disabled={status === 'submitting' || selectionError}
               className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-[#9B1B30] text-white font-semibold text-sm uppercase tracking-wider hover:bg-[#7A1526] transition-colors disabled:opacity-50"
             >
               {status === 'submitting' ? (

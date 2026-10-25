@@ -3,8 +3,15 @@ import { catalogVerificationSchema, readCatalogVerification } from '@/lib/valida
 import { datedIntake, verifiedEvidence } from '@/lib/catalog-verification';
 import { buildProgramFaqItems, buildUniversityFaqItems, faqSchema } from '@/lib/program-faq';
 import { programs, universities } from '@/lib/data';
+import { serializeJsonLd } from '@/lib/json-ld';
 
 describe('evidence-based public details', () => {
+  it('escapes closing script tags while round-tripping the original structured answers', () => {
+    const value = { answer: '</script><script>alert(1)</script>' };
+    const serialized = serializeJsonLd(value);
+    expect(serialized).not.toContain('<');
+    expect(JSON.parse(serialized)).toEqual(value);
+  });
   it('does not upgrade recurring start months to a dated intake', () => {
     expect(datedIntake('September')).toBe('');
     expect(datedIntake('February 2027')).toBe('February 2027');

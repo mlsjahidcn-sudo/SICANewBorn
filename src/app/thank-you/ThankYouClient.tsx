@@ -1,5 +1,8 @@
 'use client';
 
+import { SelectionSummary } from '@/components/public-detail/selection-summary';
+import type { CatalogSelection } from '@/lib/catalog-selection';
+
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -62,7 +65,7 @@ function generateReferenceNumber(): string {
   return `SICA-${y}${m}${day}-${rand}`;
 }
 
-export default function ThankYouClient() {
+export default function ThankYouClient({ selection = null, selectionError = false }: { selection?: CatalogSelection | null; selectionError?: boolean }) {
   const searchParams = useSearchParams();
   const { t } = useI18n();
 
@@ -330,10 +333,12 @@ export default function ThankYouClient() {
           <p className="text-sm text-[#4B5563] mb-6">
             {t('thankYou.relatedSubtitle')}
           </p>
+          <SelectionSummary selection={selection} error={selectionError} />
+
           {/* If ?interest is set, show a "you were looking at
               this" personalized card first. Falls back to the
               generic 3-link grid otherwise. */}
-          {interest && (
+          {!selection && interest && (
             <div className="bg-[#FAF6E8] border border-[#D4A853] p-5 mb-5">
               <p className="text-xs text-[#9B1B30] uppercase tracking-wider font-semibold mb-2">
                 {t('thankYou.relatedPersonalizedNote')}

@@ -1,3 +1,4 @@
+import { selectionForPage } from '@/lib/catalog-selection-server';
 import type { Metadata } from "next";
 import { buildLanguageAlternates } from "@/lib/alternates";
 import { buildServiceSchema } from "@/lib/catalog-schema";
@@ -27,7 +28,8 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function AssessmentPage() {
+export default async function AssessmentPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const context = await selectionForPage(await searchParams);
   const t = await getServerT();
   return (
     <div className="min-h-screen bg-[#FAFAF8]">
@@ -68,7 +70,7 @@ export default async function AssessmentPage() {
         <div className="grid lg:grid-cols-5 gap-10">
           {/* Assessment Form - Left */}
           <div className="lg:col-span-3">
-            <AssessmentForm />
+            <AssessmentForm {...context} />
           </div>
 
           {/* Assessment Info & QR Codes - Right */}

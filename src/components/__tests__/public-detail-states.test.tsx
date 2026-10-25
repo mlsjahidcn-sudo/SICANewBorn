@@ -3,13 +3,29 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { UniversityPrograms } from '@/components/public-detail/university-programs';
 import { DetailEvidence } from '@/components/public-detail/detail-evidence';
 import { DetailImage } from '@/components/public-detail/detail-image';
-import { I18nProvider } from '@/lib/i18n';
+import { I18nProvider, useI18n } from '@/lib/i18n';
+import { DetailFaq } from '@/components/public-detail/detail-faq';
+import { buildProgramFaqItems } from '@/lib/program-faq';
+import { programs } from '@/lib/data';
 import type { UniversityProgramPage } from '@/lib/university-programs';
 
 const empty: UniversityProgramPage = { rows: [], total: 0, totalPages: 0, page: 1, degreeOptions: [], languageOptions: [], search: '', degree: '', language: '' };
 beforeAll(() => { window.matchMedia = vi.fn().mockReturnValue({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }); });
 
 describe('public detail recovery states', () => {
+  it('updates visible FAQ answers, JSON-LD and page language together on a locale change', () => {
+    function BilingualFaq() {
+      const { locale, setLocale } = useI18n();
+      return <><button onClick={() => setLocale('zh')}>中文</button><DetailFaq items={buildProgramFaqItems(programs[0], 'Example University', locale)} /></>;
+    }
+    const { container } = render(<I18nProvider initialLocale="en"><BilingualFaq /></I18nProvider>);
+    fireEvent.click(screen.getByRole('button', { name: '中文' }));
+    const schema = JSON.parse(container.querySelector('script')?.textContent ?? '{}') as { mainEntity: { acceptedAnswer: { text: string } }[] };
+    expect(schema.mainEntity.map((item) => item.acceptedAnswer.text)).toEqual(Array.from(container.querySelectorAll('dd')).map((item) => item.textContent));
+    expect(document.documentElement.lang).toBe('zh');
+    if (typeof window.localStorage.removeItem === 'function') window.localStorage.removeItem('sica-locale');
+    document.cookie = 'sica-locale=; max-age=0; path=/';
+  });
   it('distinguishes an unlisted university catalog from filtered no matches', () => {
     const { rerender } = render(<I18nProvider initialLocale="en"><UniversityPrograms slug="example" result={empty} fromQuery="" totalPrograms={0} /></I18nProvider>);
     expect(screen.getByText('No public programs listed yet')).toBeInTheDocument();

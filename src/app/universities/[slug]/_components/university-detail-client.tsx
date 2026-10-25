@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { DetailImage } from '@/components/public-detail/detail-image';
 import { DetailFaq } from '@/components/public-detail/detail-faq';
@@ -44,6 +44,7 @@ export default function UniversityDetailClient({ university: uni, programPage, p
   const missing = t('catalog.notPublished');
   const [section, selectSection] = useDetailSection(sectionKeys);
   const [imageIndex, setImageIndex] = useState<number | null>(null);
+  const galleryTrigger = useRef<HTMLButtonElement | null>(null);
   const tags = localizedItems(uni.tags, uni.tagsCn, locale);
   const highlights = localizedItems(uni.highlights?.en, uni.highlights?.zh, locale);
   const popular = localizedItems(uni.popularPrograms, uni.popularProgramsCn, locale);
@@ -171,7 +172,7 @@ export default function UniversityDetailClient({ university: uni, programPage, p
                 <DetailSection title={t('uni.campusGallery')}>
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     {images.slice(0, 4).map((src, i) => (
-                      <button key={src} type="button" onClick={() => setImageIndex(i)} aria-label={t('detail.openCampusImage', { number: i + 1 })} className="group relative aspect-[4/3] overflow-hidden bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9B1B30]">
+                      <button key={src} type="button" onClick={(event) => { galleryTrigger.current = event.currentTarget; setImageIndex(i); }} aria-label={t('detail.openCampusImage', { number: i + 1 })} className="group relative aspect-[4/3] overflow-hidden bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9B1B30]">
                         <DetailImage src={src} alt={t('detail.campusImageAlt', { name, number: i + 1 })} sizes="(max-width: 640px) 45vw, 250px" className="object-cover transition-transform duration-300 motion-safe:group-hover:scale-105" />
                       </button>
                     ))}
@@ -253,7 +254,7 @@ export default function UniversityDetailClient({ university: uni, programPage, p
                 {images.length > 0 ? (
                   <div className="grid grid-cols-2 gap-3">
                     {images.map((src, i) => (
-                      <button key={src} type="button" onClick={() => setImageIndex(i)} aria-label={t('detail.openCampusImage', { number: i + 1 })} className="group relative aspect-[4/3] overflow-hidden bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9B1B30]">
+                      <button key={src} type="button" onClick={(event) => { galleryTrigger.current = event.currentTarget; setImageIndex(i); }} aria-label={t('detail.openCampusImage', { number: i + 1 })} className="group relative aspect-[4/3] overflow-hidden bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9B1B30]">
                         <DetailImage src={src} alt={t('detail.campusImageAlt', { name, number: i + 1 })} sizes="(max-width: 640px) 45vw, 350px" className="object-cover transition-transform duration-300 motion-safe:group-hover:scale-105" />
                         <span className="absolute bottom-2 right-2 flex h-8 w-8 items-center justify-center bg-white">
                           <Expand className="h-4 w-4 text-[#1B2A4A]" />
@@ -301,7 +302,7 @@ export default function UniversityDetailClient({ university: uni, programPage, p
       </div>
 
       <Dialog open={imageIndex !== null} onOpenChange={(open) => { if (!open) setImageIndex(null); }}>
-        <DialogContent closeLabel={t('common.close')} className="max-h-[90dvh] max-w-4xl overflow-y-auto rounded-none border-gray-200 p-4 sm:max-w-4xl sm:p-6" onKeyDown={(event) => { if (event.key === 'ArrowRight') { event.preventDefault(); changeImage(1); } if (event.key === 'ArrowLeft') { event.preventDefault(); changeImage(-1); } }}>
+        <DialogContent closeLabel={t('common.close')} onCloseAutoFocus={(event) => { if (galleryTrigger.current?.isConnected) { event.preventDefault(); galleryTrigger.current.focus(); } }} className="max-h-[90dvh] max-w-4xl overflow-y-auto rounded-none border-gray-200 p-4 sm:max-w-4xl sm:p-6" onKeyDown={(event) => { if (event.key === 'ArrowRight') { event.preventDefault(); changeImage(1); } if (event.key === 'ArrowLeft') { event.preventDefault(); changeImage(-1); } }}>
           <DialogTitle className="pr-8 text-base text-[#1B2A4A]">{name}</DialogTitle>
           <DialogDescription aria-live="polite" aria-atomic="true">{t('detail.galleryPosition', { number: (imageIndex ?? 0) + 1, count: images.length })}</DialogDescription>
           {imageIndex !== null && images[imageIndex] ? (

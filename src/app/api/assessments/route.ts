@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { resolveCatalogSelection, CatalogSelectionError } from '@/lib/catalog-selection-server';
+import { selectionNotes, type CatalogSelection } from '@/lib/catalog-selection';
 import { cookies, headers } from 'next/headers';
 import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
 import { sendAssessmentNotification } from '@/lib/email';
@@ -73,7 +75,10 @@ export async function POST(request: NextRequest) {
   }
 
   const userAgent = request.headers.get('user-agent') ?? null;
-  const sourcePage = (body.sourcePage as string) || '/assessment';
+  let selection: CatalogSelection | null;
+  try { selection = await resolveCatalogSelection(body); }
+  catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : 'Unable to confirm catalog selection' }, { status: error instanceof CatalogSelectionError ? error.status : 503 }); }
+  const sourcePage = selection?.sourcePath || (body.sourcePage as string) || '/assessment';
 
   // Phase 26: marketing attribution. Mirrors /api/leads —
   // the client (src/lib/utm.ts) captures UTM + click-id
@@ -103,7 +108,7 @@ export async function POST(request: NextRequest) {
       transcript_file_size: transcript.size || null,
       transcript_file_type: transcript.type || null,
       has_transcript: Boolean(transcript.name) || Boolean(transcriptStoragePath),
-      notes: (body.notes as string) || null,
+      notes: selectionNotes(selection, typeof body.notes === 'string' ? body.notes : null),
       source_page: sourcePage,
       user_agent: userAgent,
       // Phase 26: marketing attribution
@@ -161,7 +166,7 @@ export async function POST(request: NextRequest) {
     }).catch((err) =>
       console.error('[POST /api/assessments] drip schedule failed:', err),
     );
-    return NextResponse.json({ success: true, id: data.id });
+    return NextResponse.json({ success: true, id: data.id, selection });
   } catch (err) {
     console.error('[POST /api/assessments] unexpected error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

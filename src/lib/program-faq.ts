@@ -1,5 +1,5 @@
 import type { Program, University } from './data';
-import { detailText, localizedDetail, localizedItems } from './detail-content';
+import { catalogLabel, detailText, localizedDetail, localizedItems } from './detail-content';
 import { datedIntake, verifiedEvidence } from './catalog-verification';
 
 export interface DetailFaqItem { question: string; answer: string }
@@ -18,7 +18,7 @@ export function buildProgramFaqItems(program: FaqProgram, universityName: string
   const funding = verifiedEvidence(program.detailVerification) ? localizedDetail(program.detailVerification?.funding, program.detailVerification?.fundingCn, locale) : '';
   return [
     { question: zh ? `${name}的学费是多少？` : `How much does ${name} cost?`, answer: detailText(program.tuition) ? (zh ? `${universityName}该项目列出的学费为 ${program.tuition}。请确认适用于你的入学季的费用。` : `The listed tuition at ${universityName} is ${program.tuition}. Confirm the fee for your intake.`) : (zh ? '学费尚未列出，请与 SICA 确认。' : 'Tuition is not listed. Confirm the current fee with SICA.') },
-    { question: zh ? '使用什么语言授课？' : 'What is the teaching language?', answer: detailText(program.language) ? (zh ? `记录的授课语言为 ${program.language}。请按入学季确认。` : `The listed teaching language is ${program.language}. Confirm it for your intake.`) : (zh ? '授课语言尚未确认。' : 'The teaching language has not been confirmed.') },
+    { question: zh ? '使用什么语言授课？' : 'What is the teaching language?', answer: detailText(program.language) ? (zh ? `记录的授课语言为 ${catalogLabel(program.language, locale)}。请按入学季确认。` : `The listed teaching language is ${program.language}. Confirm it for your intake.`) : (zh ? '授课语言尚未确认。' : 'The teaching language has not been confirmed.') },
     { question: zh ? '如何确认入学要求？' : 'What are the entry requirements?', answer: requirements.length ? `${requirements.join('; ')}. ${zh ? '要求可能随入学季变化，请在申请前确认。' : 'Requirements can change by intake; confirm before applying.'}` : (zh ? '项目要求尚未列出，请向顾问确认学历、语言和材料要求。' : 'Program-specific requirements are not listed. Ask a counselor to confirm academic, language and document requirements.') },
     { question: zh ? '何时可以入学？' : 'When can I start?', answer: intake ? (zh ? `记录的入学季为 ${intake}。请确认当前名额和截止日期。` : `The recorded intake is ${intake}. Confirm current availability and its deadline.`) : (zh ? '下一个有年份的入学季尚未确认。记录的开学月份不代表正在接受申请。' : 'The next dated intake is not confirmed. Recorded start months do not establish that applications are open.') },
     { question: zh ? '有奖学金吗？' : 'Is funding available?', answer: funding || (zh ? '奖学金覆盖范围、资格和截止日期需按项目和入学季确认。目录中的标记不保证获得资助。' : 'Scholarship coverage, eligibility and deadlines must be confirmed for the program and intake. A catalog funding flag does not guarantee an award.') },

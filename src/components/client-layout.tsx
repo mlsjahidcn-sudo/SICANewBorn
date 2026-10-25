@@ -65,6 +65,9 @@ export function ClientLayout({
   catalogCounts: CatalogCounts;
 }) {
   const pathname = usePathname();
+  const isDetail = /^\/(universities|programs)\/[^/]+$/.test(pathname) && !pathname.endsWith('/compare');
+  const isHandoff = pathname === '/counselling' || pathname === '/assessment';
+  const quiet = isDetail || isHandoff;
   const isAdmin = pathname.startsWith('/admin');
   const isPartner = pathname.startsWith('/partner');
   const isStudent = pathname.startsWith('/student');
@@ -75,17 +78,19 @@ export function ClientLayout({
 
   return (
     <I18nProvider initialLocale={initialLocale}>
-      <div className="flex min-h-screen flex-col">
+      <div className={`flex min-h-screen flex-col ${isDetail ? 'pb-24 lg:pb-0' : ''}`}>
         <CscaPrepBanner />
         <Header />
         <main className="flex-1">{children}</main>
         <Footer counts={catalogCounts} />
-        <Chatbot />
-        <WhatsAppFloat />
-        <StickyContact />
-        <ExitIntentPopup />
-        {PUBLIC_WEBINAR_ENABLED && <WebinarPromoPopup />}
-        <WhatsAppGroupPopup />
+        {!quiet && <>
+          <Chatbot />
+          <WhatsAppFloat />
+          <StickyContact />
+          <ExitIntentPopup />
+          {PUBLIC_WEBINAR_ENABLED && <WebinarPromoPopup />}
+          <WhatsAppGroupPopup />
+        </>}
       </div>
     </I18nProvider>
   );

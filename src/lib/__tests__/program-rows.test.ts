@@ -7,6 +7,7 @@ function mockClient(count: number, failAt?: number) {
   const query = {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
+    is: vi.fn().mockReturnThis(),
     order: vi.fn().mockReturnThis(),
     range: vi.fn(async (from: number, to: number) => from === failAt
       ? { data: null, error: { message: 'Connection failed' } }
@@ -31,6 +32,8 @@ describe('catalogue beyond the database response cap', () => {
     expect(result.data).toHaveLength(50);
     expect(query.eq).toHaveBeenCalledWith('university_slug', 'example');
     expect(query.range).toHaveBeenCalledOnce();
+    expect(query.eq).toHaveBeenCalledWith('is_published', true);
+    expect(query.is).toHaveBeenCalledWith('archived_at', null);
   });
 
   it('reports a later page failure instead of silently returning an incomplete catalogue', async () => {

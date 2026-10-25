@@ -17,6 +17,8 @@ import { getCurrentUtm } from '@/lib/utm';
 import { track } from '@/lib/analytics';
 import { COUNSELLING_EDUCATION_LEVELS } from '@/lib/counselling-slots';
 import { WHATSAPP_PHONE } from '@/lib/contact';
+import { SelectionSummary } from '@/components/public-detail/selection-summary';
+import type { CatalogSelection } from '@/lib/catalog-selection';
 
 interface SlotOption {
   start: string;
@@ -25,6 +27,7 @@ interface SlotOption {
 }
 
 interface BookedInfo {
+  selection?: CatalogSelection | null;
   reference: string;
   slotStart: string;
   slotLabel: string;
@@ -40,7 +43,7 @@ const PHONE_RE = /^[+()\-\s\d]{5,25}$/;
  * All copy comes from the `counselling.*` i18n namespace so the
  * language toggle works mid-flow.
  */
-export function BookingWizard() {
+export function BookingWizard({ selection = null, selectionError = false }: { selection?: CatalogSelection | null; selectionError?: boolean }) {
   const { t, locale } = useI18n();
   const localeTag = locale === 'zh' ? 'zh-CN' : 'en-US';
 
@@ -201,7 +204,7 @@ export function BookingWizard() {
   };
 
   const handleSubmit = async () => {
-    if (!selectedSlot || submitting) return;
+    if (!selectedSlot || submitting || selectionError) return;
     setFormError(null);
     if (!validateDetails()) return;
     setSubmitting(true);
@@ -219,7 +222,9 @@ export function BookingWizard() {
           slotStart: selectedSlot.start,
           locale,
           website,
-          sourcePage: typeof window !== 'undefined' ? window.location.pathname : '/counselling',
+          university: selection?.universitySlug,
+          program: selection?.programSlug,
+          sourcePage: selection?.sourcePath || '/counselling',
           ...getCurrentUtm(),
         }),
       });
@@ -238,6 +243,7 @@ export function BookingWizard() {
         throw new Error(data.error || t('counselling.errorGeneric'));
       }
       setBooked(data.booking);
+      if (data.booking.selection) track('catalog_handoff_complete', { surface: 'counselling', university: data.booking.selection.universitySlug, program: data.booking.selection.programSlug, locale });
       setStep('success');
       track('counselling_booking_submit', { locale, reference: data.booking.reference });
     } catch (err) {
@@ -257,6 +263,7 @@ export function BookingWizard() {
           <CheckCircle2 className="h-9 w-9 text-[#9B1B30]" />
         </div>
         <h3 className="text-xl font-bold text-[#1B2A4A] mb-2">{t('counselling.successTitle')}</h3>
+        <SelectionSummary selection={booked.selection ?? selection} />
         <p className="text-[#4B5563] text-sm max-w-md mx-auto">{t('counselling.successBody')}</p>
         <div className="mt-6 grid sm:grid-cols-2 gap-4 max-w-lg mx-auto text-left">
           <div className="border border-gray-200 p-4">
@@ -304,12 +311,14 @@ export function BookingWizard() {
   }
 
   return (
-    <div className="bg-white border border-gray-200 p-6 sm:p-8" id="book">
+    <div className="scroll-mt-24 bg-white border border-gray-200 p-6 sm:p-8" id="book">
       <h3 className="text-xl font-bold text-[#1B2A4A] mb-1">{t('counselling.wizardTitle')}</h3>
       <p className="text-sm text-[#4B5563] mb-6 flex items-center gap-1.5">
         <Globe2 className="h-4 w-4 text-[#1B2A4A]" />
         {t('counselling.timezoneNote')}
       </p>
+
+      <SelectionSummary selection={selection} error={selectionError} clearHref="/counselling#book" />
 
       {/* Step indicator */}
       <div className="flex items-center gap-2 mb-6 text-xs font-semibold uppercase tracking-wider">
@@ -570,7 +579,7 @@ export function BookingWizard() {
 
           <button
             type="button"
-            disabled={submitting}
+            disabled={submitting || selectionError}
             onClick={handleSubmit}
             className="mt-8 w-full sm:w-auto px-8 py-3 bg-[#9B1B30] text-white font-semibold uppercase tracking-wider text-sm hover:bg-[#7A1526] transition-colors flex items-center gap-2 disabled:opacity-50"
           >

@@ -473,6 +473,9 @@ async function runQueryPrograms(params: ProgramQueryParams): Promise<ProgramQuer
       query = query.order('name', { ascending: true });
     }
 
+    // Many universities list the same name at several degrees/languages.
+    // A unique tie-breaker keeps those rows on stable result pages.
+    query = query.order('slug', { ascending: true });
     const from = (page - 1) * limit;
 
     if (relevance) {

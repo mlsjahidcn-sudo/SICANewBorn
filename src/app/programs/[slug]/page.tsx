@@ -1,4 +1,4 @@
-import { buildProgramFaqSchema } from '@/lib/program-faq';
+import { serializeJsonLd } from '@/lib/json-ld';
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import { getProgramBySlug } from '@/lib/program-queries';
@@ -64,8 +64,6 @@ export default async function ProgramDetailPage({
   const university = program.universitySlug
     ? await getUniversityBySlug(program.universitySlug)
     : null;
-  const universityName = university ? university.name : 'the partner university';
-  const faqSchema = buildProgramFaqSchema(program, university ? (locale === 'zh' && university.nameCn ? university.nameCn : university.name) : universityName, locale);
 
   // PF-6: the listing passes its filter query along, so the detail page
   // can send the visitor back to the exact result set they came from
@@ -124,15 +122,11 @@ export default async function ProgramDetailPage({
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(courseSchema).replace(/</g, '\\u003c') }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(courseSchema) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema).replace(/</g, '\\u003c') }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema).replace(/</g, '\\u003c') }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbSchema) }}
       />
       <ProgramDetailClient
         program={program}

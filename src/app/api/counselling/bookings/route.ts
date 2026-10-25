@@ -1,4 +1,6 @@
 import { randomBytes } from 'node:crypto';
+import { resolveCatalogSelection, CatalogSelectionError } from '@/lib/catalog-selection-server';
+import { selectionTopic, type CatalogSelection } from '@/lib/catalog-selection';
 import { NextRequest, NextResponse } from 'next/server';
 import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
 import {
@@ -102,9 +104,12 @@ export async function POST(request: NextRequest) {
   const email = asTrimmed(body.email, 254)?.toLowerCase() ?? null;
   const phone = asTrimmed(body.phone, 25);
   const country = asTrimmed(body.country, 60);
-  const topic = asTrimmed(body.topic, 500);
+  let selection: CatalogSelection | null;
+  try { selection = await resolveCatalogSelection(body); }
+  catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : 'Unable to confirm catalog selection' }, { status: error instanceof CatalogSelectionError ? error.status : 503 }); }
+  const topic = selectionTopic(selection, asTrimmed(body.topic, 500));
   const locale = body.locale === 'zh' ? 'zh' : 'en';
-  const sourcePage = asTrimmed(body.sourcePage, 200);
+  const sourcePage = selection?.sourcePath || asTrimmed(body.sourcePage, 200);
 
   if (!name || name.length < 2) {
     return NextResponse.json({ error: 'name is required' }, { status: 400 });
@@ -230,6 +235,7 @@ export async function POST(request: NextRequest) {
         slotStart: slotIso,
         slotLabel: formatBeijingLabel(slotStart),
         status: 'Pending',
+        selection,
       },
     },
     { status: 201 },

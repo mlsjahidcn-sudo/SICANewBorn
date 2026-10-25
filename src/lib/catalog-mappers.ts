@@ -1,3 +1,4 @@
+import { readCatalogVerification } from '@/lib/validators/catalog-verification';
 import { universities as staticUniversities, programs as staticPrograms } from '@/lib/data';
 
 /**
@@ -30,6 +31,7 @@ export function withStaticFallback<T>(
 
 export function mapUniversityFromDb(row: Record<string, unknown>) {
   return {
+    detailVerification: readCatalogVerification(row.detail_verification),
     slug: row.slug,
     name: row.name,
     nameCn: row.name_cn,
@@ -72,16 +74,13 @@ export function mapUniversityFromDb(row: Record<string, unknown>) {
     scholarshipInfoCn: row.scholarship_info_cn ?? row.scholarshipInfoCn,
     // Canonical behavior from /api/universities/[slug]: fall back to
     // the static-data row when the DB column is missing.
-    applicationDeadline: withStaticFallback(
-      row.slug as string,
-      'applicationDeadline',
-      (row.application_deadline ?? row.applicationDeadline) as string | undefined,
-    ),
+    applicationDeadline: (row.application_deadline ?? row.applicationDeadline) as string | undefined,
   };
 }
 
 export function mapUniversityToDb(u: Record<string, unknown>) {
   return {
+    ...(u.detailVerification !== undefined ? { detail_verification: u.detailVerification } : {}),
     slug: u.slug,
     name: u.name,
     name_cn: u.nameCn,
@@ -175,6 +174,7 @@ export function cnFallback(
 export function mapProgramFromDb(row: Record<string, unknown>) {
   const slug = row.slug as string;
   return {
+    detailVerification: readCatalogVerification(row.detail_verification),
     slug,
     name: row.name,
     nameCn: row.name_cn || row.name || '',
@@ -208,6 +208,7 @@ export function mapProgramFromDb(row: Record<string, unknown>) {
 
 export function mapProgramToDb(p: Record<string, unknown>) {
   return {
+    ...(p.detailVerification !== undefined ? { detail_verification: p.detailVerification } : {}),
     slug: p.slug,
     name: p.name,
     name_cn: p.nameCn,

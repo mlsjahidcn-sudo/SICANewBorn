@@ -1,3 +1,4 @@
+import { selectionForPage } from '@/lib/catalog-selection-server';
 import type { Metadata } from "next";
 import { buildLanguageAlternates } from "@/lib/alternates";
 import { Suspense } from 'react';
@@ -45,10 +46,11 @@ export async function generateMetadata(): Promise<Metadata> {
  * client component uses useSearchParams — without it the
  * whole page becomes client-rendered.
  */
-export default function ThankYouPage() {
+export default async function ThankYouPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const context = await selectionForPage(await searchParams);
   return (
     <Suspense fallback={<ThankYouSkeleton />}>
-      <ThankYouClient />
+      <ThankYouClient {...context} />
     </Suspense>
   );
 }

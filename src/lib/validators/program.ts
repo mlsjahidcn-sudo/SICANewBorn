@@ -1,8 +1,10 @@
+import { catalogVerificationSchema } from './catalog-verification';
 import { PROGRAM_DEGREES, PROGRAM_LANGUAGES } from '@/lib/program-types';
 import { z } from 'zod';
 import { stringArraySchema } from './shared';
 
 export const programSchema = z.object({
+  detailVerification: catalogVerificationSchema.optional(),
   // Track 1.3 U2: enforce lowercase kebab-case (see university validator).
   slug: z.string().min(1, 'Slug is required').regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug must be lowercase letters, numbers and hyphens'),
   name: z.string().min(1, 'Name is required'),

@@ -1,5 +1,9 @@
 'use client';
 
+import { CatalogVerificationFields } from '@/components/admin/catalog-verification-fields';
+import type { CatalogVerification } from '@/lib/catalog-verification';
+import { catalogVerificationSchema } from '@/lib/validators/catalog-verification';
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, Sparkles } from 'lucide-react';
@@ -12,6 +16,7 @@ import { AiRefineModal } from '@/components/admin/ai-refine-modal';
 import { PageContainer } from '@/components/admin/page-container';
 
 interface UniversityFormData {
+  detailVerification: CatalogVerification;
   slug: string;
   name: string;
   nameCn: string;
@@ -51,6 +56,7 @@ interface UniversityFormData {
 }
 
 const defaultFormData: UniversityFormData = {
+  detailVerification: {},
   slug: '',
   name: '',
   nameCn: '',
@@ -91,6 +97,7 @@ const defaultFormData: UniversityFormData = {
 
 function universityToForm(uni: University): UniversityFormData {
   return {
+    detailVerification: uni.detailVerification ?? {},
     slug: uni.slug || '',
     name: uni.name || '',
     nameCn: uni.nameCn || '',
@@ -277,6 +284,8 @@ function UniversityFormInner({ slug }: { slug?: string }) {
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
+    const evidence = catalogVerificationSchema.safeParse(form.detailVerification);
+    if (!evidence.success) { addToast(evidence.error.issues[0]?.message || 'Check the source details', 'error'); return; }
     setSaving(true);
     try {
       const payload = {
@@ -670,6 +679,8 @@ function UniversityFormInner({ slug }: { slug?: string }) {
             </div>
           </div>
         </div>
+
+        <CatalogVerificationFields record={slug && form.slug === slug ? { kind: 'universities', slug } : undefined} university value={form.detailVerification} onChange={(detailVerification) => setForm((previous) => ({ ...previous, detailVerification }))} />
 
         {/* Submit */}
         <div className="flex items-center gap-4">

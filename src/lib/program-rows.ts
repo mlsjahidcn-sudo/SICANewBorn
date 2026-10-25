@@ -9,7 +9,7 @@ export async function fetchProgramRows(
   const pageSize = 500;
   while (rows.length < limit) {
     const size = Math.min(pageSize, limit - rows.length);
-    let query = client.from('programs').select('*');
+    let query = client.from('programs').select('*').eq('is_published', true).is('archived_at', null);
     if (universitySlug) query = query.eq('university_slug', universitySlug);
     const { data, error } = await query
       .order('name', { ascending: true })

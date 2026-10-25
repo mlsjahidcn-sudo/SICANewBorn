@@ -1,3 +1,4 @@
+import { selectionForPage } from '@/lib/catalog-selection-server';
 import type { Metadata } from 'next';
 import { buildLanguageAlternates } from '@/lib/alternates';
 import {
@@ -59,7 +60,8 @@ const FAQ_ITEMS = [
   { q: 'counsellingFaq.q4', a: 'counsellingFaq.a4' },
 ] as const;
 
-export default async function CounsellingPage() {
+export default async function CounsellingPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const context = await selectionForPage(await searchParams);
   const t = await getServerT();
 
   // Phase 147: FAQPage JSON-LD — reads the same i18n keys as the
@@ -175,7 +177,7 @@ export default async function CounsellingPage() {
 
       {/* Booking wizard */}
       <section className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-16">
-        <BookingWizard />
+        <BookingWizard {...context} />
       </section>
 
       {/* Phase 147 (Task 7): FAQ about the session itself. The

@@ -12,6 +12,10 @@ export type Locale = 'en' | 'zh';
 
 export const translations: Record<Locale, Record<string, string>> = {
   en: {
+    "detail.evidenceSave": "Save verification only",
+    "detail.evidenceSaveHelp": "Save source, intake and funding evidence without changing the other catalog fields. This also works for a record whose description is still incomplete.",
+    "detail.evidenceSaved": "Verification details saved.",
+    "detail.evidenceSaveError": "Could not save verification details. Check the source and date, then retry.",
     "detail.pageSections": "Page sections",
     "detail.programCount": "Listed programs",
     "detail.datedIntake": "Dated intake",
@@ -6038,6 +6042,10 @@ export const translations: Record<Locale, Record<string, string>> = {
     // is the eyebrow that sits before it.
   },
   zh: {
+    "detail.evidenceSave": "仅保存核实信息",
+    "detail.evidenceSaveHelp": "单独保存来源、入学季和资助核实信息，不修改其他目录字段。项目简介尚未完善时也可使用。",
+    "detail.evidenceSaved": "核实信息已保存。",
+    "detail.evidenceSaveError": "无法保存核实信息。请检查来源与日期后重试。",
     "detail.pageSections": "页面章节",
     "detail.programCount": "目录项目",
     "detail.datedIntake": "有年份的入学季",

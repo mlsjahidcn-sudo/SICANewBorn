@@ -1,4 +1,4 @@
-import { buildUniversityFaqItems, faqSchema as buildFaqSchema } from '@/lib/program-faq';
+import { serializeJsonLd } from '@/lib/json-ld';
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import { getUniversityBySlug, getUniversities } from '@/lib/university-queries';
@@ -81,7 +81,6 @@ export default async function UniversityDetailPage({ params, searchParams }: Uni
   }
 
   const related = pickRelated(allUniversities, slug, 6);
-  const faqSchema = buildFaqSchema(buildUniversityFaqItems(uni, programSummary.total, locale));
 
   const displayName = locale === 'zh' && uni.nameCn ? uni.nameCn : uni.name;
   const displayDescription =
@@ -153,15 +152,11 @@ export default async function UniversityDetailPage({ params, searchParams }: Uni
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(universitySchema).replace(/</g, '\\u003c') }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(universitySchema) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema).replace(/</g, '\\u003c') }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema).replace(/</g, '\\u003c') }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbSchema) }}
       />
       <UniversityDetailClient university={uni} programPage={programPage} programSummary={programSummary} related={related} fromQuery={fromQuery} />
     </>
