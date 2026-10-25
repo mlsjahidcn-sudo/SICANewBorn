@@ -1,3 +1,4 @@
+import { readCatalogVerification } from '@/lib/validators/catalog-verification';
 import { unstable_cache } from 'next/cache';
 import { supabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-server';
 import { universities as staticUniversities, type University } from '@/lib/data';
@@ -13,11 +14,10 @@ async function fetchUniversityBySlug(slug: string): Promise<University | null> {
       .from('universities')
       .select('*')
       .eq('slug', slug)
-      .single();
+      .maybeSingle();
 
-    if (!error && data) {
-      return mapUniversityFromDb(data);
-    }
+    if (error) throw new Error('Unable to load this university');
+    return data ? mapUniversityFromDb(data) : null;
   }
 
   return staticUniversities.find((u) => u.slug === slug) ?? null;
@@ -52,9 +52,8 @@ async function fetchUniversities(options: GetUniversitiesOptions = {}): Promise<
       .order('ranking', { ascending: true })
       .limit(limit);
 
-    if (!error && data && data.length > 0) {
-      return data.map(mapUniversityFromDb);
-    }
+    if (error) throw new Error('Unable to load universities');
+    return (data ?? []).map(mapUniversityFromDb);
   }
 
   return staticUniversities.slice(0, limit);
@@ -80,12 +79,6 @@ export const getUniversities = unstable_cache(
   },
 );
 
-function withStaticFallback<T>(slug: string, key: keyof University, value: T): T {
-  if (value !== undefined && value !== null) return value;
-  const staticRow = staticUniversities.find((u) => u.slug === slug);
-  return (staticRow?.[key] as T) ?? value;
-}
-
 function toStringArray(value: unknown): string[] {
   if (Array.isArray(value)) return value.map(String);
   if (typeof value === 'string') return value.split(/[\n•·]+/).map((s) => s.trim()).filter(Boolean);
@@ -94,41 +87,42 @@ function toStringArray(value: unknown): string[] {
 
 function mapUniversityFromDb(row: Record<string, unknown>): University {
   return {
-    slug: String(row.slug),
-    name: String(row.name),
-    nameCn: String(row.name_cn),
-    city: String(row.city),
-    cityCn: String(row.city_cn),
+    detailVerification: readCatalogVerification(row.detail_verification),
+    slug: String(row.slug ?? ''),
+    name: String(row.name ?? ''),
+    nameCn: String(row.name_cn ?? ''),
+    city: String(row.city ?? ''),
+    cityCn: String(row.city_cn ?? ''),
     ranking: Number(row.ranking),
     rating: row.rating !== null && row.rating !== undefined ? Number(row.rating) : 0,
-    type: String(row.type),
-    typeCn: String(row.type_cn),
+    type: String(row.type ?? ''),
+    typeCn: String(row.type_cn ?? ''),
     established: Number(row.established),
-    students: String(row.students),
-    intlStudents: String(row.intl_students),
-    description: String(row.description),
-    descriptionCn: String(row.description_cn),
+    students: String(row.students ?? ''),
+    intlStudents: String(row.intl_students ?? ''),
+    description: String(row.description ?? ''),
+    descriptionCn: String(row.description_cn ?? ''),
     popularPrograms: Array.isArray(row.popular_programs)
       ? row.popular_programs.map(String)
       : [],
     popularProgramsCn: Array.isArray(row.popular_programs_cn)
       ? row.popular_programs_cn.map(String)
       : [],
-    tuitionUndergrad: String(row.tuition_undergrad),
-    tuitionGraduate: String(row.tuition_graduate),
-    intake: String(row.intake),
-    intakeCn: String(row.intake_cn),
+    tuitionUndergrad: String(row.tuition_undergrad ?? ''),
+    tuitionGraduate: String(row.tuition_graduate ?? ''),
+    intake: String(row.intake ?? ''),
+    intakeCn: String(row.intake_cn ?? ''),
     disciplines: Array.isArray(row.disciplines) ? row.disciplines.map(String) : [],
-    image: String(row.image),
-    logo: row.logo ? String(row.logo) : '',
-    qsRanking: String(row.qs_ranking),
+    image: String(row.image ?? ''),
+    logo: row.logo ? String(row.logo ?? '') : '',
+    qsRanking: String(row.qs_ranking ?? ''),
     qsWorldRanking: Number(row.qs_world_ranking),
     tags: Array.isArray(row.tags) ? row.tags.map(String) : [],
     tagsCn: Array.isArray(row.tags_cn) ? row.tags_cn.map(String) : [],
-    accommodation: String(row.accommodation),
-    accommodationCn: String(row.accommodation_cn),
-    accommodationCost: String(row.accommodation_cost),
-    accommodationCostCn: String(row.accommodation_cost_cn),
+    accommodation: String(row.accommodation ?? ''),
+    accommodationCn: String(row.accommodation_cn ?? ''),
+    accommodationCost: String(row.accommodation_cost ?? ''),
+    accommodationCostCn: String(row.accommodation_cost_cn ?? ''),
     accommodationTypes: Array.isArray(row.accommodation_types)
       ? row.accommodation_types.map(String)
       : [],
@@ -142,13 +136,9 @@ function mapUniversityFromDb(row: Record<string, unknown>): University {
             en: toStringArray((row.highlights as { en?: unknown }).en),
             zh: toStringArray((row.highlights as { zh?: unknown }).zh),
           }
-        : { en: [], zh: [] },
-    scholarshipInfo: row.scholarship_info ? String(row.scholarship_info) : undefined,
-    scholarshipInfoCn: row.scholarship_info_cn ? String(row.scholarship_info_cn) : undefined,
-    applicationDeadline: withStaticFallback(
-      String(row.slug),
-      'applicationDeadline',
-      row.application_deadline ? String(row.application_deadline) : undefined,
-    ),
+        : { en: toStringArray(row.highlights_en), zh: toStringArray(row.highlights_zh) },
+    scholarshipInfo: row.scholarship_info ? String(row.scholarship_info ?? '') : undefined,
+    scholarshipInfoCn: row.scholarship_info_cn ? String(row.scholarship_info_cn ?? '') : undefined,
+    applicationDeadline: row.application_deadline ? String(row.application_deadline) : undefined,
   };
 }

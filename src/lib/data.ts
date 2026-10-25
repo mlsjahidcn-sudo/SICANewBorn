@@ -1,4 +1,5 @@
 export interface University {
+  detailVerification?: import('./catalog-verification').CatalogVerification;
   slug: string;
   name: string;
   nameCn: string;
@@ -629,6 +630,7 @@ export const universities: University[] = [
 ];
 
 export interface Program {
+  detailVerification?: import('./catalog-verification').CatalogVerification;
   slug: string;
   name: string;
   nameCn: string;

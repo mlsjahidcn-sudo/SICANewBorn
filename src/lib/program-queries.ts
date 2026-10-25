@@ -1,3 +1,4 @@
+import { readCatalogVerification } from '@/lib/validators/catalog-verification';
 import { unstable_cache } from 'next/cache';
 import { supabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-server';
 import { programs as staticPrograms, type Program } from '@/lib/data';
@@ -10,11 +11,12 @@ async function fetchProgramBySlug(slug: string): Promise<Program | null> {
       .from('programs')
       .select('*')
       .eq('slug', slug)
-      .single();
+      .eq('is_published', true)
+      .is('archived_at', null)
+      .maybeSingle();
 
-    if (!error && data) {
-      return mapProgramFromDb(data);
-    }
+    if (error) throw new Error('Unable to load this program');
+    return data ? mapPublicProgramFromDb(data) : null;
   }
 
   return staticPrograms.find((p) => p.slug === slug) ?? null;
@@ -51,9 +53,8 @@ async function fetchProgramsByUniversity(universitySlug: string, limit = 50): Pr
   if (isSupabaseServerConfigured() && supabaseServer) {
     const { data, error } = await fetchProgramRows(supabaseServer, { universitySlug, limit });
 
-    if (!error && data && data.length > 0) {
-      return data.map(mapProgramFromDb);
-    }
+    if (error) throw new Error('Unable to load university programs');
+    return (data ?? []).map(mapPublicProgramFromDb);
   }
 
   return staticPrograms
@@ -85,9 +86,10 @@ function toStringArray(value: unknown): string[] {
   return [];
 }
 
-function mapProgramFromDb(row: Record<string, unknown>): Program {
+export function mapPublicProgramFromDb(row: Record<string, unknown>): Program {
   const slug = String(row.slug);
   return {
+    detailVerification: readCatalogVerification(row.detail_verification),
     slug,
     name: String(row.name ?? ''),
     nameCn: String(row.name_cn || row.name || ''),

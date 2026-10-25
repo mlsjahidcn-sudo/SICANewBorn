@@ -1,7 +1,8 @@
+import { buildUniversityFaqItems, faqSchema as buildFaqSchema } from '@/lib/program-faq';
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import { getUniversityBySlug, getUniversities } from '@/lib/university-queries';
-import { getProgramsByUniversity } from '@/lib/program-queries';
+import { getUniversityProgramPage, getUniversityProgramSummary } from '@/lib/university-programs';
 import { getServerLocale, t } from '@/lib/server-t';
 import { buildLanguageAlternates } from '@/lib/alternates';
 import { SITE_URL } from '@/lib/site-url';
@@ -63,75 +64,16 @@ function pickRelated(all: Awaited<ReturnType<typeof getUniversities>>, currentSl
   return [...sameCity, ...similarRank, ...restShuffled].slice(0, limit);
 }
 
-function buildFaqSchema(uni: NonNullable<Awaited<ReturnType<typeof getUniversityBySlug>>>, programCount: number) {
-  const uniName = uni.name;
-  const tuitionText = uni.tuitionUndergrad
-    ? `Undergraduate tuition at ${uniName} is ${uni.tuitionUndergrad} per year; graduate tuition is ${uni.tuitionGraduate || uni.tuitionUndergrad} per year.`
-    : `Tuition at ${uniName} varies by program and degree level. SICA provides a precise quote per program.`;
-  const rankingText = uni.ranking
-    ? `${uniName} is ranked #${uni.ranking} in China${uni.qsWorldRanking ? ` (QS World #${uni.qsWorldRanking})` : ''}.`
-    : `${uniName} is a recognized Chinese university${uni.type ? ` (${uni.type})` : ''}.`;
-  const programsCountText = programCount > 0
-    ? `${uniName} offers ${programCount}+ international programs (Bachelor's, Master's, PhD, Chinese Language) through SICA's network.`
-    : `${uniName} hosts international Bachelor's, Master's, and PhD programs in partnership with SICA.`;
-
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: [
-      {
-        '@type': 'Question',
-        name: `What is ${uniName} known for?`,
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: `${uniName} is a leading Chinese university. ${rankingText} Known for strengths in ${(uni.disciplines || []).slice(0, 3).join(', ') || 'engineering, business, and sciences'}.`,
-        },
-      },
-      {
-        '@type': 'Question',
-        name: `How much is tuition at ${uniName}?`,
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: tuitionText,
-        },
-      },
-      {
-        '@type': 'Question',
-        name: `What programs are available at ${uniName} for international students?`,
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: programsCountText,
-        },
-      },
-      {
-        '@type': 'Question',
-        name: `Does ${uniName} offer scholarships for international students?`,
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: `Yes. ${uniName} participates in the Chinese Government Scholarship (CSC) program and offers its own university-specific scholarships for international students. SICA helps you identify the right scholarship for your profile and handles the application end-to-end.`,
-        },
-      },
-      {
-        '@type': 'Question',
-        name: `How do I apply to ${uniName}?`,
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: `Apply through SICA's network. Submit a free academic assessment at https://studyinchina.academy/assessment — SICA's admissions team will confirm your eligibility for ${uniName}, prepare your application, and submit on your behalf.`,
-        },
-      },
-    ],
-  };
-}
-
 export default async function UniversityDetailPage({ params, searchParams }: UniversityPageProps) {
-  const sp = await searchParams;
-  const fromQuery = typeof sp?.from === 'string' ? safeCatalogReturnQuery(sp.from) : '';
+  const sp = (await searchParams) ?? {};
+  const fromQuery = typeof sp.from === 'string' ? safeCatalogReturnQuery(sp.from) : '';
   const { slug } = await params;
-  const [uni, allUniversities, programs, locale] = await Promise.all([
+  const locale = await getServerLocale();
+  const [uni, allUniversities, programPage, programSummary] = await Promise.all([
     getUniversityBySlug(slug),
     getUniversities({ limit: 100 }),
-    getProgramsByUniversity(slug, 50),
-    getServerLocale(),
+    getUniversityProgramPage(slug, sp, locale),
+    getUniversityProgramSummary(slug),
   ]);
 
   if (!uni) {
@@ -139,7 +81,7 @@ export default async function UniversityDetailPage({ params, searchParams }: Uni
   }
 
   const related = pickRelated(allUniversities, slug, 6);
-  const faqSchema = buildFaqSchema(uni, programs.length);
+  const faqSchema = buildFaqSchema(buildUniversityFaqItems(uni, programSummary.total, locale));
 
   const displayName = locale === 'zh' && uni.nameCn ? uni.nameCn : uni.name;
   const displayDescription =
@@ -211,17 +153,17 @@ export default async function UniversityDetailPage({ params, searchParams }: Uni
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(universitySchema) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(universitySchema).replace(/</g, '\\u003c') }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema).replace(/</g, '\\u003c') }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema).replace(/</g, '\\u003c') }}
       />
-      <UniversityDetailClient university={uni} programs={programs} related={related} fromQuery={fromQuery} />
+      <UniversityDetailClient university={uni} programPage={programPage} programSummary={programSummary} related={related} fromQuery={fromQuery} />
     </>
   );
 }

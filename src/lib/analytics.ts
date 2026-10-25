@@ -37,6 +37,9 @@ import { sendGAEvent } from '@next/third-parties/google';
  * caller's TypeScript will refuse to pass the wrong props.
  */
 export interface AnalyticsEventMap {
+  detail_view: { kind: 'programs' | 'universities'; slug: string; locale: 'en' | 'zh' };
+  detail_section_view: { kind: 'programs' | 'universities'; slug: string; section: string; locale: 'en' | 'zh' };
+  catalog_handoff_complete: { surface: 'assessment' | 'counselling'; university: string; program?: string; locale: 'en' | 'zh' };
   catalog_suggestion_select: { kind: 'programs' | 'universities'; position: number; locale: 'en' | 'zh' };
   catalog_search_complete: { kind: 'programs' | 'universities'; result_count: number; query_length: number; duration_ms: number; locale: 'en' | 'zh' };
   catalog_search_error: { kind: 'programs' | 'universities'; locale: 'en' | 'zh' };

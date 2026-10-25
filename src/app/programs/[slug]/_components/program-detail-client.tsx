@@ -1,466 +1,228 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
+import { DetailImage } from '@/components/public-detail/detail-image';
+import { DetailFaq } from '@/components/public-detail/detail-faq';
+import { buildProgramFaqItems } from '@/lib/program-faq';
+import { DetailEvidence, EvidenceSource } from '@/components/public-detail/detail-evidence';
+import { datedIntake, verifiedEvidence } from '@/lib/catalog-verification';
+import { DetailActionBar } from '@/components/public-detail/detail-action-bar';
 import { useI18n } from '@/lib/i18n';
-import {
-  degreeTypes,
-  languages,
-  degreeTypesCn,
-  languagesCn,
-  type Program,
-  type University,
-} from '@/lib/data';
-import { ChevronRight, Clock, Banknote, GraduationCap, Globe, Award, BookOpen, CheckCircle, ArrowRight, MapPin } from 'lucide-react';
-import UniversityLogo from '@/components/university-logo';
+import { type Program, type University } from '@/lib/data';
+import { ArrowRight, Check, MapPin } from 'lucide-react';
 import { RelatedNews } from '@/components/RelatedNews';
-import { GetStartedCta } from '@/components/GetStartedCta';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
+import { DetailBack, DetailFacts, DetailNav, DetailNotice, DetailSection, DetailSpec, DetailSupport, detailContainer, detailCounsellingHref, detailLink, useDetailSection } from '@/components/public-detail/detail-ui';
+import { catalogLabel, localizedDetail, localizedItems } from '@/lib/detail-content';
 import { track } from '@/lib/analytics';
-
-type TabKey = 'overview' | 'requirements' | 'curriculum' | 'tuition';
 
 interface ProgramDetailClientProps {
   program: Program;
   university: University | null;
-  /** PF-6: sibling programs (same university, then same discipline). */
-  relatedPrograms: Program[];
-  /** PF-6: the filter query the visitor arrived with, if any. */
+  relatedPrograms: (Program & { universityName: string; universityNameCn: string })[];
   fromQuery: string;
+  universityReturn?: string;
 }
 
-export default function ProgramDetailClient({
-  program,
-  university,
-  relatedPrograms,
-  fromQuery,
-}: ProgramDetailClientProps) {
+export default function ProgramDetailClient({ program, university, relatedPrograms, fromQuery, universityReturn = '' }: ProgramDetailClientProps) {
   const { t, locale } = useI18n();
-  const [activeTab, setActiveTab] = useState<TabKey>('overview');
-
-  const tabs: { key: TabKey; label: string }[] = [
+  const text = (en: unknown, zh?: unknown): string => localizedDetail(en, zh, locale);
+  const name = text(program.name, program.nameCn);
+  const uniName = university ? text(university.name, university.nameCn) : '';
+  const missing = t('catalog.notPublished');
+  const requirements = localizedItems(program.requirements, program.requirementsCn, locale);
+  const curriculum = localizedItems(program.curriculum, program.curriculumCn, locale);
+  const keys = ['overview', 'requirements', 'tuition', ...(curriculum.length ? ['curriculum'] : [])];
+  const [section, selectSection] = useDetailSection(keys);
+  const degree = catalogLabel(program.degree, locale);
+  const language = text(program.language) ? catalogLabel(program.language, locale) : missing;
+  const returnHref = universityReturn || (fromQuery ? `/programs?${fromQuery}` : '/programs');
+  const scholarship = program.scholarshipAvailable === true ? t('detail.fundingListed') : program.scholarshipAvailable === false ? t('detail.noFundingListed') : t('detail.confirmFunding');
+  const consultHref = detailCounsellingHref({
+    universitySlug: program.universitySlug,
+    name: uniName || name,
+    programSlug: program.slug,
+    programName: name,
+  });
+  const sections = [
     { key: 'overview', label: t('prog.overview') },
     { key: 'requirements', label: t('prog.requirements') },
-    { key: 'curriculum', label: t('prog.curriculum') },
-    { key: 'tuition', label: t('prog.tuitionFees') },
+    { key: 'tuition', label: t('detail.costsFunding') },
+    ...(curriculum.length ? [{ key: 'curriculum', label: t('prog.curriculum') }] : []),
   ];
-
-  const degreeColor = (degree: string) => {
-    switch (degree) {
-      case 'Bachelor': return 'bg-blue-50 text-blue-800 border-blue-200';
-      case 'Master': return 'bg-purple-50 text-purple-800 border-purple-200';
-      case 'PhD': return 'bg-amber-50 text-amber-800 border-amber-200';
-      default: return 'bg-gray-50 text-gray-800 border-gray-200';
-    }
-  };
+  const evidence = program.detailVerification;
+  const listedIntake = datedIntake(text(program.intake, program.intakeCn), evidence);
+  const facts = [
+    { label: t('prog.duration'), value: text(program.duration, program.durationCn) || missing },
+    { label: t('prog.tuitionLabel'), value: text(program.tuition) || missing },
+    { label: t('detail.datedIntake'), value: listedIntake || t('detail.confirmFunding') },
+    { label: t('prog.language'), value: language },
+  ];
+  const universityHref = university ? (universityReturn || `/universities/${university.slug}`) : '';
 
   return (
-    <main className="min-h-screen bg-[#FAFAF8]">
-      {/* Breadcrumb */}
-      <div className="border-b border-gray-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
-          <nav className="flex items-center gap-1.5 text-sm text-gray-500">
-            <Link href="/" className="hover:text-[#9B1B30] transition-colors">
-              {t('nav.home')}
-            </Link>
-            <ChevronRight className="h-3.5 w-3.5" />
-            <Link
-              href={fromQuery ? `/programs?${fromQuery}` : '/programs'}
-              className="hover:text-[#9B1B30] transition-colors"
-            >
-              {t('prog.title')}
-            </Link>
-            <ChevronRight className="h-3.5 w-3.5" />
-            <span className="text-[#1B2A4A] font-medium truncate">
-              {locale === 'zh' ? program.nameCn : program.name}
-            </span>
-          </nav>
-        </div>
-      </div>
+    <div className="min-w-0 bg-[#FAFAF8] pb-16 text-[#1B2A4A]">
+      <DetailBack href={returnHref}>{universityReturn ? t('detail.backUniversity') : t('prog.backToResults')}</DetailBack>
 
-      {/* Program Header */}
-      <section className="bg-[#1B2A4A] py-10">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-            <div className="flex-1">
-              {/* Degree + Language badges */}
-              <div className="flex flex-wrap items-center gap-2 mb-3">
-                <span className={`inline-block border px-3 py-1 text-xs font-semibold ${degreeColor(program.degree)}`}>
-                  {locale === 'zh'
-                    ? degreeTypesCn[degreeTypes.indexOf(program.degree)]
-                    : program.degree}
-                </span>
-                <span className="inline-flex items-center gap-1 border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium text-white">
-                  <Globe className="h-3.5 w-3.5" />
-                  {locale === 'zh'
-                    ? languagesCn[languages.indexOf(program.language)]
-                    : program.language}
-                </span>
-                {program.scholarshipAvailable && (
-                  <span className="inline-flex items-center gap-1 border border-[#D4A853]/30 bg-[#D4A853]/10 px-3 py-1 text-xs font-medium text-[#D4A853]">
-                    <Award className="h-3.5 w-3.5" />
-                    {t('prog.scholarship')}
-                  </span>
-                )}
-              </div>
-
-              <h1 className="text-2xl font-bold text-white sm:text-3xl">
-                {locale === 'zh' ? program.nameCn : program.name}
-              </h1>
-
-              {university && (
-                <Link
-                  href={`/universities/${university.slug}`}
-                  className="mt-2 inline-flex items-center gap-1.5 text-gray-300 hover:text-white transition-colors"
-                >
-                  <MapPin className="h-4 w-4" />
-                  <span className="text-sm font-medium">
-                    {locale === 'zh' ? university.nameCn : university.name}
-                  </span>
-                  <span className="text-xs text-gray-400">
-                    — {locale === 'zh' ? university.cityCn : university.city}
-                  </span>
-                </Link>
-              )}
+      <header className="border-b border-gray-200 bg-white">
+        {university && text(university.image) ? (
+          <div className="relative h-20 bg-[#1B2A4A] sm:h-32 lg:h-40">
+            <DetailImage src={university.image} alt="" priority sizes="100vw" className="object-cover object-center" />
+          </div>
+        ) : null}
+        <div className={detailContainer}>
+          <div className="py-5 sm:py-7">
+            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+              {degree ? <span className="bg-[#1B2A4A] px-2.5 py-1 text-white">{degree}</span> : null}
+              {language ? <span className="border border-gray-200 px-2.5 py-1 text-[#1B2A4A]">{language}</span> : null}
+              {program.scholarshipAvailable === true ? <span className="border border-[#9B1B30]/30 bg-[#9B1B30]/5 px-2.5 py-1 text-[#9B1B30]">{t('detail.fundingListed')}</span> : null}
             </div>
+            <div className="mt-3 grid min-w-0 items-center gap-x-6 lg:grid-cols-[minmax(0,1fr)_auto]">
+            <div className="min-w-0">
+            <h1 className="max-w-4xl break-words text-2xl font-bold leading-tight tracking-tight sm:text-4xl lg:text-5xl">{name}</h1>
+            {university ? (
+              <Link href={universityHref} className="mt-3 inline-flex max-w-full items-center gap-2 text-sm transition-colors duration-150 hover:text-[#9B1B30]">
 
-            <div className="flex gap-3 lg:flex-col lg:items-end">
-              <Link
-                href={`/assessment?major=${encodeURIComponent(locale === 'zh' ? program.nameCn : program.name)}&program=${encodeURIComponent(program.slug)}`}
-                className="rounded-none border border-white/30 bg-transparent px-5 py-2.5 text-sm font-semibold text-white hover:bg-white/10 hover:text-white transition-colors"
-              >
-                {t('prog.applyViaSica')}
+                <span className="min-w-0 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <span className="block font-semibold text-[#1B2A4A]">{uniName}</span>
+                  <span className="mt-1 flex items-center gap-1.5 text-xs text-gray-500">
+                    <MapPin className="h-3.5 w-3.5 text-[#1B2A4A]" />
+                    {text(university.city, university.cityCn) || missing}, {t('common.china')}
+                  </span>
+                </span>
+                <ArrowRight className="h-4 w-4 shrink-0 text-[#1B2A4A]" />
+              </Link>
+            ) : null}
+            </div>
+            <div className="mt-4 lg:mt-0">
+              <Link data-detail-primary href={consultHref} onClick={() => track('apply_click', { location: 'program_hero', slug: program.slug, locale })} className={`${detailLink} w-full sm:w-auto`}>
+                {t('consultationCta.ctaPrimary')}
               </Link>
             </div>
-          </div>
-
-          {/* Key Stats Row */}
-          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:max-w-2xl">
-            <div className="border border-white/10 bg-white/5 p-3">
-              <div className="flex items-center gap-2 text-gray-400 text-xs mb-1">
-                <Clock className="h-3.5 w-3.5" />
-                {t('prog.duration')}
-              </div>
-              <p className="text-white font-semibold text-sm">
-                {locale === 'zh' ? program.durationCn : program.duration}
-              </p>
             </div>
-            <div className="border border-white/10 bg-white/5 p-3">
-              <div className="flex items-center gap-2 text-gray-400 text-xs mb-1">
-                <Banknote className="h-3.5 w-3.5" />
-                {t('prog.tuitionLabel')}
-              </div>
-              <p className="text-white font-semibold text-sm">{program.tuition}</p>
-            </div>
-            <div className="border border-white/10 bg-white/5 p-3">
-              <div className="flex items-center gap-2 text-gray-400 text-xs mb-1">
-                <GraduationCap className="h-3.5 w-3.5" />
-                {t('prog.intake')}
-              </div>
-              <p className="text-white font-semibold text-sm">
-                {locale === 'zh' ? program.intakeCn : program.intake}
-              </p>
-            </div>
-            <div className="border border-white/10 bg-white/5 p-3">
-              <div className="flex items-center gap-2 text-gray-400 text-xs mb-1">
-                <BookOpen className="h-3.5 w-3.5" />
-                {t('prog.language')}
-              </div>
-              <p className="text-white font-semibold text-sm">
-                {locale === 'zh'
-                  ? languagesCn[languages.indexOf(program.language)]
-                  : program.language}
-              </p>
-            </div>
+            <div className="mt-5"><DetailFacts facts={facts} /></div>
           </div>
         </div>
-      </section>
+      </header>
 
-      {/* Tabs */}
-      <div className="border-b border-gray-200 bg-white sticky top-16 z-30">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex gap-0 overflow-x-auto">
-            {tabs.map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`whitespace-nowrap border-b-2 px-5 py-3.5 text-sm font-medium transition-colors ${
-                  activeTab === tab.key
-                    ? 'border-[#9B1B30] text-[#9B1B30]'
-                    : 'border-transparent text-gray-500 hover:text-[#1B2A4A]'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Tab Content */}
-      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="lg:flex lg:gap-8">
-          {/* Main Content */}
-          <div className="flex-1">
-            {activeTab === 'overview' && (
-              <div>
-                <h2 className="text-xl font-bold text-[#1B2A4A] mb-4">{t('prog.aboutProgram')}</h2>
-                <p className="text-gray-600 leading-relaxed mb-6">
-                  {locale === 'zh' ? program.descriptionCn : program.description}
-                </p>
-
-                {/* Quick highlights */}
-                <div className="grid gap-3 sm:grid-cols-2 mb-6">
-                  <div className="flex items-start gap-3 border border-gray-200 bg-white p-4">
-                    <Clock className="h-5 w-5 text-[#1B2A4A] shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-xs text-gray-500 mb-0.5">{t('prog.duration')}</p>
-                      <p className="font-semibold text-[#1B2A4A] text-sm">{locale === 'zh' ? program.durationCn : program.duration}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 border border-gray-200 bg-white p-4">
-                    <Banknote className="h-5 w-5 text-[#1B2A4A] shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-xs text-gray-500 mb-0.5">{t('prog.tuitionLabel')}</p>
-                      <p className="font-semibold text-[#1B2A4A] text-sm">{program.tuition}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 border border-gray-200 bg-white p-4">
-                    <GraduationCap className="h-5 w-5 text-[#1B2A4A] shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-xs text-gray-500 mb-0.5">{t('prog.degree')}</p>
-                      <p className="font-semibold text-[#1B2A4A] text-sm">
-                        {locale === 'zh' ? degreeTypesCn[degreeTypes.indexOf(program.degree)] : program.degree}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 border border-gray-200 bg-white p-4">
-                    <Globe className="h-5 w-5 text-[#1B2A4A] shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-xs text-gray-500 mb-0.5">{t('prog.language')}</p>
-                      <p className="font-semibold text-[#1B2A4A] text-sm">
-                        {locale === 'zh' ? languagesCn[languages.indexOf(program.language)] : program.language}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+      <Tabs value={section} onValueChange={selectSection} className="gap-0">
+        <DetailNav sections={sections} active={section} />
+        <div className={`${detailContainer} grid min-w-0 items-start gap-8 py-8 lg:grid-cols-[minmax(0,1fr)_20rem] lg:py-10`}>
+          <div className="min-w-0 space-y-6">
+            <TabsContent value="overview" className="space-y-6">
+              <DetailSection title={t('prog.aboutProgram')}>
+                <p className="whitespace-pre-line text-sm leading-7 text-gray-600 sm:text-base">{text(program.description, program.descriptionCn) || t('detail.programDescriptionMissing')}</p>
+                <EvidenceSource evidence={evidence} />
+              </DetailSection>
+              {program.scholarshipAvailable === true ? (
+                <DetailNotice title={t('detail.fundingListed')}>{t('detail.fundingFlagNote')}</DetailNotice>
+              ) : (
+                <DetailNotice title={t('detail.fundingNoteTitle')}>{t('detail.fundingNote')}</DetailNotice>
+              )}
+              <div className="grid gap-3 sm:grid-cols-2">
+                <button type="button" onClick={() => selectSection('requirements')} className="border border-gray-200 bg-white p-5 text-left transition-colors duration-150 hover:border-[#9B1B30]">
+                  <span className="block text-base font-semibold text-[#1B2A4A]">{t('prog.requirements')}</span>
+                  <span className="mt-2 block text-sm leading-6 text-gray-600">{requirements.length > 0 ? t('detail.publishedRequirements') : t('detail.requirementsMissingTitle')}</span>
+                </button>
+                <button type="button" onClick={() => selectSection('tuition')} className="border border-gray-200 bg-white p-5 text-left transition-colors duration-150 hover:border-[#9B1B30]">
+                  <span className="block text-base font-semibold text-[#1B2A4A]">{t('detail.costsFunding')}</span>
+                  <span className="mt-2 block text-sm leading-6 text-gray-600">{text(program.tuition) || missing}</span>
+                </button>
               </div>
-            )}
+            </TabsContent>
 
-            {activeTab === 'requirements' && (
-              <div>
-                <h2 className="text-xl font-bold text-[#1B2A4A] mb-4">{t('prog.requirements')}</h2>
-                <div className="border border-gray-200 bg-white p-5">
-                  <ul className="space-y-3">
-                    {(locale === 'zh' ? program.requirementsCn : program.requirements).map((req, i) => (
-                      <li key={i} className="flex items-start gap-3">
-                        <CheckCircle className="h-5 w-5 text-[#9B1B30] shrink-0 mt-0.5" />
-                        <span className="text-gray-600 text-sm leading-relaxed">{req}</span>
+            <TabsContent value="requirements" className="space-y-6">
+              <DetailSection title={t('prog.requirements')} lede={t('detail.requirementsNote')}>
+                {requirements.length > 0 ? (
+                  <ul className="divide-y divide-gray-100 border-t border-gray-100">
+                    {requirements.map((item, i) => (
+                      <li key={`${i}-${item}`} className="flex items-start gap-3 py-4 text-sm leading-6 text-gray-600">
+                        <Check className="mt-1 h-4 w-4 shrink-0 text-[#1B2A4A]" />
+                        {item}
                       </li>
                     ))}
                   </ul>
-                </div>
-
-                {program.scholarshipAvailable && (
-                  <div className="mt-6 border border-[#D4A853]/30 bg-[#D4A853]/5 p-5">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Award className="h-5 w-5 text-[#D4A853]" />
-                      <h3 className="font-semibold text-[#1B2A4A]">{t('prog.scholarshipInfo')}</h3>
-                    </div>
-                    <p className="text-sm text-gray-600">
-                      {t('prog.scholarshipInfoText')}
-                    </p>
-                  </div>
+                ) : (
+                  <DetailNotice title={t('detail.requirementsMissingTitle')}><p>{t('detail.requirementsMissing')}</p><Link href={consultHref} className="mt-3 inline-flex min-h-11 items-center font-semibold text-[#9B1B30] underline">{t('detail.confirmRequirements')}</Link></DetailNotice>
                 )}
-              </div>
-            )}
+                <EvidenceSource evidence={evidence} />
+              </DetailSection>
+              <DetailEvidence evidence={evidence} recordedIntake={text(program.intake, program.intakeCn)} />
+            </TabsContent>
 
-            {activeTab === 'curriculum' && (
-              <div>
-                <h2 className="text-xl font-bold text-[#1B2A4A] mb-4">{t('prog.curriculum')}</h2>
-                <div className="border border-gray-200 bg-white p-5">
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {(locale === 'zh' ? program.curriculumCn : program.curriculum).map((course, i) => (
-                      <div key={i} className="flex items-center gap-2.5 py-2 border-b border-gray-100 last:border-0">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center bg-[#1B2A4A] text-white text-xs font-bold">
-                          {i + 1}
-                        </span>
-                        <span className="text-sm text-gray-700">{course}</span>
-                      </div>
+            <TabsContent value="tuition" className="space-y-6">
+              <DetailSection title={t('detail.costsFunding')} lede={t('detail.feeBasis')}>
+                <DetailSpec rows={[
+                  { label: t('prog.tuitionLabel'), value: text(program.tuition) || missing },
+                  { label: t('uni.accommodation'), value: university ? text(university.accommodationCost, university.accommodationCostCn) || missing : missing },
+                  { label: t('detail.otherCosts'), value: t('detail.confirmOtherCosts') },
+                  { label: t('detail.fundingStatus'), value: scholarship },
+                ]} />
+                {university ? <p className="mt-3 text-xs leading-6 text-gray-500">{t('detail.accommodationBasis', { name: uniName })}</p> : null}
+              </DetailSection>
+              <DetailNotice title={t('detail.fundingNoteTitle')}>{(verifiedEvidence(evidence) ? text(evidence?.funding, evidence?.fundingCn) : '') || t('detail.fundingNote')}<EvidenceSource evidence={evidence} /></DetailNotice>
+              <Link href="/guides/scholarships" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#9B1B30] hover:underline">
+                {t('uni.fullScholarshipsGuide')}
+                <ArrowRight className="h-4 w-4 text-[#1B2A4A]" />
+              </Link>
+            </TabsContent>
+
+            {curriculum.length > 0 ? (
+              <TabsContent value="curriculum">
+                <DetailSection title={t('prog.curriculum')}>
+                  <ol className="divide-y divide-gray-100 border-t border-gray-100">
+                    {curriculum.map((course, i) => (
+                      <li key={`${i}-${course}`} className="flex gap-4 py-4 text-sm leading-6 text-gray-600">
+                        <span className="w-8 shrink-0 font-semibold tabular-nums text-[#1B2A4A]">{String(i + 1).padStart(2, '0')}</span>
+                        <span>{course}</span>
+                      </li>
                     ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'tuition' && (
-              <div>
-                <h2 className="text-xl font-bold text-[#1B2A4A] mb-4">{t('prog.tuitionFees')}</h2>
-                <div className="border border-gray-200 bg-white p-5 mb-6">
-                  <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                    <span className="text-gray-600">{t('prog.tuitionLabel')}</span>
-                    <span className="font-bold text-[#1B2A4A] text-lg">{program.tuition}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                    <span className="text-gray-600">{t('prog.duration')}</span>
-                    <span className="font-semibold text-[#1B2A4A]">{locale === 'zh' ? program.durationCn : program.duration}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                    <span className="text-gray-600">{t('prog.intake')}</span>
-                    <span className="font-semibold text-[#1B2A4A]">{locale === 'zh' ? program.intakeCn : program.intake}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-3">
-                    <span className="text-gray-600">{t('prog.scholarship')}</span>
-                    <span className={`font-semibold ${program.scholarshipAvailable ? 'text-[#9B1B30]' : 'text-gray-400'}`}>
-                      {program.scholarshipAvailable == null
-                        ? (locale === 'zh' ? '待确认' : 'To be confirmed')
-                        : program.scholarshipAvailable ? t('prog.scholarship') : t('prog.noScholarship')}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="border border-gray-200 bg-[#FAFAF8] p-5">
-                  <h3 className="font-semibold text-[#1B2A4A] mb-2">{t('prog.howToApply')}</h3>
-                  <p className="text-sm text-gray-600 leading-relaxed">
-                    {t('prog.howToApplyText')}
-                  </p>
-                </div>
-              </div>
-            )}
+                  </ol>
+                </DetailSection>
+              </TabsContent>
+            ) : null}
           </div>
 
-          {/* Sidebar */}
-          <div className="mt-8 lg:mt-0 lg:w-80 shrink-0">
-            {/* University Card */}
-            {university && (
-              <div className="border border-gray-200 bg-white p-5 mb-5">
-                <h3 className="text-sm font-semibold text-gray-500 mb-3">{t('prog.university')}</h3>
-                <Link
-                  href={`/universities/${university.slug}`}
-                  className="flex items-center gap-3 group"
-                >
-                  {university.logo && university.logo.startsWith('http') ? (
-                    <UniversityLogo src={university.logo} variant="sidebar" />
-                  ) : (
-                    <div className="flex h-12 w-12 items-center justify-center bg-[#1B2A4A] text-white font-bold text-lg shrink-0">
-                      {(university.name || '').charAt(0)}
-                    </div>
-                  )}
-                  <div>
-                    <p className="font-semibold text-[#1B2A4A] group-hover:text-[#9B1B30] transition-colors">
-                      {locale === 'zh' ? university.nameCn : university.name}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {locale === 'zh' ? university.cityCn : university.city} · {university.qsRanking}
-                    </p>
-                  </div>
-                </Link>
-              </div>
-            )}
-
-            {/* SICA Support Card */}
-            <div className="border border-[#9B1B30]/20 bg-[#9B1B30]/5 p-5">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="flex h-8 w-8 items-center justify-center bg-[#9B1B30] text-white text-xs font-bold">
-                  S
-                </div>
-                <h3 className="font-bold text-[#9B1B30]">{t('prog.applyViaSica')}</h3>
-              </div>
-              <p className="text-sm text-gray-600 leading-relaxed mb-4">
-                {t('prog.sicaHelp')}
-              </p>
-              <ul className="space-y-2 mb-4">
-                {[
-                  t('prog.freeConsultation'),
-                  t('prog.documentReview'),
-                  t('prog.visaGuidance'),
-                  t('prog.postArrivalSupport'),
-                ].map((item, i) => (
-                  <li key={i} className="flex items-center gap-2 text-sm text-gray-600">
-                    <CheckCircle className="h-4 w-4 text-[#9B1B30] shrink-0" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-              <Link
-                href={`/assessment?major=${encodeURIComponent(locale === 'zh' ? program.nameCn : program.name)}&program=${encodeURIComponent(program.slug)}`}
-                className="flex w-full items-center justify-center gap-2 rounded-none bg-[#9B1B30] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#7A1526]"
-              >
-                {t('cta.apply')}
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-              <div className="mt-3 text-center">
-                <GetStartedCta
-                  variant="inline"
-                  location="program_detail_support_card"
-                  program={program.slug}
-                />
-              </div>
-            </div>
-          </div>
+          <aside className="min-w-0 space-y-4 lg:sticky lg:top-32">
+            <DetailSupport name={uniName || name} universitySlug={program.universitySlug} programSlug={program.slug} programName={name} />
+            <Link href={`/programs?university=${encodeURIComponent(program.universitySlug)}`} className="flex items-center gap-3 border border-gray-200 bg-white p-5 text-sm font-semibold transition-colors duration-150 hover:border-[#9B1B30]">
+              <span className="min-w-0 flex-1">{t('detail.moreAtUniversity')}</span>
+              <ArrowRight className="h-4 w-4 shrink-0 text-[#1B2A4A]" />
+            </Link>
+          </aside>
         </div>
-      </section>
+      </Tabs>
 
-      {/* PF-6: related programs — same university first, then same
-          discipline. 2,513 program pages had no links to each other. */}
-      {relatedPrograms.length > 0 && (
-        <section className="border-t border-gray-200 bg-white py-10">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="flex items-end justify-between gap-4">
-              <h2 className="text-xl font-bold text-[#1B2A4A]">{t('prog.relatedPrograms')}</h2>
-              <Link
-                href={fromQuery ? `/programs?${fromQuery}` : '/programs'}
-                className="shrink-0 text-sm font-semibold text-[#9B1B30] hover:underline underline-offset-2"
-              >
-                {t('prog.backToResults')}
-              </Link>
-            </div>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {relatedPrograms.map((p) => (
-                <Link
-                  key={p.slug}
-                  href={`/programs/${p.slug}${fromQuery ? `?from=${encodeURIComponent(fromQuery)}` : ''}`}
-                  onClick={() => track('program_click', { slug: p.slug, position: 0, locale })}
-                  className="group flex flex-col border border-gray-200 bg-white p-4 transition-all duration-150 hover:border-[#9B1B30]/40 hover:shadow-md"
-                >
-                  <h3 className="text-sm font-bold leading-snug text-[#1B2A4A] group-hover:text-[#9B1B30]">
-                    {locale === 'zh' ? p.nameCn : p.name}
-                  </h3>
-                  <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-[#1B2A4A]/70">
-                    {p.degree}
-                    {p.language && p.language !== 'To be confirmed' ? ` · ${p.language}` : ''}
-                  </p>
-                  <p className="mt-2 line-clamp-2 text-xs text-gray-500">
-                    {locale === 'zh' ? p.descriptionCn : p.description}
-                  </p>
-                  <span className="mt-3 flex items-center gap-1 text-xs font-semibold text-[#9B1B30]">
+      <DetailFaq items={buildProgramFaqItems(program, uniName, locale)} />
+      <DetailActionBar href={consultHref} name={`${name}${uniName ? ` — ${uniName}` : ''}`} slug={program.slug} assessmentHref={`/assessment?${new URLSearchParams({ university: program.universitySlug, program: program.slug })}#assessment-form`} />
+
+      {relatedPrograms.length > 0 ? (
+        <section className="border-y border-gray-200 bg-white py-12">
+          <div className={detailContainer}>
+            <h2 className="text-2xl font-bold tracking-tight">{t('prog.relatedPrograms')}</h2>
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {relatedPrograms.map((item) => (
+                <Link key={item.slug} href={`/programs/${item.slug}${fromQuery || (universityReturn && item.universitySlug === program.universitySlug) ? `?${new URLSearchParams({ ...(fromQuery ? { from: fromQuery } : {}), ...(universityReturn && item.universitySlug === program.universitySlug ? { returnTo: universityReturn } : {}) })}` : ''}`} onClick={() => track('program_click', { slug: item.slug, position: 0, locale })} className="group flex min-h-full min-w-0 flex-col border border-gray-200 bg-white p-5 transition duration-150 hover:-translate-y-0.5 hover:border-[#9B1B30] hover:shadow-md">
+                  <p className="text-xs font-medium text-gray-500">{catalogLabel(item.degree, locale)}{item.language ? ` · ${catalogLabel(item.language, locale)}` : ''}</p>
+                  <p className="mt-2 text-xs font-semibold text-[#9B1B30]">{t(item.universitySlug === program.universitySlug ? 'detail.sameUniversity' : 'detail.similarSubject')}</p>
+                  <h3 className="mt-3 break-words text-base font-semibold leading-6 group-hover:text-[#9B1B30]">{text(item.name, item.nameCn)}</h3>
+                  <p className="mt-2 break-words text-xs leading-5 text-gray-600">{text(item.universityName, item.universityNameCn)}</p>
+                  <p className="mt-3 text-sm font-medium text-[#1B2A4A]">{text(item.tuition) || missing}</p>
+                  <p className="mt-1 text-xs text-gray-500">{text(item.intake, item.intakeCn) || missing}</p>
+                  <span className="mt-auto flex items-center gap-2 pt-5 text-sm font-semibold text-[#9B1B30]">
                     {t('prog.viewDetails')}
-                    <ArrowRight className="h-3.5 w-3.5" />
+                    <ArrowRight className="h-4 w-4 text-[#1B2A4A]" />
                   </span>
                 </Link>
               ))}
             </div>
           </div>
         </section>
-      )}
+      ) : null}
 
-      {/* Reciprocal news widget */}
-      <div className="bg-[#FAFAF8] py-10">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <RelatedNews
-            label={program.name}
-            terms={[
-              program.name,
-              program.nameCn || '',
-              university?.name || '',
-              program.universitySlug,
-              program.slug,
-              program.slug.replace(/-/g, ' '),
-            ].filter(Boolean).join(', ')}
-            category="university"
-            locale={locale as 'en' | 'zh'}
-          />
-        </div>
+      <div className={`${detailContainer} py-12`}>
+        <RelatedNews label={program.name} terms={[program.name, program.nameCn, university?.name, program.universitySlug].filter(Boolean).join(', ')} category="university" locale={locale} />
       </div>
-    </main>
+    </div>
   );
 }

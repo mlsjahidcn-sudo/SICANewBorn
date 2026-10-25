@@ -25,9 +25,9 @@ export default function UniversityLogo({ src, variant = 'card', className = '' }
   const isCard = variant === 'card';
   const isDirectory = variant === 'directory';
   const isSidebar = variant === 'sidebar';
-  // Card logos render as a 64x64 image inside the card overlay; detail page logos
-  // are 88x88 round avatars; directory logos are 64x64 round overlays; sidebar
-  // logos are 48x48 round avatars used in the program detail page sidebar.
+  // Card logos sit on listing cards. Detail logos are a square white plate.
+  // Directory logos stay circular overlays. Sidebar logos are the small plate
+  // used beside a university name.
   // next.config.ts allows all remote hostnames.
   const size = isCard ? 48 : isSidebar ? 48 : 88;
 
@@ -39,8 +39,8 @@ export default function UniversityLogo({ src, variant = 'card', className = '' }
           : isDirectory
             ? 'absolute bg-white flex items-center justify-center z-50 left-4 -bottom-8 h-16 w-16 rounded-full overflow-hidden'
             : isSidebar
-              ? 'bg-white border border-gray-200 flex items-center justify-center shrink-0 h-12 w-12 rounded-full overflow-hidden'
-              : 'bg-white border-2 border-gray-200 shadow-lg flex items-center justify-center shrink-0 h-[88px] w-[88px] rounded-full',
+              ? 'bg-white border border-gray-200 flex items-center justify-center shrink-0 h-12 w-12 overflow-hidden'
+              : 'bg-white flex items-center justify-center shrink-0 h-20 w-20 overflow-hidden',
         className,
       ].join(' ')}
     >
@@ -67,7 +67,7 @@ export default function UniversityLogo({ src, variant = 'card', className = '' }
               ? 'h-full w-full object-contain'
               : isSidebar
                 ? 'h-9 w-9 object-contain'
-                : 'h-[64px] w-[64px] object-contain rounded-full'
+                : 'h-14 w-14 object-contain'
         }
         onError={() => setHasError(true)}
       />

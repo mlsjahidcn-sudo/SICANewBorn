@@ -9,6 +9,8 @@ import { buildLanguageAlternates } from '@/lib/alternates';
 import { SITE_URL } from '@/lib/site-url';
 import ProgramDetailClient from './_components/program-detail-client';
 import type { Program } from '@/lib/data';
+import { safeCatalogReturnQuery } from '@/lib/catalog-search';
+import { safeUniversityReturn } from '@/lib/detail-content';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,13 +65,14 @@ export default async function ProgramDetailPage({
     ? await getUniversityBySlug(program.universitySlug)
     : null;
   const universityName = university ? university.name : 'the partner university';
-  const faqSchema = buildProgramFaqSchema(program, universityName);
+  const faqSchema = buildProgramFaqSchema(program, university ? (locale === 'zh' && university.nameCn ? university.nameCn : university.name) : universityName, locale);
 
   // PF-6: the listing passes its filter query along, so the detail page
   // can send the visitor back to the exact result set they came from
   // instead of the unfiltered directory.
   const rawFrom = sp.from;
-  const fromQuery = typeof rawFrom === 'string' ? rawFrom : '';
+  const fromQuery = typeof rawFrom === 'string' ? safeCatalogReturnQuery(rawFrom) : '';
+  const universityReturn = safeUniversityReturn(sp.returnTo, program.universitySlug);
 
   // PF-6: related programs (same university first, then same
   // discipline). 2,513 program pages had no links to each other.
@@ -121,21 +124,22 @@ export default async function ProgramDetailPage({
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(courseSchema) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(courseSchema).replace(/</g, '\\u003c') }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema).replace(/</g, '\\u003c') }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema).replace(/</g, '\\u003c') }}
       />
       <ProgramDetailClient
         program={program}
         university={university}
         relatedPrograms={relatedPrograms}
         fromQuery={fromQuery}
+        universityReturn={universityReturn}
       />
     </>
   );
@@ -151,23 +155,30 @@ export default async function ProgramDetailPage({
  * share, so the related list obeys exactly the same visibility rules
  * (no archived, no unpublished rows).
  */
-async function getRelatedPrograms(program: Program): Promise<Program[]> {
+async function getRelatedPrograms(program: Program): Promise<(Program & { universityName: string; universityNameCn: string })[]> {
   const [sameUni, sameDiscipline] = await Promise.all([
     program.universitySlug
       ? queryPrograms({ university: program.universitySlug, limit: 6 })
       : Promise.resolve({ programs: [] as Program[] }),
     program.discipline
-      ? queryPrograms({ discipline: program.discipline, limit: 6 })
+      ? queryPrograms({ discipline: program.discipline, degree: program.degree, limit: 8 })
       : Promise.resolve({ programs: [] as Program[] }),
   ]);
 
   const seen = new Set<string>([program.slug]);
   const out: Program[] = [];
-  for (const p of [...sameUni.programs, ...sameDiscipline.programs]) {
+  const candidates = [...sameUni.programs, ...sameDiscipline.programs].sort((a, b) => {
+    const score = (item: Program): number => Number(item.universitySlug === program.universitySlug) * 4 + Number(item.degree === program.degree) * 3 + Number(item.discipline === program.discipline) * 2 + Number(item.language === program.language);
+    return score(b) - score(a);
+  });
+  for (const p of candidates) {
     if (seen.has(p.slug)) continue;
     seen.add(p.slug);
     out.push(p);
     if (out.length >= 4) break;
   }
-  return out;
+  return Promise.all(out.map(async (item) => {
+    const institution = await getUniversityBySlug(item.universitySlug);
+    return { ...item, universityName: institution?.name || item.universitySlug.replace(/-/g, ' '), universityNameCn: institution?.nameCn || institution?.name || item.universitySlug.replace(/-/g, ' ') };
+  }));
 }
