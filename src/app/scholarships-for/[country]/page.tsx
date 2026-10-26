@@ -6,6 +6,7 @@ import { COUNTRIES, getCountryBySlug, getScholarshipsForCountry } from '@/lib/se
 import { getServerT } from '@/lib/server-t';
 import { buildLanguageAlternates } from '@/lib/alternates';
 import { SITE_URL } from "@/lib/site-url";
+import { documentTitle } from '@/lib/document-title';
 
 /**
  * /scholarships-for/[country] — pre-rendered detail page that lists
@@ -39,7 +40,7 @@ export async function generateMetadata({
   });
 
   return {
-    title,
+    title: documentTitle(title),
     description,
     alternates: await buildLanguageAlternates(`${SITE_URL}/scholarships-for/${country.slug}`),
     openGraph: {

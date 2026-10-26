@@ -11,6 +11,8 @@ import ProgramDetailClient from './_components/program-detail-client';
 import type { Program } from '@/lib/data';
 import { safeCatalogReturnQuery } from '@/lib/catalog-search';
 import { safeUniversityReturn } from '@/lib/detail-content';
+import { documentTitle } from '@/lib/document-title';
+import { buildProgramDocumentTitle, buildProgramMetaDescription } from '@/lib/program-seo';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,16 +27,28 @@ export async function generateMetadata({ params }: ProgramPageProps): Promise<Me
     getServerLocale(),
   ]);
   if (!program) {
-    return { title: t(locale, 'seo.dynamic.notFoundTitle') };
+    return { title: documentTitle(t(locale, 'seo.dynamic.notFoundTitle')) };
   }
 
-  const name = locale === 'zh' && program.nameCn ? program.nameCn : program.name;
-  const rawDescription = locale === 'zh' && program.descriptionCn ? program.descriptionCn : program.description;
-  const description = rawDescription.slice(0, 160);
-  const title = t(locale, 'seo.dynamic.programTitle', { name, degree: program.degree });
+  const university = program.universitySlug
+    ? await getUniversityBySlug(program.universitySlug)
+    : null;
+  const title = buildProgramDocumentTitle({
+    major: program.name,
+    degree: program.degree,
+    language: program.language,
+    university: university?.name ?? '',
+  });
+  const description = buildProgramMetaDescription({
+    major: program.name,
+    degree: program.degree,
+    language: program.language,
+    university: university?.name ?? '',
+    city: university?.city ?? '',
+  });
 
   return {
-    title,
+    title: documentTitle(title),
     description,
     alternates: await buildLanguageAlternates(`/programs/${slug}`),
     openGraph: {

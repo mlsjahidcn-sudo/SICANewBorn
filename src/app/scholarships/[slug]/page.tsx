@@ -4,6 +4,7 @@ import { getScholarshipBySlug } from '@/lib/scholarship-queries';
 import { getServerLocale, t } from '@/lib/server-t';
 import { buildLanguageAlternates } from '@/lib/alternates';
 import { SITE_URL } from '@/lib/site-url';
+import { documentTitle } from '@/lib/document-title';
 import ScholarshipDetailClient from './scholarship-detail-client';
 
 interface ScholarshipPageProps {
@@ -28,14 +29,14 @@ export async function generateMetadata({ params }: ScholarshipPageProps): Promis
     getServerLocale(),
   ]);
   if (!scholarship) {
-    return { title: t(locale, 'seo.dynamic.notFoundTitle') };
+    return { title: documentTitle(t(locale, 'seo.dynamic.notFoundTitle')) };
   }
 
   const name = locale === 'zh' ? scholarship.nameCn : scholarship.name;
   const description = (locale === 'zh' ? scholarship.descriptionCn : scholarship.description).slice(0, 160);
 
   return {
-    title: t(locale, 'seo.dynamic.scholarshipTitle', { name }),
+    title: documentTitle(t(locale, 'seo.dynamic.scholarshipTitle', { name })),
     description,
     alternates: await buildLanguageAlternates(`/scholarships/${slug}`),
     openGraph: {

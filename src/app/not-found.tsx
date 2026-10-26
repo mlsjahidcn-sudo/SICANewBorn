@@ -1,7 +1,8 @@
 import Link from 'next/link';
+import { documentTitle } from '@/lib/document-title';
 
 export const metadata = {
-  title: 'Page not found | SICA',
+  title: documentTitle('Page not found | SICA'),
 };
 
 export default function RootNotFound() {

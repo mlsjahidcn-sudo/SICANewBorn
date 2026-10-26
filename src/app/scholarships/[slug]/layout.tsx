@@ -9,6 +9,7 @@ import type { Metadata } from 'next';
 import { scholarships } from '@/lib/data';
 import { getServerLocale, t } from '@/lib/server-t';
 import { buildLanguageAlternates } from '@/lib/alternates';
+import { documentTitle } from '@/lib/document-title';
 
 export async function generateMetadata({
   params,
@@ -19,7 +20,7 @@ export async function generateMetadata({
   const locale = await getServerLocale();
   const scholarship = scholarships.find((s) => s.slug === slug);
   if (!scholarship) {
-    return { title: t(locale, 'seo.dynamic.notFoundTitle') };
+    return { title: documentTitle(t(locale, 'seo.dynamic.notFoundTitle')) };
   }
 
   const name = locale === 'zh' && scholarship.nameCn ? scholarship.nameCn : scholarship.name;
@@ -30,7 +31,7 @@ export async function generateMetadata({
   const description = rawDescription.slice(0, 160);
 
   return {
-    title,
+    title: documentTitle(title),
     description,
     alternates: await buildLanguageAlternates(`/scholarships/${slug}`),
     openGraph: {

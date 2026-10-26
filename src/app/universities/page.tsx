@@ -9,11 +9,12 @@ import { parseCatalogQuery } from '@/lib/catalog-search';
 import { catalogClientResult, isCatalogSearchEnabled, searchPublicCatalog } from '@/lib/catalog-search-server';
 import { CatalogClient } from '@/components/catalog/catalog-client';
 import { getServerLocale } from '@/lib/server-t';
+import { documentTitle } from '@/lib/document-title';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getServerT();
   return {
-    title: t('seo.universitiesTitle'),
+    title: documentTitle(t('seo.universitiesTitle')),
     description: t('seo.universitiesDescription'),
     alternates: await buildLanguageAlternates('/universities'),
     ...buildPageOpenGraph({ title: t('seo.universitiesTitle'), description: t('seo.universitiesDescription'), path: '/universities' }),

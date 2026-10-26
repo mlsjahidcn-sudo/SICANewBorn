@@ -13,7 +13,8 @@ import { ArrowRight, Check, MapPin } from 'lucide-react';
 import { RelatedNews } from '@/components/RelatedNews';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { DetailBack, DetailFacts, DetailNav, DetailNotice, DetailSection, DetailSpec, DetailSupport, detailContainer, detailCounsellingHref, detailLink, useDetailSection } from '@/components/public-detail/detail-ui';
-import { catalogLabel, localizedDetail, localizedItems } from '@/lib/detail-content';
+import { catalogLabel, detailText, localizedDetail, localizedItems } from '@/lib/detail-content';
+import { buildProgramHeading, teachingLanguageLabel } from '@/lib/program-seo';
 import { track } from '@/lib/analytics';
 
 interface ProgramDetailClientProps {
@@ -34,8 +35,11 @@ export default function ProgramDetailClient({ program, university, relatedProgra
   const curriculum = localizedItems(program.curriculum, program.curriculumCn, locale);
   const keys = ['overview', 'requirements', 'tuition', ...(curriculum.length ? ['curriculum'] : [])];
   const [section, selectSection] = useDetailSection(keys);
-  const degree = catalogLabel(program.degree, locale);
+  const degreeSource = detailText(program.degree);
+  const degree = degreeSource ? catalogLabel(degreeSource, locale) : '';
   const language = text(program.language) ? catalogLabel(program.language, locale) : missing;
+  const taughtLabel = teachingLanguageLabel(program.language, locale);
+  const heading = buildProgramHeading({ major: name, degree, university: uniName });
   const returnHref = universityReturn || (fromQuery ? `/programs?${fromQuery}` : '/programs');
   const scholarship = program.scholarshipAvailable === true ? t('detail.fundingListed') : program.scholarshipAvailable === false ? t('detail.noFundingListed') : t('detail.confirmFunding');
   const consultHref = detailCounsellingHref({
@@ -74,12 +78,12 @@ export default function ProgramDetailClient({ program, university, relatedProgra
           <div className="py-5 sm:py-7">
             <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
               {degree ? <span className="bg-[#1B2A4A] px-2.5 py-1 text-white">{degree}</span> : null}
-              {language ? <span className="border border-gray-200 px-2.5 py-1 text-[#1B2A4A]">{language}</span> : null}
               {program.scholarshipAvailable === true ? <span className="border border-[#9B1B30]/30 bg-[#9B1B30]/5 px-2.5 py-1 text-[#9B1B30]">{t('detail.fundingListed')}</span> : null}
             </div>
             <div className="mt-3 grid min-w-0 items-center gap-x-6 lg:grid-cols-[minmax(0,1fr)_auto]">
             <div className="min-w-0">
-            <h1 className="max-w-4xl break-words text-2xl font-bold leading-tight tracking-tight sm:text-4xl lg:text-5xl">{name}</h1>
+            <h1 className="max-w-4xl break-words text-2xl font-bold leading-tight tracking-tight sm:text-4xl lg:text-5xl">{heading}</h1>
+            {taughtLabel ? <p className="mt-2 text-sm font-semibold text-[#1B2A4A]">{taughtLabel}</p> : null}
             {university ? (
               <Link href={universityHref} className="mt-3 inline-flex max-w-full items-center gap-2 text-sm transition-colors duration-150 hover:text-[#9B1B30]">
 

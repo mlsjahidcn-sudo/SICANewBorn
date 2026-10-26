@@ -7,6 +7,7 @@ import { cities as citiesStatic, getCitiesAsync, getCityBySlugAsync, getUniversi
 import { getServerT } from '@/lib/server-t';
 import { buildLanguageAlternates } from '@/lib/alternates';
 import { SITE_URL } from "@/lib/site-url";
+import { documentTitle } from '@/lib/document-title';
 
 /**
  * /study-in-china/[city] — pre-rendered detail page for one Chinese
@@ -53,7 +54,7 @@ export async function generateMetadata({
   });
 
   return {
-    title,
+    title: documentTitle(title),
     description,
     alternates: await buildLanguageAlternates(`${SITE_URL}/study-in-china/${city.slug}`),
     openGraph: {

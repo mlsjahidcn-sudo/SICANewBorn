@@ -4,6 +4,7 @@ import { universities as staticUniversities, type University } from '@/lib/data'
 import { buildLanguageAlternates } from '@/lib/alternates';
 import { buildPageOpenGraph } from '@/lib/page-opengraph';
 import ComparePicker, { type CompareUni } from './compare-picker';
+import { documentTitle } from '@/lib/document-title';
 
 /**
  * Phase 92: this page used to be one 'use client' component that
@@ -22,7 +23,7 @@ export const revalidate = 3600;
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
-  title: 'Compare Chinese Universities | SICA',
+  title: documentTitle('Compare Chinese Universities | SICA'),
   description:
     'Pick any two Chinese universities to see them side by side — rankings, tuition, scholarships, programs, and more.',
   alternates: await buildLanguageAlternates('/universities/compare'),

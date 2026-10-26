@@ -8,6 +8,7 @@ import { buildLanguageAlternates } from '@/lib/alternates';
 import { SITE_URL } from '@/lib/site-url';
 import UniversityDetailClient from './_components/university-detail-client';
 import { safeCatalogReturnQuery } from '@/lib/catalog-search';
+import { documentTitle } from '@/lib/document-title';
 
 interface UniversityPageProps {
   params: Promise<{ slug: string }>;
@@ -27,7 +28,7 @@ export async function generateMetadata({ params }: UniversityPageProps): Promise
     getServerLocale(),
   ]);
   if (!uni) {
-    return { title: t(locale, 'seo.dynamic.notFoundTitle') };
+    return { title: documentTitle(t(locale, 'seo.dynamic.notFoundTitle')) };
   }
 
   const name = locale === 'zh' && uni.nameCn ? uni.nameCn : uni.name;
@@ -36,7 +37,7 @@ export async function generateMetadata({ params }: UniversityPageProps): Promise
   const title = t(locale, 'seo.dynamic.universityTitle', { name });
 
   return {
-    title,
+    title: documentTitle(title),
     description,
     alternates: await buildLanguageAlternates(`/universities/${slug}`),
     openGraph: {

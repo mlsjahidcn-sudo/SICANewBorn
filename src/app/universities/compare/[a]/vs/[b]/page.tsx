@@ -19,6 +19,7 @@ import {
 import { getAllUniversities } from '@/lib/data-fetcher';
 import { getServerLocale, t } from '@/lib/server-t';
 import { buildLanguageAlternates } from '@/lib/alternates';
+import { documentTitle } from '@/lib/document-title';
 import { SITE_URL } from '@/lib/site-url';
 
 // All ranked universities, sorted. The picker and the slug validation
@@ -76,7 +77,7 @@ export async function generateMetadata({
   const uniA = unis.find((u) => u.slug === a);
   const uniB = unis.find((u) => u.slug === b);
   if (!uniA || !uniB) {
-    return { title: t(locale, 'seo.dynamic.notFoundTitle') };
+    return { title: documentTitle(t(locale, 'seo.dynamic.notFoundTitle')) };
   }
 
   const nameA = locale === 'zh' && uniA.nameCn ? uniA.nameCn : uniA.name;

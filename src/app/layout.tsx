@@ -14,6 +14,9 @@ import { getCatalogCounts } from '@/lib/data-fetcher';
 const baseMetadata: Metadata = {
   title: {
     default: 'SICA | Study in China - Your Gateway to Top Chinese Universities',
+    // Appends the brand once. A page whose own title already ends in
+    // "| SICA" must set `title: { absolute }` (see documentTitle) so
+    // this template does not produce "| SICA | SICA".
     template: '%s | SICA',
   },
   description:

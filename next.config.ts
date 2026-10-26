@@ -257,6 +257,16 @@ const baseConfig: NextConfig = {
     // Raise it with NEXT_BUILD_WORKERS on a beefier builder.
     cpus: Number(process.env.NEXT_BUILD_WORKERS) || 2,
   },
+  async rewrites() {
+    return {
+      beforeFiles: [
+        // /sitemap.xml is the index. Next's sitemap.ts convention only
+        // emits a urlset, so the index is a route handler and this
+        // rewrite keeps the public URL crawlers already fetch.
+        { source: '/sitemap.xml', destination: '/sitemap-index' },
+      ],
+    };
+  },
 };
 
 // Phase 67: wrap with @next/bundle-analyzer when ANALYZE=true.

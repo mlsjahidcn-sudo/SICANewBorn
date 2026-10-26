@@ -39,6 +39,7 @@ async function fetchAllCatalogRows(
     const { data, error } = await supabase
       .from(table)
       .select(columns)
+      .order('slug', { ascending: true })
       .range(offset, offset + SITEMAP_PAGE_SIZE - 1);
     if (error || !data || data.length === 0) break;
     rows.push(...(data as unknown as SitemapEntry[]));
@@ -47,7 +48,10 @@ async function fetchAllCatalogRows(
   return rows.length > 0 ? rows : null;
 }
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+export async function loadSitemapParts(): Promise<{
+  pages: MetadataRoute.Sitemap;
+  programs: MetadataRoute.Sitemap;
+}> {
   // ─────────────────────────────────────────────────────────────────
   // NO build-time lastmod.
   // ─────────────────────────────────────────────────────────────────
@@ -472,7 +476,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   }
 
-  return [
+  const pages: MetadataRoute.Sitemap = [
     ...staticPages,
     ...landingPages,
     ...seoHubPages,
@@ -480,7 +484,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...cityUrls,
     ...countryUrls,
     ...universityUrls,
-    ...programUrls,
     ...scholarshipUrls,
     ...compareUrls,
     ...rankedUniSubUrls,
@@ -490,4 +493,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...newsIndexUrl,
     ...newsPostUrls,
   ];
+
+  return { pages, programs: programUrls };
 }

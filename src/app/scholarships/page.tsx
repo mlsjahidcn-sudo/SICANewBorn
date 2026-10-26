@@ -4,12 +4,13 @@ import { buildPageOpenGraph } from '@/lib/page-opengraph';
 import { getScholarships } from '@/lib/scholarship-queries';
 import { buildItemListSchema } from '@/lib/catalog-schema';
 import { getServerT } from '@/lib/server-t';
+import { documentTitle } from '@/lib/document-title';
 import ScholarshipsClient from './_components/scholarships-client';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getServerT();
   return {
-    title: t('seo.scholarshipsTitle'),
+    title: documentTitle(t('seo.scholarshipsTitle')),
     description: t('seo.scholarshipsDescription'),
     alternates: await buildLanguageAlternates('/scholarships'),
     ...buildPageOpenGraph({ title: t('seo.scholarshipsTitle'), description: t('seo.scholarshipsDescription'), path: '/scholarships' }),

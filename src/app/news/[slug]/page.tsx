@@ -11,6 +11,7 @@ import { getServerLocale, t } from '@/lib/server-t';
 import { buildLanguageAlternates } from '@/lib/alternates';
 
 import { SITE_URL } from '@/lib/site-url';
+import { documentTitle } from '@/lib/document-title';
 /** S36: structured FAQ pair used for FAQPage JSON-LD + visible accordion. */
 interface FaqItem {
   question: string;
@@ -128,7 +129,7 @@ export async function generateMetadata({
     getServerLocale(),
   ]);
   if (!post) {
-    return { title: t(locale, 'seo.dynamic.notFoundTitle') };
+    return { title: documentTitle(t(locale, 'seo.dynamic.notFoundTitle')) };
   }
 
   const title = locale === 'zh'
@@ -152,7 +153,7 @@ export async function generateMetadata({
   const canonical = `${SITE_URL}/news/${post.slug}`;
   const ogImage = post.cover_image || undefined;
   return {
-    title,
+    title: documentTitle(title),
     description,
     alternates: await buildLanguageAlternates(canonical),
     openGraph: {

@@ -8,6 +8,7 @@ import { buildLanguageAlternates } from '@/lib/alternates';
 import { slugify } from '@/lib/catalog-mappers';
 
 import { SITE_URL } from '@/lib/site-url';
+import { documentTitle } from '@/lib/document-title';
 // URL slug ↔ discipline. Slugs are URL-safe variants of the
 // `discipline` field on each program. The mapping is computed from
 // the live DB at build time (see slugify).
@@ -39,7 +40,7 @@ export async function generateMetadata({
   ]);
   const discipline = disciplines.find((d) => slugify(d) === disciplineSlug);
   if (!discipline) {
-    return { title: t(locale, 'seo.dynamic.notFoundTitle') };
+    return { title: documentTitle(t(locale, 'seo.dynamic.notFoundTitle')) };
   }
 
   const programs = await getAllPrograms();

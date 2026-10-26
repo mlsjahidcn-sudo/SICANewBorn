@@ -180,7 +180,7 @@ describe('F10 — /get-started must render exactly one H1', () => {
 });
 
 describe('F3 — the sitemap must not stamp build time as lastmod', () => {
-  const sitemap = readFileSync(join(SRC, 'app/sitemap.ts'), 'utf-8');
+  const sitemap = readFileSync(join(SRC, 'lib/sitemap-entries.ts'), 'utf-8');
   const code = stripComments(sitemap);
 
   it('never uses `lastModified: now`', () => {
