@@ -5257,6 +5257,10 @@ export const translations: Record<Locale, Record<string, string>> = {
     'home.news.subtitle': 'Updates on Chinese universities, scholarships, and partnerships — curated by the SICA Editorial Team.',
     'home.news.viewAll': 'View all news',
     'home.news.minRead': '{{minutes}} min read',
+    'home.guides.eyebrow': 'Guides',
+    'home.guides.title': 'Start with a clear plan',
+    'home.guides.subtitle': 'Practical guides on applications, scholarships, visas, costs, and student life in China.',
+    'home.guides.viewAll': 'View all guides',
     // Phase 128a: "Popular programs" widget on the home page.
     // Mirrors the layout vocabulary of the existing
     // successStories / home.news sections.
@@ -11109,6 +11113,10 @@ export const translations: Record<Locale, Record<string, string>> = {
     'home.news.subtitle': '由中国大学、奖学金、合作伙伴关系及留学指南动态组成——由 SICA 编辑团队精选。',
     'home.news.viewAll': '查看全部新闻',
     'home.news.minRead': '{{minutes}} 分钟阅读',
+    'home.guides.eyebrow': '留学指南',
+    'home.guides.title': '从清晰规划开始',
+    'home.guides.subtitle': '申请、奖学金、签证、费用与在华生活的实用指南。',
+    'home.guides.viewAll': '查看全部指南',
     'home.programs.eyebrow': '精选项目',
     'home.programs.title': '热门学位项目',
     'home.programs.subtitle': '由 SICA 招生团队从合作院校中精心挑选的学位项目,以学术实力与国际化特色为推荐标准。',

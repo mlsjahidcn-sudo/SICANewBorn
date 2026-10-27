@@ -4,10 +4,9 @@ import dynamic from 'next/dynamic';
 import type { CSSProperties } from 'react';
 import {
   ArrowRight,
+  BookOpen,
   BrainCircuit,
   Briefcase,
-  Calendar,
-  Clock,
   Cpu,
   DollarSign,
   FileText,
@@ -17,7 +16,6 @@ import {
   MapPin,
   Languages,
   MessageSquare,
-  Newspaper,
   Plane,
   Star,
   Trophy,
@@ -25,9 +23,11 @@ import {
   Wrench,
 } from 'lucide-react';
 import { ConsultationActivity } from '@/components/ConsultationActivity';
+import { GuideIcons } from '@/components/guides/guide-page';
 import { Button } from '@/components/ui/button';
 import { getCatalogCounts } from '@/lib/data-fetcher';
-import { getServerT } from '@/lib/server-t';
+import { guideCards } from '@/lib/guides/hub-data';
+import { getServerLocale, getServerT } from '@/lib/server-t';
 import { formatCount, getStat } from '@/lib/site-stats';
 import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
 
@@ -47,33 +47,6 @@ export function HomeProofSkeleton() {
       </div>
     </div>
   );
-}
-
-interface NewsTeaser {
-  slug: string;
-  title_en: string;
-  title_zh: string | null;
-  excerpt_en: string | null;
-  cover_image: string | null;
-  category: string;
-  tags: string[];
-  published_at: string | null;
-  read_time_minutes: number | null;
-}
-
-async function fetchLatestNews(): Promise<NewsTeaser[]> {
-  if (!isSupabaseServerConfigured()) return [];
-  const supabase = getSupabaseServer();
-  if (!supabase) return [];
-  const { data } = await supabase
-    .from('news_posts')
-    .select(
-      'slug, title_en, title_zh, excerpt_en, cover_image, category, tags, published_at, read_time_minutes',
-    )
-    .eq('status', 'published')
-    .order('published_at', { ascending: false })
-    .limit(3);
-  return (data as NewsTeaser[]) || [];
 }
 
 interface AdmissionTeaser {
@@ -108,21 +81,17 @@ function admissionImageUrl(imagePath: string): string {
 }
 
 export async function HomeProof() {
-  const [t, latestNews, latestAdmissions, counts] = await Promise.all([
+  const [t, locale, latestAdmissions, counts] = await Promise.all([
     getServerT(),
-    fetchLatestNews(),
+    getServerLocale(),
     fetchLatestAdmissions(),
     getCatalogCounts(),
   ]);
 
-  const categoryLabels: Record<string, string> = {
-    announcement: t('news.category.announcement'),
-    partnership: t('news.category.partnership'),
-    scholarship: t('news.category.scholarship'),
-    university: t('news.category.university'),
-    event: t('news.category.event'),
-    guide: t('news.category.guide'),
-  };
+  // Six process guides — same starter set as /guides, compact for the home.
+  const featuredGuides = guideCards[locale]
+    .filter((card) => card.category === 'process')
+    .slice(0, 6);
 
   const stats = [
     {
@@ -324,75 +293,62 @@ export async function HomeProof() {
       <VideoTestimonials location="home" />
       <ConsultationActivity variant="compact" />
 
-      {latestNews.length > 0 ? (
+      {featuredGuides.length > 0 ? (
         <section className="border-t border-gray-200 bg-[#FAFAF8] py-16 lg:py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="mb-8 flex items-end justify-between gap-4">
               <div>
                 <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-[#9B1B30]">
-                  <Newspaper className="h-4 w-4 text-[#1B2A4A]" />
-                  {t('home.news.eyebrow')}
+                  <BookOpen className="h-4 w-4 text-[#1B2A4A]" />
+                  {t('home.guides.eyebrow')}
                 </div>
                 <h2 className="text-2xl font-bold text-[#1B2A4A] sm:text-3xl">
-                  {t('home.news.title')}
+                  {t('home.guides.title')}
                 </h2>
-                <p className="mt-2 max-w-2xl text-sm text-[#4B5563]">{t('home.news.subtitle')}</p>
+                <p className="mt-2 max-w-2xl text-sm text-[#4B5563]">
+                  {t('home.guides.subtitle')}
+                </p>
               </div>
               <Link
-                href="/news"
+                href="/guides"
                 className="hidden items-center gap-1.5 whitespace-nowrap text-sm font-semibold text-[#9B1B30] hover:underline sm:inline-flex"
               >
-                {t('home.news.viewAll')}
+                {t('home.guides.viewAll')}
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {latestNews.map((post) => (
-                <Link
-                  key={post.slug}
-                  href={`/news/${post.slug}`}
-                  className="group block border-2 border-gray-200 bg-white p-5 transition-colors hover:border-[#9B1B30]"
-                >
-                  <div className="mb-2 flex items-center gap-2 text-[10px] text-gray-500">
-                    <span className="font-semibold uppercase tracking-wider text-[#9B1B30]">
-                      {categoryLabels[post.category] || post.category}
-                    </span>
-                    {post.published_at ? (
-                      <>
-                        <span>·</span>
-                        <span className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {new Date(post.published_at).toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                          })}
-                        </span>
-                      </>
-                    ) : null}
-                    {post.read_time_minutes ? (
-                      <>
-                        <span>·</span>
-                        <Clock className="h-3 w-3" />
-                        {t('home.news.minRead', { minutes: post.read_time_minutes })}
-                      </>
-                    ) : null}
-                  </div>
-                  <h3 className="line-clamp-2 font-bold leading-snug text-[#1B2A4A] transition-colors group-hover:text-[#9B1B30]">
-                    {post.title_en}
-                  </h3>
-                  {post.excerpt_en ? (
-                    <p className="mt-2 line-clamp-2 text-sm text-gray-600">{post.excerpt_en}</p>
-                  ) : null}
-                </Link>
-              ))}
+              {featuredGuides.map((card) => {
+                const Icon = GuideIcons[card.icon] ?? BookOpen;
+                return (
+                  <Link
+                    key={card.slug}
+                    href={card.href}
+                    className="group block border-2 border-gray-200 bg-white p-5 transition-colors hover:border-[#9B1B30]"
+                  >
+                    <div className="mb-3 flex items-center gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center bg-[#1B2A4A15]">
+                        <Icon className="h-5 w-5 text-[#1B2A4A]" />
+                      </div>
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-[#9B1B30]">
+                        {card.highlight}
+                      </span>
+                    </div>
+                    <h3 className="line-clamp-2 font-bold leading-snug text-[#1B2A4A] transition-colors group-hover:text-[#9B1B30]">
+                      {card.title}
+                    </h3>
+                    <p className="mt-2 line-clamp-2 text-sm text-gray-600">{card.subtitle}</p>
+                    <p className="mt-3 text-xs text-gray-500">{card.readTime}</p>
+                  </Link>
+                );
+              })}
             </div>
             <div className="mt-6 text-center sm:hidden">
               <Link
-                href="/news"
+                href="/guides"
                 className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#9B1B30] hover:underline"
               >
-                {t('home.news.viewAll')}
+                {t('home.guides.viewAll')}
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
