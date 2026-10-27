@@ -119,9 +119,7 @@ export function isWebinarSessionUpcoming(
 
 /**
  * Hardcoded agenda tracks — the 4-topic grid that the public
- * page renders below the hero. Phase 139/140 had these as
- * `webinar_topics` rows; Phase 162 added university-kind topics
- * on top; Phase 165 drops the DB entirely for the public surface.
+ * page renders below the hero.
  *
  * Each track has a badge (intake), title, and body. Bilingual
  * via the standard `t()` lookup at render time.

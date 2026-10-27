@@ -1,9 +1,9 @@
 /**
  * Public webinar landing page.
  *
- * Session metadata (date, time, join URL, label) + the 4-track agenda
- * come from `@/lib/webinar-config`. Featured university cards load from
- * the live Supabase catalog by slug. Registrations go to
+ * Session metadata (date, time, join URL, label) + the agenda
+ * come from `@/lib/webinar-config`. Featured university cards load
+ * from the live Supabase catalog by slug. Registrations go to
  * `POST /api/webinar-signups` (stamped with `webinar_key`).
  *
  * Static (revalidate = 3600) so the route is cached at the edge.
@@ -39,6 +39,13 @@ import { CountdownTimer } from './CountdownTimer';
 import { WebinarSignupForm } from './webinar-signup-form';
 
 export const revalidate = 3600;
+
+const TRACK_ICONS: Record<WebinarAgendaTrack['icon'], LucideIcon> = {
+  march: GraduationCap,
+  foundation: BookOpen,
+  bachelor: Globe2,
+  universities: Microscope,
+};
 
 interface FeaturedUniversity {
   slug: string;
@@ -89,13 +96,6 @@ async function loadFeaturedUniversities(): Promise<FeaturedUniversity[]> {
     .map((slug) => bySlug.get(slug))
     .filter((uni): uni is FeaturedUniversity => !!uni);
 }
-
-const TRACK_ICONS: Record<WebinarAgendaTrack['icon'], LucideIcon> = {
-  march: GraduationCap,
-  foundation: BookOpen,
-  bachelor: Globe2,
-  universities: Microscope,
-};
 
 export async function generateMetadata(): Promise<Metadata> {
   if (!PUBLIC_WEBINAR_ENABLED) notFound();
@@ -333,20 +333,39 @@ export default async function WebinarPage() {
             <h2 id="webinar-activity-title" className="mt-3 text-3xl font-bold text-[#1B2A4A]">
               {t('webinar.activity.title')}
             </h2>
+            <p className="mt-3 text-base text-[#4B5563] max-w-2xl mx-auto leading-relaxed">
+              {t('webinar.activity.subtitle')}
+            </p>
           </div>
-          <figure className="bg-white border border-gray-200">
-            <Image
-              src="/webinars/sica-live-webinar.png"
-              alt={t('webinar.activity.imageAlt')}
-              width={3290}
-              height={1694}
-              sizes="(max-width: 1152px) 100vw, 1088px"
-              className="w-full h-auto"
-            />
-            <figcaption className="p-5 sm:p-6 text-sm text-[#4B5563] leading-relaxed">
-              {t('webinar.activity.caption')}
-            </figcaption>
-          </figure>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <figure className="bg-white border border-gray-200">
+              <Image
+                src="/webinars/sica-webinar-meet-example.jpg"
+                alt={t('webinar.activity.imageAltMeet')}
+                width={1024}
+                height={600}
+                sizes="(max-width: 1024px) 100vw, 560px"
+                className="w-full h-auto"
+                priority={false}
+              />
+              <figcaption className="p-5 sm:p-6 text-sm text-[#4B5563] leading-relaxed">
+                {t('webinar.activity.captionMeet')}
+              </figcaption>
+            </figure>
+            <figure className="bg-white border border-gray-200">
+              <Image
+                src="/webinars/sica-live-webinar.png"
+                alt={t('webinar.activity.imageAlt')}
+                width={3290}
+                height={1694}
+                sizes="(max-width: 1024px) 100vw, 560px"
+                className="w-full h-auto"
+              />
+              <figcaption className="p-5 sm:p-6 text-sm text-[#4B5563] leading-relaxed">
+                {t('webinar.activity.caption')}
+              </figcaption>
+            </figure>
+          </div>
         </div>
       </section>
 
