@@ -25,7 +25,6 @@ const PROGRAM_INTEREST_VALUES = [
   'bachelor',
   'master',
   'phd',
-  'csc',
 ] as const;
 type ProgramInterestValue = (typeof PROGRAM_INTEREST_VALUES)[number];
 
@@ -36,7 +35,6 @@ const INTEREST_KEYS: Record<ProgramInterestValue, string> = {
   bachelor: 'webinar.interests.bachelor',
   master: 'webinar.interests.master',
   phd: 'webinar.interests.phd',
-  csc: 'webinar.interests.csc',
 };
 
 /**

@@ -1,18 +1,10 @@
 /**
- * Phase 139 + 165: public webinar landing page.
+ * Public webinar landing page.
  *
- * Phase 165 simplification: the page is fully static. All session
- * metadata (date, time, join URL, label) + the 4-track agenda come
- * from `@/lib/webinar-config` (a hardcoded module). No DB query
- * runs on this route, no `webinar_sessions` / `webinar_topics`
- * table lookups, no `is_active` toggle, no university-kind topics,
- * no auto-rollover query. Staff edits the constants in
- * `webinar-config.ts` and pushes when the date moves.
- *
- * What still goes to the DB:
- * - `POST /api/webinar-signups` for the registration form (the
- *   only runtime DB write on this surface — see api route).
- * - `GET /thank-you` for the post-submit redirect (no DB).
+ * Session metadata (date, time, join URL, label) + the 4-track agenda
+ * come from `@/lib/webinar-config`. Featured university cards load from
+ * the live Supabase catalog by slug. Registrations go to
+ * `POST /api/webinar-signups` (stamped with `webinar_key`).
  *
  * Static (revalidate = 3600) so the route is cached at the edge.
  */
@@ -34,7 +26,7 @@ import {
 import { getServerT } from '@/lib/server-t';
 import { buildLanguageAlternates } from '@/lib/alternates';
 import { COUNTRIES } from '@/lib/seo-data';
-import { universities as staticUniversities } from '@/lib/data';
+import { getSupabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-server';
 import {
   PUBLIC_WEBINAR_ENABLED,
   WEBINAR_CONFIG,
@@ -48,13 +40,61 @@ import { WebinarSignupForm } from './webinar-signup-form';
 
 export const revalidate = 3600;
 
-// Map the agenda track icons to Lucide components (matches the
-// original Phase 139 hardcoded AGENDA_ICONS).
+interface FeaturedUniversity {
+  slug: string;
+  name: string;
+  nameCn: string | null;
+  city: string | null;
+  ranking: number | null;
+  popularPrograms: string[];
+  tuitionUndergrad: string | null;
+}
+
+async function loadFeaturedUniversities(): Promise<FeaturedUniversity[]> {
+  if (!isSupabaseServerConfigured()) return [];
+  const supabase = getSupabaseServer();
+  if (!supabase) return [];
+
+  const slugs = [...WEBINAR_FEATURED_UNIVERSITY_SLUGS];
+  const { data, error } = await supabase
+    .from('universities')
+    .select(
+      'slug, name, name_cn, city, ranking, popular_programs, tuition_undergrad',
+    )
+    .in('slug', slugs);
+
+  if (error || !data) {
+    console.error('[webinar] featured universities load failed:', error?.message);
+    return [];
+  }
+
+  const bySlug = new Map(
+    data.map((row) => [
+      row.slug as string,
+      {
+        slug: row.slug as string,
+        name: (row.name as string) || '',
+        nameCn: (row.name_cn as string | null) || null,
+        city: (row.city as string | null) || null,
+        ranking: typeof row.ranking === 'number' ? row.ranking : null,
+        popularPrograms: Array.isArray(row.popular_programs)
+          ? (row.popular_programs as string[])
+          : [],
+        tuitionUndergrad: (row.tuition_undergrad as string | null) || null,
+      } satisfies FeaturedUniversity,
+    ]),
+  );
+
+  return slugs
+    .map((slug) => bySlug.get(slug))
+    .filter((uni): uni is FeaturedUniversity => !!uni);
+}
+
 const TRACK_ICONS: Record<WebinarAgendaTrack['icon'], LucideIcon> = {
   march: GraduationCap,
   foundation: BookOpen,
   bachelor: Globe2,
-  csc: Award,
+  universities: Microscope,
 };
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -81,16 +121,11 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function WebinarPage() {
   if (!PUBLIC_WEBINAR_ENABLED) notFound();
   const t = await getServerT();
+  const featuredUniversities = await loadFeaturedUniversities();
 
-  // Static session metadata — read once from the hardcoded module.
-  // Phase 165: no DB call. Staff edits WEBINAR_CONFIG and pushes
-  // when the date moves.
   const sessionDateIso = WEBINAR_CONFIG.sessionDateIso;
   const heroDateLabel = formatWebinarDate(sessionDateIso);
   const heroDateBody = WEBINAR_CONFIG.sessionTimeDisplay;
-
-  // Render the 4-track agenda grid from the hardcoded list. No
-  // DB lookup, no fallback chain — the agenda is canonical.
   const tracks = WEBINAR_AGENDA_TRACKS;
 
   const benefitItems = [
@@ -108,13 +143,10 @@ export default async function WebinarPage() {
     { qKey: 'webinar.faq.q4', aKey: 'webinar.faq.a4' },
   ];
 
-  // Country dropdown is static (Phase 139's COUNTRIES seed). Pass
-  // a serialised list to the client form.
   const countryOptions = COUNTRIES.map((c) => ({ value: c.name, label: c.name }));
 
   return (
     <div className="min-h-screen bg-[#FAFAF8]">
-      {/* ============================== HERO ============================== */}
       <section className="relative bg-[#1B2A4A] overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-[#1B2A4A] via-[#1B2A4A] to-[#2C3E60]" />
         <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-14 lg:py-20 text-center">
@@ -158,7 +190,6 @@ export default async function WebinarPage() {
         </div>
       </section>
 
-      {/* ============================== AGENDA ============================== */}
       <section id="agenda" className="bg-[#FAFAF8] py-14 lg:py-20">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
@@ -199,7 +230,6 @@ export default async function WebinarPage() {
         </div>
       </section>
 
-      {/* ============================== BENEFITS ============================== */}
       <section className="bg-[#1B2A4A] py-14 lg:py-20">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
@@ -224,13 +254,6 @@ export default async function WebinarPage() {
         </div>
       </section>
 
-      {/* ============================== FEATURED UNIVERSITIES (static, no DB) ============================== */}
-      {/* Phase 165b: 5-card grid sourced from src/lib/data.ts's
-          static fallback (no DB query, no Phase 162 dynamic topic
-          rows). The 5 slugs are hardcoded in WEBINAR_FEATURED_UNIVERSITY_SLUGS
-          so staff can swap the featured list with a commit. Each
-          card shows logo + bilingual name + city + QS ranking + 3
-          top programs + a "View detail" link to /universities/<slug>. */}
       <section id="universities" className="bg-white border-y border-gray-200 py-14 lg:py-20">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
@@ -246,49 +269,57 @@ export default async function WebinarPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            {WEBINAR_FEATURED_UNIVERSITY_SLUGS.map((slug) => {
-              const uni = staticUniversities.find((u) => u.slug === slug);
-              if (!uni) return null;
-              return (
-                <div
-                  key={uni.slug}
-                  className="bg-[#FAFAF8] border-2 border-[#D4A853]/40 p-5 flex flex-col"
-                >
-                  <div className="mb-3">
-                    <h3 className="font-bold text-[#1B2A4A] text-base leading-tight">
-                      {uni.name}
-                    </h3>
-                    <p className="text-xs text-gray-500 leading-tight mt-0.5">{uni.nameCn}</p>
-                  </div>
-                  <div className="text-xs text-gray-600 mb-3 flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-[#1B2A4A]">#{uni.ranking}</span>
-                    <span className="text-gray-400">·</span>
-                    <span>{uni.city}</span>
-                  </div>
-                  <div className="text-[10px] uppercase tracking-[0.15em] text-[#9B1B30] font-bold mb-1">
-                    {t('webinar.card.topPrograms')}
-                  </div>
-                  <ul className="text-xs text-[#4B5563] space-y-0.5 mb-3 flex-1">
-                    {uni.popularPrograms.slice(0, 3).map((program, i) => (
-                      <li key={i} className="truncate">
-                        • {program}
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="text-[10px] uppercase tracking-[0.15em] text-[#9B1B30] font-bold mb-1">
-                    {t('webinar.card.tuition')}
-                  </div>
-                  <p className="text-xs text-[#4B5563] mb-4">{uni.tuitionUndergrad}</p>
-                  <a
-                    href={`/universities/${uni.slug}`}
-                    className="mt-auto inline-flex items-center justify-center gap-1 px-3 py-2 bg-[#1B2A4A] text-white text-xs font-semibold uppercase tracking-wider hover:bg-[#0F1B33] transition-colors"
-                  >
-                    {t('webinar.card.viewDetail')}
-                    <ArrowRight className="h-3 w-3" />
-                  </a>
+            {featuredUniversities.map((uni) => (
+              <div
+                key={uni.slug}
+                className="bg-[#FAFAF8] border-2 border-[#D4A853]/40 p-5 flex flex-col"
+              >
+                <div className="mb-3">
+                  <h3 className="font-bold text-[#1B2A4A] text-base leading-tight">
+                    {uni.name}
+                  </h3>
+                  {uni.nameCn && (
+                    <p className="text-xs text-gray-500 leading-tight mt-0.5">
+                      {uni.nameCn}
+                    </p>
+                  )}
                 </div>
-              );
-            })}
+                <div className="text-xs text-gray-600 mb-3 flex items-center gap-2 flex-wrap">
+                  {uni.ranking != null && (
+                    <>
+                      <span className="font-semibold text-[#1B2A4A]">
+                        #{uni.ranking}
+                      </span>
+                      <span className="text-gray-400">·</span>
+                    </>
+                  )}
+                  <span>{uni.city || '—'}</span>
+                </div>
+                <div className="text-[10px] uppercase tracking-[0.15em] text-[#9B1B30] font-bold mb-1">
+                  {t('webinar.card.topPrograms')}
+                </div>
+                <ul className="text-xs text-[#4B5563] space-y-0.5 mb-3 flex-1">
+                  {uni.popularPrograms.slice(0, 3).map((program, i) => (
+                    <li key={i} className="truncate">
+                      • {program}
+                    </li>
+                  ))}
+                </ul>
+                <div className="text-[10px] uppercase tracking-[0.15em] text-[#9B1B30] font-bold mb-1">
+                  {t('webinar.card.tuition')}
+                </div>
+                <p className="text-xs text-[#4B5563] mb-4">
+                  {uni.tuitionUndergrad || '—'}
+                </p>
+                <a
+                  href={`/universities/${uni.slug}`}
+                  className="mt-auto inline-flex items-center justify-center gap-1 px-3 py-2 bg-[#1B2A4A] text-white text-xs font-semibold uppercase tracking-wider hover:bg-[#0F1B33] transition-colors"
+                >
+                  {t('webinar.card.viewDetail')}
+                  <ArrowRight className="h-3 w-3" />
+                </a>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -319,7 +350,6 @@ export default async function WebinarPage() {
         </div>
       </section>
 
-      {/* ============================== SIGNUP FORM ============================== */}
       <section id="signup" className="bg-[#FAFAF8] py-14 lg:py-20">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-10">
           <div className="space-y-6">
@@ -364,16 +394,11 @@ export default async function WebinarPage() {
           </div>
 
           <div>
-            {/* Phase 165: registration is always open (no isClosed
-                prop, no session FK, no 410 gate). The form submits
-                to /api/webinar-signups which inserts to webinar_signups
-                with no session FK. */}
             <WebinarSignupForm countryOptions={countryOptions} />
           </div>
         </div>
       </section>
 
-      {/* ============================== FAQ ============================== */}
       <section className="bg-white border-y border-gray-200 py-14 lg:py-20">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-[#1B2A4A] mb-8 text-center">
@@ -398,7 +423,6 @@ export default async function WebinarPage() {
         </div>
       </section>
 
-      {/* ============================== BOTTOM CTA ============================== */}
       <section className="bg-[#1B2A4A] py-14 lg:py-16">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl font-bold text-white">{t('webinar.cta.bottomTitle')}</h2>

@@ -10,10 +10,12 @@ import {
   parseWebinarFilters,
   summarizeWebinar,
   webinarMatches,
+  WEBINAR_KEY_UNTAGGED,
   type WebinarSignup,
   type WebinarReport,
   type WebinarStatus,
 } from './webinar-report';
+import { getCurrentWebinarKey } from './webinar-config';
 import { trackServer } from './analytics';
 
 export async function loadWebinarSignups(
@@ -24,7 +26,7 @@ export async function loadWebinarSignups(
     client
       .from('webinar_signups')
       .select(
-        'id,first_name,last_name,email,whatsapp,country,program_interests,notes,source_page,utm_source,utm_campaign,status,created_at',
+        'id,first_name,last_name,email,whatsapp,country,program_interests,notes,source_page,utm_source,utm_campaign,status,created_at,webinar_key',
       )
       .gte('created_at', range.start)
       .lt('created_at', range.endExclusive)
@@ -49,6 +51,7 @@ export async function loadWebinarSignups(
       utmCampaign: row.utm_campaign || null,
       status: row.status,
       createdAt: row.created_at as string,
+      webinarKey: (row.webinar_key as string | null) || null,
     };
   });
 }
@@ -72,6 +75,12 @@ export async function buildWebinarReport(
   );
   const unique = (values: string[]): string[] =>
     [...new Set(values)].sort((a, b) => a.localeCompare(b));
+  const keyFacet = new Set<string>();
+  for (const row of rows) {
+    keyFacet.add(row.webinarKey || WEBINAR_KEY_UNTAGGED);
+  }
+  // Always offer the current configured session even with 0 signups yet.
+  keyFacet.add(getCurrentWebinarKey());
   return {
     matching,
     report: {
@@ -88,6 +97,7 @@ export async function buildWebinarReport(
         countries: unique(rows.map((row) => row.country || '__missing')),
         sources: unique(rows.map((row) => row.utmSource || '__missing')),
         interests: unique(rows.flatMap((row) => row.programInterests)),
+        webinarKeys: unique([...keyFacet]),
       },
     },
   };

@@ -5810,24 +5810,22 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminCounselling.pagination': 'Showing {{from}}–{{to}} of {{total}}',
     'adminCounselling.prev': 'Previous',
     'adminCounselling.next': 'Next',
-    // Phase 139: public webinar landing page (March/Sept 2027 Intake + CSC)
+    // Phase 139 + Nov 2026 refresh: weekly 2027 intake webinar (5 universities)
     'webinar.hero.eyebrow': 'Live online session · Free',
-    'webinar.hero.title': '2027 Intake + CSC Scholarship webinar',
+    'webinar.hero.title': '2027 Intake · 5 Universities webinar',
     // Phase 158: TBA copy used when no active session is published —
     // the form still acts as a register-your-interest capture.
-    'webinar.hero.subtitle': 'Free 60-minute live session covering March 2027 Chinese Language + Foundation, September 2027 Bachelor + Master, and CSC Scholarship strategy.',
+    'webinar.hero.subtitle': 'Free 60-minute live session covering March 2027 Chinese Language + Foundation, September 2027 Bachelor + Master, and five partner universities for the 2027 intake.',
     'webinar.hero.dateLabel': 'Date coming soon',
     'webinar.hero.dateBody': 'Register now and we will email + WhatsApp you the moment the date and join link are confirmed.',
     'webinar.hero.ctaPrimary': 'Register below',
-    'webinar.hero.ctaSecondary': 'What is CSC?',
+    'webinar.hero.ctaSecondary': 'See the agenda',
     'webinar.agenda.title': 'What we will cover',
     'webinar.agenda.eyebrow': 'The agenda',
-    // Phase 165b: featured-university section (restored from Phase 162;
-    // data is static from src/lib/data.ts, no DB needed). Section
-    // title + subtitle + a few per-card labels.
+    // Featured-university section — cards load from the live catalog.
     'webinar.featuredEyebrow': 'Featured universities',
     'webinar.featuredTitle': '5 universities we will cover',
-    'webinar.featuredSubtitle': 'Each of these schools runs a full English-taught program catalog across Bachelor + Master + PhD, with CSC scholarship coverage and dedicated international admissions teams.',
+    'webinar.featuredSubtitle': 'Zhengzhou University, Zhejiang University of Technology, Nantong University, Harbin Engineering University, and Hangzhou Dianzi University — programs, cities, and how to apply for 2027.',
     'webinar.card.topPrograms': 'Top programs',
     'webinar.card.tuition': 'Tuition',
     'webinar.card.viewDetail': 'View detail',
@@ -5840,9 +5838,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'webinar.agenda.t3Badge': 'September 2027',
     'webinar.agenda.t3Title': 'Bachelor + Master Degrees',
     'webinar.agenda.t3Body': 'Autumn intake — full bachelor and master programs in English and Chinese. Discipline overview, ranking cutoffs, document checklist, application windows.',
-    'webinar.agenda.t4Badge': 'Funding',
-    'webinar.agenda.t4Title': 'CSC Scholarship Strategy',
-    'webinar.agenda.t4Body': 'Eligibility, agency-vs-university channels, required documents, language requirements, timeline for September 2027 nomination + March 2027 self-application.',
+    'webinar.agenda.t4Badge': 'Universities',
+    'webinar.agenda.t4Title': '5 Universities Deep Dive',
+    'webinar.agenda.t4Body': 'Zhengzhou, Zhejiang University of Technology, Nantong, Harbin Engineering, and Hangzhou Dianzi — strengths, cities, tuition bands, and which programs fit which student profiles.',
     'webinar.benefits.title': 'Why attend',
     'webinar.benefits.b1Title': 'Free 60-minute live session',
     'webinar.benefits.b1Body': 'No commitment — bring questions, leave with a plan.',
@@ -5891,14 +5889,14 @@ export const translations: Record<Locale, Record<string, string>> = {
     'webinar.faq.q4': 'What happens after I register?',
     'webinar.faq.a4': 'You will receive the join link by email within minutes, and we will also send a WhatsApp reminder the day before. You can reply to either to ask questions.',
     'webinar.cta.bottomTitle': 'Ready to plan your 2027?',
-    'webinar.cta.bottomBody': 'One 60-minute session covers every track — Chinese Language, Foundation, Bachelor, Master, and the CSC Scholarship. Register now and we will hold a seat for you.',
+    'webinar.cta.bottomBody': 'One 60-minute session covers every track — Chinese Language, Foundation, Bachelor, Master, and five partner universities. Register now and we will hold a seat for you.',
     'webinar.cta.bottomCta': 'Register below',
     'webinar.cta.trustBadge': 'Trusted by 10,000+ international students applying to Chinese universities',
     // Thank-you: webinar source branch
     'thankYou.webinar.heroTitle': 'Your seat is reserved',
     'thankYou.webinar.heroBody': 'The webinar join link is in your inbox. Tap the WhatsApp button below if you would also like the link there.',
     'thankYou.webinar.timeline2Desc': 'Tap the WhatsApp button below to also receive the join link on WhatsApp.',
-    'thankYou.webinar.whatsappContext': 'Hi SICA, I just signed up for the 2027 Intake + CSC Scholarship webinar (ref: {{reference}}). Please also send me the join link on WhatsApp.',
+    'thankYou.webinar.whatsappContext': 'Hi SICA, I just signed up for the 2027 Intake · 5 Universities webinar (ref: {{reference}}). Please also send me the join link on WhatsApp.',
     // Admin: webinar signups list
     'adminNav.webinars': 'Webinar Signups',
     'adminWebinars.title': 'Webinar Signups',
@@ -6017,7 +6015,10 @@ export const translations: Record<Locale, Record<string, string>> = {
     'webinar.interests.bachelorMarch': "Bachelor's degree — March 2027",
     'webinar.interests.phd': "PhD — September 2027",
     'webinar.agenda.tracksCount': 'Tracks on the agenda',
-    'webinar.agenda.tracksList': 'Chinese Language · Foundation · Bachelor (March + Sept) · Master · PhD · CSC Scholarship',
+    'webinar.agenda.tracksList': 'Chinese Language · Foundation · Bachelor (March + Sept) · Master · PhD · 5 Universities',
+    'adminReporting.webinarKey': 'Webinar session',
+    'adminReporting.allWebinarKeys': 'All sessions',
+    'adminReporting.untaggedWebinar': 'Untagged / legacy',
     // Phase 142: public capacity + waitlist + popup
     // "Date coming soon" empty state for that audience).
     //  gone, registration is uncapped.
@@ -6030,17 +6031,17 @@ export const translations: Record<Locale, Record<string, string>> = {
     'webinar.countdown.minutesLabel': 'm',
     'webinar.countdown.secondsLabel': 's',
     'webinar.countdown.ariaLabel': 'Time remaining until the webinar starts',
-    // Webinar promo popup (restored after Phase 165)
-    'webinar.popupEyebrow': 'Free live session',
-    'webinar.popupTitle': '2027 Intake + CSC Scholarship webinar',
-    'webinar.popupBody': 'Free 60-minute session covering March + September 2027 intakes and CSC Scholarship. Join us — seats are limited.',
-    'webinar.popupCta': 'Reserve my seat',
-    'webinar.popupDismiss': 'No thanks',
-    'webinar.popupAriaLabel': 'Webinar promo popup',
+    // Webinar promo popup — urgency + concrete date for registration CTA
+    'webinar.popupEyebrow': 'Free live webinar · This week',
+    'webinar.popupTitle': 'Register for the 5 Universities webinar',
+    'webinar.popupBody': '60 minutes live — Zhengzhou, ZJUT, Nantong, Harbin Engineering & Hangzhou Dianzi. Free seat · join link by email + WhatsApp.',
+    'webinar.popupCta': 'Reserve my free seat',
+    'webinar.popupDismiss': 'Maybe later',
+    'webinar.popupAriaLabel': 'Webinar registration promo',
     'webinar.popupTeaserEyebrow': 'Live online session',
-    'webinar.popupTeaserTitle': 'Webinar coming — register your interest',
-    'webinar.popupTeaserBody': 'Sign up to get notified when we open registration for the next 2027 intake + CSC Scholarship webinar.',
-    'webinar.popupTeaserCta': 'Notify me',
+    'webinar.popupTeaserTitle': 'Next webinar — leave your seat request',
+    'webinar.popupTeaserBody': 'Register your interest and we will email + WhatsApp you the moment the next 2027 intake webinar opens.',
+    'webinar.popupTeaserCta': 'Register interest',
     // (when there's still a future session after the
     // current one). The "Week N · Mon DD" string itself is
     // derived server-side via formatWebinarLabel(); this key
@@ -11642,22 +11643,22 @@ export const translations: Record<Locale, Record<string, string>> = {
     'adminCounselling.pagination': '显示 {{from}}–{{to}}，共 {{total}} 条',
     'adminCounselling.prev': '上一页',
     'adminCounselling.next': '下一页',
-    // Phase 139: 公开讲座报名页面（2027 年 3 月 / 9 月入学 + CSC 奖学金）
+    // Phase 139 + Nov 2026 refresh: weekly 2027 intake webinar (5 universities)
     'webinar.hero.eyebrow': '线上直播讲座 · 免费',
-    'webinar.hero.title': '2027 入学 + CSC 奖学金线上讲座',
+    'webinar.hero.title': '2027 入学 · 五所高校线上讲座',
     // Phase 158: TBA copy used when no active session is published —
     // the form still acts as a register-your-interest capture.
-    'webinar.hero.subtitle': '免费 60 分钟直播，覆盖 2027 年 3 月中文语言 + 预科入学、2027 年 9 月本科 + 硕士入学，以及 CSC 奖学金申请策略。',
+    'webinar.hero.subtitle': '免费 60 分钟直播，覆盖 2027 年 3 月中文语言 + 预科入学、2027 年 9 月本科 + 硕士入学，以及五所合作高校的 2027 申请要点。',
     'webinar.hero.dateLabel': '日期即将公布',
     'webinar.hero.dateBody': '现在注册，日期和会议链接确定后我们将通过邮件 + WhatsApp 第一时间通知您。',
     'webinar.hero.ctaPrimary': '立即报名',
-    'webinar.hero.ctaSecondary': '什么是 CSC？',
+    'webinar.hero.ctaSecondary': '查看讲座大纲',
     'webinar.agenda.title': '本次讲座内容',
     'webinar.agenda.eyebrow': '讲座大纲',
-    // Phase 165b: featured-university section (zh)
+    // Featured-university section — cards load from the live catalog.
     'webinar.featuredEyebrow': '重点大学',
     'webinar.featuredTitle': '本场讲座聚焦的 5 所大学',
-    'webinar.featuredSubtitle': '这些学校均开设完整的英语授课本科、硕士、博士项目体系，覆盖 CSC 奖学金申请通道，并配备专门的国际生招生团队。',
+    'webinar.featuredSubtitle': '郑州大学、浙江工业大学、南通大学、哈尔滨工程大学、杭州电子科技大学 — 项目、城市与 2027 申请路径。',
     'webinar.card.topPrograms': '热门项目',
     'webinar.card.tuition': '学费',
     'webinar.card.viewDetail': '查看详情',
@@ -11670,9 +11671,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'webinar.agenda.t3Badge': '2027 年 9 月',
     'webinar.agenda.t3Title': '本科 + 硕士研究生',
     'webinar.agenda.t3Body': '秋季入学 — 全英文及中文授课的本科与硕士项目。学科概览、录取分数线、材料清单、申请窗口。',
-    'webinar.agenda.t4Badge': '奖学金',
-    'webinar.agenda.t4Title': 'CSC 奖学金申请策略',
-    'webinar.agenda.t4Body': '申请资格、机构 vs 院校渠道、所需材料、语言要求、2027 年 9 月推荐名额 + 2027 年 3 月个人申请时间线。',
+    'webinar.agenda.t4Badge': '高校专题',
+    'webinar.agenda.t4Title': '五所高校深度解读',
+    'webinar.agenda.t4Body': '郑州大学、浙江工业大学、南通大学、哈尔滨工程大学、杭州电子科技大学 — 各自优势、城市、学费区间，以及适合哪类学生。',
     'webinar.benefits.title': '为什么参加',
     'webinar.benefits.b1Title': '免费 60 分钟直播',
     'webinar.benefits.b1Body': '无任何承诺 — 带着问题来，带着规划走。',
@@ -11721,14 +11722,14 @@ export const translations: Record<Locale, Record<string, string>> = {
     'webinar.faq.q4': '报名后会发生什么？',
     'webinar.faq.a4': '会议链接会在几分钟内发送到您的邮箱，讲座前一天我们会再通过 WhatsApp 提醒。您可通过任一渠道回复提问。',
     'webinar.cta.bottomTitle': '准备好规划 2027 了吗？',
-    'webinar.cta.bottomBody': '60 分钟讲座覆盖全部方向 — 中文语言、预科、本科、硕士，以及 CSC 奖学金。现在报名，我们为您保留席位。',
+    'webinar.cta.bottomBody': '60 分钟讲座覆盖全部方向 — 中文语言、预科、本科、硕士，以及五所合作高校。现在报名，我们为您保留席位。',
     'webinar.cta.bottomCta': '立即报名',
     'webinar.cta.trustBadge': '已有 10,000+ 名国际学生通过 SICA 成功入读中国顶尖大学',
     // Thank-you: webinar source branch
     'thankYou.webinar.heroTitle': '您的席位已预留',
     'thankYou.webinar.heroBody': '讲座会议链接已发送至您的邮箱。如希望通过 WhatsApp 同时接收，请点击下方按钮。',
     'thankYou.webinar.timeline2Desc': '点击下方 WhatsApp 按钮，让我们在 WhatsApp 上也发送一次会议链接。',
-    'thankYou.webinar.whatsappContext': '您好 SICA，我刚刚报名了 2027 入学 + CSC 奖学金线上讲座（编号：{{reference}}）。请也在 WhatsApp 上发送一次会议链接，谢谢。',
+    'thankYou.webinar.whatsappContext': '您好 SICA，我刚刚报名了 2027 入学 · 五所高校线上讲座（编号：{{reference}}）。请也在 WhatsApp 上发送一次会议链接，谢谢。',
     // Admin: webinar signups list
     'adminNav.webinars': '讲座报名',
     'adminWebinars.title': '讲座报名',
@@ -11825,7 +11826,10 @@ export const translations: Record<Locale, Record<string, string>> = {
     'webinar.interests.bachelorMarch': '本科学位 — 2027 年 3 月',
     'webinar.interests.phd': '博士 — 2027 年 9 月',
     'webinar.agenda.tracksCount': '本次讲座涵盖以下方向',
-    'webinar.agenda.tracksList': '中文语言 · 预科 · 本科（3 月 + 9 月）· 硕士 · 博士 · CSC 奖学金',
+    'webinar.agenda.tracksList': '中文语言 · 预科 · 本科（3 月 + 9 月）· 硕士 · 博士 · 五所高校',
+    'adminReporting.webinarKey': '讲座场次',
+    'adminReporting.allWebinarKeys': '全部场次',
+    'adminReporting.untaggedWebinar': '未标记 / 历史报名',
     // Phase 142: public capacity + waitlist + popup
     // i18n parity gate.
     'webinar.countdown.daysLabel': '天',
@@ -11833,17 +11837,17 @@ export const translations: Record<Locale, Record<string, string>> = {
     'webinar.countdown.minutesLabel': '分',
     'webinar.countdown.secondsLabel': '秒',
     'webinar.countdown.ariaLabel': '距离讲座开始还有多久',
-    // Webinar promo popup (restored after Phase 165)
-    'webinar.popupEyebrow': '免费直播讲座',
-    'webinar.popupTitle': '2027 入学 + CSC 奖学金线上讲座',
-    'webinar.popupBody': '60 分钟免费讲座，覆盖 2027 年 3 月 + 9 月入学，以及 CSC 奖学金申请策略。席位有限，立即报名。',
-    'webinar.popupCta': '立即报名',
-    'webinar.popupDismiss': '不感兴趣',
-    'webinar.popupAriaLabel': '讲座宣传弹窗',
+    // Webinar promo popup — urgency + concrete date for registration CTA
+    'webinar.popupEyebrow': '本周免费直播讲座',
+    'webinar.popupTitle': '报名五所高校线上讲座',
+    'webinar.popupBody': '60 分钟直播 — 郑州大学、浙江工业大学、南通大学、哈尔滨工程大学、杭州电子科技大学。免费席位 · 邮件 + WhatsApp 发送会议链接。',
+    'webinar.popupCta': '预留免费席位',
+    'webinar.popupDismiss': '稍后再说',
+    'webinar.popupAriaLabel': '讲座报名宣传弹窗',
     'webinar.popupTeaserEyebrow': '线上直播讲座',
-    'webinar.popupTeaserTitle': '讲座即将开放 — 留下您的邮箱',
-    'webinar.popupTeaserBody': '下一场 2027 入学 + CSC 奖学金讲座开放报名时，我们会第一时间通知您。',
-    'webinar.popupTeaserCta': '通知我',
+    'webinar.popupTeaserTitle': '下一场讲座 — 先留下席位意向',
+    'webinar.popupTeaserBody': '留下意向后，下一场 2027 入学讲座开放报名时我们会通过邮件 + WhatsApp 通知您。',
+    'webinar.popupTeaserCta': '留下意向',
   },
 };
 

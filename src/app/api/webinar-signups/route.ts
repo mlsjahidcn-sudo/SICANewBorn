@@ -3,26 +3,28 @@ import { createHash } from 'crypto';
 import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
 import { checkPublicRateLimit, isHoneypotFilled } from '@/lib/rate-limit';
 import { sendWebinarConfirmation } from '@/lib/email';
-import { formatWebinarDate, PUBLIC_WEBINAR_ENABLED, WEBINAR_CONFIG } from '@/lib/webinar-config';
+import {
+  formatWebinarDate,
+  getCurrentWebinarKey,
+  PUBLIC_WEBINAR_ENABLED,
+  WEBINAR_CONFIG,
+} from '@/lib/webinar-config';
 
 export const dynamic = 'force-dynamic';
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
 /**
- * Phase 165: public webinar signup endpoint for
- * /webinar-2027-intake-csc. Persists the row + fires the
- * `webinar.confirmed` email with the static-config session
- * metadata (Phase 164's `webinar_sessions` table is gone).
+ * Public webinar signup endpoint for /webinar-2027-intake-csc.
+ * Persists the row (stamped with `webinar_key` from config) +
+ * fires the `webinar.confirmed` email with static-config session
+ * metadata.
  *
  * Returns the row id so the client can show a reference
  * number on /thank-you.
  *
  * Anti-abuse: same 5/hr/IP + 200/hr/global + honeypot pattern
  * as /api/leads and /api/assessments.
- *
- * Phase 140 expanded the program_interests taxonomy to 7
- * values — March bachelor + PhD were missing from Phase 139.
  */
 const VALID_PROGRAM_INTERESTS = [
   'chinese_language',
@@ -31,7 +33,6 @@ const VALID_PROGRAM_INTERESTS = [
   'bachelor',
   'master',
   'phd',
-  'csc',
 ] as const;
 type ProgramInterest = (typeof VALID_PROGRAM_INTERESTS)[number];
 
@@ -149,9 +150,9 @@ export async function POST(request: NextRequest) {
         gclid,
         fbclid,
         ip_hash: ipHash,
-        // Phase 165: no more webinar_session_id FK — the
-        // session is hardcoded in WEBINAR_CONFIG. Signups
-        // are anonymous leads, not tied to a specific row.
+        // Server-stamped session tag (YYYY-MM-DD). Never trust
+        // a client-supplied webinar_key.
+        webinar_key: getCurrentWebinarKey(),
       })
       .select('id, created_at')
       .single();

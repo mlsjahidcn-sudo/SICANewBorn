@@ -36,6 +36,7 @@ const row = (n: number, patch: Row = {}): Row => ({
   utm_campaign: null,
   status: 'Registered',
   created_at: '2026-10-21T18:00:00Z',
+  webinar_key: '2026-10-22',
   ...patch,
 });
 

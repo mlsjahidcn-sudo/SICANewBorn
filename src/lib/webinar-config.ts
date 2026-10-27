@@ -17,7 +17,7 @@ export function formatWebinarDate(iso: string | null): string {
 }
 
 /** Controls the public webinar page, registration endpoint, and promo popup. */
-export const PUBLIC_WEBINAR_ENABLED = false;
+export const PUBLIC_WEBINAR_ENABLED = true;
 
 /**
  * Phase 165: hardcoded webinar configuration.
@@ -30,10 +30,11 @@ export const PUBLIC_WEBINAR_ENABLED = false;
  * AI brief wizard, and 17 API routes supported this.
  *
  * After: the public landing page is a static RSC that reads from
- * this module. The only DB-backed surface is the registration form
- * (`webinar_signups` insert) + the admin signups list (status flip
- * + CSV export). No `webinar_sessions` / `webinar_topics` lookups
- * anywhere on the public surface.
+ * this module. The only DB-backed surfaces are the registration
+ * form (`webinar_signups` insert, stamped with `webinar_key`) +
+ * the featured-university cards (live catalog by slug) + the
+ * admin signups list. No `webinar_sessions` / `webinar_topics`
+ * lookups anywhere on the public surface.
  *
  * Staff edits this file when the webinar date moves or the join
  * URL is ready (typically once per session, by committing the
@@ -63,16 +64,37 @@ export interface WebinarStaticConfig {
  * The current webinar session. Edit this when the webinar date
  * moves or the join URL is ready. Commit + push + redeploy — the
  * public page picks it up automatically.
+ *
+ * `webinar_key` on each signup is derived from `sessionDateIso`
+ * via {@link getCurrentWebinarKey} (Asia/Shanghai `YYYY-MM-DD`).
  */
 export const WEBINAR_CONFIG: WebinarStaticConfig = {
-  // Thursday 22 October 2026, 21:00 Asia/Shanghai = 13:00 UTC
-  sessionDateIso: '2026-10-22T13:00:00.000Z',
+  // Monday 3 November 2026, 21:00 Asia/Shanghai = 13:00 UTC
+  sessionDateIso: '2026-11-03T13:00:00.000Z',
   sessionTimeDisplay: '21:00 Beijing Time',
   sessionTimezone: 'Asia/Shanghai',
   joinUrl: 'https://studyinchina.academy/webinar-room',
-  label: '2027 Intake + CSC Scholarship webinar',
+  label: '2027 Intake · 5 Universities webinar',
   durationMinutes: 60,
 };
+
+/**
+ * Per-session tag stamped onto every new `webinar_signups` row.
+ * Derived from the session date in Asia/Shanghai as `YYYY-MM-DD`
+ * so staff only edits `sessionDateIso` each week.
+ */
+export function getCurrentWebinarKey(
+  sessionDateIso: string = WEBINAR_CONFIG.sessionDateIso,
+): string {
+  const t = Date.parse(sessionDateIso);
+  if (Number.isNaN(t)) return 'unknown';
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: WEBINAR_CONFIG.sessionTimezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date(t));
+}
 
 /**
  * Pure upcoming-session check for the promo popup (and any
@@ -113,28 +135,21 @@ export interface WebinarAgendaTrack {
   titleKey: string;
   /** i18n key for the track body. */
   bodyKey: string;
-  /** Lucide icon for the track card (matches the original 4 icons). */
-  icon: 'march' | 'foundation' | 'bachelor' | 'csc';
+  /** Lucide icon for the track card. */
+  icon: 'march' | 'foundation' | 'bachelor' | 'universities';
 }
 
 /**
- * Phase 165b: featured-university slugs that the public landing
- * page renders as a 5-card grid below the 4-track agenda. These
- * come from `src/lib/data.ts`'s static fallback (Phase 1 seeds
- * + the 5 Phase 165b webinar entries: SCUT, UESTC, HITSZ,
- * Sichuan U, NUAA). No DB lookup, no dynamic query. When the
- * admin wants a different 5, edit this array + commit + push.
- *
- * The 5 below are the Phase 162 shortlist: strong engineering
- * / science / aerospace schools with the highest CSC
- * scholarship coverage and full English-taught catalogs.
+ * Featured-university slugs for the public 5-card grid.
+ * Resolved from the live Supabase catalog (not static data.ts)
+ * so admin-managed schools without a static fallback still render.
  */
 export const WEBINAR_FEATURED_UNIVERSITY_SLUGS = [
-  'south-china-university-of-technology',
-  'uestc-university',
-  'hitsz-university',
-  'sichuan-university',
-  'nuaa-university',
+  'zhengzhou-university',
+  'zhejiang-university-of-technology',
+  'nantong-university',
+  'harbin-engineering-university',
+  'hangzhou-dianzi-university',
 ] as const;
 
 export const WEBINAR_AGENDA_TRACKS: WebinarAgendaTrack[] = [
@@ -160,10 +175,10 @@ export const WEBINAR_AGENDA_TRACKS: WebinarAgendaTrack[] = [
     icon: 'bachelor',
   },
   {
-    id: 'csc',
+    id: 'universities',
     badgeKey: 'webinar.agenda.t4Badge',
     titleKey: 'webinar.agenda.t4Title',
     bodyKey: 'webinar.agenda.t4Body',
-    icon: 'csc',
+    icon: 'universities',
   },
 ];

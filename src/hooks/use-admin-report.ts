@@ -12,6 +12,7 @@ export interface ReportingFilters {
   country: string;
   source: string;
   interest: string;
+  webinarKey: string;
   page: number;
 }
 const INITIAL: ReportingFilters = {
@@ -23,6 +24,7 @@ const INITIAL: ReportingFilters = {
   country: '',
   source: '',
   interest: '',
+  webinarKey: '',
   page: 1,
 };
 const FILTER_KEYS = [
@@ -34,6 +36,7 @@ const FILTER_KEYS = [
   'country',
   'source',
   'interest',
+  'webinarKey',
   'page',
 ] as const;
 
@@ -54,6 +57,7 @@ function readFilters(): ReportingFilters {
     country: params.get('country') || '',
     source: params.get('source') || '',
     interest: params.get('interest') || '',
+    webinarKey: params.get('webinarKey') || '',
     page: Math.max(1, Math.trunc(Number(params.get('page')) || 1)),
   };
 }
@@ -88,7 +92,7 @@ export function useReportingFilters(): {
       params.set('from', filters.from);
       params.set('to', filters.to);
     }
-    for (const key of ['country', 'source', 'interest'] as const)
+    for (const key of ['country', 'source', 'interest', 'webinarKey'] as const)
       if (filters[key]) params.set(key, filters[key]);
     if (search.trim()) params.set('q', search.trim());
     if (filters.status !== 'all') params.set('status', filters.status);

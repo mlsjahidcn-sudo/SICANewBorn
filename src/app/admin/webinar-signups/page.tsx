@@ -36,6 +36,7 @@ import { useAdminReport, useReportingFilters } from '@/hooks/use-admin-report';
 import {
   WEBINAR_STATUSES,
   WEBINAR_INTEREST_KEYS,
+  WEBINAR_KEY_UNTAGGED,
   type WebinarReport,
   type WebinarSignup,
   type WebinarStatus,
@@ -240,7 +241,25 @@ export default function WebinarSignupsPage(): React.JSX.Element {
           generatedAt={data?.generatedAt}
           range={data?.range}
         />
-        <div className="grid grid-cols-1 gap-2 border-t border-gray-100 pt-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-2 border-t border-gray-100 pt-4 sm:grid-cols-2 lg:grid-cols-4">
+          <select
+            aria-label={t('adminReporting.webinarKey')}
+            value={filters.webinarKey}
+            onChange={(event) => update({ webinarKey: event.target.value })}
+            className={REPORT_INPUT}
+          >
+            <option value="">{t('adminReporting.allWebinarKeys')}</option>
+            {(
+              data?.facets.webinarKeys ||
+              (filters.webinarKey ? [filters.webinarKey] : [])
+            ).map((key) => (
+              <option key={key} value={key}>
+                {key === WEBINAR_KEY_UNTAGGED
+                  ? t('adminReporting.untaggedWebinar')
+                  : key}
+              </option>
+            ))}
+          </select>
           <select
             aria-label={t('adminReporting.countries')}
             value={filters.country}
@@ -330,6 +349,7 @@ export default function WebinarSignupsPage(): React.JSX.Element {
                 country: '',
                 source: '',
                 interest: '',
+                webinarKey: '',
               })
             }
             className="px-2 text-xs font-medium text-[#9B1B30] underline-offset-4 hover:underline"
@@ -426,6 +446,7 @@ export default function WebinarSignupsPage(): React.JSX.Element {
                         {[
                           'attendee',
                           'country',
+                          'webinarKey',
                           'interests',
                           'registeredAt',
                           'status',
@@ -484,6 +505,10 @@ export default function WebinarSignupsPage(): React.JSX.Element {
                           <td className="px-4 py-4 text-gray-600">
                             {signup.country || '—'}
                           </td>
+                          <td className="whitespace-nowrap px-4 py-4 text-[11px] text-gray-600">
+                            {signup.webinarKey ||
+                              t('adminReporting.untaggedWebinar')}
+                          </td>
                           <td className="max-w-48 px-4 py-4">
                             <p className="line-clamp-2 leading-relaxed text-gray-600">
                               {signup.programInterests
@@ -534,7 +559,9 @@ export default function WebinarSignupsPage(): React.JSX.Element {
                           </p>
                           <p className="mt-1 text-[11px] text-gray-500">
                             {signup.country || '—'} ·{' '}
-                            {formatDate(signup.createdAt)}
+                            {signup.webinarKey ||
+                              t('adminReporting.untaggedWebinar')}{' '}
+                            · {formatDate(signup.createdAt)}
                           </p>
                         </div>
                       </div>
@@ -696,7 +723,9 @@ export default function WebinarSignupsPage(): React.JSX.Element {
                   {detail.whatsapp}
                 </a>
                 <p className="text-xs text-gray-500">
-                  {detail.country || '—'} · {formatDate(detail.createdAt)}
+                  {detail.country || '—'} ·{' '}
+                  {detail.webinarKey || t('adminReporting.untaggedWebinar')} ·{' '}
+                  {formatDate(detail.createdAt)}
                 </p>
               </div>
               <div>

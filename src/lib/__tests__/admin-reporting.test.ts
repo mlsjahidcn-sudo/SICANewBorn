@@ -32,6 +32,7 @@ const signup = (patch: Partial<WebinarSignup> = {}): WebinarSignup => ({
   utmCampaign: null,
   status: 'Registered',
   createdAt: '2026-10-21T16:00:00Z',
+  webinarKey: '2026-10-22',
   ...patch,
 });
 
@@ -165,6 +166,24 @@ describe('webinar metric definitions', () => {
       parseWebinarFilters(new URLSearchParams('status=Unknown')),
     ).toThrow();
   });
+  it('filters by webinar_key including untagged legacy rows', () => {
+    const tagged = parseWebinarFilters(
+      new URLSearchParams('webinarKey=2026-11-03'),
+    );
+    const untagged = parseWebinarFilters(
+      new URLSearchParams('webinarKey=__untagged'),
+    );
+    expect(webinarMatches(signup({ webinarKey: '2026-11-03' }), tagged)).toBe(
+      true,
+    );
+    expect(webinarMatches(signup({ webinarKey: '2026-10-22' }), tagged)).toBe(
+      false,
+    );
+    expect(webinarMatches(signup({ webinarKey: null }), untagged)).toBe(true);
+    expect(webinarMatches(signup({ webinarKey: '2026-11-03' }), untagged)).toBe(
+      false,
+    );
+  });
   it('exports quoted multiline CSV, UTF-8 BOM, and neutralizes spreadsheet formulas', () => {
     const csv = webinarCsv(
       [
@@ -176,6 +195,8 @@ describe('webinar metric definitions', () => {
       'Asia/Shanghai',
     );
     expect(csv.startsWith('\uFEFF')).toBe(true);
+    expect(csv).toContain('Webinar key');
+    expect(csv).toContain('2026-10-22');
     expect(csv).toContain('"\'=HYPERLINK(""evil"") Student"');
     expect(csv).toContain('"First line\nSecond, ""quoted"""');
     expect(csv).toContain('Asia/Shanghai');

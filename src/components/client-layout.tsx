@@ -83,12 +83,15 @@ export function ClientLayout({
         <Header />
         <main className="flex-1">{children}</main>
         <Footer counts={catalogCounts} />
+        {/* Webinar promo stays on quiet (detail) pages too — high-intent
+            browse traffic. Anchored under the header so it does not fight
+            StickyApplyBar / chat / WhatsApp floats at the bottom. */}
+        {PUBLIC_WEBINAR_ENABLED && <WebinarPromoPopup />}
         {!quiet && <>
           <Chatbot />
           <WhatsAppFloat />
           <StickyContact />
           <ExitIntentPopup />
-          {PUBLIC_WEBINAR_ENABLED && <WebinarPromoPopup />}
           <WhatsAppGroupPopup />
         </>}
       </div>

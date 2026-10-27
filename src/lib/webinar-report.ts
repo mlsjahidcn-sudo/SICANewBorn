@@ -14,6 +14,10 @@ export const WEBINAR_STATUSES = [
   'Cancelled',
 ] as const;
 export type WebinarStatus = (typeof WEBINAR_STATUSES)[number];
+
+/** Sentinel filter value for rows with no webinar_key (pre-tag legacy). */
+export const WEBINAR_KEY_UNTAGGED = '__untagged';
+
 export const WEBINAR_INTEREST_KEYS: Record<string, string> = {
   chinese_language: 'webinar.interests.chineseLanguage',
   foundation: 'webinar.interests.foundation',
@@ -21,6 +25,7 @@ export const WEBINAR_INTEREST_KEYS: Record<string, string> = {
   bachelor: 'webinar.interests.bachelor',
   master: 'webinar.interests.master',
   phd: 'webinar.interests.phd',
+  // Kept for historical rows that still carry the old interest.
   csc: 'webinar.interests.csc',
 };
 export interface WebinarSignup {
@@ -37,6 +42,7 @@ export interface WebinarSignup {
   utmCampaign: string | null;
   status: WebinarStatus;
   createdAt: string;
+  webinarKey: string | null;
 }
 export interface WebinarFilters {
   q: string;
@@ -44,6 +50,7 @@ export interface WebinarFilters {
   source: string;
   interest: string;
   status: string;
+  webinarKey: string;
 }
 export interface WebinarSummary {
   total: number;
@@ -69,7 +76,12 @@ export interface WebinarReport {
   page: number;
   limit: number;
   totalPages: number;
-  facets: { countries: string[]; sources: string[]; interests: string[] };
+  facets: {
+    countries: string[];
+    sources: string[];
+    interests: string[];
+    webinarKeys: string[];
+  };
 }
 export function isWebinarStatus(value: unknown): value is WebinarStatus {
   return (
@@ -87,6 +99,7 @@ export function parseWebinarFilters(params: URLSearchParams): WebinarFilters {
     country: params.get('country') || '',
     source: params.get('source') || '',
     interest: params.get('interest') || '',
+    webinarKey: (params.get('webinarKey') || '').trim().slice(0, 40),
   };
 }
 export function webinarMatches(
@@ -106,6 +119,13 @@ export function webinarMatches(
     return false;
   if (filters.interest && !signup.programInterests.includes(filters.interest))
     return false;
+  if (filters.webinarKey) {
+    if (filters.webinarKey === WEBINAR_KEY_UNTAGGED) {
+      if (signup.webinarKey) return false;
+    } else if (signup.webinarKey !== filters.webinarKey) {
+      return false;
+    }
+  }
   const haystack = [
     signup.firstName,
     signup.lastName,
@@ -113,6 +133,7 @@ export function webinarMatches(
     signup.email,
     signup.whatsapp,
     signup.country || '',
+    signup.webinarKey || '',
   ]
     .join(' ')
     .toLocaleLowerCase();
@@ -169,6 +190,7 @@ export function webinarCsv(rows: WebinarSignup[], timezone: string): string {
     'Country',
     'Interests',
     'Status',
+    'Webinar key',
     'Source',
     'Campaign',
     'Source page',
@@ -187,6 +209,7 @@ export function webinarCsv(rows: WebinarSignup[], timezone: string): string {
         row.country,
         row.programInterests.join('; '),
         row.status,
+        row.webinarKey,
         row.utmSource,
         row.utmCampaign,
         row.sourcePage,
