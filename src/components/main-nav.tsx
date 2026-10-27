@@ -1,8 +1,10 @@
 'use client';
 
 import Link from 'next/link';
+import { useState, type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { useI18n } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -40,24 +42,42 @@ interface MenuItem {
   type: 'link' | 'menu';
   href?: string;
   /** Pathname prefixes that mark this menu item as the "current section".
-   *  Direct links match `href` exactly; menus match any of these prefixes. */
+   *  Direct links and menus stay highlighted throughout these subtrees. */
   activeMatch?: string[];
   sections?: SubSection[];
+  align?: 'end';
 }
 
 const CITY_KEYS = ['beijing', 'shanghai', 'guangzhou', 'hangzhou', 'nanjing', 'wuhan'] as const;
 const TOP_COUNTRIES = ['india', 'indonesia', 'pakistan', 'nigeria', 'bangladesh', 'vietnam'] as const;
 
-/**
- * MainNav — the public-site top navigation with hover submenus (desktop)
- * and a stacked, accordion-style menu (mobile). Brand-aligned:
- *  - Sharp corners (no rounded) per SICA convention
- *  - Crimson accent on hover/active (#9B1B30)
- *  - Submenu descriptions in muted gray for hierarchy
- *  - i18n: full en + zh coverage
- */
-export function MainNav() {
-  const { t } = useI18n();
+/** Own state in the keyed menu so navigation also resets an open panel. */
+function DesktopNavigation({ children, label }: { children: ReactNode; label: string }): React.JSX.Element {
+  const [openMenu, setOpenMenu] = useState('');
+
+  return (
+    <NavigationMenu
+      aria-label={label}
+      className="hidden shrink-0 flex-none xl:flex"
+      viewport={false}
+      value={openMenu}
+      onValueChange={setOpenMenu}
+      delayDuration={150}
+      skipDelayDuration={300}
+      onKeyDown={(event) => {
+        // Radix handles Escape from panel links; also dismiss while the
+        // trigger is still focused after opening with Enter or Space.
+        if (event.key === 'Escape') setOpenMenu('');
+      }}
+    >
+      {children}
+    </NavigationMenu>
+  );
+}
+
+/** Desktop navigation; the header owns the separate mobile link list. */
+export function MainNav(): React.JSX.Element {
+  const { t, locale } = useI18n();
   const pathname = usePathname() || '/';
 
   const cities = CITY_KEYS.map((slug) => ({
@@ -69,41 +89,16 @@ export function MainNav() {
     label: t(`nav.countries.${slug}`),
   }));
 
-  // `isItemActive` decides whether a menu item is the "current section"
-  // — used to apply `aria-current` + crimson text + bottom border on the
-  // matching trigger so the user can see where they are in the IA.
-  //
-  // Direct links: match the exact `href` (Home `/` matches only `/`).
-  // Menus: match any of the explicit `activeMatch` prefixes so the
-  // section is highlighted for every page in that subtree.
-  //   - "Universities" matches /universities/* + /study-in-china/*
-  //     (By City is grouped under Universities in the IA)
-  //   - "About SICA" also matches /contact because the About submenu is
-  //     where Contact lives in the IA (Admissions submenu's Contact was
-  //     deduped in S42).
-  //   - "Admissions" matches /assessment only — /contact goes to About.
-  const isItemActive = (item: MenuItem): boolean => {
-    if (item.type === 'link') {
-      return item.href === pathname;
-    }
-    return (
-      item.activeMatch?.some(
-        (prefix) => pathname === prefix || pathname.startsWith(prefix + '/'),
-      ) ?? false
-    );
-  };
+  const isItemActive = (item: MenuItem): boolean =>
+    item.activeMatch?.some(
+      (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+    ) ?? item.href === pathname;
 
-  // Per-sub-item exact-path match — used to bold/highlight a row inside
-  // an open submenu when the user is exactly on that page.
-  const isSubItemActive = (href: string): boolean => {
-    // Strip hash fragments for the comparison so /#why-study-in-china
-    // matches pathname === '/' as a regular Home link.
-    const [path] = href.split('#');
-    return path === pathname;
-  };
+  // A home-page anchor is not the current page just because its pathname is '/'.
+  const isSubItemActive = (href: string): boolean =>
+    !href.includes('#') && href === pathname;
 
   const menuItems: MenuItem[] = [
-    { type: 'link', href: '/', label: t('nav.home') },
     {
       type: 'menu',
       label: t('nav.universities'),
@@ -148,7 +143,7 @@ export function MainNav() {
     {
       type: 'menu',
       label: t('nav.scholarships'),
-      activeMatch: ['/scholarships'],
+      activeMatch: ['/scholarships', '/scholarships-for'],
       sections: [
         {
           title: t('nav.scholarships'),
@@ -223,7 +218,8 @@ export function MainNav() {
     },
     {
       type: 'menu',
-      label: t('nav.about'),
+      label: t('nav.aboutShort'),
+      align: 'end',
       // About owns /about + /contact. /contact was previously under
       // both Admissions and About (Phase 40/41 added it to Admissions
       // for parity); the dedup moved the visual ownership here.
@@ -259,31 +255,23 @@ export function MainNav() {
   ];
 
   return (
-    // viewport={false} → each NavigationMenuContent renders in its
-    // own trigger item (absolutely positioned under that trigger),
-    // not in a single shared floating viewport. We were getting
-    // "submenu shows under the wrong menu item" when the viewport
-    // tried to re-position for content of mixed widths (some menus
-    // are 280px wide, others 480px). Per-trigger positioning is the
-    // simpler, more predictable layout.
-    <NavigationMenu className="hidden min-[1360px]:flex" viewport={false}>
-      <NavigationMenuList>
+    // Keep panels anchored to their own trigger. Padding bridges the pointer
+    // path into the panel; a margin here would leave a hover gap.
+    <DesktopNavigation key={`${pathname}:${locale}`} label={t('nav.mainMenu')}>
+      <NavigationMenuList className="gap-0.5">
         {menuItems.map((item) => {
-          // Compute once per item — drives both `aria-current` and the
-          // crimson-text + bottom-border treatment for the active section.
           const active = isItemActive(item);
+          const itemClassName = cn(
+            'h-10 flex-row gap-1 rounded-none border-b-2 border-transparent bg-transparent px-2.5 py-2 text-sm font-semibold text-[#1B2A4A] transition-colors duration-150 hover:bg-[#1B2A4A]/5 hover:text-[#9B1B30] focus-visible:ring-2 focus-visible:ring-[#1B2A4A] focus-visible:ring-offset-2 motion-reduce:transition-none',
+            active && 'border-[#9B1B30] text-[#9B1B30]',
+          );
+
           return item.type === 'link' ? (
             <NavigationMenuItem key={item.href}>
-              <NavigationMenuLink asChild>
+              <NavigationMenuLink asChild className={itemClassName}>
                 <Link
                   href={item.href!}
-                  aria-current={active ? 'page' : undefined}
-                  className={[
-                    'group inline-flex h-9 w-max items-center justify-center px-3 py-2 text-sm font-medium transition-colors focus:outline-none',
-                    active
-                      ? 'text-[#9B1B30] font-semibold border-b-2 border-[#9B1B30]'
-                      : 'text-gray-700 hover:text-[#9B1B30] focus:text-[#9B1B30]',
-                  ].join(' ')}
+                  aria-current={active ? (pathname === item.href ? 'page' : 'location') : undefined}
                 >
                   {item.label}
                 </Link>
@@ -292,117 +280,91 @@ export function MainNav() {
           ) : (
             <NavigationMenuItem key={item.label}>
               <NavigationMenuTrigger
-                aria-current={active ? 'page' : undefined}
-                className={[
-                  'group inline-flex h-9 w-max items-center justify-center px-3 py-2 text-sm font-medium transition-colors focus:outline-none data-[state=open]:text-[#9B1B30]',
-                  active
-                    ? 'text-[#9B1B30] font-semibold border-b-2 border-[#9B1B30]'
-                    : 'text-gray-700 hover:text-[#9B1B30] focus:text-[#9B1B30]',
-                ].join(' ')}
+                aria-current={active ? 'location' : undefined}
+                className={cn(
+                  itemClassName,
+                  'data-[state=open]:bg-[#1B2A4A]/5 data-[state=open]:text-[#9B1B30] [&>svg]:text-[#1B2A4A]',
+                )}
               >
                 {item.label}
               </NavigationMenuTrigger>
-              <NavigationMenuContent>
+              <NavigationMenuContent
+                className={cn(
+                  'w-max p-0 pt-2 pr-0 group-data-[viewport=false]/navigation-menu:mt-0 group-data-[viewport=false]/navigation-menu:overflow-visible group-data-[viewport=false]/navigation-menu:rounded-none group-data-[viewport=false]/navigation-menu:border-0 group-data-[viewport=false]/navigation-menu:bg-transparent group-data-[viewport=false]/navigation-menu:shadow-none group-data-[viewport=false]/navigation-menu:duration-150 motion-reduce:animate-none!',
+                  // The last panel opens toward the centre of the header.
+                  item.align === 'end' && 'right-0 left-auto',
+                )}
+              >
                 <div
-                  className={`grid ${
+                  className={cn(
+                    'grid max-h-[calc(100dvh-6rem)] max-w-[calc(100vw-2rem)] overflow-y-auto rounded-none border border-[#1B2A4A]/15 bg-white shadow-lg',
                     (item.sections?.length ?? 0) > 1
-                      ? 'w-[480px] md:grid-cols-[1fr_140px]'
-                      : 'w-[280px]'
-                  } bg-white border border-[#1B2A4A] shadow-lg`}
-                  style={{ borderRadius: 0 }}
+                      ? 'w-[520px] grid-cols-[minmax(0,1fr)_190px]'
+                      : 'w-[360px]',
+                  )}
                 >
-                  {item.sections?.map((section, idx) => (
-                    <div
-                      key={section.title}
-                      className={
-                        (item.sections?.length ?? 0) > 1
-                          ? // Two-column layout: left = primary items (with
-                            // subtle icons), right = compact city/country
-                            // list (no icons, denser rows).
-                            idx === 0
-                            ? 'p-2 border-r border-gray-100'
-                            : 'p-2 bg-[#FAFAF8]'
-                          : 'p-2'
-                      }
-                    >
-                      {/* Section title — only show when there are 2+
-                          sections and this isn't the first one. */}
-                      {(item.sections?.length ?? 0) > 1 && idx > 0 && (
-                        <h3 className="mb-1 px-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#9B1B30]">
-                          {section.title}
-                        </h3>
-                      )}
-                      <ul className={idx === 0 ? 'space-y-0.5' : 'space-y-px'}>
-                        {section.items.map((sub) => {
-                          // Compact mode for the right column: no icon,
-                          // smaller text, single line.
-                          const isCompact = idx > 0;
-                          // Bold + crimson when this exact sub-link matches
-                          // the current route — gives the user a visible
-                          // "you are here" inside an open submenu.
-                          const subActive = isSubItemActive(sub.href);
-                          return (
-                            // Composite key: a few menu items intentionally
-                            // share a destination (e.g. `/assessment` shows
-                            // up under both "Free Assessment" + "Apply Now"
-                            // with different labels) but React still wants
-                            // a unique key per row.
-                            <li key={`${sub.href}::${sub.label}`}>
-                              <NavigationMenuLink asChild>
-                                <Link
-                                  href={sub.href}
-                                  aria-current={subActive ? 'page' : undefined}
-                                  className={[
-                                    'group flex select-none outline-none transition-colors',
-                                    isCompact
-                                      ? 'items-center px-1.5 py-1 text-[12px] group-hover:text-[#9B1B30]'
-                                      : 'items-start gap-2 p-1.5',
-                                    subActive
-                                      ? 'bg-[#1B2A4A]/5'
-                                      : 'hover:bg-[#1B2A4A]/5',
-                                    subActive
-                                      ? (isCompact ? 'text-[#9B1B30] font-semibold' : '[&_div]:text-[#9B1B30] [&_div]:font-semibold')
-                                      : (isCompact ? 'text-[#1B2A4A]' : ''),
-                                  ].filter(Boolean).join(' ')}
-                                >
-                                  {!isCompact && (
-                                    <div className="flex h-6 w-6 shrink-0 items-center justify-center bg-[#9B1B30] text-white group-hover:bg-[#7A1526] transition-colors">
-                                      <sub.icon className="h-3.5 w-3.5" />
-                                    </div>
+                  {item.sections?.map((section, index) => {
+                    const compact = index > 0;
+                    return (
+                      <div
+                        key={`${section.title}-${index}`}
+                        className={cn('p-3', compact && 'border-l border-gray-200 bg-[#FAFAF8]')}
+                      >
+                        {(item.sections?.length ?? 0) > 1 && (
+                          <h3 className="mb-2 px-2 text-xs font-semibold text-[#4B5563]">
+                            {section.title}
+                          </h3>
+                        )}
+                        <ul className="flex flex-col gap-1">
+                          {section.items.map((sub) => {
+                            const subActive = isSubItemActive(sub.href);
+                            return (
+                              <li key={sub.href}>
+                                <NavigationMenuLink
+                                  asChild
+                                  className={cn(
+                                    'group/nav-link flex min-h-9 flex-row rounded-none text-[#1B2A4A] transition-colors duration-150 hover:bg-[#1B2A4A]/5 focus-visible:bg-[#1B2A4A]/5 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#1B2A4A] motion-reduce:transition-none',
+                                    compact ? 'items-center px-2 py-2' : 'items-start gap-3 p-3',
+                                    subActive && 'bg-[#1B2A4A]/5',
                                   )}
-                                  <div className="min-w-0 flex-1">
-                                    <div
-                                      className={[
-                                        'leading-tight transition-colors',
-                                        isCompact
-                                          ? 'text-[12px] font-medium truncate group-hover:text-[#9B1B30]'
-                                          : 'text-[13px] font-semibold text-[#1B2A4A] group-hover:text-[#9B1B30]',
-                                        subActive && isCompact ? 'text-[#9B1B30] font-semibold' : '',
-                                        subActive && !isCompact ? 'text-[#9B1B30] font-bold' : '',
-                                      ].filter(Boolean).join(' ')}
-                                    >
-                                      {sub.label}
-                                    </div>
-                                    {!isCompact && sub.desc && (
-                                      <div className="mt-0.5 text-[11px] leading-snug text-[#4B5563] line-clamp-1">
-                                        {sub.desc}
-                                      </div>
+                                >
+                                  <Link href={sub.href} aria-current={subActive ? 'page' : undefined}>
+                                    {!compact && (
+                                      <span className="flex size-9 shrink-0 items-center justify-center bg-[#1B2A4A]/5">
+                                        <sub.icon className="size-4 text-[#1B2A4A]" aria-hidden="true" />
+                                      </span>
                                     )}
-                                  </div>
-                                </Link>
-                              </NavigationMenuLink>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </div>
-                  ))}
+                                    <span className="min-w-0 flex-1">
+                                      <span
+                                        className={cn(
+                                          'block text-sm leading-5 group-hover/nav-link:text-[#9B1B30]',
+                                          compact ? 'font-medium' : 'font-semibold',
+                                          subActive && 'font-semibold text-[#9B1B30]',
+                                        )}
+                                      >
+                                        {sub.label}
+                                      </span>
+                                      {!compact && sub.desc && (
+                                        <span className="mt-1 block text-xs leading-5 text-[#4B5563]">
+                                          {sub.desc}
+                                        </span>
+                                      )}
+                                    </span>
+                                  </Link>
+                                </NavigationMenuLink>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    );
+                  })}
                 </div>
               </NavigationMenuContent>
             </NavigationMenuItem>
           );
         })}
       </NavigationMenuList>
-    </NavigationMenu>
+    </DesktopNavigation>
   );
 }

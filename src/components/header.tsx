@@ -9,12 +9,13 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuGroup,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { MainNav } from '@/components/main-nav';
 import { SicaLogo } from '@/components/sica-logo';
 
-export function Header() {
+export function Header(): React.JSX.Element {
   const { t, locale, setLocale } = useI18n();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -41,9 +42,9 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-gray-200 bg-white/95 backdrop-blur-sm">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 shrink-0">
+        <Link href="/" aria-label={`SICA — ${t('nav.home')}`} className="flex shrink-0 items-center focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#1B2A4A]">
           <SicaLogo className="h-9 w-auto" />
         </Link>
 
@@ -51,12 +52,14 @@ export function Header() {
         <MainNav />
 
         {/* Right Actions */}
-        <div className="hidden min-[1360px]:flex items-center gap-3 shrink-0">
+        <div className="hidden xl:flex items-center gap-1.5 shrink-0">
           <button
             onClick={() => setLocale(locale === 'en' ? 'zh' : 'en')}
-            className="flex items-center gap-1.5 rounded-none border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 transition-colors hover:border-[#9B1B30] hover:text-[#9B1B30]"
+            type="button"
+            lang={locale === 'en' ? 'zh' : 'en'}
+            className="flex h-9 items-center gap-1.5 rounded-none px-2.5 text-sm font-medium text-[#1B2A4A] transition-colors duration-150 hover:bg-[#1B2A4A]/5 hover:text-[#9B1B30] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1B2A4A] motion-reduce:transition-none"
           >
-            <Globe className="h-4 w-4" />
+            <Globe className="size-4 text-[#1B2A4A]" aria-hidden="true" />
             {/* S42: was hardcoded inline ternary — now uses i18n key. The
                 button always shows the OTHER language (中文 when current
                 is en, EN when current is zh) so a Chinese reader sees
@@ -67,37 +70,39 @@ export function Header() {
           {/* Portal Login Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="border-[#1B2A4A] text-[#1B2A4A] hover:bg-[#1B2A4A] hover:text-white font-semibold text-sm">
-                <Users className="mr-2 h-4 w-4" />
+              <Button variant="ghost" className="gap-1.5 text-[#1B2A4A] hover:bg-[#1B2A4A]/5 hover:text-[#9B1B30] font-medium text-sm duration-150 motion-reduce:transition-none">
+                <Users className="text-[#1B2A4A]" aria-hidden="true" />
                 {t('nav.portalLogin')}
-                <ChevronDown className="ml-1 h-3 w-3" />
+                <ChevronDown className="size-3 text-[#1B2A4A]" aria-hidden="true" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <Link href="/student/login">
-                <DropdownMenuItem className="cursor-pointer">
-                  <Users className="mr-2 h-4 w-4" />
-                  <span>{t('nav.studentPortal')}</span>
+            <DropdownMenuContent align="end" sideOffset={8} className="w-56 rounded-none border-[#1B2A4A]/15 p-2 duration-150 motion-reduce:animate-none">
+              <DropdownMenuGroup>
+                <DropdownMenuItem asChild className="cursor-pointer rounded-none px-3 py-2.5 text-[#1B2A4A] focus:bg-[#1B2A4A]/5 focus:text-[#9B1B30]">
+                  <Link href="/student/login">
+                    <Users className="text-[#1B2A4A]" aria-hidden="true" />
+                    <span>{t('nav.studentPortal')}</span>
+                  </Link>
                 </DropdownMenuItem>
-              </Link>
-              <Link href="/partner/login">
-                <DropdownMenuItem className="cursor-pointer">
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  <span>{t('nav.partnerPortal')}</span>
+                <DropdownMenuItem asChild className="cursor-pointer rounded-none px-3 py-2.5 text-[#1B2A4A] focus:bg-[#1B2A4A]/5 focus:text-[#9B1B30]">
+                  <Link href="/partner/login">
+                    <UserPlus className="text-[#1B2A4A]" aria-hidden="true" />
+                    <span>{t('nav.partnerPortal')}</span>
+                  </Link>
                 </DropdownMenuItem>
-              </Link>
-              <Link href="/admin/login">
-                <DropdownMenuItem className="cursor-pointer">
-                  <FileText className="mr-2 h-4 w-4" />
-                  <span>{t('nav.adminPortal')}</span>
+                <DropdownMenuItem asChild className="cursor-pointer rounded-none px-3 py-2.5 text-[#1B2A4A] focus:bg-[#1B2A4A]/5 focus:text-[#9B1B30]">
+                  <Link href="/admin/login">
+                    <FileText className="text-[#1B2A4A]" aria-hidden="true" />
+                    <span>{t('nav.adminPortal')}</span>
+                  </Link>
                 </DropdownMenuItem>
-              </Link>
+              </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>
 
           <Button
             asChild
-            className="bg-[#9B1B30] hover:bg-[#7A1526] text-white font-semibold text-sm px-5"
+            className="bg-[#9B1B30] hover:bg-[#7A1526] text-white font-semibold text-sm px-5 duration-150 motion-reduce:transition-none"
           >
             <Link href="/assessment">{t('nav.apply')}</Link>
           </Button>
@@ -106,8 +111,8 @@ export function Header() {
         {/* Mobile Menu Toggle */}
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="min-[1360px]:hidden p-2 text-gray-700"
-          aria-label={t('nav.menu.openMenu')}
+          className="xl:hidden p-2 text-gray-700"
+          aria-label={t(mobileMenuOpen ? 'nav.menu.closeMenu' : 'nav.menu.openMenu')}
           aria-expanded={mobileMenuOpen}
         >
           {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -116,7 +121,7 @@ export function Header() {
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="min-[1360px]:hidden border-t border-gray-200 bg-white px-4 pb-4 pt-2">
+        <div className="xl:hidden border-t border-gray-200 bg-white px-4 pb-4 pt-2">
           <nav className="flex flex-col gap-1">
             {mobileNavLinks.map((link) => (
               <Link
@@ -165,7 +170,7 @@ export function Header() {
                 onClick={() => setLocale(locale === 'en' ? 'zh' : 'en')}
                 className="flex items-center gap-1.5 rounded-none border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600"
               >
-                <Globe className="h-4 w-4" />
+                <Globe className="size-4 text-[#1B2A4A]" aria-hidden="true" />
                 {locale === 'en' ? t('nav.langChinese') : t('nav.langEnglish')}
               </button>
               <Button
