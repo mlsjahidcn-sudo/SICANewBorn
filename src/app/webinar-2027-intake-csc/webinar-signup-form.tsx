@@ -112,8 +112,14 @@ export function WebinarSignupForm({ countryOptions }: Props) {
 
     // Client-side required-field gate so we don't burn the
     // server-side rate-limit on obvious blanks. The server
-    // re-validates.
-    if (!firstName.trim() || !lastName.trim() || !email.trim() || !whatsapp.trim()) {
+    // re-validates. Name, email, WhatsApp, and country are required.
+    if (
+      !firstName.trim() ||
+      !lastName.trim() ||
+      !email.trim() ||
+      !whatsapp.trim() ||
+      !country.trim()
+    ) {
       track('webinar_form_submitted_failed', { locale, error_code: 'validation' });
       setErrorMsg(t('webinar.form.errorRequired'));
       setStatus('error');
@@ -132,7 +138,7 @@ export function WebinarSignupForm({ countryOptions }: Props) {
       lastName: lastName.trim(),
       email: email.trim(),
       whatsapp: whatsapp.trim(),
-      country: country.trim() || undefined,
+      country: country.trim(),
       programInterests: Array.from(programInterests),
       notes: notes.trim() || undefined,
       website: honeypot,
@@ -287,7 +293,7 @@ export function WebinarSignupForm({ countryOptions }: Props) {
           </div>
           <div>
             <label htmlFor="webinar-country" className="block text-sm font-medium text-[#1F2937] mb-1">
-              {t('webinar.form.country')}
+              {t('webinar.form.country')} *
             </label>
             <select
               id="webinar-country"
@@ -296,6 +302,7 @@ export function WebinarSignupForm({ countryOptions }: Props) {
               value={country}
               onChange={(e) => setCountry(e.target.value)}
               onFocus={() => onFieldFocus('country')}
+              required
               className="w-full border border-gray-300 px-4 py-2.5 text-sm text-[#1F2937] bg-white rounded-none focus:border-[#9B1B30] focus:outline-none focus:ring-1 focus:ring-[#9B1B30]"
             >
               <option value="">{t('webinar.form.countryPlaceholder')}</option>

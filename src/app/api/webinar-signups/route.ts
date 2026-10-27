@@ -81,14 +81,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
   }
 
-  // Required fields
+  // Required fields: name, email, WhatsApp, country.
   const firstName = (body.firstName as string)?.trim();
   const lastName = (body.lastName as string)?.trim();
   const email = (body.email as string)?.trim();
   const whatsapp = (body.whatsapp as string)?.trim();
-  if (!firstName || !lastName || !email || !whatsapp) {
+  const country = (body.country as string)?.trim() || '';
+  if (!firstName || !lastName || !email || !whatsapp || !country) {
     return NextResponse.json(
-      { error: 'firstName, lastName, email, and WhatsApp are required' },
+      { error: 'firstName, lastName, email, WhatsApp, and country are required' },
       { status: 400 },
     );
   }
@@ -113,9 +114,6 @@ export async function POST(request: NextRequest) {
   const sourcePage = (body.sourcePage as string) ?? null;
   const referrer = request.headers.get('referer') ?? null;
   const userAgent = request.headers.get('user-agent') ?? null;
-  // Phase 141: extract country as a top-level variable so the
-  // email sender can render the per-recipient local time.
-  const country = ((body.country as string)?.trim() ?? null) || null;
   const utmSource = (body.utmSource as string)?.trim() || null;
   const utmMedium = (body.utmMedium as string)?.trim() || null;
   const utmCampaign = (body.utmCampaign as string)?.trim() || null;
