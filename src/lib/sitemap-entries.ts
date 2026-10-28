@@ -202,6 +202,22 @@ export async function loadSitemapParts(): Promise<{
     // deep-dive. Now has its own URL.
     { url: `${SITE_URL}/medical-check-physical-examination-form`, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/x1-vs-x2-student-visa-china`, changeFrequency: 'monthly', priority: 0.8 },
+    // Phase 172: country X1 visa spokes (PK/BD/NG) + CSC document how-tos
+    // (recommendation letter sample + 2027 pre-admission letter). Closes
+    // the long-tail gaps from the Oct 2026 guide audit.
+    { url: `${SITE_URL}/china-student-visa-pakistan`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/china-student-visa-bangladesh`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/china-student-visa-nigeria`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/csc-recommendation-letter-sample`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/pre-admission-letter-csc-2027`, changeFrequency: 'monthly', priority: 0.8 },
+    // Phase 173: create-queue items 4–8 (age/gap, CSC results,
+    // Pakistan documents/Apostille, Chinese vs English taught,
+    // MBBS home recognition for PK/BD/NG).
+    { url: `${SITE_URL}/age-limit-to-study-in-china`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/csc-scholarship-result-2027`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/documents-required-to-study-in-china-from-pakistan`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/chinese-taught-vs-english-taught-programs-china`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/mbbs-in-china-for-pakistani-students-2027`, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/study-in-china-without-ielts`, changeFrequency: 'monthly', priority: 0.8 },
     // Phase 150: English-track ETP landscape article — the broad
     // 300+ university MOE ETP catalog for non-Chinese speakers, the
