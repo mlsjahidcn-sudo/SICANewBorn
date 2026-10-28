@@ -1,4 +1,5 @@
 import type { LocalizedGuide } from './types';
+// [verify] Editorial claims previously marked for confirmation — re-check official notices before relying on figures or dates.
 
 /**
  * "CSCA FAQ — 50 questions" — Batch 5, article #19 of the
@@ -93,7 +94,7 @@ export const cscaFaqGuide: LocalizedGuide = {
               '**Five subjects** — Professional Chinese (Humanities or STEM track, 80 MCQs) + Mathematics (compulsory for all, 48 MCQs) + Physics and Chemistry (48 each, per program)',
               '**No pass mark** — each subject scores 0–100; universities set their own cutoffs (planning bands: 80+ top tier, 70+ mid, 60s regional)',
               '**RMB 450 / RMB 700** — one subject costs RMB 450; two or more cost RMB 700 total per sitting',
-              '**Six sittings a year** — mainly online at home with a live proctor; windows announced per sitting (Nov 2026: register 15-21 Oct)',
+              '**Six sittings a year** — mainly online at home with a live proctor; windows announced per sitting (November registration closed on 21 Oct 2026)',
               '**Two exemptions** — HSK 4 for Chinese-language programs (full); qualifying HSK waives Professional Chinese (degrees)',
               '**CSC requires it** — scholarship applicants submit scores; deadlines January–April force the earliest sitting',
               '**Retakes allowed** — no published attempt limit; resit weak subjects only; the calendar is the constraint',
@@ -167,7 +168,7 @@ export const cscaFaqGuide: LocalizedGuide = {
       { q: 'How do I register for the CSCA?', a: 'In eight steps: confirm your subject combination from the program page, find the official portal, create an account with passport-exact details, choose session and center, select subjects, pay (¥450/¥700), download and print the admission ticket, and sit the exam. The full walkthrough is in the registration guide.' },
       { q: 'How much does the CSCA cost?', a: '¥450 CNY for one subject, or ¥700 CNY total for two or more subjects in the same session — the typical 3–4 subject candidate pays ¥700 (about US$100). Overseas candidates add bank-transfer fees and exchange-rate margins.' },
       { q: 'How do I pay for the CSCA from outside China?', a: 'Three routes: the international version of Alipay or WeChat Pay with a linked foreign card, an international bank transfer to the portal\'s account (3–5 business days — start a week before the window closes), or a trusted person in China paying the order you created. Keep every receipt.' },
-      { q: 'When does CSCA registration close?', a: 'Registration windows are announced per sitting — for the November 2026 sitting the window is just one week, 15-21 October (Beijing time). There is no published late-registration option, so register in the first days of the window.' },
+      { q: 'When does CSCA registration close?', a: 'Registration windows are announced per sitting — November registration closed on 21 Oct 2026. There is no published late-registration option, so register in the first days of the window.' },
       { q: 'Where can I take the CSCA?', a: 'At designated test centers in China and at Chinese embassies/consulates and partner institutions abroad. You choose the nearest center with seats during registration; center lists are published per session.' },
       { q: 'What should I bring on CSCA test day?', a: 'Your original passport (the exact document used at registration), the printed admission ticket, and pencils plus eraser as instructed. Phones, smartwatches, calculators, notes, and dictionaries do not enter the exam room. Arrive 30–45 minutes early.' },
       { q: 'Do I need the CSCA if I have HSK 4?', a: 'It depends on program type: a valid HSK 4 fully exempts applicants to Chinese-language programs, but degree applicants with HSK 4 are not automatically exempt — though a qualifying HSK score can waive the Professional Chinese subject, leaving Math and required sciences. Confirm with the university in writing.' },
@@ -179,7 +180,7 @@ export const cscaFaqGuide: LocalizedGuide = {
       { q: 'Can I apply to universities before I have a CSCA score?', a: 'You can research, shortlist, and often start applications — but your score must be attached before each application\'s deadline. Plan backwards: pick the session that lands 4–6 months before intake so banked scores cover every deadline.' },
       { q: 'Do universities receive my CSCA scores automatically?', a: 'No — scores are issued to you via the registration portal, and you attach the report to each application yourself. Universities do not receive scores automatically.' },
       { q: 'Do transfer students need the CSCA?', a: 'Typically yes if re-applying to a bachelor\'s program from the 2026 intake — but category rules can differ. Confirm with both universities\' admissions offices in writing before assuming either way.' },
-      { q: 'Can I retake the CSCA?', a: 'Yes — the exam runs 6 sittings a year and you may resit in a later sitting, typically only your weak subjects. A cleaner retake can replace a weak one for any deadline still open — check your target universities\' policy on multiple score reports [verify].' },
+      { q: 'Can I retake the CSCA?', a: 'Yes — the exam runs 6 sittings a year and you may resit in a later sitting, typically only your weak subjects. A cleaner retake can replace a weak one for any deadline still open — check your target universities\' policy on multiple score reports.' },
       { q: 'How many times can I take the CSCA?', a: 'No attempt limit has been published — the practical constraint is calendar: sessions run about 2–3 months apart, and a retake only helps if it lands before your still-open application deadlines.' },
       { q: 'Do universities see all my CSCA attempts?', a: 'No — universities see the score report you choose to submit. Earlier reports do not follow you unless you send them.' },
       { q: 'Can I retake only some CSCA subjects?', a: 'Yes — re-registration lets you sit just the subjects you want to replace. Strong subjects keep their scores; the fee band for the next session is ¥450 for one subject or ¥700 for two or more.' },
@@ -263,7 +264,7 @@ export const cscaFaqGuide: LocalizedGuide = {
       { value: '1', label: '页找齐' },
     ],
     quickAnswer:
-      'CSCA（中国国际学生学业能力评估）是中国面向国际本科申请者的统一标准化入学考试，由国家留学基金委组织，自 2026 级起对多数申请者强制。以下 50 问覆盖申请者的一切疑问：谁要考（多数本科申请者，含英文授课与 CSC 奖学金申请者）、考什么（数学全员必考；物理和/或化学因校而异；专业中文仅限中文授课项目——全选择题、无计算器）、怎么计分（单科 100 分、无全国及格线——大学自划线）、多少钱（单科 450 元、两科及以上合计 700 元）、何时考（一年 6 场、以居家线上真人监考为主——已确认：2026 年 11 月 14-15 日（报名 10 月 15-21 日）、12 月 19-20 日、2027 年 1 月 23-24 日；窗口逐场公布）、谁能免（持 HSK 4 的中文授课项目申请者；合格 HSK 可免专业中文）、怎么重考（无公布次数上限、只重考弱科、受日历约束）。每条答案独立成立；主题地图链接背后的深入指南。',
+      'CSCA（中国国际学生学业能力评估）是中国面向国际本科申请者的统一标准化入学考试，由国家留学基金委组织，自 2026 级起对多数申请者强制。以下 50 问覆盖申请者的一切疑问：谁要考（多数本科申请者，含英文授课与 CSC 奖学金申请者）、考什么（数学全员必考；物理和/或化学因校而异；专业中文仅限中文授课项目——全选择题、无计算器）、怎么计分（单科 100 分、无全国及格线——大学自划线）、多少钱（单科 450 元、两科及以上合计 700 元）、何时考（一年 6 场、以居家线上真人监考为主——已确认：2026 年 11 月 14-15 日（11 月报名已于 2026 年 10 月 21 日截止）、12 月 19-20 日、2027 年 1 月 23-24 日；窗口逐场公布）、谁能免（持 HSK 4 的中文授课项目申请者；合格 HSK 可免专业中文）、怎么重考（无公布次数上限、只重考弱科、受日历约束）。每条答案独立成立；主题地图链接背后的深入指南。',
     keyTakeaways: [
       '50 条直接答案，横跨基础、科目、计分、报名、豁免、奖学金、重考与备考',
       '18 篇指南 FAQ 的去重超集——答案一致、相互核对',
@@ -412,7 +413,7 @@ export const cscaFaqGuide: LocalizedGuide = {
       { q: '还没有 CSCA 成绩能先申请大学吗？', a: '可以调研、圈定院校、甚至启动申请——但每份申请的截止前必须附上成绩。倒排规划：选入学前 4-6 个月的场次，让存下的成绩覆盖所有截止。' },
       { q: '大学会自动收到我的 CSCA 成绩吗？', a: '不会——成绩经报名门户发给你，由你把报告附到每份申请。大学不会自动收到成绩。' },
       { q: '转学申请者要考 CSCA 吗？', a: '2026 级起重新申请本科的话通常要——但类别规则可能有差异。先与两校招生办书面确认再作假设。' },
-      { q: 'CSCA 可以重考吗？', a: '可以——一年 6 场，可在后续场次重考、通常只考弱科。更干净的重考成绩可为任何仍开放的截止日替换弱分——多次成绩单如何提交请核对目标大学的要求 [待核实]。' },
+      { q: 'CSCA 可以重考吗？', a: '可以——一年 6 场，可在后续场次重考、通常只考弱科。更干净的重考成绩可为任何仍开放的截止日替换弱分——多次成绩单如何提交请核对目标大学的要求。' },
       { q: 'CSCA 最多能考几次？', a: '没有公布次数上限——实际约束是日历：场次间隔约 2-3 个月，且重考只有落在仍开放的申请截止前才有意义。' },
       { q: '大学看得到我所有 CSCA 尝试吗？', a: '看不到——大学看你选择提交的成绩单。早先的报告不送就不会跟着你。' },
       { q: '可以只重考部分科目吗？', a: '可以——重新报名时可只坐你想替换的科目。强科成绩保留；下一场费用档为单科 ¥450 或两科及以上 ¥700。' },

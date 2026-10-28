@@ -10,6 +10,8 @@ const ENTRY_TAIL =
   'Entry requirements, intake and how SICA helps you apply. Book a free 10-minute check.';
 const HSK_TAIL =
   'HSK requirement, intake and how SICA helps you apply. Book a free 10-minute check.';
+const CHINESE_SOFT_TAIL =
+  'Chinese-taught: language level and intake confirmed by SICA. Book a free 10-minute check.';
 
 export interface ProgramSeoFields {
   major: string;
@@ -17,6 +19,8 @@ export interface ProgramSeoFields {
   language: string;
   university: string;
   city?: string;
+  /** When present, used to decide whether Chinese-taught metas may claim an HSK line. */
+  requirements?: string[];
 }
 
 export type TeachingLanguage = 'English' | 'Chinese' | 'Bilingual';
@@ -55,79 +59,20 @@ export function shortenUniversityName(name: string): string {
   return short || original;
 }
 
-function clipText(value: string, max: number): string {
-  const text = value.trim();
-  if (max <= 0) return '';
-  if (text.length <= max) return text;
-  if (max === 1) return text.slice(0, 1);
-  const sliced = text.slice(0, max).trimEnd();
-  const space = sliced.lastIndexOf(' ');
-  const base = space >= 4 ? sliced.slice(0, space) : sliced;
-  return base.replace(/[\s,;:–-]+$/u, '').trim();
+function hasLanguageRequirementValue(requirements: string[] | undefined): boolean {
+  return (requirements ?? []).some((item) => {
+    const text = detailText(item);
+    return Boolean(text && /HSK|IELTS|TOEFL|\blanguage\b/i.test(text));
+  });
+}
+
+function wordCount(value: string): number {
+  return value.split(/\s+/).filter(Boolean).length;
 }
 
 function qualifier(degree: string, language: TeachingLanguage | ''): string {
   const parts = [degree, language ? `${language}-taught` : ''].filter(Boolean);
   return parts.length ? ` (${parts.join(', ')})` : '';
-}
-
-/**
- * `{Major} ({Degree}, {Language}-taught) – {University} | SICA`
- * Shortens the university name before the major. The teaching language stays.
- */
-export function buildProgramDocumentTitle(fields: ProgramSeoFields): string {
-  const majorFull = detailText(fields.major) || 'Program';
-  const degree = detailText(fields.degree);
-  const language = teachingLanguageWord(fields.language);
-  const universityFull = detailText(fields.university);
-  const qual = qualifier(degree, language);
-
-  const render = (major: string, university: string): string => {
-    const head = `${major}${qual}`;
-    return university ? `${head} – ${university}${BRAND}` : `${head}${BRAND}`;
-  };
-
-  let major = majorFull;
-  let university = universityFull;
-  let title = render(major, university);
-  if (title.length <= PROGRAM_TITLE_MAX) return title;
-
-  const stripped = shortenUniversityName(university);
-  if (stripped && stripped.length < university.length) {
-    university = stripped;
-    title = render(major, university);
-    if (title.length <= PROGRAM_TITLE_MAX) return title;
-  }
-
-  const uniWords = university.split(/\s+/).filter(Boolean);
-  while (uniWords.length > 1 && render(major, stripTrailingJoiners(uniWords.join(' '))).length > PROGRAM_TITLE_MAX) {
-    uniWords.pop();
-  }
-  university = stripTrailingJoiners(uniWords.join(' '));
-  title = render(major, university);
-  if (title.length <= PROGRAM_TITLE_MAX) return title;
-
-  // The university is already as short as its name allows. Shorten the
-  // major next, and keep the teaching-language qualifier intact.
-  const majorWords = major.split(/\s+/).filter(Boolean);
-  while (majorWords.length > 1 && render(stripTrailingJoiners(majorWords.join(' ')), university).length > PROGRAM_TITLE_MAX) {
-    majorWords.pop();
-  }
-  major = stripTrailingJoiners(majorWords.join(' '));
-  title = render(major, university);
-  if (title.length <= PROGRAM_TITLE_MAX) return title;
-
-  const suffix = university ? `${qual} – ${university}${BRAND}` : `${qual}${BRAND}`;
-  const room = PROGRAM_TITLE_MAX - suffix.length;
-  major = clipText(major, Math.max(room, 1));
-  title = render(major, university);
-  if (title.length <= PROGRAM_TITLE_MAX) return title;
-
-  while (title.length > PROGRAM_TITLE_MAX && major.length > 1) {
-    major = major.slice(0, -1).trim();
-    title = render(major, university);
-  }
-  return title.length <= PROGRAM_TITLE_MAX ? title : title.slice(0, PROGRAM_TITLE_MAX);
 }
 
 function wordPrefixes(value: string): string[] {
@@ -140,6 +85,13 @@ function wordPrefixes(value: string): string[] {
   return stages;
 }
 
+/** Major stages for metas: longest first, never below 2 words when the name has 2+. */
+function majorStagesForMeta(value: string): string[] {
+  const stages = wordPrefixes(value);
+  const multi = stages.filter((stage) => wordCount(stage) >= 2);
+  return multi.length > 0 ? multi : stages.slice(0, 1);
+}
+
 const TRAILING_JOINER = /^(and|of|the|in|for|with|or|a|an|&)$/i;
 
 function stripTrailingJoiners(value: string): string {
@@ -148,10 +100,110 @@ function stripTrailingJoiners(value: string): string {
   return words.join(' ');
 }
 
+function isBareCityUniversity(university: string, city: string): boolean {
+  if (!university) return false;
+  if (city && university.toLowerCase() === city.toLowerCase()) return true;
+  return false;
+}
+
+/**
+ * `{Major} ({Degree}, {Language}-taught) – {University} | SICA`
+ * Fallback when >60: shorten university name → drop brand → shorten major
+ * (min 2 words) → only then cut university words (min 2 / never a bare city).
+ * Keeps the teaching-language qualifier; never doubles SICA.
+ */
+export function buildProgramDocumentTitle(fields: ProgramSeoFields): string {
+  const majorFull = detailText(fields.major) || 'Program';
+  const degree = detailText(fields.degree);
+  const language = teachingLanguageWord(fields.language);
+  const universityFull = detailText(fields.university);
+  const city = detailText(fields.city);
+  const qual = qualifier(degree, language);
+
+  const render = (major: string, university: string, withBrand: boolean): string => {
+    const head = `${major}${qual}`;
+    const body = university ? `${head} – ${university}` : head;
+    if (!withBrand) return body;
+    return body.includes('SICA') ? body : `${body}${BRAND}`;
+  };
+
+  const fits = (major: string, university: string, withBrand: boolean): boolean =>
+    render(major, university, withBrand).length <= PROGRAM_TITLE_MAX;
+
+  const pick = (major: string, university: string, withBrand: boolean): string =>
+    render(major, university, withBrand);
+
+  let major = majorFull;
+  let university = universityFull;
+
+  if (fits(major, university, true)) return pick(major, university, true);
+
+  // (a) shortenUniversityName
+  const stripped = shortenUniversityName(university);
+  if (stripped && stripped !== university) {
+    university = stripped;
+    if (fits(major, university, true)) return pick(major, university, true);
+  }
+
+  // (b) drop trailing " | SICA"
+  if (fits(major, university, false)) {
+    return fits(major, university, true)
+      ? pick(major, university, true)
+      : pick(major, university, false);
+  }
+
+  // (c) shorten major by whole words (min 2 words)
+  const majorWords = major.split(/\s+/).filter(Boolean);
+  while (majorWords.length > 2) {
+    majorWords.pop();
+    major = stripTrailingJoiners(majorWords.join(' '));
+    if (fits(major, university, false)) {
+      return fits(major, university, true)
+        ? pick(major, university, true)
+        : pick(major, university, false);
+    }
+  }
+  major = stripTrailingJoiners(majorWords.join(' '));
+
+  // (d) only then cut university words — never below 2, never a bare city
+  const uniWords = university.split(/\s+/).filter(Boolean);
+  while (uniWords.length > 2) {
+    const nextWords = uniWords.slice(0, -1);
+    const candidate = stripTrailingJoiners(nextWords.join(' '));
+    if (!candidate || isBareCityUniversity(candidate, city)) break;
+    uniWords.length = nextWords.length;
+    university = candidate;
+    if (fits(major, university, false)) {
+      return fits(major, university, true)
+        ? pick(major, university, true)
+        : pick(major, university, false);
+    }
+  }
+
+  // Still over: allow one more major-word drop so language + university stay.
+  if (!fits(major, university, false) && wordCount(major) > 1) {
+    const words = major.split(/\s+/).filter(Boolean);
+    words.pop();
+    major = stripTrailingJoiners(words.join(' ')) || major;
+  }
+
+  if (fits(major, university, true)) return pick(major, university, true);
+  if (fits(major, university, false)) return pick(major, university, false);
+
+  // Last resort: keep the language qualifier; trim the major from the end.
+  let title = pick(major, university, false);
+  if (title.length <= PROGRAM_TITLE_MAX) return title;
+  while (title.length > PROGRAM_TITLE_MAX && major.length > 1) {
+    major = major.slice(0, -1).trim();
+    title = pick(major, university, false);
+  }
+  return title.length <= PROGRAM_TITLE_MAX ? title : title.slice(0, PROGRAM_TITLE_MAX);
+}
+
 /**
  * English-taught and Chinese-taught descriptions use different closing sentences.
- * Empty fields are left out. The result is never longer than 155 characters.
- * University names are shortened by whole words, never cut mid-word.
+ * Prefer the full major, then the longest university form that still fits ≤155.
+ * Never cut the major below 2 words when the name has 2+.
  */
 export function buildProgramMetaDescription(fields: ProgramSeoFields): string {
   const majorFull = detailText(fields.major) || 'this program';
@@ -159,7 +211,12 @@ export function buildProgramMetaDescription(fields: ProgramSeoFields): string {
   const city = detailText(fields.city);
   const language = teachingLanguageWord(fields.language);
   const universityFull = detailText(fields.university);
-  const tail = language === 'Chinese' ? HSK_TAIL : ENTRY_TAIL;
+  const tail =
+    language === 'Chinese'
+      ? hasLanguageRequirementValue(fields.requirements)
+        ? HSK_TAIL
+        : CHINESE_SOFT_TAIL
+      : ENTRY_TAIL;
   const medium =
     language === 'English'
       ? 'in English'
@@ -180,28 +237,32 @@ export function buildProgramMetaDescription(fields: ProgramSeoFields): string {
   };
 
   const shortened = shortenUniversityName(universityFull);
-  const universityStages = [...new Set([universityFull, shortened, ...wordPrefixes(shortened || universityFull)].filter(Boolean))];
+  const universityStages = [
+    ...new Set([universityFull, shortened, ...wordPrefixes(shortened || universityFull)].filter(Boolean)),
+  ];
   if (universityStages.length === 0) universityStages.push('');
-  const majorStages = wordPrefixes(majorFull);
+  const majorStages = majorStagesForMeta(majorFull);
   const cityStages = city ? [city, ''] : [''];
 
-  let best = '';
-  for (const cityName of cityStages) {
+  // Prefer full major → longest university → first form that fits ≤155.
+  for (const major of majorStages) {
     for (const university of universityStages) {
-      for (const major of majorStages) {
+      for (const cityName of cityStages) {
         const text = render(major, university, cityName);
-        if (text.length <= PROGRAM_DESCRIPTION_MAX && text.length > best.length) best = text;
+        if (text.length <= PROGRAM_DESCRIPTION_MAX) return text;
       }
     }
   }
-  if (best) return best;
 
-  const university = universityStages[universityStages.length - 1] ?? '';
-  let major = majorStages[majorStages.length - 1] ?? majorFull;
-  let text = render(major, university, '');
-  while (text.length > PROGRAM_DESCRIPTION_MAX && major.length > 1) {
-    major = major.slice(0, -1).trim();
-    text = render(major, university, '');
+  // Full major never fits with any university/city combo. Keep a ≥2-word major
+  // and drop place details rather than chopping the major to a single word.
+  const major = majorStages[majorStages.length - 1] ?? majorFull;
+  let text = render(major, '', '');
+  if (text.length <= PROGRAM_DESCRIPTION_MAX) return text;
+
+  // Extremely long tails: trim the closing sentence only.
+  while (text.length > PROGRAM_DESCRIPTION_MAX && text.includes('. ')) {
+    text = text.replace(/\.\s+[^.]*$/, '.').trim();
   }
   return text.length <= PROGRAM_DESCRIPTION_MAX ? text : text.slice(0, PROGRAM_DESCRIPTION_MAX);
 }

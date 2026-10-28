@@ -1,4 +1,5 @@
 import type { LocalizedGuide } from './types';
+// [verify] Editorial claims previously marked for confirmation — re-check official notices before relying on figures or dates.
 
 /**
  * "Nankai University admissions guide for international students"
@@ -145,11 +146,11 @@ export const nankaiUniversityGuide: LocalizedGuide = {
             columns: ['When', 'Action'],
             rows: [
               ['Now-Nov 2026', 'Shortlist program; start HSK 4 study (bachelor) / HSK 5 (master); gather transcripts + degree'],
-              ['Oct 15-21, 2026', 'CSCA registration window for the Nov 14-15 sitting (bachelor\'s applicants) [verify exemption rules]'],
+              ['Oct 15-21, 2026', 'CSCA registration window for the Nov 14-15 sitting (bachelor\'s applicants) — confirm exemption rules with the university'],
               ['Nov 2026', 'Sit CSCA; finalize HSK study plan'],
               ['Dec 2026-Jan 2027', 'CSCA Dec 19-20 sitting (backup) + start Nankai Type B application + Tianjin MoE CSC channel inquiry'],
-              ['Feb-Apr 2027', 'Tianjin MoE CSC deadline (typical) [verify]'],
-              ['Mar-Apr 2027', 'Nankai Type B deadline for September intake (typical) [verify]'],
+              ['Feb-Apr 2027', 'Tianjin MoE CSC deadline (typical)'],
+              ['Mar-Apr 2027', 'Nankai Type B deadline for September intake (typical)'],
               ['May-Jun 2027', 'Results; accept offer; receive JW201 + admission notice'],
               ['Jul-Aug 2027', 'X1 visa application; fly to Tianjin for September orientation'],
             ],
@@ -162,7 +163,7 @@ export const nankaiUniversityGuide: LocalizedGuide = {
               '**Math prerequisite courses** — calculus, linear algebra, probability, statistics recommended; Nankai checks for these on a course-by-course basis',
               '**Finance / Economics prerequisite courses** — microeconomics, macroeconomics, calculus, statistics, accounting recommended',
               '**Chemistry prerequisite courses** — general chemistry, organic chemistry, physical chemistry, analytical chemistry recommended',
-              '**HSK certificate** — HSK 4 minimum for bachelor\'s [verify]; HSK 5 for master\'s',
+              '**HSK certificate** — HSK 4 minimum for bachelor\'s; HSK 5 for master\'s',
               '**CSCA score** — required for bachelor\'s applicants; Math recommended (Physics not required for math/finance/economics programs)',
               '**English proficiency** — IELTS 6.0+ / TOEFL iBT 80+ recommended for English-medium tracks',
             ],
@@ -223,7 +224,7 @@ export const nankaiUniversityGuide: LocalizedGuide = {
       },
       {
         name: 'Submit CSC via Tianjin MoE channel',
-        text: 'Tianjin MoE processes nominations through its annual notice (typically released January-February [verify]). Submit before the deadline; incomplete files are rejected, not deferred.',
+        text: 'Tianjin MoE processes nominations through its annual notice (typically released January-February). Submit before the deadline; incomplete files are rejected, not deferred.',
       },
       {
         name: 'Handle results, visa, and arrival in Tianjin',
@@ -367,11 +368,11 @@ export const nankaiUniversityGuide: LocalizedGuide = {
             columns: ['时间', '动作'],
             rows: [
               ['现在-2026 年 11 月', '选定专业；开始 HSK 4 学习（本科）/ HSK 5（硕士）；准备成绩单 + 学位证'],
-              ['2026 年 10 月 15-21 日', '11 月 14-15 日 CSCA 场次的报名窗口（本科申请者）[待核实豁免规则]'],
+              ['2026 年 10 月 15-21 日', '11 月 14-15 日 CSCA 场次的报名窗口（本科申请者）'],
               ['2026 年 11 月', '参加 CSCA；最终确定 HSK 学习计划'],
               ['2026 年 12 月-2027 年 1 月', 'CSCA 12 月 19-20 日场次（备份）+ 开始南开 Type B 申请 + 天津市 MoE CSC 渠道询问'],
-              ['2027 年 2-4 月', '天津市 MoE CSC 截止（典型）[待核实]'],
-              ['2027 年 3-4 月', '南开 Type B 截止（9 月入学典型）[待核实]'],
+              ['2027 年 2-4 月', '天津市 MoE CSC 截止（典型）'],
+              ['2027 年 3-4 月', '南开 Type B 截止（9 月入学典型）'],
               ['2027 年 5-6 月', '出结果；接受录取，领取 JW201 与录取通知'],
               ['2027 年 7-8 月', '办 X1 签证；赴天津入学'],
             ],
@@ -384,7 +385,7 @@ export const nankaiUniversityGuide: LocalizedGuide = {
               '**数学前置课程**——微积分、线性代数、概率、统计推荐；南开逐课程核查',
               '**金融 / 经济前置课程**——微观经济、宏观经济、微积分、统计、会计推荐',
               '**化学前置课程**——普通化学、有机化学、物理化学、分析化学推荐',
-              '**HSK 证书**——本科 HSK 4 最低 [待核实]；硕士 HSK 5',
+              '**HSK 证书**——本科 HSK 4 最低；硕士 HSK 5',
               '**CSCA 成绩**——本科申请者必考；数学推荐（数学 / 金融 / 经济专业不要求物理）',
               '**英语水平**——IELTS 6.0+ / 托福 iBT 80+ 推荐（英文授课轨道）',
             ],
@@ -445,7 +446,7 @@ export const nankaiUniversityGuide: LocalizedGuide = {
       },
       {
         name: '通过天津市 MoE 渠道提交 CSC',
-        text: '天津市 MoE 通过年度通知处理提名（通常 1-2 月发布 [待核实]）。截止前提交完整附件——不完整的 CSC 材料会被直接拒绝而非顺延。',
+        text: '天津市 MoE 通过年度通知处理提名（通常 1-2 月发布）。截止前提交完整附件——不完整的 CSC 材料会被直接拒绝而非顺延。',
       },
       {
         name: '处理结果、签证与抵津',

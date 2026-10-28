@@ -1,4 +1,5 @@
 import type { LocalizedGuide } from './types';
+// [verify] Editorial claims previously marked for confirmation — re-check official notices before relying on figures or dates.
 
 /**
  * "Peking vs Tsinghua for international students" — deep comparison
@@ -203,7 +204,7 @@ export const pekingVsTsinghuaGuide: LocalizedGuide = {
           {
             type: 'ul',
             items: [
-              '**CSC** — same terms at both: full tuition + on-campus dorm + monthly stipend (bachelor\'s 2,500 / master\'s 3,000 / PhD 3,500 CNY/mo [verify against the current CSC notice]) + health insurance + (for some channels) airfare',
+              '**CSC** — same terms at both: full tuition + on-campus dorm + monthly stipend (confirm tiers in the current CSC notice) + health insurance + (for some channels) airfare',
               '**University top-up** — both universities add their own scholarship on top of CSC; the exact amount varies by program and year but commonly ¥2,000-10,000/month for top candidates; engineering + PhD top-ups are usually larger',
               '**Beijing Government Scholarship** — separate from CSC, offered by the Beijing Municipal Education Commission; both universities\' international students can apply; covers tuition or stipend top-ups',
               '**Confucius Institute Scholarship** — for Chinese language year (1-year program), covers tuition + dorm + stipend + insurance; both universities host Confucius Institute scholarship recipients',
@@ -217,7 +218,7 @@ export const pekingVsTsinghuaGuide: LocalizedGuide = {
             rows: [
               ['CSC tuition waiver', 'Full', 'Full'],
               ['CSC on-campus dorm', 'Provided', 'Provided'],
-              ['CSC monthly stipend (bachelor\'s / master\'s / PhD)', '¥2,500 / ¥3,000 / ¥3,500', '¥2,500 / ¥3,000 / ¥3,500'],
+              ['CSC monthly stipend (bachelor\'s / master\'s / PhD)', 'Confirm in CSC notice', 'Confirm in CSC notice'],
               ['University top-up (CSC scholars, top candidates)', '¥2,000-8,000/month typical', '¥2,000-10,000/month typical (engineering + CS higher)'],
               ['Total monthly for fully-funded top candidate', '¥4,500-10,000/month', '¥4,500-13,000/month'],
               ['Self-funded tuition (English-medium bachelor\'s)', '¥20,000-45,000/year', '¥22,000-50,000/year'],
@@ -301,7 +302,7 @@ export const pekingVsTsinghuaGuide: LocalizedGuide = {
       },
       {
         q: 'How do PKU and Tsinghua compare on scholarships?',
-        a: 'Both fully cover tuition + dorm + monthly stipend + insurance for CSC scholars, with the same base stipend tiers (bachelor\'s 2,500 / master\'s 3,000 / PhD 3,500 CNY/month [verify against the current CSC notice]). University top-ups stack on top — Tsinghua engineering/CS top-ups are typically slightly higher. Beijing Government Scholarship is available at both.',
+        a: 'Both fully cover tuition + dorm + monthly stipend + insurance for CSC scholars, with the same base stipend tiers (confirm amounts in the current CSC notice). University top-ups stack on top — Tsinghua engineering/CS top-ups are typically slightly higher. Beijing Government Scholarship is available at both.',
       },
       {
         q: 'Should I apply to both Peking and Tsinghua?',
@@ -327,7 +328,7 @@ export const pekingVsTsinghuaGuide: LocalizedGuide = {
       },
       {
         name: 'Take the English test and plan the CSCA',
-        text: 'IELTS 6.5+ (master\'s) / 6.0+ (bachelor\'s) is the floor. For September 2027 intake, sit the CSCA in November 2026 (register Oct 15-21, Beijing time), December 2026, or January 2027 so the score exists before CSC deadlines.',
+        text: 'IELTS 6.5+ (master\'s) / 6.0+ (bachelor\'s) is the floor. For September 2027 intake, note that November registration closed on 21 Oct 2026; next sittings 19–20 Dec 2026 and 23–24 Jan 2027. Prefer December 2026 or January 2027 so the score exists before CSC deadlines.',
       },
       {
         name: 'Shortlist 3-5 target programs across both universities + 1-2 backups',
@@ -561,7 +562,7 @@ export const pekingVsTsinghuaGuide: LocalizedGuide = {
           {
             type: 'ul',
             items: [
-              '**CSC**——两校条件相同：全额学费 + 校内住宿 + 月津贴（本科 2,500 / 硕士 3,000 / 博士 3,500 元 [以当期通知核实]）+ 医疗保险 + （部分渠道）机票',
+              '**CSC**——两校条件相同：全额学费 + 校内住宿 + 月津贴（本科 2,500 / 硕士 3,000 / 博士 3,500 元）+ 医疗保险 + （部分渠道）机票',
               '**院校追加**——两校在 CSC 之外加自有奖学金；具体金额因项目与年级而异，常见 ¥2,000-10,000/月给头部候选人；工程 + 博士追加通常更高',
               '**北京市政府奖学金**——独立于 CSC，由北京市教委提供；两校国际生都可申请；覆盖学费或津贴追加',
               '**孔子学院奖学金**——1 年中文语言项目；覆盖学费 + 住宿 + 津贴 + 保险；两校都接收孔子学院奖学金学生',
@@ -575,7 +576,7 @@ export const pekingVsTsinghuaGuide: LocalizedGuide = {
             rows: [
               ['CSC 学费全免', '全额', '全额'],
               ['CSC 校内住宿', '提供', '提供'],
-              ['CSC 月津贴（本科/硕士/博士）', '¥2,500/3,000/3,500', '¥2,500/3,000/3,500'],
+              ['CSC 月津贴（本科/硕士/博士）', '以当期通知为准', '以当期通知为准'],
               ['院校追加（头部 CSC 学者）', '通常 ¥2,000-8,000/月', '通常 ¥2,000-10,000/月（工程 + CS 更高）'],
               ['头部候选人月合计', '¥4,500-10,000/月', '¥4,500-13,000/月'],
               ['自费学费（英文本科）', '¥20,000-45,000/年', '¥22,000-50,000/年'],
@@ -659,7 +660,7 @@ export const pekingVsTsinghuaGuide: LocalizedGuide = {
       },
       {
         q: '北大和清华奖学金怎么比？',
-        a: '两校都全额覆盖 CSC 学者的学费 + 住宿 + 月津贴 + 保险，基础津贴档位相同（本科 2,500 / 硕士 3,000 / 博士 3,500 元/月 [以当期通知核实]）。院校追加叠加在 CSC 之上——清华工程 / CS 追加通常稍高。北京市政府奖学金两校都可申。',
+        a: '两校都全额覆盖 CSC 学者的学费 + 住宿 + 月津贴 + 保险，基础津贴档位相同（以当期 CSC 通知确认津贴档位）。院校追加叠加在 CSC 之上——清华工程 / CS 追加通常稍高。北京市政府奖学金两校都可申。',
       },
       {
         q: '我应该两校都申请吗？',
@@ -685,7 +686,7 @@ export const pekingVsTsinghuaGuide: LocalizedGuide = {
       },
       {
         name: '考英语 + 规划 CSCA',
-        text: '雅思 6.5+（硕士）/ 6.0+（本科）是基础。2027 年 9 月入学参加 2026 年 11 月（报名 10 月 15-21 日北京时间）、12 月或 2027 年 1 月 CSCA 场次，确保成绩早于 CSC 截止前到位。',
+        text: '雅思 6.5+（硕士）/ 6.0+（本科）是基础。2027 年 9 月入学参加 2026 年 11 月（11 月报名已于 2026 年 10 月 21 日截止）、12 月或 2027 年 1 月 CSCA 场次，确保成绩早于 CSC 截止前到位。',
       },
       {
         name: '筛选 3-5 所目标（两校 + 1-2 所保底）',

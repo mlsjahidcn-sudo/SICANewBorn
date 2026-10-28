@@ -94,7 +94,7 @@ export const chinaApplicationDeadlinesGuide: LocalizedGuide = {
           {
             type: 'callout',
             tone: 'warning',
-            text: 'Bachelor\'s applicants targeting CSC or universities that require the CSCA: registration for the 14-15 November 2026 sitting runs 15-21 October (Beijing time). Sit November 2026 or December 2026 so the score exists before January-April 2027 scholarship deadlines. Full calendar: https://cscaprep.academy/exam-dates',
+            text: 'Bachelor\'s applicants targeting CSC or universities that require the CSCA: November registration closed on 21 Oct 2026; next sittings 19–20 Dec 2026 and 23–24 Jan 2027. Sit December 2026 or January 2027 so the score exists before January-April 2027 scholarship deadlines. Full calendar: https://cscaprep.academy/exam-dates',
           },
         ],
       },
@@ -246,7 +246,7 @@ export const chinaApplicationDeadlinesGuide: LocalizedGuide = {
       },
       {
         q: 'Do bachelor\'s applicants need the CSCA for September 2027?',
-        a: 'Yes for CSC scholarship applications — and many universities require it for direct admission too. Math is required for everyone; Physics and/or Chemistry depend on the university. For September 2027, sit the CSCA in November 2026 (register 15-21 Oct), December 2026, or January 2027 so the score exists before deadlines. Full calendar: https://cscaprep.academy/exam-dates',
+        a: 'Yes for CSC scholarship applications — and many universities require it for direct admission too. Math is required for everyone; Physics and/or Chemistry depend on the university. For September 2027, note that November registration closed on 21 Oct 2026; next sittings 19–20 Dec 2026 and 23–24 Jan 2027. Prefer December 2026 or January 2027 so the score exists before deadlines. Full calendar: https://cscaprep.academy/exam-dates',
       },
       {
         q: 'How long does admission take after applying?',
@@ -554,7 +554,7 @@ export const chinaApplicationDeadlinesGuide: LocalizedGuide = {
       },
       {
         q: '2027 年 9 月入学的本科申请者需要 CSCA 吗？',
-        a: 'CSC 奖学金申请需要——许多大学直接录取也要求。数学全员必考；物理和/或化学取决于大学。2027 年 9 月入学应在 2026 年 11 月（报名 10 月 15-21 日）、12 月或 2027 年 1 月场次完成考试，确保成绩赶在截止前。完整日历：https://cscaprep.academy/exam-dates',
+        a: 'CSC 奖学金申请需要——许多大学直接录取也要求。数学全员必考；物理和/或化学取决于大学。2027 年 9 月入学应在 2026 年 11 月（11 月报名已于 2026 年 10 月 21 日截止）、12 月或 2027 年 1 月场次完成考试，确保成绩赶在截止前。完整日历：https://cscaprep.academy/exam-dates',
       },
       {
         q: '申请后多久拿到录取？',

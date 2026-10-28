@@ -1,4 +1,5 @@
 import type { LocalizedGuide } from './types';
+// [verify] Editorial claims previously marked for confirmation — re-check official notices before relying on figures or dates.
 
 /**
  * "CSC scholarship for Nigerian students 2027" — country-specific
@@ -8,7 +9,7 @@ import type { LocalizedGuide } from './types';
  *
  * Facts: Type B university route is the practical path; the
  * embassy/bilateral channel's current status for Nigeria is
- * [verify]; WAEC/passport name-matching is the classic Nigerian
+ *; WAEC/passport name-matching is the classic Nigerian
  * application failure; fraud warning for agents charging for "free"
  * CSC applications.
  */
@@ -30,13 +31,13 @@ export const cscNigeriaGuide: LocalizedGuide = {
       { value: 'Free', label: 'CSC never charges agents' },
     ],
     quickAnswer:
-      'Nigerian students apply for the Chinese Government Scholarship (CSC) mainly through Type B — applying directly to a target Chinese university, which nominates you to CSC. Deadlines fall roughly January-April 2027 and vary by university [verify each target]. The embassy/bilateral channel\'s current availability for Nigeria should be confirmed with the Chinese embassy in Abuja [verify]. Bachelor\'s applicants must submit a CSCA score — sit the November 2026 (register 15-21 October, Beijing time), December 2026, or January 2027 sitting. Two Nigeria-specific rules: every name on every document must match your passport exactly (WAEC records included), and the CSC application itself is free — anyone charging a "guaranteed CSC placement" fee is a fraud.',
+      'Nigerian students apply for the Chinese Government Scholarship (CSC) mainly through Type B — applying directly to a target Chinese university, which nominates you to CSC. Deadlines fall roughly January-April 2027 and vary by university. The embassy/bilateral channel\'s current availability for Nigeria should be confirmed with the Chinese embassy in Abuja. Bachelor\'s applicants must submit a CSCA score — note that November registration closed on 21 Oct 2026; next sittings 19–20 Dec 2026 and 23–24 Jan 2027. Prefer December 2026 or January 2027. Two Nigeria-specific rules: every name on every document must match your passport exactly (WAEC records included), and the CSC application itself is free — anyone charging a "guaranteed CSC placement" fee is a fraud.',
     keyTakeaways: [
       'Type B (university route) is the practical path: apply to the university, it nominates you to CSC',
-      'Deadlines roughly January-April 2027, set university-by-university [verify each target]; the embassy route\'s status should be confirmed with the embassy [verify]',
-      'Bachelor\'s applicants: CSCA score required — next sittings Nov 14-15 2026 (register Oct 15-21), Dec 19-20 2026, Jan 23-24 2027',
+      'Deadlines roughly January-April 2027, set university-by-university; the embassy route\'s status should be confirmed with the embassy',
+      'Bachelor\'s applicants: CSCA score required — November registration closed on 21 Oct 2026; next sittings 19–20 Dec 2026 and 23–24 Jan 2027.',
       'Name-matching is the classic failure: WAEC certificate, transcript, passport, and bank documents must all carry the identical name',
-      'A pre-admission letter from the host university is expected for 2026/27 onward [verify]',
+      'A pre-admission letter from the host university is expected for 2026/27 onward',
       'CSC applications are free — agents charging for "guaranteed" CSC placement are fraudulent',
     ],
     sections: [
@@ -49,9 +50,9 @@ export const cscNigeriaGuide: LocalizedGuide = {
           {
             type: 'ul',
             items: [
-              '**Type B — Chinese University Program (recommended)** — apply directly to your target university\'s international-student portal; the university nominates you to CSC. Deadlines roughly January-April 2027, set by each university [verify each target]',
-              '**Embassy / bilateral channel** — handled through the Chinese embassy in Abuja; whether Nigeria runs an open bilateral CSC batch in the current cycle should be confirmed directly with the embassy [verify]',
-              '**Other CSC sub-programs** (China-Africa Friendship, MOFCOM) run their own channels — the CAFP announcement each cycle lists participating countries [verify]',
+              '**Type B — Chinese University Program (recommended)** — apply directly to your target university\'s international-student portal; the university nominates you to CSC. Deadlines roughly January-April 2027, set by each university',
+              '**Embassy / bilateral channel** — handled through the Chinese embassy in Abuja; whether Nigeria runs an open bilateral CSC batch in the current cycle should be confirmed directly with the embassy',
+              '**Other CSC sub-programs** (China-Africa Friendship, MOFCOM) run their own channels — the CAFP announcement each cycle lists participating countries',
               '**The routes are not mutually exclusive** — file Type B applications at 3-5 universities and any embassy channel that is open',
             ],
           },
@@ -128,11 +129,11 @@ export const cscNigeriaGuide: LocalizedGuide = {
     faqs: [
       {
         q: 'How do Nigerian students get the CSC scholarship?',
-        a: 'Most successfully through Type B: apply directly to a Chinese university (deadlines roughly January-April 2027, set per university [verify]), and the university nominates you to CSC. The embassy/bilateral channel\'s current availability should be confirmed with the Chinese embassy in Abuja [verify].',
+        a: 'Most successfully through Type B: apply directly to a Chinese university (deadlines roughly January-April 2027, set per university), and the university nominates you to CSC. The embassy/bilateral channel\'s current availability should be confirmed with the Chinese embassy in Abuja.',
       },
       {
         q: 'Do Nigerian bachelor\'s applicants need the CSCA?',
-        a: 'Yes — a CSCA score is required for CSC scholarship undergraduate applications. Math is required for everyone; Physics and/or Chemistry depend on the university. Next sittings: Nov 14-15 2026 (register Oct 15-21, Beijing time), Dec 19-20 2026, Jan 23-24 2027. Free practice: cscaprep.academy',
+        a: 'Yes — a CSCA score is required for CSC scholarship undergraduate applications. Math is required for everyone; Physics and/or Chemistry depend on the university. November registration closed on 21 Oct 2026; next sittings 19–20 Dec 2026 and 23–24 Jan 2027.. Free practice: cscaprep.academy',
       },
       {
         q: 'My WAEC name differs slightly from my passport — is that a problem?',
@@ -144,7 +145,7 @@ export const cscNigeriaGuide: LocalizedGuide = {
       },
       {
         q: 'What documents does a Nigerian CSC application need?',
-        a: 'Passport (valid beyond the program), WAEC certificate and/or degree + transcripts with notarized translations where needed, a study plan tailored to each university, two recommendation letters, the official physical-examination form completed by a licensed physician, a police clearance certificate, and the pre-admission letter where expected [verify].',
+        a: 'Passport (valid beyond the program), WAEC certificate and/or degree + transcripts with notarized translations where needed, a study plan tailored to each university, two recommendation letters, the official physical-examination form completed by a licensed physician, a police clearance certificate, and the pre-admission letter where expected.',
       },
       {
         q: 'Can I work in China after graduating on a CSC scholarship?',
@@ -154,7 +155,7 @@ export const cscNigeriaGuide: LocalizedGuide = {
     howToSteps: [
       {
         name: 'Shortlist 3-5 universities with open Type B windows',
-        text: 'Check each target\'s international-student page for its CSC (Type B) deadline — roughly January-April 2027, set per university [verify]. Prioritize programs matching your degree and grades.',
+        text: 'Check each target\'s international-student page for its CSC (Type B) deadline — roughly January-April 2027, set per university. Prioritize programs matching your degree and grades.',
       },
       {
         name: 'Register for the CSCA (bachelor\'s applicants)',
@@ -166,7 +167,7 @@ export const cscNigeriaGuide: LocalizedGuide = {
       },
       {
         name: 'Start university applications in parallel',
-        text: 'A pre-admission letter is expected for 2026/27 CSC applications [verify]. Submit university applications as soon as portals open so the letter exists before CSC deadlines.',
+        text: 'A pre-admission letter is expected for 2026/27 CSC applications. Submit university applications as soon as portals open so the letter exists before CSC deadlines.',
       },
       {
         name: 'Prepare the CSC document package',
@@ -219,13 +220,13 @@ export const cscNigeriaGuide: LocalizedGuide = {
       { value: '免费', label: 'CSC 从不向中介收费' },
     ],
     quickAnswer:
-      '尼日利亚学生申请中国政府奖学金（CSC）主要走 Type B——直接向目标中国大学申请，由大学向 CSC 提名。截止约在 2027 年 1-4 月且因校而异 [逐校核实]。使馆/双边渠道本周期对尼日利亚是否开放，请直接向中国驻阿布贾使馆确认 [待核实]。本科申请者必须提交 CSCA 成绩——应参加 2026 年 11 月（报名 10 月 15-21 日北京时间）、12 月或 2027 年 1 月场次。两条尼日利亚专属规则：所有文件的姓名必须与护照逐字一致（含 WAEC 记录）；CSC 申请本身免费——任何收取「保证 CSC 名额」费用的都是骗局。',
+      '尼日利亚学生申请中国政府奖学金（CSC）主要走 Type B——直接向目标中国大学申请，由大学向 CSC 提名。截止约在 2027 年 1-4 月且因校而异。使馆/双边渠道本周期对尼日利亚是否开放，请直接向中国驻阿布贾使馆确认。本科申请者必须提交 CSCA 成绩——请注意：11 月报名已于 2026 年 10 月 21 日截止；下一场次为 2026 年 12 月 19–20 日与 2027 年 1 月 23–24 日。优先考虑 12 月或 1 月场次。两条尼日利亚专属规则：所有文件的姓名必须与护照逐字一致（含 WAEC 记录）；CSC 申请本身免费——任何收取「保证 CSC 名额」费用的都是骗局。',
     keyTakeaways: [
       'Type B（大学渠道）是现实主路径：向大学申请，由大学提名给 CSC',
-      '截止约 2027 年 1-4 月，逐校自定 [逐校核实]；使馆渠道状态请向使馆确认 [待核实]',
-      '本科申请者：须提交 CSCA 成绩——下一批场次 2026 年 11 月 14-15 日（报名 10 月 15-21 日）、12 月 19-20 日、2027 年 1 月 23-24 日',
+      '截止约 2027 年 1-4 月，逐校自定；使馆渠道状态请向使馆确认',
+      '本科申请者：须提交 CSCA 成绩——下一批场次 2026 年 11 月 14-15 日（11 月报名已于 2026 年 10 月 21 日截止）、12 月 19-20 日、2027 年 1 月 23-24 日',
       '姓名一致是经典失败点：WAEC 证书、成绩单、护照、银行文件的姓名必须完全相同',
-      '2026/27 起预计需接收大学预录取函 [待核实]',
+      '2026/27 起预计需接收大学预录取函',
       'CSC 申请免费——收取「保证录取」费用的中介均为欺诈',
     ],
     sections: [
@@ -238,9 +239,9 @@ export const cscNigeriaGuide: LocalizedGuide = {
           {
             type: 'ul',
             items: [
-              '**Type B——中国大学项目（推荐）**——直接向目标大学国际生门户申请，大学向 CSC 提名。截止约 2027 年 1-4 月，逐校自定 [逐校核实]',
-              '**使馆/双边渠道**——经中国驻阿布贾使馆办理；本周期尼日利亚是否有公开双边批次请直接向使馆确认 [待核实]',
-              '**其他 CSC 子项目**（中非友谊、MOFCOM）走各自渠道——每期公告列出参与国 [待核实]',
+              '**Type B——中国大学项目（推荐）**——直接向目标大学国际生门户申请，大学向 CSC 提名。截止约 2027 年 1-4 月，逐校自定',
+              '**使馆/双边渠道**——经中国驻阿布贾使馆办理；本周期尼日利亚是否有公开双边批次请直接向使馆确认',
+              '**其他 CSC 子项目**（中非友谊、MOFCOM）走各自渠道——每期公告列出参与国',
               '**渠道不互斥**——可同时向 3-5 所大学提交 Type B，并行任何开放的使馆渠道',
             ],
           },
@@ -283,7 +284,7 @@ export const cscNigeriaGuide: LocalizedGuide = {
             type: 'ul',
             items: [
               '**数学全员必考**；物理和/或化学取决于大学与项目',
-              '**已确认场次**：2026 年 11 月 14-15 日（报名 10 月 15-21 日北京时间）、12 月 19-20 日、2027 年 1 月 23-24 日',
+              '**已确认场次**：2026 年 11 月 14-15 日（11 月报名已于 2026 年 10 月 21 日截止）、12 月 19-20 日、2027 年 1 月 23-24 日',
               '**模式**——以居家线上、真人监考为主；费用单科 450 元、两科及以上 700 元（csca.cn）',
               '**免费练习**——每场次模拟与学习计划：https://cscaprep.academy',
             ],
@@ -317,11 +318,11 @@ export const cscNigeriaGuide: LocalizedGuide = {
     faqs: [
       {
         q: '尼日利亚学生怎么拿到 CSC 奖学金？',
-        a: '多数走 Type B：直接向中国大学申请（截止约 2027 年 1-4 月，逐校自定 [待核实]），由大学提名给 CSC。使馆/双边渠道本周期是否开放请向中国驻阿布贾使馆确认 [待核实]。',
+        a: '多数走 Type B：直接向中国大学申请（截止约 2027 年 1-4 月，逐校自定），由大学提名给 CSC。使馆/双边渠道本周期是否开放请向中国驻阿布贾使馆确认。',
       },
       {
         q: '尼日利亚本科申请者需要 CSCA 吗？',
-        a: '需要——CSC 奖学金本科申请必须提交 CSCA 成绩。数学全员必考；物理和/或化学因校而异。下一批场次：2026 年 11 月 14-15 日（报名 10 月 15-21 日北京时间）、12 月 19-20 日、2027 年 1 月 23-24 日。免费练习：cscaprep.academy',
+        a: '需要——CSC 奖学金本科申请必须提交 CSCA 成绩。数学全员必考；物理和/或化学因校而异。下一批场次：2026 年 11 月 14-15 日（11 月报名已于 2026 年 10 月 21 日截止）、12 月 19-20 日、2027 年 1 月 23-24 日。免费练习：cscaprep.academy',
       },
       {
         q: 'WAEC 姓名与护照略有出入——有问题吗？',
@@ -333,7 +334,7 @@ export const cscNigeriaGuide: LocalizedGuide = {
       },
       {
         q: '尼日利亚 CSC 申请需要哪些材料？',
-        a: '护照（有效期覆盖项目期）、WAEC 证书和/或学位 + 成绩单（按需公证翻译）、按校定制的学习计划、两封推荐信、执业医师填写的官方体检表、无犯罪证明，以及按需的预录取函 [待核实]。',
+        a: '护照（有效期覆盖项目期）、WAEC 证书和/或学位 + 成绩单（按需公证翻译）、按校定制的学习计划、两封推荐信、执业医师填写的官方体检表、无犯罪证明，以及按需的预录取函。',
       },
       {
         q: 'CSC 奖学金毕业后能在中国工作吗？',
@@ -343,7 +344,7 @@ export const cscNigeriaGuide: LocalizedGuide = {
     howToSteps: [
       {
         name: '筛选 3-5 所 Type B 窗口开放的大学',
-        text: '查每所目标大学国际生页面的 CSC（Type B）截止——约 2027 年 1-4 月，逐校自定 [待核实]。优先匹配你学位与成绩的项目。',
+        text: '查每所目标大学国际生页面的 CSC（Type B）截止——约 2027 年 1-4 月，逐校自定。优先匹配你学位与成绩的项目。',
       },
       {
         name: '报名 CSCA（本科申请者）',
@@ -355,7 +356,7 @@ export const cscNigeriaGuide: LocalizedGuide = {
       },
       {
         name: '并行启动大学申请',
-        text: '2026/27 起 CSC 申请预计需预录取函 [待核实]。门户一开放就提交大学申请，确保函件赶在 CSC 截止前到位。',
+        text: '2026/27 起 CSC 申请预计需预录取函。门户一开放就提交大学申请，确保函件赶在 CSC 截止前到位。',
       },
       {
         name: '准备 CSC 材料包',

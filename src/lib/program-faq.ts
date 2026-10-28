@@ -10,23 +10,68 @@ export function faqSchema(items: DetailFaqItem[]): { '@context': string; '@type'
 
 type FaqProgram = Pick<Program, 'name' | 'tuition' | 'language' | 'requirements' | 'intake'> & Partial<Program>;
 
+/**
+ * Only emit Q&A pairs with confirmed catalog values. Not-listed / not-confirmed
+ * fallbacks stay out of the visible FAQ and out of FAQPage JSON-LD.
+ */
 export function buildProgramFaqItems(program: FaqProgram, universityName: string, locale: 'en' | 'zh' = 'en'): DetailFaqItem[] {
   const zh = locale === 'zh';
   const name = localizedDetail(program.name, program.nameCn, locale);
   const requirements = localizedItems(program.requirements, program.requirementsCn, locale);
   const intake = datedIntake(localizedDetail(program.intake, program.intakeCn, locale), program.detailVerification);
   const funding = verifiedEvidence(program.detailVerification) ? localizedDetail(program.detailVerification?.funding, program.detailVerification?.fundingCn, locale) : '';
-  return [
-    { question: zh ? `${name}的学费是多少？` : `How much does ${name} cost?`, answer: detailText(program.tuition) ? (zh ? `${universityName}该项目列出的学费为 ${program.tuition}。请确认适用于你的入学季的费用。` : `The listed tuition at ${universityName} is ${program.tuition}. Confirm the fee for your intake.`) : (zh ? '学费尚未列出，请与 SICA 确认。' : 'Tuition is not listed. Confirm the current fee with SICA.') },
-    { question: zh ? '使用什么语言授课？' : 'What is the teaching language?', answer: detailText(program.language) ? (zh ? `记录的授课语言为 ${catalogLabel(program.language, locale)}。请按入学季确认。` : `The listed teaching language is ${program.language}. Confirm it for your intake.`) : (zh ? '授课语言尚未确认。' : 'The teaching language has not been confirmed.') },
-    { question: zh ? '如何确认入学要求？' : 'What are the entry requirements?', answer: requirements.length ? `${requirements.join('; ')}. ${zh ? '要求可能随入学季变化，请在申请前确认。' : 'Requirements can change by intake; confirm before applying.'}` : (zh ? '项目要求尚未列出，请向顾问确认学历、语言和材料要求。' : 'Program-specific requirements are not listed. Ask a counselor to confirm academic, language and document requirements.') },
-    { question: zh ? '何时可以入学？' : 'When can I start?', answer: intake ? (zh ? `记录的入学季为 ${intake}。请确认当前名额和截止日期。` : `The recorded intake is ${intake}. Confirm current availability and its deadline.`) : (zh ? '下一个有年份的入学季尚未确认。记录的开学月份不代表正在接受申请。' : 'The next dated intake is not confirmed. Recorded start months do not establish that applications are open.') },
-    { question: zh ? '有奖学金吗？' : 'Is funding available?', answer: funding || (zh ? '奖学金覆盖范围、资格和截止日期需按项目和入学季确认。目录中的标记不保证获得资助。' : 'Scholarship coverage, eligibility and deadlines must be confirmed for the program and intake. A catalog funding flag does not guarantee an award.') },
-  ];
+  const language = detailText(program.language);
+  const tuition = detailText(program.tuition);
+  const items: DetailFaqItem[] = [];
+
+  if (tuition) {
+    items.push({
+      question: zh ? `${name}的学费是多少？` : `How much does ${name} cost?`,
+      answer: zh
+        ? `${universityName}该项目列出的学费为 ${tuition}。请确认适用于你的入学季的费用。`
+        : `The listed tuition at ${universityName} is ${tuition}. Confirm the fee for your intake.`,
+    });
+  }
+
+  if (language) {
+    items.push({
+      question: zh ? '使用什么语言授课？' : 'What is the teaching language?',
+      answer: zh
+        ? `记录的授课语言为 ${catalogLabel(program.language, locale)}。请按入学季确认。`
+        : `The listed teaching language is ${language}. Confirm it for your intake.`,
+    });
+  }
+
+  if (requirements.length > 0) {
+    items.push({
+      question: zh ? '如何确认入学要求？' : 'What are the entry requirements?',
+      answer: `${requirements.join('; ')}. ${zh ? '要求可能随入学季变化，请在申请前确认。' : 'Requirements can change by intake; confirm before applying.'}`,
+    });
+  }
+
+  if (intake) {
+    items.push({
+      question: zh ? '何时可以入学？' : 'When can I start?',
+      answer: zh
+        ? `记录的入学季为 ${intake}。请确认当前名额和截止日期。`
+        : `The recorded intake is ${intake}. Confirm current availability and its deadline.`,
+    });
+  }
+
+  if (funding) {
+    items.push({
+      question: zh ? '有奖学金吗？' : 'Is funding available?',
+      answer: funding,
+    });
+  }
+
+  return items;
 }
 
-export function buildProgramFaqSchema(program: FaqProgram, universityName: string, locale: 'en' | 'zh' = 'en'): ReturnType<typeof faqSchema> {
-  return faqSchema(buildProgramFaqItems(program, universityName, locale));
+export function buildProgramFaqSchema(program: FaqProgram, universityName: string, locale: 'en' | 'zh' = 'en'): ReturnType<typeof faqSchema> | null {
+  const items = buildProgramFaqItems(program, universityName, locale);
+  if (items.length < 2) return null;
+  return faqSchema(items);
 }
 
 export function buildUniversityFaqItems(university: University, count: number, locale: 'en' | 'zh'): DetailFaqItem[] {

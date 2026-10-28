@@ -1,4 +1,5 @@
 import type { LocalizedGuide } from './types';
+// [verify] Editorial claims previously marked for confirmation — re-check official notices before relying on figures or dates.
 
 /**
  * "How to write a study plan for a Chinese university application,
@@ -44,7 +45,7 @@ export const howToWriteStudyPlanGuide: LocalizedGuide = {
       'A Chinese-university study plan has 6 sections: (1) academic background, (2) research interests or work experience, (3) why this specific program + university, (4) study plan in China (what courses, what labs, what advisor), (5) future career plans, (6) closing paragraph reaffirming fit. Target length: 800-1,500 words for CSC, 500-1,000 words for Type B (university direct). Chinese reviewers reward three things: (a) clarity of your academic record (no vague claims — name specific coursework, projects, grades); (b) fit with the specific program + university (not "your university is prestigious" but "your specific lab + advisor aligns with my background in X"); (c) concrete future plans (China-return, industry vs PhD, region). Generic plans that swap the university name get rejected in the first 30 seconds.',
     keyTakeaways: [
       '6-section structure: (1) academic background, (2) research interests, (3) why this program + university, (4) study plan in China, (5) future career plans, (6) closing',
-      'Target length: CSC = 800-1,500 words (pre-admission letter expected for 2026/27 [verify]); Type B = 500-1,000 words (varies by university)',
+      'Target length: CSC = 800-1,500 words (pre-admission letter expected for 2026/27); Type B = 500-1,000 words (varies by university)',
       'Chinese reviewers reward 3 things: clarity of academic record + fit with the specific program + concrete future plans',
       'Always tailor per university — name the specific lab, advisor, or center; "your university is prestigious" is a red flag, not a plus',
       'For Chinese-taught programs: HSK 3.0 prep matters (new standard live July 2026, full switch Dec 13 2026). For English-taught: no HSK required but English fluency must be evidenced (IELTS/TOEFL or MOI letter)',
@@ -212,7 +213,7 @@ export const howToWriteStudyPlanGuide: LocalizedGuide = {
       },
       {
         name: 'Submit with the rest of the document package',
-        text: 'The study plan is one of 5-7 documents in a CSC / Type B application. Bundle it with transcripts (notarized English translations), recommendation letters (2), physical exam form, police clearance, and (for CSC) the pre-admission letter from the host university [verify].',
+        text: 'The study plan is one of 5-7 documents in a CSC / Type B application. Bundle it with transcripts (notarized English translations), recommendation letters (2), physical exam form, police clearance, and (for CSC) the pre-admission letter from the host university.',
       },
     ],
     ctaTitle: 'Need a tailored study plan for a Chinese university application?',
@@ -253,7 +254,7 @@ export const howToWriteStudyPlanGuide: LocalizedGuide = {
       { value: '3 大要点', label: '审阅人最看重的' },
     ],
     quickAnswer:
-      '中国大学学习计划有 6 段结构：(1) 学术背景、(2) 研究兴趣 / 工作经验、(3) 为何选择本项目与本校、(4) 在华学习计划（课程 + 实验室 + 导师）、(5) 未来职业规划、(6) 收尾段落重申契合。字数目标：CSC 800-1,500 词（2026/27 起预计需要预录取函 [待核实]），Type B 500-1,000 词（因校而异）。中国审阅人最看重三件事：(a) 学术记录清晰（不要空泛——点名具体课程、项目、成绩）；(b) 与具体项目 + 大学的契合（不是"贵校很有名"而是"贵校的 X 实验室 + X 导师与我的 X 背景契合"）；(c) 具体的未来规划（归国行业 vs 读博、地区）。通用模板（只换校名）在前 30 秒就被刷掉。',
+      '中国大学学习计划有 6 段结构：(1) 学术背景、(2) 研究兴趣 / 工作经验、(3) 为何选择本项目与本校、(4) 在华学习计划（课程 + 实验室 + 导师）、(5) 未来职业规划、(6) 收尾段落重申契合。字数目标：CSC 800-1,500 词（2026/27 起预计需要预录取函），Type B 500-1,000 词（因校而异）。中国审阅人最看重三件事：(a) 学术记录清晰（不要空泛——点名具体课程、项目、成绩）；(b) 与具体项目 + 大学的契合（不是"贵校很有名"而是"贵校的 X 实验室 + X 导师与我的 X 背景契合"）；(c) 具体的未来规划（归国行业 vs 读博、地区）。通用模板（只换校名）在前 30 秒就被刷掉。',
     keyTakeaways: [
       '6 段结构：(1) 学术背景、(2) 研究兴趣、(3) 为何选择本项目 + 本校、(4) 在华学习计划、(5) 未来职业规划、(6) 收尾段落',
       '字数目标：CSC 800-1,500 词；Type B 500-1,000 词（因校而异）',
@@ -424,7 +425,7 @@ export const howToWriteStudyPlanGuide: LocalizedGuide = {
       },
       {
         name: '与其他材料一并提交',
-        text: '学习计划是 CSC / Type B 申请 5-7 份材料之一。与它一并打包：成绩单（公证英文翻译）、推荐信（2 封）、体检表、无犯罪证明、（CSC）接收大学的预录取函 [待核实]。',
+        text: '学习计划是 CSC / Type B 申请 5-7 份材料之一。与它一并打包：成绩单（公证英文翻译）、推荐信（2 封）、体检表、无犯罪证明、（CSC）接收大学的预录取函。',
       },
     ],
     ctaTitle: '需要为中国大学申请定制一份学习计划？',

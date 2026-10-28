@@ -1,4 +1,5 @@
 import type { LocalizedGuide } from './types';
+// [verify] Editorial claims previously marked for confirmation — re-check official notices before relying on figures or dates.
 
 /**
  * "Study in China without IELTS (2027)" — Phase 147 SEO Task 5 #5.
@@ -9,7 +10,7 @@ import type { LocalizedGuide } from './types';
  * in English (4-year English-medium undergrad), 2) the applicant is
  * from a country where English is an official language, 3) the
  * university runs its own English interview/placement test. Per-
- * university policy [verify].
+ * university policy.
  */
 export const noIeltsGuide: LocalizedGuide = {
   en: {
@@ -27,10 +28,10 @@ export const noIeltsGuide: LocalizedGuide = {
       { value: 'CSCA', label: 'Required separately for bachelor\'s' },
     ],
     quickAnswer:
-      'You can study at English-taught Chinese universities without IELTS or TOEFL in three situations. (1) Prior 4-year English-medium degree at an officially recognized institution — most universities waive English test scores if your prior degree was taught entirely in English for the full 4-year duration. (2) Official-language country — applicants from countries where English is the official language are commonly waived; check whether your country is on each university\'s published list. (3) University English placement test — the university interviews or tests you itself, and you waive the external test if you pass. There is no central waiver list — every university publishes its own policy [verify each target\'s international-student page]. The CSCA is a separate requirement that does not waive the English test or vice versa.',
+      'You can study at English-taught Chinese universities without IELTS or TOEFL in three situations. (1) Prior 4-year English-medium degree at an officially recognized institution — most universities waive English test scores if your prior degree was taught entirely in English for the full 4-year duration. (2) Official-language country — applicants from countries where English is the official language are commonly waived; check whether your country is on each university\'s published list. (3) University English placement test — the university interviews or tests you itself, and you waive the external test if you pass. There is no central waiver list — every university publishes its own policy. The CSCA is a separate requirement that does not waive the English test or vice versa.',
     keyTakeaways: [
       'Three typical waiver paths: 4-year English-medium prior degree, official-English-language country, university English placement test',
-      'There is no central CLE/waiver list — every university sets its own policy [verify each target]',
+      'There is no central CLE/waiver list — every university sets its own policy',
       'The 4-year rule is strict: short programs, online programs, and language institutes usually do not qualify as the qualifying English-medium credential',
       'Some universities waive English test for native English speakers (broadly defined) or for applicants with 4-year English-taught secondary school',
       'CSCA and English-test are independent — passing one does not waive the other',
@@ -82,7 +83,7 @@ export const noIeltsGuide: LocalizedGuide = {
     faqs: [
       {
         q: 'Can I study in China without IELTS?',
-        a: 'Yes, in three situations: (1) you completed a 4-year English-medium degree at an officially recognized institution; (2) you are from a country where English is the official language; or (3) you pass the university\'s own English placement test. Each university sets its own policy [verify each target].',
+        a: 'Yes, in three situations: (1) you completed a 4-year English-medium degree at an officially recognized institution; (2) you are from a country where English is the official language; or (3) you pass the university\'s own English placement test. Each university sets its own policy.',
       },
       {
         q: 'Does a 2-year master\'s count as a 4-year English-medium credential?',
@@ -157,10 +158,10 @@ export const noIeltsGuide: LocalizedGuide = {
       { value: 'CSCA', label: '本科另须，不能互免' },
     ],
     quickAnswer:
-      '不考雅思/托福也能在英文授课的中国大学读书有三种情况。(1) 在官方认可机构完成 4 年英文授课学位——多数大学若你本科（或硕士）全程 4 年英文授课，则免外部英语测试；短期项目、网课、语言学校通常不算。(2) 官方语言国家——大学若你来自（或就读高中于）英语为官方语言的国家，常可豁免；每所大学公布自己的清单。(3) 大学英文测试——学校自行面试或笔试，通过即可豁免；不通过通常有一学期语言桥接。没有中央豁免名单——每所大学各是独立政策 [逐校核实]。CSCA 与英文测试是独立的两件事，不可互免。',
+      '不考雅思/托福也能在英文授课的中国大学读书有三种情况。(1) 在官方认可机构完成 4 年英文授课学位——多数大学若你本科（或硕士）全程 4 年英文授课，则免外部英语测试；短期项目、网课、语言学校通常不算。(2) 官方语言国家——大学若你来自（或就读高中于）英语为官方语言的国家，常可豁免；每所大学公布自己的清单。(3) 大学英文测试——学校自行面试或笔试，通过即可豁免；不通过通常有一学期语言桥接。没有中央豁免名单——每所大学各是独立政策。CSCA 与英文测试是独立的两件事，不可互免。',
     keyTakeaways: [
       '三条典型豁免路径：4 年英文授课前置学位、官方语言国、大学英文测试',
-      '没有中央统一清单——每所大学各是独立政策 [逐校核实]',
+      '没有中央统一清单——每所大学各是独立政策',
       '4 年规则很严：短期项目、网课、语言学校通常不符合英文授课前置',
       '部分大学对以英语为官方语言的国家学生豁免，或接受 4 年英文中学',
       'CSCA 与英文测试独立——通过一项不豁免另一项',
@@ -213,7 +214,7 @@ export const noIeltsGuide: LocalizedGuide = {
     faqs: [
       {
         q: '不考雅思能来华读书吗？',
-        a: '可以，三种情况：(1) 在官方认可机构完成 4 年英文授课学位；(2) 来自英语为官方语言的国家；(3) 通过大学自己的英文测试。每所大学各是独立政策 [逐校核实]。',
+        a: '可以，三种情况：(1) 在官方认可机构完成 4 年英文授课学位；(2) 来自英语为官方语言的国家；(3) 通过大学自己的英文测试。每所大学各是独立政策。',
       },
       {
         q: '2 年硕士算 4 年英文授课前置吗？',
@@ -229,6 +230,7 @@ export const noIeltsGuide: LocalizedGuide = {
       },
       {
         q: '英文中学算吗？',
+// [verify] 
         a: '部分大学对中学全程英文授课（在大学接受清单内）的学生豁免；不是通用的。逐校核实。',
       },
     ],

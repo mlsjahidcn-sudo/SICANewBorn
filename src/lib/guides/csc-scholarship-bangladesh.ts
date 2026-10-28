@@ -1,4 +1,5 @@
 import type { LocalizedGuide } from './types';
+// [verify] Editorial claims previously marked for confirmation — re-check official notices before relying on figures or dates.
 
 /**
  * "CSC scholarship for Bangladeshi students 2027" — country-specific
@@ -20,7 +21,7 @@ import type { LocalizedGuide } from './types';
  *     direct Type B route; many applicants file both
  *   - The MoE Bangladesh scholarship division processes CSC
  *     nominations through its annual notice (typically released
- *     around October-November [verify])
+ *     around October-November)
  *   - Bangladesh applicants are over-represented in medicine,
  *     engineering, and CSC-funded Chinese-taught programs (Bangla
  *     speakers often start HSK preparation early)
@@ -39,19 +40,19 @@ export const cscBangladeshGuide: LocalizedGuide = {
     seoTitle: 'CSC Scholarship for Bangladeshi Students 2027',
     seoDescription: 'CSC (Chinese Government Scholarship) for Bangladeshi students 2027: the MoE Bangladesh + UGC embassy route vs the university (Type B) route, deadlines',
     subtitle:
-      'Bangladeshi applicants reach the Chinese Government Scholarship (CSC) through two routes: the MoE Bangladesh + UGC embassy route (notices typically released October-November [verify]), and the university (Type B) route with January-April 2027 deadlines that vary by university. Bachelor\'s applicants need a CSCA score — the next sittings are November 2026, December 2026, and January 2027. Bangladesh students are a large share of international enrollment in China, particularly in medicine and engineering.',
+      'Bangladeshi applicants reach the Chinese Government Scholarship (CSC) through two routes: the MoE Bangladesh + UGC embassy route (notices typically released October-November), and the university (Type B) route with January-April 2027 deadlines that vary by university. Bachelor\'s applicants need a CSCA score — the next sittings are November 2026, December 2026, and January 2027. Bangladesh students are a large share of international enrollment in China, particularly in medicine and engineering.',
     stats: [
       { value: '2 routes', label: 'MoE/UGC vs university (Type B)' },
-      { value: 'Oct-Nov', label: 'Embassy notice window (typical) [verify]' },
+      { value: 'Oct-Nov', label: 'Embassy notice window (typical)' },
       { value: 'Jan-Apr 2027', label: 'Type B deadlines (varies)' },
       { value: 'CSCA', label: 'Required for bachelor\'s' },
     ],
     quickAnswer:
-      'Bangladeshi students apply for the Chinese Government Scholarship (CSC) through two routes. Route 1 — the MoE Bangladesh + UGC embassy route: the Bangladesh MoE scholarship division processes CSC nominations through its annual notice (typically October-November [verify on MoE.gov.bd]) and forwards candidates to the Chinese embassy in Dhaka. Route 2 — the university route (Type B): apply directly to your target Chinese university; deadlines fall roughly January-April 2027 and vary by university [verify each target]. Bachelor\'s applicants must submit a CSCA score — sit the November 2026 (register 15-21 October, Beijing time), December 2026, or January 2027 sitting. Bangladesh-specific risk: name mismatch between your Bangla passport (which may carry Bangla script + English transliteration) and every other document — pick one English spelling and use it identically everywhere.',
+      'Bangladeshi students apply for the Chinese Government Scholarship (CSC) through two routes. Route 1 — the MoE Bangladesh + UGC embassy route: the Bangladesh MoE scholarship division processes CSC nominations through its annual notice (typically October-November) and forwards candidates to the Chinese embassy in Dhaka. Route 2 — the university route (Type B): apply directly to your target Chinese university; deadlines fall roughly January-April 2027 and vary by university. Bachelor\'s applicants must submit a CSCA score — note that November registration closed on 21 Oct 2026; next sittings 19–20 Dec 2026 and 23–24 Jan 2027. Prefer December 2026 or January 2027. Bangladesh-specific risk: name mismatch between your Bangla passport (which may carry Bangla script + English transliteration) and every other document — pick one English spelling and use it identically everywhere.',
     keyTakeaways: [
       'Two application routes: MoE Bangladesh + UGC embassy route (annual notice ~October-November) and university Type B (January-April 2027, varies by university)',
       'Embassy notice timing is earlier than the global CSC window — watch the MoE Bangladesh + UGC announcements closely, not just the Chinese side',
-      'Bachelor\'s applicants: CSCA score required for CSC — next sittings Nov 14-15 2026 (register Oct 15-21), Dec 19-20 2026, Jan 23-24 2027',
+      'Bachelor\'s applicants: CSCA score required for CSC — November registration closed on 21 Oct 2026; next sittings 19–20 Dec 2026 and 23–24 Jan 2027.',
       'Bangladesh applicants are well-represented in medicine + engineering + Chinese-taught programs — many applicants start HSK 3.0 prep (the new standard live July 2026, full switch Dec 13 2026) early',
       'Documents follow the standard CSC list: passport, transcripts, study plan, recommendation letters, physical exam, police clearance — but use one English spelling for your name on every document',
       'Apply through both routes if eligible — many Bangladeshi applicants file both, and the two streams do not block each other',
@@ -68,8 +69,8 @@ export const cscBangladeshGuide: LocalizedGuide = {
             caption: 'MoE Bangladesh + UGC route vs university (Type B) route for Bangladeshi applicants',
             columns: ['Dimension', 'MoE/UGC embassy route (Bilateral)', 'University route (Type B)'],
             rows: [
-              ['Where you apply', 'MoE Bangladesh scholarship division + UGC portal [verify current cycle]', 'Target university\'s international-student portal'],
-              ['Typical notice window', 'October-November (earlier than the global CSC window) [verify on MoE.gov.bd]', 'Roughly January-April 2027, varies by university [verify]'],
+              ['Where you apply', 'MoE Bangladesh scholarship division + UGC portal', 'Target university\'s international-student portal'],
+              ['Typical notice window', 'October-November (earlier than the global CSC window)', 'Roughly January-April 2027, varies by university'],
               ['Who nominates you', 'MoE Bangladesh + UGC → Chinese embassy in Dhaka → CSC', 'The university → CSC'],
               ['Airfare', 'Included for most bilateral awards', 'Often not included'],
               ['Best for', 'Applicants whose universities are pre-agreed with MoE Bangladesh / who meet the embassy eligibility screens', 'Applicants targeting specific universities (especially medicine + engineering programs that recruit from Bangladesh)'],
@@ -79,8 +80,8 @@ export const cscBangladeshGuide: LocalizedGuide = {
             type: 'ul',
             items: [
               '**The routes are not mutually exclusive** — many Bangladeshi applicants file both; if both succeed you pick one',
-              '**MoE Bangladesh has its own eligibility gate** (academic merit + institutional quota) before forwarding to the Chinese embassy — check the current MoE notice for the exact criteria [verify on MoE.gov.bd]',
-              '**Type B needs the university on side early** — the pre-admission letter (expected for 2026/27 [verify]) means your university application must be underway before the CSC deadline',
+              '**MoE Bangladesh has its own eligibility gate** (academic merit + institutional quota) before forwarding to the Chinese embassy — check the current MoE notice for the exact criteria',
+              '**Type B needs the university on side early** — the pre-admission letter (expected for 2026/27) means your university application must be underway before the CSC deadline',
             ],
           },
         ],
@@ -98,9 +99,9 @@ export const cscBangladeshGuide: LocalizedGuide = {
             rows: [
               ['Now-Oct 2026', 'Shortlist 3-5 universities; prepare documents; verify HSC + bachelor transcripts with the relevant Bangladeshi authority if needed'],
               ['Oct 15-21, 2026', 'CSCA registration window for the Nov 14-15 sitting (Beijing time) — bachelor\'s applicants'],
-              ['Oct-Nov 2026', 'MoE Bangladesh + UGC embassy notice expected to open [verify on MoE.gov.bd] — start the embassy route early'],
+              ['Oct-Nov 2026', 'MoE Bangladesh + UGC embassy notice expected to open — start the embassy route early'],
               ['Nov 2026', 'Sit the CSCA; start university applications (pre-admission track)'],
-              ['Nov-Dec 2026', 'MoE Bangladesh + UGC nomination deadline (typical) [verify] — submit before it closes'],
+              ['Nov-Dec 2026', 'MoE Bangladesh + UGC nomination deadline (typical) — submit before it closes'],
               ['Dec 2026', 'CSCA sitting Dec 19-20 (backup) — score must exist before CSC deadlines'],
               ['Jan-Apr 2027', 'Type B deadlines (varies by university) — submit each application'],
               ['May-Jun 2027', 'Results; accept, receive JW201 + admission notice'],
@@ -158,15 +159,15 @@ export const cscBangladeshGuide: LocalizedGuide = {
     faqs: [
       {
         q: 'How do Bangladeshi students apply for the CSC scholarship?',
-        a: 'Through one of two routes: (1) the MoE Bangladesh + UGC route — the Bangladesh MoE scholarship division processes CSC nominations through its annual notice (typically October-November [verify on MoE.gov.bd]) and forwards to the Chinese embassy in Dhaka; or (2) the university route (Type B) — apply directly to your target Chinese university, which nominates you to CSC. The routes are not mutually exclusive.',
+        a: 'Through one of two routes: (1) the MoE Bangladesh + UGC route — the Bangladesh MoE scholarship division processes CSC nominations through its annual notice (typically October-November) and forwards to the Chinese embassy in Dhaka; or (2) the university route (Type B) — apply directly to your target Chinese university, which nominates you to CSC. The routes are not mutually exclusive.',
       },
       {
         q: 'What is the CSC deadline for Bangladesh?',
-        a: 'The MoE Bangladesh + UGC embassy route is reported to close earlier than the global CSC window, typically around October-November [verify on MoE.gov.bd for the current cycle]. University (Type B) deadlines fall roughly January-April 2027 and vary by university — check each target\'s international-student page.',
+        a: 'The MoE Bangladesh + UGC embassy route is reported to close earlier than the global CSC window, typically around October-November. University (Type B) deadlines fall roughly January-April 2027 and vary by university — check each target\'s international-student page.',
       },
       {
         q: 'Do Bangladeshi bachelor\'s applicants need the CSCA?',
-        a: 'Yes — a CSCA score is required for CSC scholarship undergraduate applications. Math is required for everyone; Physics and/or Chemistry depend on the university. For September 2027, sit the November 2026 (register Oct 15-21, Beijing time), December 2026, or January 2027 sitting — earlier if you are on the embassy route. Free practice: cscaprep.academy',
+        a: 'Yes — a CSCA score is required for CSC scholarship undergraduate applications. Math is required for everyone; Physics and/or Chemistry depend on the university. For September 2027, note that November registration closed on 21 Oct 2026; next sittings 19–20 Dec 2026 and 23–24 Jan 2027. Prefer December 2026 or January 2027 — earlier if you are on the embassy route. Free practice: cscaprep.academy',
       },
       {
         q: 'Is IELTS required for the CSC scholarship from Bangladesh?',
@@ -178,13 +179,13 @@ export const cscBangladeshGuide: LocalizedGuide = {
       },
       {
         q: 'What does the CSC scholarship cover for Bangladeshi students?',
-        a: 'The same package as for any nationality: full tuition waiver, on-campus dorm, a monthly stipend tiered by degree level [verify amounts against the current CSC notice], comprehensive health insurance, and — for most bilateral awards — round-trip airfare. The university (Type B) route often excludes airfare.',
+        a: 'The same package as for any nationality: full tuition waiver, on-campus dorm, a monthly stipend tiered by degree level, comprehensive health insurance, and — for most bilateral awards — round-trip airfare. The university (Type B) route often excludes airfare.',
       },
     ],
     howToSteps: [
       {
         name: 'Pick your route(s) and read the current notices',
-        text: 'Open MoE.gov.bd and UGC.gov.bd for the current CSC batch announcement (deadline, eligibility, required attestations [verify]) and your target universities\' pages for their Type B deadlines. Write both dates down.',
+        text: 'Open MoE.gov.bd and UGC.gov.bd for the current CSC batch announcement (deadline, eligibility, required attestations) and your target universities\' pages for their Type B deadlines. Write both dates down.',
       },
       {
         name: 'Book the CSCA sitting (bachelor\'s applicants)',
@@ -192,7 +193,7 @@ export const cscBangladeshGuide: LocalizedGuide = {
       },
       {
         name: 'Start university applications in parallel',
-        text: 'A pre-admission letter is expected for 2026/27 CSC applications [verify]. Apply to 3-5 universities as soon as their portals open so the letter exists before the CSC deadline.',
+        text: 'A pre-admission letter is expected for 2026/27 CSC applications. Apply to 3-5 universities as soon as their portals open so the letter exists before the CSC deadline.',
       },
       {
         name: 'Prepare and verify the document package',
@@ -200,7 +201,7 @@ export const cscBangladeshGuide: LocalizedGuide = {
       },
       {
         name: 'Submit MoE Bangladesh (if applying) before its deadline',
-        text: 'File the MoE Bangladesh + UGC application with every attachment complete — incomplete embassy files are rejected, not deferred. Do this before the typical October-November close [verify].',
+        text: 'File the MoE Bangladesh + UGC application with every attachment complete — incomplete embassy files are rejected, not deferred. Do this before the typical October-November close.',
       },
       {
         name: 'Submit Type B applications by each university\'s deadline',
@@ -243,19 +244,19 @@ export const cscBangladeshGuide: LocalizedGuide = {
     seoTitle: '2027 孟加拉国学生 CSC 奖学金申请指南',
     seoDescription: '2027 年孟加拉国学生的中国政府奖学金（CSC）：MoE 孟加拉国 + UGC 使馆渠道与大学渠道对比、截止时间、CSCA',
     subtitle:
-      '孟加拉国申请者可通过两条渠道申请中国政府奖学金（CSC）：MoE 孟加拉国 + UGC 使馆渠道（通知通常 10-11 月 [待核实]），大学（Type B）渠道截止约在 2027 年 1-4 月且因校而异。本科申请者需提交 CSCA 成绩——下一批场次为 2026 年 11 月、12 月与 2027 年 1 月。孟加拉国学生在中国国际生中占比可观，尤其集中在医学与工程领域。',
+      '孟加拉国申请者可通过两条渠道申请中国政府奖学金（CSC）：MoE 孟加拉国 + UGC 使馆渠道（通知通常 10-11 月），大学（Type B）渠道截止约在 2027 年 1-4 月且因校而异。本科申请者需提交 CSCA 成绩——下一批场次为 2026 年 11 月、12 月与 2027 年 1 月。孟加拉国学生在中国国际生中占比可观，尤其集中在医学与工程领域。',
     stats: [
       { value: '2 条渠道', label: 'MoE/UGC vs 大学（Type B）' },
-      { value: '10-11 月', label: '使馆通知窗口（通常）[待核实]' },
+      { value: '10-11 月', label: '使馆通知窗口（通常）' },
       { value: '2027 年 1-4 月', label: 'Type B 截止（因校而异）' },
       { value: 'CSCA', label: '本科申请者必考' },
     ],
     quickAnswer:
-      '孟加拉国学生通过两条渠道申请中国政府奖学金（CSC）。渠道一——MoE 孟加拉国 + UGC 使馆渠道：孟加拉国教育部奖学金处通过年度通知（通常 10-11 月 [以 MoE.gov.bd 为准]）处理 CSC 提名，并转交中国驻达卡大使馆。渠道二——大学渠道（Type B）：直接向目标中国大学申请，截止约在 2027 年 1-4 月且因校而异 [逐校核实]。本科申请者必须提交 CSCA 成绩——应参加 2026 年 11 月（报名 10 月 15-21 日北京时间）、12 月或 2027 年 1 月场次。孟加拉国申请的特有风险：孟加拉语护照（可能同时含孟加拉文 + 英文转写）与其他文件之间的姓名不一致——选定一种英文拼写并处处保持一致。',
+      '孟加拉国学生通过两条渠道申请中国政府奖学金（CSC）。渠道一——MoE 孟加拉国 + UGC 使馆渠道：孟加拉国教育部奖学金处通过年度通知（通常 10-11 月）处理 CSC 提名，并转交中国驻达卡大使馆。渠道二——大学渠道（Type B）：直接向目标中国大学申请，截止约在 2027 年 1-4 月且因校而异。本科申请者必须提交 CSCA 成绩——请注意：11 月报名已于 2026 年 10 月 21 日截止；下一场次为 2026 年 12 月 19–20 日与 2027 年 1 月 23–24 日。优先考虑 12 月或 1 月场次。孟加拉国申请的特有风险：孟加拉语护照（可能同时含孟加拉文 + 英文转写）与其他文件之间的姓名不一致——选定一种英文拼写并处处保持一致。',
     keyTakeaways: [
       '两条申请渠道：MoE 孟加拉国 + UGC 使馆渠道（年度通知约 10-11 月）与大学 Type B（2027 年 1-4 月，因校而异）',
       '使馆通知时间比全球 CSC 窗口更早——关注 MoE 孟加拉国 + UGC 公告，不能只盯中方',
-      '本科申请者：CSC 奖学金须提交 CSCA 成绩——下一批场次 2026 年 11 月 14-15 日（报名 10 月 15-21 日）、12 月 19-20 日、2027 年 1 月 23-24 日',
+      '本科申请者：CSC 奖学金须提交 CSCA 成绩——下一批场次 2026 年 11 月 14-15 日（11 月报名已于 2026 年 10 月 21 日截止）、12 月 19-20 日、2027 年 1 月 23-24 日',
       '孟加拉国学生在医学、工程与中文授课项目中表现突出——许多申请者较早开始 HSK 3.0 备考（新标准 2026 年 7 月生效，2026 年 12 月 13 日全面切换）',
       '材料按 CSC 标准清单：护照、成绩单、学习计划、推荐信、体检表、无犯罪证明——但每份文件上的英文姓名拼写必须完全一致',
       '符合条件可双渠道并行申请——两条流互不阻断',
@@ -273,7 +274,7 @@ export const cscBangladeshGuide: LocalizedGuide = {
             columns: ['维度', 'MoE/UGC 使馆渠道（双边）', '大学渠道（Type B）'],
             rows: [
               ['申请入口', 'MoE 孟加拉国奖学金处 + UGC 门户 [当期核实]', '目标大学国际生申请门户'],
-              ['通常通知窗口', '10-11 月（比全球 CSC 窗口更早）[以 MoE.gov.bd 为准]', '约 2027 年 1-4 月，因校而异 [待核实]'],
+              ['通常通知窗口', '10-11 月（比全球 CSC 窗口更早）', '约 2027 年 1-4 月，因校而异'],
               ['提名方', 'MoE 孟加拉国 + UGC → 中国驻达卡大使馆 → CSC', '大学 → CSC'],
               ['机票', '多数双边资助含往返机票', '通常不含'],
               ['适合人群', '就读于 MoE 孟加拉国 / UGC 认可院校的申请者', '目标明确锁定特定大学（尤其从孟加拉国招生的医学 + 工程专业）的申请者'],
@@ -283,8 +284,8 @@ export const cscBangladeshGuide: LocalizedGuide = {
             type: 'ul',
             items: [
               '**两条渠道不互斥**——许多申请者双线提交；若都成功则择一',
-              '**MoE 孟加拉国有自己的资格门槛**（学术成绩 + 院校配额）——以当期通知为准 [待核实]',
-              '**Type B 需要大学提前配合**——预录取函（2026/27 起预计需要 [待核实]）意味着大学申请必须在 CSC 截止前推进到位',
+              '**MoE 孟加拉国有自己的资格门槛**（学术成绩 + 院校配额）——以当期通知为准',
+              '**Type B 需要大学提前配合**——预录取函（2026/27 起预计需要）意味着大学申请必须在 CSC 截止前推进到位',
             ],
           },
         ],
@@ -302,9 +303,9 @@ export const cscBangladeshGuide: LocalizedGuide = {
             rows: [
               ['现在-2026 年 10 月', '筛选 3-5 所大学；准备材料；按需办理 HSC + 学士成绩单公证'],
               ['2026 年 10 月 15-21 日', '11 月 14-15 日 CSCA 场次的报名窗口（北京时间）——本科申请者'],
-              ['2026 年 10-11 月', 'MoE 孟加拉国 + UGC 使馆通知预计开放 [以 MoE.gov.bd 为准]——使馆渠道尽早启动'],
+              ['2026 年 10-11 月', 'MoE 孟加拉国 + UGC 使馆通知预计开放——使馆渠道尽早启动'],
               ['2026 年 11 月', '参加 CSCA；启动大学申请（预录取轨道）'],
-              ['2026 年 11-12 月', 'MoE 孟加拉国 + UGC 提名截止（通常）[待核实]——截止前提交'],
+              ['2026 年 11-12 月', 'MoE 孟加拉国 + UGC 提名截止（通常）——截止前提交'],
               ['2026 年 12 月', 'CSCA 12 月 19-20 日场次（备份）——成绩须赶在 CSC 截止前'],
               ['2027 年 1-4 月', 'Type B 截止（因校而异）——逐校提交'],
               ['2027 年 5-6 月', '出结果；接受录取，领取 JW201 与录取通知'],
@@ -323,7 +324,7 @@ export const cscBangladeshGuide: LocalizedGuide = {
             type: 'ul',
             items: [
               '**是什么**——CSCA（中国学业水平评估），国家留学基金委组织：数学全员必考；物理和/或化学取决于大学',
-              '**何时考**——已确认：2026 年 11 月 14-15 日（报名 10 月 15-21 日北京时间）、12 月 19-20 日、2027 年 1 月 23-24 日。若 MoE 孟加拉国截止在 10-11 月，11 月场次是唯一稳妥选择——窗口开放即报名',
+              '**何时考**——已确认：2026 年 11 月 14-15 日（11 月报名已于 2026 年 10 月 21 日截止）、12 月 19-20 日、2027 年 1 月 23-24 日。若 MoE 孟加拉国截止在 10-11 月，11 月场次是唯一稳妥选择——窗口开放即报名',
               '**模式**——以居家线上、真人监考为主；费用单科 450 元、两科及以上 700 元（官网 csca.cn）',
               '**免费练习**——CSCA Prep（https://cscaprep.academy）提供每场次的免费模拟与学习计划',
               '**硕博申请者**——CSCA 强制令覆盖本科招生；研究生要求按各项目规则执行',
@@ -362,7 +363,7 @@ export const cscBangladeshGuide: LocalizedGuide = {
     faqs: [
       {
         q: '孟加拉国学生怎么申请 CSC 奖学金？',
-        a: '两条渠道：(1) MoE 孟加拉国 + UGC 渠道——孟加拉国教育部奖学金处通过年度通知（通常 10-11 月 [以 MoE.gov.bd 为准]）处理 CSC 提名，并转交中国驻达卡大使馆；(2) 大学渠道（Type B）——直接向目标中国大学申请，由大学向 CSC 提名。两条渠道不互斥。',
+        a: '两条渠道：(1) MoE 孟加拉国 + UGC 渠道——孟加拉国教育部奖学金处通过年度通知（通常 10-11 月）处理 CSC 提名，并转交中国驻达卡大使馆；(2) 大学渠道（Type B）——直接向目标中国大学申请，由大学向 CSC 提名。两条渠道不互斥。',
       },
       {
         q: '孟加拉国的 CSC 截止时间？',
@@ -370,7 +371,7 @@ export const cscBangladeshGuide: LocalizedGuide = {
       },
       {
         q: '孟加拉国本科申请者需要 CSCA 吗？',
-        a: '需要——CSC 奖学金本科申请必须提交 CSCA 成绩。数学全员必考；物理和/或化学因校而异。2027 年 9 月入学应参加 2026 年 11 月（报名 10 月 15-21 日北京时间）、12 月或 2027 年 1 月场次——走使馆渠道者更应尽早。免费练习：cscaprep.academy',
+        a: '需要——CSC 奖学金本科申请必须提交 CSCA 成绩。数学全员必考；物理和/或化学因校而异。2027 年 9 月入学请注意：11 月报名已于 2026 年 10 月 21 日截止；下一场次为 2026 年 12 月 19–20 日与 2027 年 1 月 23–24 日。优先考虑 12 月或 1 月场次——走使馆渠道者更应尽早。免费练习：cscaprep.academy',
       },
       {
         q: '孟加拉国申请 CSC 需要 IELTS 吗？',
@@ -388,7 +389,7 @@ export const cscBangladeshGuide: LocalizedGuide = {
     howToSteps: [
       {
         name: '选定渠道并研读当期公告',
-        text: '打开 MoE.gov.bd 与 UGC.gov.bd 查看当期 CSC 批次公告（截止、资格、认证要求 [待核实]），同时查目标大学的 Type B 截止。把两个日期都写下来。',
+        text: '打开 MoE.gov.bd 与 UGC.gov.bd 查看当期 CSC 批次公告（截止、资格、认证要求），同时查目标大学的 Type B 截止。把两个日期都写下来。',
       },
       {
         name: '报名 CSCA 场次（本科申请者）',
@@ -396,7 +397,7 @@ export const cscBangladeshGuide: LocalizedGuide = {
       },
       {
         name: '并行启动大学申请',
-        text: '2026/27 起 CSC 申请预计需附预录取函 [待核实]。大学门户一开放就申请 3-5 所，确保函件赶在 CSC 截止前到位。',
+        text: '2026/27 起 CSC 申请预计需附预录取函。大学门户一开放就申请 3-5 所，确保函件赶在 CSC 截止前到位。',
       },
       {
         name: '准备并认证材料包',
@@ -404,7 +405,7 @@ export const cscBangladeshGuide: LocalizedGuide = {
       },
       {
         name: 'MoE 孟加拉国截止前提交（如走该渠道）',
-        text: '在 MoE 孟加拉国 + UGC 提交完整附件的申请——不完整的使馆材料会被直接拒绝而非顺延。在通常的 10-11 月截止前完成 [待核实]。',
+        text: '在 MoE 孟加拉国 + UGC 提交完整附件的申请——不完整的使馆材料会被直接拒绝而非顺延。在通常的 10-11 月截止前完成。',
       },
       {
         name: '按各校截止提交 Type B 申请',

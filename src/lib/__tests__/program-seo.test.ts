@@ -5,11 +5,12 @@ import {
   buildProgramMetaDescription,
   teachingLanguageLabel,
 } from '@/lib/program-seo';
+import { buildProgramFaqItems, buildProgramFaqSchema } from '@/lib/program-faq';
 
 const PLACEHOLDER = /\b(undefined|null|to be confirmed)\b/i;
 
 describe('programme document titles', () => {
-  it('keeps an English-taught title within 60 characters with the university and one SICA', () => {
+  it('keeps an English-taught title within 60 characters without doubling SICA', () => {
     const title = buildProgramDocumentTitle({
       major: 'Computer Science',
       degree: 'Bachelor',
@@ -18,9 +19,10 @@ describe('programme document titles', () => {
     });
     expect(title.length).toBeLessThanOrEqual(60);
     expect(title).toContain('English-taught');
+    expect(title).toContain('Computer Science');
     expect(title).toMatch(/Tsinghua/);
-    expect(title.match(/SICA/g)).toEqual(['SICA']);
-    expect(title.endsWith('| SICA')).toBe(true);
+    // Brand is dropped before shortening the major when "| SICA" would push past 60.
+    expect((title.match(/SICA/g) ?? []).length).toBeLessThanOrEqual(1);
   });
 
   it('keeps a Chinese-taught title and never drops the language to fit', () => {
@@ -49,6 +51,22 @@ describe('programme document titles', () => {
     expect(title).not.toContain('University');
   });
 
+  it('keeps Beijing Jiaotong and English-taught within 60 without collapsing to the city', () => {
+    const title = buildProgramDocumentTitle({
+      major: 'Computer Science and Technology',
+      degree: 'Bachelor',
+      language: 'English',
+      university: 'Beijing Jiaotong University',
+      city: 'Beijing',
+    });
+    expect(title.length).toBeLessThanOrEqual(60);
+    expect(title).toContain('Beijing Jiaotong');
+    expect(title).toContain('English-taught');
+    expect(title).not.toMatch(/– Beijing \|/);
+    expect(title).not.toMatch(/– Beijing$/);
+    expect((title.match(/SICA/g) ?? []).length).toBeLessThanOrEqual(1);
+  });
+
   it('keeps the language on a very long major', () => {
     const title = buildProgramDocumentTitle({
       major: 'The Category of Electronic Information (Including Information Engineering, Telecommunication Engineering, and Electronic Information Engineering)',
@@ -59,7 +77,7 @@ describe('programme document titles', () => {
     expect(title.length).toBeLessThanOrEqual(60);
     expect(title).toContain('Chinese-taught');
     expect(title).not.toMatch(PLACEHOLDER);
-    expect(title.match(/SICA/g)).toEqual(['SICA']);
+    expect((title.match(/SICA/g) ?? []).length).toBeLessThanOrEqual(1);
   });
 
   it('omits empty fields instead of printing placeholders', () => {
@@ -91,7 +109,35 @@ describe('programme meta descriptions', () => {
     expect(description).not.toMatch(PLACEHOLDER);
   });
 
-  it('uses the Chinese-taught HSK sentence', () => {
+  it('prefers the full major for Beijing Jiaotong Computer Science and Technology', () => {
+    const description = buildProgramMetaDescription({
+      major: 'Computer Science and Technology',
+      degree: 'Bachelor',
+      language: 'English',
+      university: 'Beijing Jiaotong University',
+      city: 'Beijing',
+    });
+    expect(description.startsWith('Study Computer Science')).toBe(true);
+    expect(description).not.toMatch(/^Study Computer \(/);
+    expect(description.length).toBeLessThanOrEqual(155);
+  });
+
+  it('uses the Chinese-taught HSK sentence when a language requirement is listed', () => {
+    const description = buildProgramMetaDescription({
+      major: 'Clinical Medicine',
+      degree: 'Bachelor',
+      language: 'Chinese',
+      university: 'Peking University',
+      city: 'Beijing',
+      requirements: ['HSK Level 4 or above'],
+    });
+    expect(description.length).toBeLessThanOrEqual(155);
+    expect(description.length).toBeGreaterThanOrEqual(140);
+    expect(description).toContain('in Chinese');
+    expect(description).toContain('HSK requirement, intake and how SICA helps you apply.');
+  });
+
+  it('uses the soft Chinese-taught tail when no language requirement is listed', () => {
     const description = buildProgramMetaDescription({
       major: 'Clinical Medicine',
       degree: 'Bachelor',
@@ -100,9 +146,11 @@ describe('programme meta descriptions', () => {
       city: 'Beijing',
     });
     expect(description.length).toBeLessThanOrEqual(155);
-    expect(description.length).toBeGreaterThanOrEqual(140);
     expect(description).toContain('in Chinese');
-    expect(description).toContain('HSK requirement, intake and how SICA helps you apply.');
+    expect(description).toContain(
+      'Chinese-taught: language level and intake confirmed by SICA. Book a free 10-minute check.',
+    );
+    expect(description).not.toContain('HSK requirement');
   });
 
   it('keeps a whole university word instead of a mid-word fragment', () => {
@@ -119,6 +167,7 @@ describe('programme meta descriptions', () => {
       language: 'Chinese',
       university: 'Beijing Jiaotong University',
       city: 'Beijing',
+      requirements: ['HSK Level 5'],
     });
     expect(agronomy.length).toBeLessThanOrEqual(155);
     expect(vehicle.length).toBeLessThanOrEqual(155);
@@ -161,6 +210,20 @@ describe('programme meta descriptions', () => {
     expect(description).not.toMatch(PLACEHOLDER);
     expect(description.length).toBeLessThanOrEqual(155);
     expect(description.startsWith('Study this program.')).toBe(true);
+  });
+});
+
+describe('programme FAQ schema', () => {
+  it('emits no FAQPage schema when fewer than two confirmed answers exist', () => {
+    const program = {
+      name: 'Computer Science',
+      tuition: '',
+      language: 'To be confirmed',
+      requirements: [] as string[],
+      intake: '',
+    };
+    expect(buildProgramFaqItems(program, 'Beijing Jiaotong University')).toEqual([]);
+    expect(buildProgramFaqSchema(program, 'Beijing Jiaotong University')).toBeNull();
   });
 });
 

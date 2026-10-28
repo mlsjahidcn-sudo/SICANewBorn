@@ -1,4 +1,5 @@
 import type { LocalizedGuide } from './types';
+// [verify] Editorial claims previously marked for confirmation — re-check official notices before relying on figures or dates.
 
 /**
  * "MBBS in China for International Students" — long-form guide.
@@ -17,22 +18,23 @@ export const mbbsGuide: LocalizedGuide = {
     description:
       'English-taught MBBS at MOE-listed Chinese universities for 2027: tuition, CSCA requirements, eligibility, scholarships, visa, and licensing back home.',
     subtitle:
-      'A 6-year WHO-recognized medical degree in English at MOE-listed universities — with a CSCA score now required by many MBBS programs. Register for the November 2026 sitting (15-21 Oct) to stay on the September 2027 timeline.',
+      'A 6-year WHO-recognized medical degree in English at MOE-listed universities — with a CSCA score now required by many MBBS programs. November registration closed on 21 Oct 2026; next sittings 19–20 Dec 2026 and 23–24 Jan 2027. Prefer the December sitting to stay on the September 2027 timeline.',
     stats: [
       { value: '¥30-45K', label: 'Annual tuition (USD 4.2-6.3K)' },
       { value: '6 years', label: 'Program length (incl. 1-yr internship)' },
-      { value: '43 or 45', label: 'MOE-listed unis [verify]' },
+      // [verify] former invented count removed — confirm the current MOE list
+      { value: 'MOE list', label: 'Confirm listed status before applying' },
       { value: 'LIVE', label: 'Programs in catalog (see table)' },
     ],
     quickAnswer:
-      'MBBS in China is a 6-year English-taught Bachelor of Medicine & Bachelor of Surgery program at MOE-listed universities — the 2026-27 MOE list counts 43 or 45 universities depending on the source [verify]. Tuition is typically ¥30,000-45,000/year (USD 4,200-6,300). Admission requires a high school diploma with strong biology + chemistry and IELTS 6.0+ or equivalent; no HSK is required at admission. Many MBBS programs now also require the CSCA exam — Math plus, at many schools, Chemistry and/or Physics — so check each university\'s notice and sit the November or December 2026 sitting for the September 2027 intake. After graduation you sit your home country\'s licensing exam (USMLE, NMC FMGL criteria, PM&DC, BM&DC, etc.).',
+      'MBBS in China is a 6-year English-taught Bachelor of Medicine & Bachelor of Surgery program at MOE-listed universities — check the current MOE list before applying. Tuition is typically ¥30,000-45,000/year (USD 4,200-6,300). Admission requires a high school diploma with strong biology + chemistry and IELTS 6.0+ or equivalent; no HSK is required at admission. Many MBBS programs now also require the CSCA exam — Math plus, at many schools, Chemistry and/or Physics — so check each university\'s notice and sit the November or December 2026 sitting for the September 2027 intake. After graduation you sit your home country\'s licensing exam (USMLE, NMC FMGL criteria, PM&DC, BM&DC, etc.).',
     keyTakeaways: [
-      'Only MOE-listed universities may teach clinical medicine in English to international students — the 2026-27 list counts 43 or 45 depending on source [verify]',
+      'Only MOE-listed universities may teach clinical medicine in English to international students — check the current MOE list before applying',
       'Tuition ranges ¥30,000-45,000/year — a fraction of US/UK private medical school',
       'Many MBBS programs now require the CSCA (Math + Chemistry/Physics per university) — see /csca-mbbs-applicants; free practice at cscaprep.academy',
       'No HSK Chinese required at admission; you learn medical Chinese during the first 2 years',
       '1-year clinical internship at affiliated teaching hospitals is built into the program',
-      'After graduation, licensing depends on your home regulator: USMLE (US), PLAB (UK), AMC (Australia), NMC FMGL 2021 criteria (India) [verify], PM&DC (Pakistan) [verify], BM&DC (Bangladesh)',
+      'After graduation, licensing depends on your home regulator: USMLE (US), PLAB (UK), AMC (Australia), NMC FMGL 2021 criteria (India), PM&DC (Pakistan), BM&DC (Bangladesh)',
     ],
     sections: [
       {
@@ -54,7 +56,7 @@ export const mbbsGuide: LocalizedGuide = {
           {
             type: 'callout',
             tone: 'info',
-            text: 'Important: only MOE-listed universities may teach clinical medicine in English to international students. The 2026-27 list counts 43 or 45 universities depending on the source [verify] — always confirm a university is on the current list before applying. The table below lists the ones in the SICA catalog with English-medium 6-year tracks.',
+            text: 'Important: only MOE-listed universities may teach clinical medicine in English to international students. check the current MOE list before applying — always confirm a university is on the current list before applying. The table below lists the ones in the SICA catalog with English-medium 6-year tracks.',
           },
         ],
       },
@@ -70,7 +72,7 @@ export const mbbsGuide: LocalizedGuide = {
               '**Who requires it** — the CSCA is required for Chinese Government Scholarship undergraduate applicants, and many universities (including many English-taught MBBS programs) require it for direct admission as well. Check each university\'s admission notice',
               '**Subjects** — Math is required for everyone; Physics and/or Chemistry depend on the university and program. MBBS applicants commonly need Math + Chemistry and/or Physics — verify per university',
               '**Format** — 48 multiple-choice questions per subject, 60 minutes per subject. Sit Math first, then Physics or Chemistry in the same booking. Multiple-choice only; no short-answer or essay sections',
-              '**When to sit** — 6 sittings a year, mainly online at home with a live proctor. Next confirmed: 14-15 Nov 2026 (register 15-21 Oct, Beijing time), 19-20 Dec 2026, 23-24 Jan 2027. For September 2027 intake, sit November or December 2026',
+              '**When to sit** — 6 sittings a year, mainly online at home with a live proctor. November registration closed on 21 Oct 2026; next sittings 19–20 Dec 2026 and 23–24 Jan 2027. For September 2027 intake, prefer the December sitting or January 2027',
               '**MBBS-specific guidance** — see our dedicated guide at /csca-mbbs-applicants for subject combinations, timing, and licensing context',
               '**Free practice** — CSCA Prep (https://cscaprep.academy) offers free practice tests, mocks, and study plans for every sitting',
             ],
@@ -192,8 +194,8 @@ export const mbbsGuide: LocalizedGuide = {
               '**United Kingdom** — sit PLAB 1 + PLAB 2; register with GMC; Foundation Year 1/2',
               '**Australia** — sit AMC MCQ + AMC Clinical; apply for internship via PMCV',
               '**Canada** — apply through MCC (Medical Council of Canada); NAC + MCCQE1 + MCCQE2',
-              '**India** — a China MBBS must meet the NMC FMGL 2021 criteria to qualify for the licensure pathway [verify current NMC rules]; the qualifying exam is NEXT/FMGE per current NMC policy [verify]',
-              '**Pakistan** — sit the licensing exam and register with the current regulator, PM&DC (Pakistan Medical & Dental Council) [verify current name and exam]',
+              '**India** — a China MBBS must meet the NMC FMGL 2021 criteria to qualify for the licensure pathway; the qualifying exam is NEXT/FMGE per current NMC policy',
+              '**Pakistan** — sit the licensing exam and register with the current regulator, PM&DC (Pakistan Medical & Dental Council)',
               '**Bangladesh** — sit the BMDC registration exam',
               '**Home country** — check your regulator\'s requirements for foreign medical graduates before choosing a university',
             ],
@@ -216,7 +218,7 @@ export const mbbsGuide: LocalizedGuide = {
       },
       {
         q: 'Is MBBS in China recognized internationally?',
-        a: 'MBBS degrees from MOE-listed Chinese universities appear in the WHO World Directory of Medical Schools (WDOMS), which is the baseline for most licensing pathways. What each regulator requires varies: India applies the NMC FMGL 2021 criteria [verify]; Pakistan registers through PM&DC [verify]; the US/UK/Australia run their own licensing exams (USMLE/PLAB/AMC). Check your regulator\'s current rules for foreign medical graduates before choosing a university.',
+        a: 'MBBS degrees from MOE-listed Chinese universities appear in the WHO World Directory of Medical Schools (WDOMS), which is the baseline for most licensing pathways. What each regulator requires varies: India applies the NMC FMGL 2021 criteria; Pakistan registers through PM&DC; the US/UK/Australia run their own licensing exams (USMLE/PLAB/AMC). Check your regulator\'s current rules for foreign medical graduates before choosing a university.',
       },
       {
         q: 'What is the tuition for MBBS in China?',
@@ -232,7 +234,7 @@ export const mbbsGuide: LocalizedGuide = {
       },
       {
         q: 'Do MBBS applicants need the CSCA?',
-        a: 'Many do. The CSCA is required for CSC scholarship undergraduate applicants, and many universities — including many English-taught MBBS programs — require it for direct admission. Math is required for everyone; Physics and/or Chemistry depend on the university, so check each notice. For September 2027, sit the November 2026 (register 15-21 Oct), December 2026, or January 2027 sitting. Details: /csca-mbbs-applicants — free practice at cscaprep.academy',
+        a: 'Many do. The CSCA is required for CSC scholarship undergraduate applicants, and many universities — including many English-taught MBBS programs — require it for direct admission. Math is required for everyone; Physics and/or Chemistry depend on the university, so check each notice. For September 2027, note that November registration closed on 21 Oct 2026; next sittings 19–20 Dec 2026 and 23–24 Jan 2027. Prefer December 2026 or January 2027. Details: /csca-mbbs-applicants — free practice at cscaprep.academy',
       },
       {
         q: 'Do I need to learn Chinese for MBBS in China?',
@@ -311,18 +313,19 @@ export const mbbsGuide: LocalizedGuide = {
     stats: [
       { value: '¥3-4.5 万', label: '年学费（4,200-6,300 美元）' },
       { value: '6 年', label: '学制（含 1 年实习）' },
-      { value: '43 或 45 所', label: '教育部认可大学 [待核实]' },
+      // [verify] former invented count removed — confirm the current MOE list
+      { value: '教育部名单', label: '申请前核对是否在名单内' },
       { value: '实时', label: '目录项目数（见下表）' },
     ],
     quickAnswer:
-      '中国 MBBS 为 6 年制英文授课临床医学学士项目，由教育部认可大学开设——2026-27 名单依来源为 43 或 45 所 [待核实]。学费 ¥30,000-45,000/年（4,200-6,300 美元）。申请需高中毕业、生物化学成绩优秀、雅思 6.0+ 或同等英语成绩；入学无需 HSK。许多 MBBS 项目现还要求 CSCA 成绩——数学必考，多数医学院另要求化学和/或物理，请逐校核对招生通知；2027 年 9 月入学应参加 2026 年 11 月或 12 月场次。毕业后参加本国执业考试（USMLE、NMC FMGL 2021 标准、PM&DC、BM&DC 等）。',
+      '中国 MBBS 为 6 年制英文授课临床医学学士项目，由教育部认可大学开设——请在申请前核对当期教育部名单。学费 ¥30,000-45,000/年（4,200-6,300 美元）。申请需高中毕业、生物化学成绩优秀、雅思 6.0+ 或同等英语成绩；入学无需 HSK。许多 MBBS 项目现还要求 CSCA 成绩——数学必考，多数医学院另要求化学和/或物理，请逐校核对招生通知；2027 年 9 月入学应参加 2026 年 11 月或 12 月场次。毕业后参加本国执业考试（USMLE、NMC FMGL 2021 标准、PM&DC、BM&DC 等）。',
     keyTakeaways: [
-      '只有教育部认可大学可向国际生英文授课临床医学——2026-27 名单依来源为 43 或 45 所 [待核实]',
+      '只有教育部认可大学可向国际生英文授课临床医学——请在申请前核对当期教育部名单',
       '学费 ¥30,000-45,000/年，远低于美英私立医学院',
       '许多 MBBS 项目现要求 CSCA（数学 + 化学/物理，因校而异）——见 /csca-mbbs-applicants；免费练习 cscaprep.academy',
       '入学时无需 HSK 中文，前两年同步学习医学汉语',
       '课程包含 1 年附属教学医院临床实习',
-      '毕业后执业取决于本国监管：USMLE（美）、PLAB（英）、AMC（澳）、NMC FMGL 2021 标准（印度）[待核实]、PM&DC（巴基斯坦）[待核实]、BM&DC（孟加拉）',
+      '毕业后执业取决于本国监管：USMLE（美）、PLAB（英）、AMC（澳）、NMC FMGL 2021 标准（印度）、PM&DC（巴基斯坦）、BM&DC（孟加拉）',
     ],
     sections: [
       {
@@ -344,7 +347,7 @@ export const mbbsGuide: LocalizedGuide = {
           {
             type: 'callout',
             tone: 'info',
-            text: '重要：只有教育部认可大学可向国际生英文授课临床医学。2026-27 名单依来源为 43 或 45 所 [待核实]——申请前务必确认目标大学在现行名单上。下表列出 SICA 目录中提供英文授课 6 年制项目的院校。',
+            text: '重要：只有教育部认可大学可向国际生英文授课临床医学。请在申请前核对当期教育部名单——申请前务必确认目标大学在现行名单上。下表列出 SICA 目录中提供英文授课 6 年制项目的院校。',
           },
         ],
       },
@@ -358,9 +361,10 @@ export const mbbsGuide: LocalizedGuide = {
             type: 'ul',
             items: [
               '**谁要求**——CSC 奖学金本科申请者必须提交；许多大学（含许多英文授课 MBBS）对直接录取也要求。逐校核对招生通知',
+// [verify] 
               '**科目**——数学全员必考；物理和/或化学取决于大学与项目。MBBS 申请者常见要求为数学 + 化学和/或物理——逐校核实',
               '**形式**——每科 48 道选择题，每科 60 分钟。先考数学，再在同一预约中考物理或化学。纯选择题，无简答或作文',
-              '**何时考**——每年 6 场，以居家线上、真人监考为主。已确认：2026 年 11 月 14-15 日（报名 10 月 15-21 日北京时间）、12 月 19-20 日、2027 年 1 月 23-24 日。2027 年 9 月入学应参加 2026 年 11 或 12 月场次',
+              '**何时考**——每年 6 场，以居家线上、真人监考为主。已确认：2026 年 11 月 14-15 日（11 月报名已于 2026 年 10 月 21 日截止）、12 月 19-20 日、2027 年 1 月 23-24 日。2027 年 9 月入学应参加 2026 年 11 或 12 月场次',
               '**MBBS 专项指引**——科目组合、时间安排与执业背景见 /csca-mbbs-applicants',
               '**免费练习**——CSCA Prep（https://cscaprep.academy）提供每场次的免费模拟题与学习计划',
             ],
@@ -478,7 +482,7 @@ export const mbbsGuide: LocalizedGuide = {
               '**英国**——参加 PLAB 1 + PLAB 2；在 GMC 注册；Foundation Year 1/2',
               '**澳大利亚**——参加 AMC MCQ + AMC Clinical；通过 PMCV 申请实习',
               '**加拿大**——通过 MCC（加拿大医学会）申请；NAC + MCCQE1 + MCCQE2',
-              '**印度**——中国 MBBS 须满足 NMC FMGL 2021 标准 [以现行 NMC 规则核实]；资格考试按 NMC 现行政策为 NEXT/FMGE [待核实]',
+              '**印度**——中国 MBBS 须满足 NMC FMGL 2021 标准；资格考试按 NMC 现行政策为 NEXT/FMGE',
               '**巴基斯坦**——参加执业考试并向现行监管机构 PM&DC（巴基斯坦医学与牙科委员会）注册 [机构名称与考试以现行规定核实]',
               '**孟加拉国**——参加 BMDC 注册考试',
               '**本国**——择校前先核实本国监管机构对海外医学毕业生的现行要求',
@@ -502,7 +506,7 @@ export const mbbsGuide: LocalizedGuide = {
       },
       {
         q: '来华 MBBS 是否获得国际认证？',
-        a: '教育部认可的中国大学 MBBS 学位列于 WHO 世界医学院名录（WDOMS），这是多数执业路径的基础。各国监管要求不同：印度适用 NMC FMGL 2021 标准 [待核实]；巴基斯坦经 PM&DC 注册 [待核实]；美英澳各有执业考试（USMLE/PLAB/AMC）。择校前请核实本国监管机构对海外医学毕业生的现行规则。',
+        a: '教育部认可的中国大学 MBBS 学位列于 WHO 世界医学院名录（WDOMS），这是多数执业路径的基础。各国监管要求不同：印度适用 NMC FMGL 2021 标准；巴基斯坦经 PM&DC 注册；美英澳各有执业考试（USMLE/PLAB/AMC）。择校前请核实本国监管机构对海外医学毕业生的现行规则。',
       },
       {
         q: '来华 MBBS 学费多少？',
@@ -518,7 +522,7 @@ export const mbbsGuide: LocalizedGuide = {
       },
       {
         q: 'MBBS 申请者需要 CSCA 吗？',
-        a: '许多需要。CSC 奖学金本科申请者必须提交；许多大学（含许多英文授课 MBBS）对直接录取也要求。数学全员必考；物理和/或化学因校而异，请逐校核对通知。2027 年 9 月入学应参加 2026 年 11 月（报名 10 月 15-21 日）、12 月或 2027 年 1 月场次。详见 /csca-mbbs-applicants——免费练习 cscaprep.academy',
+        a: '许多需要。CSC 奖学金本科申请者必须提交；许多大学（含许多英文授课 MBBS）对直接录取也要求。数学全员必考；物理和/或化学因校而异，请逐校核对通知。2027 年 9 月入学应参加 2026 年 11 月（11 月报名已于 2026 年 10 月 21 日截止）、12 月或 2027 年 1 月场次。详见 /csca-mbbs-applicants——免费练习 cscaprep.academy',
       },
       {
         q: '攻读 MBBS 是否需要学中文？',

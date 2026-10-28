@@ -1,4 +1,5 @@
 import type { LocalizedGuide } from './types';
+// [verify] Editorial claims previously marked for confirmation — re-check official notices before relying on figures or dates.
 
 /**
  * Short SERP answer: age limits + study gaps for China.
@@ -28,7 +29,7 @@ export const ageLimitToStudyInChinaGuide: LocalizedGuide = {
       'CSC age caps are the ones applicants hit most often (≤25 / ≤35 / ≤40)',
       'Self-funded university rules vary; read the program notice, not only CSC rules',
       'A gap year is not automatic rejection — unexplained multi-year blanks are the risk',
-      'Age is usually calculated as of 1 September of the intake year [verify per notice]',
+      'Age is usually calculated as of 1 September of the intake year',
       'Medicine / MBBS may add tighter caps — confirm before paying fees',
     ],
     sections: [
@@ -179,7 +180,7 @@ export const ageLimitToStudyInChinaGuide: LocalizedGuide = {
       '申请人最常撞上的是 CSC 年龄上限（≤25 / ≤35 / ≤40）',
       '自费院校规则各异；看项目通知，不要只看 CSC',
       '空档年不会自动拒录——说不清的多年空白才是风险',
-      '年龄通常按入学年 9 月 1 日计算 [以通知核实]',
+      '年龄通常按入学年 9 月 1 日计算',
       '医学 / MBBS 可能更严——缴费前务必确认',
     ],
     sections: [

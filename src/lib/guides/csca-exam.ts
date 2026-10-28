@@ -33,13 +33,13 @@ export const cscaExamGuide: LocalizedGuide = {
       { value: 'RMB 450 / 700', label: '1 subject / 2+ subjects' },
     ],
     quickAnswer:
-      'The CSCA (China Scholastic Competency Assessment) is China\'s standardized, centrally-administered exam for international students applying to undergraduate (bachelor\'s) programs, effective from the 2026 intake. It is organized by the China Scholarship Council (CSC) and developed with Chinese university experts. Math is required for everyone; Physics and/or Chemistry depend on the university and program; Professional Chinese applies only to Chinese-taught programs. Every question is multiple choice, each subject is scored out of 100, and each university sets its own score cutoffs (there is no national pass mark). The exam runs 6 sittings a year, mainly online at home with a live proctor — next confirmed: 14-15 Nov 2026 (register 15-21 Oct, Beijing time), 19-20 Dec 2026, 23-24 Jan 2027. Fees: RMB 450 for one subject, RMB 700 for two or more (official site: csca.cn). CSC scholarship undergraduate applicants must submit a score.',
+      'The CSCA (China Scholastic Competency Assessment) is China\'s standardized, centrally-administered exam for international students applying to undergraduate (bachelor\'s) programs, effective from the 2026 intake. It is organized by the China Scholarship Council (CSC) and developed with Chinese university experts. Math is required for everyone; Physics and/or Chemistry depend on the university and program; Professional Chinese applies only to Chinese-taught programs. Every question is multiple choice, each subject is scored out of 100, and each university sets its own score cutoffs (there is no national pass mark). The exam runs 6 sittings a year, mainly online at home with a live proctor — November registration closed on 21 Oct 2026; next sittings 19–20 Dec 2026 and 23–24 Jan 2027.. Fees: RMB 450 for one subject, RMB 700 for two or more (official site: csca.cn). CSC scholarship undergraduate applicants must submit a score.',
     keyTakeaways: [
       'CSCA is mandatory for most international bachelor\'s applicants from the 2026 intake — including CSC scholarship applicants',
       'Math is required for everyone; Physics and/or Chemistry depend on the university; Professional Chinese only for Chinese-taught programs',
       'All multiple choice; no calculators; each subject scored out of 100',
       'No national pass mark — each university sets its own cutoffs, so your target school defines your target score',
-      '6 sittings a year, mainly online at home with a live proctor; next: Nov 14-15 2026 (register Oct 15-21), Dec 19-20 2026, Jan 23-24 2027',
+      '6 sittings a year, mainly online at home with a live proctor; November registration closed on 21 Oct 2026; next sittings 19–20 Dec 2026 and 23–24 Jan 2027.',
       'Fees: RMB 450 (1 subject) / RMB 700 (2+ subjects); official site is csca.cn',
       'Applicants to Chinese-taught language programs may be exempt with a valid HSK 4; a qualifying HSK score can also waive the Professional Chinese subject',
     ],
@@ -158,14 +158,14 @@ export const cscaExamGuide: LocalizedGuide = {
         id: 'csca-dates',
         h2: 'CSCA exam dates and registration windows',
         intro:
-          'The CSCA runs 6 sittings per year, mainly online at home with a live proctor. Next confirmed: 14-15 November 2026 (register 15-21 October, Beijing time), then 19-20 December 2026 and 23-24 January 2027, with further sittings in March, April, and June 2027.',
+          'The CSCA runs 6 sittings per year, mainly online at home with a live proctor. November registration closed on 21 Oct 2026; next sittings 19–20 Dec 2026 and 23–24 Jan 2027. Further sittings are expected in March, April, and June 2027 — confirm on csca.cn.',
         blocks: [
           {
             type: 'table',
             caption: 'Sitting timeline (confirmed dates per the official portal, csca.cn)',
             columns: ['Milestone', 'Timing'],
             rows: [
-              ['November 2026 sitting', '14-15 Nov 2026 — register 15-21 Oct 2026 (Beijing time)'],
+              ['November 2026 sitting', 'November registration closed on 21 Oct 2026 (sitting was 14–15 Nov)'],
               ['December 2026 sitting', '19-20 Dec 2026'],
               ['January 2027 sitting', '23-24 Jan 2027'],
               ['Mar / Apr / Jun 2027 sittings', 'Exact dates TBA — announced per sitting on csca.cn'],
@@ -176,7 +176,7 @@ export const cscaExamGuide: LocalizedGuide = {
             type: 'ul',
             items: [
               '**Plan backwards from your intake** — university applications for September 2027 intake run roughly November 2026–June 2027; your CSCA score must exist before your application deadline, so sit the earliest sitting that works for you',
-              '**Registration windows are per-sitting** — the November window is just one week (15-21 Oct); there is no general closing rule, so check each announcement',
+              '**Registration windows are per-sitting** — November registration closed on 21 Oct 2026; there is no general closing rule, so check each announcement',
               '**Full calendar + reminders** — the per-sitting calendar with free practice tests lives on CSCA Prep: https://cscaprep.academy/exam-dates',
             ],
           },
@@ -347,7 +347,7 @@ export const cscaExamGuide: LocalizedGuide = {
       },
       {
         q: 'When is the CSCA exam held?',
-        a: 'Six sittings a year, mainly online at home with a live proctor. Next confirmed dates: 14-15 November 2026 (register 15-21 October, Beijing time), 19-20 December 2026, and 23-24 January 2027, with further sittings in March, April, and June 2027. For a September 2027 intake, sit November 2026 – January 2027 at the latest — check csca.cn for the current calendar.',
+        a: 'Six sittings a year, mainly online at home with a live proctor. November registration closed on 21 Oct 2026; next sittings 19–20 Dec 2026 and 23–24 Jan 2027., with further sittings in March, April, and June 2027. For a September 2027 intake, sit November 2026 – January 2027 at the latest — check csca.cn for the current calendar.',
       },
       {
         q: 'Is there a pass mark for the CSCA?',
@@ -463,13 +463,13 @@ export const cscaExamGuide: LocalizedGuide = {
       { value: '450 / 700 元', label: '1 科 / 2 科及以上' },
     ],
     quickAnswer:
-      'CSCA（中国国际学生学业能力评估）是中国自 2026 级起面向本科（学士）国际申请者实施的统一标准化入学考试，由国家留学基金委（CSC）组织、联合中国高校专家开发。数学全员必考；物理和/或化学取决于大学与项目；专业中文仅适用于中文授课项目。全部为选择题，单科满分 100 分，各大学自行划定录取分数线（无全国统一及格线）。考试每年举行 6 场，以居家线上、真人监考为主——已确认：2026 年 11 月 14-15 日（报名 10 月 15-21 日北京时间）、12 月 19-20 日、2027 年 1 月 23-24 日。费用：单科 450 元、两科及以上 700 元（官方网站 csca.cn）。CSC 奖学金本科申请者必须提交成绩。',
+      'CSCA（中国国际学生学业能力评估）是中国自 2026 级起面向本科（学士）国际申请者实施的统一标准化入学考试，由国家留学基金委（CSC）组织、联合中国高校专家开发。数学全员必考；物理和/或化学取决于大学与项目；专业中文仅适用于中文授课项目。全部为选择题，单科满分 100 分，各大学自行划定录取分数线（无全国统一及格线）。考试每年举行 6 场，以居家线上、真人监考为主——已确认：2026 年 11 月 14-15 日（11 月报名已于 2026 年 10 月 21 日截止）、12 月 19-20 日、2027 年 1 月 23-24 日。费用：单科 450 元、两科及以上 700 元（官方网站 csca.cn）。CSC 奖学金本科申请者必须提交成绩。',
     keyTakeaways: [
       '自 2026 级起，多数国际本科申请者必须参加 CSCA——含 CSC 奖学金申请者',
       '数学全员必考；物理和/或化学取决于大学；专业中文仅限中文授课项目',
       '全选择题；禁用计算器；单科满分 100',
       '无全国及格线——各大学自划分数线，目标分数取决于目标院校',
-      '每年 6 场，居家线上、真人监考为主；下一批：2026 年 11 月 14-15 日（报名 10 月 15-21 日）、12 月 19-20 日、2027 年 1 月 23-24 日',
+      '每年 6 场，居家线上、真人监考为主；下一批：2026 年 11 月 14-15 日（11 月报名已于 2026 年 10 月 21 日截止）、12 月 19-20 日、2027 年 1 月 23-24 日',
       '费用：450 元（1 科）/ 700 元（2 科及以上）；官方网站 csca.cn',
       '中文授课语言项目申请者凭有效 HSK 4 可豁免；合格 HSK 成绩可免专业中文科目',
     ],
@@ -588,14 +588,14 @@ export const cscaExamGuide: LocalizedGuide = {
         id: 'csca-dates',
         h2: 'CSCA 考试时间与报名窗口',
         intro:
-          'CSCA 每年举行 6 场，以居家线上、真人监考为主。已确认：2026 年 11 月 14-15 日（报名 10 月 15-21 日北京时间）、12 月 19-20 日、2027 年 1 月 23-24 日，其后 2027 年 3 月、4 月、6 月另有场次。',
+          'CSCA 每年举行 6 场，以居家线上、真人监考为主。已确认：2026 年 11 月 14-15 日（11 月报名已于 2026 年 10 月 21 日截止）、12 月 19-20 日、2027 年 1 月 23-24 日，其后 2027 年 3 月、4 月、6 月另有场次。',
         blocks: [
           {
             type: 'table',
             caption: '场次时间线（已确认日期以官方门户 csca.cn 为准）',
             columns: ['节点', '时间'],
             rows: [
-              ['2026 年 11 月场', '11 月 14-15 日——报名 10 月 15-21 日（北京时间）'],
+              ['2026 年 11 月场', '11 月 14-15 日——11 月报名已于 2026 年 10 月 21 日截止（北京时间）'],
               ['2026 年 12 月场', '12 月 19-20 日'],
               ['2027 年 1 月场', '1 月 23-24 日'],
               ['2027 年 3 / 4 / 6 月场', '具体日期待定——逐场在 csca.cn 公布'],
@@ -777,7 +777,7 @@ export const cscaExamGuide: LocalizedGuide = {
       },
       {
         q: 'CSCA 什么时候考？',
-        a: '每年 6 场，以居家线上、真人监考为主。已确认：2026 年 11 月 14-15 日（报名 10 月 15-21 日北京时间）、12 月 19-20 日、2027 年 1 月 23-24 日，其后 3 月、4 月、6 月另有场次。对应 2027 年 9 月入学最迟 2027 年 1 月考完——最新日历以 csca.cn 为准。',
+        a: '每年 6 场，以居家线上、真人监考为主。已确认：2026 年 11 月 14-15 日（11 月报名已于 2026 年 10 月 21 日截止）、12 月 19-20 日、2027 年 1 月 23-24 日，其后 3 月、4 月、6 月另有场次。对应 2027 年 9 月入学最迟 2027 年 1 月考完——最新日历以 csca.cn 为准。',
       },
       {
         q: 'CSCA 有及格线吗？',

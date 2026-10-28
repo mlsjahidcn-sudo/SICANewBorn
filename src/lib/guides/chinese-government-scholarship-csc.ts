@@ -1,5 +1,6 @@
 import type { LocalizedGuide } from './types';
 import { cscDeadlineTrackerSection, CSC_DEADLINES_REVIEWED_AT, CSC_DEADLINES_PATH } from './csc-deadlines-2027-2028';
+// [verify] Editorial claims previously marked for confirmation — re-check official notices before relying on figures or dates.
 
 /**
  * "Chinese Government Scholarship (CSC)" — long-form process guide.
@@ -69,9 +70,9 @@ export const cscScholarshipGuide: LocalizedGuide = {
             items: [
               '**Tuition** — fully waived',
               '**On-campus dorm** — provided',
-              '**Monthly stipend** — paid for the duration of your program; exact amounts vary by degree level [verify against the current CSC notice]',
+              '**Monthly stipend** — paid for the duration of your program; exact amounts vary by degree level',
               '**Health insurance** — comprehensive coverage provided',
-              '**Settlement allowance** — one-time payment upon arrival [verify amount against the current notice]',
+              '**Settlement allowance** — one-time payment upon arrival',
               '**Round-trip airfare** — provided for most categories (Bilateral Program, EU/US special programs)',
             ],
           },
@@ -79,7 +80,7 @@ export const cscScholarshipGuide: LocalizedGuide = {
             type: 'h3',
             text: 'Why CSC is the most popular choice for international students',
             body:
-              'Three reasons CSC dominates the China-scholarship conversation: (1) full funding across degree levels — bachelor\'s, master\'s, PhD, and one-year training programs; (2) it can be used at participating Chinese universities across tiers (the exact count of participating universities changes each cycle [verify against the current notice]); (3) it is portable — your scholarship travels with you if you change universities, though this requires CSC approval. Compare to university-specific scholarships (which lock you to one university) and provincial government scholarships (which lock you to one province).',
+              'Three reasons CSC dominates the China-scholarship conversation: (1) full funding across degree levels — bachelor\'s, master\'s, PhD, and one-year training programs; (2) it can be used at participating Chinese universities across tiers (the exact count of participating universities changes each cycle); (3) it is portable — your scholarship travels with you if you change universities, though this requires CSC approval. Compare to university-specific scholarships (which lock you to one university) and provincial government scholarships (which lock you to one province).',
           },
         ],
       },
@@ -159,7 +160,7 @@ export const cscScholarshipGuide: LocalizedGuide = {
           {
             type: 'callout',
             tone: 'info',
-            text: 'Most international students apply through the Chinese University Program (administered by their target university\'s international student office) or the Bilateral Program (administered through their home country\'s Chinese embassy). These two channels handle the majority of CSC applications [verify exact share against current CSC data].',
+            text: 'Most international students apply through the Chinese University Program (administered by their target university\'s international student office) or the Bilateral Program (administered through their home country\'s Chinese embassy). These two channels handle the majority of CSC applications.',
           },
         ],
       },
@@ -171,14 +172,14 @@ export const cscScholarshipGuide: LocalizedGuide = {
         blocks: [
           {
             type: 'table',
-            caption: 'CSC scholarship coverage breakdown [verify amounts against the current CSC notice]',
+            caption: 'CSC scholarship coverage breakdown',
             columns: ['Component', 'Bachelor', 'Master', 'PhD', 'Notes'],
             rows: [
               ['Tuition waiver', 'Full', 'Full', 'Full', 'Varies by program + university'],
               ['On-campus dorm', 'Provided', 'Provided', 'Provided', 'Double room standard; single available'],
-              ['Monthly stipend (CNY/mo)', '2,500 [verify]', '3,000 [verify]', '3,500 [verify]', 'Paid 12 months/year'],
+              ['Monthly stipend (CNY/mo)', 'Confirm in CSC notice', 'Confirm in CSC notice', 'Confirm in CSC notice', 'Paid 12 months/year'],
               ['Health insurance', 'Provided', 'Provided', 'Provided', 'Comprehensive, China-wide coverage'],
-              ['Settlement allowance (one-time)', 'Provided [verify]', 'Provided [verify]', 'Provided [verify]', 'Paid on arrival'],
+              ['Settlement allowance (one-time)', 'Confirm in CSC notice', 'Confirm in CSC notice', 'Confirm in CSC notice', 'Paid on arrival'],
               ['Round-trip airfare (Bilateral)', 'Most categories', 'Most categories', 'Most categories', 'Reimbursed or booked by CSC'],
             ],
           },
@@ -304,7 +305,7 @@ export const cscScholarshipGuide: LocalizedGuide = {
       },
       {
         q: 'How much is the CSC monthly stipend?',
-        a: 'Stipends are tiered by degree level — commonly cited as RMB 2,500 (bachelor\'s), RMB 3,000 (master\'s), RMB 3,500 (PhD) [verify against the current CSC notice]. Most universities pay monthly; a few pay quarterly. University top-up funding can add extra on top of the base CSC stipend.',
+        a: 'Stipends are tiered by degree level — confirm the current amounts in the CSC notice. Most universities pay monthly; a few pay quarterly. University top-up funding can add extra on top of the base CSC stipend.',
       },
       {
         q: 'How competitive is the CSC scholarship?',
@@ -443,7 +444,7 @@ export const cscScholarshipGuide: LocalizedGuide = {
             type: 'h3',
             text: '为什么 CSC 是国际生最热门选择',
             body:
-            '三个理由：（1）各学位层级全额资助——本科、硕士、博士、一年培训项目；（2）可用于参与项目的各层次中国大学（参与校数量逐期变化 [以当期通知核实]）；（3）可携带——奖学金随你转校（需 CSC 批准）。比较院校专属奖学金（锁在一所大学）与省市奖学金（锁在一个省）。',
+            '三个理由：（1）各学位层级全额资助——本科、硕士、博士、一年培训项目；（2）可用于参与项目的各层次中国大学（参与校数量逐期变化）；（3）可携带——奖学金随你转校（需 CSC 批准）。比较院校专属奖学金（锁在一所大学）与省市奖学金（锁在一个省）。',
           },
         ],
       },
@@ -540,9 +541,9 @@ export const cscScholarshipGuide: LocalizedGuide = {
             rows: [
               ['学费全免', '全额', '全额', '全额', '因项目 + 大学而异'],
               ['校内住宿', '提供', '提供', '提供', '标准双人间；可申请单人间'],
-              ['月津贴（元/月）', '2,500 [待核实]', '3,000 [待核实]', '3,500 [待核实]', '每年支付 12 个月'],
+              ['月津贴（元/月）', '以当期 CSC 通知为准', '以当期 CSC 通知为准', '以当期 CSC 通知为准', '每年支付 12 个月'],
               ['医疗保险', '提供', '提供', '提供', '综合、全国覆盖'],
-              ['安置费（一次性）', '提供 [待核实]', '提供 [待核实]', '提供 [待核实]', '抵华后发放'],
+              ['安置费（一次性）', '以当期 CSC 通知为准', '以当期 CSC 通知为准', '以当期 CSC 通知为准', '抵华后发放'],
               ['往返机票（双边）', '多数类别', '多数类别', '多数类别', '报销或 CSC 代订'],
             ],
           },
@@ -668,7 +669,7 @@ export const cscScholarshipGuide: LocalizedGuide = {
       },
       {
         q: 'CSC 月津贴多少？',
-        a: '按学位层级分档——常见口径为本科 2,500 元、硕士 3,000 元、博士 3,500 元人民币 [以当期 CSC 通知核实]。多数大学按月发放；少数按季。大学追加资助可在 CSC 基础上再叠加。',
+        a: '按学位层级分档——以当期 CSC 通知确认各学位档位金额。多数大学按月发放；少数按季。大学追加资助可在 CSC 基础上再叠加。',
       },
       {
         q: 'CSC 奖学金多大竞争？',

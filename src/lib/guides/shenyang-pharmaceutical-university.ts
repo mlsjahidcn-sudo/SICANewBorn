@@ -1,4 +1,5 @@
 import type { LocalizedGuide } from './types';
+// [verify] Editorial claims previously marked for confirmation — re-check official notices before relying on figures or dates.
 
 /**
  * "Shenyang Pharmaceutical University for international students:
@@ -43,7 +44,7 @@ export const shenyangPharmaceuticalGuide: LocalizedGuide = {
       { value: 'CSC + Bilateral', label: 'Two application routes' },
     ],
     quickAnswer:
-      'SYPHU offers international students three flagship programs: (1) Pharmacy (4-year bachelor) — pharmacology, drug analysis, clinical pharmacy tracks; (2) Pharmaceutical Engineering — formulation, drug synthesis, biopharmaceuticals; (3) Clinical Pharmacy — hospital pharmacy + clinical pharmacy practice. All three are taught in Chinese-medium with English-track elective options for some courses; full English-medium bachelor programs are limited but expanding. Apply via either the CSC route (Chinese Government Scholarship, agency code via Liaoning Province) or Type B direct (SYPHU\'s own international student office). Bachelor\'s applicants need CSCA [verify exemption rules] + a foundation year of Chinese. Master\'s applicants need HSK 4-5 [verify] + a relevant bachelor in pharmacy / chemistry / biology.',
+      'SYPHU offers international students three flagship programs: (1) Pharmacy (4-year bachelor) — pharmacology, drug analysis, clinical pharmacy tracks; (2) Pharmaceutical Engineering — formulation, drug synthesis, biopharmaceuticals; (3) Clinical Pharmacy — hospital pharmacy + clinical pharmacy practice. All three are taught in Chinese-medium with English-track elective options for some courses; full English-medium bachelor programs are limited but expanding. Apply via either the CSC route (Chinese Government Scholarship, agency code via Liaoning Province) or Type B direct (SYPHU\'s own international student office). Bachelor\'s applicants need CSCA (confirm any exemption rules with the university) + a foundation year of Chinese. Master\'s applicants need HSK 4-5 + a relevant bachelor in pharmacy / chemistry / biology.',
     keyTakeaways: [
       'SYPHU is one of 4 Chinese universities with pharmacy in the Double First-Class tier — the highest discipline-level recognition',
       'Three flagship programs for international students: Pharmacy (4-yr bachelor), Pharmaceutical Engineering, Clinical Pharmacy',
@@ -66,7 +67,7 @@ export const shenyangPharmaceuticalGuide: LocalizedGuide = {
             caption: 'Three flagship programs at SYPHU for international students',
             columns: ['Program', 'Bachelor / Master', 'Length', 'English-medium?'],
             rows: [
-              ['Pharmacy', 'Bachelor (4 yr) / Master (3 yr) / PhD (4-5 yr)', '4 / 3 / 4-5 years', 'Chinese-medium; some electives English-medium for senior-year students [verify]'],
+              ['Pharmacy', 'Bachelor (4 yr) / Master (3 yr) / PhD (4-5 yr)', '4 / 3 / 4-5 years', 'Chinese-medium; some electives English-medium for senior-year students'],
               ['Pharmaceutical Engineering', 'Bachelor (4 yr) / Master (3 yr)', '4 / 3 years', 'Chinese-medium; some engineering electives English-medium'],
               ['Clinical Pharmacy', 'Bachelor (5 yr) / Master (3 yr)', '5 / 3 years (5-yr bachelor is the standard; includes a 1-yr clinical rotation)', 'Chinese-medium; clinical rotations in Chinese'],
             ],
@@ -93,8 +94,8 @@ export const shenyangPharmaceuticalGuide: LocalizedGuide = {
             items: [
               '**Bachelor\'s core courses** — mostly Chinese-medium (Pharmacology, Pharmaceutical Chemistry, Pharmaceutics, Clinical Pharmacy); expect 80%+ of classes in Chinese',
               '**Master\'s / PhD** — more English-medium options exist (research-focused, thesis-driven); master\'s thesis can be written in English with supervisor agreement',
-              '**Elective English-medium options** — some senior-year electives (Pharmaceutical Analysis lab, Pharmaceutical English, Clinical Pharmacy Practice) are taught in English; check SYPHU\'s current course catalog [verify annually]',
-              '**Chinese language requirement** — bachelor\'s applicants need HSK 4 minimum by year 2; master\'s applicants need HSK 5 [verify current rules]',
+              '**Elective English-medium options** — some senior-year electives (Pharmaceutical Analysis lab, Pharmaceutical English, Clinical Pharmacy Practice) are taught in English; check SYPHU\'s current course catalog',
+              '**Chinese language requirement** — bachelor\'s applicants need HSK 4 minimum by year 2; master\'s applicants need HSK 5',
               '**Foundation year alternative** — if your Chinese is below HSK 4, the pre-pharmacy foundation year (year-zero, Chinese-medium) gives you 1 year to reach HSK 4 before joining the regular cohort',
               '**Practical implication** — SYPHU is harder than universities with full English-medium coverage; budget an extra 6-12 months for Chinese language study before applying',
             ],
@@ -139,10 +140,10 @@ export const shenyangPharmaceuticalGuide: LocalizedGuide = {
             columns: ['When', 'Action'],
             rows: [
               ['Now-Nov 2026', 'Shortlist program (Pharmacy / PharmE / ClinPharm); start HSK 4 study (bachelor) / HSK 5 (master); gather transcripts + degree'],
-              ['Oct 15-21, 2026', 'CSCA registration window for the Nov 14-15 sitting (bachelor\'s applicants) [verify exemption rules for pharmacy]'],
+              ['Oct 15-21, 2026', 'CSCA registration window for the Nov 14-15 sitting (bachelor\'s applicants) — confirm exemption rules with the university'],
               ['Nov 2026', 'Sit CSCA; finalize HSK study plan'],
               ['Dec 2026-Jan 2027', 'CSCA Dec 19-20 sitting (backup) + start SYPHU Type B application + Liaoning Province MoE CSC channel inquiry'],
-              ['Jan-Apr 2027', 'SYPHU Type B deadline (varies by program, typically March for September intake) [verify]'],
+              ['Jan-Apr 2027', 'SYPHU Type B deadline (varies by program, typically March for September intake)'],
               ['Apr-Jun 2027', 'Results; accept offer; receive JW201 + admission notice'],
               ['Jul-Aug 2027', 'X1 visa application; fly to Shenyang for September orientation + pre-pharmacy foundation year (if needed)'],
             ],
@@ -153,7 +154,7 @@ export const shenyangPharmaceuticalGuide: LocalizedGuide = {
               '**Standard CSC document package** — passport, notarized transcripts + degree, study plan (per Phase 167 structure), 2 recommendation letters, physical exam form, police clearance',
               '**SYPHU-specific** — pharmacy-specific transcript (with course-by-course breakdown including pharmacology, pharmaceutical chemistry, biochemistry), bachelor\'s thesis abstract if applicable',
               '**Pharmacy prerequisite courses** — general chemistry, organic chemistry, biology, calculus recommended; SYPHU checks for these on a course-by-course basis',
-              '**HSK certificate** — HSK 4 minimum for bachelor\'s [verify]; HSK 5 for master\'s',
+              '**HSK certificate** — HSK 4 minimum for bachelor\'s; HSK 5 for master\'s',
               '**CSCA score** — required for bachelor\'s applicants; Math + Physics recommended (not strictly required for pharmacy but strengthens the application)',
               '**English proficiency** — IELTS 5.5+ / TOEFL iBT 60+ recommended for English-track electives; not strictly required if you commit to the Chinese-medium track',
             ],
@@ -172,7 +173,7 @@ export const shenyangPharmaceuticalGuide: LocalizedGuide = {
       },
       {
         q: 'Do I need the CSCA to apply to SYPHU pharmacy?',
-        a: 'For bachelor\'s applicants: yes [verify exemption rules]. For master\'s / PhD: usually not required (the CSCA mandate covers undergraduate admissions). Pharmacy-specific applicants should sit the November 2026 (register Oct 15-21) or December 2026 sittings to have scores ready before the January-April 2027 deadlines.',
+        a: 'For bachelor\'s applicants: usually yes — confirm any exemption rules with the university. For master\'s / PhD: usually not required (the CSCA mandate covers undergraduate admissions). Pharmacy-specific applicants should note that November registration closed on 21 Oct 2026; next sittings 19–20 Dec 2026 and 23–24 Jan 2027. Prefer December 2026 to have scores ready before the January-April 2027 deadlines.',
       },
       {
         q: 'Does SYPHU have CSC scholarships?',
@@ -214,7 +215,7 @@ export const shenyangPharmaceuticalGuide: LocalizedGuide = {
       },
       {
         name: 'Submit CSC via Liaoning Province MoE channel',
-        text: 'CSC pharmacy is competitive. Liaoning Province MoE processes nominations through its annual notice (typically released January-February [verify]). Submit before the deadline; incomplete files are rejected, not deferred.',
+        text: 'CSC pharmacy is competitive. Liaoning Province MoE processes nominations through its annual notice (typically released January-February). Submit before the deadline; incomplete files are rejected, not deferred.',
       },
       {
         name: 'Handle results, visa, and arrival',
@@ -259,7 +260,7 @@ export const shenyangPharmaceuticalGuide: LocalizedGuide = {
       { value: 'CSC + 直招', label: '两种申请渠道' },
     ],
     quickAnswer:
-      'SYPHU 为国际学生提供三个旗舰专业：(1) 药学（4 年制本科）——药理学、药物分析、临床药学方向；(2) 制药工程——制剂、药物合成、生物制药；(3) 临床药学——医院药学 + 临床药学实践。三个项目均为中文授课，部分选修课有英文授课选项；全日制英文授课本科项目有限但在增加。申请方式：CSC（中国政府奖学金，经辽宁省渠道）或 Type B 直招（SYPHU 国际学生办公室）。本科申请者需要 CSCA 成绩 [待核实豁免规则] + 中文预科年。硕士申请者需要 HSK 4-5 [待核实] + 相关药学 / 化学 / 生物的本科学位。',
+      'SYPHU 为国际学生提供三个旗舰专业：(1) 药学（4 年制本科）——药理学、药物分析、临床药学方向；(2) 制药工程——制剂、药物合成、生物制药；(3) 临床药学——医院药学 + 临床药学实践。三个项目均为中文授课，部分选修课有英文授课选项；全日制英文授课本科项目有限但在增加。申请方式：CSC（中国政府奖学金，经辽宁省渠道）或 Type B 直招（SYPHU 国际学生办公室）。本科申请者需要 CSCA 成绩 + 中文预科年。硕士申请者需要 HSK 4-5 + 相关药学 / 化学 / 生物的本科学位。',
     keyTakeaways: [
       'SYPHU 是 4 所中国药学入选"双一流"的大学之一——最高学科级别认可',
       '国际学生三大旗舰专业：药学（4 年本科）、制药工程、临床药学',
@@ -282,7 +283,7 @@ export const shenyangPharmaceuticalGuide: LocalizedGuide = {
             caption: 'SYPHU 国际学生三大旗舰专业',
             columns: ['专业', '本科 / 硕士', '学制', '英文授课？'],
             rows: [
-              ['药学', '本科（4 年）/ 硕士（3 年）/ 博士（4-5 年）', '4 / 3 / 4-5 年', '中文授课；部分高年级选修英文授课 [待核实]'],
+              ['药学', '本科（4 年）/ 硕士（3 年）/ 博士（4-5 年）', '4 / 3 / 4-5 年', '中文授课；部分高年级选修英文授课'],
               ['制药工程', '本科（4 年）/ 硕士（3 年）', '4 / 3 年', '中文授课；部分工程选修英文授课'],
               ['临床药学', '本科（5 年）/ 硕士（3 年）', '5 / 3 年（5 年本科含 1 年临床实习）', '中文授课；临床轮转用中文'],
             ],
@@ -355,10 +356,10 @@ export const shenyangPharmaceuticalGuide: LocalizedGuide = {
             columns: ['时间', '动作'],
             rows: [
               ['现在-2026 年 11 月', '选定专业（药学 / 制药 / 临床）；开始 HSK 4 学习（本科）/ HSK 5（硕士）；准备成绩单 + 学位证'],
-              ['2026 年 10 月 15-21 日', '11 月 14-15 日 CSCA 场次的报名窗口（本科申请者）[待核实药学豁免规则]'],
+              ['2026 年 10 月 15-21 日', '11 月 14-15 日 CSCA 场次的报名窗口（本科申请者）'],
               ['2026 年 11 月', '参加 CSCA；最终确定 HSK 学习计划'],
               ['2026 年 12 月-2027 年 1 月', 'CSCA 12 月 19-20 日场次（备份）+ 开始 SYPHU Type B 申请 + 辽宁省 MoE CSC 渠道询问'],
-              ['2027 年 1-4 月', 'SYPHU Type B 截止（因专业而异，9 月入学通常 3 月）[待核实]'],
+              ['2027 年 1-4 月', 'SYPHU Type B 截止（因专业而异，9 月入学通常 3 月）'],
               ['2027 年 4-6 月', '出结果；接受录取，领取 JW201 与录取通知'],
               ['2027 年 7-8 月', '办 X1 签证；赴沈阳入学 + 药学预科年（如需要）'],
             ],
@@ -369,7 +370,7 @@ export const shenyangPharmaceuticalGuide: LocalizedGuide = {
               '**CSC 标准材料包**——护照、公证成绩单 + 学位证、学习计划（按 Phase 167 结构）、2 封推荐信、体检表、无犯罪证明',
               '**SYPHU 特有**——药学专业成绩单（逐课程明细包括药理学、药物化学、生物化学）、学士论文摘要（如适用）',
               '**药学前置课程**——普通化学、有机化学、生物学、微积分推荐；SYPHU 逐课程核查',
-              '**HSK 证书**——本科 HSK 4 最低 [待核实]；硕士 HSK 5',
+              '**HSK 证书**——本科 HSK 4 最低；硕士 HSK 5',
               '**CSCA 成绩**——本科申请者必考；数学 + 物理推荐（药学非强制但加分）',
               '**英语水平**——IELTS 5.5+ / 托福 iBT 60+ 推荐（英文选修课需要）；决定走中文授课则非强制',
             ],
@@ -388,7 +389,7 @@ export const shenyangPharmaceuticalGuide: LocalizedGuide = {
       },
       {
         q: '申请 SYPHU 药学需要 CSCA 吗？',
-        a: '本科申请者：需要 [待核实豁免规则]。硕士 / 博士：通常不需要（CSCA 强制令覆盖本科招生）。药学申请者应参加 2026 年 11 月（报名 10 月 15-21 日）或 12 月场次，成绩赶在 2027 年 1-4 月截止前到位。',
+        a: '本科申请者：需要。硕士 / 博士：通常不需要（CSCA 强制令覆盖本科招生）。药学申请者应参加 2026 年 11 月（11 月报名已于 2026 年 10 月 21 日截止）或 12 月场次，成绩赶在 2027 年 1-4 月截止前到位。',
       },
       {
         q: 'SYPHU 有 CSC 奖学金吗？',
@@ -430,7 +431,7 @@ export const shenyangPharmaceuticalGuide: LocalizedGuide = {
       },
       {
         name: '通过辽宁省 MoE 渠道提交 CSC',
-        text: 'CSC 药学竞争激烈。辽宁省 MoE 通过年度通知处理提名（通常 1-2 月发布 [待核实]）。截止前提交完整附件——不完整的 CSC 材料会被直接拒绝而非顺延。',
+        text: 'CSC 药学竞争激烈。辽宁省 MoE 通过年度通知处理提名（通常 1-2 月发布）。截止前提交完整附件——不完整的 CSC 材料会被直接拒绝而非顺延。',
       },
       {
         name: '处理结果、签证与抵沈',

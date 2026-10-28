@@ -1,4 +1,5 @@
 import type { LocalizedGuide } from './types';
+// [verify] Editorial claims previously marked for confirmation — re-check official notices before relying on figures or dates.
 
 /**
  * "MOE-listed MBBS universities in China 2026-27" — Phase 147 SEO
@@ -8,8 +9,8 @@ import type { LocalizedGuide } from './types';
  *
  * Facts: only MOE-listed universities may teach clinical medicine
  * in English to international students; the 2026-27 list counts
- * 43 or 45 depending on source [verify]; regulators: NMC FMGL 2021
- * criteria [verify], PM&DC [verify], BM&DC [verify]; CSCA subjects
+ * list count varies by edition; regulators: NMC FMGL 2021
+ * criteria, PM&DC, BM&DC; CSCA subjects
  * by university where published.
  */
 export const moeMbbsGuide: LocalizedGuide = {
@@ -18,24 +19,25 @@ export const moeMbbsGuide: LocalizedGuide = {
     eyebrow: 'GUIDE · MBBS LIST',
     title: 'MOE-Listed MBBS Universities in China 2027',
     description:
-      'What the MOE MBBS list is, why only listed universities may teach clinical medicine in English (43 or 45 schools [verify]), what regulators require, and CSCA subjects by university.',
+      'What the MOE MBBS list is, why only listed universities may teach clinical medicine in English (check the current MOE list before applying), what regulators require, and CSCA subjects by university.',
     seoTitle: 'MOE-Listed MBBS Universities in China 2027',
-    seoDescription: 'What the MOE MBBS list is, why only listed universities may teach clinical medicine in English (43 or 45 schools [verify]), what regulators require, and',
+    seoDescription: 'What the MOE MBBS list is, why only listed universities may teach clinical medicine in English (check the current MOE list before applying), what regulators require, and',
     subtitle:
-      'China\'s Ministry of Education (MOE) publishes the list of universities permitted to teach clinical medicine in English to international students — the 2026-27 list counts 43 or 45 universities depending on the source [verify]. Only these universities can award an English-taught MBBS that WHO lists and your regulator will assess.',
+      'China\'s Ministry of Education (MOE) publishes the list of universities permitted to teach clinical medicine in English to international students — check the current MOE list before applying. Only these universities can award an English-taught MBBS that WHO lists and your regulator will assess.',
     stats: [
-      { value: '45 or 46', label: 'Universities on the 2027 list [verify]' },
+      // [verify] former invented count removed — confirm the current MOE list
+      { value: 'MOE list', label: 'Check the current edition before applying' },
       { value: '6 years', label: 'MBBS duration (incl. internship)' },
       { value: 'English', label: 'Only listed schools may teach in' },
       { value: 'CSCA', label: 'Required by many MBBS programs' },
     ],
     quickAnswer:
-      'The MOE list is the official register of Chinese universities permitted to teach clinical medicine (MBBS) in English to international students — the 2027 edition counts 45 or 46 universities depending on the source [verify against the current MOE notice before applying]. Studying MBBS at a non-listed university means an English-taught clinical degree that is not recognized in the WHO directory pathway, which regulators like India\'s NMC (FMGL 2021 criteria [verify]), Pakistan\'s PM&DC [verify], and Bangladesh\'s BM&DC [verify] assess against. Many listed universities now also require the CSCA — Math for everyone, plus Chemistry and/or Physics per university. Confirm both the current list and each university\'s CSCA subjects before applying.',
+      'The MOE list is the official register of Chinese universities permitted to teach clinical medicine (MBBS) in English to international students — check the current MOE list before applying. Studying MBBS at a non-listed university means an English-taught clinical degree that is not recognized in the WHO directory pathway, which regulators like India\'s NMC (FMGL 2021 criteria), Pakistan\'s PM&DC, and Bangladesh\'s BM&DC assess against. Many listed universities now also require the CSCA — Math for everyone, plus Chemistry and/or Physics per university. Confirm both the current list and each university\'s CSCA subjects before applying.',
     keyTakeaways: [
       'Only MOE-listed universities may teach clinical medicine in English to international students',
-      'The 2027 list counts 45 or 46 universities depending on the source [verify against the current MOE notice] — always confirm the current edition',
+      'Check the current MOE list before applying — always confirm the current edition',
       'Non-listed "English MBBS" degrees fail the WDOMS/regulator pathway — check before paying any fee',
-      'Regulator checks: India NMC FMGL 2021 criteria [verify], Pakistan PM&DC [verify], Bangladesh BM&DC [verify]',
+      'Regulator checks: India NMC FMGL 2021 criteria, Pakistan PM&DC, Bangladesh BM&DC',
       'Many listed universities require the CSCA (Math + Chemistry/Physics per school) — next sittings Nov 14-15 2026, Dec 19-20 2026, Jan 23-24 2027',
       'The SICA catalog lists MOE-listed programs with tuition and language — see the table on /mbbs-in-china',
     ],
@@ -49,7 +51,7 @@ export const moeMbbsGuide: LocalizedGuide = {
           {
             type: 'ul',
             items: [
-              '**Who publishes it** — China\'s Ministry of Education, updated periodically; the 2027 edition counts 45 or 46 universities depending on the source [verify against the current MOE notice]',
+              '**Who publishes it** — China\'s Ministry of Education, updated periodically; check the current MOE list before applying',
               '**What inclusion means** — the university may enroll international students in English-taught clinical medicine (MBBS)',
               '**What it does not mean** — inclusion is not a quality ranking; within the list, tuition, city, and internship hospitals differ widely',
               '**The WHO connection** — listed universities appear in the World Directory of Medical Schools (WDOMS), the baseline most regulators check',
@@ -71,8 +73,8 @@ export const moeMbbsGuide: LocalizedGuide = {
           {
             type: 'ul',
             items: [
-              '**India (NMC)** — a China MBBS must meet the FMGL 2021 criteria; the qualifying exam follows current NMC policy [verify both before choosing a university]',
-              '**Pakistan (PM&DC)** — registration and the licensing exam run through the current regulator; confirm its name and rules for the year you graduate [verify]',
+              '**India (NMC)** — a China MBBS must meet the FMGL 2021 criteria; the qualifying exam follows current NMC policy',
+              '**Pakistan (PM&DC)** — registration and the licensing exam run through the current regulator; confirm its name and rules for the year you graduate',
               '**Bangladesh (BM&DC)** — the BMDC registration exam applies to foreign graduates',
               '**US / UK / Australia** — USMLE, PLAB, and AMC pathways assess any WDOMS-listed degree; program-level coaching support varies by university',
               '**Rule of thumb** — check your regulator\'s CURRENT criteria first, then pick a listed university that fits them',
@@ -103,7 +105,7 @@ export const moeMbbsGuide: LocalizedGuide = {
     faqs: [
       {
         q: 'How many universities are on the MOE MBBS list?',
-        a: 'The 2027 list counts 45 or 46 universities depending on the source [verify against the current MOE notice]. The count shifts as the MOE updates the register — always confirm the current edition and the university\'s presence on it before applying.',
+        a: 'Check the current MOE list before applying. The count shifts as the MOE updates the register — always confirm the current edition and the university\'s presence on it before applying.',
       },
       {
         q: 'What happens if I study MBBS at a non-listed university?',
@@ -125,11 +127,11 @@ export const moeMbbsGuide: LocalizedGuide = {
     howToSteps: [
       {
         name: 'Check your regulator\'s current criteria',
-        text: 'NMC FMGL 2021 (India) [verify], PM&DC (Pakistan) [verify], BM&DC (Bangladesh), or USMLE/PLAB/AMC pathways — know what your degree must satisfy before choosing a university.',
+        text: 'NMC FMGL 2021 (India), PM&DC (Pakistan), BM&DC (Bangladesh), or USMLE/PLAB/AMC pathways — know what your degree must satisfy before choosing a university.',
       },
       {
         name: 'Verify the university is on the current MOE list',
-        text: '45 or 46 schools for 2027 [verify against the current MOE notice]. Cross-check the MOE notice, the university\'s page, and WDOMS. Never trust a brochure alone.',
+        text: 'Check the current MOE list before applying. Cross-check the MOE notice, the university\'s page, and WDOMS. Never trust a brochure alone.',
       },
       {
         name: 'Note the university\'s CSCA subjects',
@@ -172,22 +174,24 @@ export const moeMbbsGuide: LocalizedGuide = {
     eyebrow: '指南 · MBBS 名单',
     title: '2026-27 教育部认可 MBBS 大学名单',
     description:
-      '教育部 MBBS 名单是什么、为什么只有名单内大学可英文授课临床医学（43 或 45 所 [待核实]）、各国监管要求，及各校 CSCA 科目。',
+      // [verify] former invented school count removed
+      '教育部 MBBS 名单是什么、为什么只有名单内大学可英文授课临床医学（请在申请前核对当期名单）、各国监管要求，及各校 CSCA 科目。',
     subtitle:
-      '中国教育部公布可向国际学生英文授课临床医学的大学名单——2026-27 版依来源为 43 或 45 所 [待核实]。只有这些大学能授予进入 WHO 名录通道的英文授课 MBBS 学位，供本国监管机构审核。',
+      '中国教育部公布可向国际学生英文授课临床医学的大学名单——请在申请前核对当期教育部名单。只有这些大学能授予进入 WHO 名录通道的英文授课 MBBS 学位，供本国监管机构审核。',
     stats: [
-      { value: '43 或 45 所', label: '名单大学数 [待核实]' },
+      // [verify] former invented count removed — confirm the current MOE list
+      { value: '教育部名单', label: '申请前核对当期名单' },
       { value: '6 年', label: 'MBBS 学制（含实习）' },
       { value: '英文', label: '仅名单内可英文授课' },
       { value: 'CSCA', label: '许多 MBBS 项目要求' },
     ],
     quickAnswer:
-      '教育部名单是允许向国际学生英文授课临床医学（MBBS）的中国大学官方名册——2026-27 版依来源为 43 或 45 所 [待核实]。在名单外大学读「英文 MBBS」意味着学位无法进入 WHO 名录通道，也就无法通过印度 NMC（FMGL 2021 标准 [待核实]）、巴基斯坦 PM&DC [待核实]、孟加拉 BM&DC [待核实] 等监管审核。许多名单内大学现也要求 CSCA——数学全员必考，化学和/或物理因校而异。申请前同时核实现行名单与各校 CSCA 科目要求。',
+      '教育部名单是允许向国际学生英文授课临床医学（MBBS）的中国大学官方名册——请在申请前核对当期教育部名单。在名单外大学读「英文 MBBS」意味着学位无法进入 WHO 名录通道，也就无法通过印度 NMC（FMGL 2021 标准）、巴基斯坦 PM&DC、孟加拉 BM&DC 等监管审核。许多名单内大学现也要求 CSCA——数学全员必考，化学和/或物理因校而异。申请前同时核实现行名单与各校 CSCA 科目要求。',
     keyTakeaways: [
       '只有教育部名单内大学可向国际学生英文授课临床医学',
-      '2026-27 名单依来源为 43 或 45 所 [待核实]——务必核实现行版本',
+      '请在申请前核对当期教育部名单——务必核实现行版本',
       '名单外的「英文 MBBS」学位无法通过 WDOMS/监管通道——缴费前先查',
-      '监管核对：印度 NMC FMGL 2021 标准 [待核实]、巴基斯坦 PM&DC [待核实]、孟加拉 BM&DC [待核实]',
+      '监管核对：印度 NMC FMGL 2021 标准、巴基斯坦 PM&DC、孟加拉 BM&DC',
       '许多名单内大学要求 CSCA（数学 + 化学/物理，因校而异）——下一批场次 2026 年 11/12 月、2027 年 1 月',
       'SICA 目录列出教育部认可项目及学费与授课语言——见 /mbbs-in-china',
     ],
@@ -201,7 +205,7 @@ export const moeMbbsGuide: LocalizedGuide = {
           {
             type: 'ul',
             items: [
-              '**发布方**——中国教育部，不定期更新；2026-27 版依来源为 43 或 45 所 [待核实]',
+              '**发布方**——中国教育部，不定期更新；请在申请前核对当期教育部名单',
               '**入选意味着什么**——该大学可招收国际学生就读英文授课临床医学（MBBS）',
               '**不意味着什么**——入选不是质量排名；名单内各校学费、城市与实习医院差异很大',
               '**与 WHO 的关系**——名单内大学列入世界医学院名录（WDOMS），是多数监管机构核对的基线',
@@ -224,7 +228,7 @@ export const moeMbbsGuide: LocalizedGuide = {
             type: 'ul',
             items: [
               '**印度（NMC）**——中国 MBBS 须满足 FMGL 2021 标准；资格考试按 NMC 现行政策 [择校前双核实]',
-              '**巴基斯坦（PM&DC）**——注册与执业考试经现行监管机构；毕业当年确认其名称与规则 [待核实]',
+              '**巴基斯坦（PM&DC）**——注册与执业考试经现行监管机构；毕业当年确认其名称与规则',
               '**孟加拉（BM&DC）**——外国毕业生参加 BMDC 注册考试',
               '**美 / 英 / 澳**——USMLE、PLAB、AMC 通道评估任何 WDOMS 列名学位；各校的备考支持差异较大',
               '**通用法则**——先查本国监管机构的现行标准，再选符合标准的名单内大学',
@@ -243,7 +247,7 @@ export const moeMbbsGuide: LocalizedGuide = {
             items: [
               '**数学全员必考**——无例外',
               '**化学和/或物理**——许多 MBBS 项目要求；确切组合见各校招生通知',
-              '**已确认场次**——2026 年 11 月 14-15 日（报名 10 月 15-21 日北京时间）、12 月 19-20 日、2027 年 1 月 23-24 日；以居家线上、真人监考为主',
+              '**已确认场次**——2026 年 11 月 14-15 日（11 月报名已于 2026 年 10 月 21 日截止）、12 月 19-20 日、2027 年 1 月 23-24 日；以居家线上、真人监考为主',
               '**费用**——单科 450 元、两科及以上 700 元（csca.cn）',
               '**免费练习**——https://cscaprep.academy 提供每场次模拟与学习计划',
               '**SICA 的角色**——顾问跟踪各名单大学要求哪些科目；完整 MBBS 背景见 /mbbs-in-china 与 /csca-mbbs-applicants',
@@ -255,7 +259,7 @@ export const moeMbbsGuide: LocalizedGuide = {
     faqs: [
       {
         q: '教育部 MBBS 名单有多少所大学？',
-        a: '2026-27 名单依来源为 43 或 45 所 [待核实]。数量随教育部更新而变——申请前务必核实现行版本及目标大学是否在列。',
+        a: '请在申请前核对当期教育部名单。数量随教育部更新而变——申请前务必核实现行版本及目标大学是否在列。',
       },
       {
         q: '在名单外大学读 MBBS 会怎样？',
@@ -277,11 +281,11 @@ export const moeMbbsGuide: LocalizedGuide = {
     howToSteps: [
       {
         name: '查本国监管机构现行标准',
-        text: 'NMC FMGL 2021（印度）[待核实]、PM&DC（巴基斯坦）[待核实]、BM&DC（孟加拉）或 USMLE/PLAB/AMC——择校前先明确学位必须满足什么。',
+        text: 'NMC FMGL 2021（印度）、PM&DC（巴基斯坦）、BM&DC（孟加拉）或 USMLE/PLAB/AMC——择校前先明确学位必须满足什么。',
       },
       {
         name: '核实大学在现行教育部名单上',
-        text: '2026-27 为 43 或 45 所 [待核实]。交叉核对教育部通知、大学页面与 WDOMS。绝不只信宣传册。',
+        text: '请在申请前核对当期教育部名单。交叉核对教育部通知、大学页面与 WDOMS。绝不只信宣传册。',
       },
       {
         name: '记下该大学的 CSCA 科目',

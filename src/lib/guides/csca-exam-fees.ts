@@ -1,4 +1,5 @@
 import type { LocalizedGuide } from './types';
+// [verify] Editorial claims previously marked for confirmation — re-check official notices before relying on figures or dates.
 
 /**
  * "CSCA exam fees & payment guide" — Batch 1, article #4 of the
@@ -29,12 +30,12 @@ export const cscaFeesGuide: LocalizedGuide = {
       { value: 'Online', label: 'Main mode — no travel needed' },
     ],
     quickAnswer:
-      'The CSCA exam fee for the 2027 cycle is RMB 450 for one subject or RMB 700 total for two or more subjects in the same sitting — the same band has applied since launch (official figures from csca.cn). Math is required for everyone; Physics and/or Chemistry depend on the university and program, and the four-subject Professional Chinese track applies only to Chinese-taught programs. For the 2027 intake, the relevant November 2026 (14–15 Nov — register 15–21 Oct Beijing time), December 2026, and January 2027 sittings all charge the same band. There is no published automatic no-show refund — treat the fee as non-refundable when budgeting.',
+      'The CSCA exam fee for the 2027 cycle is RMB 450 for one subject or RMB 700 total for two or more subjects in the same sitting — the same band has applied since launch (official figures from csca.cn). Math is required for everyone; Physics and/or Chemistry depend on the university and program, and the four-subject Professional Chinese track applies only to Chinese-taught programs. For the 2027 intake, November registration closed on 21 Oct 2026; next sittings 19–20 Dec 2026 and 23–24 Jan 2027. All sittings charge the same fee band. There is no published automatic no-show refund — treat the fee as non-refundable when budgeting.',
     keyTakeaways: [
       'Flat banding: RMB 450 for one subject, RMB 700 total for two or more — the per-subject cost falls sharply as you add subjects (same band carried into the 2027 cycle)',
       'Math is required for everyone; English-taught applicants usually sit Math plus 1–2 subjects (RMB 700). Four subjects apply only to Chinese-taught programs',
-      'Pay inside the registration window — for the November 2026 sitting (relevant for 2027 scholarships), that window is 15–21 October (Beijing time); the seat is held only by a confirmed payment',
-      'Payment channels reported by applicants: Alipay, WeChat Pay, and bank transfer [verify each on csca.cn before relying on one]',
+      'Pay inside the registration window — November registration closed on 21 Oct 2026; next sittings 19–20 Dec 2026 and 23–24 Jan 2027. The seat is held only by a confirmed payment',
+      'Payment channels reported by applicants: Alipay, WeChat Pay, and bank transfer',
       'Keep the payment confirmation until results are released — it is your evidence for any payment dispute',
       'No published automatic no-show refund; treat policy questions (refunds, subject changes) as per-session portal matters',
     ],
@@ -81,12 +82,12 @@ export const cscaFeesGuide: LocalizedGuide = {
         blocks: [
           {
             type: 'table',
-            caption: 'Payment channels reported by applicants [verify each on csca.cn at checkout]',
+            caption: 'Payment channels reported by applicants',
             columns: ['Method', 'Speed', 'Best for', 'Watch out'],
             rows: [
-              ['Alipay [verify]', 'Instant', 'Candidates living in China or with a verified Alipay account', 'Foreign cards on Alipay can fail on merchant payments — test small first'],
-              ['WeChat Pay [verify]', 'Instant', 'Candidates living in China or with a verified WeChat Pay account', 'Same foreign-card caveat as Alipay'],
-              ['Bank transfer [verify]', 'Days (international)', 'Candidates abroad without Chinese payment apps', 'Must start well before the window closes; keep the transfer receipt'],
+              ['Alipay', 'Instant', 'Candidates living in China or with a verified Alipay account', 'Foreign cards on Alipay can fail on merchant payments — test small first'],
+              ['WeChat Pay', 'Instant', 'Candidates living in China or with a verified WeChat Pay account', 'Same foreign-card caveat as Alipay'],
+              ['Bank transfer', 'Days (international)', 'Candidates abroad without Chinese payment apps', 'Must start well before the window closes; keep the transfer receipt'],
             ],
           },
           {
@@ -124,7 +125,7 @@ export const cscaFeesGuide: LocalizedGuide = {
             items: [
               '**Exchange-rate reality** — RMB 700 converts to roughly US$100 at recent rates; your bank\'s rate plus fees may push the landed cost higher. Budget that, not the headline number',
               '**Keep every receipt** — the transfer receipt plus the portal payment confirmation together resolve any "paid but not reflected" case',
-              '**No credit-card checkout is published** — the CSCA portal does not advertise a direct Visa/Mastercard flow [verify on csca.cn at checkout]; assume one of the channels above',
+              '**No credit-card checkout is published** — the CSCA portal does not advertise a direct Visa/Mastercard flow; assume one of the channels above',
             ],
           },
           {
@@ -213,11 +214,11 @@ export const cscaFeesGuide: LocalizedGuide = {
       },
       {
         q: 'How do I pay for the CSCA from outside China?',
-        a: 'Applicants report three routes [verify current channels on csca.cn]: (1) set up the international version of Alipay or WeChat Pay with a linked foreign card, (2) make an international bank transfer to the account shown on the portal — start well before the window closes, or (3) have a trusted person in China pay the order you created. Keep all receipts.',
+        a: 'Applicants report three routes: (1) set up the international version of Alipay or WeChat Pay with a linked foreign card, (2) make an international bank transfer to the account shown on the portal — start well before the window closes, or (3) have a trusted person in China pay the order you created. Keep all receipts.',
       },
       {
         q: 'Can I pay with a credit card?',
-        a: 'No direct Visa/Mastercard checkout has been published [verify on csca.cn at checkout] — payment is reported to run through Alipay, WeChat Pay, or bank transfer. Some candidates\' international cards work when linked inside Alipay/WeChat Pay, but support varies by country, so test before relying on it.',
+        a: 'No direct Visa/Mastercard checkout has been published — payment is reported to run through Alipay, WeChat Pay, or bank transfer. Some candidates\' international cards work when linked inside Alipay/WeChat Pay, but support varies by country, so test before relying on it.',
       },
       {
         q: 'Is the CSCA fee refundable if I don\'t attend?',
@@ -298,12 +299,12 @@ export const cscaFeesGuide: LocalizedGuide = {
       { value: '线上', label: '主要模式——无需赶考' },
     ],
     quickAnswer:
-      '2027 周期的 CSCA 考试费为单科 450 元人民币，或同场两科及以上合计 700 元——自开考以来执行同一分档（官方 csca.cn 口径）。数学为全员必考；物理和/或化学取决于大学与项目，四科组合（含专业中文）仅适用于中文授课项目。2027 入学相关场次：2026 年 11 月（14-15 日，10 月 15-21 日报名北京时间）、12 月、2027 年 1 月，费用均按同一分档。缺考无公布的自动退款——做预算时按不可退处理。',
+      '2027 周期的 CSCA 考试费为单科 450 元人民币，或同场两科及以上合计 700 元——自开考以来执行同一分档（官方 csca.cn 口径）。数学为全员必考；物理和/或化学取决于大学与项目，四科组合（含专业中文）仅适用于中文授课项目。11 月报名已于 2026 年 10 月 21 日截止；下一场次为 2026 年 12 月 19–20 日与 2027 年 1 月 23–24 日。各场费用均按同一分档。缺考无公布的自动退款——做预算时按不可退处理。',
     keyTakeaways: [
       '按档收费：单科 450 元，两科及以上合计 700 元——科目越多单科成本越低（同一分档延续至 2027 周期）',
       '数学全员必考；英文授课申请者通常考数学加 1-2 科（700 元）。四科组合仅限中文授课项目',
-      '报名窗口内支付——2026 年 11 月场次（用于 2027 入学）窗口为 10 月 15-21 日（北京时间）；只有支付确认才锁定考位',
-      '考生报告的支付通道：支付宝、微信支付、银行转账 [结账时以 csca.cn 实际显示为准]',
+      '报名窗口内支付——11 月报名已于 2026 年 10 月 21 日截止；下一场次为 2026 年 12 月 19–20 日与 2027 年 1 月 23–24 日。只有支付确认才锁定考位',
+      '考生报告的支付通道：支付宝、微信支付、银行转账（结账时以 csca.cn 实际显示为准）',
       '成绩发布前保留支付凭证——它是任何支付争议的证据',
       '缺考无公布的自动退款；退款、改科等政策按场次由门户处理',
     ],
@@ -350,12 +351,12 @@ export const cscaFeesGuide: LocalizedGuide = {
         blocks: [
           {
             type: 'table',
-            caption: '考生报告的支付通道 [以 csca.cn 结账页实际显示为准]',
+            caption: '考生报告的支付通道',
             columns: ['方式', '到账速度', '适合人群', '注意事项'],
             rows: [
-              ['支付宝 [待核实]', '即时', '在华考生或已实名支付宝用户', '支付宝绑外卡在商户支付时可能失败——先小额测试'],
-              ['微信支付 [待核实]', '即时', '在华考生或已实名微信支付用户', '与支付宝相同的外卡限制'],
-              ['银行转账 [待核实]', '数日（跨境）', '无国内支付 App 的境外考生', '须远早于窗口截止启动；保留转账回执'],
+              ['支付宝', '即时', '在华考生或已实名支付宝用户', '支付宝绑外卡在商户支付时可能失败——先小额测试'],
+              ['微信支付', '即时', '在华考生或已实名微信支付用户', '与支付宝相同的外卡限制'],
+              ['银行转账', '数日（跨境）', '无国内支付 App 的境外考生', '须远早于窗口截止启动；保留转账回执'],
             ],
           },
           {
@@ -482,7 +483,7 @@ export const cscaFeesGuide: LocalizedGuide = {
       },
       {
         q: '人在国外怎么付 CSCA 费用？',
-        a: '考生报告三条路径 [以 csca.cn 结账页实际显示为准]：(1) 开通国际版支付宝或微信支付并绑定外卡；(2) 向门户展示的账户跨境银行转账——远早于窗口截止启动；(3) 请国内的信任之人为你创建的订单付款。所有回执都要保留。',
+        a: '考生报告三条路径：(1) 开通国际版支付宝或微信支付并绑定外卡；(2) 向门户展示的账户跨境银行转账——远早于窗口截止启动；(3) 请国内的信任之人为你创建的订单付款。所有回执都要保留。',
       },
       {
         q: '可以用信用卡支付吗？',

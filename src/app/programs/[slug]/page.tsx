@@ -38,6 +38,7 @@ export async function generateMetadata({ params }: ProgramPageProps): Promise<Me
     degree: program.degree,
     language: program.language,
     university: university?.name ?? '',
+    city: university?.city ?? '',
   });
   const description = buildProgramMetaDescription({
     major: program.name,
@@ -45,10 +46,13 @@ export async function generateMetadata({ params }: ProgramPageProps): Promise<Me
     language: program.language,
     university: university?.name ?? '',
     city: university?.city ?? '',
+    requirements: program.requirements,
   });
 
   return {
-    title: documentTitle(title),
+    // Absolute so a length-fit title that omitted "| SICA" is not re-branded
+    // by the layout template (which would also risk a second "| SICA").
+    title: { absolute: title },
     description,
     alternates: await buildLanguageAlternates(`/programs/${slug}`),
     openGraph: {

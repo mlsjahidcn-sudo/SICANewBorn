@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { programSchema } from '../validators/program';
 import { normalizeProgramRows } from '../ai/program-parse-sanitize';
-import { buildProgramFaqSchema } from '../program-faq';
+import { buildProgramFaqItems, buildProgramFaqSchema } from '../program-faq';
 
 describe('researched language and foundation programs', () => {
   const base = {
@@ -31,17 +31,20 @@ describe('researched language and foundation programs', () => {
     expect(programs.every((p) => p.language === 'To be confirmed')).toBe(true);
   });
 
-  it('uses source fee units and does not infer language, requirements or intakes in FAQ data', () => {
-    const faq = buildProgramFaqSchema({
+  it('uses source fee units and omits not-confirmed FAQ answers', () => {
+    const program = {
       name: 'Foundation Program', tuition: 'CNY 12,000/semester',
-      language: 'To be confirmed', requirements: [], intake: '',
-    }, 'Example University');
-    const answers = faq.mainEntity.map((item) => item.acceptedAnswer.text);
-    expect(answers[0]).toContain('CNY 12,000/semester.');
-    expect(answers[0]).not.toContain('per year');
-    expect(answers[1]).toContain('has not been confirmed');
-    expect(answers[1]).not.toContain('HSK');
-    expect(answers[2]).not.toContain("bachelor's degree");
-    expect(answers[3]).not.toContain('September');
+      language: 'To be confirmed', requirements: [] as string[], intake: '',
+    };
+    const items = buildProgramFaqItems(program, 'Example University');
+    expect(items).toHaveLength(1);
+    expect(items[0]?.answer).toContain('CNY 12,000/semester.');
+    expect(items[0]?.answer).not.toContain('per year');
+    expect(JSON.stringify(items)).not.toContain('has not been confirmed');
+    expect(JSON.stringify(items)).not.toContain('HSK');
+    expect(JSON.stringify(items)).not.toContain("bachelor's degree");
+    expect(JSON.stringify(items)).not.toContain('September');
+    // A single confirmed answer is not enough for FAQPage JSON-LD.
+    expect(buildProgramFaqSchema(program, 'Example University')).toBeNull();
   });
 });

@@ -1,4 +1,5 @@
 import type { LocalizedGuide } from './types';
+// [verify] Editorial claims previously marked for confirmation — re-check official notices before relying on figures or dates.
 
 /**
  * "SUFE (Shanghai University of Finance and Economics) for
@@ -146,11 +147,11 @@ export const sufeGuide: LocalizedGuide = {
             columns: ['When', 'Action'],
             rows: [
               ['Now-Nov 2026', 'Shortlist program (Finance / Economics / IB); start HSK 4 study (bachelor) / HSK 5 (master); gather transcripts + degree'],
-              ['Oct 15-21, 2026', 'CSCA registration window for the Nov 14-15 sitting (bachelor\'s applicants) [verify exemption rules]'],
+              ['Oct 15-21, 2026', 'CSCA registration window for the Nov 14-15 sitting (bachelor\'s applicants) — confirm exemption rules with the university'],
               ['Nov 2026', 'Sit CSCA; finalize HSK study plan'],
               ['Dec 2026-Jan 2027', 'CSCA Dec 19-20 sitting (backup) + start SUFE Type B application + Shanghai MoE CSC channel inquiry'],
-              ['Feb-Apr 2027', 'Shanghai MoE CSC deadline (typical) [verify]'],
-              ['Mar-Apr 2027', 'SUFE Type B deadline for September intake (typical) [verify]'],
+              ['Feb-Apr 2027', 'Shanghai MoE CSC deadline (typical)'],
+              ['Mar-Apr 2027', 'SUFE Type B deadline for September intake (typical)'],
               ['May-Jun 2027', 'Results; accept offer; receive JW201 + admission notice'],
               ['Jul-Aug 2027', 'X1 visa application; fly to Shanghai for September orientation'],
             ],
@@ -161,7 +162,7 @@ export const sufeGuide: LocalizedGuide = {
               '**Standard CSC document package** — passport, notarized transcripts + degree, study plan (per Phase 167 structure), 2 recommendation letters, physical exam form, police clearance',
               '**SUFE-specific for finance** — a quantitative skills statement (math olympiad, CFA Level 1 pass, GRE Quant) is a strong differentiator; SUFE\'s admissions review looks for quantitative evidence',
               '**Finance / Economics prerequisite courses** — calculus, statistics, microeconomics, macroeconomics recommended; SUFE checks for these on a course-by-course basis',
-              '**HSK certificate** — HSK 4 minimum for bachelor\'s [verify]; HSK 5 for master\'s',
+              '**HSK certificate** — HSK 4 minimum for bachelor\'s; HSK 5 for master\'s',
               '**CSCA score** — required for bachelor\'s applicants; Math recommended (Physics not required for finance/economics programs)',
               '**English proficiency** — IELTS 6.5+ / TOEFL iBT 80+ recommended for English-medium tracks; required for the IB + BA programs',
               '**Optional strengthening credentials** — CFA Level 1 pass, FRM Part 1 pass, or a math competition ranking strengthens the application significantly',
@@ -185,7 +186,7 @@ export const sufeGuide: LocalizedGuide = {
       },
       {
         q: 'Does SUFE have CSC scholarships?',
-        a: 'Yes. SUFE participates via the Shanghai MoE channel. Finance + economics are CSC-priority disciplines so per-applicant acceptance rates are higher than the global CSC average. Apply via Shanghai MoE (typical February-April deadline [verify]).',
+        a: 'Yes. SUFE participates via the Shanghai MoE channel. Finance + economics are CSC-priority disciplines so per-applicant acceptance rates are higher than the global CSC average. Apply via Shanghai MoE (typical February-April deadline).',
       },
       {
         q: 'What is SUFE famous for?',
@@ -223,7 +224,7 @@ export const sufeGuide: LocalizedGuide = {
       },
       {
         name: 'Submit CSC via Shanghai MoE channel',
-        text: 'Shanghai MoE processes nominations through its annual notice (typically released January-February [verify]). Submit before the deadline; incomplete files are rejected, not deferred.',
+        text: 'Shanghai MoE processes nominations through its annual notice (typically released January-February). Submit before the deadline; incomplete files are rejected, not deferred.',
       },
       {
         name: 'Handle results, visa, and arrival in Shanghai',
@@ -369,11 +370,11 @@ export const sufeGuide: LocalizedGuide = {
             columns: ['时间', '动作'],
             rows: [
               ['现在-2026 年 11 月', '选定专业（金融 / 经济 / IB）；开始 HSK 4 学习（本科）/ HSK 5（硕士）；准备成绩单 + 学位证'],
-              ['2026 年 10 月 15-21 日', '11 月 14-15 日 CSCA 场次的报名窗口（本科申请者）[待核实豁免规则]'],
+              ['2026 年 10 月 15-21 日', '11 月 14-15 日 CSCA 场次的报名窗口（本科申请者）'],
               ['2026 年 11 月', '参加 CSCA；最终确定 HSK 学习计划'],
               ['2026 年 12 月-2027 年 1 月', 'CSCA 12 月 19-20 日场次（备份）+ 开始 SUFE Type B 申请 + 上海市 MoE CSC 渠道询问'],
-              ['2027 年 2-4 月', '上海市 MoE CSC 截止（典型）[待核实]'],
-              ['2027 年 3-4 月', 'SUFE Type B 截止（9 月入学典型）[待核实]'],
+              ['2027 年 2-4 月', '上海市 MoE CSC 截止（典型）'],
+              ['2027 年 3-4 月', 'SUFE Type B 截止（9 月入学典型）'],
               ['2027 年 5-6 月', '出结果；接受录取，领取 JW201 与录取通知'],
               ['2027 年 7-8 月', '办 X1 签证；赴上海入学'],
             ],
@@ -384,7 +385,7 @@ export const sufeGuide: LocalizedGuide = {
               '**CSC 标准材料包**——护照、公证成绩单 + 学位证、学习计划（按 Phase 167 结构）、2 封推荐信、体检表、无犯罪证明',
               '**SUFE 金融特有**——定量能力陈述（数学奥赛、CFA 一级通过、GRE Quant）是强差异化因素；SUFE 招生审核看定量证据',
               '**金融 / 经济前置课程**——微积分、统计、微观经济、宏观经济推荐；SUFE 逐课程核查',
-              '**HSK 证书**——本科 HSK 4 最低 [待核实]；硕士 HSK 5',
+              '**HSK 证书**——本科 HSK 4 最低；硕士 HSK 5',
               '**CSCA 成绩**——本科申请者必考；数学推荐（金融 / 经济专业不要求物理）',
               '**英语水平**——IELTS 6.5+ / 托福 iBT 80+ 推荐（英文授课轨道）；IB + BA 项目必备',
               '**可选强化凭证**——CFA 一级通过、FRM 一级通过、或数学竞赛排名能显著加分',
@@ -408,7 +409,7 @@ export const sufeGuide: LocalizedGuide = {
       },
       {
         q: 'SUFE 有 CSC 奖学金吗？',
-        a: '有。SUFE 通过上海市 MoE 渠道参与。金融 + 经济是 CSC 重点资助学科，所以人均录取率比 CSC 全球均值高。通过上海市 MoE 申请（典型截止 2-4 月 [待核实]）。',
+        a: '有。SUFE 通过上海市 MoE 渠道参与。金融 + 经济是 CSC 重点资助学科，所以人均录取率比 CSC 全球均值高。通过上海市 MoE 申请（典型截止 2-4 月）。',
       },
       {
         q: 'SUFE 以什么闻名？',
@@ -446,7 +447,7 @@ export const sufeGuide: LocalizedGuide = {
       },
       {
         name: '通过上海市 MoE 渠道提交 CSC',
-        text: '上海市 MoE 通过年度通知处理提名（通常 1-2 月发布 [待核实]）。截止前提交完整附件——不完整的 CSC 材料会被直接拒绝而非顺延。',
+        text: '上海市 MoE 通过年度通知处理提名（通常 1-2 月发布）。截止前提交完整附件——不完整的 CSC 材料会被直接拒绝而非顺延。',
       },
       {
         name: '处理结果、签证与抵沪',

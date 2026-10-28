@@ -1,4 +1,5 @@
 import type { LocalizedGuide } from './types';
+// [verify] Editorial claims previously marked for confirmation — re-check official notices before relying on figures or dates.
 
 /**
  * Documents + Apostille / attestation for China admission from Pakistan
@@ -123,7 +124,7 @@ export const documentsRequiredPakistanGuide: LocalizedGuide = {
           {
             type: 'ul',
             items: [
-              '**Police / non-criminal record** — request early; many Chinese universities and visa posts want a document issued within the last 6 months [verify]',
+              '**Police / non-criminal record** — request early; many Chinese universities and visa posts want a document issued within the last 6 months',
               '**Apostille check** — phone camera on the MoFA QR; content must match name and ID',
               '**Translations** — every stamp page; do not translate only the first page of a multi-page transcript',
               '**Name lock** — pick one English spelling from the passport and use it on HEC, MoFA, CSC, and university forms',

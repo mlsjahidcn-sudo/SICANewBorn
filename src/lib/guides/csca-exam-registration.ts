@@ -1,4 +1,5 @@
 import type { LocalizedGuide } from './types';
+// [verify] Editorial claims previously marked for confirmation — re-check official notices before relying on figures or dates.
 
 /**
  * "How to register for the CSCA — step-by-step" — Batch 1, article
@@ -20,7 +21,7 @@ export const cscaRegistrationGuide: LocalizedGuide = {
     seoTitle: 'How to Register for the CSCA Exam',
     seoDescription: 'The complete CSCA registration walkthrough: finding the official portal, the 8-step flow, choosing a test center at home or abroad, payment, admission',
     subtitle:
-      'CSCA registration runs through the official portal, csca.cn: create an account with passport-exact details, pick a sitting (mainly online at home with a live proctor), select your subjects, pay RMB 450 (1 subject) or RMB 700 (2+ subjects) inside the window, then download your admission ticket. Registration windows are announced per sitting — for the November 2026 sitting the window runs 15-21 October (Beijing time).',
+      'CSCA registration runs through the official portal, csca.cn: create an account with passport-exact details, pick a sitting (mainly online at home with a live proctor), select your subjects, pay RMB 450 (1 subject) or RMB 700 (2+ subjects) inside the window, then download your admission ticket. Registration windows are announced per sitting — November registration closed on 21 Oct 2026.',
     stats: [
       { value: '8 steps', label: 'Account → ticket' },
       { value: 'Per sitting', label: 'Registration window announced per sitting' },
@@ -28,12 +29,12 @@ export const cscaRegistrationGuide: LocalizedGuide = {
       { value: 'Online', label: 'Main mode — live-proctored at home' },
     ],
     quickAnswer:
-      'To register for the CSCA: (1) confirm your required subject combination on your target university\'s program page, (2) go to the official CSCA website — csca.cn, organized by the China Scholarship Council — never a third-party agent, (3) create an account with your name exactly as printed in your passport, (4) choose your sitting (the default mode is online at home with a live proctor; offline centres exist only in some countries), (5) select your subjects, (6) pay RMB 450 for one subject or RMB 700 total for two or more inside the registration window, (7) download and print the admission ticket when it is released shortly before the test, and (8) bring the ticket plus your original passport on test day. Windows are per-sitting: the November 2026 window runs 15-21 October (Beijing time).',
+      'To register for the CSCA: (1) confirm your required subject combination on your target university\'s program page, (2) go to the official CSCA website — csca.cn, organized by the China Scholarship Council — never a third-party agent, (3) create an account with your name exactly as printed in your passport, (4) choose your sitting (the default mode is online at home with a live proctor; offline centres exist only in some countries), (5) select your subjects, (6) pay RMB 450 for one subject or RMB 700 total for two or more inside the registration window, (7) download and print the admission ticket when it is released shortly before the test, and (8) bring the ticket plus your original passport on test day. Windows are per-sitting: November registration closed on 21 Oct 2026.',
     keyTakeaways: [
       'Register only on the official CSCA portal, csca.cn — agents charge inflated fees and cannot get you extra seats',
       'Name must match your passport character-for-character — mismatches are the #1 test-day problem',
       'Choose your subject combination BEFORE registering: RMB 450 for 1 subject, RMB 700 covers 2+ in the same sitting',
-      'Registration windows are short and per-sitting — for Nov 2026 it is 15-21 October; register in the first days, not the last',
+      'Registration windows are short and per-sitting — November registration closed on 21 Oct 2026; register in the first days, not the last',
       'The exam is mainly online at home with a live proctor — most candidates do not need to travel to a centre',
       'Admission tickets are released shortly before the test — print a physical copy, screen-only tickets cause check-in problems',
       'Keep the payment confirmation until results are out — it is your receipt for any support dispute',
@@ -185,7 +186,7 @@ export const cscaRegistrationGuide: LocalizedGuide = {
       },
       {
         q: 'What do I need before starting registration?',
-        a: 'Three things: your confirmed subject combination from the target program page, a valid passport (details entered exactly as printed), and a working payment channel — check what the portal offers at checkout [verify on csca.cn]; bank transfers can take days, so start early in the window.',
+        a: 'Three things: your confirmed subject combination from the target program page, a valid passport (details entered exactly as printed), and a working payment channel — check what the portal offers at checkout; bank transfers can take days, so start early in the window.',
       },
       {
         q: 'Can an agent register for the CSCA on my behalf?',

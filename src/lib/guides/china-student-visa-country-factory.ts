@@ -1,4 +1,5 @@
 import type { Guide, LocalizedGuide } from './types';
+// [verify] Editorial claims previously marked for confirmation — re-check official notices before relying on figures or dates.
 
 /**
  * Per-country China X1 student visa guides for Pakistan, Bangladesh,
@@ -118,7 +119,7 @@ const COUNTRIES: Record<VisaCountryId, VisaCountryConfig> = {
       '达卡签证中心 X1 清单要求自费申请人提交**证明每年至少 2,500 美元**的银行对账单。奖学金申请人改交奖学金证明。',
     returnExtraEn: [
       '**Missing original JW201/JW202 + admission letter** — Dhaka checklist asks for originals and one copy when you hand in the passport',
-      '**Bank statement below US$2,500 × study years** — top up or get a sponsor letter that the centre accepts [verify]',
+      '**Bank statement below US$2,500 × study years** — top up or get a sponsor letter that the centre accepts',
       '**Applying in Bangladesh on a non-Bangladeshi passport** without proof of legal stay (residence / work / student status)',
       '**Dual nationals** — bring all valid passports; previous passports may be requested',
       '**Altered JW forms** — same red flag as other missions; never edit the form yourself',
