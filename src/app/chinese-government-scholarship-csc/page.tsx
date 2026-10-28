@@ -57,7 +57,7 @@ export default async function CscScholarshipPage() {
     s.type,
     s.coverage.join(', ') || (isZh ? '见详情' : 'see description'),
     s.eligibleRegions || (isZh ? '不限' : 'worldwide'),
-    s.deadline || (isZh ? '春季 4 月 / 秋季 10 月' : 'Apr (Spring) / Oct (Fall)'),
+    s.deadline || (isZh ? '查看本年度渠道通知' : 'Check the current channel notice'),
   ]);
 
   const liveGuide = {

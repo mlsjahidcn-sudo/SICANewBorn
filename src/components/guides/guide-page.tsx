@@ -161,7 +161,7 @@ function GuideBlockRenderer({ block }: { block: GuideBlock }) {
                       key={ci}
                       className={`p-3 text-[#374151] ${ci === 0 ? 'font-semibold text-[#1B2A4A]' : ''}`}
                     >
-                      {cell}
+                      {block.cellLinks?.[cell] ? <Link href={block.cellLinks[cell]} className="text-[#9B1B30] underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1B2A4A]">{cell}</Link> : cell}
                     </td>
                   ))}
                 </tr>
@@ -170,6 +170,8 @@ function GuideBlockRenderer({ block }: { block: GuideBlock }) {
           </table>
         </div>
       );
+    case 'links':
+      return <ul className="my-4 space-y-2">{block.items.map((item) => <li key={item.href}><Link href={item.href} className="text-sm text-[#9B1B30] underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1B2A4A]">{item.label}</Link></li>)}</ul>;
     case 'callout':
       return <Callout tone={block.tone} text={block.text} />;
   }
@@ -444,9 +446,9 @@ export function GuidePage({
                 crawlers (dateModified is already in the Article JSON-LD;
                 a visible date reinforces freshness for human readers
                 and gives GEO/AEO engines a clear signal). */}
-            <p className="mt-3 text-xs text-gray-400">
-              Last updated: {new Date().toISOString().slice(0, 10)}
-            </p>
+            {(guide.updatedAt || guide.publishedAt) && <p className="mt-3 text-xs text-gray-400">
+              Last updated: <time dateTime={guide.updatedAt ?? guide.publishedAt}>{guide.updatedAt ?? guide.publishedAt}</time>
+            </p>}
           </div>
 
           {/* Hero stats — at-a-glance numbers near the top, also useful

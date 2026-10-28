@@ -43,7 +43,8 @@ export type GuideBlock =
   | { type: 'h3'; text: string; body: string }
   | { type: 'ul'; items: string[] }
   | { type: 'ol'; items: string[] }
-  | { type: 'table'; caption: string; columns: string[]; rows: string[][] }
+  | { type: 'table'; caption: string; columns: string[]; rows: string[][]; cellLinks?: Record<string, string> }
+  | { type: 'links'; items: Array<{ label: string; href: string }> }
   | { type: 'callout'; tone: 'info' | 'success' | 'warning'; text: string };
 
 export interface Guide {

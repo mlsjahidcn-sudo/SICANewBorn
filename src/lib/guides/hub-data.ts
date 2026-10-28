@@ -20,6 +20,12 @@ import type { LocalizedGuideCards } from './hub-types';
  */
 export const guideCards: LocalizedGuideCards = {
   en: [
+    {
+      slug: 'csc-scholarship-deadlines-2027-2028', href: '/csc-scholarship-deadlines-2027-2028',
+      icon: 'calendar-clock', category: 'listicle', title: 'CSC 2027/2028 deadlines by country',
+      subtitle: 'Official country deadlines, admission documents and bachelor’s CSCA reports. Bangladesh, Pakistan and Nigeria remain Check.',
+      readTime: '8 min read', highlight: 'Updated 28 October 2026',
+    },
     // ───── Process guides (Phase 39a) ─────
     {
       slug: 'study-in-china',
@@ -854,6 +860,12 @@ export const guideCards: LocalizedGuideCards = {
     },
   ],
   zh: [
+    {
+      slug: 'csc-scholarship-deadlines-2027-2028', href: '/csc-scholarship-deadlines-2027-2028',
+      icon: 'calendar-clock', category: 'listicle', title: 'CSC 2027/2028 各国截止日',
+      subtitle: '官方截止日、录取材料与本科 CSCA 成绩要求。孟加拉国、巴基斯坦、尼日利亚日期待查。',
+      readTime: '8 分钟阅读', highlight: '更新于 2026 年 10 月 28 日',
+    },
     // ───── Process guides (Phase 39a) ─────
     {
       slug: 'study-in-china',

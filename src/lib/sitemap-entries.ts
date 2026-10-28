@@ -116,6 +116,7 @@ export async function loadSitemapParts(): Promise<{
     { url: `${SITE_URL}/study-in-china-vs-russia-for-mbbs`, changeFrequency: 'monthly', priority: 0.75 },
     { url: `${SITE_URL}/china-university-application-deadlines`, changeFrequency: 'monthly', priority: 0.75 },
     { url: `${SITE_URL}/chinese-government-scholarship-csc`, changeFrequency: 'monthly', priority: 0.75 },
+    { url: `${SITE_URL}/csc-scholarship-deadlines-2027-2028`, lastModified: '2026-10-28', changeFrequency: 'weekly', priority: 0.8 },
     // Phase 115: CSCA exam flagship — new mandatory exam for intl bachelor's applicants (2026 intake)
     { url: `${SITE_URL}/csca-exam`, changeFrequency: 'monthly', priority: 0.85 },
     // Phase 116: CSCA cluster Batch 1 — logistics pillars

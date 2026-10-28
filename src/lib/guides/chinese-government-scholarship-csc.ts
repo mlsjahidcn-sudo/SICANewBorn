@@ -1,4 +1,5 @@
 import type { LocalizedGuide } from './types';
+import { cscDeadlineTrackerSection, CSC_DEADLINES_REVIEWED_AT, CSC_DEADLINES_PATH } from './csc-deadlines-2027-2028';
 
 /**
  * "Chinese Government Scholarship (CSC)" — long-form process guide.
@@ -6,7 +7,7 @@ import type { LocalizedGuide } from './types';
  * "csc scholarship application", "fully funded scholarship china",
  * "china scholarship for international students".
  *
- * Mostly static content (CSC rules are stable). Page wrapper fetches
+ * Deadline and document notices reviewed for the 2027/2028 cycle. The page wrapper fetches
  * the live scholarship list and surfaces the rows that look like
  * CSC-related programs (Government, Bilateral, etc.) into the
  * `cscholarships-table` block at render time.
@@ -14,32 +15,45 @@ import type { LocalizedGuide } from './types';
 export const cscScholarshipGuide: LocalizedGuide = {
   en: {
     slug: 'chinese-government-scholarship-csc',
+    updatedAt: CSC_DEADLINES_REVIEWED_AT,
     eyebrow: 'GUIDE · CSC SCHOLARSHIP',
-    title: 'CSC Scholarship 2027: Chinese Government Scholarship Guide',
+    title: "CSC Scholarship 2027/2028: Chinese Government Scholarship Guide",
     description:
-      'CSC (Chinese Government Scholarship) for 2027: what it covers, stipend, eligibility, the 4 application channels, deadlines by country, and the CSCA requirement for bachelor\'s applicants.',
-    seoTitle: 'CSC Scholarship 2027',
-    seoDescription: 'CSC (Chinese Government Scholarship) for 2027: what it covers, stipend, eligibility, the 4 application channels, deadlines by country, and the CSCA',
+      "CSC 2027/2028 guide: confirmed country deadlines, required admission documents, bachelor’s CSCA reports, eligibility and application routes.",
+    seoTitle: "CSC Scholarship 2027/2028: Deadlines & Requirements | SICA",
+    seoDescription: "Check CSC 2027/2028 country deadlines, admission-document and CSCA requirements. Timor-Leste closes before 20 December 2026; other dates vary.",
     subtitle:
-      'A CSC scholarship fully funds your degree at a participating Chinese university — covering tuition, dorm, health insurance, a monthly stipend, and (for most categories) round-trip airfare. Applications for the September 2027 intake run roughly January–April 2027, earlier via some country channels.',
+      "Some 2027/2028 country channels opened in October 2026 and close in December or January. Use the official country notice and prepare admission evidence and bachelor’s CSCA reports before submission.",
     stats: [
-      { value: 'Full ride', label: 'Tuition + dorm + stipend + insurance' },
-      { value: 'Jan-Apr 2027', label: 'Main application window (varies)' },
-      { value: '4 channels', label: 'Application routes' },
-      { value: 'CSCA', label: 'Required for bachelor\'s applicants' },
+      {
+        value: "2027/28",
+        label: "Scholarship academic year"
+      },
+      {
+        value: "By country",
+        label: "Official notice controls the deadline"
+      },
+      {
+        value: "Admission evidence",
+        label: "Required in reviewed country notices"
+      },
+      {
+        value: "CSCA",
+        label: "Score report required for bachelor’s applicants"
+      }
     ],
     quickAnswer:
-      'The Chinese Government Scholarship (CSC), administered by the China Scholarship Council, is the most prestigious fully-funded scholarship for international students in China. It covers tuition, on-campus dorm, a monthly stipend, health insurance, and (for most categories) round-trip airfare — check the current CSC notice for exact stipend figures [verify]. Apply 9-12 months before your target intake via one of four channels: your home country\'s dispatching authority, the host university (Type B), a CSC partner institution, or a special program. For the September 2027 intake, deadlines cluster in January–April 2027; the Pakistan HEC route closes earlier (December–January) [verify]. Bachelor\'s applicants: a CSCA score is now required for CSC scholarship undergraduate applications.',
+      "There is no single CSC 2027/2028 deadline. Reviewed country notices close before 20 December 2026 (Timor-Leste), on 20 January 2027 (South Sudan), 29 January (Maldives), and 31 January at 23:59 (Singapore). Bangladesh, Pakistan and Nigeria remain [Check]. These routes require university admission/pre-admission evidence and a valid CSCA score report for bachelor’s applicants. Type B university deadlines are separate.",
     keyTakeaways: [
-      'CSC covers tuition + dorm + monthly stipend + insurance; airfare for most categories (stipend amounts: verify against the current CSC notice)',
-      'Four application channels: dispatching authority (embassy), university (Type B), partner institution, special programs',
-      'For September 2027: Type B (university route) deadlines fall roughly January-April 2027 and vary by university [verify each target]; some country channels close earlier',
-      'Pakistan: the HEC route (agency no. 5861) has a reported December-January deadline [verify] — sit the CSCA in November 2026 if you need a score',
-      'Bachelor\'s applicants need a CSCA score for CSC scholarship applications (2026 and 2027 intakes); next sittings Nov/Dec 2026, Jan 2027',
-      'A pre-admission letter from the host university is expected for 2026/27 onward [verify] — apply to universities in parallel, not after CSC',
-      'CSC can be combined with university-funded top-ups but not stacked with other full scholarships',
+      "Some 2027/2028 country channels close in December 2026; a general January–April estimate is not a safe deadline.",
+      "Four reviewed country dates are confirmed below. Bangladesh, Pakistan and Nigeria remain [Check]; do not reuse last year’s cutoff.",
+      "University admission or pre-admission evidence is required in the reviewed notices, rather than merely expected.",
+      "Bachelor’s applicants need a valid CSCA score report; confirm subjects and result timing for your route.",
+      "Check university Type B deadlines separately and complete any local delivery as well as the CSC online submission.",
+      "Confirm coverage and restrictions on holding other scholarships in your specific channel notice."
     ],
     sections: [
+      cscDeadlineTrackerSection('en'),
       {
         id: 'what-is-csc',
         h2: 'What is the Chinese Government Scholarship (CSC)?',
@@ -70,49 +84,56 @@ export const cscScholarshipGuide: LocalizedGuide = {
         ],
       },
       {
-        id: 'csca-requirement',
-        h2: 'CSCA requirement for bachelor\'s applicants',
-        intro:
-          'Since the 2026 intake, CSC scholarship undergraduate applicants must submit a CSCA score — this is now a hard requirement, not a nice-to-have.',
+        id: "csca-requirement",
+        h2: "CSCA score-report requirement for bachelor’s applicants",
+        intro: "The reviewed 2027/2028 notices require bachelor’s applicants to have a valid CSCA score report when submitting. Ask the target university which subjects your major requires.",
         blocks: [
           {
-            type: 'ul',
-            items: [
-              '**Who** — bachelor\'s (undergraduate) applicants to the Chinese Government Scholarship, for the 2026 and 2027 intakes',
-              '**What** — the CSCA (China Scholastic Competency Assessment), organized by the China Scholarship Council: Math is required for everyone; Physics and/or Chemistry depend on the university and program',
-              '**When** — the exam runs 6 sittings a year, mainly online at home with a live proctor. Next confirmed: 14–15 Nov 2026 (register 15–21 Oct, Beijing time), 19–20 Dec 2026, 23–24 Jan 2027',
-              '**Planning rule** — because CSC deadlines cluster in January–April 2027, sit the November or December 2026 sitting at the latest; see our CSCA exam dates guide',
-              '**Beyond CSC** — many universities, including many English-taught MBBS programs, require the CSCA even for self-funded applicants; universal adoption by 2028 is reported [verify]',
-            ],
+            type: "p",
+            text: "A booking confirmation is not a score report. A notice listing possible test months does not guarantee every sitting works for every deadline. Check registration and score-release dates, especially for Timor-Leste’s December cutoff and South Sudan’s 20 January deadline."
           },
           {
-            type: 'callout',
-            tone: 'warning',
-            text: 'A CSC scholarship file without a CSCA score is incomplete for bachelor\'s applicants — no score, no consideration. Free practice tests and study plans for every sitting: https://cscaprep.academy',
-          },
-        ],
+            type: "links",
+            items: [
+              {
+                label: "Official CSCA examination and registration information",
+                href: "https://www.csca.cn/"
+              },
+              {
+                label: "Country deadline and document guide",
+                href: "/csc-scholarship-deadlines-2027-2028#csca-score"
+              }
+            ]
+          }
+        ]
       },
       {
-        id: 'pre-admission-letter',
-        h2: 'The pre-admission letter',
-        intro:
-          'For 2026/27 onward, CSC applications are expected to include a pre-admission letter from the host university [verify against the current CSC notice and your channel\'s requirements].',
+        id: "pre-admission-letter",
+        h2: "Is admission or pre-admission evidence required?",
+        intro: "Yes, for the four country channels reviewed here. Maldives and Singapore explicitly require at least one document from a preferred university. South Sudan and Timor-Leste’s attached checklist also require pre-admission material.",
         blocks: [
           {
-            type: 'ul',
-            items: [
-              '**What it is** — a document from the host university\'s international student office stating you are pre-admitted (or under review) for the program you listed on the CSC application',
-              '**Why it matters** — the Type B (university) route has always effectively required it; the expectation now extends to other channels [verify]',
-              '**How to get one** — apply to the university\'s international admission portal in parallel with (not after) your CSC preparation; universities issue pre-admission letters on rolling review from late in the prior year',
-              '**Timing** — start university applications by November–December 2026 for the September 2027 intake so the letter exists before CSC deadlines in January–April 2027',
-            ],
+            type: "p",
+            text: "Accepted forms may include an admissions-office pre-admission notice or a school/supervisor invitation. Confirm whether your document qualifies; a generic application receipt is not automatically sufficient. Prepare university admission and scholarship documents in parallel, then submit the complete file. Pre-admission does not guarantee funding."
           },
           {
-            type: 'callout',
-            tone: 'info',
-            text: 'Run the university application and the CSC application as parallel tracks. Waiting for one before starting the other is the most common way applicants miss the January-April window.',
-          },
-        ],
+            type: "links",
+            items: [
+              {
+                label: "Maldives official requirement",
+                href: "https://mv.china-embassy.gov.cn/eng/sgsd/202610/t20261025_12046428.htm"
+              },
+              {
+                label: "Singapore official requirement",
+                href: "https://www.cscse.edu.cn/singapore/tzgg/2026102611241792506/index.html"
+              },
+              {
+                label: "Timor-Leste official document checklist (PDF)",
+                href: "https://tl.china-embassy.gov.cn/eng/xwdt/202610/P020261023499724359279.pdf"
+              }
+            ]
+          }
+        ]
       },
       {
         id: 'csc-categories',
@@ -194,61 +215,73 @@ export const cscScholarshipGuide: LocalizedGuide = {
         ],
       },
       {
-        id: 'csc-timeline',
-        h2: 'CSC application timeline (12 months before intake)',
-        intro:
-          'CSC follows a strict annual cycle. Applications for the September 2027 intake open in January 2027 and close January–April 2027 depending on the channel — the deadline, not the opening, is what you plan around.',
+        id: "csc-timeline",
+        h2: "How should I plan the CSC 2027/2028 timeline?",
+        intro: "Some country channels were already open in October 2026. Do not wait until January to start or treat mid-March as a universal safe submission date.",
         blocks: [
           {
-            type: 'table',
-            caption: 'CSC application timeline — September 2027 intake',
-            columns: ['When', 'Action', 'Output'],
-            rows: [
-              ['Aug-Oct 2026', 'Shortlist target universities + programs', '3-5 target schools'],
-              ['Sep-Nov 2026', 'Take language test (IELTS/TOEFL/HSK); bachelor\'s applicants sit the CSCA (Nov 14-15 or Dec 19-20)', 'Test scores ready'],
-              ['Sep-Dec 2026', 'Draft study plan + gather documents; start university applications', 'Application package + pre-admission in progress'],
-              ['Nov 2026-Jan 2027', 'University applications under review (parallel path)', 'Pre-admission letter [expected for 2026/27 onward — verify]'],
-              ['Jan 2027', 'CSC application window opens (portal + channels)', 'CSC application submitted'],
-              ['Jan-Apr 2027', 'Channel deadlines close (varies by channel + country)', 'All submissions done'],
-              ['Feb-May 2027', 'Review by CSC + universities', 'Waiting period'],
-              ['May-Jun 2027', 'CSC results announced', 'Acceptance / rejection'],
-              ['Jun-Jul 2027', 'Receive admission notice + JW201 + airfare booking', 'Pre-departure prep'],
-              ['Aug-Sep 2027', 'Arrive in China, begin program', 'Start of funded program'],
+            type: "table",
+            caption: "Plan backward from your receiving authority’s cutoff",
+            columns: [
+              "Stage",
+              "Action",
+              "Output"
             ],
+            rows: [
+              [
+                "Now",
+                "Read the current country notice and university requirements",
+                "Record every applicable cutoff"
+              ],
+              [
+                "Before the cutoff",
+                "Obtain admission evidence, test reports and required documents",
+                "Complete application file"
+              ],
+              [
+                "Before the country deadline",
+                "Complete CSC submission and local agency requirements",
+                "Portal and delivery receipts"
+              ],
+              [
+                "After submission",
+                "Monitor correction, interview and outcome notices",
+                "Follow the authority’s published schedule"
+              ]
+            ]
           },
           {
-            type: 'p',
-            text: 'Practical advice: apply for admission to the target university FIRST (a pre-admission letter is expected for 2026/27 CSC applications [verify]), then submit CSC once the letter is in hand. Deadlines are tight — submitting by mid-March 2027 is typical for the September intake.',
-          },
-        ],
+            type: "links",
+            items: [
+              {
+                label: "Open the country deadline and document tracker",
+                href: "/csc-scholarship-deadlines-2027-2028"
+              }
+            ]
+          }
+        ]
       },
       {
-        id: 'csc-channels',
-        h2: 'The four CSC application channels',
-        intro:
-          'CSC has four primary application channels. The channel you use depends on your home country, your target university, and your academic profile. Pick the channel that maximizes your acceptance probability.',
+        id: "csc-channels",
+        h2: "CSC application channels and their separate deadlines",
+        intro: "Follow the rules of your chosen program. Do not mix country-channel deadlines or agency numbers with a university route.",
         blocks: [
           {
-            type: 'ol',
+            type: "ul",
             items: [
-              '**Home country\'s dispatching authority (Bilateral Program)** — Apply through your home country\'s Chinese embassy, consulate, or relevant ministry. Best channel for: students from countries with active CSC bilateral agreements (most of Asia, Africa, Latin America). Deadlines: often the earliest, sometimes January-March for September intake. **Pakistan**: the HEC route (agency no. 5861) is reported to close as early as December-January [verify on HEC.gov.pk] — sit the CSCA in November 2026 if you need a score.',
-              '**Host Chinese university (Type B / Chinese University Program)** — Apply through your target Chinese university\'s international student office. University nominates you to CSC for funding. Best channel for: students applying to specific universities with strong programs. Deadlines: roughly January-April 2027 and vary by university [verify each target]; apply to 3-5 universities in parallel.',
-              '**CSC overseas partner institution in your country** — Some Confucius Institutes, UNESCO national commissions, and partner universities nominate students to CSC. Best channel for: students with existing institutional connections.',
-              '**Special programs (CAFP, ASEAN, MOFCOM, EU/US programs)** — Country-specific programs with separate application channels. Best channel for: students from targeted regions or professional programs. Each has its own deadline + eligibility.',
-            ],
-          },
-          {
-            type: 'callout',
-            tone: 'info',
-            text: 'Channels 1 (Bilateral) and 2 (Chinese University) are not mutually exclusive — many students apply through both to maximize chances. You can hold multiple CSC acceptances but must ultimately pick one.',
-          },
-        ],
+              "**Country/dispatching-authority route (commonly Type A):** follow the embassy, ministry or dispatching authority’s notice, including local delivery where required.",
+              "**University route (Type B):** check the target university’s 2027/28 admission and scholarship notices; a separate admission application may be required. The country table does not cover every university.",
+              "**Partner-institution or special-program route:** check the nominating organisation’s program-specific eligibility, document list and cutoff.",
+              "**Pakistan:** the 2027/28 date remains [Check] here. Monitor the new HEC and embassy notice instead of treating a previous December–January window as confirmed."
+            ]
+          }
+        ]
       },
       {
         id: 'cscholarships-table',
         h2: 'CSC-tagged scholarships in the SICA catalog',
         intro:
-          'The live scholarship list from the SICA database — filtered to entries that match the CSC program (Government Scholarship, Bilateral, China-Africa Friendship, etc.). Use this to see which scholarships your target school participates in.',
+          'Catalog entries can help you explore funding options, but they do not replace the 2027/2028 country notice. Use the country tracker above for the reviewed local deadlines and confirm any university-specific date with the school.',
         blocks: [
           {
             type: 'table',
@@ -279,15 +312,15 @@ export const cscScholarshipGuide: LocalizedGuide = {
       },
       {
         q: 'Can I apply for CSC after being admitted to a university?',
-        a: 'Yes — apply for university admission first (rolling admissions start in late 2026 for the September 2027 intake), then submit the CSC application via the university (Type B) or your dispatching authority (Bilateral). A pre-admission letter is expected for 2026/27 applications onward [verify].',
+        a: "Yes. The reviewed 2027/2028 country routes require university admission/pre-admission evidence before the scholarship application is submitted. Prepare both processes in parallel and confirm which university-issued documents your route accepts.",
       },
       {
         q: 'When does CSC open for the September 2027 intake?',
-        a: 'The application window opens in January 2027; deadlines run January-April 2027 and vary by channel. Dispatching-authority routes often close earliest (January-March); university (Type B) deadlines are roughly February-April and vary by university [verify each target]. The Pakistan HEC route may close as early as December-January [verify on HEC.gov.pk].',
+        a: "Some country channels were already open in October 2026. Their deadlines differ: before 20 December 2026 for Timor-Leste, 20 January 2027 for South Sudan, 29 January for Maldives, and 31 January at 23:59 for Singapore. Bangladesh, Pakistan and Nigeria remain [Check] in the tracker. Type B universities set separate dates.",
       },
       {
         q: 'Do bachelor\'s applicants need the CSCA for CSC?',
-        a: 'Yes — a CSCA score is required for Chinese Government Scholarship undergraduate applicants (2026 and 2027 intakes). Math is required for everyone; Physics and/or Chemistry depend on the university. Next sittings: 14-15 Nov 2026 (register 15-21 Oct, Beijing time), 19-20 Dec 2026, and 23-24 Jan 2027 — see our CSCA exam dates guide. Free practice: https://cscaprep.academy',
+        a: "Yes. The reviewed notices require a valid CSCA score report at submission. Ask the university which subjects apply, then choose a sitting that releases results before your country deadline. A booking alone is insufficient; do not assume late score submission is permitted.",
       },
       {
         q: 'Do I need to apply through my home country\'s embassy?',
@@ -300,37 +333,25 @@ export const cscScholarshipGuide: LocalizedGuide = {
     ],
     howToSteps: [
       {
-        name: 'Shortlist 3-5 target universities + programs',
-        text: 'Identify 3-5 Chinese universities with strong programs in your target field. For each, check: (a) does the program offer English-medium instruction? (b) what\'s the published tuition? (c) does the university accept CSC applicants? Most C9 League + ~30 strong research universities actively recruit CSC scholars.',
+        name: "Confirm country and university deadlines",
+        text: "Use the current 2027/28 notices and record separate CSC, local-delivery and university deadlines."
       },
       {
-        name: 'Take the language test 6-9 months before applying',
-        text: 'IELTS 5.5-6.5+ / TOEFL 60-90+ for English-medium programs. HSK 4+ for Chinese-medium. Most programs accept scores within 2 years. Book your test 6 months before the CSC deadline to allow retake if needed.',
+        name: "Obtain admission or pre-admission evidence",
+        text: "Prepare university admission and scholarship documents in parallel. Confirm that your university-issued document is accepted."
       },
       {
-        name: 'Draft study plan + gather documents',
-        text: 'Study plan: 500-1,500 words: why China, why this program, why this university, career goals. Specific to your target university (mention faculty, labs, facilities). Documents: passport, transcripts (notarized English translation), 2-3 recommendation letters, language test scores, study plan, health certificate (post-acceptance).',
+        name: "Prepare reports and supporting documents",
+        text: "Bachelor’s applicants need a valid CSCA report. Follow the country checklist for qualifications, translations, language evidence and applicable health/background documents."
       },
       {
-        name: 'Submit university admission FIRST (parallel path)',
-        text: 'Apply to your target Chinese university via their international student portal. Most universities have rolling admissions from November for September intake. Submit 4-6 weeks before the CSC deadline — you need a pre-admission letter for some CSC channels.',
+        name: "Complete every required submission",
+        text: "Use the correct category and agency number, finish both online and local requirements, and retain receipts."
       },
       {
-        name: 'Apply for CSC via one of four channels',
-        text: 'Channel 1 (Bilateral): your home country\'s Chinese embassy or Ministry of Education — apply January-March. Channel 2 (Chinese University): target university\'s international student office — apply February-April. Channel 3 (partner institution): Confucius Institute, UNESCO. Channel 4 (special programs): CAFP, ASEAN, MOFCOM.',
-      },
-      {
-        name: 'Wait for CSC results (May-June)',
-        text: 'Results are typically announced 2-4 weeks after the application deadline. Successful applicants receive a CSC admission notice + the Admission Notice from the target university. Unsuccessful applicants can reapply the following cycle or accept the university offer without CSC funding.',
-      },
-      {
-        name: 'Plan arrival + visa',
-        text: 'Admitted CSC scholars receive an Admission Notice + Visa Application Form (JW201 for CSC, JW202 for non-CSC). Apply for an X1 visa at your local Chinese embassy. Book the CSC-funded airfare (or get reimbursed on arrival). Plan to arrive 1-2 weeks before orientation.',
-      },
-      {
-        name: 'Activate CSC funding on arrival',
-        text: 'On arrival, register at the university\'s international student office. CSC funds are typically disbursed monthly through the university finance office. First-month stipend may take 4-6 weeks to process. Keep your Admission Notice, JW201, and university enrollment confirmation for all CSC administrative tasks.',
-      },
+        name: "Follow review and admission updates",
+        text: "Monitor requests for corrections, interviews, outcomes and visa documents according to the official schedule."
+      }
     ],
     ctaTitle: 'Ready to apply for the CSC scholarship?',
     ctaSubtitle:
@@ -338,6 +359,7 @@ export const cscScholarshipGuide: LocalizedGuide = {
     ctaApplyLabel: 'Start free assessment',
     ctaContactLabel: 'Talk to a counselor',
     related: [
+      { href: CSC_DEADLINES_PATH, label: "CSC 2027/2028 deadlines by country", description: "Confirmed notices, countries marked Check, and the application checklist." },
       {
         href: '/phd-in-china-international-students',
         label: 'PhD in China for international students',
@@ -357,30 +379,45 @@ export const cscScholarshipGuide: LocalizedGuide = {
   },
   zh: {
     slug: 'chinese-government-scholarship-csc',
+    updatedAt: CSC_DEADLINES_REVIEWED_AT,
     eyebrow: '指南 · CSC 奖学金',
-    title: 'CSC 奖学金 2027：中国政府奖学金指南',
+    seoTitle: "CSC 奖学金 2027/2028：截止日与要求 | SICA",
+    seoDescription: "查看已确认国家截止日与申请要求。东帝汶须在 2026 年 12 月 20 日之前提交；部分国家日期待查。",
+    title: "CSC 奖学金 2027/2028：中国政府奖学金申请指南",
     description:
-      '2027 年中国政府奖学金（CSC）：覆盖内容、津贴、资格、四大申请渠道、各国截止时间，以及本科申请者的 CSCA 要求。',
+      "CSC 2027/2028 申请指南：各国截止日、预录取材料、本科 CSCA 成绩要求、资格与申请渠道。",
     subtitle:
-      'CSC 奖学金全额资助你在参与中国大学的学位——学费、住宿、医疗保险、月津贴、（多数类别）往返机票。2027 年 9 月入学的申请窗口约为 2027 年 1-4 月，部分国家渠道更早。',
+      "2027/2028 年度部分国家渠道已于 2026 年 10 月开放，最早须在 12 月提交。请按本国通知确认截止日，并提前准备录取材料与本科 CSCA 成绩。",
     stats: [
-      { value: '全额', label: '学费 + 住宿 + 津贴 + 保险' },
-      { value: '2027 年 1-4 月', label: '主要申请窗口（因渠道而异）' },
-      { value: '4 渠道', label: '申请路径' },
-      { value: 'CSCA', label: '本科申请者必考' },
+      {
+        value: "2027/28",
+        label: "奖学金学年"
+      },
+      {
+        value: "因国而异",
+        label: "以官方通知截止日为准"
+      },
+      {
+        value: "录取材料",
+        label: "已查阅国家渠道要求"
+      },
+      {
+        value: "CSCA",
+        label: "本科申请者需要成绩单"
+      }
     ],
     quickAnswer:
-      '中国政府奖学金（CSC）由国家留学基金管理委员会管理，是国际生最负盛名的全额资助奖学金，覆盖学费、校内住宿、月津贴、医疗保险与（多数类别）往返机票——具体津贴数额以当期 CSC 通知为准 [待核实]。在目标入学前 9-12 个月通过四大渠道之一申请：本国派遣单位、接收大学（Type B）、CSC 合作机构或专项项目。2027 年 9 月入学的截止集中在 2027 年 1-4 月；巴基斯坦 HEC 渠道据报 12-1 月即截止 [待核实]。本科申请者：CSC 奖学金本科申请须提交 CSCA 成绩。',
+      "CSC 没有全球统一的 2027/2028 截止日。已查阅通知中，东帝汶要求在 2026 年 12 月 20 日之前提交；南苏丹为 2027 年 1 月 20 日，马尔代夫为 1 月 29 日，新加坡为 1 月 31 日 23:59。孟加拉国、巴基斯坦、尼日利亚保留 [待查]。这些渠道要求大学录取或预录取文件，本科申请者还须持有效 CSCA 成绩单；大学 Type B 另查校方通知。",
     keyTakeaways: [
-      'CSC 覆盖学费 + 住宿 + 月津贴 + 保险；多数类别含机票（津贴数额以当期 CSC 通知核实）',
-      '四大申请渠道：派遣单位（使馆）、大学（Type B）、合作机构、专项项目',
-      '2027 年 9 月入学：Type B（大学渠道）截止约在 2027 年 1-4 月，因校而异 [逐校核实]；部分国家渠道更早',
-      '巴基斯坦：HEC 渠道（机构号 5861）据报 12-1 月截止 [在 HEC.gov.pk 核实]——需要 CSCA 成绩者应参加 2026 年 11 月场次',
-      '本科申请者申请 CSC 奖学金须提交 CSCA 成绩（2026、2027 入学）；下一批场次：2026 年 11/12 月、2027 年 1 月',
-      '2026/27 起预计需要接收大学的预录取函 [待核实]——大学申请与 CSC 并行推进，不要先后等',
-      'CSC 可与院校资助叠加，但不可与其他全额奖学金叠加',
+      "2027/2028 国家渠道截止可能早在 2026 年 12 月，不要套用“1—4 月”。",
+      "下表四个国家日期已确认；孟加拉国、巴基斯坦、尼日利亚保持 [待查]，不沿用往年日期。",
+      "本次查阅的国家通知要求大学录取或预录取材料，不应再标记为“预计需要”。",
+      "本科申请须持有效 CSCA 成绩；考试科目及出分时间须匹配目标专业与本国截止。",
+      "大学 Type B 的入学与奖学金申请另有截止日；完成网申不一定等于完成本地递交。",
+      "资助与其他奖学金能否同时享受，应按具体渠道通知确认。"
     ],
     sections: [
+      cscDeadlineTrackerSection('zh'),
       {
         id: 'what-is-csc',
         h2: '什么是中国政府奖学金（CSC）？',
@@ -411,49 +448,56 @@ export const cscScholarshipGuide: LocalizedGuide = {
         ],
       },
       {
-        id: 'csca-requirement',
-        h2: '本科申请者的 CSCA 要求',
-        intro:
-          '自 2026 级起，中国政府奖学金本科申请者必须提交 CSCA 成绩——这是硬性要求，不是加分项。',
+        id: "csca-requirement",
+        h2: "本科申请者的 CSCA 成绩要求",
+        intro: "已查阅的 2027/2028 通知要求本科申请者在提交时持有效 CSCA 成绩单，具体科目向目标大学确认。",
         blocks: [
           {
-            type: 'ul',
-            items: [
-              '**适用对象**——中国政府奖学金本科（undergraduate）申请者，2026 与 2027 入学',
-              '**考什么**——CSCA（中国学业水平评估），由国家留学基金委组织：数学全员必考；物理和/或化学取决于大学与项目',
-              '**什么时候考**——每年 6 场，以居家线上、真人监考为主。已确认：2026 年 11 月 14-15 日（报名 10 月 15-21 日北京时间）、12 月 19-20 日、2027 年 1 月 23-24 日',
-              '**规划法则**——CSC 截止集中在 2027 年 1-4 月，最迟应参加 2026 年 11 或 12 月场次；详见 CSCA 考试时间指南',
-              '**超出 CSC 范围**——许多大学（含许多英文授课 MBBS）对自费申请者也要求 CSCA；据报 2028 年全面铺开 [待核实]',
-            ],
+            type: "p",
+            text: "报考凭证不能代替成绩单。通知提到某些考试月份，并不保证每场考试都能赶上每个国家的截止日。先核对官方报名与出分时间，尤其注意东帝汶 12 月截止和南苏丹 1 月 20 日截止。"
           },
           {
-            type: 'callout',
-            tone: 'warning',
-            text: '本科申请者缺 CSCA 成绩的 CSC 材料即不完整——没有成绩就没有资格。每场免费模拟题与学习计划：https://cscaprep.academy',
-          },
-        ],
+            type: "links",
+            items: [
+              {
+                label: "CSCA 官方考试与报名信息",
+                href: "https://www.csca.cn/"
+              },
+              {
+                label: "各国截止日与成绩安排指南",
+                href: "/csc-scholarship-deadlines-2027-2028#csca-score"
+              }
+            ]
+          }
+        ]
       },
       {
-        id: 'pre-admission-letter',
-        h2: '预录取函',
-        intro:
-          '2026/27 起，CSC 申请预计需附接收大学的预录取函 [以当期 CSC 通知及你所在渠道要求为准]。',
+        id: "pre-admission-letter",
+        h2: "必须提供录取或预录取材料吗？",
+        intro: "本次核查的四个国家渠道均要求录取或预录取材料，不再仅是“预计需要”。马尔代夫和新加坡明确要求至少一所志愿大学出具文件；南苏丹和东帝汶附件也要求相关材料。",
         blocks: [
           {
-            type: 'ul',
-            items: [
-              '**是什么**——接收大学国际学生办公室出具的文件，说明你在 CSC 申请中填报的项目已获预录取（或审核中）',
-              '**为何重要**——Type B（大学渠道）实际一直需要它；据报此要求现扩展到其他渠道 [待核实]',
-              '**如何获得**——与 CSC 准备并行（而非之后）向大学国际生申请门户提交申请；大学自前一年年底滚动审核发放',
-              '**时间点**——2027 年 9 月入学应在 2026 年 11-12 月前启动大学申请，确保预录取函赶在 2027 年 1-4 月 CSC 截止前到位',
-            ],
+            type: "p",
+            text: "可接受形式可能包括大学招生部门预录取通知，或学院、导师邀请函。先向受理单位确认具体文件是否符合要求；普通申请回执不能自动替代。大学申请与奖学金材料准备应同步进行，并在所需证明齐备后提交。预录取不保证获得资助。"
           },
           {
-            type: 'callout',
-            tone: 'info',
-            text: '大学申请与 CSC 申请按双轨并行。等一个做完再启动另一个，是错过 1-4 月窗口最常见的方式。',
-          },
-        ],
+            type: "links",
+            items: [
+              {
+                label: "马尔代夫官方要求",
+                href: "https://mv.china-embassy.gov.cn/eng/sgsd/202610/t20261025_12046428.htm"
+              },
+              {
+                label: "新加坡官方要求",
+                href: "https://www.cscse.edu.cn/singapore/tzgg/2026102611241792506/index.html"
+              },
+              {
+                label: "东帝汶官方材料清单（PDF）",
+                href: "https://tl.china-embassy.gov.cn/eng/xwdt/202610/P020261023499724359279.pdf"
+              }
+            ]
+          }
+        ]
       },
       {
         id: 'csc-categories',
@@ -535,61 +579,73 @@ export const cscScholarshipGuide: LocalizedGuide = {
         ],
       },
       {
-        id: 'csc-timeline',
-        h2: 'CSC 申请时间线（入学前 12 个月）',
-        intro:
-          'CSC 遵循严格年度周期。2027 年 9 月入学的申请于 2027 年 1 月开放，截止因渠道分布在 1-4 月——需要围绕截止（而非开放）规划。',
+        id: "csc-timeline",
+        h2: "2027/2028 申请应怎样安排时间？",
+        intro: "部分国家渠道已于 2026 年 10 月开放，不要等到 2027 年 1 月才开始，也不要把 3 月中旬当作通用安全截止日。",
         blocks: [
           {
-            type: 'table',
-            caption: 'CSC 申请时间线——2027 年 9 月入学',
-            columns: ['时间', '动作', '产出'],
-            rows: [
-              ['2026 年 8-10 月', '筛选目标大学 + 项目', '3-5 所目标校'],
-              ['2026 年 9-11 月', '备考语言（雅思/托福/HSK）；本科申请者参加 CSCA（11 月 14-15 或 12 月 19-20）', '语言/CSCA 成绩就绪'],
-              ['2026 年 9-12 月', '起草学习计划 + 收集材料；启动大学申请', '申请包就绪 + 预录取推进中'],
-              ['2026 年 11 月-2027 年 1 月', '大学申请并行审核', '预录取函 [2026/27 起预计需要——待核实]'],
-              ['2027 年 1 月', 'CSC 申请窗口开启（门户 + 各渠道）', 'CSC 申请提交'],
-              ['2027 年 1-4 月', '各渠道截止（因渠道 + 国家而异）', '全部提交完成'],
-              ['2027 年 2-5 月', 'CSC + 大学评审', '等待期'],
-              ['2027 年 5-6 月', 'CSC 结果公布', '录取 / 拒录'],
-              ['2027 年 6-7 月', '收到录取通知 + JW201 + 机票', '出发前准备'],
-              ['2027 年 8-9 月', '抵华，开课', '资助项目开始'],
+            type: "table",
+            caption: "按所选渠道倒排时间",
+            columns: [
+              "阶段",
+              "动作",
+              "产出"
             ],
+            rows: [
+              [
+                "现在",
+                "阅读本国新通知及大学要求",
+                "确认所有截止日"
+              ],
+              [
+                "截止前",
+                "申请录取文件，备齐考试成绩与其他材料",
+                "完整申请包"
+              ],
+              [
+                "本国截止前",
+                "提交 CSC 网申并完成本地受理流程",
+                "系统回执与递交凭证"
+              ],
+              [
+                "提交后",
+                "留意补件、面试与录取通知",
+                "按官方进度跟进"
+              ]
+            ]
           },
           {
-            type: 'p',
-            text: '实用建议：先申请目标大学入学（2026/27 起 CSC 申请预计需附预录取函 [待核实]），函到手后再提交 CSC。截止很紧——2027 年 9 月入学通常应在 2027 年 3 月中旬前提交。',
-          },
-        ],
+            type: "links",
+            items: [
+              {
+                label: "查看各国截止日与材料清单",
+                href: "/csc-scholarship-deadlines-2027-2028"
+              }
+            ]
+          }
+        ]
       },
       {
-        id: 'csc-channels',
-        h2: 'CSC 四大申请渠道',
-        intro:
-          'CSC 有四个主要申请渠道。选择哪个取决于你的祖国、目标大学、学术身份。选择能最大化录取概率的渠道。',
+        id: "csc-channels",
+        h2: "CSC 申请渠道与截止日的区别",
+        intro: "以你申请的具体项目规则为准，不要混用国家渠道与大学渠道的日期或机构号。",
         blocks: [
           {
-            type: 'ol',
+            type: "ul",
             items: [
-              '**本国派遣单位（双边项目）**——通过本国中国大使馆、领事馆或相关部委申请。最适合：与中国签有活跃 CSC 双边协定的国家（多数亚洲、非洲、拉美）。截止往往最早，常在 1-3 月。**巴基斯坦**：HEC 渠道（机构号 5861）据报 12-1 月即截止 [在 HEC.gov.pk 核实]——需要 CSCA 成绩者应参加 2026 年 11 月场次。',
-              '**接收中国大学（Type B / 中国大学项目）**——通过目标中国大学国际学生办公室申请。大学提名你给 CSC 资助。最适合：申请特定大学强项目的学生。截止约在 2027 年 1-4 月，因校而异 [逐校核实]；并行申请 3-5 所。',
-              '**本国 CSC 海外合作机构**——部分孔子学院、UNESCO 国家委员会、合作大学提名学生给 CSC。最适合：有现成机构联系的学生。',
-              '**特殊项目（CAFP、东盟、MOFCOM、欧美项目）**——针对特定地区或专业项目的国别项目，各有截止日 + 资格。最适合：目标地区或专业项目学生。',
-            ],
-          },
-          {
-            type: 'callout',
-            tone: 'info',
-            text: '渠道 1（双边）与渠道 2（中国大学）不互斥——许多学生同时申请以最大化机会。可持有多个 CSC 录取，但最终只能选其一。',
-          },
-        ],
+              "**国家受理渠道（常见 A 类）：**按使馆、派遣单位或部委通知申请；南苏丹和东帝汶还要求本地材料递交。",
+              "**大学渠道（Type B）：**查目标大学 2027/28 招生及奖学金通知，可能需独立入学申请；本表不代表所有大学截止日。",
+              "**合作机构或专项项目：**按提名单位与项目通知确认资格、材料和截止。",
+              "**巴基斯坦：**本表的 2027/28 日期保留 [待查]，关注 HEC 与使馆新通知，不套用去年 12—1 月的时间。"
+            ]
+          }
+        ]
       },
       {
         id: 'cscholarships-table',
         h2: 'SICA 目录中的 CSC 相关奖学金',
         intro:
-          '来自 SICA 数据库的实时奖学金清单——筛选匹配 CSC 项目的条目（政府奖学金、双边、中非友谊等）。用此查看目标学校参与哪些奖学金。',
+          '目录条目可用于了解资助选项，但不能替代 2027/2028 国家渠道通知。请使用上方截止日表，并向学校另查大学渠道日期。',
         blocks: [
           {
             type: 'table',
@@ -620,15 +676,15 @@ export const cscScholarshipGuide: LocalizedGuide = {
       },
       {
         q: '可以录取后申请 CSC 吗？',
-        a: '可以——先申请大学入学（2026 年底起滚动录取对应 2027 年 9 月入学），再通过大学（Type B）或本国派遣单位（双边）提交 CSC。2026/27 起预计需附预录取函 [待核实]。',
+        a: "可以。本次核查的 2027/2028 国家渠道要求在奖学金提交前持有大学录取或预录取证明。同步准备两端材料，并确认受理单位接受的文件形式。",
       },
       {
         q: '2027 年 9 月入学的 CSC 何时开放？',
-        a: '申请窗口 2027 年 1 月开放；截止分布在 1-4 月，因渠道而异。派遣单位渠道往往最早（1-3 月）；大学（Type B）截止约 2-4 月且因校而异 [逐校核实]。巴基斯坦 HEC 渠道可能 12-1 月即截止 [在 HEC.gov.pk 核实]。',
+        a: "部分国家渠道已在 2026 年 10 月开放。东帝汶须在 2026 年 12 月 20 日之前提交；南苏丹为 2027 年 1 月 20 日，马尔代夫为 1 月 29 日，新加坡为 1 月 31 日 23:59。孟加拉国、巴基斯坦、尼日利亚日期保留 [待查]；大学 Type B 日期另查。",
       },
       {
         q: '本科申请者需要 CSCA 吗？',
-        a: '需要——中国政府奖学金本科申请者（2026、2027 入学）必须提交 CSCA 成绩。数学全员必考；物理和/或化学取决于大学。下一批场次：2026 年 11 月 14-15 日（报名 10 月 15-21 日北京时间）、12 月 19-20 日、2027 年 1 月 23-24 日——详见 CSCA 考试时间指南。免费练习：https://cscaprep.academy',
+        a: "需要。本次核查通知要求提交时持有效成绩单。向大学确认科目，再选择能在本国截止前出分的场次。报考凭证不能替代正式成绩，也不能自行假定允许逾期补交。",
       },
       {
         q: '需要通过本国大使馆申请吗？',
@@ -641,37 +697,25 @@ export const cscScholarshipGuide: LocalizedGuide = {
     ],
     howToSteps: [
       {
-        name: '筛选 3-5 所目标大学 + 项目',
-        text: '确定 3-5 所目标领域的强项目中国大学。对每所检查：（a）项目是否英文授课？（b）公布学费多少？（c）大学是否接收 CSC 申请？多数 C9 联盟 + ~30 所强研究型大学积极招收 CSC 学者。',
+        name: "确认本国与大学截止日",
+        text: "使用 2027/28 本年度通知，分别记录网申、本地递交与大学申请的截止要求。"
       },
       {
-        name: '提前 6-9 个月备考语言',
-        text: '雅思 5.5-6.5+ / 托福 60-90+（英文授课）。HSK 4+（中文授课）。多数项目接受 2 年内成绩。CSC 截止日前 6 个月报考以允许重考。',
+        name: "取得录取或预录取材料",
+        text: "同步准备大学申请与奖学金材料，向受理单位确认文件形式。"
       },
       {
-        name: '起草学习计划 + 收集材料',
-        text: '学习计划：500-1,500 字：为何中国、为何该项目、为何该校、职业目标。针对目标大学定制（提及教师、实验室、设施）。材料：护照、成绩单（公证英文翻译）、2-3 封推荐信、语言成绩、学习计划、体检证明（录取后）。',
+        name: "备齐成绩及材料",
+        text: "本科须持有效 CSCA 成绩；其余材料按本国清单准备，注意语言、公证、体检及背景证明要求。"
       },
       {
-        name: '先提交大学入学（并行路径）',
-        text: '通过目标中国大学的国际学生门户申请。多数大学从 11 月起滚动录取对应 9 月入学。CSC 截止日前 4-6 周提交——部分 CSC 渠道需预录取函。',
+        name: "按时完成所有提交手续",
+        text: "使用正确项目类别与机构号，按时完成网申及本地材料递交，保留回执。"
       },
       {
-        name: '通过四大渠道之一申请 CSC',
-        text: '渠道 1（双边）：本国中国大使馆或教育部——1-3 月申请。渠道 2（中国大学）：目标大学国际学生办公室——2-4 月申请。渠道 3（合作机构）：孔子学院、UNESCO。渠道 4（特殊项目）：CAFP、ASEAN、MOFCOM。',
-      },
-      {
-        name: '等待 CSC 结果（5-6 月）',
-        text: '通常截止日后 2-4 周公布结果。录取者获 CSC 录取通知 + 目标大学录取通知。未录取者可下一周期重新申请或接受无 CSC 资助的大学录取。',
-      },
-      {
-        name: '规划抵达 + 签证',
-        text: 'CSC 学者获录取通知 + 签证申请表（CSC 为 JW201，非 CSC 为 JW202）。在本国中国大使馆申请 X1 签证。预订 CSC 资助机票（或抵华后报销）。建议开学前 1-2 周抵达。',
-      },
-      {
-        name: '抵华后激活 CSC 资助',
-        text: '抵华后在大学国际学生办公室注册。CSC 资助通常通过大学财务处按月发放。首月津贴可能需 4-6 周处理。保留录取通知、JW201、大学注册确认以便所有 CSC 行政事务使用。',
-      },
+        name: "跟进审核与录取",
+        text: "及时查看补件、面试、录取与签证通知，以官方进度为准。"
+      }
     ],
     ctaTitle: '准备好申请 CSC 奖学金了吗？',
     ctaSubtitle:
@@ -679,6 +723,7 @@ export const cscScholarshipGuide: LocalizedGuide = {
     ctaApplyLabel: '开始免费评估',
     ctaContactLabel: '联系顾问',
     related: [
+      { href: CSC_DEADLINES_PATH, label: "CSC 2027/2028 各国截止日", description: "已确认通知、待查国家与材料清单。" },
       {
         href: '/phd-in-china-international-students',
         label: '中国博士项目（国际生）',
