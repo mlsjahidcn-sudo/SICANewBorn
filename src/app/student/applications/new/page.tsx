@@ -15,16 +15,12 @@ import { apiFetchJson } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { useI18n } from '@/lib/i18n';
 import { DocumentUploader } from '@/components/student/DocumentUploader';
-import { SearchableSelect } from '@/components/ui/searchable-select';
+import { RemoteSearchSelect } from '@/components/admin/remote-search-select';
 // We keep the *static* enumerations (degreeLevels, documentTypes)
 // from data.ts — those are closed taxonomies the wizard drives.
-// The university + program lists are now fetched from the API so
-// admin-added entries show up immediately. The intake list is
-// generated at runtime from the current date (see
-// Live intake catalog (Phase 50a). The dropdown is fed from
-// /api/intakes?active=true which reads the database/intake_periods
-// table. Admin-added intakes show up immediately; we no longer
-// depend on the hardcoded getIntendedIntakes() from src/lib/data.ts.
+// Program/university pickers use authenticated typeahead
+// (/api/catalog/options) so the wizard never downloads the full catalog.
+// Intakes come from /api/intakes?active=true.
 import {
   degreeLevels,
   documentTypes,
@@ -166,16 +162,10 @@ export default function StudentNewApplicationPage() {
   const [loading, setLoading] = useState(false);
   // Phase S20: live university + program lists fetched from the
   // admin-managed API. The static data.ts fallback is gone for
-  // these two — admin-added universities / programs now show up
-  // in the wizard immediately. The page still works offline-ish: if
-  // the API is unreachable we fall back to the static arrays below.
-  const [universities, setUniversities] = useState<University[]>([]);
-  const [programs, setPrograms] = useState<Program[]>([]);
-  // Phase 50a: live intake catalog. Filled by the same
-  // useEffect that loads universities + programs. Replaces
-  // the static getIntendedIntakes() array — admin-added
-  // intakes now show up in the Intended Intake dropdown
-  // without a code change.
+  // Selected catalog row from typeahead (no full-catalog download).
+  const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
+  const [selectedUniversity, setSelectedUniversity] = useState<University | null>(null);
+  // Phase 50a: live intake catalog from /api/intakes?active=true.
   const [intakes, setIntakes] = useState<{ slug: string; label: string }[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   // Phase S21: profile prefill. The student already filled out
@@ -258,22 +248,29 @@ export default function StudentNewApplicationPage() {
           };
         }>(`/api/student/applications/${resumeId}`);
         const a = data.application;
-        // Slug-first restore; fall back to name matching only for old
-        // rows where university_id/program_id might be missing.
-        const matchedProgram = a.programId
-          ? programs.find((p) => p.slug === a.programId)
-          : programs.find((p) => p.name === a.program || p.slug === a.program);
-        const matchedUniversity = matchedProgram
-          ? universities.find((u) => u.slug === matchedProgram.universitySlug)
-          : a.universityId
-            ? universities.find((u) => u.slug === a.universityId)
-            : universities.find((u) => u.name === a.university);
+        const programSlug = a.programId || '';
+        if (programSlug) {
+          try {
+            const opt = await apiFetchJson<{
+              options: Array<{
+                record: { program: Program; university: University | null };
+              }>;
+            }>(`/api/catalog/options?kind=program&value=${encodeURIComponent(programSlug)}`);
+            const record = opt.options[0]?.record;
+            if (record?.program) {
+              setSelectedProgram(record.program);
+              setSelectedUniversity(record.university);
+            }
+          } catch {
+            /* picker still works; selection card may be empty until re-pick */
+          }
+        }
         setApplicationData((prev) => ({
           ...prev,
           targetDegreeLevel:
             a.degree && isDegreeLevel(a.degree) ? a.degree : prev.targetDegreeLevel,
-          targetProgramSlug: a.programId || matchedProgram?.slug || prev.targetProgramSlug,
-          targetUniversity: a.universityId || matchedUniversity?.slug || prev.targetUniversity,
+          targetProgramSlug: programSlug || prev.targetProgramSlug,
+          targetUniversity: a.universityId || prev.targetUniversity,
           intendedIntake: a.intake || prev.intendedIntake,
           personalStatement: a.personalStatement || prev.personalStatement,
           additionalNotes: a.additionalNotes || prev.additionalNotes,
@@ -292,32 +289,6 @@ export default function StudentNewApplicationPage() {
     // don't want to re-fetch. The ref guard makes that explicit.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Phase S20: programs filtered by degree + (optionally) university.
-  // The university filter is optional — picking a school narrows the
-  // program list, but a student can also leave it empty and see
-  // Phase S23: the student wanted to see ALL programs in the
-  // dropdown, not a pre-filtered subset. The wizard no longer
-  // hides programs by degree level — the student picks from the
-  // full list and the program picker auto-fills the rest. We
-  // keep the (now unused) targetUniversity filter for backwards-
-  // compat with the auto-fill path but the typical flow doesn't
-  // touch it. Renamed from `filteredPrograms` to `availablePrograms`
-  // so the intent is clear at call sites.
-  const availablePrograms = useMemo(() => {
-    let list = programs;
-    if (applicationData.targetUniversity) {
-      list = list.filter(
-        (p) => p.universitySlug === applicationData.targetUniversity,
-      );
-    }
-    return list;
-  }, [programs, applicationData.targetUniversity]);
-
-  const selectedProgram = availablePrograms.find(p => p.slug === applicationData.targetProgramSlug);
-  const selectedUniversity = selectedProgram 
-    ? universities.find((u: { slug: string }) => u.slug === selectedProgram.universitySlug)
-    : null;
 
   // Get the current logged-in student from the auth context (real user,
   // NOT mockStudentAccounts[0]). The studentDocuments hook fetches
@@ -343,32 +314,16 @@ export default function StudentNewApplicationPage() {
       });
   };
 
-  // Phase S20: fetch universities + programs from the API. Both
-  // endpoints are public, no auth required, paginated — we pass
-  // a high limit so the whole list comes back in one round-trip.
-  // If the API fails we keep the empty arrays; the wizard still
-  // renders but the university + program pickers will be empty
-  // and the user sees an error.
+  // Load intakes + profile. Program/university pickers typeahead
+  // against /api/catalog/options (no full-catalog download).
   useEffect(() => {
     const controller = new AbortController();
     setDataLoading(true);
     Promise.all([
-      apiFetchJson<{ universities: University[] }>('/api/universities?limit=200', {
-        signal: controller.signal,
-      }),
-      apiFetchJson<{ programs: Program[] }>('/api/programs?limit=500', {
-        signal: controller.signal,
-      }),
-      // Phase 50a: live intakes. Falls through silently on error
-      // so the form still works if the DB is down.
       apiFetchJson<{ intakes: { slug: string; label: string }[] }>(
         '/api/intakes?active=true',
         { signal: controller.signal },
       ).catch(() => ({ intakes: [] })),
-      // Phase S21: also fetch the student's profile so we can
-      // pre-fill target_degree / target_intake / target_field in
-      // the wizard. 404 is fine (the profile trigger may not have
-      // run for older accounts) — we just don't pre-fill.
       apiFetchJson<{
         data: {
           target_degree: string | null;
@@ -381,24 +336,17 @@ export default function StudentNewApplicationPage() {
           school_name: string | null;
         } | null;
       }>('/api/student/profile', { signal: controller.signal }).catch((err) => {
-        // 404 is expected for old accounts; just return null
         if (err && typeof err === 'object' && 'status' in err && (err as { status?: number }).status === 404) {
           return { data: null };
         }
         throw err;
       }),
     ])
-      .then(([u, p, i, profRes]) => {
+      .then(([i, profRes]) => {
         if (controller.signal.aborted) return;
-        setUniversities((u as { universities: University[] }).universities || []);
-        setPrograms((p as { programs: Program[] }).programs || []);
         setIntakes(((i as { intakes?: { slug: string; label: string }[] }).intakes) || []);
         const prof = profRes?.data ?? null;
         setProfile(prof);
-        // Phase S21: prefill the wizard with profile values, but
-        // ONLY if the form field is still empty. This means a
-        // student who resumes a draft keeps their picks (their
-        // picks win); a fresh wizard pre-fills from the profile.
         if (prof) {
           setApplicationData((prev) => {
             const next = { ...prev };
@@ -411,9 +359,6 @@ export default function StudentNewApplicationPage() {
               next.intendedIntake = prof.target_intake;
               marked.add('intendedIntake');
             }
-            // Personal statement gets a starter paragraph seeded
-            // from the student's profile context. They can edit
-            // before submitting — the seed is just a draft.
             if (!prev.personalStatement && (prof.target_field || prof.highest_education)) {
               next.personalStatement = buildPersonalStatementSeed(t, prof);
               marked.add('personalStatement');
@@ -431,9 +376,7 @@ export default function StudentNewApplicationPage() {
       })
       .catch((err) => {
         if (!controller.signal.aborted) {
-          console.error('[student/new] failed to load universities/programs:', err);
-          setUniversities([]);
-          setPrograms([]);
+          console.error('[student/new] failed to load intakes/profile:', err);
           setIntakes([]);
         }
       })
@@ -441,7 +384,7 @@ export default function StudentNewApplicationPage() {
         if (!controller.signal.aborted) setDataLoading(false);
       });
     return () => controller.abort();
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -525,7 +468,7 @@ export default function StudentNewApplicationPage() {
   const [draftSaved, setDraftSaved] = useState(false);
 
   const getSelectedProgramBySlug = () =>
-    programs.find((p) => p.slug === applicationData.targetProgramSlug);
+    selectedProgram?.slug === applicationData.targetProgramSlug ? selectedProgram : selectedProgram;
 
   /**
    * Phase S25: after the application is created, link ALL of the
@@ -613,9 +556,7 @@ export default function StudentNewApplicationPage() {
     setSavingDraft(true);
     setSubmitError(null);
     try {
-      const university = universities.find(
-        (u: { slug: string }) => u.slug === applicationData.targetUniversity,
-      );
+      const university = selectedUniversity;
       const program = getSelectedProgramBySlug();
       const payload = {
         universityId: applicationData.targetUniversity,
@@ -665,7 +606,7 @@ export default function StudentNewApplicationPage() {
     setLoading(true);
     setSubmitError(null);
     try {
-      const university = universities.find((u: { slug: string }) => u.slug === applicationData.targetUniversity);
+      const university = selectedUniversity;
       const program = getSelectedProgramBySlug();
       const payload = {
         universityId: applicationData.targetUniversity,
@@ -903,58 +844,35 @@ export default function StudentNewApplicationPage() {
                       {t('studentWizard.programLabel')}
                       {prefilledFields.has('targetProgramSlug') && <PrefillBadge t={t} />}
                     </Label>
-                    <SearchableSelect
+                    <RemoteSearchSelect<{
+                      program: Program;
+                      university: University | null;
+                    }>
+                      url={`/api/catalog/options?kind=program${
+                        applicationData.targetDegreeLevel
+                          ? `&degree=${encodeURIComponent(applicationData.targetDegreeLevel)}`
+                          : ''
+                      }`}
                       value={applicationData.targetProgramSlug}
-                      onChange={(value) => {
-                        const program = availablePrograms.find((p) => p.slug === value);
-                        const university = program
-                          ? universities.find((u: { slug: string }) => u.slug === program.universitySlug)
-                          : null;
+                      onChange={(_value, record) => {
+                        if (!record?.program) return;
+                        setSelectedProgram(record.program);
+                        setSelectedUniversity(record.university);
                         setApplicationData({
                           ...applicationData,
-                          targetProgramSlug: value,
-                          // Auto-fill the university from the
-                          // program — saves a click and avoids the
-                          // "wrong school for this program" mistake.
-                          targetUniversity: university?.slug || applicationData.targetUniversity,
+                          targetProgramSlug: String(record.program.slug),
+                          targetUniversity:
+                            record.university?.slug ||
+                            String(record.program.universitySlug || applicationData.targetUniversity),
                         });
                       }}
-                      options={availablePrograms.map((program) => {
-                        const university = universities.find(
-                          (u: { slug: string }) => u.slug === program.universitySlug,
-                        );
-                        return {
-                          value: program.slug,
-                          label: program.name,
-                          // Phase S25: the sublabel is now visually
-                          // structured so the university name
-                          // always reads first and is the
-                          // dominant signal — "at Tsinghua
-                          // University · Master · English" reads
-                          // naturally and the search filter
-                          // catches the university name (cmdk
-                          // does fuzzy match on `value` below).
-                          sublabel: university
-                            ? `at ${university.name} · ${program.degree} · ${program.language}`
-                            : `${program.degree} · ${program.language}`,
-                          // University logo is rendered in the
-                          // picker (the SearchableSelect component
-                          // shows a small circular thumbnail next
-                          // to the label).
-                          logo: university?.logo || undefined,
-                        };
-                      })}
                       placeholder={
                         dataLoading
                           ? t('studentWizard.programLoadingPlaceholder')
-                          : availablePrograms.length === 0
-                          ? t('studentWizard.programEmptyPlaceholder')
                           : t('studentWizard.programSearchPrompt')
                       }
-                      emptyText={t('studentWizard.programEmptyText')}
-                      searchPlaceholder={t('studentWizard.programSearchPlaceholder')}
                       disabled={!applicationData.targetDegreeLevel || dataLoading}
-                      loading={dataLoading}
+                      getLogo={(record) => record.university?.logo || undefined}
                     />
                   </div>
 

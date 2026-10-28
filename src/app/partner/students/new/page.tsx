@@ -3,7 +3,7 @@
 import { StudentUniversityFields } from '@/components/student-university-fields';
 import { studentUniversityFormValues, validateStudentUniversityDetails, type StudentUniversityFormValues } from '@/lib/student-university-fields';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save } from 'lucide-react';
 import Link from 'next/link';
@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
-import { SearchableSelect } from '@/components/ui/searchable-select';
+import { RemoteSearchSelect } from '@/components/admin/remote-search-select';
 import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 import { getPartnerStudentStatusLabel } from '@/lib/partner-enum-labels';
@@ -23,10 +23,6 @@ import {
   PartnerStudentStatus,
 } from '@/lib/partner-student-mapper';
 import { COMMON_COUNTRIES, NATIONALITY_CUSTOM, NATIONALITY_NONE } from '@/lib/common-countries';
-// Phase 54: shadcn <Select> reserves '' for the placeholder state —
-// can't use empty string as a SelectItem value. Phase 111d: the
-// sentinel + helper now live in @/lib/common-countries so the
-// edit page doesn't have to redeclare them.
 import type { University, Program } from '@/lib/data';
 
 interface FormData extends StudentUniversityFormValues {
@@ -70,59 +66,8 @@ export default function PartnerAddStudentPage() {
   // they pick a real country, we set nationality to that value
   // and clear the custom flag.
   const [showCustomNationality, setShowCustomNationality] = useState(false);
-  // Phase 47.4: load the live catalog so the target-university and
-  // target-program fields are searchable pickers (not free-text).
-  // Free-text gave us "Tsingha University" / "Tsinghua Univ" /
-  // "Tsinghua" as three different rows for the same school; the
-  // catalog is the single source of truth for what's offered. The
-  // picker is empty-allowed (clearValue='') so the partner can
-  // skip the field if the student hasn't decided yet.
-  const [universities, setUniversities] = useState<University[]>([]);
-  const [programs, setPrograms] = useState<Program[]>([]);
-  const [catalogLoading, setCatalogLoading] = useState(true);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    setCatalogLoading(true);
-    Promise.all([
-      apiFetchJson<{ universities: University[] }>('/api/universities?limit=200', {
-        signal: controller.signal,
-      }).catch(() => ({ universities: [] })),
-      apiFetchJson<{ programs: Program[] }>('/api/programs?limit=500', {
-        signal: controller.signal,
-      }).catch(() => ({ programs: [] })),
-    ])
-      .then(([u, p]) => {
-        if (controller.signal.aborted) return;
-        setUniversities(u.universities || []);
-        setPrograms(p.programs || []);
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setCatalogLoading(false);
-      });
-    return () => controller.abort();
-  }, []);
-
-  // Phase 3: cap + memoize catalog options so the SearchableSelect
-  // doesn't rebuild a huge option array on every render.
-  const universityOptions = useMemo(
-    () =>
-      universities.slice(0, 200).map((u) => ({
-        value: u.name,
-        label: u.name,
-        sublabel: u.nameCn || undefined,
-      })),
-    [universities],
-  );
-  const programOptions = useMemo(
-    () =>
-      programs.slice(0, 500).map((p) => ({
-        value: p.name,
-        label: p.name,
-        sublabel: p.nameCn || undefined,
-      })),
-    [programs],
-  );
+  // Target university/program use authenticated typeahead — store the
+  // display name (existing partner_students columns are free-text names).
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
@@ -382,26 +327,36 @@ export default function PartnerAddStudentPage() {
                       keeps accepting strings). clearValue=''
                       lets the partner leave the field blank when
                       the student hasn't decided yet. */}
-                  <SearchableSelect
+                  <RemoteSearchSelect<University>
+                    url="/api/catalog/options?kind=university&valueAs=name"
                     value={formData.targetUniversity}
-                    onChange={(v) => setFormData((prev) => ({ ...prev, targetUniversity: v }))}
-                    options={universityOptions}
+                    onChange={(v) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        targetUniversity: v,
+                      }))
+                    }
                     placeholder={t('partnerStudentNew.fieldTargetUniversityPlaceholder')}
                     clearValue=""
                     clearLabel={t('partnerCommon.placeholderDash')}
-                    loading={catalogLoading}
+                    getLogo={(record) => record.logo || undefined}
                   />
                 </div>
                 <div>
                   <Label htmlFor="targetProgram" className="text-[#1B2A4A] mb-2 block">{t('partnerStudentNew.fieldTargetProgram')}</Label>
-                  <SearchableSelect
+                  <RemoteSearchSelect<{ program: Program; university: University | null }>
+                    url="/api/catalog/options?kind=program&valueAs=name"
                     value={formData.targetProgram}
-                    onChange={(v) => setFormData((prev) => ({ ...prev, targetProgram: v }))}
-                    options={programOptions}
+                    onChange={(v) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        targetProgram: v,
+                      }))
+                    }
                     placeholder={t('partnerStudentNew.fieldTargetProgramPlaceholder')}
                     clearValue=""
                     clearLabel={t('partnerCommon.placeholderDash')}
-                    loading={catalogLoading}
+                    getLogo={(record) => record.university?.logo || undefined}
                   />
                 </div>
                 <div>

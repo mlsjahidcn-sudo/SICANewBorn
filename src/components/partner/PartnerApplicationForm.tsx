@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import {
   ArrowLeft,
   Save,
@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { SearchableSelect } from '@/components/ui/searchable-select';
+import { RemoteSearchSelect } from '@/components/admin/remote-search-select';
 import {
   PARTNER_APPLICATION_DEGREES,
   PARTNER_APPLICATION_PRIORITIES,
@@ -226,9 +226,11 @@ const NONE = '__none__';
 export interface PartnerApplicationFormProps {
   formData: PartnerApplicationFormData;
   setFormData: React.Dispatch<React.SetStateAction<PartnerApplicationFormData>>;
-  universities: University[];
-  programs: Program[];
-  dataLoading: boolean;
+  /** @deprecated Prefer remote catalog typeahead; kept optional for call-site compat. */
+  universities?: University[];
+  /** @deprecated Prefer remote catalog typeahead; kept optional for call-site compat. */
+  programs?: Program[];
+  dataLoading?: boolean;
   isSaving: boolean;
   // Phase 1.6: per-field error map. Each key is a form field
   // name; the value is the human error message. The form
@@ -258,9 +260,7 @@ export interface PartnerApplicationFormProps {
 export function PartnerApplicationForm({
   formData,
   setFormData,
-  universities,
-  programs,
-  dataLoading,
+  dataLoading = false,
   isSaving,
   fieldErrors = {},
   submitLabel,
@@ -306,25 +306,6 @@ export function PartnerApplicationForm({
       });
     return () => controller.abort();
   }, []);
-
-  // Phase 3: memoize + cap the program catalog options. The parent
-  // may fetch up to 500 programs; rendering a SearchableSelect over
-  // a rebuilt array on every keystroke was sluggish for large catalogs.
-  const programOptions = useMemo(
-    () =>
-      programs.slice(0, 500).map((program) => {
-        const uni = universities.find((u) => u.slug === program.universitySlug);
-        return {
-          value: program.slug,
-          label: program.name,
-          sublabel: uni
-            ? `${t('partnerAppForm.programSublabelAt', { name: uni.name })} · ${program.degree} · ${program.language}`
-            : `${program.degree} · ${program.language}`,
-          logo: uni?.logo || undefined,
-        };
-      }),
-    [programs, universities, t],
-  );
 
   const formContent = (
     <div className="space-y-4">
@@ -838,31 +819,32 @@ export function PartnerApplicationForm({
                 <Label htmlFor="program" className="text-[#1B2A4A] mb-2 block">
                   {t('partnerAppForm.fieldProgram')} <span className="text-red-600">{t('partnerCommon.requiredAsterisk')}</span>
                 </Label>
-                <SearchableSelect
+                <RemoteSearchSelect<{
+                  program: Program;
+                  university: University | null;
+                }>
+                  url="/api/catalog/options?kind=program"
                   value={formData.programSlug}
-                  onChange={(value) => {
-                    const picked = programs.find((p) => p.slug === value);
-                    if (!picked) return;
-                    const uni = universities.find(
-                      (u) => u.slug === picked.universitySlug,
-                    );
+                  onChange={(_value, record) => {
+                    if (!record?.program) return;
+                    const picked = record.program;
+                    const uni = record.university;
                     setFormData((prev) => ({
                       ...prev,
-                      programSlug: picked.slug,
-                      program: picked.name,
-                      university: uni?.name ?? picked.universitySlug,
+                      programSlug: String(picked.slug),
+                      program: String(picked.name ?? ''),
+                      university: uni?.name
+                        ? String(uni.name)
+                        : String(picked.universitySlug ?? ''),
                     }));
                   }}
-                  options={programOptions}
                   placeholder={
                     dataLoading
                       ? t('partnerAppForm.programLoadingPlaceholder')
                       : t('partnerAppForm.programSearchPrompt')
                   }
-                  emptyText={t('partnerAppForm.programEmptyText')}
-                  searchPlaceholder={t('partnerAppForm.programSearchPlaceholder')}
                   disabled={dataLoading}
-                  loading={dataLoading}
+                  getLogo={(record) => record.university?.logo || undefined}
                 />
                 {fieldErrors.program && (
                   <p className="text-xs text-red-700 mt-1">{fieldErrors.program}</p>

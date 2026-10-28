@@ -1,19 +1,18 @@
 import { NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { supabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-server';
-import { universities as staticUniversities } from '@/lib/data';
 import { CACHE_TAGS } from '@/lib/cache';
 import { universitySchema } from '@/lib/validators/university';
 import { validationErrorResponse } from '@/lib/validators/shared';
 import { requireAdmin } from '@/lib/supabase-auth';
-import { sanitizeOrTerm, parseIntParam } from '@/lib/postgrest';
-// Track 1.3 U2: DB mappers consolidated into src/lib/catalog-mappers.ts.
 import { mapUniversityFromDb, mapUniversityToDb } from '@/lib/catalog-mappers';
 import { invalidateLiveCatalogCache } from '@/lib/ai/live-data-context';
 import { importUniversityMediaFields } from '@/lib/university-media';
 import { parseCatalogQuery } from '@/lib/catalog-search';
 import { isCatalogSearchEnabled, searchPublicCatalog, invalidateCatalogSearchCache } from '@/lib/catalog-search-server';
 import { getServerLocale } from '@/lib/server-t';
+import { parseUniversityQueryParams, queryUniversities } from '@/lib/university-query';
+import { CATALOG_CACHE_CONTROL } from '@/lib/catalog-list-columns';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -25,91 +24,28 @@ export async function GET(request: Request) {
       if (!params.has('limit')) params.set('limit', '8');
       const locale = searchParams.get('locale');
       const result = await searchPublicCatalog(parseCatalogQuery('universities', params), locale === 'en' || locale === 'zh' ? locale : await getServerLocale());
-      return NextResponse.json(result, { headers: { 'Cache-Control': 'no-store', 'Server-Timing': `search;dur=${(performance.now() - started).toFixed(1)}` } });
+      return NextResponse.json(result, {
+        headers: {
+          'Cache-Control': CATALOG_CACHE_CONTROL,
+          'Server-Timing': `search;dur=${(performance.now() - started).toFixed(1)}`,
+        },
+      });
     } catch {
       return NextResponse.json({ error: 'Catalog search is temporarily unavailable' }, { status: 503 });
     }
   }
-  const city = searchParams.get('city');
-  const discipline = searchParams.get('discipline');
-  const search = searchParams.get('search');
-  const sort = searchParams.get('sort') || 'ranking';
-  // Phase 71: NaN-safe, clamped pagination — ?page=abc used to flow
-  // into .range(NaN, NaN) and silently trigger the static fallback.
-  const page = parseIntParam(searchParams.get('page'), 1, { min: 1 });
-  const limit = parseIntParam(searchParams.get('limit'), 8, { min: 1, max: 500 });
 
-  // Try Supabase first, fall back to static data
-  if (isSupabaseServerConfigured() && supabaseServer) {
-    let query = supabaseServer
-      .from('universities')
-      .select('*', { count: 'exact' });
-
-    if (city) query = query.eq('city', city);
-    if (discipline) query = query.contains('disciplines', [discipline]);
-    // Phase 71: sanitize before interpolating into .or() — raw input
-    // containing , ( ) " % _ could rewrite the filter or 400 the query.
-    const term = search ? sanitizeOrTerm(search) : '';
-    if (term) query = query.or(`name.ilike.%${term}%,name_cn.ilike.%${term}%,city.ilike.%${term}%`);
-
-    if (sort === 'ranking') query = query.order('ranking', { ascending: true });
-    else if (sort === 'name') query = query.order('name', { ascending: true });
-    else if (sort === 'rating') query = query.order('rating', { ascending: false });
-
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
-    query = query.range(from, to);
-
-    const { data, count, error } = await query;
-
-    if (!error && data) {
-      // U3 #1: only fall back to static when the request has no filters
-      // AND the DB is genuinely empty. A filter that legitimately matches
-      // nothing must return [] (not "show me the unfiltered static data").
-      const hasFilters = !!city || !!discipline || !!term;
-      if (data.length > 0 || hasFilters) {
-        return NextResponse.json({
-          universities: data.map(mapUniversityFromDb),
-          total: count || 0,
-          page,
-          limit,
-          totalPages: Math.ceil((count || 0) / limit),
-        });
-      }
-      // data.length === 0 && !hasFilters → fall through to static
-    }
-  }
-
-  // Fallback to static data
-  let filtered = [...staticUniversities];
-  if (city) filtered = filtered.filter((u) => u.city === city);
-  if (discipline) filtered = filtered.filter((u) => u.disciplines.includes(discipline));
-  if (search) {
-    const s = search.toLowerCase();
-    filtered = filtered.filter(
-      (u) => u.name.toLowerCase().includes(s) || u.nameCn.includes(s) || u.city.toLowerCase().includes(s)
-    );
-  }
-  if (sort === 'ranking') filtered.sort((a, b) => a.ranking - b.ranking);
-  else if (sort === 'name') filtered.sort((a, b) => a.name.localeCompare(b.name));
-  else if (sort === 'rating') filtered.sort((a, b) => b.rating - a.rating);
-
-  const total = filtered.length;
-  const from = (page - 1) * limit;
-  const paged = filtered.slice(from, from + limit);
-
-  return NextResponse.json({
-    universities: paged,
-    total,
-    page,
-    limit,
-    totalPages: Math.ceil(total / limit),
+  const started = performance.now();
+  const result = await queryUniversities(parseUniversityQueryParams(searchParams));
+  return NextResponse.json(result, {
+    headers: {
+      'Cache-Control': CATALOG_CACHE_CONTROL,
+      'Server-Timing': `search;dur=${(performance.now() - started).toFixed(1)}`,
+    },
   });
 }
 
 export async function POST(request: Request) {
-  // Phase 71: catalog mutations are admin-only (service-role client,
-  // RLS bypass — see /api/universities/[slug]).
   const auth = await requireAdmin(request);
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
@@ -124,9 +60,6 @@ export async function POST(request: Request) {
     const parsed = universitySchema.safeParse(raw);
     if (!parsed.success) return validationErrorResponse(parsed.error);
 
-    // Phase 175: download external logo/banner/gallery → WebP in
-    // university-media bucket before insert. Partial failures keep
-    // the original URL; the row still saves.
     const media = await importUniversityMediaFields({
       slug: parsed.data.slug,
       logo: parsed.data.logo,
@@ -153,11 +86,8 @@ export async function POST(request: Request) {
     }
     revalidateTag(CACHE_TAGS.universities, 'default');
     revalidateTag(CACHE_TAGS.university(String(data.slug)), 'default');
-    // Phase 121: the chatbot's RAG catalog has its own 5-min cache.
     invalidateLiveCatalogCache();
     invalidateCatalogSearchCache();
-    // Phase 72: fire university.created webhook (fire-and-forget;
-    // the event emitter handles queueing + delivery)
     return NextResponse.json(
       { university: mapUniversityFromDb(data), mediaImport: media.report },
       { status: 201 },
@@ -166,4 +96,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 }
-

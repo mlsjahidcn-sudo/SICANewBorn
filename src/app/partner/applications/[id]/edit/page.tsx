@@ -24,8 +24,6 @@ import {
   HskLevel,
   EmergencyRelationship,
 } from '@/lib/partner-application-mapper';
-import type { University, Program } from '@/lib/data';
-
 export default function PartnerEditApplicationPage() {
   const params = useParams();
   const router = useRouter();
@@ -34,8 +32,6 @@ export default function PartnerEditApplicationPage() {
 
   const [formData, setFormData] =
     useState<PartnerApplicationFormData | null>(null);
-  const [universities, setUniversities] = useState<University[]>([]);
-  const [programs, setPrograms] = useState<Program[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,39 +43,17 @@ export default function PartnerEditApplicationPage() {
   // Same pattern as the partner student edit page.
   const initialFormDataRef = useRef<PartnerApplicationFormData | null>(null);
 
-  // S26: load the application row + the university / program lists in
-  // parallel so the form can pre-fill from the row and the
-  // SearchableSelect can offer live options.
+  // Load the application row. Program picker typeahead hydrates the
+  // selected slug via /api/catalog/options?value=… on demand.
   const load = useCallback(async () => {
     if (!applicationId) return;
     setIsLoading(true);
     setLoadError(null);
     try {
-      const [res, u, p] = await Promise.all([
-        apiFetchJson<{
-          application: import('@/lib/partner-application-mapper').PartnerApplication;
-        }>(`/api/partner/applications/${applicationId}`),
-        apiFetchJson<{ universities: University[] }>('/api/universities?limit=200').catch(
-          () => ({ universities: [] }),
-        ),
-        apiFetchJson<{ programs: Program[] }>('/api/programs?limit=500').catch(
-          () => ({ programs: [] }),
-        ),
-      ]);
+      const res = await apiFetchJson<{
+        application: import('@/lib/partner-application-mapper').PartnerApplication;
+      }>(`/api/partner/applications/${applicationId}`);
       const a = res.application;
-      setUniversities(u.universities || []);
-      setPrograms(p.programs || []);
-      // Phase 112: prefer matching by `program_slug` (set on write
-      // by the new-app form's SearchableSelect). Falls back to name
-      // matching for rows that pre-date Phase 112 or were created
-      // without a slug (manual-mode rows where partner typed
-      // free-text). Without the slug-preference, two programs at
-      // the same school sharing a name (BSc + MSc "Computer
-      // Science") would resolve to whichever sorted first.
-      const matchedProgram = a.programSlug
-        ? (p.programs || []).find((prog) => prog.slug === a.programSlug)
-          ?? (p.programs || []).find((prog) => prog.name === a.program)
-        : (p.programs || []).find((prog) => prog.name === a.program);
       const loaded: PartnerApplicationFormData = {
         studentId: a.studentId ?? '',
         studentName: a.studentName ?? '',
@@ -118,7 +92,7 @@ export default function PartnerEditApplicationPage() {
 
         university: a.university,
         program: a.program,
-        programSlug: matchedProgram?.slug ?? '',
+        programSlug: a.programSlug ?? '',
         intake: a.intake ?? '',
         degree: (a.degree as PartnerApplicationDegree | null) || '',
         hasStudiedInChina: a.hasStudiedInChina ?? false,
@@ -356,8 +330,6 @@ export default function PartnerEditApplicationPage() {
         // form is only ever rendered when `formData` is non-null
         // (the `loadError || !formData` branch above returns early).
         setFormData={setFormData as React.Dispatch<React.SetStateAction<import('@/components/partner/PartnerApplicationForm').PartnerApplicationFormData>>}
-        universities={universities}
-        programs={programs}
         dataLoading={false}
         isSaving={isSaving}
         onSubmit={handleSubmit}

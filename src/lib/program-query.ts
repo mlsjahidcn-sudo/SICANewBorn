@@ -28,6 +28,7 @@ import { supabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-serve
 import { programs as staticPrograms, universities as staticUniversities } from '@/lib/data';
 import { sanitizeOrTerm, parseIntParam } from '@/lib/postgrest';
 import { mapProgramFromDb } from '@/lib/catalog-mappers';
+import { PROGRAM_LIST_COLUMNS } from '@/lib/catalog-list-columns';
 import {
   UNIVERSITY_SLUG_MATCH_CAP,
   buildProgramsSearchOr,
@@ -357,7 +358,7 @@ async function runQueryPrograms(params: ProgramQueryParams): Promise<ProgramQuer
     params.durationMax != null;
 
   if (isSupabaseServerConfigured() && supabaseServer) {
-    let query = supabaseServer.from('programs').select('*', { count: 'exact' });
+    let query = supabaseServer.from('programs').select(PROGRAM_LIST_COLUMNS, { count: 'exact' });
     const hasStatus = await hasProgramsStatusColumns();
 
     if (degree) {
@@ -481,7 +482,8 @@ async function runQueryPrograms(params: ProgramQueryParams): Promise<ProgramQuer
     if (relevance) {
       const { data, count, error } = await query.range(0, RELEVANCE_CANDIDATE_CAP - 1);
       if (!error && data) {
-        const mapped = data.map((r) => mapProgramFromDb(r) as unknown as Program);
+        const rows = data as unknown as Record<string, unknown>[];
+        const mapped = rows.map((r) => mapProgramFromDb(r) as unknown as Program);
         const ranked = rankByRelevance(mapped, term, uniSlugs);
         return {
           programs: ranked.slice(from, from + limit),
@@ -511,8 +513,9 @@ async function runQueryPrograms(params: ProgramQueryParams): Promise<ProgramQuer
         onlyArchived ||
         normalizedFilterRequested;
       if (data.length > 0 || hasFilters) {
+        const rows = data as unknown as Record<string, unknown>[];
         return {
-          programs: data.map((r) => mapProgramFromDb(r) as unknown as Program),
+          programs: rows.map((r) => mapProgramFromDb(r) as unknown as Program),
           total: count || 0,
           page,
           limit,

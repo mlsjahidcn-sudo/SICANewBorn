@@ -3,7 +3,7 @@
 import { StudentUniversityFields } from '@/components/student-university-fields';
 import { studentUniversityFormValues, validateStudentUniversityDetails, type StudentUniversityFormValues } from '@/lib/student-university-fields';
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Save } from 'lucide-react';
 import Link from 'next/link';
@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
-import { SearchableSelect } from '@/components/ui/searchable-select';
+import { RemoteSearchSelect } from '@/components/admin/remote-search-select';
 import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 import { isDeepEqual } from '@/lib/object-equal';
@@ -24,10 +24,6 @@ import {
   PartnerStudentStatus,
 } from '@/lib/partner-student-mapper';
 import { COMMON_COUNTRIES, NATIONALITY_CUSTOM, NATIONALITY_NONE } from '@/lib/common-countries';
-// Phase 54: shadcn <Select> reserves '' for the placeholder state —
-// can't use empty string as a SelectItem value. Phase 111d: the
-// sentinel + helper now live in @/lib/common-countries so the
-// new-student form doesn't have to redeclare them.
 import type { University, Program } from '@/lib/data';
 
 interface FormData extends StudentUniversityFormValues {
@@ -68,49 +64,6 @@ export default function PartnerEditStudentPage() {
   // listens for unload events while dirty and prompts the
   // browser's native "Leave site?" dialog.
   const initialFormDataRef = useRef<FormData | null>(null);
-  // Phase 47.4: live catalog for the target-university and
-  // target-program pickers. Same data source the application form
-  // uses, so a program added via /admin/programs shows up here
-  // immediately. We also keep the previous free-text value as a
-  // fallback option in the list, so any existing data that doesn't
-  // match a catalog entry stays editable (and visible) rather than
-  // silently disappearing into an empty select.
-  const [universities, setUniversities] = useState<University[]>([]);
-  const [programs, setPrograms] = useState<Program[]>([]);
-  const [catalogLoading, setCatalogLoading] = useState(true);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    setCatalogLoading(true);
-    Promise.all([
-      apiFetchJson<{ universities: University[] }>('/api/universities?limit=200', {
-        signal: controller.signal,
-      }).catch(() => ({ universities: [] })),
-      apiFetchJson<{ programs: Program[] }>('/api/programs?limit=500', {
-        signal: controller.signal,
-      }).catch(() => ({ programs: [] })),
-    ])
-      .then(([u, p]) => {
-        if (controller.signal.aborted) return;
-        setUniversities(u.universities || []);
-        setPrograms(p.programs || []);
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setCatalogLoading(false);
-      });
-    return () => controller.abort();
-  }, []);
-
-  // Phase 3: cap + memoize catalog options so the SearchableSelect
-  // doesn't rebuild a huge option array on every render.
-  const universitySelectOptions = useMemo(
-    () => buildUniversityOptions(universities, formData?.targetUniversity ?? ''),
-    [universities, formData?.targetUniversity],
-  );
-  const programSelectOptions = useMemo(
-    () => buildProgramOptions(programs, formData?.targetProgram ?? ''),
-    [programs, formData?.targetProgram],
-  );
 
   const loadStudent = useCallback(async () => {
     if (!studentId) return;
@@ -404,26 +357,26 @@ export default function PartnerEditStudentPage() {
                       we inject it as a "custom" option so it stays
                       editable and the partner can re-pick or clear
                       it explicitly — never silently lost. */}
-                  <SearchableSelect
+                  <RemoteSearchSelect<University>
+                    url="/api/catalog/options?kind=university&valueAs=name"
                     value={formData.targetUniversity}
                     onChange={(v) => setFormData((prev) => (prev ? { ...prev, targetUniversity: v } : prev))}
-                    options={universitySelectOptions}
                     placeholder={t('partnerStudentNew.fieldTargetUniversityPlaceholder')}
                     clearValue=""
                     clearLabel={t('partnerCommon.placeholderDash')}
-                    loading={catalogLoading}
+                    getLogo={(record) => record.logo || undefined}
                   />
                 </div>
                 <div>
                   <Label htmlFor="targetProgram" className="text-[#1B2A4A] mb-2 block">{t('partnerStudentEdit.fieldTargetProgram')}</Label>
-                  <SearchableSelect
+                  <RemoteSearchSelect<{ program: Program; university: University | null }>
+                    url="/api/catalog/options?kind=program&valueAs=name"
                     value={formData.targetProgram}
                     onChange={(v) => setFormData((prev) => (prev ? { ...prev, targetProgram: v } : prev))}
-                    options={programSelectOptions}
                     placeholder={t('partnerStudentNew.fieldTargetProgramPlaceholder')}
                     clearValue=""
                     clearLabel={t('partnerCommon.placeholderDash')}
-                    loading={catalogLoading}
+                    getLogo={(record) => record.university?.logo || undefined}
                   />
                 </div>
                 <div>
@@ -480,57 +433,4 @@ export default function PartnerEditStudentPage() {
       </form>
     </div>
   );
-}
-
-// Phase 47.4: build picker options for the target-university
-// SearchableSelect. If the existing value (pre-Phase 47 free-text
-// data) isn't in the live catalog, we inject it as a synthetic
-// "(not in catalog)" option so it stays selectable + the partner
-// can re-pick or clear it explicitly. Without this, old data would
-// render as an empty select on edit and the partner would have to
-// guess why.
-function buildUniversityOptions(
-  universities: University[],
-  currentValue: string,
-): { value: string; label: string; sublabel?: string }[] {
-  const opts = universities.slice(0, 200).map((u) => ({
-    value: u.name,
-    label: u.name,
-    sublabel: u.nameCn || undefined,
-  }));
-  if (
-    currentValue &&
-    currentValue.trim() &&
-    !universities.some((u) => u.name === currentValue)
-  ) {
-    opts.unshift({
-      value: currentValue,
-      label: currentValue,
-      sublabel: '(not in catalog)',
-    });
-  }
-  return opts;
-}
-
-function buildProgramOptions(
-  programs: Program[],
-  currentValue: string,
-): { value: string; label: string; sublabel?: string }[] {
-  const opts = programs.slice(0, 500).map((p) => ({
-    value: p.name,
-    label: p.name,
-    sublabel: p.nameCn || undefined,
-  }));
-  if (
-    currentValue &&
-    currentValue.trim() &&
-    !programs.some((p) => p.name === currentValue)
-  ) {
-    opts.unshift({
-      value: currentValue,
-      label: currentValue,
-      sublabel: '(not in catalog)',
-    });
-  }
-  return opts;
 }

@@ -22,8 +22,6 @@ import {
   type PartnerApplicationFormData,
 } from '@/components/partner/PartnerApplicationForm';
 import type { PartnerStudent } from '@/lib/partner-student-mapper';
-import type { University, Program } from '@/lib/data';
-
 export default function PartnerNewApplicationPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -31,8 +29,6 @@ export default function PartnerNewApplicationPage() {
   const [formData, setFormData] =
     useState<PartnerApplicationFormData>(INITIAL_FORM_DATA);
   const [students, setStudents] = useState<PartnerStudent[]>([]);
-  const [universities, setUniversities] = useState<University[]>([]);
-  const [programs, setPrograms] = useState<Program[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,29 +60,19 @@ export default function PartnerNewApplicationPage() {
   // auto-fill the university + program fields.
   const promotionPrefillRef = useRef<string | null>(null);
 
-  // Phase S20: load this partner's students, plus the live university
-  // and program lists. S26: this list feeds the combined program
-  // picker, which is now the primary way to pick a school (university
-  // is auto-filled from the picked program's universitySlug).
+  // Load this partner's students. Program/university pickers use
+  // authenticated typeahead (/api/catalog/options) instead of
+  // downloading hundreds of full catalog rows on mount.
   useEffect(() => {
     const controller = new AbortController();
     setDataLoading(true);
-    Promise.all([
-      apiFetchJson<{ students: PartnerStudent[] }>('/api/partner/students?limit=100', {
-        signal: controller.signal,
-      }).catch(() => ({ students: [] })),
-      apiFetchJson<{ universities: University[] }>('/api/universities?limit=200', {
-        signal: controller.signal,
-      }).catch(() => ({ universities: [] })),
-      apiFetchJson<{ programs: Program[] }>('/api/programs?limit=500', {
-        signal: controller.signal,
-      }).catch(() => ({ programs: [] })),
-    ])
-      .then(([s, u, p]) => {
+    apiFetchJson<{ students: PartnerStudent[] }>('/api/partner/students?limit=100', {
+      signal: controller.signal,
+    })
+      .catch(() => ({ students: [] }))
+      .then((s) => {
         if (controller.signal.aborted) return;
         setStudents(s.students || []);
-        setUniversities(u.universities || []);
-        setPrograms(p.programs || []);
       })
       .finally(() => {
         if (!controller.signal.aborted) setDataLoading(false);
@@ -130,19 +116,35 @@ export default function PartnerNewApplicationPage() {
   useEffect(() => {
     const programSlugFromUrl = searchParams.get('programSlug');
     if (!programSlugFromUrl) return;
-    if (dataLoading) return;
     if (promotionPrefillRef.current === programSlugFromUrl) return;
-    const picked = programs.find((p) => p.slug === programSlugFromUrl);
-    if (!picked) return;
-    const uni = universities.find((u) => u.slug === picked.universitySlug);
-    promotionPrefillRef.current = programSlugFromUrl;
-    setFormData((prev) => ({
-      ...prev,
-      programSlug: picked.slug,
-      program: picked.name,
-      university: uni?.name ?? picked.universitySlug,
-    }));
-  }, [searchParams, dataLoading, programs, universities]);
+    const controller = new AbortController();
+    apiFetchJson<{
+      options: Array<{
+        record: {
+          program: { slug: string; name: string; universitySlug: string };
+          university: { name: string } | null;
+        };
+      }>;
+    }>(`/api/catalog/options?kind=program&value=${encodeURIComponent(programSlugFromUrl)}`, {
+      signal: controller.signal,
+    })
+      .then((res) => {
+        if (controller.signal.aborted) return;
+        const record = res.options[0]?.record;
+        if (!record?.program) return;
+        promotionPrefillRef.current = programSlugFromUrl;
+        setFormData((prev) => ({
+          ...prev,
+          programSlug: record.program.slug,
+          program: record.program.name,
+          university: record.university?.name ?? record.program.universitySlug,
+        }));
+      })
+      .catch(() => {
+        /* leave form blank if lookup fails */
+      });
+    return () => controller.abort();
+  }, [searchParams]);
 
   // Phase 49.3: read the sessionStorage entry written by the
   // "Clone as new application" button on the application
@@ -403,8 +405,6 @@ export default function PartnerNewApplicationPage() {
       <PartnerApplicationForm
         formData={formData}
         setFormData={setFormData}
-        universities={universities}
-        programs={programs}
         dataLoading={dataLoading}
         isSaving={isSaving}
         fieldErrors={fieldErrors}

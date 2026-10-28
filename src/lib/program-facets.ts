@@ -397,6 +397,63 @@ function normalizedFacets(rows: FacetRow[]): ProgramFacets['normalized'] {
   };
 }
 
+function asFacetList(raw: unknown): ProgramFacet[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item) => {
+      if (!item || typeof item !== 'object') return null;
+      const row = item as Record<string, unknown>;
+      const value = typeof row.value === 'string' ? row.value : '';
+      const count = typeof row.count === 'number' ? row.count : Number(row.count) || 0;
+      const labelCn = typeof row.labelCn === 'string' ? row.labelCn : undefined;
+      return { value, count, ...(labelCn ? { labelCn } : {}) };
+    })
+    .filter((f): f is ProgramFacet => f != null);
+}
+
+/** Prefer the SQL aggregate RPC; fall back to paged PostgREST scan. */
+async function fetchFacetsFromRpc(): Promise<ProgramFacets | null> {
+  if (!isSupabaseServerConfigured() || !supabaseServer) return null;
+  const { data, error } = await supabaseServer.rpc('program_facets_aggregate_v1');
+  if (error || !data || typeof data !== 'object') return null;
+  const raw = data as Record<string, unknown>;
+  const normalizedRaw =
+    raw.normalized && typeof raw.normalized === 'object'
+      ? (raw.normalized as Record<string, unknown>)
+      : null;
+  const scholarshipRaw =
+    raw.scholarship && typeof raw.scholarship === 'object'
+      ? (raw.scholarship as Record<string, unknown>)
+      : { yes: 0, no: 0 };
+  const tuition = asFacetList(normalizedRaw?.tuition);
+  const duration = asFacetList(normalizedRaw?.duration);
+  const tuitionAvailable = Boolean(normalizedRaw?.tuitionAvailable) && tuition.some((f) => f.count > 0);
+  return {
+    degree: asFacetList(raw.degree),
+    language: asFacetList(raw.language),
+    discipline: asFacetList(raw.discipline),
+    university: asFacetList(raw.university),
+    city: asFacetList(raw.city),
+    scholarship: {
+      yes: Number(scholarshipRaw.yes) || 0,
+      no: Number(scholarshipRaw.no) || 0,
+    },
+    normalized: {
+      available: Boolean(normalizedRaw?.available),
+      tuitionAvailable,
+      durationAvailable:
+        tuitionAvailable && Boolean(normalizedRaw?.durationAvailable) && duration.some((f) => f.count > 0),
+      intakeSeason: asFacetList(normalizedRaw?.intakeSeason),
+      intakeYear: asFacetList(normalizedRaw?.intakeYear),
+      tuition,
+      duration,
+    },
+    total: Number(raw.total) || 0,
+    generatedAt: Date.now(),
+    fromFallback: false,
+  };
+}
+
 /**
  * The live facet snapshot. Cached for 10 minutes; call
  * `invalidateProgramFacetsCache()` after an admin write.
@@ -409,23 +466,28 @@ export async function getProgramFacets(): Promise<ProgramFacets> {
   inflight = (async () => {
     let value: ProgramFacets;
     try {
-      const rows = await fetchFacetRows();
-      if (rows.length > 0) {
-        const university = countFacetValues(rows, (r) => r.university_slug);
-        value = {
-          degree: countFacetValues(rows, (r) => r.degree),
-          language: countFacetValues(rows, (r) => r.language),
-          discipline: countFacetValues(rows, (r) => r.discipline, (r) => r.discipline_cn),
-          university,
-          city: await cityFacets(university),
-          scholarship: scholarshipSplit(rows),
-          normalized: normalizedFacets(rows),
-          total: rows.length,
-          generatedAt: Date.now(),
-          fromFallback: false,
-        };
+      const fromRpc = await fetchFacetsFromRpc();
+      if (fromRpc && fromRpc.total > 0) {
+        value = fromRpc;
       } else {
-        value = staticFacets();
+        const rows = await fetchFacetRows();
+        if (rows.length > 0) {
+          const university = countFacetValues(rows, (r) => r.university_slug);
+          value = {
+            degree: countFacetValues(rows, (r) => r.degree),
+            language: countFacetValues(rows, (r) => r.language),
+            discipline: countFacetValues(rows, (r) => r.discipline, (r) => r.discipline_cn),
+            university,
+            city: await cityFacets(university),
+            scholarship: scholarshipSplit(rows),
+            normalized: normalizedFacets(rows),
+            total: rows.length,
+            generatedAt: Date.now(),
+            fromFallback: false,
+          };
+        } else {
+          value = staticFacets();
+        }
       }
     } catch {
       value = staticFacets();

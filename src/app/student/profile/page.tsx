@@ -117,7 +117,7 @@ export default function StudentProfilePage() {
   useEffect(() => {
     let cancelled = false;
     setUnisLoading(true);
-    fetch('/api/universities?limit=500&sort=name')
+    fetch('/api/universities?limit=200&sort=name')
       .then((r) => r.json())
       .then((d: { universities?: UniversityOption[] }) => {
         if (cancelled) return;

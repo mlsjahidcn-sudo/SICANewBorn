@@ -7,13 +7,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, Star, MapPin, ChevronLeft, ChevronRight, ArrowRight, Globe, Award, X, Filter as FilterIcon } from 'lucide-react';
 import Image from 'next/image';
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef, useTransition } from 'react';
 import { useSearchParams } from 'next/navigation';
 import UniversityLogo from '@/components/university-logo';
 import { useUrlState } from '@/hooks/use-url-state';
 import { track } from '@/lib/analytics';
 import { GetStartedCta } from '@/components/GetStartedCta';
 import { pageNumbers } from '@/lib/pagination';
+import {
+  DEFAULT_UNIVERSITY_PAGE_SIZE,
+  type UniversityQueryResult,
+} from '@/lib/university-query';
 
 const RATING_OPTIONS = [
   { value: 0, label: 'Any' },
@@ -31,16 +35,16 @@ const TYPE_OPTIONS = [
 ] as const;
 
 interface UniversitiesClientProps {
-  initialUniversities: University[];
+  initialResult: UniversityQueryResult;
 }
 
-export default function UniversitiesClient({ initialUniversities }: UniversitiesClientProps) {
+export default function UniversitiesClient({ initialResult }: UniversitiesClientProps) {
   const { t, locale } = useI18n();
   const searchParams = useSearchParams();
-  const perPage = 6;
-  // Seed state from the server-fetched list so the first paint already
-  // shows the grid instead of an empty loader.
-  const [universities, setUniversities] = useState<University[]>(initialUniversities);
+  const [isPending, startTransition] = useTransition();
+  const skipFirstFetch = useRef(true);
+
+  const [result, setResult] = useState<UniversityQueryResult>(initialResult);
 
   const [searchQuery, setSearchQuery] = useUrlState('q', '' as string, {
     searchParams, debounceMs: 250,
@@ -58,67 +62,48 @@ export default function UniversitiesClient({ initialUniversities }: Universities
     'ranking' as 'ranking' | 'name' | 'qsWorld' | 'rating',
     { searchParams },
   );
-  const [currentPage, setCurrentPage] = useState(1);
-
-  // Keep client state in sync if the server ever passes different data
-  // (e.g. during ISR updates), but skip the mount fetch we used before.
-  useEffect(() => {
-    setUniversities(initialUniversities);
-  }, [initialUniversities]);
-
-  const filtered = useMemo(() => {
-    let result = [...universities];
-
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(
-        (u) =>
-          u.name.toLowerCase().includes(q) ||
-          u.nameCn.includes(q) ||
-          u.city.toLowerCase().includes(q) ||
-          u.cityCn.includes(q)
-      );
-    }
-
-    if (selectedCity) {
-      result = result.filter((u) => u.city === selectedCity || u.cityCn === selectedCity);
-    }
-
-    if (selectedDiscipline) {
-      result = result.filter((u) => u.disciplines.includes(selectedDiscipline));
-    }
-
-    if (selectedTag) {
-      result = result.filter((u) => u.tags.includes(selectedTag));
-    }
-
-    if (selectedType) {
-      result = result.filter((u) =>
-        selectedType === 'Public' ? u.type === 'Public University' : u.type !== 'Public University',
-      );
-    }
-
-    const minRatingNum = parseFloat(minRating || '0');
-    if (minRatingNum > 0) {
-      result = result.filter((u) => u.rating >= minRatingNum);
-    }
-
-    if (sortBy === 'ranking') {
-      result.sort((a, b) => a.ranking - b.ranking);
-    } else if (sortBy === 'qsWorld') {
-      result.sort((a, b) => a.qsWorldRanking - b.qsWorldRanking);
-    } else if (sortBy === 'rating') {
-      result.sort((a, b) => b.rating - a.rating);
-    } else {
-      result.sort((a, b) => a.name.localeCompare(b.name));
-    }
-
-    return result;
-  }, [searchQuery, selectedCity, selectedDiscipline, selectedTag, selectedType, minRating, sortBy, universities]);
+  const [pageParam, setPageParam] = useUrlState('page', '' as string, { searchParams });
+  const currentPage = Math.max(1, Number.parseInt(pageParam || '1', 10) || 1);
 
   useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, selectedCity, selectedDiscipline, selectedTag, selectedType, minRating, sortBy]);
+    setResult(initialResult);
+  }, [initialResult]);
+
+  const fetchPage = useCallback(
+    async (page: number, signal?: AbortSignal) => {
+      const params = new URLSearchParams();
+      if (searchQuery) params.set('q', searchQuery);
+      if (selectedCity) params.set('city', selectedCity);
+      if (selectedDiscipline) params.set('discipline', selectedDiscipline);
+      if (selectedTag) params.set('tag', selectedTag);
+      if (selectedType) params.set('type', selectedType);
+      if (minRating && minRating !== '0') params.set('rating', minRating);
+      if (sortBy) params.set('sort', sortBy);
+      params.set('page', String(page));
+      params.set('limit', String(DEFAULT_UNIVERSITY_PAGE_SIZE));
+      const res = await fetch(`/api/universities?${params.toString()}`, { signal });
+      if (!res.ok) throw new Error('Failed to load universities');
+      const data = (await res.json()) as UniversityQueryResult;
+      setResult(data);
+    },
+    [searchQuery, selectedCity, selectedDiscipline, selectedTag, selectedType, minRating, sortBy],
+  );
+
+  useEffect(() => {
+    if (skipFirstFetch.current) {
+      skipFirstFetch.current = false;
+      return;
+    }
+    const controller = new AbortController();
+    startTransition(() => {
+      void fetchPage(1, controller.signal)
+        .then(() => setPageParam(''))
+        .catch((err) => {
+          if (!controller.signal.aborted) console.error('[universities] filter fetch failed:', err);
+        });
+    });
+    return () => controller.abort();
+  }, [searchQuery, selectedCity, selectedDiscipline, selectedTag, selectedType, minRating, sortBy, fetchPage, setPageParam]);
 
   useEffect(() => {
     const term = searchQuery.trim().toLowerCase();
@@ -133,8 +118,20 @@ export default function UniversitiesClient({ initialUniversities }: Universities
     return () => window.clearTimeout(id);
   }, [searchQuery, locale]);
 
-  const totalPages = Math.ceil(filtered.length / perPage);
-  const paginated = filtered.slice((currentPage - 1) * perPage, currentPage * perPage);
+  const goToPage = useCallback(
+    async (page: number) => {
+      setPageParam(page > 1 ? String(page) : '');
+      startTransition(() => {
+        void fetchPage(page).catch((err) => console.error('[universities] page change failed:', err));
+      });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+    [fetchPage, setPageParam],
+  );
+
+  const universities = result.universities as University[];
+  const totalPages = result.totalPages;
+  const total = result.total;
 
   const cityList = locale === 'zh' ? citiesCn : cities;
   const disciplineList = locale === 'zh' ? disciplinesCn : disciplines;
@@ -305,7 +302,7 @@ export default function UniversitiesClient({ initialUniversities }: Universities
           </div>
           <div className="mt-3 flex items-center justify-between flex-wrap gap-2">
             <p className="text-sm text-gray-500">
-              {t('uni.resultsFound', { count: filtered.length })}
+              {t('uni.resultsFound', { count: total })}
             </p>
             <select
               value={sortBy}
@@ -356,10 +353,13 @@ export default function UniversitiesClient({ initialUniversities }: Universities
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
-        {paginated.length > 0 ? (
+      <section
+        className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 lg:py-12"
+        style={{ opacity: isPending ? 0.6 : 1, transition: 'opacity 150ms ease' }}
+      >
+        {universities.length > 0 ? (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {paginated.map((uni, idx) => (
+            {universities.map((uni, idx) => (
               <Link
                 key={uni.slug}
                 href={`/universities/${uni.slug}`}
@@ -375,7 +375,7 @@ export default function UniversitiesClient({ initialUniversities }: Universities
                 <div className="relative">
                   <div className="relative h-48 overflow-hidden">
                     <Image
-                      src={uni.image}
+                      src={uni.image || '/hero-bg.avif'}
                       alt={uni.name}
                       fill
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
@@ -420,10 +420,12 @@ export default function UniversitiesClient({ initialUniversities }: Universities
                       </span>
                     ))}
                   </div>
-                  <div className="mt-2 flex items-center gap-1.5 text-xs text-gray-500">
-                    <span className="font-medium text-[#1B2A4A]">{locale === 'en' ? uni.accommodationCost : uni.accommodationCostCn}</span>
-                    <span>{t('uni.accommodationLabel')}</span>
-                  </div>
+                  {(uni.accommodationCost || uni.accommodationCostCn) && (
+                    <div className="mt-2 flex items-center gap-1.5 text-xs text-gray-500">
+                      <span className="font-medium text-[#1B2A4A]">{locale === 'en' ? uni.accommodationCost : uni.accommodationCostCn}</span>
+                      <span>{t('uni.accommodationLabel')}</span>
+                    </div>
+                  )}
 
                   <div className="mt-4 pt-3 border-t border-gray-100">
                     <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#9B1B30] group-hover:gap-2.5 transition-all">
@@ -467,8 +469,8 @@ export default function UniversitiesClient({ initialUniversities }: Universities
         {totalPages > 1 && (
           <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
             <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
+              onClick={() => void goToPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1 || isPending}
               className="flex h-9 w-9 items-center justify-center rounded-none border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -480,8 +482,9 @@ export default function UniversitiesClient({ initialUniversities }: Universities
             ) : (
               <button
                 key={page}
-                onClick={() => setCurrentPage(page)}
+                onClick={() => void goToPage(page)}
                 aria-current={currentPage === page ? 'page' : undefined}
+                disabled={isPending}
                 className={`flex h-9 w-9 items-center justify-center rounded-none text-sm font-medium ${
                   currentPage === page
                     ? 'bg-[#9B1B30] text-white'
@@ -492,8 +495,8 @@ export default function UniversitiesClient({ initialUniversities }: Universities
               </button>
             ))}
             <button
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
+              onClick={() => void goToPage(Math.min(totalPages, currentPage + 1))}
+              disabled={currentPage === totalPages || isPending}
               className="flex h-9 w-9 items-center justify-center rounded-none border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <ChevronRight className="h-4 w-4" />

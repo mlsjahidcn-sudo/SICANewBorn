@@ -3,6 +3,7 @@ import { unstable_cache } from 'next/cache';
 import { supabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-server';
 import { universities as staticUniversities, type University } from '@/lib/data';
 import { CACHE_TAGS } from '@/lib/cache';
+import { UNIVERSITY_LIST_COLUMNS } from '@/lib/catalog-list-columns';
 
 export interface GetUniversitiesOptions {
   limit?: number;
@@ -48,12 +49,13 @@ async function fetchUniversities(options: GetUniversitiesOptions = {}): Promise<
   if (isSupabaseServerConfigured() && supabaseServer) {
     const { data, error } = await supabaseServer
       .from('universities')
-      .select('*')
+      .select(UNIVERSITY_LIST_COLUMNS)
       .order('ranking', { ascending: true })
       .limit(limit);
 
     if (error) throw new Error('Unable to load universities');
-    return (data ?? []).map(mapUniversityFromDb);
+    const rows = (data ?? []) as unknown as Record<string, unknown>[];
+    return rows.map((row) => mapUniversityFromDb(row));
   }
 
   return staticUniversities.slice(0, limit);

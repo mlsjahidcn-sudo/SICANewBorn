@@ -17,6 +17,7 @@ import { invalidateProgramFacetsCache } from '@/lib/program-facets';
 import { parseCatalogQuery } from '@/lib/catalog-search';
 import { isCatalogSearchEnabled, searchPublicCatalog, invalidateCatalogSearchCache } from '@/lib/catalog-search-server';
 import { getServerLocale } from '@/lib/server-t';
+import { CATALOG_CACHE_CONTROL } from '@/lib/catalog-list-columns';
 
 /**
  * GET /api/programs — public catalogue query.
@@ -42,13 +43,24 @@ export async function GET(request: Request) {
       const started = performance.now();
       const locale = searchParams.get('locale');
       const result = await searchPublicCatalog(parseCatalogQuery('programs', searchParams), locale === 'en' || locale === 'zh' ? locale : await getServerLocale());
-      return NextResponse.json(result, { headers: { 'Cache-Control': 'no-store', 'Server-Timing': `search;dur=${(performance.now() - started).toFixed(1)}` } });
+      return NextResponse.json(result, {
+        headers: {
+          'Cache-Control': CATALOG_CACHE_CONTROL,
+          'Server-Timing': `search;dur=${(performance.now() - started).toFixed(1)}`,
+        },
+      });
     } catch {
       return NextResponse.json({ error: 'Catalog search is temporarily unavailable' }, { status: 503 });
     }
   }
+  const started = performance.now();
   const result = await queryPrograms(parseProgramQueryParams(searchParams));
-  return NextResponse.json(result);
+  return NextResponse.json(result, {
+    headers: {
+      'Cache-Control': CATALOG_CACHE_CONTROL,
+      'Server-Timing': `search;dur=${(performance.now() - started).toFixed(1)}`,
+    },
+  });
 }
 
 export async function POST(request: Request) {
