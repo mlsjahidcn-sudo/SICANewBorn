@@ -62,7 +62,16 @@ export function middleware(request: NextRequest) {
     return new NextResponse(null, { status: 403 });
   }
 
-  const response = NextResponse.next();
+  // The requested language must reach this render, not only the next request.
+  const requestHeaders = new Headers(request.headers);
+  if (lang === 'en' || lang === 'zh') {
+    const cookie = request.cookies.getAll()
+      .filter((item) => item.name !== 'sica-locale')
+      .map((item) => `${item.name}=${item.value}`);
+    cookie.push(`sica-locale=${lang}`);
+    requestHeaders.set('cookie', cookie.join('; '));
+  }
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
 
   if (lang === 'en' || lang === 'zh') {
     response.cookies.set('sica-locale', lang, {

@@ -82,3 +82,18 @@ describe('middleware — Cache-Control: public on public pages only', () => {
     );
   });
 });
+
+describe('explicit language URLs', () => {
+  it('forwards the requested locale into the first server render and preserves other cookies', () => {
+    const request = new NextRequest('http://localhost/study-in-china/beijing?lang=zh', { headers: { cookie: 'sica-locale=en; preference=retained' } });
+    const response = middleware(request);
+    expect(response.headers.get('x-middleware-request-cookie')).toContain('sica-locale=zh');
+    expect(response.headers.get('x-middleware-request-cookie')).toContain('preference=retained');
+    expect(response.cookies.get('sica-locale')?.value).toBe('zh');
+  });
+  it('does not treat teaching-language filters as locale switches', () => {
+    const response = middleware(new NextRequest('http://localhost/programs?lang=English', { headers: { cookie: 'sica-locale=zh' } }));
+    expect(response.headers.get('x-middleware-request-cookie')).toBe('sica-locale=zh');
+    expect(response.cookies.get('sica-locale')).toBeUndefined();
+  });
+});

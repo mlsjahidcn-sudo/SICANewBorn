@@ -5,8 +5,8 @@ import { Header } from '@/components/header';
 import { I18nProvider } from '@/lib/i18n';
 import type { Locale } from '@/lib/i18n-translations';
 
-const route = vi.hoisted(() => ({ pathname: '/' }));
-vi.mock('next/navigation', () => ({ usePathname: () => route.pathname }));
+const route = vi.hoisted(() => ({ pathname: '/', refresh: vi.fn(), replace: vi.fn() }));
+vi.mock('next/navigation', () => ({ usePathname: () => route.pathname, useRouter: () => ({ refresh: route.refresh, replace: route.replace }) }));
 
 function renderHeader(locale: Locale = 'en'): ReturnType<typeof render> {
   return render(<I18nProvider initialLocale={locale}><Header /></I18nProvider>);
@@ -14,6 +14,9 @@ function renderHeader(locale: Locale = 'en'): ReturnType<typeof render> {
 
 beforeEach(() => {
   route.pathname = '/';
+  route.refresh.mockClear();
+  route.replace.mockClear();
+  window.history.replaceState({}, '', '/');
   vi.stubGlobal('localStorage', { getItem: vi.fn().mockReturnValue(null), setItem: vi.fn() });
 });
 
@@ -115,9 +118,26 @@ describe('public desktop header navigation', () => {
     renderHeader();
     await user.click(screen.getByRole('button', { name: '中文' }));
     expect(screen.getByRole('navigation', { name: '主导航' })).toBeInTheDocument();
+    expect(route.refresh).toHaveBeenCalledOnce();
     expect(screen.getByRole('button', { name: '关于' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '门户登录' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'EN' }));
     expect(screen.getByRole('navigation', { name: 'Main navigation' })).toBeInTheDocument();
   });
+  it('updates explicit locale URLs without overwriting the city search', async () => {
+    window.history.replaceState({}, '', '/study-in-china?q=Beijing&lang=en');
+    const user = userEvent.setup();
+    renderHeader();
+    await user.click(screen.getByRole('button', { name: '中文' }));
+    expect(route.replace).toHaveBeenCalledWith('/study-in-china?q=Beijing&lang=zh', { scroll: false });
+  });
+
+  it('honors explicit Chinese URLs over a previous English browser preference', () => {
+    window.history.replaceState({}, '', '/study-in-china/beijing?lang=zh');
+    vi.stubGlobal('localStorage', { getItem: vi.fn().mockReturnValue('en'), setItem: vi.fn() });
+    renderHeader('zh');
+    expect(screen.getByRole('navigation', { name: '主导航' })).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Main navigation' })).not.toBeInTheDocument();
+  });
+
 });

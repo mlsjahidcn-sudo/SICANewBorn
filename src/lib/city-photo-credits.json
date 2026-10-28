@@ -1,0 +1,74 @@
+{
+  "beijing": {
+    "city": "beijing",
+    "title": "Eastern Beijing skyline from Forbidden City.jpg",
+    "author": "Daniel Case",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Eastern_Beijing_skyline_from_Forbidden_City.jpg",
+    "path": "/cities/beijing.webp"
+  },
+  "chengdu": {
+    "city": "chengdu",
+    "title": "Central Chengdu skyline at dawn - Flickr.jpg",
+    "author": "Pierre Marshall",
+    "license": "CC BY 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Central_Chengdu_skyline_at_dawn_-_Flickr.jpg",
+    "path": "/cities/chengdu.webp"
+  },
+  "guangzhou": {
+    "city": "guangzhou",
+    "title": "Guangzhou skyline.jpg",
+    "author": "jo.sau",
+    "license": "CC BY 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Guangzhou_skyline.jpg",
+    "path": "/cities/guangzhou.webp"
+  },
+  "hangzhou": {
+    "city": "hangzhou",
+    "title": "West Lake 62825-Hangzhou (49152596866).jpg",
+    "author": "xiquinhosilva",
+    "license": "CC BY 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:West_Lake_62825-Hangzhou_(49152596866).jpg",
+    "path": "/cities/hangzhou.webp"
+  },
+  "nanjing": {
+    "city": "nanjing",
+    "title": "Nanjing Skyline.jpg",
+    "author": "_大面",
+    "license": "CC BY-SA 2.5",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.5",
+    "source": "https://commons.wikimedia.org/wiki/File:Nanjing_Skyline.jpg",
+    "path": "/cities/nanjing.webp"
+  },
+  "shanghai": {
+    "city": "shanghai",
+    "title": "Pudong 20045-Shanghai-Pano (32250787253).jpg",
+    "author": "xiquinhosilva",
+    "license": "CC BY 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Pudong_20045-Shanghai-Pano_(32250787253).jpg",
+    "path": "/cities/shanghai.webp"
+  },
+  "shenzhen": {
+    "city": "shenzhen",
+    "title": "Skyline in Shenzhen (20250327).jpg",
+    "author": "Fumikas Sagisavas",
+    "license": "CC0",
+    "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+    "source": "https://commons.wikimedia.org/wiki/File:Skyline_in_Shenzhen_(20250327).jpg",
+    "path": "/cities/shenzhen.webp"
+  },
+  "wuhan": {
+    "city": "wuhan",
+    "title": "Skyline of Wuhan-2.jpg",
+    "author": "Majorantarktis",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Skyline_of_Wuhan-2.jpg",
+    "path": "/cities/wuhan.webp"
+  }
+}

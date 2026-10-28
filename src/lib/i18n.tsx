@@ -17,14 +17,6 @@ interface I18nContextType {
   t: (key: string, params?: Record<string, string | number>) => string;
 }
 
-function readLocaleCookie(): Locale | null {
-  if (typeof document === 'undefined') return null;
-  const m = document.cookie.match(/(?:^|; )sica-locale=([^;]+)/);
-  if (!m) return null;
-  const v = m[1] === 'zh' ? 'zh' : 'en';
-  return v as Locale;
-}
-
 function writeLocaleCookie(locale: Locale): void {
   if (typeof document === 'undefined') return;
   // 1 year, lax (so it's sent on top-level navigations)
@@ -42,6 +34,14 @@ export function I18nProvider({ children, initialLocale }: { children: React.Reac
   // and sync it to the cookie so the server sees it on the next request.
   useEffect(() => {
     try {
+      const requested = new URLSearchParams(window.location.search).get('lang');
+      if (requested === 'en' || requested === 'zh') {
+        // Explicit locale URLs take priority over a previous browser preference.
+        if (requested !== locale) setLocaleState(requested);
+        window.localStorage.setItem('sica-locale', requested);
+        writeLocaleCookie(requested);
+        return;
+      }
       const stored = window.localStorage.getItem('sica-locale');
       if (stored === 'en' || stored === 'zh') {
         if (stored !== locale) {

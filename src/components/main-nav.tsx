@@ -115,14 +115,14 @@ export function MainNav(): React.JSX.Element {
             },
             {
               href: '/study-in-china',
-              label: t('nav.universities.byCity'),
+              label: t('cityFinder.allCities'),
               desc: t('nav.universities.byCityDesc'),
               icon: MapPin,
             },
           ],
         },
         {
-          title: t('nav.universities.byCity'),
+          title: t('cityFinder.popularCities'),
           items: cities.map(({ slug, label }) => ({
             href: `/study-in-china/${slug}`,
             label,

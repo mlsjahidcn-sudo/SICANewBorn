@@ -2,7 +2,8 @@ import type { MetadataRoute } from 'next';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-server';
 import { universities as staticUniversities, programs as staticPrograms, scholarships as staticScholarships } from '@/lib/data';
-import { cities, COUNTRIES } from '@/lib/seo-data';
+import { COUNTRIES } from '@/lib/seo-data';
+import { citySlug } from '@/lib/city-index';
 import { slugify } from '@/lib/catalog-mappers';
 
 import { SITE_URL } from '@/lib/site-url';
@@ -11,6 +12,7 @@ interface SitemapEntry {
   slug: string;
   updated_at?: string;
   discipline?: string;
+  city?: string;
 }
 
 /**
@@ -41,11 +43,12 @@ async function fetchAllCatalogRows(
       .select(columns)
       .order('slug', { ascending: true })
       .range(offset, offset + SITEMAP_PAGE_SIZE - 1);
-    if (error || !data || data.length === 0) break;
+    if (error || !data) return null;
+    if (data.length === 0) break;
     rows.push(...(data as unknown as SitemapEntry[]));
     if (data.length < SITEMAP_PAGE_SIZE) break;
   }
-  return rows.length > 0 ? rows : null;
+  return rows;
 }
 
 export async function loadSitemapParts(): Promise<{
@@ -274,13 +277,6 @@ export async function loadSitemapParts(): Promise<{
     { url: `${SITE_URL}/guides/hsk`, changeFrequency: 'monthly', priority: 0.85 },
   ];
 
-  // City pages — /study-in-china/[city]
-  const cityUrls: MetadataRoute.Sitemap = cities.map((c) => ({
-    url: `${SITE_URL}/study-in-china/${c.slug}`,
-    changeFrequency: 'weekly',
-    priority: 0.8,
-  }));
-
   // Country pages — /scholarships-for/[country]
   const countryUrls: MetadataRoute.Sitemap = COUNTRIES.map((c) => ({
     url: `${SITE_URL}/scholarships-for/${c.slug}`,
@@ -289,8 +285,9 @@ export async function loadSitemapParts(): Promise<{
   }));
 
   // Pull dynamic content from Supabase (fall back to static data)
-  let universities: SitemapEntry[] = staticUniversities.map((u: { slug: string }) => ({
+  let universities: SitemapEntry[] = staticUniversities.map((u) => ({
     slug: u.slug,
+    city: u.city,
   }));
   let programs: SitemapEntry[] = staticPrograms.map((p) => ({
     slug: p.slug,
@@ -307,13 +304,13 @@ export async function loadSitemapParts(): Promise<{
       const supabase = getSupabaseServer();
       if (supabase) {
         const [u, p, s] = await Promise.all([
-          fetchAllCatalogRows(supabase, 'universities'),
+          fetchAllCatalogRows(supabase, 'universities', 'slug, updated_at, city'),
           fetchAllCatalogRows(supabase, 'programs', 'slug, updated_at, discipline'),
           fetchAllCatalogRows(supabase, 'scholarships'),
         ]);
         // Type the dynamic fetches — they may return error objects in
         // some Supabase SDK versions, but we only read .data.
-        if (u && u.length > 0) universities = u as SitemapEntry[];
+        if (u !== null) universities = u;
         if (p && p.length > 0) programs = p as SitemapEntry[];
         if (s && s.length > 0) scholarships = s as SitemapEntry[];
       }
@@ -328,6 +325,13 @@ export async function loadSitemapParts(): Promise<{
       // dashboard's monitoring.
     }
   }
+
+  // Derive cities from the same complete university dataset as profile URLs.
+  const cityUrls: MetadataRoute.Sitemap = [...new Set(universities.map((u) => citySlug(u.city ?? '')).filter(Boolean))].sort().map((slug) => ({
+    url: `${SITE_URL}/study-in-china/${slug}`,
+    changeFrequency: 'weekly',
+    priority: 0.8,
+  }));
 
   const universityUrls: MetadataRoute.Sitemap = universities.map((entry: SitemapEntry) => ({
     url: `${SITE_URL}/universities/${entry.slug}`,

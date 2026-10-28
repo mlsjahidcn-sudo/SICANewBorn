@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useI18n } from '@/lib/i18n';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Menu, X, Globe, FileText, Users, UserPlus, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,6 +19,20 @@ import { SicaLogo } from '@/components/sica-logo';
 export function Header(): React.JSX.Element {
   const { t, locale, setLocale } = useI18n();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const router = useRouter();
+  const switchLocale = (): void => {
+    const nextLocale = locale === 'en' ? 'zh' : 'en';
+    setLocale(nextLocale);
+    // Keep explicit language URLs aligned with the cookie on this render.
+    const url = new URL(window.location.href);
+    const explicitLocale = url.searchParams.get('lang');
+    if (explicitLocale === 'en' || explicitLocale === 'zh') {
+      url.searchParams.set('lang', nextLocale);
+      router.replace(`${url.pathname}${url.search}${url.hash}`, { scroll: false });
+    } else {
+      router.refresh();
+    }
+  };
 
   // Mobile-only flat link list. Desktop uses the full MainNav with
   // hover submenus, so this list is intentionally simpler (no submenu
@@ -54,7 +69,7 @@ export function Header(): React.JSX.Element {
         {/* Right Actions */}
         <div className="hidden xl:flex items-center gap-1.5 shrink-0">
           <button
-            onClick={() => setLocale(locale === 'en' ? 'zh' : 'en')}
+            onClick={switchLocale}
             type="button"
             lang={locale === 'en' ? 'zh' : 'en'}
             className="flex h-9 items-center gap-1.5 rounded-none px-2.5 text-sm font-medium text-[#1B2A4A] transition-colors duration-150 hover:bg-[#1B2A4A]/5 hover:text-[#9B1B30] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1B2A4A] motion-reduce:transition-none"
@@ -167,7 +182,7 @@ export function Header(): React.JSX.Element {
             {/* Language & Apply */}
             <div className="flex items-center gap-3 pt-3 mt-2 border-t border-gray-100">
               <button
-                onClick={() => setLocale(locale === 'en' ? 'zh' : 'en')}
+                onClick={switchLocale}
                 className="flex items-center gap-1.5 rounded-none border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600"
               >
                 <Globe className="size-4 text-[#1B2A4A]" aria-hidden="true" />
