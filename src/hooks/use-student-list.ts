@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { apiFetchJson } from '@/lib/api-client';
 import type { AdminStudent } from '@/lib/student-mapper';
 
+// Fee and shortlist FKs require student_profiles IDs, not partner CRM IDs.
 const STUDENT_LIST_LIMIT = 100;
 
 export function useStudentList(): {
@@ -21,7 +22,7 @@ export function useStudentList(): {
       const all: AdminStudent[] = [];
       let page = 1;
       for (;;) {
-        const data = await apiFetchJson<{ students: AdminStudent[]; totalPages: number }>(`/api/admin/students?limit=${STUDENT_LIST_LIMIT}&page=${page}`, { signal: controller.signal });
+        const data = await apiFetchJson<{ students: AdminStudent[]; totalPages: number }>(`/api/admin/students?surface=student&limit=${STUDENT_LIST_LIMIT}&page=${page}`, { signal: controller.signal });
         all.push(...data.students);
         if (page >= data.totalPages || !data.students.length) break;
         page++;

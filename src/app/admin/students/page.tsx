@@ -41,7 +41,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { apiFetch, apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
-import type { AdminStudent } from '@/lib/student-mapper';
+import { adminStudentDetailHref, type AdminStudentListRow } from '@/lib/admin-student-list-types';
 import { APPLICATION_PAYMENT_STATUS_DISPLAY, type ApplicationPaymentStatus } from '@/lib/payment-aggregate';
 import { SendEmailDialog } from '@/components/admin/SendEmailDialog';
 
@@ -51,7 +51,7 @@ type StudentSortField = 'created_at' | 'updated_at' | 'first_name' | 'last_name'
 
 export default function AdminStudentsPage() {
   const { t } = useI18n();
-  const [students, setStudents] = useState<AdminStudent[]>([]);
+  const [students, setStudents] = useState<AdminStudentListRow[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
@@ -63,10 +63,10 @@ export default function AdminStudentsPage() {
   const [servicePaidFilter, setServicePaidFilter] = useState<string>('all');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [paidToggleBusyId, setPaidToggleBusyId] = useState<string | null>(null);
-  const [studentToDelete, setStudentToDelete] = useState<AdminStudent | null>(null);
+  const [studentToDelete, setStudentToDelete] = useState<AdminStudentListRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   // Phase 136 — AI-assisted send-email composer target
-  const [emailStudent, setEmailStudent] = useState<AdminStudent | null>(null);
+  const [emailStudent, setEmailStudent] = useState<AdminStudentListRow | null>(null);
   // Phase 85 — student delete refactor. The single suspend dialog was
   // replaced with a 2-step "Manage student" flow:
   //   step=manage  → show Suspend + Delete-permanently buttons
@@ -120,7 +120,7 @@ export default function AdminStudentsPage() {
       params.set('servicePaid', servicePaidFilter);
     }
 
-    apiFetchJson<{ students: AdminStudent[]; total: number; page: number; totalPages: number }>(
+    apiFetchJson<{ students: AdminStudentListRow[]; total: number; page: number; totalPages: number }>(
       `/api/admin/students?${params.toString()}`,
       { signal: controller.signal },
     )
@@ -192,9 +192,10 @@ export default function AdminStudentsPage() {
 
   const toggleSelectAllVisible = useCallback(() => {
     setSelectedIds((prev) => {
-      const allSelected = students.length > 0 && students.every((s) => prev.has(s.id));
+      const selectable = students.filter(s => s.surface !== 'partner');
+      const allSelected = selectable.length > 0 && selectable.every((s) => prev.has(s.id));
       if (allSelected) return new Set();
-      return new Set(students.map((s) => s.id));
+      return new Set(selectable.map((s) => s.id));
     });
   }, [students]);
 
@@ -263,7 +264,7 @@ export default function AdminStudentsPage() {
     }
   };
 
-  const handleDeleteStudent = (student: AdminStudent) => {
+  const handleDeleteStudent = (student: AdminStudentListRow) => {
     setStudentToDelete(student);
     setManageStep('manage');
     setConfirmEmailInput('');
@@ -341,7 +342,7 @@ export default function AdminStudentsPage() {
   };
 
   // Source badges also keep DB enum values untranslated.
-  const getSourceBadge = (student: AdminStudent) => {
+  const getSourceBadge = (student: AdminStudentListRow) => {
     if (student.isOffline || student.source === 'Admin') {
       return (
         <Badge className="bg-[#9B1B30]/10 text-[#9B1B30] hover:bg-[#9B1B30]/10">
@@ -361,8 +362,8 @@ export default function AdminStudentsPage() {
 
   // Phase 182: green Paid badge — distinct from amber Offline student
   // and from fee-row payment status on the Payment column.
-  const getServicePaidBadge = (student: AdminStudent) => {
-    if (!student.servicePaid) return null;
+  const getServicePaidBadge = (student: AdminStudentListRow) => {
+    if (student.surface === 'partner' || !student.servicePaid) return null;
     return (
       <Badge
         className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100"
@@ -377,12 +378,12 @@ export default function AdminStudentsPage() {
     );
   };
 
-  const toggleServicePaid = async (student: AdminStudent) => {
+  const toggleServicePaid = async (student: AdminStudentListRow) => {
     const next = !student.servicePaid;
     setPaidToggleBusyId(student.id);
     setError(null);
     try {
-      const { student: updated } = await apiFetchJson<{ student: AdminStudent }>(
+      const { student: updated } = await apiFetchJson<{ student: AdminStudentListRow }>(
         `/api/admin/students/${student.id}`,
         {
           method: 'PATCH',
@@ -451,8 +452,9 @@ export default function AdminStudentsPage() {
     return () => controller.abort();
   }, [refreshToken]);
 
-  const allVisibleSelected = students.length > 0 && students.every((s) => selectedIds.has(s.id));
-  const someVisibleSelected = students.some((s) => selectedIds.has(s.id));
+  const selectableStudents = students.filter(s => s.surface !== 'partner');
+  const allVisibleSelected = selectableStudents.length > 0 && selectableStudents.every((s) => selectedIds.has(s.id));
+  const someVisibleSelected = selectableStudents.some((s) => selectedIds.has(s.id));
 
   return (
     <div className="space-y-6">
@@ -578,6 +580,11 @@ export default function AdminStudentsPage() {
                 <SelectItem value="Inactive">Inactive</SelectItem>
                 <SelectItem value="Pending">Pending</SelectItem>
                 <SelectItem value="Suspended">Suspended</SelectItem>
+                <SelectItem value="New">{t('partnerStudents.statusNew')}</SelectItem>
+                <SelectItem value="In Progress">{t('partnerStudents.statusInProgress')}</SelectItem>
+                <SelectItem value="Applied">{t('partnerStudents.statusApplied')}</SelectItem>
+                <SelectItem value="Accepted">{t('partnerStudents.statusAccepted')}</SelectItem>
+                <SelectItem value="Rejected">{t('partnerStudents.statusRejected')}</SelectItem>
               </SelectContent>
             </Select>
             <Select value={sourceFilter} onValueChange={setSourceFilter}>
@@ -633,6 +640,7 @@ export default function AdminStudentsPage() {
                   {/* Phase 122a: bulk selection column */}
                   <TableHead className="w-10">
                     <Checkbox
+                      disabled={selectableStudents.length === 0}
                       checked={
                         allVisibleSelected
                           ? true
@@ -675,9 +683,10 @@ export default function AdminStudentsPage() {
               </TableHeader>
               <TableBody>
                 {students.map((student) => (
-                  <TableRow key={student.id} className={selectedIds.has(student.id) ? 'bg-[#9B1B30]/5' : undefined}>
+                  <TableRow key={`${student.surface ?? 'student'}:${student.id}`} className={selectedIds.has(student.id) ? 'bg-[#9B1B30]/5' : undefined}>
                     <TableCell>
                       <Checkbox
+                        disabled={student.surface === 'partner'}
                         checked={selectedIds.has(student.id)}
                         onCheckedChange={() => toggleSelected(student.id)}
                         aria-label={t('adminStudents.selectRow', {
@@ -736,7 +745,7 @@ export default function AdminStudentsPage() {
                         column doesn't go silent for students
                         who haven't been billed yet. */}
                     <TableCell className="whitespace-nowrap">
-                      {student.payment && student.payment.status !== 'none' ? (
+                      {student.surface === 'partner' ? <span className="text-[#4B5563]">—</span> : student.payment && student.payment.status !== 'none' ? (
                         <div
                           className="flex flex-col gap-1"
                           title={Object.entries(student.payment.outstandingByCurrency)
@@ -781,7 +790,7 @@ export default function AdminStudentsPage() {
                           tab. */}
                       {student.applicationCount ? (
                         <Link
-                          href={`/admin/students/${student.id}?tab=applications`}
+                          href={`${adminStudentDetailHref(student)}?tab=applications`}
                           className="inline-flex items-center justify-center min-w-[1.75rem] px-2 py-0.5 text-xs font-semibold bg-[#1B2A4A] text-white hover:bg-[#243560]"
                         >
                           {student.applicationCount}
@@ -802,46 +811,50 @@ export default function AdminStudentsPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem asChild>
-                            <Link href={`/admin/students/${student.id}`} className="flex items-center cursor-pointer">
+                            <Link href={adminStudentDetailHref(student)} className="flex items-center cursor-pointer">
                               <Eye className="w-4 h-4 mr-2" />
                               {t('adminStudents.actionView')}
                             </Link>
                           </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/admin/students/${student.id}/edit`} className="flex items-center cursor-pointer">
-                              <Edit className="w-4 h-4 mr-2" />
-                              {t('adminStudents.actionEdit')}
-                            </Link>
-                          </DropdownMenuItem>
-                          {student.email && (
-                            <DropdownMenuItem
-                              className="cursor-pointer"
-                              onClick={() => setEmailStudent(student)}
-                            >
-                              <Mail className="w-4 h-4 mr-2" />
-                              {t('adminSendEmail.sendEmail')}
-                            </DropdownMenuItem>
+                          {student.surface !== 'partner' && (
+                            <>
+                              <DropdownMenuItem asChild>
+                                <Link href={`${adminStudentDetailHref(student)}/edit`} className="flex items-center cursor-pointer">
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  {t('adminStudents.actionEdit')}
+                                </Link>
+                              </DropdownMenuItem>
+                              {student.email && (
+                                <DropdownMenuItem
+                                  className="cursor-pointer"
+                                  onClick={() => setEmailStudent(student)}
+                                >
+                                  <Mail className="w-4 h-4 mr-2" />
+                                  {t('adminSendEmail.sendEmail')}
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem
+                                className="cursor-pointer"
+                                onClick={() => void toggleServicePaid(student)}
+                                disabled={paidToggleBusyId === student.id}
+                              >
+                                <DollarSign className="w-4 h-4 mr-2" />
+                                {student.servicePaid
+                                  ? t('adminStudents.actionClearPaid')
+                                  : t('adminStudents.actionMarkPaid')}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-red-600 cursor-pointer"
+                                onClick={() => handleDeleteStudent(student)}
+                                disabled={student.status === 'Suspended'}
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                {student.status === 'Suspended'
+                                  ? t('adminStudents.actionAlreadySuspended')
+                                  : t('adminStudents.actionDelete')}
+                              </DropdownMenuItem>
+                            </>
                           )}
-                          <DropdownMenuItem
-                            className="cursor-pointer"
-                            onClick={() => void toggleServicePaid(student)}
-                            disabled={paidToggleBusyId === student.id}
-                          >
-                            <DollarSign className="w-4 h-4 mr-2" />
-                            {student.servicePaid
-                              ? t('adminStudents.actionClearPaid')
-                              : t('adminStudents.actionMarkPaid')}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-red-600 cursor-pointer"
-                            onClick={() => handleDeleteStudent(student)}
-                            disabled={student.status === 'Suspended'}
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            {student.status === 'Suspended'
-                              ? t('adminStudents.actionAlreadySuspended')
-                              : t('adminStudents.actionDelete')}
-                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>

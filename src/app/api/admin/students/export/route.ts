@@ -1,8 +1,6 @@
-import { collectRows } from '@/lib/admin-application-query';
+import { loadAdminStudentList, loadAdminStudentApplicationCounts } from '@/lib/admin-student-list';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, buildServiceClient, getServerEnv } from '@/lib/supabase-auth';
-import { mapStudentFromDb, parseSource, parseStatus, STUDENT_SORTABLE_FIELDS } from '@/lib/student-mapper';
-import { sanitizeOrTerm } from '@/lib/postgrest';
 
 export const dynamic = 'force-dynamic';
 
@@ -70,66 +68,11 @@ export async function GET(request: NextRequest) {
 
   try {
     const { searchParams } = new URL(request.url);
-    const search = searchParams.get('search')?.trim() || '';
-    const status = parseStatus(searchParams.get('status'));
-    const source = parseSource(searchParams.get('source'));
-    const isOfflineRaw = searchParams.get('isOffline');
-    const servicePaidRaw = searchParams.get('servicePaid');
-    const sortRaw = searchParams.get('sort') || 'created_at';
-    const orderRaw = searchParams.get('order') || 'desc';
-    const sort = (STUDENT_SORTABLE_FIELDS as readonly string[]).includes(sortRaw)
-      ? sortRaw
-      : 'created_at';
-    const ascending = orderRaw === 'asc';
-
     const service = buildServiceClient();
-    let query = service
-      .from('student_profiles')
-      .select('*')
-      .order(sort, { ascending })
-      .limit(MAX_EXPORT_ROWS);
-
-    if (status) query = query.eq('status', status);
-    if (source) query = query.eq('source', source);
-    if (isOfflineRaw === 'true') query = query.eq('source', 'Admin');
-    if (isOfflineRaw === 'false') query = query.neq('source', 'Admin');
-    if (servicePaidRaw === 'true') query = query.eq('service_paid', true);
-    if (servicePaidRaw === 'false') query = query.eq('service_paid', false);
-
-    if (search) {
-      const safe = sanitizeOrTerm(search);
-      query = query.or(
-        `first_name.ilike.%${safe}%,last_name.ilike.%${safe}%,email.ilike.%${safe}%,phone.ilike.%${safe}%,nationality.ilike.%${safe}%,target_degree.ilike.%${safe}%,target_field.ilike.%${safe}%`,
-      );
-    }
-
-    const { data, error } = await query;
-    if (error) {
-      console.error('[admin/students/export] supabase error:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    const students = (data || []).map(mapStudentFromDb);
-    const studentIds = students.map((s) => s.id);
-
-    // Application counts for the exported slice — student applications
-    // by student_id, partner CRM applications by the Phase A bridge
-    // column (linked_student_profile_id). Two batched IN queries cover
-    // up to 1000 students; both are best-effort (a failure leaves the
-    // Applications column at 0 rather than failing the download).
-    const studentAppCounts = new Map<string, number>();
-    const partnerAppCounts = new Map<string, number>();
-    if (studentIds.length > 0) {
-      const [studentApps, partnerApps] = await Promise.all([
-        collectRows<{ student_id: string }>((from, to) => service.from('student_applications').select('id, student_id').in('student_id', studentIds).is('archived_at', null).order('id').range(from, to)),
-        collectRows<{ linked_student_profile_id: string }>((from, to) => service.from('partner_applications').select('id, linked_student_profile_id').in('linked_student_profile_id', studentIds).is('archived_at', null).order('id').range(from, to)),
-      ]);
-      for (const row of studentApps) studentAppCounts.set(row.student_id, (studentAppCounts.get(row.student_id) || 0) + 1);
-      for (const row of partnerApps) partnerAppCounts.set(row.linked_student_profile_id, (partnerAppCounts.get(row.linked_student_profile_id) || 0) + 1);
-    }
-
+    const students = await loadAdminStudentList(service, searchParams);
     const truncated = students.length > MAX_EXPORT_ROWS;
-    const rows = truncated ? students.slice(0, MAX_EXPORT_ROWS) : students;
+    const rows = students.slice(0, MAX_EXPORT_ROWS);
+    const counts = await loadAdminStudentApplicationCounts(service, rows);
 
     const header = toCsvRow([...CSV_COLUMNS]);
     const body = rows.map((s) =>
@@ -146,8 +89,8 @@ export async function GET(request: NextRequest) {
         s.preferredUniversities.join('; '),
         s.source,
         s.status,
-        s.servicePaid ? 'Yes' : 'No',
-        (studentAppCounts.get(s.id) || 0) + (partnerAppCounts.get(s.id) || 0),
+        s.surface === 'partner' ? '' : s.servicePaid ? 'Yes' : 'No',
+        counts.get(`${s.surface}:${s.id}`) || 0,
         s.createdAt,
         s.updatedAt,
       ]),

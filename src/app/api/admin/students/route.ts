@@ -1,10 +1,10 @@
 import { validateStudentUniversityDetails } from '@/lib/student-university-fields';
-import { collectRows } from '@/lib/admin-application-query';
+import { loadAdminStudentList, loadAdminStudentApplicationCounts } from '@/lib/admin-student-list';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, buildServiceClient, getServerEnv } from '@/lib/supabase-auth';
-import { mapStudentFromDb, mapStudentToDb, parseSource, parseStatus } from '@/lib/student-mapper';
+import { mapStudentFromDb, mapStudentToDb, parseSource } from '@/lib/student-mapper';
 import { sendStudentWelcome } from '@/lib/email';
-import { sanitizeOrTerm, parseIntParam } from '@/lib/postgrest';
+import { parseIntParam } from '@/lib/postgrest';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { fetchLastEmailSentAt } from '@/lib/admin/last-email-lookup';
 import { computePaymentAggregateForApp } from '@/lib/payment-aggregate';
@@ -12,13 +12,14 @@ import { computePaymentAggregateForApp } from '@/lib/payment-aggregate';
 /**
  * GET /api/admin/students
  *
- * List all students (any status, any source) with optional filters:
+ * List profiles plus active, unlinked partner CRM students with optional filters:
  *   - search   : free-text on first_name, last_name, email, phone,
  *                nationality, target_degree, target_field (case-insensitive)
- *   - status   : exact match (Active | Inactive | Pending | Suspended)
+ *   - status   : exact profile-account or partner CRM status
  *   - source   : exact match (Admin | Partner | Online)
+ *   - surface  : 'student' for profile-only FK pickers; 'partner' for unlinked CRM
  *   - isOffline: derived filter — 'true' returns source='Admin', 'false' returns source != 'Admin'
- *   - servicePaid: 'true' | 'false' — student_profiles.service_paid triage flag
+ *   - servicePaid: 'true' | 'false' — profile-only triage flag (CRM rows excluded)
  *   - sort     : created_at | updated_at | first_name | last_name  (default created_at)
  *   - order    : asc | desc                                       (default desc)
  *   - page     : 1-indexed                                        (default 1)
@@ -78,84 +79,18 @@ export async function GET(request: NextRequest) {
 
   try {
     const { searchParams } = new URL(request.url);
-    const search = searchParams.get('search')?.trim() || '';
-    const status = parseStatus(searchParams.get('status'));
-    const source = parseSource(searchParams.get('source'));
-    const isOfflineRaw = searchParams.get('isOffline');
-    // Phase 182: Paid triage filter (orthogonal to source='Admin' offline intake).
-    const servicePaidRaw = searchParams.get('servicePaid');
-    const sortRaw = searchParams.get('sort') || 'created_at';
-    const orderRaw = searchParams.get('order') || 'desc';
     const page = parseIntParam(searchParams.get('page'), 1);
     const limit = parseIntParam(searchParams.get('limit'), 20, { max: 100 });
-
-    // Validate sort
-    const allowedSort = ['created_at', 'updated_at', 'first_name', 'last_name'];
-    const sort = allowedSort.includes(sortRaw) ? sortRaw : 'created_at';
-    const ascending = orderRaw === 'asc';
-
     const service = buildServiceClient();
-    let query = service
-      .from('student_profiles')
-      .select('*', { count: 'exact' })
-      .order(sort, { ascending });
-
-    // Apply filters
-    if (status) query = query.eq('status', status);
-    if (source) query = query.eq('source', source);
-    if (isOfflineRaw === 'true') query = query.eq('source', 'Admin');
-    if (isOfflineRaw === 'false') query = query.neq('source', 'Admin');
-    if (servicePaidRaw === 'true') query = query.eq('service_paid', true);
-    if (servicePaidRaw === 'false') query = query.eq('service_paid', false);
-
-    // Search: case-insensitive partial match across name, email, and
-    // the core registration fields (country/phone/degree/program).
-    if (search) {
-      // Escape ILIKE wildcards + strip PostgREST .or() syntax chars
-      // (a comma in the search used to split the filter string and
-      // 500 the request — or worse, inject extra filters).
-      const safe = sanitizeOrTerm(search);
-      // Use OR across searchable columns. The pattern syntax for OR in
-      // supabase-js is `.or('col.ilike.%x%,col2.ilike.%y%')`.
-      query = query.or(
-        `first_name.ilike.%${safe}%,last_name.ilike.%${safe}%,email.ilike.%${safe}%,phone.ilike.%${safe}%,nationality.ilike.%${safe}%,target_degree.ilike.%${safe}%,target_field.ilike.%${safe}%`,
-      );
+    const allStudents = await loadAdminStudentList(service, searchParams);
+    const total = allStudents.length;
+    const students = allStudents.slice((page - 1) * limit, page * limit);
+    const counts = await loadAdminStudentApplicationCounts(service, students);
+    for (const student of students) {
+      student.applicationCount = counts.get(`${student.surface}:${student.id}`) || 0;
     }
-
-    // Pagination
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
-    query = query.range(from, to);
-
-    const { data, count, error } = await query;
-
-    if (error) {
-      console.error('[admin/students GET] supabase error:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    const students = (data || []).map(mapStudentFromDb);
-    const total = count || 0;
-
-    // Phase 122a: application counts for the page slice —
-    // student_applications by student_id PLUS partner_applications by
-    // the Phase A bridge column (linked_student_profile_id). Two
-    // batched IN queries cover the ≤100-row page; both are
-    // best-effort (a failure leaves the count at 0 rather than
-    // failing the list).
-    const studentIds = students.map((s) => s.id);
-    if (studentIds.length > 0) {
-      const [studentApps, partnerApps] = await Promise.all([
-        collectRows<{ student_id: string }>((from, to) => service.from('student_applications').select('id, student_id').in('student_id', studentIds).is('archived_at', null).order('id').range(from, to)),
-        collectRows<{ linked_student_profile_id: string }>((from, to) => service.from('partner_applications').select('id, linked_student_profile_id').in('linked_student_profile_id', studentIds).is('archived_at', null).order('id').range(from, to)),
-      ]);
-      const counts = new Map<string, number>();
-      for (const row of studentApps) counts.set(row.student_id, (counts.get(row.student_id) || 0) + 1);
-      for (const row of partnerApps) counts.set(row.linked_student_profile_id, (counts.get(row.linked_student_profile_id) || 0) + 1);
-      for (const s of students) {
-        s.applicationCount = counts.get(s.id) || 0;
-      }
-    }
+    // Email and fee records refer to student_profiles, never CRM IDs.
+    const studentIds = students.filter(s => s.surface !== 'partner').map(s => s.id);
 
     // Phase 136b — newest successful email send per student, for the
     // "✓ Email sent <date>" chip on the list. Same best-effort
@@ -166,7 +101,7 @@ export async function GET(request: NextRequest) {
         leadIds: studentIds,
         adminEmail: process.env.ADMIN_EMAIL || null,
       });
-      for (const s of students) {
+      for (const s of students.filter(row => row.surface !== 'partner')) {
         s.lastEmailSentAt = emailMap.get(s.id) ?? null;
       }
     }
@@ -204,7 +139,7 @@ export async function GET(request: NextRequest) {
             list.push(row as never);
             byStudent.set(sid, list);
           }
-          for (const s of students) {
+          for (const s of students.filter(row => row.surface !== 'partner')) {
             const fees = byStudent.get(s.id) || [];
             s.payment = computePaymentAggregateForApp(fees);
           }
