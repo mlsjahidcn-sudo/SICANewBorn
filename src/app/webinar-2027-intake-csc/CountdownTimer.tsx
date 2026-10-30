@@ -57,9 +57,9 @@ function parseSessionDateMs(sessionDate: string | null): number | null {
 export function CountdownTimer({ sessionDate, forceHidden }: Props) {
   const { t } = useI18n();
   const targetMs = parseSessionDateMs(sessionDate);
-  const [state, setState] = useState<CountdownState | null>(() =>
-    targetMs === null ? null : computeState(targetMs, Date.now()),
-  );
+  // Keep SSR and the first client render identical; compute at mount and
+  // every 1s, since Date.now() in initial state would mismatch cached HTML.
+  const [state, setState] = useState<CountdownState | null>(null);
 
   useEffect(() => {
     if (targetMs === null) {
