@@ -1,5 +1,6 @@
 import { readCatalogVerification } from '@/lib/validators/catalog-verification';
 import { unstable_cache } from 'next/cache';
+import { cache } from 'react';
 import { supabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-server';
 import { universities as staticUniversities, type University } from '@/lib/data';
 import { CACHE_TAGS } from '@/lib/cache';
@@ -34,14 +35,14 @@ async function fetchUniversityBySlug(slug: string): Promise<University | null> {
  * fresh data should still call `revalidateTag(CACHE_TAGS.universities)`
  * explicitly — this is the safety net.
  */
-export const getUniversityBySlug = unstable_cache(
+export const getUniversityBySlug = cache(unstable_cache(
   fetchUniversityBySlug,
   ['university-by-slug'],
   {
     tags: [CACHE_TAGS.universities],
     revalidate: 3600,
   },
-);
+));
 
 async function fetchUniversities(options: GetUniversitiesOptions = {}): Promise<University[]> {
   const { limit = 1000 } = options;
