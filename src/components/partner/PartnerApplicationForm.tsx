@@ -844,7 +844,6 @@ export function PartnerApplicationForm({
                       : t('partnerAppForm.programSearchPrompt')
                   }
                   disabled={dataLoading}
-                  getLogo={(record) => record.university?.logo || undefined}
                 />
                 {fieldErrors.program && (
                   <p className="text-xs text-red-700 mt-1">{fieldErrors.program}</p>

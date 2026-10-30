@@ -34,7 +34,7 @@ describe('researched language and foundation programs', () => {
   it('uses source fee units and omits not-confirmed FAQ answers', () => {
     const program = {
       name: 'Foundation Program', tuition: 'CNY 12,000/semester',
-      language: 'To be confirmed', requirements: [] as string[], intake: '',
+      language: 'To be confirmed' as const, requirements: [] as string[], intake: '',
     };
     const items = buildProgramFaqItems(program, 'Example University');
     expect(items).toHaveLength(1);

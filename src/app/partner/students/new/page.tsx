@@ -339,7 +339,6 @@ export default function PartnerAddStudentPage() {
                     placeholder={t('partnerStudentNew.fieldTargetUniversityPlaceholder')}
                     clearValue=""
                     clearLabel={t('partnerCommon.placeholderDash')}
-                    getLogo={(record) => record.logo || undefined}
                   />
                 </div>
                 <div>
@@ -356,7 +355,6 @@ export default function PartnerAddStudentPage() {
                     placeholder={t('partnerStudentNew.fieldTargetProgramPlaceholder')}
                     clearValue=""
                     clearLabel={t('partnerCommon.placeholderDash')}
-                    getLogo={(record) => record.university?.logo || undefined}
                   />
                 </div>
                 <div>

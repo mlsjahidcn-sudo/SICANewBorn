@@ -872,7 +872,6 @@ export default function StudentNewApplicationPage() {
                           : t('studentWizard.programSearchPrompt')
                       }
                       disabled={!applicationData.targetDegreeLevel || dataLoading}
-                      getLogo={(record) => record.university?.logo || undefined}
                     />
                   </div>
 

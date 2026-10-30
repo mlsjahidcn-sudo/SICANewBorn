@@ -203,7 +203,7 @@ describe('programme meta descriptions', () => {
     const description = buildProgramMetaDescription({
       major: 'null',
       degree: '',
-      language: 'To be confirmed',
+      language: 'To be confirmed' as const,
       university: 'undefined',
       city: 'n/a',
     });
@@ -218,7 +218,7 @@ describe('programme FAQ schema', () => {
     const program = {
       name: 'Computer Science',
       tuition: '',
-      language: 'To be confirmed',
+      language: 'To be confirmed' as const,
       requirements: [] as string[],
       intake: '',
     };
