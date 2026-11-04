@@ -22,7 +22,7 @@ import {
   PARTNER_STUDENT_STATUSES,
   PartnerStudentStatus,
 } from '@/lib/partner-student-mapper';
-import { COMMON_COUNTRIES, NATIONALITY_CUSTOM, NATIONALITY_NONE } from '@/lib/common-countries';
+import { ALL_COUNTRIES, NATIONALITY_CUSTOM, NATIONALITY_NONE } from '@/lib/common-countries';
 import type { University, Program } from '@/lib/data';
 
 interface FormData extends StudentUniversityFormValues {
@@ -236,21 +236,18 @@ export default function PartnerAddStudentPage() {
                 </div>
                 <div>
                   <Label htmlFor="nationality" className="text-[#1B2A4A] mb-2 block">{t('partnerStudentNew.fieldNationality')}</Label>
-                  {/* Phase 49.2: <Select> over the curated top-40
-                      country list (src/lib/common-countries.ts).
-                      Free-text gave us "USA" / "United States" /
-                      "America" / "U.S.A." as 4 different rows
-                      for the same country. The "Other" option
-                      preserves the old free-text path so partners
-                      with students from rare countries can still
-                      type a value. */}
+                  {/* Full ISO 3166-1 country list (ALL_COUNTRIES).
+                      Previously a curated top-40 left markets like
+                      Haiti only reachable via "Other". The "Other"
+                      option still preserves free-text for legacy /
+                      non-standard values. */}
                   <Select
                     value={
                       showCustomNationality
                         ? NATIONALITY_CUSTOM
                         : formData.nationality === ''
                           ? NATIONALITY_NONE
-                          : COMMON_COUNTRIES.some((c) => c.value === formData.nationality)
+                          : ALL_COUNTRIES.some((c) => c.value === formData.nationality)
                             ? formData.nationality
                             : NATIONALITY_CUSTOM
                     }
@@ -273,7 +270,7 @@ export default function PartnerAddStudentPage() {
                     <SelectTrigger className="rounded-none">
                       <SelectValue placeholder={t('partnerStudentNew.fieldNationalityPlaceholder')} />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-[320px]">
                       {/* Phase 54 fix: shadcn <Select> reserves empty
                           string for the placeholder/no-selection state.
                           Using <SelectItem value=""> throws at render
@@ -285,7 +282,7 @@ export default function PartnerAddStudentPage() {
                       <SelectItem value={NATIONALITY_NONE}>
                         {t('partnerCommon.placeholderDash')}
                       </SelectItem>
-                      {COMMON_COUNTRIES.map((c) => (
+                      {ALL_COUNTRIES.map((c) => (
                         <SelectItem key={c.code} value={c.value}>
                           {c.label} ({c.code})
                         </SelectItem>

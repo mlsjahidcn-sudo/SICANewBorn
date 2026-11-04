@@ -1,13 +1,15 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/lib/auth-context';
 import { useI18n } from '@/lib/i18n';
+import { ALL_COUNTRIES } from '@/lib/common-countries';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, UserPlus } from 'lucide-react';
 import { SicaLogo } from '@/components/sica-logo';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 
 export default function StudentRegisterPage() {
   const { signUp, user, isConfigured } = useAuth();
@@ -27,6 +29,16 @@ export default function StudentRegisterPage() {
   const [loading, setLoading] = useState(false);
 
   const [redirecting, setRedirecting] = useState(false);
+
+  const countryOptions = useMemo(
+    () =>
+      ALL_COUNTRIES.map((c) => ({
+        value: c.value,
+        label: c.label,
+        sublabel: c.code,
+      })),
+    [],
+  );
 
   useEffect(() => {
     if (user && !redirecting) {
@@ -159,13 +171,14 @@ export default function StudentRegisterPage() {
                 <label className="block text-sm font-medium text-[#1F2937] mb-1.5">
                   {t('studentRegister.country')}
                 </label>
-                <input
-                  type="text"
+                <SearchableSelect
                   value={country}
-                  onChange={(e) => setCountry(e.target.value)}
-                  required
-                  placeholder="Nigeria"
-                  className="w-full px-4 py-2.5 border border-gray-300 text-[#1F2937] placeholder:text-gray-400 focus:outline-none focus:border-[#9B1B30] focus:ring-1 focus:ring-[#9B1B30] text-sm"
+                  onChange={setCountry}
+                  options={countryOptions}
+                  placeholder={t('studentRegister.countryPlaceholder')}
+                  searchPlaceholder={t('studentRegister.countrySearch')}
+                  emptyText={t('studentRegister.countryEmpty')}
+                  className="h-[42px] border-gray-300 text-sm"
                 />
               </div>
               <div>

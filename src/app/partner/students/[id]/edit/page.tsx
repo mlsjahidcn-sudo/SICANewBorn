@@ -23,7 +23,7 @@ import {
   PARTNER_STUDENT_STATUSES,
   PartnerStudentStatus,
 } from '@/lib/partner-student-mapper';
-import { COMMON_COUNTRIES, NATIONALITY_CUSTOM, NATIONALITY_NONE } from '@/lib/common-countries';
+import { ALL_COUNTRIES, NATIONALITY_CUSTOM, NATIONALITY_NONE } from '@/lib/common-countries';
 import type { University, Program } from '@/lib/data';
 
 interface FormData extends StudentUniversityFormValues {
@@ -86,16 +86,15 @@ export default function PartnerEditStudentPage() {
         notes: s.notes ?? '',
       };
       setFormData(loaded);
-      // Phase 49.2: if the existing nationality isn't in the
-      // top-40 catalog, show the free-text "Other" fallback
-      // input pre-filled with the current value, so the
-      // partner sees their existing free-text data instead
-      // of an empty select. We only set the flag once on
-      // load — changing it after that is the partner's
-      // choice via the select.
+      // If the existing nationality isn't in ALL_COUNTRIES,
+      // show the free-text "Other" fallback so the partner
+      // sees their existing free-text data instead of an
+      // empty select. We only set the flag once on load —
+      // changing it after that is the partner's choice via
+      // the select.
       if (
         s.nationality &&
-        !COMMON_COUNTRIES.some((c) => c.value === s.nationality)
+        !ALL_COUNTRIES.some((c) => c.value === s.nationality)
       ) {
         setShowCustomNationality(true);
       }
@@ -284,16 +283,15 @@ export default function PartnerEditStudentPage() {
                 </div>
                 <div>
                   <Label htmlFor="nationality" className="text-[#1B2A4A] mb-2 block">{t('partnerStudentEdit.fieldNationality')}</Label>
-                  {/* Phase 49.2: <Select> over the curated top-40
-                      country list. Mirrors the partner student
-                      new form. See src/lib/common-countries.ts. */}
+                  {/* Full ISO 3166-1 country list — mirrors the
+                      partner student new form. */}
                   <Select
                     value={
                       showCustomNationality
                         ? NATIONALITY_CUSTOM
                         : formData.nationality === ''
                           ? NATIONALITY_NONE
-                          : COMMON_COUNTRIES.some((c) => c.value === formData.nationality)
+                          : ALL_COUNTRIES.some((c) => c.value === formData.nationality)
                             ? formData.nationality
                             : NATIONALITY_CUSTOM
                     }
@@ -313,14 +311,14 @@ export default function PartnerEditStudentPage() {
                     <SelectTrigger className="rounded-none">
                       <SelectValue placeholder={t('partnerStudentNew.fieldNationalityPlaceholder')} />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-[320px]">
                       {/* Phase 54: shadcn <Select> reserves '' for the
                           placeholder state. Use a sentinel that maps
                           back to real empty on onValueChange. */}
                       <SelectItem value={NATIONALITY_NONE}>
                         {t('partnerCommon.placeholderDash')}
                       </SelectItem>
-                      {COMMON_COUNTRIES.map((c) => (
+                      {ALL_COUNTRIES.map((c) => (
                         <SelectItem key={c.code} value={c.value}>
                           {c.label} ({c.code})
                         </SelectItem>

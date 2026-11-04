@@ -2,20 +2,13 @@
  * common-countries.ts
  *
  * A curated list of the most common nationalities for SICA's
- * international-student partner CRM. Phase 49.2: replaces the
- * free-text nationality input on the partner student new + edit
- * forms with a `<Select>` of these values. Free-text was the
- * source of the "USA / United States / America / U.S.A." data
- * inconsistency — 4 different rows for the same country.
+ * marketing / promotions surfaces (e.g. admin promotion targeting).
+ * Partner + student registration forms use ALL_COUNTRIES instead
+ * so every ISO country (including Haiti, etc.) is selectable
+ * without relying on the free-text "Other" escape hatch.
  *
- * Curated by reach (the top 40 markets SICA serves today). Not
- * exhaustive on purpose — a partner with a student from a rare
- * country can use the (Custom) option, which preserves the old
- * free-text path so we don't lose the long tail.
- *
- * The list is ordered by approximate enrollment volume for the
- * partner CRM, so the most common picks surface first when the
- * partner opens the dropdown.
+ * Ordered by approximate enrollment volume so the most common
+ * markets surface first in short dropdowns.
  */
 
 export interface CountryOption {
