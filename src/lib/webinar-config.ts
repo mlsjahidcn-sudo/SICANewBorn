@@ -16,8 +16,11 @@ export function formatWebinarDate(iso: string | null): string {
   }
 }
 
-/** Controls the public webinar page, registration endpoint, and promo popup. */
+/** Controls the public webinar page and registration endpoint. */
 export const PUBLIC_WEBINAR_ENABLED = true;
+
+/** Pause the promotional popup independently of the webinar page and signups. */
+export const PUBLIC_WEBINAR_POPUP_ENABLED = false;
 
 /**
  * Phase 165: hardcoded webinar configuration.

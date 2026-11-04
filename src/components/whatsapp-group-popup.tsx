@@ -5,7 +5,7 @@ import { X, MessageCircle, GraduationCap, Newspaper, Calendar, FileText, ArrowRi
 import { usePathname } from 'next/navigation';
 import { track } from '@/lib/analytics';
 import { WHATSAPP_GROUP_URL as WHATSAPP_GROUP_URL_BASE } from '@/lib/contact';
-import { PUBLIC_WEBINAR_ENABLED } from '@/lib/webinar-config';
+import { PUBLIC_WEBINAR_ENABLED, PUBLIC_WEBINAR_POPUP_ENABLED } from '@/lib/webinar-config';
 import {
   WEBINAR_PROMO_DISMISS_KEY,
   isOnPublicPath,
@@ -68,7 +68,7 @@ export function isWebinarPromoOnScreen(
   pathname: string | null,
   promoDismissed: boolean,
 ): boolean {
-  if (!PUBLIC_WEBINAR_ENABLED) return false;
+  if (!PUBLIC_WEBINAR_ENABLED || !PUBLIC_WEBINAR_POPUP_ENABLED) return false;
   if (!isOnPublicPath(pathname)) return false;
   return !promoDismissed;
 }

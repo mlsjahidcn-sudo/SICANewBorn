@@ -9,7 +9,7 @@ import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import type { Locale } from '@/lib/i18n-translations';
 import type { CatalogCounts } from '@/lib/data-fetcher';
-import { PUBLIC_WEBINAR_ENABLED } from '@/lib/webinar-config';
+import { PUBLIC_WEBINAR_ENABLED, PUBLIC_WEBINAR_POPUP_ENABLED } from '@/lib/webinar-config';
 
 /**
  * Phase 67: dynamic-import the floating/overlay widgets so they
@@ -86,7 +86,7 @@ export function ClientLayout({
         {/* Webinar promo stays on quiet (detail) pages too — high-intent
             browse traffic. Anchored under the header so it does not fight
             StickyApplyBar / chat / WhatsApp floats at the bottom. */}
-        {PUBLIC_WEBINAR_ENABLED && <WebinarPromoPopup />}
+        {PUBLIC_WEBINAR_ENABLED && PUBLIC_WEBINAR_POPUP_ENABLED && <WebinarPromoPopup />}
         {!quiet && <>
           <Chatbot />
           <WhatsAppFloat />

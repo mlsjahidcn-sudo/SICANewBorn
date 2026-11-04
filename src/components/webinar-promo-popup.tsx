@@ -8,6 +8,7 @@ import { track } from '@/lib/analytics';
 import { useI18n } from '@/lib/i18n';
 import {
   PUBLIC_WEBINAR_ENABLED,
+  PUBLIC_WEBINAR_POPUP_ENABLED,
   WEBINAR_CONFIG,
   formatWebinarDate,
   isWebinarSessionUpcoming,
@@ -26,7 +27,7 @@ const REVEAL_DELAY_MS = 1200;
 /**
  * Visitor-facing promo popup for the current webinar session.
  *
- * Shows when `PUBLIC_WEBINAR_ENABLED` and the path is public:
+ * Shows when both public webinar flags are enabled and the path is public:
  *   - Active branch when `sessionDateIso` is still in the future
  *   - Teaser branch when the date has passed (or is invalid)
  *   - Denylist path filter (portals / webinar landing / thank-you / api)
@@ -62,7 +63,7 @@ export function WebinarPromoPopup() {
     nowMs,
   );
   const canShow =
-    PUBLIC_WEBINAR_ENABLED && mounted && !dismissed && isOnPublicPath(pathname);
+    PUBLIC_WEBINAR_ENABLED && PUBLIC_WEBINAR_POPUP_ENABLED && mounted && !dismissed && isOnPublicPath(pathname);
 
   useEffect(() => {
     if (!canShow) {
