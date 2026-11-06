@@ -125,11 +125,14 @@ export default function StudentRegisterPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-[#1F2937] mb-1.5">
+                <label htmlFor="student-register-first-name" className="block text-sm font-medium text-[#1F2937] mb-1.5">
                   {t('studentRegister.firstName')}
                 </label>
                 <input
+                  id="student-register-first-name"
                   type="text"
+                  name="firstName"
+                  autoComplete="given-name"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   required
@@ -138,11 +141,14 @@ export default function StudentRegisterPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#1F2937] mb-1.5">
+                <label htmlFor="student-register-last-name" className="block text-sm font-medium text-[#1F2937] mb-1.5">
                   {t('studentRegister.lastName')}
                 </label>
                 <input
+                  id="student-register-last-name"
                   type="text"
+                  name="lastName"
+                  autoComplete="family-name"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   required
@@ -153,11 +159,15 @@ export default function StudentRegisterPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1.5">
+              <label htmlFor="student-register-email" className="block text-sm font-medium text-[#1F2937] mb-1.5">
                 {t('studentRegister.email')}
               </label>
               <input
+                id="student-register-email"
                 type="email"
+                name="email"
+                autoComplete="email"
+                inputMode="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -168,10 +178,11 @@ export default function StudentRegisterPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-[#1F2937] mb-1.5">
+                <label htmlFor="student-register-country" className="block text-sm font-medium text-[#1F2937] mb-1.5">
                   {t('studentRegister.country')}
                 </label>
                 <SearchableSelect
+                  id="student-register-country"
                   value={country}
                   onChange={setCountry}
                   options={countryOptions}
@@ -182,11 +193,15 @@ export default function StudentRegisterPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#1F2937] mb-1.5">
+                <label htmlFor="student-register-whatsapp" className="block text-sm font-medium text-[#1F2937] mb-1.5">
                   {t('studentRegister.whatsapp')}
                 </label>
                 <input
+                  id="student-register-whatsapp"
                   type="tel"
+                  name="whatsapp"
+                  autoComplete="tel"
+                  inputMode="tel"
                   value={whatsapp}
                   onChange={(e) => setWhatsapp(e.target.value)}
                   required
@@ -198,11 +213,14 @@ export default function StudentRegisterPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-[#1F2937] mb-1.5">
+                <label htmlFor="student-register-degree" className="block text-sm font-medium text-[#1F2937] mb-1.5">
                   {t('studentRegister.degree')}
                 </label>
                 <input
+                  id="student-register-degree"
                   type="text"
+                  name="degree"
+                  autoComplete="off"
                   value={degree}
                   onChange={(e) => setDegree(e.target.value)}
                   required
@@ -211,11 +229,14 @@ export default function StudentRegisterPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#1F2937] mb-1.5">
+                <label htmlFor="student-register-program" className="block text-sm font-medium text-[#1F2937] mb-1.5">
                   {t('studentRegister.interestedProgram')}
                 </label>
                 <input
+                  id="student-register-program"
                   type="text"
+                  name="interestedProgram"
+                  autoComplete="off"
                   value={interestedProgram}
                   onChange={(e) => setInterestedProgram(e.target.value)}
                   required
@@ -226,12 +247,15 @@ export default function StudentRegisterPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1.5">
+              <label htmlFor="student-register-password" className="block text-sm font-medium text-[#1F2937] mb-1.5">
                 {t('studentRegister.password')}
               </label>
               <div className="relative">
                 <input
+                  id="student-register-password"
                   type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  autoComplete="new-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -242,7 +266,7 @@ export default function StudentRegisterPage() {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#1B2A4A]"
-                  aria-label={t('studentRegister.password')}
+                  aria-label={showPassword ? t('passwordRecovery.hidePassword') : t('passwordRecovery.showPassword')}
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -250,11 +274,14 @@ export default function StudentRegisterPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1.5">
+              <label htmlFor="student-register-confirm-password" className="block text-sm font-medium text-[#1F2937] mb-1.5">
                 {t('studentRegister.confirmPassword')}
               </label>
               <input
+                id="student-register-confirm-password"
                 type="password"
+                name="confirmPassword"
+                autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required

@@ -5959,6 +5959,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'webinar.cta.bottomBody': 'One 60-minute session covers every track — Chinese Language, Foundation, Bachelor, Master, and five partner universities. Register now and we will hold a seat for you.',
     'webinar.cta.bottomCta': 'Register below',
     'webinar.cta.trustBadge': 'Trusted by 10,000+ international students applying to Chinese universities',
+    'webinar.closedBanner.title': 'This webinar session has ended',
+    'webinar.closedBanner.body':
+      'Registration is closed. Book a free 10-minute consultation with a SICA counsellor to keep planning your 2027 intake.',
     // Thank-you: webinar source branch
     'thankYou.webinar.heroTitle': 'Your seat is reserved',
     'thankYou.webinar.heroBody': 'The webinar join link is in your inbox. Tap the WhatsApp button below if you would also like the link there.',
@@ -11859,6 +11862,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'webinar.cta.bottomBody': '60 分钟讲座覆盖全部方向 — 中文语言、预科、本科、硕士，以及五所合作高校。现在报名，我们为您保留席位。',
     'webinar.cta.bottomCta': '立即报名',
     'webinar.cta.trustBadge': '已有 10,000+ 名国际学生通过 SICA 成功入读中国顶尖大学',
+    'webinar.closedBanner.title': '本场讲座已结束',
+    'webinar.closedBanner.body':
+      '报名已截止。预约一次免费 10 分钟咨询，继续规划您的 2027 入学。',
     // Thank-you: webinar source branch
     'thankYou.webinar.heroTitle': '您的席位已预留',
     'thankYou.webinar.heroBody': '讲座会议链接已发送至您的邮箱。如希望通过 WhatsApp 同时接收，请点击下方按钮。',

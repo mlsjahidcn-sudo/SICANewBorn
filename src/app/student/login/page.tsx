@@ -67,11 +67,15 @@ export default function StudentLoginPage() {
               )}
 
               <div>
-                <label className="block text-sm font-medium text-[#1F2937] mb-1.5">
+                <label htmlFor="student-login-email" className="block text-sm font-medium text-[#1F2937] mb-1.5">
                   {t('studentLogin.email')}
                 </label>
                 <input
+                  id="student-login-email"
                   type="email"
+                  name="email"
+                  autoComplete="username"
+                  inputMode="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -81,12 +85,15 @@ export default function StudentLoginPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-[#1F2937] mb-1.5">
+                <label htmlFor="student-login-password" className="block text-sm font-medium text-[#1F2937] mb-1.5">
                   {t('studentLogin.password')}
                 </label>
                 <div className="relative">
                   <input
+                    id="student-login-password"
                     type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    autoComplete="current-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -97,7 +104,7 @@ export default function StudentLoginPage() {
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#1B2A4A]"
-                    aria-label={t('studentLogin.password')}
+                    aria-label={showPassword ? t('passwordRecovery.hidePassword') : t('passwordRecovery.showPassword')}
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>

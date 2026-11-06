@@ -6,6 +6,7 @@ import { sendWebinarConfirmation } from '@/lib/email';
 import {
   formatWebinarDate,
   getCurrentWebinarKey,
+  isWebinarRegistrationOpen,
   PUBLIC_WEBINAR_ENABLED,
   WEBINAR_CONFIG,
 } from '@/lib/webinar-config';
@@ -38,6 +39,16 @@ type ProgramInterest = (typeof VALID_PROGRAM_INTERESTS)[number];
 
 export async function POST(request: NextRequest) {
   if (!PUBLIC_WEBINAR_ENABLED) {
+    return NextResponse.json(
+      { error: 'Webinar registration is currently closed.' },
+      { status: 410 },
+    );
+  }
+
+  // Close registration as soon as the session starts. The landing
+  // page revalidates hourly, so this API gate must enforce closure
+  // immediately even when cached HTML still shows the form.
+  if (!isWebinarRegistrationOpen()) {
     return NextResponse.json(
       { error: 'Webinar registration is currently closed.' },
       { status: 410 },

@@ -489,11 +489,14 @@ export function BookingWizard({ selection = null, selectionError = false }: { se
 
           <div className="grid sm:grid-cols-2 gap-5">
             <div>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1">
+              <label htmlFor="counselling-name" className="block text-sm font-medium text-[#1F2937] mb-1">
                 {t('counselling.fieldName')} *
               </label>
               <input
+                id="counselling-name"
                 type="text"
+                name="name"
+                autoComplete="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className={inputClass}
@@ -502,11 +505,15 @@ export function BookingWizard({ selection = null, selectionError = false }: { se
               {fieldErrors.name && <p className="mt-1 text-xs text-red-600">{fieldErrors.name}</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1">
+              <label htmlFor="counselling-email" className="block text-sm font-medium text-[#1F2937] mb-1">
                 {t('counselling.fieldEmail')} *
               </label>
               <input
+                id="counselling-email"
                 type="email"
+                name="email"
+                autoComplete="email"
+                inputMode="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className={inputClass}
@@ -518,11 +525,15 @@ export function BookingWizard({ selection = null, selectionError = false }: { se
 
           <div className="grid sm:grid-cols-2 gap-5 mt-5">
             <div>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1">
+              <label htmlFor="counselling-phone" className="block text-sm font-medium text-[#1F2937] mb-1">
                 {t('counselling.fieldPhone')} *
               </label>
               <input
+                id="counselling-phone"
                 type="tel"
+                name="phone"
+                autoComplete="tel"
+                inputMode="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 className={inputClass}
@@ -532,11 +543,14 @@ export function BookingWizard({ selection = null, selectionError = false }: { se
               {fieldErrors.phone && <p className="mt-1 text-xs text-red-600">{fieldErrors.phone}</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#1F2937] mb-1">
+              <label htmlFor="counselling-country" className="block text-sm font-medium text-[#1F2937] mb-1">
                 {t('counselling.fieldCountry')}
               </label>
               <input
+                id="counselling-country"
                 type="text"
+                name="country"
+                autoComplete="country-name"
                 value={country}
                 onChange={(e) => setCountry(e.target.value)}
                 className={inputClass}
@@ -546,10 +560,13 @@ export function BookingWizard({ selection = null, selectionError = false }: { se
           </div>
 
           <div className="mt-5">
-            <label className="block text-sm font-medium text-[#1F2937] mb-1">
+            <label htmlFor="counselling-education" className="block text-sm font-medium text-[#1F2937] mb-1">
               {t('counselling.fieldEducation')}
             </label>
             <select
+              id="counselling-education"
+              name="educationLevel"
+              autoComplete="off"
               value={educationLevel}
               onChange={(e) => setEducationLevel(e.target.value)}
               className={inputClass}
@@ -564,10 +581,13 @@ export function BookingWizard({ selection = null, selectionError = false }: { se
           </div>
 
           <div className="mt-5">
-            <label className="block text-sm font-medium text-[#1F2937] mb-1">
+            <label htmlFor="counselling-topic" className="block text-sm font-medium text-[#1F2937] mb-1">
               {t('counselling.fieldTopic')}
             </label>
             <textarea
+              id="counselling-topic"
+              name="topic"
+              autoComplete="off"
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
               rows={3}

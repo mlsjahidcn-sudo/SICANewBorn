@@ -59,6 +59,8 @@ export interface SearchableSelectProps {
   clearLabel?: string;
   disabled?: boolean;
   className?: string;
+  /** Forwarded to the combobox trigger so a label htmlFor can focus it. */
+  id?: string;
   /** Locale hint used for default placeholder / search text. */
   locale?: 'en' | 'zh';
   /** When the user is in a slow connection, the list might still be
@@ -88,6 +90,7 @@ export function SearchableSelect({
   clearLabel,
   disabled,
   className,
+  id,
   loading,
   onSearchChange,
   searchValue,
@@ -101,6 +104,7 @@ export function SearchableSelect({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
+          id={id}
           variant="outline"
           role="combobox"
           aria-expanded={open}

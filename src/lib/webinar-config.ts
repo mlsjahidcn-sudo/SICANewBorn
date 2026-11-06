@@ -121,6 +121,18 @@ export function isWebinarSessionUpcoming(
 }
 
 /**
+ * Registration gate for the public landing page + signup API.
+ * Defaults `nowMs` to `Date.now()` so RSC pages can call this
+ * without putting an impure `Date.now()` in the render body
+ * (Phase 161 / react-hooks/purity).
+ */
+export function isWebinarRegistrationOpen(
+  nowMs: number = Date.now(),
+): boolean {
+  return isWebinarSessionUpcoming(WEBINAR_CONFIG.sessionDateIso, nowMs);
+}
+
+/**
  * Hardcoded agenda tracks — the 4-topic grid that the public
  * page renders below the hero.
  *

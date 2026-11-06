@@ -32,9 +32,10 @@ import {
   WEBINAR_CONFIG,
   WEBINAR_AGENDA_TRACKS,
   WEBINAR_FEATURED_UNIVERSITY_SLUGS,
+  formatWebinarDate,
+  isWebinarRegistrationOpen,
   type WebinarAgendaTrack,
 } from '@/lib/webinar-config';
-import { formatWebinarDate } from '@/lib/webinar-config';
 import { CountdownTimer } from './CountdownTimer';
 import { WebinarSignupForm } from './webinar-signup-form';
 
@@ -124,6 +125,9 @@ export default async function WebinarPage() {
   const featuredUniversities = await loadFeaturedUniversities();
 
   const sessionDateIso = WEBINAR_CONFIG.sessionDateIso;
+  // HTML may lag up to `revalidate` (1h); the API closes registration
+  // immediately via the same helper.
+  const registrationOpen = isWebinarRegistrationOpen();
   const heroDateLabel = formatWebinarDate(sessionDateIso);
   const heroDateBody = WEBINAR_CONFIG.sessionTimeDisplay;
   const tracks = WEBINAR_AGENDA_TRACKS;
@@ -170,16 +174,26 @@ export default async function WebinarPage() {
                 </>
               )}
             </div>
-            <CountdownTimer sessionDate={sessionDateIso} />
+            {registrationOpen && <CountdownTimer sessionDate={sessionDateIso} />}
           </div>
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-            <a
-              href="#signup"
-              className="inline-flex items-center justify-center px-7 py-3 bg-[#9B1B30] text-white font-semibold uppercase tracking-wider text-sm hover:bg-[#7A1526] transition-colors"
-            >
-              {t('webinar.hero.ctaPrimary')}
-              <ChevronDown className="ml-2 h-4 w-4" />
-            </a>
+            {registrationOpen ? (
+              <a
+                href="#signup"
+                className="inline-flex items-center justify-center px-7 py-3 bg-[#9B1B30] text-white font-semibold uppercase tracking-wider text-sm hover:bg-[#7A1526] transition-colors"
+              >
+                {t('webinar.hero.ctaPrimary')}
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </a>
+            ) : (
+              <a
+                href="/counselling"
+                className="inline-flex items-center justify-center px-7 py-3 bg-[#9B1B30] text-white font-semibold uppercase tracking-wider text-sm hover:bg-[#7A1526] transition-colors"
+              >
+                {t('consultationCta.ctaPrimary')}
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </a>
+            )}
             <a
               href="#agenda"
               className="inline-flex items-center justify-center px-7 py-3 border border-white/30 text-white font-semibold uppercase tracking-wider text-sm hover:bg-white/5 transition-colors"
@@ -370,52 +384,73 @@ export default async function WebinarPage() {
       </section>
 
       <section id="signup" className="bg-[#FAFAF8] py-14 lg:py-20">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-10">
-          <div className="space-y-6">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9B1B30]">
-                {t('webinar.form.eyebrow')}
-              </p>
-              <h2 className="mt-3 text-3xl font-bold text-[#1B2A4A] leading-tight">
-                {t('webinar.form.title')}
-              </h2>
-              <p className="mt-3 text-base text-[#4B5563] leading-relaxed">
-                {t('webinar.form.subtitle')}
-              </p>
+        {registrationOpen ? (
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-10">
+            <div className="space-y-6">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9B1B30]">
+                  {t('webinar.form.eyebrow')}
+                </p>
+                <h2 className="mt-3 text-3xl font-bold text-[#1B2A4A] leading-tight">
+                  {t('webinar.form.title')}
+                </h2>
+                <p className="mt-3 text-base text-[#4B5563] leading-relaxed">
+                  {t('webinar.form.subtitle')}
+                </p>
+              </div>
+              <div className="bg-[#FAF6E8] border border-[#D4A853]/50 p-5 space-y-3">
+                <div className="flex items-start gap-3">
+                  <Clock className="h-5 w-5 text-[#D4A853] flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold text-[#1B2A4A] text-sm">{heroDateLabel}</p>
+                    <p className="text-sm text-[#4B5563]">{heroDateBody}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <GraduationCap className="h-5 w-5 text-[#D4A853] flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold text-[#1B2A4A] text-sm">{t('webinar.agenda.tracksCount')}</p>
+                    <p className="text-sm text-[#4B5563]">
+                      {t('webinar.agenda.tracksList')}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Award className="h-5 w-5 text-[#D4A853] flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold text-[#1B2A4A] text-sm">{t('webinar.benefits.b4Title')}</p>
+                    <p className="text-sm text-[#4B5563]">
+                      {t('webinar.benefits.b4Body')}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="bg-[#FAF6E8] border border-[#D4A853]/50 p-5 space-y-3">
-              <div className="flex items-start gap-3">
-                <Clock className="h-5 w-5 text-[#D4A853] flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-semibold text-[#1B2A4A] text-sm">{heroDateLabel}</p>
-                  <p className="text-sm text-[#4B5563]">{heroDateBody}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <GraduationCap className="h-5 w-5 text-[#D4A853] flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-semibold text-[#1B2A4A] text-sm">{t('webinar.agenda.tracksCount')}</p>
-                  <p className="text-sm text-[#4B5563]">
-                    {t('webinar.agenda.tracksList')}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <Award className="h-5 w-5 text-[#D4A853] flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-semibold text-[#1B2A4A] text-sm">{t('webinar.benefits.b4Title')}</p>
-                  <p className="text-sm text-[#4B5563]">
-                    {t('webinar.benefits.b4Body')}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
 
-          <div>
-            <WebinarSignupForm countryOptions={countryOptions} />
+            <div>
+              <WebinarSignupForm countryOptions={countryOptions} />
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8 text-center">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9B1B30]">
+              {t('consultationCta.eyebrow')}
+            </p>
+            <h2 className="mt-3 text-3xl font-bold text-[#1B2A4A] leading-tight">
+              {t('webinar.closedBanner.title')}
+            </h2>
+            <p className="mt-3 text-base text-[#4B5563] leading-relaxed">
+              {t('webinar.closedBanner.body')}
+            </p>
+            <a
+              href="/counselling"
+              className="mt-8 inline-flex items-center justify-center px-8 py-3 bg-[#9B1B30] text-white font-semibold uppercase tracking-wider text-sm hover:bg-[#7A1526] transition-colors"
+            >
+              {t('consultationCta.ctaPrimary')}
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </a>
+          </div>
+        )}
       </section>
 
       <section className="bg-white border-y border-gray-200 py-14 lg:py-20">
@@ -449,10 +484,10 @@ export default async function WebinarPage() {
             {t('webinar.cta.bottomBody')}
           </p>
           <a
-            href="#signup"
+            href={registrationOpen ? '#signup' : '/counselling'}
             className="mt-8 inline-flex items-center justify-center px-8 py-3 bg-[#9B1B30] text-white font-semibold uppercase tracking-wider text-sm hover:bg-[#7A1526] transition-colors"
           >
-            {t('webinar.cta.bottomCta')}
+            {registrationOpen ? t('webinar.cta.bottomCta') : t('consultationCta.ctaPrimary')}
           </a>
           <p className="mt-6 text-xs text-white/50 uppercase tracking-wider">
             {t('webinar.cta.trustBadge')}
