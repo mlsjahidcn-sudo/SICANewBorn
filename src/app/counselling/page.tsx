@@ -99,12 +99,18 @@ export default async function CounsellingPage({ searchParams }: { searchParams: 
           <p className="mt-5 text-lg text-gray-300 max-w-2xl mx-auto">
             {t('counselling.heroSubtitle')}
           </p>
-          <div className="mt-8">
+          <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <a
               href="#book"
               className="inline-block px-10 py-4 bg-[#9B1B30] text-white font-semibold uppercase tracking-wider text-sm hover:bg-[#7A1526] transition-colors"
             >
               {t('counselling.ctaBook')}
+            </a>
+            <a
+              href="/china-admission-kit?from=counselling-hero"
+              className="inline-block px-8 py-3.5 border border-white/40 text-white font-semibold uppercase tracking-wider text-sm hover:bg-white/10 transition-colors"
+            >
+              {t('kit.ctaBuy')}
             </a>
           </div>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-x-8 gap-y-2 text-sm text-gray-300">
@@ -207,7 +213,7 @@ export default async function CounsellingPage({ searchParams }: { searchParams: 
         </div>
       </section>
 
-      {/* Deeper-commitment cross-link */}
+      {/* Admission Kit cross-sell */}
       <section className="bg-[#1B2A4A]">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 text-center">
           <h2 className="text-xl sm:text-2xl font-bold text-white">
@@ -215,7 +221,7 @@ export default async function CounsellingPage({ searchParams }: { searchParams: 
           </h2>
           <p className="mt-3 text-gray-300 max-w-xl mx-auto">{t('counselling.crossSellBody')}</p>
           <a
-            href="/assessment"
+            href="/china-admission-kit?from=counselling-footer"
             className="inline-block mt-6 px-8 py-3 bg-[#9B1B30] text-white font-semibold uppercase tracking-wider text-sm hover:bg-[#7A1526] transition-colors"
           >
             {t('counselling.crossSellCta')}

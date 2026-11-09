@@ -59,7 +59,7 @@ export async function ConsultationActivity({
         labels={{
           eyebrow: t('consultationActivity.compactEyebrow'),
           title: t('consultationActivity.compactTitle'),
-          book: t('consultationCta.ctaPrimary'),
+          book: t('counselling.ctaBook'),
           session: t('consultationActivity.sessionType'),
           previous: t('consultationActivity.previous'),
           next: t('consultationActivity.next'),

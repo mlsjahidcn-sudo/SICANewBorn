@@ -187,10 +187,10 @@ export default async function WebinarPage() {
               </a>
             ) : (
               <a
-                href="/counselling"
+                href="/china-admission-kit?from=webinar-hero-closed"
                 className="inline-flex items-center justify-center px-7 py-3 bg-[#9B1B30] text-white font-semibold uppercase tracking-wider text-sm hover:bg-[#7A1526] transition-colors"
               >
-                {t('consultationCta.ctaPrimary')}
+                {t('webinar.kitCta')}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </a>
             )}
@@ -200,6 +200,14 @@ export default async function WebinarPage() {
             >
               {t('webinar.hero.ctaSecondary')}
             </a>
+            {registrationOpen ? (
+              <a
+                href="/china-admission-kit?from=webinar-hero"
+                className="inline-flex items-center justify-center px-7 py-3 border border-white/30 text-white font-semibold uppercase tracking-wider text-sm hover:bg-white/5 transition-colors"
+              >
+                {t('webinar.kitCta')}
+              </a>
+            ) : null}
           </div>
         </div>
       </section>
@@ -443,10 +451,10 @@ export default async function WebinarPage() {
               {t('webinar.closedBanner.body')}
             </p>
             <a
-              href="/counselling"
+              href="/china-admission-kit?from=webinar-closed"
               className="mt-8 inline-flex items-center justify-center px-8 py-3 bg-[#9B1B30] text-white font-semibold uppercase tracking-wider text-sm hover:bg-[#7A1526] transition-colors"
             >
-              {t('consultationCta.ctaPrimary')}
+              {t('webinar.kitCta')}
               <ArrowRight className="ml-2 h-4 w-4" />
             </a>
           </div>
@@ -483,12 +491,22 @@ export default async function WebinarPage() {
           <p className="mt-4 text-base text-gray-300 max-w-2xl mx-auto leading-relaxed">
             {t('webinar.cta.bottomBody')}
           </p>
-          <a
-            href={registrationOpen ? '#signup' : '/counselling'}
-            className="mt-8 inline-flex items-center justify-center px-8 py-3 bg-[#9B1B30] text-white font-semibold uppercase tracking-wider text-sm hover:bg-[#7A1526] transition-colors"
-          >
-            {registrationOpen ? t('webinar.cta.bottomCta') : t('consultationCta.ctaPrimary')}
-          </a>
+          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <a
+              href={registrationOpen ? '#signup' : '/china-admission-kit?from=webinar-footer'}
+              className="inline-flex items-center justify-center px-8 py-3 bg-[#9B1B30] text-white font-semibold uppercase tracking-wider text-sm hover:bg-[#7A1526] transition-colors"
+            >
+              {registrationOpen ? t('webinar.cta.bottomCta') : t('webinar.kitCta')}
+            </a>
+            {registrationOpen ? (
+              <a
+                href="/china-admission-kit?from=webinar-footer"
+                className="inline-flex items-center justify-center px-8 py-3 border border-white/30 text-white font-semibold uppercase tracking-wider text-sm hover:bg-white/5 transition-colors"
+              >
+                {t('webinar.kitCta')}
+              </a>
+            ) : null}
+          </div>
           <p className="mt-6 text-xs text-white/50 uppercase tracking-wider">
             {t('webinar.cta.trustBadge')}
           </p>

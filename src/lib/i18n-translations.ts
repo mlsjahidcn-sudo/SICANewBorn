@@ -5752,9 +5752,10 @@ export const translations: Record<Locale, Record<string, string>> = {
     'counselling.step2Body': 'A focused 10-minute video or voice call via Zoom, WhatsApp, or WeChat.',
     'counselling.step3Title': 'Get your plan',
     'counselling.step3Body': 'A clear, honest next-step plan for your study-in-China journey.',
-    'counselling.crossSellTitle': 'Want a deeper evaluation first?',
-    'counselling.crossSellBody': 'The free academic assessment matches your background against SICA partner universities in about 5 minutes.',
-    'counselling.crossSellCta': 'Start Free Assessment',
+    'counselling.crossSellTitle': 'Prefer to apply on your own?',
+    'counselling.crossSellBody':
+      'Get the China Admission Complete Kit 2027 — 11 guides, templates and a 1,000+ university database for $49.',
+    'counselling.crossSellCta': 'Get the Kit, $49',
     'counselling.wizardTitle': 'Book your session',
     'counselling.stepTime': '1. Pick a time',
     'counselling.stepDetails': '2. Your details',
@@ -6038,7 +6039,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'webinar.cta.trustBadge': 'Trusted by 10,000+ international students applying to Chinese universities',
     'webinar.closedBanner.title': 'This webinar session has ended',
     'webinar.closedBanner.body':
-      'Registration is closed. Book a free 10-minute consultation with a SICA counsellor to keep planning your 2027 intake.',
+      'Registration is closed. Get the China Admission Complete Kit 2027 and keep planning your application step by step.',
+    'webinar.kitCta': 'Get the Admission Kit, $49',
     // Thank-you: webinar source branch
     'thankYou.webinar.heroTitle': 'Your seat is reserved',
     'thankYou.webinar.heroBody': 'The webinar join link is in your inbox. Tap the WhatsApp button below if you would also like the link there.',
@@ -11730,9 +11732,10 @@ export const translations: Record<Locale, Record<string, string>> = {
     'counselling.step2Body': '通过 Zoom、WhatsApp 或微信进行 10 分钟高效视频或语音通话。',
     'counselling.step3Title': '获得规划',
     'counselling.step3Body': '得到一份清晰、务实的中国留学下一步规划。',
-    'counselling.crossSellTitle': '想先做更完整的评估？',
-    'counselling.crossSellBody': '免费学术评估约 5 分钟，即可将你的背景与 SICA 合作院校进行匹配。',
-    'counselling.crossSellCta': '开始免费评估',
+    'counselling.crossSellTitle': '更想自行申请？',
+    'counselling.crossSellBody':
+      '获取 2027 中国留学完整录取工具包——11 份指南、模板与 1000+ 大学数据库，仅 $49。',
+    'counselling.crossSellCta': '获取工具包，$49',
     'counselling.wizardTitle': '预约咨询',
     'counselling.stepTime': '1. 选择时间',
     'counselling.stepDetails': '2. 填写信息',
@@ -12012,7 +12015,8 @@ export const translations: Record<Locale, Record<string, string>> = {
     'webinar.cta.trustBadge': '已有 10,000+ 名国际学生通过 SICA 成功入读中国顶尖大学',
     'webinar.closedBanner.title': '本场讲座已结束',
     'webinar.closedBanner.body':
-      '报名已截止。预约一次免费 10 分钟咨询，继续规划您的 2027 入学。',
+      '报名已截止。获取 2027 中国留学完整录取工具包，继续按步骤规划申请。',
+    'webinar.kitCta': '获取录取工具包，$49',
     // Thank-you: webinar source branch
     'thankYou.webinar.heroTitle': '您的席位已预留',
     'thankYou.webinar.heroBody': '讲座会议链接已发送至您的邮箱。如希望通过 WhatsApp 同时接收，请点击下方按钮。',
