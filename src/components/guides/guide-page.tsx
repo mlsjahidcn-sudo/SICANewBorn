@@ -640,20 +640,20 @@ export function GuidePage({
               </ul>
             </nav>
 
-            {/* Quick apply CTA */}
+            {/* Quick apply CTA — kit primary, counselling secondary */}
             <div className="bg-[#9B1B30] text-white p-5">
               <h3 className="font-bold mb-2">Ready to start?</h3>
               <p className="text-sm text-white/90 mb-4 leading-relaxed">
                 {guide.ctaSubtitle}
               </p>
               <Link
-                href="/assessment"
+                href={`/china-admission-kit?from=${encodeURIComponent(pathSegment)}`}
                 className="block text-center px-4 py-2.5 bg-white text-[#9B1B30] text-sm font-semibold uppercase tracking-wider hover:bg-[#FAFAF8] transition-colors"
               >
                 {guide.ctaApplyLabel}
               </Link>
               <Link
-                href="/contact"
+                href={`/counselling?from=${encodeURIComponent(pathSegment)}`}
                 className="block text-center px-4 py-2.5 mt-2 border-2 border-white/40 text-white text-sm font-semibold uppercase tracking-wider hover:border-white transition-colors"
               >
                 {guide.ctaContactLabel}

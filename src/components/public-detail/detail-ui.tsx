@@ -14,12 +14,12 @@ export const detailPanel = 'min-w-0 border border-gray-200 bg-white p-5 sm:p-7';
 export const detailLink = 'inline-flex min-h-11 items-center justify-center gap-2 bg-[#9B1B30] px-5 py-3 text-center text-sm font-semibold text-white transition-colors duration-150 hover:bg-[#7A1526] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9B1B30] focus-visible:ring-offset-2';
 export const detailLinkOnDark = 'inline-flex min-h-11 items-center justify-center gap-2 bg-white px-5 py-3 text-center text-sm font-semibold text-[#1B2A4A] transition-colors duration-150 hover:bg-[#F3F4F6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#1B2A4A]';
 
-export function detailCounsellingHref(input: {
+function detailAttributionParams(input: {
   universitySlug: string;
   name: string;
   programSlug?: string;
   programName?: string;
-}): string {
+}): URLSearchParams {
   const params = new URLSearchParams({
     interest: input.universitySlug,
     interestName: input.programName ?? input.name,
@@ -27,7 +27,26 @@ export function detailCounsellingHref(input: {
     from: input.programSlug ? `program_${input.programSlug}` : `university_${input.universitySlug}`,
   });
   if (input.programSlug) params.set('program', input.programSlug);
-  return `/counselling?${params}#book`;
+  return params;
+}
+
+export function detailCounsellingHref(input: {
+  universitySlug: string;
+  name: string;
+  programSlug?: string;
+  programName?: string;
+}): string {
+  return `/counselling?${detailAttributionParams(input)}#book`;
+}
+
+/** Primary detail CTA → China Admission Kit landing (counselling stays secondary). */
+export function detailKitHref(input: {
+  universitySlug: string;
+  name: string;
+  programSlug?: string;
+  programName?: string;
+}): string {
+  return `/china-admission-kit?${detailAttributionParams(input)}`;
 }
 
 export function useDetailSection(keys: readonly string[]): [string, (value: string) => void] {
@@ -171,12 +190,8 @@ export function DetailNotice({ title, children }: { title: string; children: Rea
 
 export function DetailSupport({ name, universitySlug, programSlug, programName }: { name: string; universitySlug: string; programSlug?: string; programName?: string }): ReactElement {
   const { t, locale } = useI18n();
-  const href = detailCounsellingHref({ universitySlug, name, programSlug, programName });
-  const assessment = new URLSearchParams({ university: universitySlug, interest: universitySlug });
-  if (programSlug) {
-    assessment.set('program', programSlug);
-    assessment.set('major', programName ?? name);
-  }
+  const kitHref = detailKitHref({ universitySlug, name, programSlug, programName });
+  const counsellingHref = detailCounsellingHref({ universitySlug, name, programSlug, programName });
   const whatsapp = `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(`Hi SICA, I'd like guidance about ${programName ? `${programName} at ` : ''}${name}.`)}`;
   const slug = programSlug ?? universitySlug;
 
@@ -194,11 +209,11 @@ export function DetailSupport({ name, universitySlug, programSlug, programName }
             </li>
           ))}
         </ul>
-        <Link href={href} onClick={() => track('apply_click', { location: 'detail_consultation', slug, locale })} className={`${detailLink} w-full`}>
+        <Link href={kitHref} onClick={() => track('apply_click', { location: 'detail_kit', slug, locale })} className={`${detailLink} w-full`}>
           {t('consultationCta.ctaPrimary')}
         </Link>
-        <Link href={`/assessment?${assessment}#assessment-form`} className="mt-3 flex min-h-11 items-center justify-center gap-2 text-sm font-semibold text-[#9B1B30] hover:underline">
-          {t('detail.startAssessment')}
+        <Link href={counsellingHref} className="mt-3 flex min-h-11 items-center justify-center gap-2 text-sm font-semibold text-[#9B1B30] hover:underline">
+          {t('consultationCta.ctaSecondary')}
           <ArrowRight className="h-4 w-4 text-[#1B2A4A]" />
         </Link>
         <div className="mt-3 border-t border-gray-100 pt-4">

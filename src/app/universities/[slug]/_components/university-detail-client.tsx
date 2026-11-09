@@ -16,7 +16,7 @@ import UniversityLogo from '@/components/university-logo';
 import { RelatedNews } from '@/components/RelatedNews';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { DetailBack, DetailFacts, DetailNav, DetailNotice, DetailSection, DetailSpec, DetailSupport, detailContainer, detailCounsellingHref, detailLink, detailLinkOnDark, useDetailSection } from '@/components/public-detail/detail-ui';
+import { DetailBack, DetailFacts, DetailNav, DetailNotice, DetailSection, DetailSpec, DetailSupport, detailContainer, detailCounsellingHref, detailKitHref, detailLink, detailLinkOnDark, useDetailSection } from '@/components/public-detail/detail-ui';
 import { UniversityPrograms } from '@/components/public-detail/university-programs';
 import { detailText, localizedDetail, localizedItems } from '@/lib/detail-content';
 import { track } from '@/lib/analytics';
@@ -50,6 +50,7 @@ export default function UniversityDetailClient({ university: uni, programPage, p
   const popular = localizedItems(uni.popularPrograms, uni.popularProgramsCn, locale);
   const roomTypes = localizedItems(uni.accommodationTypes, uni.accommodationTypesCn, locale);
   const images = [...new Set([...(uni.gallery ?? []), uni.image].map(detailText).filter(Boolean))];
+  const kitHref = detailKitHref({ universitySlug: uni.slug, name });
   const consultHref = detailCounsellingHref({ universitySlug: uni.slug, name });
   const sections = [
     { key: 'overview', label: t('uni.overview') },
@@ -106,9 +107,12 @@ export default function UniversityDetailClient({ university: uni, programPage, p
               ) : null}
             </div>
           </div>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Link data-detail-primary href={consultHref} onClick={() => track('apply_click', { location: 'university_hero', slug: uni.slug, locale })} className={`${detailLink} w-full sm:w-auto`}>
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            <Link data-detail-primary href={kitHref} onClick={() => track('apply_click', { location: 'university_hero_kit', slug: uni.slug, locale })} className={`${detailLink} w-full sm:w-auto`}>
               {t('consultationCta.ctaPrimary')}
+            </Link>
+            <Link href={consultHref} className={`${detailLinkOnDark} w-full sm:w-auto`}>
+              {t('consultationCta.ctaSecondary')}
             </Link>
             <button type="button" onClick={openPrograms} className={`${detailLinkOnDark} w-full sm:w-auto`}>
               {t('uni.viewAllPrograms')} ({programSummary.total})
@@ -273,7 +277,7 @@ export default function UniversityDetailClient({ university: uni, programPage, p
       </Tabs>
 
       <DetailFaq items={buildUniversityFaqItems(uni, programSummary.total, locale)} />
-      <DetailActionBar href={consultHref} name={name} slug={uni.slug} assessmentHref={`/assessment?${new URLSearchParams({ university: uni.slug })}#assessment-form`} />
+      <DetailActionBar href={kitHref} name={name} slug={uni.slug} assessmentHref={consultHref} />
 
       {related.length > 0 ? (
         <section className="border-y border-gray-200 bg-white py-12">

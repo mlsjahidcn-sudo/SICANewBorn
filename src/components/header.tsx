@@ -42,6 +42,7 @@ export function Header(): React.JSX.Element {
     { href: '/universities', label: t('nav.universities') },
     { href: '/study-in-china', label: t('nav.universities.byCity') },
     { href: '/programs', label: t('nav.programs') },
+    { href: '/china-admission-kit', label: t('nav.admissionKit') },
     // Phase 149: MBBS in China promoted from "buried SEO guide" to
     // mobile nav so the medical cohort finds the pillar page in 1 tap.
     // Other English-medium tracks are covered by /programs.

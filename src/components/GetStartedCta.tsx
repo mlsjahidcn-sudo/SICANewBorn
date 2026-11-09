@@ -26,7 +26,7 @@ import { useI18n } from '@/lib/i18n';
 export interface GetStartedCtaProps {
   variant?: 'hero' | 'banner' | 'inline';
   /** Where the user came from — used in the click target's analytics
-   *  and forwarded as `?from=` to the counselling wizard. */
+   *  and forwarded as `?from=` to the kit landing page. */
   location: string;
   /** Optional university / program context. Forwarded as `?interest=`
    *  / `?program=` query params. */
@@ -49,10 +49,9 @@ export function GetStartedCta({
   if (university) params.set('interest', university);
   if (program) params.set('program', program);
   params.set('from', location);
-  // Phase 148: was /get-started; /get-started is the paid-package
-  // landing page and the spec requires no public surface links to
-  // it. The free 10-minute consultation is the new conversion.
-  const href = `/counselling${params.toString() ? `?${params}` : ''}`;
+  // Primary conversion is now the China Admission Kit landing page.
+  // Free counselling remains available as a secondary CTA elsewhere.
+  const href = `/china-admission-kit${params.toString() ? `?${params}` : ''}`;
 
   const labelKey =
     variant === 'hero'
@@ -66,7 +65,7 @@ export function GetStartedCta({
     return (
       <Link
         href={href}
-        data-counselling-from={location}
+        data-kit-from={location}
         className={`inline-flex items-center justify-center gap-2 bg-[#9B1B30] hover:bg-[#7A1526] text-white font-semibold px-7 py-3 text-base transition-colors ${className}`}
       >
         <Sparkles className="h-5 w-5" />
@@ -80,7 +79,7 @@ export function GetStartedCta({
     return (
       <Link
         href={href}
-        data-counselling-from={location}
+        data-kit-from={location}
         className={`inline-flex items-center gap-2 border-2 border-[#9B1B30] text-[#9B1B30] hover:bg-[#9B1B30] hover:text-white px-4 py-2 text-sm font-semibold transition-colors ${className}`}
       >
         <Sparkles className="h-4 w-4" />
@@ -90,11 +89,11 @@ export function GetStartedCta({
     );
   }
 
-  // 'inline' — a quiet text link for "or compare our packages" surfaces.
+  // 'inline' — a quiet text link for secondary surfaces.
   return (
     <Link
       href={href}
-      data-counselling-from={location}
+      data-kit-from={location}
       className={`inline-flex items-center gap-1 text-sm font-semibold text-[#9B1B30] hover:underline ${className}`}
     >
       <Sparkles className="h-3.5 w-3.5" />

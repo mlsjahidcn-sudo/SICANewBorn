@@ -21,8 +21,9 @@ import { PUBLIC_WEBINAR_ENABLED, PUBLIC_WEBINAR_POPUP_ENABLED } from '@/lib/webi
  * - WhatsAppFloat: tiny but still ships eagerly today.
  * - StickyContact: small floating button with a modal that loads
  *   QR code images on open.
- * - ExitIntentPopup: only mounts when the user moves the mouse
- *   toward the browser chrome (about to leave).
+ * - KitPromoPopup: exit-intent / delayed promo for /china-admission-kit
+ *   (replaces ExitIntentPopup counselling overlay). Also mounts on
+ *   quiet university/program detail pages.
  * - WebinarPromoPopup: static-config invitation card (restored
  *   after Phase 165 removed it with the dynamic sessions API).
  *
@@ -43,7 +44,7 @@ const StickyContact = dynamic(() => import('@/components/sticky-contact').then((
   ssr: false,
   loading: () => null,
 });
-const ExitIntentPopup = dynamic(() => import('@/components/exit-intent-popup').then((m) => m.ExitIntentPopup), {
+const KitPromoPopup = dynamic(() => import('@/components/kit-promo-popup').then((m) => m.KitPromoPopup), {
   ssr: false,
   loading: () => null,
 });
@@ -87,11 +88,12 @@ export function ClientLayout({
             browse traffic. Anchored under the header so it does not fight
             StickyApplyBar / chat / WhatsApp floats at the bottom. */}
         {PUBLIC_WEBINAR_ENABLED && PUBLIC_WEBINAR_POPUP_ENABLED && <WebinarPromoPopup />}
+        {/* Kit promo mounts on quiet detail pages too — primary discovery CTA. */}
+        <KitPromoPopup />
         {!quiet && <>
           <Chatbot />
           <WhatsAppFloat />
           <StickyContact />
-          <ExitIntentPopup />
           <WhatsAppGroupPopup />
         </>}
       </div>

@@ -141,6 +141,12 @@ export function MainNav(): React.JSX.Element {
       label: t('nav.programs'),
     },
     {
+      type: 'link',
+      href: '/china-admission-kit',
+      activeMatch: ['/china-admission-kit'],
+      label: t('nav.admissionKit'),
+    },
+    {
       type: 'menu',
       label: t('nav.scholarships'),
       activeMatch: ['/scholarships', '/scholarships-for'],

@@ -100,6 +100,7 @@ export async function loadSitemapParts(): Promise<{
     // Phase 114: free counselling session booking — the conversion
     // landing for "free counselling study in china" queries.
     { url: `${SITE_URL}/counselling`, changeFrequency: 'weekly', priority: 0.8 },
+    { url: `${SITE_URL}/china-admission-kit`, changeFrequency: 'weekly', priority: 0.85 },
     ...(PUBLIC_WEBINAR_ENABLED
       ? [{ url: `${SITE_URL}/webinar-2027-intake-csc`, changeFrequency: 'weekly' as const, priority: 0.8 }]
       : []),

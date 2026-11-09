@@ -12,7 +12,7 @@ import { type Program, type University } from '@/lib/data';
 import { ArrowRight, Check, MapPin } from 'lucide-react';
 import { RelatedNews } from '@/components/RelatedNews';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
-import { DetailBack, DetailFacts, DetailNav, DetailNotice, DetailSection, DetailSpec, DetailSupport, detailContainer, detailCounsellingHref, detailLink, useDetailSection } from '@/components/public-detail/detail-ui';
+import { DetailBack, DetailFacts, DetailNav, DetailNotice, DetailSection, DetailSpec, DetailSupport, detailContainer, detailCounsellingHref, detailKitHref, detailLink, useDetailSection } from '@/components/public-detail/detail-ui';
 import { catalogLabel, detailText, localizedDetail, localizedItems } from '@/lib/detail-content';
 import { buildProgramHeading, teachingLanguageLabel } from '@/lib/program-seo';
 import { track } from '@/lib/analytics';
@@ -42,6 +42,12 @@ export default function ProgramDetailClient({ program, university, relatedProgra
   const heading = buildProgramHeading({ major: name, degree, university: uniName });
   const returnHref = universityReturn || (fromQuery ? `/programs?${fromQuery}` : '/programs');
   const scholarship = program.scholarshipAvailable === true ? t('detail.fundingListed') : program.scholarshipAvailable === false ? t('detail.noFundingListed') : t('detail.confirmFunding');
+  const kitHref = detailKitHref({
+    universitySlug: program.universitySlug,
+    name: uniName || name,
+    programSlug: program.slug,
+    programName: name,
+  });
   const consultHref = detailCounsellingHref({
     universitySlug: program.universitySlug,
     name: uniName || name,
@@ -98,9 +104,12 @@ export default function ProgramDetailClient({ program, university, relatedProgra
               </Link>
             ) : null}
             </div>
-            <div className="mt-4 lg:mt-0">
-              <Link data-detail-primary href={consultHref} onClick={() => track('apply_click', { location: 'program_hero', slug: program.slug, locale })} className={`${detailLink} w-full sm:w-auto`}>
+            <div className="mt-4 flex flex-col gap-2 lg:mt-0">
+              <Link data-detail-primary href={kitHref} onClick={() => track('apply_click', { location: 'program_hero_kit', slug: program.slug, locale })} className={`${detailLink} w-full sm:w-auto`}>
                 {t('consultationCta.ctaPrimary')}
+              </Link>
+              <Link href={consultHref} className="inline-flex min-h-11 items-center justify-center text-sm font-semibold text-[#9B1B30] hover:underline">
+                {t('consultationCta.ctaSecondary')}
               </Link>
             </div>
             </div>
@@ -198,7 +207,7 @@ export default function ProgramDetailClient({ program, university, relatedProgra
       </Tabs>
 
       <DetailFaq items={buildProgramFaqItems(program, uniName, locale)} />
-      <DetailActionBar href={consultHref} name={`${name}${uniName ? ` — ${uniName}` : ''}`} slug={program.slug} assessmentHref={`/assessment?${new URLSearchParams({ university: program.universitySlug, program: program.slug })}#assessment-form`} />
+      <DetailActionBar href={kitHref} name={`${name}${uniName ? ` — ${uniName}` : ''}`} slug={program.slug} assessmentHref={consultHref} />
 
       {relatedPrograms.length > 0 ? (
         <section className="border-y border-gray-200 bg-white py-12">
