@@ -7,8 +7,8 @@ const tMock = vi.fn((key: string) => {
     'consultationCta.eyebrow': 'China Admission Kit 2027',
     'consultationCta.title': 'Apply on your own with the complete kit',
     'consultationCta.subtitle': '11 guides, templates and a university database.',
-    'consultationCta.ctaPrimary': 'View the Admission Kit',
-    'consultationCta.ctaSecondary': 'Book free counselling',
+    'consultationCta.ctaPrimary': 'Get the Kit',
+    'consultationCta.ctaSecondary': 'Get the Kit',
   };
   return map[key] ?? key;
 });
@@ -49,28 +49,27 @@ beforeEach(() => {
   trackMock.mockClear();
 });
 
-describe('ConsultationCta — Admission Kit primary', () => {
+describe('ConsultationCta — Admission Kit buy-only', () => {
   it('links primary CTA to /china-admission-kit with ?from=<slug>', () => {
     render(<ConsultationCta slug="tsinghua-university" />);
-    const links = screen.getAllByRole('link', { name: /View the Admission Kit/i });
+    const links = screen.getAllByRole('link', { name: /Get the Kit/i });
     expect(links[0]).toHaveAttribute('href', '/china-admission-kit?from=tsinghua-university');
   });
 
   it('links primary CTA to /china-admission-kit when slug is omitted', () => {
     render(<ConsultationCta />);
-    const links = screen.getAllByRole('link', { name: /View the Admission Kit/i });
+    const links = screen.getAllByRole('link', { name: /Get the Kit/i });
     expect(links[0]).toHaveAttribute('href', '/china-admission-kit');
   });
 
-  it('links secondary CTA to /counselling', () => {
+  it('does not offer a counselling secondary CTA', () => {
     render(<ConsultationCta slug="tsinghua-university" />);
-    const links = screen.getAllByRole('link', { name: /Book free counselling/i });
-    expect(links[0]).toHaveAttribute('href', '/counselling?from=tsinghua-university');
+    expect(screen.queryByRole('link', { name: /counselling/i })).toBeNull();
   });
 
   it('tracks apply_click with kit location prefix', () => {
     render(<ConsultationCta slug="tsinghua-university" />);
-    const cta = screen.getAllByRole('link', { name: /View the Admission Kit/i })[0];
+    const cta = screen.getAllByRole('link', { name: /Get the Kit/i })[0];
     cta.click();
     expect(trackMock).toHaveBeenCalledWith(
       'apply_click',
@@ -84,7 +83,7 @@ describe('ConsultationCta — Admission Kit primary', () => {
 
   it('renders the hero CTA compact layout when variant="hero"', () => {
     render(<ConsultationCta variant="hero" />);
-    const cta = screen.getByRole('link', { name: /View the Admission Kit/i });
+    const cta = screen.getByRole('link', { name: /Get the Kit/i });
     expect(cta).toBeInTheDocument();
   });
 });

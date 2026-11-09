@@ -2,22 +2,14 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { X, BookOpen, CalendarClock } from 'lucide-react';
+import { X, BookOpen } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useI18n } from '@/lib/i18n';
 import { track } from '@/lib/analytics';
 
 /**
  * KitPromoPopup — exit-intent / delayed promo for the China Admission Kit.
- * Replaces the counselling ExitIntentPopup as the primary overlay CTA.
- *
- * Triggers:
- *   - DESKTOP: mouseleave through the top of the viewport
- *   - MOBILE: scrolled past 60% AND on-page ≥25 seconds
- *   - Once per session (sessionStorage)
- *
- * Primary CTA → /china-admission-kit
- * Secondary → /counselling
+ * Buy-focused: single CTA to /china-admission-kit (no counselling path).
  */
 
 const STORAGE_KEY = 'sica_kit_promo_shown';
@@ -42,7 +34,6 @@ function shouldShowOnPath(pathname: string): boolean {
   if (pathname.startsWith('/programs')) return true;
   if (pathname.startsWith('/scholarships')) return true;
   if (pathname.startsWith('/guides')) return true;
-  // Top-level guide / CSCA / listicle routes commonly use GuidePage
   if (
     pathname.startsWith('/csca') ||
     pathname.startsWith('/how-to') ||
@@ -169,7 +160,6 @@ export function KitPromoPopup() {
   if (!shouldShowOnPath(pathname) || !open) return null;
 
   const kitHref = `/china-admission-kit?from=kit-promo`;
-  const counsellingHref = '/counselling?from=kit-promo';
 
   const onPrimaryClick = () => {
     track('apply_click', {
@@ -228,14 +218,6 @@ export function KitPromoPopup() {
           >
             <BookOpen className="h-4 w-4" />
             {t('kit.promoPrimary')}
-          </Link>
-
-          <Link
-            href={counsellingHref}
-            className="inline-flex w-full items-center justify-center gap-2 border-2 border-[#1B2A4A] py-2.5 text-sm font-semibold text-[#1B2A4A] transition-colors hover:bg-[#1B2A4A]/5"
-          >
-            <CalendarClock className="h-4 w-4" />
-            {t('kit.promoSecondary')}
           </Link>
 
           <button

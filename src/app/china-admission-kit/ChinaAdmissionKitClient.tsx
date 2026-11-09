@@ -2,7 +2,6 @@
 
 import { useEffect, useId, useState } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
 import {
   BookOpen,
   CalendarDays,
@@ -79,7 +78,6 @@ const FAQ_ITEMS = [
   { q: 'kit.faq3q', a: 'kit.faq3a' },
   { q: 'kit.faq4q', a: 'kit.faq4a' },
   { q: 'kit.faq5q', a: 'kit.faq5a' },
-  { q: 'kit.faq6q', a: 'kit.faq6a' },
   { q: 'kit.faq7q', a: 'kit.faq7a' },
 ] as const;
 
@@ -192,37 +190,46 @@ export function ChinaAdmissionKitClient() {
 
   return (
     <div className={`min-h-screen bg-[#FAFAF8] ${showSticky ? 'pb-20 md:pb-0' : ''}`}>
-      {/* Hero */}
-      <section className="border-b border-gray-200 bg-white">
-        <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-2 lg:items-center lg:gap-14 lg:px-8 lg:py-20">
-          <div>
-            <h1 className="text-3xl font-bold leading-tight tracking-tight text-[#1B2A4A] sm:text-4xl lg:text-5xl">
+      {/* Hero — full-bleed navy product band, buy-only */}
+      <section className="relative overflow-hidden bg-[#1B2A4A]">
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-25"
+          style={{ backgroundImage: 'url(/hero-bg.avif)' }}
+          aria-hidden
+        />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#1B2A4A] via-[#1B2A4A]/95 to-[#9B1B30]/40" aria-hidden />
+        <div className="relative mx-auto grid max-w-7xl items-end gap-10 px-4 pb-0 pt-14 sm:px-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:gap-12 lg:px-8 lg:pt-20">
+          <div className="pb-14 lg:pb-20">
+            <p className="inline-block border border-[#D4A853] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#D4A853]">
+              {t('kit.heroBadge')}
+            </p>
+            <h1 className="mt-5 max-w-xl text-3xl font-bold leading-[1.12] tracking-tight text-white sm:text-4xl lg:text-5xl">
               {t('kit.heroTitle')}
             </h1>
-            <p className="mt-5 text-lg leading-relaxed text-gray-600">
+            <p className="mt-5 max-w-xl text-base leading-relaxed text-white/80 sm:text-lg">
               {t('kit.heroSubtitle')}
             </p>
-            <p className="mt-3 text-sm font-medium text-[#1B2A4A]/80">
-              {t('kit.heroCredit')}
-            </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            <p className="mt-3 text-sm text-white/65">{t('kit.heroCredit')}</p>
+            <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center">
               <button
                 type="button"
                 onClick={() => openBuyModal('hero')}
-                className="inline-flex min-h-11 items-center justify-center bg-[#9B1B30] px-6 py-3 text-sm font-semibold uppercase tracking-wider text-white transition-colors hover:bg-[#7A1526] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9B1B30] focus-visible:ring-offset-2"
+                className="inline-flex min-h-12 items-center justify-center bg-[#9B1B30] px-8 py-3.5 text-sm font-semibold uppercase tracking-wider text-white transition-colors hover:bg-[#7A1526] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#1B2A4A]"
               >
                 {t('kit.ctaBuy')}
               </button>
-              <Link
-                href="/counselling"
-                className="inline-flex min-h-11 items-center justify-center border-2 border-[#1B2A4A] px-6 py-3 text-sm font-semibold uppercase tracking-wider text-[#1B2A4A] transition-colors hover:bg-[#1B2A4A] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1B2A4A] focus-visible:ring-offset-2"
-              >
-                {t('kit.ctaCounselling')}
-              </Link>
+              <p className="text-sm text-white/70">{t('kit.heroPriceNote')}</p>
             </div>
+            <ul className="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-xs font-medium uppercase tracking-wider text-white/55">
+              <li>{t('kit.heroChip1')}</li>
+              <li aria-hidden className="text-[#D4A853]">•</li>
+              <li>{t('kit.heroChip2')}</li>
+              <li aria-hidden className="text-[#D4A853]">•</li>
+              <li>{t('kit.heroChip3')}</li>
+            </ul>
           </div>
-          <div className="relative mx-auto w-full max-w-md lg:mx-0 lg:max-w-none">
-            <div className="border-2 border-[#1B2A4A] bg-[#1B2A4A]/5 p-2">
+          <div className="relative mx-auto w-full max-w-sm lg:mx-0 lg:max-w-md">
+            <div className="relative z-10 border-4 border-white/15 bg-[#0f1729] shadow-[0_24px_60px_rgba(0,0,0,0.45)]">
               <Image
                 src="/images/china-admission-kit-cover.png"
                 alt={t('kit.coverAlt')}
@@ -232,8 +239,10 @@ export function ChinaAdmissionKitClient() {
                 priority
               />
             </div>
+            <div className="pointer-events-none absolute -bottom-6 -left-6 hidden h-24 w-24 border-2 border-[#D4A853]/40 lg:block" aria-hidden />
           </div>
         </div>
+        <div className="relative h-8 bg-[#FAFAF8] lg:h-12" aria-hidden />
       </section>
 
       {/* Who it's for */}
@@ -323,67 +332,37 @@ export function ChinaAdmissionKitClient() {
         </p>
       </section>
 
-      {/* DIY vs Done-for-you */}
+      {/* Value / buy band */}
       <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-        <h2 className="text-2xl font-bold text-[#1B2A4A] sm:text-3xl">
-          {t('kit.compareTitle')}
-        </h2>
-        <div className="mt-8 grid gap-4 lg:grid-cols-2">
-          <div className="border-2 border-[#1B2A4A] bg-white p-6 sm:p-8">
-            <h3 className="text-xl font-bold text-[#1B2A4A]">
-              {t('kit.diyTitle')}
-            </h3>
-            <ul className="mt-4 space-y-2 text-sm text-gray-600">
-              <li className="flex gap-2">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#1B2A4A]" />
-                {t('kit.diyPoint1')}
-              </li>
-              <li className="flex gap-2">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#1B2A4A]" />
-                {t('kit.diyPoint2')}
-              </li>
-              <li className="flex gap-2">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#1B2A4A]" />
-                {t('kit.diyPoint3')}
-              </li>
-              <li className="flex gap-2">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#1B2A4A]" />
-                {t('kit.diyPoint4')}
-              </li>
+        <div className="border-2 border-[#1B2A4A] bg-white p-6 sm:p-10 lg:flex lg:items-center lg:justify-between lg:gap-10">
+          <div className="max-w-2xl">
+            <h2 className="text-2xl font-bold text-[#1B2A4A] sm:text-3xl">
+              {t('kit.valueTitle')}
+            </h2>
+            <p className="mt-3 text-sm leading-relaxed text-gray-600 sm:text-base">
+              {t('kit.valueSubtitle')}
+            </p>
+            <ul className="mt-5 grid gap-2 sm:grid-cols-2">
+              {[
+                'kit.diyPoint1',
+                'kit.diyPoint2',
+                'kit.diyPoint3',
+                'kit.diyPoint4',
+              ].map((key) => (
+                <li key={key} className="flex gap-2 text-sm text-gray-600">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#1B2A4A]" />
+                  {t(key)}
+                </li>
+              ))}
             </ul>
-            <button
-              type="button"
-              onClick={() => openBuyModal('compare_diy')}
-              className="mt-6 inline-flex min-h-11 w-full items-center justify-center bg-[#9B1B30] px-6 py-3 text-sm font-semibold uppercase tracking-wider text-white transition-colors hover:bg-[#7A1526] sm:w-auto"
-            >
-              {t('kit.ctaBuy')}
-            </button>
           </div>
-          <div className="border-2 border-gray-200 bg-white p-6 sm:p-8">
-            <h3 className="text-xl font-bold text-[#1B2A4A]">
-              {t('kit.dfyTitle')}
-            </h3>
-            <ul className="mt-4 space-y-2 text-sm text-gray-600">
-              <li className="flex gap-2">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#1B2A4A]" />
-                {t('kit.dfyPoint1')}
-              </li>
-              <li className="flex gap-2">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#1B2A4A]" />
-                {t('kit.dfyPoint2')}
-              </li>
-              <li className="flex gap-2">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#1B2A4A]" />
-                {t('kit.dfyPoint3')}
-              </li>
-            </ul>
-            <Link
-              href="/counselling"
-              className="mt-6 inline-flex min-h-11 w-full items-center justify-center border-2 border-[#1B2A4A] px-6 py-3 text-sm font-semibold uppercase tracking-wider text-[#1B2A4A] transition-colors hover:bg-[#1B2A4A] hover:text-white sm:w-auto"
-            >
-              {t('kit.ctaBookCounselling')}
-            </Link>
-          </div>
+          <button
+            type="button"
+            onClick={() => openBuyModal('value')}
+            className="mt-6 inline-flex min-h-12 w-full shrink-0 items-center justify-center bg-[#9B1B30] px-8 py-3.5 text-sm font-semibold uppercase tracking-wider text-white transition-colors hover:bg-[#7A1526] lg:mt-0 lg:w-auto"
+          >
+            {t('kit.ctaBuy')}
+          </button>
         </div>
       </section>
 
@@ -428,12 +407,12 @@ export function ChinaAdmissionKitClient() {
           <button
             type="button"
             onClick={() => openBuyModal('final')}
-            className="mt-6 inline-flex min-h-11 items-center justify-center bg-[#9B1B30] px-8 py-3 text-sm font-semibold uppercase tracking-wider text-white transition-colors hover:bg-[#7A1526]"
+            className="mt-6 inline-flex min-h-12 items-center justify-center bg-[#9B1B30] px-8 py-3.5 text-sm font-semibold uppercase tracking-wider text-white transition-colors hover:bg-[#7A1526]"
           >
             {t('kit.ctaBuy')}
           </button>
-          <p className="mt-4 text-sm text-white/80">
-            {t('kit.finalPreferHelp')}{' '}
+          <p className="mt-4 text-sm text-white/70">
+            {t('kit.finalSupport')}{' '}
             <a
               href={WHATSAPP_HREF}
               target="_blank"

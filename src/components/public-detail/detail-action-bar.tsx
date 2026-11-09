@@ -27,7 +27,7 @@ export function DetailActionBar({ href, name, slug, assessmentHref }: { href: st
       <Link href={href} onClick={() => track('apply_click', { location: 'detail_mobile_bar', slug, locale })} className={`${detailLink} min-w-0 flex-1`}>{t('consultationCta.ctaPrimary')}</Link>
       <Dialog><DialogTrigger asChild><button className="inline-flex min-h-11 shrink-0 items-center gap-2 border border-gray-300 px-3 text-sm font-semibold text-[#1B2A4A] focus-visible:ring-2 focus-visible:ring-[#9B1B30]"><MessageCircle className="h-4 w-4" />{t('detail.help')}</button></DialogTrigger>
         <DialogContent closeLabel={t('common.close')} className="rounded-none"><DialogTitle>{t('detail.planApplication')}</DialogTitle><DialogDescription className="break-words">{name}</DialogDescription>
-          <Link href={assessmentHref} className={detailLink}>{t('consultationCta.ctaSecondary')}</Link>
+          <Link href={assessmentHref} className={detailLink}>{t('consultationCta.ctaPrimary')}</Link>
           <a href={`https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(`${t('detail.whatsappIntro')} ${name}`)}`} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center justify-center border border-gray-300 px-4 text-sm font-semibold text-[#1B2A4A]">{t('detail.askWhatsapp')}</a>
         </DialogContent>
       </Dialog>

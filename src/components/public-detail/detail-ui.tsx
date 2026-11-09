@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode, type ReactElement } from 'react';
 import { useSearchParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, Check, MessageCircle } from 'lucide-react';
+import { ArrowLeft, Check, MessageCircle } from 'lucide-react';
 import { TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useI18n } from '@/lib/i18n';
 import { WHATSAPP_PHONE } from '@/lib/contact';
@@ -191,7 +191,6 @@ export function DetailNotice({ title, children }: { title: string; children: Rea
 export function DetailSupport({ name, universitySlug, programSlug, programName }: { name: string; universitySlug: string; programSlug?: string; programName?: string }): ReactElement {
   const { t, locale } = useI18n();
   const kitHref = detailKitHref({ universitySlug, name, programSlug, programName });
-  const counsellingHref = detailCounsellingHref({ universitySlug, name, programSlug, programName });
   const whatsapp = `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(`Hi SICA, I'd like guidance about ${programName ? `${programName} at ` : ''}${name}.`)}`;
   const slug = programSlug ?? universitySlug;
 
@@ -211,10 +210,6 @@ export function DetailSupport({ name, universitySlug, programSlug, programName }
         </ul>
         <Link href={kitHref} onClick={() => track('apply_click', { location: 'detail_kit', slug, locale })} className={`${detailLink} w-full`}>
           {t('consultationCta.ctaPrimary')}
-        </Link>
-        <Link href={counsellingHref} className="mt-3 flex min-h-11 items-center justify-center gap-2 text-sm font-semibold text-[#9B1B30] hover:underline">
-          {t('consultationCta.ctaSecondary')}
-          <ArrowRight className="h-4 w-4 text-[#1B2A4A]" />
         </Link>
         <div className="mt-3 border-t border-gray-100 pt-4">
           <a href={whatsapp} target="_blank" rel="noopener noreferrer" onClick={() => track('whatsapp_click', { location: 'detail_support', slug, locale })} className="flex min-h-11 items-center justify-center gap-2 text-sm font-medium text-[#1B2A4A] hover:underline">

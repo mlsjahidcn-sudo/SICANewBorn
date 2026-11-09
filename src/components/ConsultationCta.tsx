@@ -1,23 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { BookOpen, CalendarClock } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { track } from '@/lib/analytics';
 import { I18nProvider } from '@/lib/i18n';
 
 /**
- * Sitewide conversion block — primary CTA is the China Admission Kit
- * landing page; free counselling remains the secondary path.
- *
- * Wraps itself in a local I18nProvider so it renders correctly on
- * public guide pages (which don't have an outer provider).
- *
- * Variants:
- *  - `inline` (default): bordered navy card used inside GuidePage
- *  - `hero`: compact two-button row for the homepage hero band
- *
- * The `slug` prop lands in `?from=<slug>` for attribution.
+ * Sitewide conversion block — primary CTA is the China Admission Kit.
+ * Buy-focused: no counselling secondary on this surface.
  */
 export function ConsultationCta({
   slug,
@@ -45,9 +36,6 @@ function ConsultationCtaInner({
   const kitHref = slug
     ? `/china-admission-kit?from=${encodeURIComponent(slug)}`
     : '/china-admission-kit';
-  const counsellingHref = slug
-    ? `/counselling?from=${encodeURIComponent(slug)}`
-    : '/counselling';
 
   const onPrimaryClick = () => {
     track('apply_click', { location: `kit_${from}`, slug: slug ?? 'none', locale });
@@ -65,15 +53,6 @@ function ConsultationCtaInner({
             <BookOpen className="h-4 w-4 text-[#1B2A4A]" />
           </span>
           {t('consultationCta.ctaPrimary')}
-        </Link>
-        <Link
-          href={counsellingHref}
-          className="inline-flex min-h-11 items-center gap-2.5 text-sm font-medium text-white/85 underline-offset-4 transition-colors hover:text-white hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-        >
-          <span className="flex h-7 w-7 items-center justify-center bg-white/90">
-            <CalendarClock className="h-4 w-4 text-[#1B2A4A]" />
-          </span>
-          {t('consultationCta.ctaSecondary')}
         </Link>
       </div>
     );
@@ -101,13 +80,6 @@ function ConsultationCtaInner({
           >
             <BookOpen className="h-4 w-4" />
             {t('consultationCta.ctaPrimary')}
-          </Link>
-          <Link
-            href={counsellingHref}
-            className="inline-flex items-center justify-center gap-2 border-2 border-white/40 px-6 py-2.5 text-sm font-semibold uppercase tracking-wider text-white transition-colors hover:border-white"
-          >
-            <CalendarClock className="h-4 w-4" />
-            {t('consultationCta.ctaSecondary')}
           </Link>
         </div>
       </div>
