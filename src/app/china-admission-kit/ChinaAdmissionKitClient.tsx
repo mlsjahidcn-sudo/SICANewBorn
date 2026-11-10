@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useId, useState } from 'react';
-import Image from 'next/image';
 import {
   BookOpen,
   CalendarDays,
@@ -190,7 +189,7 @@ export function ChinaAdmissionKitClient() {
 
   return (
     <div className={`min-h-screen bg-[#FAFAF8] ${showSticky ? 'pb-20 md:pb-0' : ''}`}>
-      {/* Hero — full-bleed navy product band, buy-only */}
+      {/* Hero — full-bleed navy product band, buy-only (no cover mockup) */}
       <section className="relative overflow-hidden bg-[#1B2A4A]">
         <div
           className="absolute inset-0 bg-cover bg-center opacity-25"
@@ -198,15 +197,15 @@ export function ChinaAdmissionKitClient() {
           aria-hidden
         />
         <div className="absolute inset-0 bg-gradient-to-br from-[#1B2A4A] via-[#1B2A4A]/95 to-[#9B1B30]/40" aria-hidden />
-        <div className="relative mx-auto grid max-w-7xl items-end gap-10 px-4 pb-0 pt-14 sm:px-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:gap-12 lg:px-8 lg:pt-20">
-          <div className="pb-14 lg:pb-20">
+        <div className="relative mx-auto max-w-7xl px-4 pb-14 pt-14 sm:px-6 sm:pb-16 lg:px-8 lg:pb-20 lg:pt-20">
+          <div className="max-w-3xl">
             <p className="inline-block border border-[#D4A853] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#D4A853]">
               {t('kit.heroBadge')}
             </p>
-            <h1 className="mt-5 max-w-xl text-3xl font-bold leading-[1.12] tracking-tight text-white sm:text-4xl lg:text-5xl">
+            <h1 className="mt-5 text-3xl font-bold leading-[1.12] tracking-tight text-white sm:text-4xl lg:text-5xl">
               {t('kit.heroTitle')}
             </h1>
-            <p className="mt-5 max-w-xl text-base leading-relaxed text-white/80 sm:text-lg">
+            <p className="mt-5 text-base leading-relaxed text-white/80 sm:text-lg">
               {t('kit.heroSubtitle')}
             </p>
             <p className="mt-3 text-sm text-white/65">{t('kit.heroCredit')}</p>
@@ -228,21 +227,7 @@ export function ChinaAdmissionKitClient() {
               <li>{t('kit.heroChip3')}</li>
             </ul>
           </div>
-          <div className="relative mx-auto w-full max-w-sm lg:mx-0 lg:max-w-md">
-            <div className="relative z-10 border-4 border-white/15 bg-[#0f1729] shadow-[0_24px_60px_rgba(0,0,0,0.45)]">
-              <Image
-                src="/images/china-admission-kit-cover.png"
-                alt={t('kit.coverAlt')}
-                width={600}
-                height={800}
-                className="h-auto w-full object-cover"
-                priority
-              />
-            </div>
-            <div className="pointer-events-none absolute -bottom-6 -left-6 hidden h-24 w-24 border-2 border-[#D4A853]/40 lg:block" aria-hidden />
-          </div>
         </div>
-        <div className="relative h-8 bg-[#FAFAF8] lg:h-12" aria-hidden />
       </section>
 
       {/* Who it's for */}

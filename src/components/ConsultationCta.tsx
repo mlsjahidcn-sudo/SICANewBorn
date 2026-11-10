@@ -43,17 +43,18 @@ function ConsultationCtaInner({
 
   if (variant === 'hero') {
     return (
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
         <Link
           href={kitHref}
           onClick={onPrimaryClick}
-          className="inline-flex min-h-11 items-center gap-2.5 text-sm font-medium text-white/85 underline-offset-4 transition-colors hover:text-white hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          className="inline-flex min-h-12 items-center justify-center gap-2 bg-[#9B1B30] px-7 py-3 text-sm font-semibold uppercase tracking-wider text-white transition-colors hover:bg-[#7A1526] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#1B2A4A]"
         >
-          <span className="flex h-7 w-7 items-center justify-center bg-white/90">
-            <BookOpen className="h-4 w-4 text-[#1B2A4A]" />
-          </span>
+          <BookOpen className="h-4 w-4" aria-hidden />
           {t('consultationCta.ctaPrimary')}
         </Link>
+        <p className="max-w-xs text-sm leading-snug text-white/70">
+          {t('consultationCta.subtitle')}
+        </p>
       </div>
     );
   }
