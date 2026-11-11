@@ -275,7 +275,20 @@ export const cscScholarshipGuide: LocalizedGuide = {
               "**Partner-institution or special-program route:** check the nominating organisation’s program-specific eligibility, document list and cutoff.",
               "**Pakistan:** the 2027/28 date remains [Check] here. Monitor the new HEC and embassy notice instead of treating a previous December–January window as confirmed."
             ]
-          }
+          },
+          {
+            type: 'p',
+            text: 'Many Type B universities also shortlist with a written exam or oral interview before admission or pre-admission — see the dedicated CSC interview and entrance exam guide for 2027 examples from SISU and NPU.',
+          },
+          {
+            type: 'links',
+            items: [
+              {
+                label: 'CSC scholarship interview and entrance exam 2027',
+                href: '/csc-scholarship-interview-2027',
+              },
+            ],
+          },
         ]
       },
       {
@@ -639,7 +652,20 @@ export const cscScholarshipGuide: LocalizedGuide = {
               "**合作机构或专项项目：**按提名单位与项目通知确认资格、材料和截止。",
               "**巴基斯坦：**本表的 2027/28 日期保留 [待查]，关注 HEC 与使馆新通知，不套用去年 12—1 月的时间。"
             ]
-          }
+          },
+          {
+            type: 'p',
+            text: '许多 Type B 高校还会在录取或预录取前安排笔试或口试——上外与西工大 2027 示例见 CSC 面试与入学考试指南。',
+          },
+          {
+            type: 'links',
+            items: [
+              {
+                label: 'CSC 奖学金面试与入学考试 2027',
+                href: '/csc-scholarship-interview-2027',
+              },
+            ],
+          },
         ]
       },
       {

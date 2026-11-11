@@ -78,6 +78,10 @@ export const preAdmissionLetterCsc2027Guide: LocalizedGuide = {
             text: 'USTB’s 2027 notice states clearly: applicants for the High-Level Postgraduate Program or Silk Road Program (CSC—Type B) shall not apply for the Type A Pre-Admission Notice. Mixing channels wastes time and can confuse reviewers.',
           },
           {
+            type: 'p',
+            text: 'On Type B routes, universities often decide who advances through document review plus a written exam or oral interview before they issue admission or pre-admission — see the 2027 interview guide for SISU and NPU examples.',
+          },
+          {
             type: 'links',
             items: [
               {
@@ -91,6 +95,10 @@ export const preAdmissionLetterCsc2027Guide: LocalizedGuide = {
               {
                 label: 'SICA: CSC deadlines tracker',
                 href: '/csc-scholarship-deadlines-2027-2028',
+              },
+              {
+                label: 'CSC scholarship interview and entrance exam 2027',
+                href: '/csc-scholarship-interview-2027',
               },
             ],
           },
@@ -314,6 +322,10 @@ export const preAdmissionLetterCsc2027Guide: LocalizedGuide = {
             text: 'USTB 2027 通知写明：申请高水平研究生项目或丝绸之路项目（CSC—Type B）者，不得申请 Type A 预录取通知。渠道混用浪费时间，也易让评审困惑。',
           },
           {
+            type: 'p',
+            text: '在 Type B 路径上，高校常通过材料审核加上笔试或口试，再决定谁进入录取或预录取——上外与西工大 2027 示例见面试与入学考试指南。',
+          },
+          {
             type: 'links',
             items: [
               {
@@ -322,6 +334,10 @@ export const preAdmissionLetterCsc2027Guide: LocalizedGuide = {
               },
               { label: 'SICA：CSC 奖学金 2027/2028', href: '/chinese-government-scholarship-csc' },
               { label: 'SICA：CSC 截止日期追踪', href: '/csc-scholarship-deadlines-2027-2028' },
+              {
+                label: 'CSC 奖学金面试与入学考试 2027',
+                href: '/csc-scholarship-interview-2027',
+              },
             ],
           },
         ],

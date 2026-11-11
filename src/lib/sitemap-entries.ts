@@ -211,6 +211,7 @@ export async function loadSitemapParts(): Promise<{
     { url: `${SITE_URL}/china-student-visa-nigeria`, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/csc-recommendation-letter-sample`, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/pre-admission-letter-csc-2027`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/csc-scholarship-interview-2027`, changeFrequency: 'monthly', priority: 0.8 },
     // Phase 173: create-queue items 4–8 (age/gap, CSC results,
     // Pakistan documents/Apostille, Chinese vs English taught,
     // MBBS home recognition for PK/BD/NG).

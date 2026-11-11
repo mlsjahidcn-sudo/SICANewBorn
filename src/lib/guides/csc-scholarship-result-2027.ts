@@ -50,12 +50,20 @@ export const cscScholarshipResult2027Guide: LocalizedGuide = {
             ],
           },
           {
+            type: 'p',
+            text: 'Before spring awards, many Type B applicants first sit a university interview or entrance exam and only then receive admission or pre-admission — that earlier step is covered in the CSC interview guide.',
+          },
+          {
             type: 'links',
             items: [
               { label: 'CSC deadlines 2027/2028 tracker', href: '/csc-scholarship-deadlines-2027-2028' },
               { label: 'CSC Pakistan', href: '/csc-scholarship-pakistan' },
               { label: 'CSC Bangladesh', href: '/csc-scholarship-bangladesh' },
               { label: 'CSC Nigeria', href: '/csc-scholarship-nigeria' },
+              {
+                label: 'CSC scholarship interview and entrance exam 2027',
+                href: '/csc-scholarship-interview-2027',
+              },
             ],
           },
         ],
@@ -264,12 +272,20 @@ export const cscScholarshipResult2027Guide: LocalizedGuide = {
             ],
           },
           {
+            type: 'p',
+            text: '春季获奖之前，许多 Type B 申请人会先参加高校面试或入学考试，随后才获得录取或预录取——这一更早的环节见 CSC 面试指南。',
+          },
+          {
             type: 'links',
             items: [
               { label: 'CSC 2027/2028 截止日追踪', href: '/csc-scholarship-deadlines-2027-2028' },
               { label: 'CSC 巴基斯坦', href: '/csc-scholarship-pakistan' },
               { label: 'CSC 孟加拉', href: '/csc-scholarship-bangladesh' },
               { label: 'CSC 尼日利亚', href: '/csc-scholarship-nigeria' },
+              {
+                label: 'CSC 奖学金面试与入学考试 2027',
+                href: '/csc-scholarship-interview-2027',
+              },
             ],
           },
         ],
