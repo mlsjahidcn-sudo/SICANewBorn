@@ -218,6 +218,14 @@ const baseConfig: NextConfig = {
     ];
   },
   experimental: {
+    // `next upgrade --agent=security` writes this policy so future
+    // advisories surface themselves: `next dev` / `next build` then show an
+    // "Upgrade now" reminder (with a copyable agent prompt) instead of
+    // silently running a version that has a known CVE. The November 2026
+    // Next.js security release (16.4.5) is exactly what this would have
+    // caught — 16.4.1 fixed the October advisories but not those.
+    // Set to `false` to disable the reminder.
+    agentUpgrade: 'security',
     optimizeCss: true,
     optimizePackageImports: ['lucide-react', 'react-icons'],
     // S59: reduce the static-export concurrency from the Next default
