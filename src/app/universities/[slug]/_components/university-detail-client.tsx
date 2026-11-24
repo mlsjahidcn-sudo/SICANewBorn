@@ -16,7 +16,10 @@ import UniversityLogo from '@/components/university-logo';
 import { RelatedNews } from '@/components/RelatedNews';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { DetailBack, DetailFacts, DetailNav, DetailNotice, DetailSection, DetailSpec, DetailSupport, detailContainer, detailKitHref, detailLink, detailLinkOnDark, useDetailSection } from '@/components/public-detail/detail-ui';
+import { DetailBack, DetailFacts, DetailNav, DetailNotice, DetailSection, DetailSpec, detailContainer, detailKitHref, detailLink, detailLinkOnDark, useDetailSection } from '@/components/public-detail/detail-ui';
+import { ConsultationBookingCard } from '@/components/public-detail/consultation-booking-card';
+import { scrollToBooking } from '@/components/public-detail/booking-anchor';
+import type { CatalogSelection } from '@/lib/catalog-selection';
 import { UniversityPrograms } from '@/components/public-detail/university-programs';
 import { detailText, localizedDetail, localizedItems } from '@/lib/detail-content';
 import { track } from '@/lib/analytics';
@@ -50,6 +53,16 @@ export default function UniversityDetailClient({ university: uni, programPage, p
   const popular = localizedItems(uni.popularPrograms, uni.popularProgramsCn, locale);
   const roomTypes = localizedItems(uni.accommodationTypes, uni.accommodationTypesCn, locale);
   const images = [...new Set([...(uni.gallery ?? []), uni.image].map(detailText).filter(Boolean))];
+  /**
+   * What the inline consultation booking is attached to. The admin sees a
+   * lead that already knows which university the student was reading about.
+   */
+  const bookingSelection: CatalogSelection = {
+    universitySlug: uni.slug,
+    universityName: uni.name,
+    universityNameCn: uni.nameCn,
+    sourcePath: `/universities/${uni.slug}`,
+  };
   const kitHref = detailKitHref({ universitySlug: uni.slug, name });
   const sections = [
     { key: 'overview', label: t('uni.overview') },
@@ -267,7 +280,12 @@ export default function UniversityDetailClient({ university: uni, programPage, p
             </TabsContent>
           </div>
           <aside className="min-w-0 lg:sticky lg:top-32">
-            <DetailSupport name={name} universitySlug={uni.slug} />
+            <ConsultationBookingCard
+              selection={bookingSelection}
+              name={name}
+              surface="university_detail"
+              kitHref={kitHref}
+            />
           </aside>
         </div>
       </Tabs>

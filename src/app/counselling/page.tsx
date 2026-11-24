@@ -13,7 +13,7 @@ import {
   Video,
 } from 'lucide-react';
 import { getServerT } from '@/lib/server-t';
-import { BookingWizard } from './booking-wizard';
+import { BookingWizard } from '@/components/counselling/booking-wizard';
 import { ConsultationActivity } from '@/components/ConsultationActivity';
 
 export async function generateMetadata(): Promise<Metadata> {

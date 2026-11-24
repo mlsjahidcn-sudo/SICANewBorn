@@ -31,6 +31,15 @@
 import { sendGAEvent } from '@next/third-parties/google';
 
 /**
+ * Which surface a free-consultation booking was made from.
+ *
+ * `/counselling` is the standalone booking page. The university and program
+ * detail pages render the same wizard inline in their sidebar, so a booking
+ * made there must be separable from one made on the dedicated page.
+ */
+export type BookingSurface = 'counselling' | 'university_detail' | 'program_detail';
+
+/**
  * Catalog of GA4 events SICA fires, with the per-event property
  * shape. Add a new entry here when wiring a new call site — the
  * `track()` overloads will pick it up automatically and the
@@ -100,11 +109,15 @@ export interface AnalyticsEventMap {
     locale: 'en' | 'zh';
     /** Booking reference minted server-side (e.g. CS-20260919-K7QM). */
     reference: string;
+    /** Which surface the booking was made from. */
+    surface: BookingSurface;
   };
-  /** Counselling wizard rendered on /counselling (Phase 123 funnel). */
+  /** Counselling wizard rendered (Phase 123 funnel). */
   counselling_wizard_start: {
     /** Page locale. */
     locale: 'en' | 'zh';
+    /** Which surface rendered the wizard. */
+    surface: BookingSurface;
   };
   /** User picked an available slot in step 1 (Phase 123 funnel). */
   counselling_slot_selected: {

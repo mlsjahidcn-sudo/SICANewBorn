@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { getCurrentUtm } from '@/lib/utm';
-import { track } from '@/lib/analytics';
+import { track, type BookingSurface } from '@/lib/analytics';
 import { COUNSELLING_EDUCATION_LEVELS } from '@/lib/counselling-slots';
 import { WHATSAPP_PHONE } from '@/lib/contact';
 import { SelectionSummary } from '@/components/public-detail/selection-summary';
@@ -37,15 +37,49 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_RE = /^[+()\-\s\d]{5,25}$/;
 
 /**
- * Client island for the /counselling booking wizard (Phase 114).
+ * Client island for the free 10-minute counselling booking (Phase 114).
  * Two steps — pick a date+slot, then contact details — talking to
  * /api/counselling/slots (GET) and /api/counselling/bookings (POST).
  * All copy comes from the `counselling.*` i18n namespace so the
  * language toggle works mid-flow.
+ *
+ * Rendered in two places:
+ *  - `/counselling` (variant `full`) — the dedicated booking page.
+ *  - the right sidebar of the university / program detail pages
+ *    (variant `compact`) — the booking happens in place, with the
+ *    page's own university (and program) attached to it.
+ *
+ * The slot-fetch, validation and submit logic is identical in both
+ * variants; `compact` only changes the layout density. Keeping ONE
+ * implementation is the point — a second, smaller form would drift.
  */
-export function BookingWizard({ selection = null, selectionError = false }: { selection?: CatalogSelection | null; selectionError?: boolean }) {
+export type { BookingSurface };
+
+export function BookingWizard({
+  selection = null,
+  selectionError = false,
+  variant = 'full',
+  surface = 'counselling',
+}: {
+  selection?: CatalogSelection | null;
+  selectionError?: boolean;
+  /** `full` is the /counselling page layout; `compact` fits the 320px detail sidebar. */
+  variant?: 'full' | 'compact';
+  /** Which surface rendered the wizard — tagged on the GA funnel events. */
+  surface?: BookingSurface;
+}) {
   const { t, locale } = useI18n();
   const localeTag = locale === 'zh' ? 'zh-CN' : 'en-US';
+  /**
+   * The detail-page sidebar is a 320px column. Tailwind's `sm:` breakpoint
+   * keys off the VIEWPORT, not the container, so on a desktop viewport a
+   * `sm:grid-cols-2` field row would squeeze two inputs into ~140px each
+   * inside that column. Every multi-column layout below therefore switches
+   * to a single column in compact mode rather than relying on a breakpoint.
+   */
+  const compact = variant === 'compact';
+  /** Two-column rows: side by side on the wide page, stacked in the sidebar. */
+  const fieldRow = compact ? 'grid gap-5' : 'grid sm:grid-cols-2 gap-5';
 
   const [dates, setDates] = useState<string[]>([]);
   const [datesLoading, setDatesLoading] = useState(true);
@@ -167,7 +201,7 @@ export function BookingWizard({ selection = null, selectionError = false }: { se
 
   // Phase 123 funnel instrumentation: wizard rendered.
   useEffect(() => {
-    track('counselling_wizard_start', { locale });
+    track('counselling_wizard_start', { locale, surface });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // fire once on mount; locale is stable per session
 
@@ -245,7 +279,7 @@ export function BookingWizard({ selection = null, selectionError = false }: { se
       setBooked(data.booking);
       if (data.booking.selection) track('catalog_handoff_complete', { surface: 'counselling', university: data.booking.selection.universitySlug, program: data.booking.selection.programSlug, locale });
       setStep('success');
-      track('counselling_booking_submit', { locale, reference: data.booking.reference });
+      track('counselling_booking_submit', { locale, reference: data.booking.reference, surface });
     } catch (err) {
       setFormError(err instanceof Error ? err.message : t('counselling.errorGeneric'));
     } finally {
@@ -258,14 +292,17 @@ export function BookingWizard({ selection = null, selectionError = false }: { se
 
   if (step === 'success' && booked) {
     return (
-      <div className="bg-white border border-gray-200 p-8 text-center">
+      // `id="book"` is kept on the success state too: the detail-page CTAs
+      // scroll to this anchor, and without it the target would vanish the
+      // moment the booking went through.
+      <div id="book" className={compact ? 'scroll-mt-24 text-center' : 'scroll-mt-24 bg-white border border-gray-200 p-8 text-center'}>
         <div className="h-16 w-16 bg-[#9B1B30]/10 flex items-center justify-center mx-auto mb-4">
           <CheckCircle2 className="h-9 w-9 text-[#9B1B30]" />
         </div>
         <h3 className="text-xl font-bold text-[#1B2A4A] mb-2">{t('counselling.successTitle')}</h3>
         <SelectionSummary selection={booked.selection ?? selection} />
         <p className="text-[#4B5563] text-sm max-w-md mx-auto">{t('counselling.successBody')}</p>
-        <div className="mt-6 grid sm:grid-cols-2 gap-4 max-w-lg mx-auto text-left">
+        <div className={`mt-6 grid gap-4 max-w-lg mx-auto text-left ${compact ? '' : 'sm:grid-cols-2'}`}>
           <div className="border border-gray-200 p-4">
             <div className="text-xs uppercase tracking-wider text-gray-500 mb-1 flex items-center gap-1.5">
               <Clock className="h-3.5 w-3.5 text-[#1B2A4A]" />
@@ -300,25 +337,41 @@ export function BookingWizard({ selection = null, selectionError = false }: { se
           <MessageCircle className="h-4 w-4" />
           {t('counselling.successWhatsappCta')}
         </a>
-        <Link
-          href="/"
-          className="inline-block mt-4 ml-0 sm:ml-3 px-8 py-3 bg-[#9B1B30] text-white font-semibold uppercase tracking-wider text-sm hover:bg-[#7A1526] transition-colors"
-        >
-          {t('counselling.backHome')}
-        </Link>
+        {/* In the detail sidebar the visitor is already on the page they
+            came from — a "back home" button would throw them out of it. */}
+        {!compact && (
+          <Link
+            href="/"
+            className="inline-block mt-4 ml-0 sm:ml-3 px-8 py-3 bg-[#9B1B30] text-white font-semibold uppercase tracking-wider text-sm hover:bg-[#7A1526] transition-colors"
+          >
+            {t('counselling.backHome')}
+          </Link>
+        )}
       </div>
     );
   }
 
   return (
-    <div className="scroll-mt-24 bg-white border border-gray-200 p-6 sm:p-8" id="book">
-      <h3 className="text-xl font-bold text-[#1B2A4A] mb-1">{t('counselling.wizardTitle')}</h3>
+    <div
+      className={compact ? 'scroll-mt-24' : 'scroll-mt-24 bg-white border border-gray-200 p-6 sm:p-8'}
+      id="book"
+      tabIndex={-1}
+    >
+      {/* In the detail sidebar the card already provides a heading — two
+          stacked headings in a 320px column just push the form down. */}
+      {!compact && (
+        <h3 className="text-xl font-bold text-[#1B2A4A] mb-1">{t('counselling.wizardTitle')}</h3>
+      )}
       <p className="text-sm text-[#4B5563] mb-6 flex items-center gap-1.5">
         <Globe2 className="h-4 w-4 text-[#1B2A4A]" />
         {t('counselling.timezoneNote')}
       </p>
 
-      <SelectionSummary selection={selection} error={selectionError} clearHref="/counselling#book" />
+      {/* The "clear selection" link points at /counselling, which is the
+          page the selection was carried FROM. On a detail page there is no
+          selection to clear — the page itself IS the selection — so the link
+          is suppressed rather than throwing the visitor off the page. */}
+      <SelectionSummary selection={selection} error={selectionError} clearHref={compact ? undefined : '/counselling#book'} />
 
       {/* Step indicator */}
       <div className="flex items-center gap-2 mb-6 text-xs font-semibold uppercase tracking-wider">
@@ -394,7 +447,7 @@ export function BookingWizard({ selection = null, selectionError = false }: { se
               {t('counselling.loadingSlots')}
             </div>
           ) : slots.length > 0 ? (
-            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+            <div className={`grid gap-2 ${compact ? 'grid-cols-3' : 'grid-cols-3 sm:grid-cols-5'}`}>
               {slots.map((slot) => (
                 <button
                   key={slot.start}
@@ -487,7 +540,7 @@ export function BookingWizard({ selection = null, selectionError = false }: { se
             />
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-5">
+          <div className={fieldRow}>
             <div>
               <label htmlFor="counselling-name" className="block text-sm font-medium text-[#1F2937] mb-1">
                 {t('counselling.fieldName')} *
@@ -523,7 +576,7 @@ export function BookingWizard({ selection = null, selectionError = false }: { se
             </div>
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-5 mt-5">
+          <div className={`${fieldRow} mt-5`}>
             <div>
               <label htmlFor="counselling-phone" className="block text-sm font-medium text-[#1F2937] mb-1">
                 {t('counselling.fieldPhone')} *

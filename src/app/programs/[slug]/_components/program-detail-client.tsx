@@ -12,7 +12,10 @@ import { type Program, type University } from '@/lib/data';
 import { ArrowRight, Check, MapPin } from 'lucide-react';
 import { RelatedNews } from '@/components/RelatedNews';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
-import { DetailBack, DetailFacts, DetailNav, DetailNotice, DetailSection, DetailSpec, DetailSupport, detailContainer, detailKitHref, detailLink, useDetailSection } from '@/components/public-detail/detail-ui';
+import { DetailBack, DetailFacts, DetailNav, DetailNotice, DetailSection, DetailSpec, detailContainer, detailKitHref, detailLink, useDetailSection } from '@/components/public-detail/detail-ui';
+import { ConsultationBookingCard } from '@/components/public-detail/consultation-booking-card';
+import { scrollToBooking } from '@/components/public-detail/booking-anchor';
+import type { CatalogSelection } from '@/lib/catalog-selection';
 import { catalogLabel, detailText, localizedDetail, localizedItems } from '@/lib/detail-content';
 import { buildProgramHeading, teachingLanguageLabel } from '@/lib/program-seo';
 import { track } from '@/lib/analytics';
@@ -42,6 +45,20 @@ export default function ProgramDetailClient({ program, university, relatedProgra
   const heading = buildProgramHeading({ major: name, degree, university: uniName });
   const returnHref = universityReturn || (fromQuery ? `/programs?${fromQuery}` : '/programs');
   const scholarship = program.scholarshipAvailable === true ? t('detail.fundingListed') : program.scholarshipAvailable === false ? t('detail.noFundingListed') : t('detail.confirmFunding');
+  /**
+   * What the inline consultation booking is attached to. On a program page
+   * both the program and its university are known, so the lead arrives with
+   * the exact course the student was reading about.
+   */
+  const bookingSelection: CatalogSelection = {
+    universitySlug: program.universitySlug,
+    universityName: university?.name ?? '',
+    universityNameCn: university?.nameCn ?? '',
+    programSlug: program.slug,
+    programName: program.name,
+    programNameCn: program.nameCn,
+    sourcePath: `/programs/${program.slug}`,
+  };
   const kitHref = detailKitHref({
     universitySlug: program.universitySlug,
     name: uniName || name,
@@ -147,7 +164,7 @@ export default function ProgramDetailClient({ program, university, relatedProgra
                     ))}
                   </ul>
                 ) : (
-                  <DetailNotice title={t('detail.requirementsMissingTitle')}><p>{t('detail.requirementsMissing')}</p><Link href={kitHref} className="mt-3 inline-flex min-h-11 items-center font-semibold text-[#9B1B30] underline">{t('detail.confirmRequirements')}</Link></DetailNotice>
+                  <DetailNotice title={t('detail.requirementsMissingTitle')}><p>{t('detail.requirementsMissing')}</p><button type="button" onClick={() => { track('apply_click', { location: 'program_requirements', slug: program.slug, locale }); scrollToBooking(); }} className="mt-3 inline-flex min-h-11 items-center font-semibold text-[#9B1B30] underline">{t('detail.confirmRequirements')}</button></DetailNotice>
                 )}
                 <EvidenceSource evidence={evidence} />
               </DetailSection>
@@ -188,7 +205,12 @@ export default function ProgramDetailClient({ program, university, relatedProgra
           </div>
 
           <aside className="min-w-0 space-y-4 lg:sticky lg:top-32">
-            <DetailSupport name={uniName || name} universitySlug={program.universitySlug} programSlug={program.slug} programName={name} />
+            <ConsultationBookingCard
+              selection={bookingSelection}
+              name={uniName || name}
+              surface="program_detail"
+              kitHref={kitHref}
+            />
             <Link href={`/programs?university=${encodeURIComponent(program.universitySlug)}`} className="flex items-center gap-3 border border-gray-200 bg-white p-5 text-sm font-semibold transition-colors duration-150 hover:border-[#9B1B30]">
               <span className="min-w-0 flex-1">{t('detail.moreAtUniversity')}</span>
               <ArrowRight className="h-4 w-4 shrink-0 text-[#1B2A4A]" />

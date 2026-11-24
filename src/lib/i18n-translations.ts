@@ -5594,6 +5594,9 @@ export const translations: Record<Locale, Record<string, string>> = {
       '11 guides, templates and a 1,000+ university database — apply step by step for $49.',
     'consultationCta.ctaPrimary': 'Get the Kit',
     'consultationCta.ctaSecondary': 'Get the Kit',
+    'consultationBooking.title': 'Book a free 10-minute consultation',
+    'consultationBooking.subtitle': 'Pick a time that suits you — no account, no obligation.',
+    'consultationBooking.allOptions': 'See all consultation options',
     'kit.heroBadge': 'Digital product · Instant access',
     'kit.heroTitle': 'China Admission Complete Kit 2027',
     'kit.heroSubtitle':
@@ -11589,6 +11592,9 @@ export const translations: Record<Locale, Record<string, string>> = {
       '11 份指南、模板与 1000+ 大学数据库——$49 按步骤自行申请。',
     'consultationCta.ctaPrimary': '获取工具包',
     'consultationCta.ctaSecondary': '获取工具包',
+    'consultationBooking.title': '预约免费 10 分钟咨询',
+    'consultationBooking.subtitle': '选一个方便你的时间——无需注册，无任何义务。',
+    'consultationBooking.allOptions': '查看全部咨询选项',
     'kit.heroBadge': '数字产品 · 即时交付',
     'kit.heroTitle': '2027 中国留学完整录取工具包',
     'kit.heroSubtitle':

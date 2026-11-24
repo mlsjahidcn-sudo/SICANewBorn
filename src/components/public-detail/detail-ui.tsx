@@ -3,10 +3,9 @@
 import { useEffect, useRef, useState, type ReactNode, type ReactElement } from 'react';
 import { useSearchParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Check, MessageCircle } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useI18n } from '@/lib/i18n';
-import { WHATSAPP_PHONE } from '@/lib/contact';
 import { track } from '@/lib/analytics';
 
 export const detailContainer = 'mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8';
@@ -184,40 +183,6 @@ export function DetailNotice({ title, children }: { title: string; children: Rea
     <div className="border border-gray-200 border-l-4 border-l-[#9B1B30] bg-white p-5">
       <h3 className="font-semibold text-[#1B2A4A]">{title}</h3>
       <div className="mt-2 text-sm leading-6 text-gray-600">{children}</div>
-    </div>
-  );
-}
-
-export function DetailSupport({ name, universitySlug, programSlug, programName }: { name: string; universitySlug: string; programSlug?: string; programName?: string }): ReactElement {
-  const { t, locale } = useI18n();
-  const kitHref = detailKitHref({ universitySlug, name, programSlug, programName });
-  const whatsapp = `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(`Hi SICA, I'd like guidance about ${programName ? `${programName} at ` : ''}${name}.`)}`;
-  const slug = programSlug ?? universitySlug;
-
-  return (
-    <div className="border border-gray-200 bg-white shadow-sm">
-      <div className="border-t-4 border-t-[#9B1B30] px-5 pb-5 pt-5 sm:px-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-500">{t('detail.withSica')}</p>
-        <h2 className="mt-2 text-xl font-bold tracking-tight text-[#1B2A4A]">{t('detail.planApplication')}</h2>
-        <p className="mt-3 text-sm leading-6 text-gray-600">{t('detail.supportDescription')}</p>
-        <ul className="my-5 space-y-3">
-          {['detail.checkEligibility', 'detail.reviewDocuments', 'detail.confirmCosts'].map((key) => (
-            <li key={key} className="flex items-start gap-2.5 text-sm leading-6 text-gray-600">
-              <Check className="mt-1 h-4 w-4 shrink-0 text-[#1B2A4A]" />
-              {t(key)}
-            </li>
-          ))}
-        </ul>
-        <Link href={kitHref} onClick={() => track('apply_click', { location: 'detail_kit', slug, locale })} className={`${detailLink} w-full`}>
-          {t('consultationCta.ctaPrimary')}
-        </Link>
-        <div className="mt-3 border-t border-gray-100 pt-4">
-          <a href={whatsapp} target="_blank" rel="noopener noreferrer" onClick={() => track('whatsapp_click', { location: 'detail_support', slug, locale })} className="flex min-h-11 items-center justify-center gap-2 text-sm font-medium text-[#1B2A4A] hover:underline">
-            <MessageCircle className="h-4 w-4" />
-            {t('detail.askWhatsapp')}
-          </a>
-        </div>
-      </div>
     </div>
   );
 }

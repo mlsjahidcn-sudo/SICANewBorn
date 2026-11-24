@@ -137,7 +137,7 @@ describe('F7 — llms.txt must not leak internal build notes', () => {
 });
 
 describe('F2 — /counselling must not claim "no open slots" before asking', () => {
-  const wizard = readFileSync(join(SRC, 'app/counselling/booking-wizard.tsx'), 'utf-8');
+  const wizard = readFileSync(join(SRC, 'components/counselling/booking-wizard.tsx'), 'utf-8');
 
   it('tracks whether a slot fetch has resolved', () => {
     // "We have not asked yet" and "we asked and there is nothing" are
