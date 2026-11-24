@@ -1,3 +1,4 @@
+import { scholarshipDeadline } from '@/lib/scholarship-deadlines';
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import type { Locale } from '@/lib/i18n-translations';
@@ -57,7 +58,7 @@ export default async function CscScholarshipPage() {
     s.type,
     s.coverage.join(', ') || (isZh ? '见详情' : 'see description'),
     s.eligibleRegions || (isZh ? '不限' : 'worldwide'),
-    s.deadline || (isZh ? '查看本年度渠道通知' : 'Check the current channel notice'),
+    scholarshipDeadline(s, locale).label,
   ]);
 
   const liveGuide = {

@@ -1,3 +1,4 @@
+import { cscCountryStatus } from './csc-country-status';
 import type { LocalizedGuide } from './types';
 // [verify] Editorial claims previously marked for confirmation — re-check official notices before relying on figures or dates.
 
@@ -41,6 +42,7 @@ export const cscPakistanGuide: LocalizedGuide = {
       'Apply through both routes if eligible — they are not mutually exclusive, and you pick one if both come through',
     ],
     sections: [
+      cscCountryStatus('Pakistan', 'en'),
       {
         id: 'two-routes',
         h2: 'The two routes: HEC vs university (Type B)',
@@ -240,6 +242,7 @@ export const cscPakistanGuide: LocalizedGuide = {
       '符合条件可双渠道并行申请——两者不互斥，若都获批则择一',
     ],
     sections: [
+      cscCountryStatus('Pakistan', 'zh'),
       {
         id: 'two-routes',
         h2: '两条渠道：HEC vs 大学（Type B）',

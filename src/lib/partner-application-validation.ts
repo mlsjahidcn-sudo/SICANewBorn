@@ -121,14 +121,23 @@ export function validatePartnerApplicationPayload(
   // the target school/program is not in the catalog yet, but must
   // describe the desired option in notes so the admin can assign it
   // later. We still validate length when they are provided.
+  //
+  // Phase 177: `studentName` is only REQUIRED on create. In update
+  // mode it is validated when present, so a single-field PATCH (e.g.
+  // the inline notes editor on the application detail page) no longer
+  // 400s with "studentName is required". This matches the contract
+  // documented above: "Required fields are only checked when they are
+  // present in the body, so single-field updates still work."
   const studentName = toTrimmedString(body.studentName);
-  if (!studentName) {
-    errors.push({ field: 'studentName', message: 'studentName is required' });
-  } else if (studentName.length > PARTNER_APPLICATION_FIELD_LIMITS.studentName) {
-    errors.push({
-      field: 'studentName',
-      message: `studentName must be at most ${PARTNER_APPLICATION_FIELD_LIMITS.studentName} characters`,
-    });
+  if (mode === 'create' || body.studentName !== undefined) {
+    if (!studentName) {
+      errors.push({ field: 'studentName', message: 'studentName is required' });
+    } else if (studentName.length > PARTNER_APPLICATION_FIELD_LIMITS.studentName) {
+      errors.push({
+        field: 'studentName',
+        message: `studentName must be at most ${PARTNER_APPLICATION_FIELD_LIMITS.studentName} characters`,
+      });
+    }
   }
 
   const university = toTrimmedString(body.university);

@@ -7,7 +7,7 @@ import {
 } from '@/lib/rate-limit';
 import { mapPartnerApplicationToDb } from '@/lib/partner-application-mapper';
 import { mapPartnerStudentToDb } from '@/lib/partner-student-mapper';
-import { validatePartnerApplicationPayload } from '@/lib/partner-application-validation';
+import { publicApplicationSchema } from '@/lib/public-application';
 import { getStorageClient } from '@/lib/storage';
 import { validateFileType, validateFileName } from '@/lib/storage-validation';
 
@@ -59,28 +59,7 @@ const STUDENT_DOCS_BUCKET = 'student-documents';
 const MAX_FILES = 4;
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
 
-const SubmitPayload = z.object({
-  // Honeypot — never filled by humans. Filled => fake 200.
-  website: z.string().optional(),
-  // Student
-  studentName: z.string().min(1).max(255),
-  studentEmail: z.string().email().max(255).optional().or(z.literal('')),
-  studentPhone: z.string().min(5).max(50).optional().or(z.literal('')),
-  nationality: z.string().max(100).optional().or(z.literal('')),
-  // Program
-  university: z.string().max(255).optional().or(z.literal('')),
-  program: z.string().max(255).optional().or(z.literal('')),
-  degree: z.enum(['Bachelor', 'Master', 'PhD']).optional().or(z.literal('')),
-  intake: z.string().max(100).optional().or(z.literal('')),
-  // Academics
-  gpa: z.string().max(16).optional().or(z.literal('')),
-  englishTest: z.enum(['IELTS', 'TOEFL', 'Duolingo', 'PTE', 'Other']).optional().or(z.literal('')),
-  englishScore: z.string().max(16).optional().or(z.literal('')),
-  // Narrative
-  whyProgram: z.string().max(500).optional().or(z.literal('')),
-  // Partner attribution
-  referringPartnerId: z.string().uuid().optional(),
-});
+const SubmitPayload = publicApplicationSchema;
 
 // File categories (mapped to student_documents.category).
 // The client sends one multipart part per file. The part name is
@@ -207,18 +186,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Referring partner is not active' }, { status: 400 });
     }
     partnerId = (partner as { id: string }).id;
-  }
-
-  // Shared field validation.
-  const validationErrors = validatePartnerApplicationPayload(
-    parsedData as Record<string, unknown>,
-    'create',
-  );
-  if (validationErrors.length > 0) {
-    return NextResponse.json(
-      { error: validationErrors[0].message, errors: validationErrors },
-      { status: 400 },
-    );
   }
 
   // 1. partner_students row.

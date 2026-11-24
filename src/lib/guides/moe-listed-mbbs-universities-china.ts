@@ -19,9 +19,9 @@ export const moeMbbsGuide: LocalizedGuide = {
     eyebrow: 'GUIDE · MBBS LIST',
     title: 'MOE-Listed MBBS Universities in China 2027',
     description:
-      'What the MOE MBBS list is, why only listed universities may teach clinical medicine in English (check the current MOE list before applying), what regulators require, and CSCA subjects by university.',
+      'Understand the MOE MBBS list, English-taught clinical medicine eligibility, and medical regulator checks. Verify the current official list before applying. CSCA subjects by university.',
     seoTitle: 'MOE-Listed MBBS Universities in China 2027',
-    seoDescription: 'What the MOE MBBS list is, why only listed universities may teach clinical medicine in English (check the current MOE list before applying), what regulators require, and',
+    seoDescription: 'Understand the MOE MBBS list, English-taught clinical medicine eligibility, and medical regulator checks. Verify the current official list before applying.',
     subtitle:
       'China\'s Ministry of Education (MOE) publishes the list of universities permitted to teach clinical medicine in English to international students — check the current MOE list before applying. Only these universities can award an English-taught MBBS that WHO lists and your regulator will assess.',
     stats: [

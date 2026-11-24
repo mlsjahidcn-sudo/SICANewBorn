@@ -3,17 +3,15 @@ import type { NextRequest } from 'next/server';
 import { corsPreflightHeaders } from '@/lib/v1-cors';
 
 /**
- * Middleware for cookie-based i18n + CDN-friendly Cache-Control + CORS preflight.
+ * Middleware for cookie-based i18n, private HTML caching and CORS preflight.
  *
  * Phase 67:
  *   1. When a visitor arrives with `?lang=en` or `?lang=zh`, we set the
  *      `sica-locale` cookie so that server components render the requested
  *      language. SameSite=Lax + 1-year expiry, matching the client-side
  *      language switcher in `src/lib/i18n.tsx`.
- *   2. GET requests to public pages get `Cache-Control: public,
- *      s-maxage=3600, stale-while-revalidate=86400` so the CDN can cache
- *      the HTML for an hour and serve stale for up to a day while it
- *      regenerates. Excludes /api/* (always dynamic), /_next/*
+ *   2. GET requests to public pages get `Cache-Control:
+ *      private, no-store, max-age=0` because HTML varies by locale cookie. Excludes /api/* (always dynamic), /_next/*
  *      (Next's own static asset pipeline already sets these headers), AND
  *      authenticated surfaces (Phase S144): /admin, /student, /partner.
  *      Caching a logged-in user's HTML on the CDN would let the next
@@ -81,7 +79,7 @@ export function middleware(request: NextRequest) {
     });
   }
 
-  // CDN cache headers for public GETs. Excludes:
+  // Cookie-localized HTML must not be reused by shared caches. Excludes:
   //   - /api/* (always dynamic, never cached)
   //   - /_next/* (Next's own static asset pipeline)
   //   - /admin /student /partner — every page in these subtrees
@@ -99,7 +97,7 @@ export function middleware(request: NextRequest) {
   ) {
     response.headers.set(
       'Cache-Control',
-      'public, s-maxage=3600, stale-while-revalidate=86400',
+      'private, no-store, max-age=0',
     );
   }
 

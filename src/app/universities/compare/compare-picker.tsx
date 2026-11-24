@@ -8,6 +8,7 @@
  * university reach the browser, and none of data.ts ships in the
  * client bundle for this route.
  */
+import { useI18n } from '@/lib/i18n';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -16,6 +17,10 @@ import { ArrowRight, GraduationCap, Check } from 'lucide-react';
 export interface CompareUni {
   slug: string;
   name: string;
+  nameCn?: string;
+  cityCn?: string;
+  rankingYear?: string;
+  rankingSourceUrl?: string;
   logo: string;
   ranking: number;
   qsWorldRanking: number | null;
@@ -34,6 +39,11 @@ export interface CompareUni {
  */
 export default function ComparePicker({ unis }: { unis: CompareUni[] }) {
   const router = useRouter();
+  const { locale } = useI18n();
+  const zh = locale === 'zh';
+  const [search, setSearch] = useState('');
+  const visible = unis.filter((u) => `${u.name} ${u.nameCn ?? ''} ${u.city} ${u.cityCn ?? ''}`.toLowerCase().includes(search.trim().toLowerCase()));
+  const name = (u: CompareUni): string => zh && u.nameCn ? u.nameCn : u.name;
   const [selected, setSelected] = useState<string[]>([]);
 
   // Total number of unique pairs: C(n, 2). Updates as the list
@@ -56,39 +66,38 @@ export default function ComparePicker({ unis }: { unis: CompareUni[] }) {
   };
 
   return (
-    <main className="min-h-screen bg-[#FAFAF8]">
+    <div className="min-h-screen bg-[#FAFAF8]">
       {/* Hero */}
       <section className="bg-[#1B2A4A] text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
           {/* Breadcrumb */}
           <nav className="flex items-center gap-1.5 text-sm text-gray-300 mb-4">
-            <Link href="/" className="hover:text-white transition-colors">Home</Link>
+            <Link href="/" className="hover:text-white transition-colors">{zh ? '首页' : 'Home'}</Link>
             <span className="text-gray-500">/</span>
-            <Link href="/universities" className="hover:text-white transition-colors">Universities</Link>
+            <Link href="/universities" className="hover:text-white transition-colors">{zh ? '大学' : 'Universities'}</Link>
             <span className="text-gray-500">/</span>
-            <span className="text-white font-medium">Compare</span>
+            <span className="text-white font-medium">{zh ? '对比' : 'Compare'}</span>
           </nav>
           <h1 className="text-3xl sm:text-4xl font-bold leading-tight">
-            Compare Chinese Universities
+            {zh ? '中国大学对比' : 'Compare Chinese Universities'}
           </h1>
           <p className="mt-3 text-lg text-gray-300 max-w-2xl">
-            Pick any two universities to see them side by side — rankings, tuition, scholarships,
-            programs, and more. Or jump to one of the most popular comparisons below.
+            {zh ? '搜索并选择两所大学，对比排名、学费及项目。排名与费用请以当期官方来源为准。' : 'Search and select two universities to compare rankings, tuition and programs. Confirm ranking editions and current fees with official sources.'}
           </p>
         </div>
       </section>
 
       {/* Picker */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 lg:py-12">
-        <div className="flex items-end justify-between mb-6 gap-4">
+        <div className="flex flex-col justify-between mb-6 gap-4 sm:flex-row sm:items-end">
           <div>
             <h2 className="text-xl font-bold text-[#1B2A4A]">
-              Select 2 universities
+              {zh ? '选择两所大学' : 'Select 2 universities'}
             </h2>
             <p className="text-sm text-gray-500 mt-1">
-              {selected.length === 0 && 'Click any two cards to compare.'}
-              {selected.length === 1 && 'Pick one more to continue.'}
-              {selected.length === 2 && 'Ready to compare. Click the button below.'}
+              {selected.length === 0 && (zh ? '搜索院校或城市，然后选择两所大学。' : 'Search by university or city, then select two schools.')}
+              {selected.length === 1 && (zh ? '再选一所即可继续。' : 'Pick one more to continue.')}
+              {selected.length === 2 && (zh ? '已选两所，可以开始对比。' : 'Ready to compare. Click the button below.')}
             </p>
           </div>
           <button
@@ -97,13 +106,21 @@ export default function ComparePicker({ unis }: { unis: CompareUni[] }) {
             disabled={selected.length !== 2}
             className="inline-flex items-center gap-2 bg-[#9B1B30] text-white px-6 py-2.5 text-sm font-semibold hover:bg-[#7A1526] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            Compare side by side
+            {zh ? '并排对比' : 'Compare side by side'}
             <ArrowRight className="h-4 w-4" />
           </button>
         </div>
 
+        <div className="mb-6 space-y-3">
+          <label className="block text-sm font-medium text-[#1B2A4A]" htmlFor="compare-search">{zh ? '搜索院校或城市' : 'Search university or city'}</label>
+          <input id="compare-search" type="search" value={search} onChange={(e) => setSearch(e.target.value)} className="min-h-11 w-full border border-gray-300 bg-white px-3 text-sm focus-visible:outline-2 focus-visible:outline-[#9B1B30]" />
+          <div className="flex flex-wrap gap-2" aria-live="polite">
+            {selected.map((slug) => { const u = unis.find((item) => item.slug === slug); return u ? <button type="button" key={slug} onClick={() => toggle(slug)} className="min-h-11 border border-[#9B1B30] bg-white px-3 text-sm text-[#1B2A4A]" aria-label={`${zh ? '移除' : 'Remove'} ${name(u)}`}>{name(u)} ×</button> : null; })}
+          </div>
+          <p className="text-xs text-gray-600">{zh ? `${visible.length} 所院校；不显示未公布或无效的排名。` : `${visible.length} universities; unpublished or invalid rankings are omitted.`}</p>
+        </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {unis.map((u) => {
+          {visible.map((u) => {
             const isSelected = selected.includes(u.slug);
             const order = selected.indexOf(u.slug) + 1;
             return (
@@ -142,23 +159,25 @@ export default function ComparePicker({ unis }: { unis: CompareUni[] }) {
                 </div>
 
                 <h3 className="font-semibold text-[#1B2A4A] text-sm leading-tight">
-                  {u.name}
+                  {name(u)}
                 </h3>
                 <p className="text-xs text-gray-500 mt-1">
-                  #{u.ranking} in China · QS #{u.qsWorldRanking ?? '—'}
+                  {u.ranking > 0 ? `#${u.ranking} ${zh ? '中国' : 'in China'}` : ''}{u.qsWorldRanking && u.qsWorldRanking > 0 ? ` · QS #${u.qsWorldRanking}${u.rankingYear ? ` (${u.rankingYear})` : ''}` : ''}
                 </p>
-                <p className="text-xs text-gray-400 mt-0.5">{u.city}, China</p>
+                {u.rankingYear ? null : <p className="mt-1 text-[10px] text-gray-500">{zh ? '排名年份待确认' : 'Ranking year unconfirmed'}</p>}
+                <p className="text-xs text-gray-400 mt-0.5">{zh && u.cityCn ? u.cityCn : u.city}, {zh ? '中国' : 'China'}</p>
               </button>
             );
           })}
         </div>
       </section>
 
+      {visible.length === 0 ? <p className="mx-auto max-w-7xl px-4 pb-8 text-gray-600">{zh ? '未找到院校，请更换名称或城市。' : 'No universities match. Try another name or city.'}</p> : null}
       {/* Popular comparisons — links directly to the side-by-side
           pages so users (and search engines) can find the top pairs
           without using the picker. */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-16">
-        <h2 className="text-xl font-bold text-[#1B2A4A] mb-4">Popular comparisons</h2>
+        <h2 className="text-xl font-bold text-[#1B2A4A] mb-4">{zh ? '常见院校对比' : 'Popular comparisons'}</h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {popularPairs.map(([a, b]) => {
             const uniA = unis.find((u) => u.slug === a);
@@ -184,11 +203,10 @@ export default function ComparePicker({ unis }: { unis: CompareUni[] }) {
           })}
         </div>
         <p className="mt-4 text-xs text-gray-500">
-          + {Math.max(0, totalPairs - popularPairs.length)} more pairs available — use the picker
-          above.
+          {zh ? `还可组合 ${Math.max(0, totalPairs - popularPairs.length)} 组对比，请使用上方选择器。` : `${Math.max(0, totalPairs - popularPairs.length)} more pairs available — use the picker above.`}
         </p>
       </section>
-    </main>
+    </div>
   );
 }
 

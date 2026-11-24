@@ -28,7 +28,7 @@ function shouldNudgeOnPath(pathname: string): boolean {
   return false;
 }
 
-export function Chatbot() {
+export function Chatbot({ autoNudge = true }: { autoNudge?: boolean } = {}) {
   const { t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -121,7 +121,7 @@ export function Chatbot() {
       setNudgeOpen(false);
       return;
     }
-    if (!shouldNudgeOnPath(pathname)) {
+    if (!autoNudge || !shouldNudgeOnPath(pathname)) {
       setNudgeOpen(false);
       return;
     }
@@ -147,7 +147,7 @@ export function Chatbot() {
         timerRef.current = null;
       }
     };
-  }, [pathname, isOpen]);
+  }, [pathname, isOpen, autoNudge]);
 
   if (!isOpen) {
     return (

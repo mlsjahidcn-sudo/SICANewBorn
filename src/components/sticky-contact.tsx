@@ -61,14 +61,14 @@ export function StickyContact() {
         // secondary "more contact options" entry point (WeChat QR
         // for Chinese users, email, hours). Popover opens upward
         // and never collides with the WhatsApp button below.
-        className="fixed bottom-24 left-4 z-40 sm:bottom-24 sm:left-6"
+        className="fixed bottom-4 left-4 z-40 sm:left-6"
       >
         {/* Popover — on desktop: anchored to the button, opens above.
             On mobile: becomes a full-width bottom sheet for thumb
             reach. */}
         {open && (
           <div
-            role="dialog"
+            role="dialog" data-state="open"
             aria-label={t('stickyContact.title')}
             className="fixed inset-x-0 bottom-0 sm:absolute sm:inset-auto sm:bottom-16 sm:left-0 w-full sm:w-80 sm:max-w-[calc(100vw-2.5rem)] bg-white border-t-2 sm:border-t-0 sm:border-2 border-[#1B2A4A] shadow-2xl"
             style={{ animation: 'sica-popover-in 160ms ease-out' }}

@@ -1,5 +1,7 @@
 'use client';
 
+import { scholarshipDeadline, compareScholarshipDeadlines } from '@/lib/scholarship-deadlines';
+
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -68,7 +70,7 @@ export default function ScholarshipsClient({ initialScholarships }: Scholarships
     }
 
     result.sort((a, b) => {
-      if (sortBy === 'deadline') return a.deadline.localeCompare(b.deadline);
+      if (sortBy === 'deadline') return compareScholarshipDeadlines(a, b);
       return a.name.localeCompare(b.name);
     });
 
@@ -133,15 +135,15 @@ export default function ScholarshipsClient({ initialScholarships }: Scholarships
           <p className="mt-3 text-lg text-gray-300 max-w-xl">{t('schol.subtitle')}</p>
           <div className="mt-6 flex flex-wrap gap-8">
             <div>
-              <div className="text-3xl font-bold text-white">10+</div>
+              <div className="text-3xl font-bold text-white">{scholarships.length}</div>
               <div className="text-sm text-gray-400">{t('schol.heroStats.national')}</div>
             </div>
             <div>
-              <div className="text-3xl font-bold text-white">Full &amp; Partial</div>
+              <div className="text-3xl font-bold text-white">{locale === 'zh' ? '全额与部分' : 'Full & Partial'}</div>
               <div className="text-sm text-gray-400">{t('schol.heroStats.coverage')}</div>
             </div>
             <div>
-              <div className="text-3xl font-bold text-white">All Levels</div>
+              <div className="text-3xl font-bold text-white">{locale === 'zh' ? '多种学位' : 'Multiple levels'}</div>
               <div className="text-sm text-gray-400">{t('schol.heroStats.levels')}</div>
             </div>
           </div>
@@ -163,6 +165,7 @@ export default function ScholarshipsClient({ initialScholarships }: Scholarships
           </div>
 
           <select
+            aria-label={t('schol.type')}
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
             className="px-4 py-2.5 border border-gray-300 rounded-none bg-white text-sm focus:outline-none focus:border-[#9B1B30]"
@@ -176,6 +179,7 @@ export default function ScholarshipsClient({ initialScholarships }: Scholarships
           </select>
 
           <select
+            aria-label={t('schol.degreeLevels')}
             value={levelFilter}
             onChange={(e) => setLevelFilter(e.target.value)}
             className="px-4 py-2.5 border border-gray-300 rounded-none bg-white text-sm focus:outline-none focus:border-[#9B1B30]"
@@ -191,6 +195,7 @@ export default function ScholarshipsClient({ initialScholarships }: Scholarships
           <div className="ml-auto flex items-center gap-2">
             <span className="text-sm text-gray-500">{t('schol.sortBy')}:</span>
             <select
+              aria-label={t('schol.sortBy')}
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-none bg-white text-sm focus:outline-none"
@@ -258,7 +263,7 @@ export default function ScholarshipsClient({ initialScholarships }: Scholarships
                   </span>
                   <div className="flex items-center gap-1.5 text-xs text-gray-500">
                     <Clock className="w-3.5 h-3.5 text-[#1B2A4A]" />
-                    {locale === 'zh' ? scholarship.deadlineCn : scholarship.deadline}
+                    {scholarshipDeadline(scholarship, locale).label}
                   </div>
                 </div>
 
@@ -269,6 +274,11 @@ export default function ScholarshipsClient({ initialScholarships }: Scholarships
                 <p className="text-sm text-gray-600 line-clamp-2 mb-4">
                   {locale === 'zh' ? scholarship.descriptionCn : scholarship.description}
                 </p>
+              </div>
+
+              <div className="px-6 pb-4 text-xs leading-5 text-gray-600">
+                <p>{scholarshipDeadline(scholarship, locale).note}</p>
+                {scholarshipDeadline(scholarship, locale).href ? <Link href={scholarshipDeadline(scholarship, locale).href!} className="mt-1 inline-flex min-h-8 font-semibold text-[#9B1B30] underline">{locale === 'zh' ? '查看各国截止日' : 'Check country deadlines'}</Link> : null}
               </div>
 
               {/* Coverage Tags */}
@@ -288,15 +298,15 @@ export default function ScholarshipsClient({ initialScholarships }: Scholarships
 
               {/* Degree Levels + Regions */}
               <div className="px-6 pb-4 flex items-center gap-4 text-xs text-gray-500">
-                <div className="flex items-center gap-1">
+                <div className="flex max-w-2/3 shrink-0 items-center gap-1">
                   <GraduationCap className="w-3.5 h-3.5 text-[#1B2A4A]" />
                   <span>
                     {(locale === 'zh' ? scholarship.degreeLevelsCn : scholarship.degreeLevels).slice(0, 3).join(', ')}
                     {scholarship.degreeLevels.length > 3 && '...'}
                   </span>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Globe className="w-3.5 h-3.5 text-[#1B2A4A]" />
+                <div className="flex min-w-0 items-center gap-1">
+                  <Globe className="w-3.5 h-3.5 shrink-0 text-[#1B2A4A]" />
                   <span className="truncate">
                     {locale === 'zh' ? scholarship.eligibleRegionsCn : scholarship.eligibleRegions}
                   </span>
@@ -338,6 +348,7 @@ export default function ScholarshipsClient({ initialScholarships }: Scholarships
         {totalPages > 1 && (
           <div className="flex items-center justify-center gap-1 mt-10">
             <button
+              aria-label={t('common.previous')}
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
               className="p-2 border border-gray-300 rounded-none disabled:opacity-40 hover:border-[#9B1B30] transition-colors"
@@ -358,6 +369,7 @@ export default function ScholarshipsClient({ initialScholarships }: Scholarships
               </button>
             ))}
             <button
+              aria-label={t('common.next')}
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
               className="p-2 border border-gray-300 rounded-none disabled:opacity-40 hover:border-[#9B1B30] transition-colors"

@@ -28,27 +28,14 @@ import {
   getPartnerApplicationPriorityLabel,
   getPartnerApplicationDecisionLabel,
 } from '@/lib/partner-enum-labels';
+import {
+  STATUS_VARIANTS,
+  PRIORITY_VARIANTS,
+} from '@/lib/partner-status-styles';
 import type {
   PartnerApplication,
   PartnerApplicationStatus,
-  PartnerApplicationPriority,
 } from '@/lib/partner-application-mapper';
-
-const STATUS_VARIANTS: Record<PartnerApplicationStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-  'Draft': 'secondary',
-  'Submitted': 'outline',
-  'In Review': 'outline',
-  'Accepted': 'default',
-  'Rejected': 'destructive',
-  'Withdrawn': 'outline',
-};
-
-const PRIORITY_VARIANTS: Record<PartnerApplicationPriority, string> = {
-  Low: 'bg-gray-100 text-gray-600',
-  Normal: 'bg-blue-50 text-blue-700',
-  High: 'bg-orange-100 text-orange-800',
-  Urgent: 'bg-[#9B1B30] text-white',
-};
 
 export default function PartnerApplicationsPage() {
   const { t } = useI18n();

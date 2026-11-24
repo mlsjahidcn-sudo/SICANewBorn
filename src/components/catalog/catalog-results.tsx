@@ -37,11 +37,12 @@ export function CatalogResultRow({ row, query, position }: { row: CatalogRow; qu
               [t('catalog.filter.intake'), local(row.intake, row.intakeCn) || t('catalog.notPublished')],
             ].map(([label, value]) => <div key={label} className="min-w-0 sm:flex sm:items-baseline sm:gap-1.5"><dt className="text-xs text-gray-500">{label}</dt><dd className="mt-0.5 break-words text-[#1B2A4A]">{value}</dd></div>)}
           </dl>
-          {row.scholarshipAvailable === true && <p className="mt-3 flex items-center gap-1.5 text-xs font-medium text-[#1B2A4A]"><Award className="h-4 w-4" aria-hidden="true" />{t('filter.scholarship')}</p>}
+          {row.scholarshipAvailable === true && <p className="mt-3 flex items-center gap-1.5 text-xs font-medium text-[#1B2A4A]"><Award className="h-4 w-4" aria-hidden="true" />{t('detail.fundingListed')}</p>}
         </> : <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
           {query.q && <span className="text-gray-600">{t(row.matchingProgramCount === 1 ? 'catalog.matchingProgramOne' : 'catalog.matchingPrograms', { count: row.matchingProgramCount ?? 0 })}</span>}
           <Link href={catalogHref({ kind: 'programs', q: query.q, filters: { university: row.slug, ...(query.filters.city ? { city: query.filters.city } : {}) }, sort: query.q ? 'relevance' : 'default', page: 1, limit: 24 })} className="inline-flex items-center gap-1.5 font-semibold text-[#9B1B30] underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-[#9B1B30]">{t('catalog.viewPrograms')}<ArrowRight className="h-4 w-4 text-[#1B2A4A]" aria-hidden="true" /></Link>
         </div>}
+        {query.kind === 'programs' && <p className="mt-2 text-xs text-gray-500">{locale === 'zh' ? '请核对本年度教学语言、费用与招生要求。' : 'Confirm teaching language, fees and requirements for your intake.'}</p>}
         {query.q && row.matchReason && row.matchReason !== 'title' && <p className="mt-3 text-xs text-gray-500">{t(`catalog.match.${row.matchReason}`)}</p>}
       </div>
     </div>

@@ -133,7 +133,7 @@ export default async function ComparePage({
   };
 
   const lowerRankingWins = (a: number, b: number): 'a' | 'b' | null => {
-    if (a === b) return null;
+    if (!(a > 0) || !(b > 0) || a === b) return null;
     return a < b ? 'a' : 'b';
   };
 
@@ -148,8 +148,8 @@ export default async function ComparePage({
     {
       label: t(locale, 'compare.qsWorldRanking'),
       icon: Globe2,
-      a: `#${uniA.qsWorldRanking}`,
-      b: `#${uniB.qsWorldRanking}`,
+      a: uniA.qsWorldRanking > 0 ? `#${uniA.qsWorldRanking}` : t(locale, 'compare.seeWebsite'),
+      b: uniB.qsWorldRanking > 0 ? `#${uniB.qsWorldRanking}` : t(locale, 'compare.seeWebsite'),
       winner: lowerRankingWins(uniA.qsWorldRanking, uniB.qsWorldRanking),
     },
     {
@@ -287,7 +287,7 @@ export default async function ComparePage({
         name: `Is ${uniA.name} better than ${uniB.name}?`,
         acceptedAnswer: {
           '@type': 'Answer',
-          text: `It depends on your goals. ${uniA.name} is ranked #${uniA.ranking} in China (QS World #${uniA.qsWorldRanking}); ${uniB.name} is ranked #${uniB.ranking} in China (QS World #${uniB.qsWorldRanking}). Both are top-tier. Use the comparison table above to decide which is the better fit for your program of interest, location preference, and scholarship eligibility.`,
+          text: `It depends on your program, teaching language, location and budget. Compare the listed facts and confirm ranking editions, current fees and intake requirements with the universities before deciding.`,
         },
       },
       {
@@ -363,7 +363,7 @@ export default async function ComparePage({
               {t(locale, 'compare.subtitle')}
             </p>
             <p className="mt-2 text-xs text-gray-400">
-              {t(locale, 'compare.lastUpdated', { date: new Date().toISOString().slice(0, 10) })}
+              {locale === 'zh' ? '排名与学费以当期官方来源为准；目录数据不代表本年度已核实。' : 'Confirm ranking editions and current-intake fees with official sources; catalog data is not a current-year verification.'}
             </p>
           </div>
         </section>
@@ -403,7 +403,7 @@ export default async function ComparePage({
                       </span>
                       <span className="inline-flex items-center gap-1 text-[#1B2A4A] font-semibold">
                         <Trophy className="h-3 w-3 fill-[#D4A853] text-[#D4A853]" />
-                        QS #{u.qsWorldRanking}
+                        {u.qsWorldRanking > 0 ? `QS #${u.qsWorldRanking}` : (locale === 'zh' ? 'QS 排名未公布' : 'QS rank not published')}
                       </span>
                       <span className="inline-flex items-center gap-1 text-[#1B2A4A] font-semibold">
                         <Star className="h-3 w-3 fill-[#D4A853] text-[#D4A853]" />

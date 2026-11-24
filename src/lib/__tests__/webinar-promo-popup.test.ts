@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { isOnPublicPath } from '@/components/webinar-promo-popup';
-import { isWebinarSessionUpcoming } from '@/lib/webinar-config';
+import { isWebinarSessionUpcoming, WEBINAR_CONFIG } from '@/lib/webinar-config';
 
 describe('isOnPublicPath', () => {
   it('allows home and catalog pages', () => {
@@ -47,6 +47,11 @@ describe('isWebinarSessionUpcoming', () => {
 
   it('returns false when session is in the past', () => {
     expect(isWebinarSessionUpcoming('2026-10-01T06:00:00.000Z', now)).toBe(false);
+  });
+
+  it('returns false one minute after the configured session starts', () => {
+    const { sessionDateIso } = WEBINAR_CONFIG;
+    expect(isWebinarSessionUpcoming(sessionDateIso, Date.parse(sessionDateIso) + 60_000)).toBe(false);
   });
 
   it('returns false for missing or invalid dates', () => {

@@ -92,6 +92,16 @@ interface DocumentUploadDialogProps {
   onShowToast?: (message: string) => void;
   /** Default student selection (e.g. pre-filled from query param). */
   defaultStudentId?: string;
+  /**
+   * Lock the upload to one application. When set, the student and
+   * application pickers are replaced by a read-only "linked to" line and
+   * the document is created against this application. Used by the
+   * application detail page, where the partner is uploading in response
+   * to a document request for a specific application.
+   */
+  lockApplicationId?: string;
+  /** Text for the read-only "linked to" line (e.g. "Maria · PA-2026-0042"). */
+  lockedLabel?: string;
 }
 
 /**
@@ -141,6 +151,8 @@ export function DocumentUploadDialog({
   onUploaded,
   onShowToast,
   defaultStudentId,
+  lockApplicationId,
+  lockedLabel,
 }: DocumentUploadDialogProps) {
   const { t, locale } = useI18n();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -169,7 +181,7 @@ export function DocumentUploadDialog({
   useEffect(() => {
     if (!open) {
       setStudentId(defaultStudentId || '');
-      setApplicationId('__none__');
+      setApplicationId(lockApplicationId || '__none__');
       setCategory('Identity');
       setName('');
       setNameCn('');
@@ -180,7 +192,7 @@ export function DocumentUploadDialog({
       setBatchTotal(0);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
-  }, [open, defaultStudentId]);
+  }, [open, defaultStudentId, lockApplicationId]);
 
   // Filter the applications list to those of the picked student
   // (so the application picker stays relevant). Apps without a
@@ -474,36 +486,49 @@ export function DocumentUploadDialog({
 
           {/* Form fields */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
-              <Label htmlFor="partner-doc-student" className="text-[#1B2A4A] mb-2 block">
-                {t('partnerDocs.uploadDialog.partnerStudent')}
-              </Label>
-              <SearchableSelect
-                value={studentId}
-                onChange={setStudentId}
-                options={studentOptions}
-                placeholder={t('partnerDocs.filterStudentAll')}
-                emptyText={t('partnerDocs.filterStudentAll')}
-                searchPlaceholder={t('partnerDocs.filterSearch')}
-                disabled={isWorking}
-              />
-            </div>
-            <div className="md:col-span-2">
-              <Label htmlFor="partner-doc-app" className="text-[#1B2A4A] mb-2 block">
-                {t('partnerDocs.uploadDialog.partnerApplication')}
-              </Label>
-              <SearchableSelect
-                value={applicationId}
-                onChange={setApplicationId}
-                options={appOptions}
-                placeholder={t('partnerDocs.uploadDialog.partnerApplicationNone')}
-                emptyText={t('partnerDocs.uploadDialog.partnerApplicationNone')}
-                searchPlaceholder={t('partnerDocs.filterSearch')}
-                clearValue="__none__"
-                clearLabel={t('partnerDocs.uploadDialog.partnerApplicationNone')}
-                disabled={isWorking || !studentId}
-              />
-            </div>
+            {lockApplicationId ? (
+              <div className="md:col-span-2 border border-gray-200 bg-gray-50 p-3">
+                <div className="text-xs uppercase tracking-wider text-[#4B5563] font-medium">
+                  {t('partnerDocs.uploadDialog.linkedTo')}
+                </div>
+                <div className="text-sm font-medium text-[#1F2937] mt-1">
+                  {lockedLabel || t('partnerDocs.uploadDialog.linkedToUnknown')}
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="md:col-span-2">
+                  <Label htmlFor="partner-doc-student" className="text-[#1B2A4A] mb-2 block">
+                    {t('partnerDocs.uploadDialog.partnerStudent')}
+                  </Label>
+                  <SearchableSelect
+                    value={studentId}
+                    onChange={setStudentId}
+                    options={studentOptions}
+                    placeholder={t('partnerDocs.filterStudentAll')}
+                    emptyText={t('partnerDocs.filterStudentAll')}
+                    searchPlaceholder={t('partnerDocs.filterSearch')}
+                    disabled={isWorking}
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <Label htmlFor="partner-doc-app" className="text-[#1B2A4A] mb-2 block">
+                    {t('partnerDocs.uploadDialog.partnerApplication')}
+                  </Label>
+                  <SearchableSelect
+                    value={applicationId}
+                    onChange={setApplicationId}
+                    options={appOptions}
+                    placeholder={t('partnerDocs.uploadDialog.partnerApplicationNone')}
+                    emptyText={t('partnerDocs.uploadDialog.partnerApplicationNone')}
+                    searchPlaceholder={t('partnerDocs.filterSearch')}
+                    clearValue="__none__"
+                    clearLabel={t('partnerDocs.uploadDialog.partnerApplicationNone')}
+                    disabled={isWorking || !studentId}
+                  />
+                </div>
+              </>
+            )}
             <div>
               <Label htmlFor="partner-doc-category" className="text-[#1B2A4A] mb-2 block">
                 {t('partnerDocs.uploadDialog.category')}

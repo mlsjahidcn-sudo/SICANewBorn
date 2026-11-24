@@ -1,3 +1,4 @@
+import { cscCountryStatus } from './csc-country-status';
 import type { LocalizedGuide } from './types';
 // [verify] Editorial claims previously marked for confirmation — re-check official notices before relying on figures or dates.
 
@@ -41,6 +42,7 @@ export const cscNigeriaGuide: LocalizedGuide = {
       'CSC applications are free — agents charging for "guaranteed" CSC placement are fraudulent',
     ],
     sections: [
+      cscCountryStatus('Nigeria', 'en'),
       {
         id: 'routes-nigeria',
         h2: 'Your routes into CSC from Nigeria',
@@ -230,6 +232,7 @@ export const cscNigeriaGuide: LocalizedGuide = {
       'CSC 申请免费——收取「保证录取」费用的中介均为欺诈',
     ],
     sections: [
+      cscCountryStatus('Nigeria', 'zh'),
       {
         id: 'routes-nigeria',
         h2: '尼日利亚申请者的 CSC 渠道',

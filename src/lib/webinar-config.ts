@@ -76,7 +76,7 @@ export const WEBINAR_CONFIG: WebinarStaticConfig = {
   sessionDateIso: '2026-11-03T13:00:00.000Z',
   sessionTimeDisplay: '21:00 Beijing Time',
   sessionTimezone: 'Asia/Shanghai',
-  joinUrl: 'https://studyinchina.academy/webinar-room',
+  joinUrl: null,
   label: '2027 Intake · 5 Universities webinar',
   durationMinutes: 60,
 };

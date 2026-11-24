@@ -1,5 +1,7 @@
 'use client';
 
+import { getStat } from '@/lib/site-stats';
+
 /**
  * /success-stories — Public Success Stories page.
  *
@@ -134,7 +136,7 @@ export default function SuccessStoriesPage() {
             {t('successStories.subtitle')}
           </p>
           <p className="text-sm text-white/60 mt-4">
-            {t('successStories.countLabel')}
+            {t('successStories.countLabel', { count: getStat('studentsHelped') })}
           </p>
         </div>
       </section>

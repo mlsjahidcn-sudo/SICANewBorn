@@ -1,3 +1,4 @@
+import { uniqueComparisonUniversities } from '@/lib/comparison-universities';
 import type { Metadata } from 'next';
 import { getAllUniversities } from '@/lib/data-fetcher';
 import { universities as staticUniversities, type University } from '@/lib/data';
@@ -46,12 +47,16 @@ export default async function ComparePickerPage() {
   for (const u of staticUniversities) bySlug.set(u.slug, u);
   for (const u of live) bySlug.set(u.slug, u);
 
-  const unis: CompareUni[] = Array.from(bySlug.values())
+  const unis: CompareUni[] = uniqueComparisonUniversities(Array.from(bySlug.values()))
     .filter((u) => (u.ranking ?? 0) > 0)
     .sort((a, b) => (a.ranking ?? 0) - (b.ranking ?? 0))
     .map((u) => ({
       slug: u.slug,
       name: u.name,
+      nameCn: u.nameCn,
+      cityCn: u.cityCn,
+      rankingYear: u.detailVerification?.rankingYear,
+      rankingSourceUrl: u.detailVerification?.rankingSourceUrl,
       logo: u.logo,
       ranking: u.ranking,
       qsWorldRanking: u.qsWorldRanking ?? null,

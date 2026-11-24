@@ -4,11 +4,18 @@ import Link from 'next/link';
 import { BookOpen } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { track } from '@/lib/analytics';
-import { I18nProvider } from '@/lib/i18n';
 
 /**
  * Sitewide conversion block — primary CTA is the China Admission Kit.
  * Buy-focused: no counselling secondary on this surface.
+ *
+ * Variants:
+ *  - `inline` (default): bordered navy card used inside GuidePage
+ *    above the FAQ — renders on every guide / csca / listicle page.
+ *  - `hero`: compact button row for the homepage hero band.
+ *
+ * The `slug` prop lands in the /china-admission-kit?from=<slug> param
+ * and in the GA event so funnel attribution survives.
  */
 export function ConsultationCta({
   slug,
@@ -17,11 +24,7 @@ export function ConsultationCta({
   slug?: string;
   variant?: 'inline' | 'hero';
 }) {
-  return (
-    <I18nProvider initialLocale="en">
-      <ConsultationCtaInner slug={slug} variant={variant} />
-    </I18nProvider>
-  );
+  return <ConsultationCtaInner slug={slug} variant={variant} />;
 }
 
 function ConsultationCtaInner({

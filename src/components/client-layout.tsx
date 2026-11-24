@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { PublicPromotions } from '@/components/public-promotions';
 import { I18nProvider } from '@/lib/i18n';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
@@ -36,11 +38,11 @@ const Chatbot = dynamic(() => import('@/components/ai/Chatbot').then((m) => m.Ch
   ssr: false,
   loading: () => null,
 });
-const WhatsAppFloat = dynamic(() => import('@/components/whatsapp-float').then((m) => m.WhatsAppFloat), {
+const StickyContact = dynamic(() => import('@/components/sticky-contact').then((m) => m.StickyContact), {
   ssr: false,
   loading: () => null,
 });
-const StickyContact = dynamic(() => import('@/components/sticky-contact').then((m) => m.StickyContact), {
+const WhatsAppFloat = dynamic(() => import('@/components/whatsapp-float').then((m) => m.WhatsAppFloat), {
   ssr: false,
   loading: () => null,
 });
@@ -66,12 +68,20 @@ export function ClientLayout({
   catalogCounts: CatalogCounts;
 }) {
   const pathname = usePathname();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [hasBrowsed, setHasBrowsed] = useState(false);
+  useEffect(() => {
+    const onScroll = (): void => { if (window.scrollY >= 160) setHasBrowsed(true); };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
   const isDetail = /^\/(universities|programs)\/[^/]+$/.test(pathname) && !pathname.endsWith('/compare');
-  const isHandoff = pathname === '/counselling' || pathname === '/assessment';
+  const isHandoff = ['/counselling', '/assessment', '/apply', '/contact', '/webinar-2027-intake-csc'].includes(pathname);
   const quiet = isDetail || isHandoff;
-  const isAdmin = pathname.startsWith('/admin');
-  const isPartner = pathname.startsWith('/partner');
-  const isStudent = pathname.startsWith('/student');
+  const isAdmin = pathname === '/admin' || pathname.startsWith('/admin/');
+  const isPartner = pathname === '/partner' || pathname.startsWith('/partner/');
+  const isStudent = pathname === '/student' || pathname.startsWith('/student/');
 
   if (isAdmin || isPartner || isStudent) {
     return <>{children}</>;
@@ -81,21 +91,25 @@ export function ClientLayout({
     <I18nProvider initialLocale={initialLocale}>
       <div className={`flex min-h-screen flex-col ${isDetail ? 'pb-24 lg:pb-0' : ''}`}>
         <CscaPrepBanner />
-        <Header />
+        <Header onMobileMenuChange={setMobileMenuOpen} />
         <main className="flex-1">{children}</main>
         <Footer counts={catalogCounts} />
-        {/* Webinar promo stays on quiet (detail) pages too — high-intent
-            browse traffic. Anchored under the header so it does not fight
-            StickyApplyBar / chat / WhatsApp floats at the bottom. */}
-        {PUBLIC_WEBINAR_ENABLED && PUBLIC_WEBINAR_POPUP_ENABLED && <WebinarPromoPopup />}
-        {/* Kit promo mounts on quiet detail pages too — primary discovery CTA. */}
-        <KitPromoPopup />
-        {!quiet && <>
-          <Chatbot />
-          <WhatsAppFloat />
+        {/* Promotions yield to navigation, form entry and open dialogs:
+            PublicPromotions only mounts them once the visitor has engaged
+            with the page, and hides them again while they are typing in a
+            form or reading a dialog. The Kit promo replaces the old
+            exit-intent counselling overlay and mounts on quiet detail
+            pages too. */}
+        {!isHandoff && <PublicPromotions paused={mobileMenuOpen}>
+          {PUBLIC_WEBINAR_ENABLED && PUBLIC_WEBINAR_POPUP_ENABLED && <WebinarPromoPopup />}
+          <KitPromoPopup />
+          {!quiet && <WhatsAppGroupPopup />}
+        </PublicPromotions>}
+        {!quiet && <div className={mobileMenuOpen || !hasBrowsed ? 'hidden' : undefined}>
+          <Chatbot autoNudge={false} />
           <StickyContact />
-          <WhatsAppGroupPopup />
-        </>}
+          <WhatsAppFloat />
+        </div>}
       </div>
     </I18nProvider>
   );

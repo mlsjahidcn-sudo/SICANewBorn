@@ -755,7 +755,7 @@ export function ChatWindow({ isOpen, onClose, onMinimize }: ChatWindowProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 sm:inset-auto sm:bottom-4 sm:right-4 z-50 w-full sm:w-[380px] sm:max-w-[90vw] h-full sm:h-[640px] sm:max-h-[85vh] bg-white sm:rounded-none shadow-2xl border-0 sm:border border-gray-200 flex flex-col">
+    <div role="dialog" data-state="open" aria-label="SICA AI Assistant" className="fixed inset-0 sm:inset-auto sm:bottom-4 sm:right-4 z-50 w-full sm:w-[380px] sm:max-w-[90vw] h-full sm:h-[640px] sm:max-h-[85vh] bg-white sm:rounded-none shadow-2xl border-0 sm:border border-gray-200 flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-[#9B1B30]">
         <div className="flex items-center gap-2 text-white">

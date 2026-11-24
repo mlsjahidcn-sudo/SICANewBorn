@@ -84,7 +84,7 @@ export function CountdownTimer({ sessionDate, forceHidden }: Props) {
   return (
     <div
       className="inline-flex items-center gap-1 bg-white/5 border border-white/15 px-3 py-1.5 text-sm font-mono text-white"
-      aria-live="polite"
+      role="timer" aria-live="off"
       aria-label={t('webinar.countdown.ariaLabel')}
     >
       <span className="inline-flex items-baseline gap-1">

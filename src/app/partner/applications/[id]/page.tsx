@@ -1,18 +1,19 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
-  ArrowLeft, Edit, Trash2, Calendar, Building, BookOpen, AlertTriangle,
-  Mail, Phone, Globe, Hash, Flag, Info, Copy, ClipboardCopy, RotateCcw, CheckCircle,
-  User, Plus, History, FileText, Download, ExternalLink,
+  AlertTriangle, ArchiveRestore, ArrowLeft, BookOpen, Building, Calendar, CheckCircle,
+  Download, ExternalLink, FileText, FileUp, Flag, History, Info, Mail, Phone, Globe,
+  Plus, User,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,20 +32,34 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+
+import { PageContainer } from '@/components/admin/page-container';
+import { ApplicationDetailHeader } from '@/components/partner/application-detail-header';
+import {
+  DescriptionPlaceholder,
+  DescriptionRow,
+} from '@/components/partner/descriptions';
+import { DocumentUploadDialog } from '@/components/partner/DocumentUploadDialog';
+
 import { apiFetch, apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
+import { useUrlState } from '@/hooks/use-url-state';
+import { formatFileSize } from '@/lib/document-viewer-origin';
 import {
-  getPartnerApplicationStatusLabel,
-  getPartnerApplicationPriorityLabel,
   getPartnerApplicationDecisionLabel,
+  getPartnerApplicationPriorityLabel,
+  getPartnerApplicationStatusLabel,
 } from '@/lib/partner-enum-labels';
-import type {
-  PartnerApplication,
-  PartnerApplicationStatus,
-  PartnerApplicationDecision,
-  PartnerApplicationPriority,
-} from '@/lib/partner-application-mapper';
-import type { PartnerDocument, PartnerDocStatus } from '@/lib/partner-doc-mapper';
+import {
+  DOC_REQUEST_CATEGORY_LABEL_KEY,
+  DOC_STATUS_STYLES,
+  PRIORITY_VARIANTS,
+  STATUS_VARIANTS,
+  countDocumentsForRequest,
+} from '@/lib/partner-status-styles';
+import { MIN_NOTES_WHEN_UNASSIGNED } from '@/lib/partner-application-validation';
+import type { PartnerApplication } from '@/lib/partner-application-mapper';
+import type { PartnerDocument } from '@/lib/partner-doc-mapper';
 
 interface TimelineEvent {
   id: string;
@@ -55,31 +70,15 @@ interface TimelineEvent {
   actorEmail: string | null;
 }
 
-const STATUS_VARIANTS: Record<PartnerApplicationStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-  'Draft': 'secondary',
-  'Submitted': 'outline',
-  'In Review': 'outline',
-  'Accepted': 'default',
-  'Rejected': 'destructive',
-  'Withdrawn': 'outline',
-};
-
-const PRIORITY_VARIANTS: Record<PartnerApplicationPriority, string> = {
-  Low: 'bg-gray-100 text-gray-700',
-  Normal: 'bg-blue-50 text-blue-700',
-  High: 'bg-orange-100 text-orange-800',
-  Urgent: 'bg-[#9B1B30] text-white',
-};
-
-const DOC_STATUS_STYLES: Record<PartnerDocStatus, string> = {
-  Pending: 'bg-amber-100 text-amber-800',
-  Verified: 'bg-emerald-100 text-emerald-800',
-  Rejected: 'bg-red-100 text-red-800',
-};
+/** The four panes of the detail page. Bound to `?tab=` so the view is
+ *  shareable and survives a refresh. */
+const DETAIL_TABS = ['overview', 'file', 'documents', 'activity'] as const;
+type DetailTab = (typeof DETAIL_TABS)[number];
 
 export default function PartnerApplicationDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t, locale } = useI18n();
   const applicationId = params.id as string;
 
@@ -118,6 +117,16 @@ export default function PartnerApplicationDetailPage() {
     }
   };
 
+  // The active pane lives in the URL (`?tab=`). `searchParams` MUST be
+  // passed to `useUrlState` — the hook's window fallback returns null
+  // during SSR, so the first server render and the first client render
+  // would disagree and trip a hydration mismatch.
+  const [activeTab, setActiveTab] = useUrlState<DetailTab>('tab', 'overview', {
+    searchParams,
+    coerce: (raw) =>
+      (DETAIL_TABS as readonly string[]).includes(raw) ? (raw as DetailTab) : undefined,
+  });
+
   const [app, setApp] = useState<PartnerApplication | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -145,9 +154,23 @@ export default function PartnerApplicationDetailPage() {
   // Phase F: activity timeline for this application.
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [timelineLoading, setTimelineLoading] = useState(true);
-  // Phase G: documents linked to this application.
+  // Phase G: documents linked to this application. Loaded lazily when
+  // the Documents pane opens — the list is only relevant there.
   const [linkedDocs, setLinkedDocs] = useState<PartnerDocument[]>([]);
-  const [linkedDocsLoading, setLinkedDocsLoading] = useState(true);
+  const [linkedDocsLoading, setLinkedDocsLoading] = useState(false);
+  // Guards against a double-fetch when the pane is opened twice.
+  const linkedDocsRequested = useRef(false);
+  // Phase C: the admin document-request log. Every request stays open
+  // forever (`fulfilled_at` is only ever written as null), so the
+  // partner's progress is DERIVED from the documents already uploaded.
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
+  // Inline notes editing. `notes` is the one application field a
+  // partner may write (it is absent from `partnerForbiddenFields`).
+  const [notesDraft, setNotesDraft] = useState('');
+  const [notesSaving, setNotesSaving] = useState(false);
+  const [notesError, setNotesError] = useState<string | null>(null);
+  const [notesSavedAt, setNotesSavedAt] = useState(false);
+  const [restoring, setRestoring] = useState(false);
 
   const load = useCallback(async () => {
     if (!applicationId) return;
@@ -187,29 +210,36 @@ export default function PartnerApplicationDetailPage() {
     void load();
   }, [load]);
 
-  // Phase G: load documents linked to this application. Separate
-  // from load() so a doc mutation can refresh just this list.
+  // Seed the notes editor whenever a fresh application lands.
   useEffect(() => {
-    if (!applicationId) return;
-    let cancelled = false;
+    setNotesDraft(app?.notes ?? '');
+  }, [app?.id, app?.notes]);
+
+  // Phase G: linked documents. Loaded on demand — the previous version
+  // fetched all 100 rows on mount even when the partner never opened
+  // the card. The ref guard makes it exactly-once per application.
+  const fetchLinkedDocs = useCallback(async () => {
+    if (!applicationId || linkedDocsRequested.current) return;
+    linkedDocsRequested.current = true;
     setLinkedDocsLoading(true);
-    (async () => {
-      try {
-        const res = await apiFetchJson<{
-          documents: PartnerDocument[];
-          total: number;
-        }>(`/api/partner/documents?partnerApplicationId=${encodeURIComponent(applicationId)}&limit=100`);
-        if (!cancelled) setLinkedDocs(res.documents || []);
-      } catch (err) {
-        console.error('[partner/applications/:id] linked docs fetch failed:', err);
-      } finally {
-        if (!cancelled) setLinkedDocsLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    try {
+      const res = await apiFetchJson<{
+        documents: PartnerDocument[];
+        total: number;
+      }>(`/api/partner/documents?partnerApplicationId=${encodeURIComponent(applicationId)}&limit=100`);
+      setLinkedDocs(res.documents || []);
+    } catch (err) {
+      console.error('[partner/applications/:id] linked docs fetch failed:', err);
+      // Allow a retry on the next activation.
+      linkedDocsRequested.current = false;
+    } finally {
+      setLinkedDocsLoading(false);
+    }
   }, [applicationId]);
+
+  useEffect(() => {
+    if (activeTab === 'documents') void fetchLinkedDocs();
+  }, [activeTab, fetchLinkedDocs]);
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -224,6 +254,57 @@ export default function PartnerApplicationDetailPage() {
       setError(err instanceof Error ? err.message : t('partnerAppDetail.errorDelete'));
       setIsDeleting(false);
       setShowDelete(false);
+    }
+  };
+
+  // Phase C: restore a soft-deleted application. The PATCH route
+  // already accepts `archived: false` (api/partner/applications/[id]
+  // route.ts:195-201) — the detail page just had no affordance for it.
+  const handleRestore = async () => {
+    setRestoring(true);
+    setError(null);
+    try {
+      const res = await apiFetch(`/api/partner/applications/${applicationId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ archived: false }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || t('partnerAppDetail.errorRestore'));
+      }
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('partnerAppDetail.errorRestore'));
+    } finally {
+      setRestoring(false);
+    }
+  };
+
+  // Phase C: save the notes inline. `notes` is not an admin-only field,
+  // so the partner may write it — and it is exactly the field the API
+  // requires when a university/program is left unassigned.
+  const handleSaveNotes = async () => {
+    setNotesSaving(true);
+    setNotesError(null);
+    setNotesSavedAt(false);
+    try {
+      const res = await apiFetch(`/api/partner/applications/${applicationId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: notesDraft }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || t('partnerAppDetail.notesSaveFailed'));
+      }
+      setNotesSavedAt(true);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('partnerAppDetail.notesSaveFailed'));
+      setNotesError(err instanceof Error ? err.message : t('partnerAppDetail.notesSaveFailed'));
+    } finally {
+      setNotesSaving(false);
     }
   };
 
@@ -367,36 +448,57 @@ export default function PartnerApplicationDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <PageContainer width="default">
         <div className="h-8 bg-gray-200 animate-pulse w-48" />
         <div className="h-64 bg-gray-200 animate-pulse" />
-      </div>
+      </PageContainer>
     );
   }
 
   if (error && !app) {
     return (
-      <div className="space-y-4">
-        <Link href="/partner/applications" className="inline-flex items-center gap-2 text-[#1B2A4A]">
-          <ArrowLeft className="w-4 h-4" /> {t('partnerAppDetail.backToApplications')}
-        </Link>
-        <Card className="rounded-none border-red-200 bg-red-50">
-          <CardContent className="p-6 text-red-700 flex items-center gap-3">
-            <AlertTriangle className="w-5 h-5" />
-            <div>
-              <p className="font-medium">{t('partnerAppDetail.couldNotLoad')}</p>
-              <p className="text-sm">{error}</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <PageContainer width="default">
+        <div className="space-y-4">
+          <Link href="/partner/applications" className="inline-flex items-center gap-2 text-[#1B2A4A]">
+            <ArrowLeft className="w-4 h-4" /> {t('partnerAppDetail.backToApplications')}
+          </Link>
+          <Card className="rounded-none border-red-200 bg-red-50">
+            <CardContent className="p-6 text-red-700 flex items-center gap-3">
+              <AlertTriangle className="w-5 h-5" />
+              <div>
+                <p className="font-medium">{t('partnerAppDetail.couldNotLoad')}</p>
+                <p className="text-sm">{error}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </PageContainer>
     );
   }
 
   if (!app) return null;
 
+  // A row with an empty value is shown explicitly as "not recorded"
+  // rather than an em dash, and the card offers a route to fill it in.
+  const notRecorded = t('partnerAppDetail.notRecorded');
+  const row = (label: string, value: string | null | undefined, mono = false) =>
+    value ? (
+      <DescriptionRow key={label} label={label} value={value} mono={mono} />
+    ) : (
+      <DescriptionPlaceholder key={label} label={label} value={notRecorded} />
+    );
+
+  const openRequests = (app.documentsRequested ?? []).filter((r) => !r.fulfilled_at);
+
+  const linkedLabel = [
+    app.studentName ?? '',
+    app.applicationNumber ?? '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
   return (
-    <div className="space-y-6">
+    <PageContainer width="default">
       <AlertDialog open={showDelete} onOpenChange={setShowDelete}>
         <AlertDialogContent className="rounded-none">
           <AlertDialogHeader>
@@ -484,107 +586,34 @@ export default function PartnerApplicationDetailPage() {
         </DialogContent>
       </Dialog>
 
-      <div className="flex items-center gap-4">
-        <Link href="/partner/applications" className="p-2 hover:bg-gray-100 inline-flex">
-          <ArrowLeft className="w-5 h-5 text-[#1B2A4A]" />
-        </Link>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-bold text-[#1B2A4A]">{app.studentName}</h1>
-            <Badge variant={STATUS_VARIANTS[app.status]} className="rounded-none">
-              {getPartnerApplicationStatusLabel(app.status, t)}
-            </Badge>
-            <Badge variant="outline" className="rounded-none">
-              {getPartnerApplicationDecisionLabel(app.decision, t)}
-            </Badge>
-            {app.priority && app.priority !== 'Normal' && (
-              <span
-                className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-none ${PRIORITY_VARIANTS[app.priority]}`}
-                title={t('partnerAppDetail.priorityTitle')}
-              >
-                <Flag className="w-3 h-3" /> {getPartnerApplicationPriorityLabel(app.priority, t)}
-              </span>
-            )}
-          </div>
-          <p className="text-[#4B5563] mt-1 text-sm">
-            {app.university && app.program
-              ? `${app.university} · ${app.program}`
-              : app.university || app.program || t('partnerAppDetail.pendingAssignmentHeader')}
-            {app.applicationNumber && (
-              <span className="ml-2 font-mono text-xs text-gray-400">
-                {app.applicationNumber}
-              </span>
-            )}
-          </p>
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          <Button asChild variant="outline" className="rounded-none">
-            <Link href={`/partner/applications/${app.id}/edit`}>
-              <Edit className="mr-2 h-4 w-4" />
-              {t('partnerAppDetail.edit')}
-            </Link>
-          </Button>
-          {/* Phase 111b: warn the partner which fields won't carry
-              over when cloning — the v4 form removed several fields
-              (fundingSource, scholarshipName, whyProgram, careerPlan)
-              from the create/edit UI, so cloning would silently drop
-              them. Surface the names so the partner knows to re-fill. */}
-          {/* Phase 49.3: "Clone as new application" — partners
-              often submit the same student to multiple
-              universities. This stores the form-ready data in
-              sessionStorage and routes to /partner/applications/new
-              with ?clone=1. The new-app page reads sessionStorage
-              on mount and pre-fills every field except
-              university/program/intake/degree/applicationNumber
-              (the partner will re-pick these — that's the whole
-              point of cloning). sessionStorage is per-tab and
-              auto-clears on tab close, so this is safe. */}
-          <Button
-            variant="outline"
-            className="rounded-none"
-            onClick={() => handleClone()}
-            disabled={cloning}
-            title={t('partnerAppDetail.cloneTooltip')}
-          >
-            <ClipboardCopy className="mr-2 h-4 w-4" />
-            {t('partnerAppDetail.clone')}
-          </Button>
-          {/* Phase 49.4: "Request withdrawal" — opens the
-              modal with an optional reason textarea. Disabled
-              when the row is already Withdrawn (no need to ask
-              again). The modal posts to
-              /api/partner/applications/[id]/request-withdrawal
-              which inserts a 'Withdrawal Requested' timeline
-              event the admin sees in the partner-application
-              detail. */}
-          {app.status !== 'Withdrawn' && (
-            <Button
-              variant="outline"
-              className="rounded-none"
-              onClick={() => setShowWithdrawal(true)}
-            >
-              <RotateCcw className="mr-2 h-4 w-4" />
-              {t('partnerAppDetail.requestWithdrawal')}
-            </Button>
-          )}
-          <Button
-            variant="outline"
-            onClick={() => setShowDelete(true)}
-            className="rounded-none border-red-300 text-red-600 hover:bg-red-50"
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            {t('partnerAppDetail.delete')}
-          </Button>
-        </div>
-      </div>
+      <ApplicationDetailHeader
+        app={app}
+        cloning={cloning}
+        onClone={handleClone}
+        onRequestWithdrawal={() => setShowWithdrawal(true)}
+        onDelete={() => setShowDelete(true)}
+      />
 
-      {/* S27: the Quick status update panel was removed. Status and
-          decision are now admin-only — partners can edit the
-          application's intake / academic / passport / etc. but the
-          workflow transitions happen on the admin side. The
-          status + decision are still visible below in the Status
-          card so the partner always knows where SICA has the
-          application. */}
+      {/* Phase C: an archived row is invisible in the list, so the
+          detail page is the only place it can be restored. */}
+      {app.archivedAt && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border border-amber-200 bg-amber-50 px-4 py-3">
+          <p className="text-sm text-amber-900">
+            <strong>{t('partnerAppDetail.archivedBanner')}</strong>{' '}
+            {t('partnerAppDetail.archivedBannerBody', { date: fmtDate(app.archivedAt) })}
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-none border-amber-300 text-amber-900"
+            onClick={handleRestore}
+            disabled={restoring}
+          >
+            <ArchiveRestore className="mr-2 h-4 w-4" />
+            {restoring ? t('partnerAppDetail.restoring') : t('partnerAppDetail.restore')}
+          </Button>
+        </div>
+      )}
 
       {error && (
         <Card className="rounded-none border-red-200 bg-red-50">
@@ -592,571 +621,662 @@ export default function PartnerApplicationDetailPage() {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Phase C: linked student card. Surfaces the partner_students
-            link and gives one-click actions to the student profile or
-            creating another application for the same student. */}
-        <Card className="rounded-none">
-          <CardHeader>
-            <CardTitle className="text-[#1B2A4A] flex items-center gap-2">
-              <User className="w-4 h-4" /> {t('partnerAppDetail.sectionLinkedStudent')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            {app.studentId ? (
-              <>
-                <Field label={t('partnerAppDetail.linkedStudentName')} value={app.studentName} />
-                <Field label={t('partnerAppDetail.linkedStudentEmail')} value={app.studentEmail} />
-                <Field label={t('partnerAppDetail.linkedStudentPhone')} value={app.studentPhone} />
-                <div className="flex flex-wrap gap-2 pt-1">
-                  <Button asChild variant="outline" size="sm" className="rounded-none">
-                    <Link href={`/partner/students/${app.studentId}`}>
-                      {t('partnerAppDetail.viewStudentProfile')}
-                    </Link>
-                  </Button>
-                  <Button asChild variant="outline" size="sm" className="rounded-none">
-                    <Link href={`/partner/applications/new?studentId=${encodeURIComponent(app.studentId)}`}>
-                      <Plus className="mr-1 h-3 w-3" />
-                      {t('partnerAppDetail.newAppForStudent')}
-                    </Link>
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <p className="text-[#4B5563]">{t('partnerAppDetail.noLinkedStudent')}</p>
-            )}
-          </CardContent>
-        </Card>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as DetailTab)} className="space-y-4">
+        <TabsList className="rounded-none">
+          <TabsTrigger value="overview">{t('partnerAppDetail.tabOverview')}</TabsTrigger>
+          <TabsTrigger value="file">{t('partnerAppDetail.tabFile')}</TabsTrigger>
+          <TabsTrigger value="documents">
+            {openRequests.length > 0
+              ? t('partnerAppDetail.tabDocumentsOpen', { count: openRequests.length })
+              : t('partnerAppDetail.tabDocuments')}
+          </TabsTrigger>
+          <TabsTrigger value="activity">{t('partnerAppDetail.tabActivity')}</TabsTrigger>
+        </TabsList>
 
-        <Card className="rounded-none">
-          <CardHeader>
-            <CardTitle className="text-[#1B2A4A] flex items-center gap-2">
-              <Building className="w-4 h-4" /> {t('partnerAppDetail.sectionUniversityProgram')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="flex items-center gap-2">
-              <span className="text-[#4B5563] min-w-24">{t('partnerAppDetail.fieldUniversity')}:</span>
-              {app.university ? (
-                <span className="font-medium text-[#1F2937]">{app.university}</span>
-              ) : (
-                <span className="text-amber-700 bg-amber-50 px-2 py-0.5 text-xs border border-amber-200">
-                  {t('partnerAppDetail.pendingAssignment')}
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[#4B5563] min-w-24">{t('partnerAppDetail.fieldProgram')}:</span>
-              {app.program ? (
-                <span className="font-medium text-[#1F2937]">{app.program}</span>
-              ) : (
-                <span className="text-amber-700 bg-amber-50 px-2 py-0.5 text-xs border border-amber-200">
-                  {t('partnerAppDetail.pendingAssignment')}
-                </span>
-              )}
-            </div>
-            <Field label={t('partnerAppDetail.fieldIntake')} value={app.intake} />
-            <Field label={t('partnerAppDetail.fieldDegree')} value={app.degree} />
-            <Field label={t('partnerAppDetail.fieldApplicationNumber')} value={app.applicationNumber} mono />
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-none">
-          <CardHeader>
-            <CardTitle className="text-[#1B2A4A] flex items-center gap-2">
-              <BookIcon className="w-4 h-4" /> {t('partnerAppDetail.sectionStatus')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="flex items-center gap-2">
-              <span className="text-[#4B5563] min-w-24">{t('partnerAppDetail.fieldStatus')}</span>
-              <Badge variant={STATUS_VARIANTS[app.status]} className="rounded-none">
-                {getPartnerApplicationStatusLabel(app.status, t)}
-              </Badge>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[#4B5563] min-w-24">{t('partnerAppDetail.fieldDecision')}</span>
-              <Badge variant="outline" className="rounded-none">{getPartnerApplicationDecisionLabel(app.decision, t)}</Badge>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[#4B5563] min-w-24">{t('partnerAppDetail.fieldPriority')}</span>
-              <span
-                className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-none ${PRIORITY_VARIANTS[app.priority]}`}
-              >
-                <Flag className="w-3 h-3" /> {getPartnerApplicationPriorityLabel(app.priority, t)}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[#4B5563] min-w-24">{t('partnerAppDetail.fieldSubmitted')}</span>
-              <span className="text-[#1F2937]">
-                {fmtDate(app.submittedAt)}
-              </span>
-            </div>
-            {/* Phase 49.1: prominent "why can't I change status?" callout.
-                S27 removed the partner's ability to change status +
-                decision (admins drive the workflow). Partners were
-                left wondering why the Edit button doesn't surface
-                those fields. The old copy was a tiny gray sentence
-                at the bottom of the status card — easy to miss. This
-                callout is now a real amber notice with an Info icon,
-                explains the rule, and points at the request-withdrawal
-                action below as the partner's recourse when the admin
-                hasn't moved the status fast enough for them. */}
-            <div className="flex items-start gap-2 pt-3 mt-1 border-t border-gray-100">
-              <Info className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-amber-900">
-                <strong>{t('partnerAppDetail.statusAdminNoteTitle')}</strong>{' '}
-                {t('partnerAppDetail.statusAdminNote')}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="rounded-none">
-        <CardHeader>
-          <CardTitle className="text-[#1B2A4A] flex items-center gap-2">
-            <Mail className="w-4 h-4" /> {t('partnerAppDetail.sectionStudentContact')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          {app.studentEmail ? (
-            <div className="flex items-center gap-2">
-              <Mail className="w-4 h-4 text-[#4B5563]" />
-              <a
-                href={`mailto:${app.studentEmail}`}
-                className="text-[#1B2A4A] hover:underline"
-              >
-                {app.studentEmail}
-              </a>
-            </div>
-          ) : (
-            <p className="text-sm text-[#4B5563] italic">{t('partnerAppDetail.noEmailOnFile')}</p>
-          )}
-          {app.studentPhone && (
-            <div className="flex items-center gap-2">
-              <Phone className="w-4 h-4 text-[#4B5563]" />
-              <a href={`tel:${app.studentPhone}`} className="text-[#1B2A4A] hover:underline">
-                {app.studentPhone}
-              </a>
-            </div>
-          )}
-          {app.nationality && (
-            <div className="flex items-center gap-2">
-              <Globe className="w-4 h-4 text-[#4B5563]" />
-              <span className="text-[#1F2937]">{app.nationality}</span>
-            </div>
-          )}
-          {app.createdByEmail && (
-            <div className="text-xs text-[#4B5563] pt-2 border-t border-gray-100 mt-2">
-              {t('partnerAppDetail.addedBy', { email: app.createdByEmail })}
-              {app.createdAt && (
-                <> {t('partnerAppDetail.addedOn', { date: fmtDate(app.createdAt) })}</>
-              )}
-            </div>
-          )}
-          {/* Phase 1.13: show the most recent admin-actor on this
-              case so the partner knows who to follow up with.
-              Falls back to "SICA Admissions Team" if no admin has
-              touched the case yet. */}
-          <div className="text-xs text-[#4B5563] pt-2 border-t border-gray-100 mt-2">
-            <span className="font-semibold text-[#1B2A4A]">
-              {t('partnerAppDetail.assignedTo')}:
-            </span>{' '}
-            {reviewer?.email ? (
-              <>
-                {reviewer.email}
-                {reviewer.at && (
-                  <span className="text-gray-500 ml-1">
-                    ({t('partnerAppDetail.lastActivity', {
-                      date: fmtDate(reviewer.at),
-                    })})
-                  </span>
+        {/* ---------------------------------------------------------- */}
+        {/* Overview: who, what, where, and the admin-owned status.     */}
+        {/* ---------------------------------------------------------- */}
+        <TabsContent value="overview">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Phase C: linked student card. Surfaces the partner_students
+                link and gives one-click actions to the student profile or
+                creating another application for the same student. */}
+            <Card className="rounded-none">
+              <CardHeader>
+                <CardTitle className="text-[#1B2A4A] flex items-center gap-2">
+                  <User className="w-4 h-4" /> {t('partnerAppDetail.sectionLinkedStudent')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                {app.studentId ? (
+                  <>
+                    <DescriptionRow label={t('partnerAppDetail.linkedStudentName')} value={app.studentName} />
+                    <DescriptionRow label={t('partnerAppDetail.linkedStudentEmail')} value={app.studentEmail} />
+                    <DescriptionRow label={t('partnerAppDetail.linkedStudentPhone')} value={app.studentPhone} />
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <Button asChild variant="outline" size="sm" className="rounded-none">
+                        <Link href={`/partner/students/${app.studentId}`}>
+                          {t('partnerAppDetail.viewStudentProfile')}
+                        </Link>
+                      </Button>
+                      <Button asChild variant="outline" size="sm" className="rounded-none">
+                        <Link href={`/partner/applications/new?studentId=${encodeURIComponent(app.studentId)}`}>
+                          <Plus className="mr-1 h-3 w-3" />
+                          {t('partnerAppDetail.newAppForStudent')}
+                        </Link>
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-[#4B5563]">{t('partnerAppDetail.noLinkedStudent')}</p>
                 )}
-              </>
-            ) : (
-              <span>{t('partnerAppDetail.admissionsTeam')}</span>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+              </CardContent>
+            </Card>
 
-      {/* S26 — extended application data. We render these as
-          additional cards below the contact card so the partner can
-          see everything admissions needs. Each card only renders
-          if at least one field is filled in, so the page stays
-          clean for sparse rows (the old partner_applications had
-          none of these fields). */}
+            <Card className="rounded-none">
+              <CardHeader>
+                <CardTitle className="text-[#1B2A4A] flex items-center gap-2">
+                  <Building className="w-4 h-4" /> {t('partnerAppDetail.sectionUniversityProgram')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="text-[#4B5563] min-w-24">{t('partnerAppDetail.fieldUniversity')}:</span>
+                  {app.university ? (
+                    <span className="font-medium text-[#1F2937]">{app.university}</span>
+                  ) : (
+                    <span className="text-amber-700 bg-amber-50 px-2 py-0.5 text-xs border border-amber-200">
+                      {t('partnerAppDetail.pendingAssignment')}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[#4B5563] min-w-24">{t('partnerAppDetail.fieldProgram')}:</span>
+                  {app.program ? (
+                    <span className="font-medium text-[#1F2937]">{app.program}</span>
+                  ) : (
+                    <span className="text-amber-700 bg-amber-50 px-2 py-0.5 text-xs border border-amber-200">
+                      {t('partnerAppDetail.pendingAssignment')}
+                    </span>
+                  )}
+                </div>
+                {/* Phase C: the API refuses to clear the university or the
+                    program unless the notes carry enough text (>= 10
+                    characters). Say so before the partner hits the error. */}
+                {(!app.university || !app.program) && (
+                  <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 px-2 py-1.5">
+                    {t('partnerAppDetail.pendingAssignmentNotesHint', {
+                      count: MIN_NOTES_WHEN_UNASSIGNED,
+                    })}
+                  </p>
+                )}
+                <DescriptionRow label={t('partnerAppDetail.fieldIntake')} value={app.intake} />
+                <DescriptionRow label={t('partnerAppDetail.fieldDegree')} value={app.degree} />
+                <DescriptionRow label={t('partnerAppDetail.fieldApplicationNumber')} value={app.applicationNumber} mono />
+              </CardContent>
+            </Card>
 
-      {/* Identity & address */}
-      {(app.dateOfBirth ||
-        app.gender ||
-        app.maritalStatus ||
-        app.placeOfBirth ||
-        app.currentAddress) && (
-        <Card className="rounded-none">
-          <CardHeader>
-            <CardTitle className="text-[#1B2A4A]">{t('partnerAppDetail.sectionIdentityAddress')}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <Field label={t('partnerAppDetail.fieldDateOfBirth')} value={app.dateOfBirth} />
-            <Field label={t('partnerAppDetail.fieldGender')} value={app.gender} />
-            <Field label={t('partnerAppDetail.fieldMaritalStatus')} value={app.maritalStatus} />
-            <Field label={t('partnerAppDetail.fieldPlaceOfBirth')} value={app.placeOfBirth} />
-            {app.currentAddress && (
-              <div>
-                <div className="text-[#4B5563] mb-1">{t('partnerAppDetail.fieldCurrentAddress')}</div>
-                <p className="text-[#1F2937] whitespace-pre-wrap">{app.currentAddress}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Passport */}
-      {(app.passportNumber || app.passportIssueDate || app.passportExpiryDate) && (
-        <Card className="rounded-none">
-          <CardHeader>
-            <CardTitle className="text-[#1B2A4A]">{t('partnerAppDetail.sectionPassport')}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <Field label={t('partnerAppDetail.fieldPassportNumber')} value={app.passportNumber} mono />
-            <Field label={t('partnerAppDetail.fieldIssueDate')} value={app.passportIssueDate} />
-            <Field label={t('partnerAppDetail.fieldExpiryDate')} value={app.passportExpiryDate} />
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Emergency contact */}
-      {(app.emergencyContactName ||
-        app.emergencyContactPhone ||
-        app.emergencyContactEmail ||
-        app.emergencyContactRelationship) && (
-        <Card className="rounded-none">
-          <CardHeader>
-            <CardTitle className="text-[#1B2A4A]">{t('partnerAppDetail.sectionEmergencyContact')}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <Field label={t('partnerAppDetail.fieldName')} value={app.emergencyContactName} />
-            <Field label={t('partnerAppDetail.fieldRelationship')} value={app.emergencyContactRelationship} />
-            <Field label={t('partnerAppDetail.fieldPhone')} value={app.emergencyContactPhone} />
-            <Field label={t('partnerAppDetail.fieldEmail')} value={app.emergencyContactEmail} />
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Academic background */}
-      {(app.highestEducation ||
-        app.schoolName ||
-        app.major ||
-        app.gpa ||
-        app.graduationYear) && (
-        <Card className="rounded-none">
-          <CardHeader>
-            <CardTitle className="text-[#1B2A4A]">{t('partnerAppDetail.sectionAcademic')}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <Field label={t('partnerAppDetail.fieldHighestEducation')} value={app.highestEducation} />
-            <Field label={t('partnerAppDetail.fieldSchool')} value={app.schoolName} />
-            <Field label={t('partnerAppDetail.fieldCountry')} value={app.schoolCountry} />
-            <Field label={t('partnerAppDetail.fieldMajor')} value={app.major} />
-            <Field
-              label={t('partnerAppDetail.fieldGraduationYear')}
-              value={app.graduationYear ? String(app.graduationYear) : null}
-            />
-            <Field label={t('partnerAppDetail.fieldGPA')} value={app.gpa} />
-            <Field label={t('partnerAppDetail.fieldClassRank')} value={app.classRank} />
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Language proficiency */}
-      {(app.nativeLanguage ||
-        app.englishTest ||
-        app.englishScore ||
-        app.hskLevel ||
-        app.hskScore) && (
-        <Card className="rounded-none">
-          <CardHeader>
-            <CardTitle className="text-[#1B2A4A]">{t('partnerAppDetail.sectionLanguage')}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <Field label={t('partnerAppDetail.fieldNativeLanguage')} value={app.nativeLanguage} />
-            <Field
-              label={t('partnerAppDetail.fieldEnglish')}
-              value={
-                app.englishTest
-                  ? `${app.englishTest}${app.englishScore ? ` · ${app.englishScore}` : ''}`
-                  : null
-              }
-            />
-            <Field
-              label={t('partnerAppDetail.fieldHSK')}
-              value={
-                app.hskLevel
-                  ? `${app.hskLevel}${app.hskScore ? ` · ${app.hskScore}` : ''}`
-                  : null
-              }
-            />
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Application context (prior China study, funding) — Phase 52
-          narrowed to just the China-history fields. The Funding
-          sub-card (fundingSource/scholarshipName) was dropped from
-          the partner application form in Phase 51f, so new rows
-          can never populate it. Pre-51f rows still show their
-          stored values via the read-side mapper, but rendering
-          them here would just confuse partners ("why is there a
-          field I can't edit?"). Same for the Personal Statement
-          card below — Phase 51f removed the form, so we hide the
-          card entirely. Read-side data is preserved on the
-          PartnerApplication interface for any future restore. */}
-      {(app.hasStudiedInChina !== null || app.hasAppliedChinaUni !== null) && (
-        <Card className="rounded-none">
-          <CardHeader>
-            <CardTitle className="text-[#1B2A4A]">{t('partnerAppDetail.sectionContext')}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <Field
-              label={t('partnerAppDetail.fieldStudiedInChinaBefore')}
-              value={
-                app.hasStudiedInChina === null
-                  ? null
-                  : app.hasStudiedInChina
-                  ? t('partnerAppDetail.yes')
-                  : t('partnerAppDetail.no')
-              }
-            />
-            <Field
-              label={t('partnerAppDetail.fieldAppliedToCNUniBefore')}
-              value={
-                app.hasAppliedChinaUni === null
-                  ? null
-                  : app.hasAppliedChinaUni
-                  ? t('partnerAppDetail.yes')
-                  : t('partnerAppDetail.no')
-              }
-            />
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Personal statement — Phase 52 hidden. The form no longer
-          writes to whyProgram/careerPlan (Phase 51f removed
-          Section 8 from the create/edit wizard). New rows will
-          never have data; pre-51f rows keep their stored values
-          but showing the card invites the "why can't I edit?"
-          question. Hide the card and rely on the read-side
-          PartnerApplication interface to preserve the data for
-          any future restore. */}
-
-      <Card className="rounded-none">
-        <CardHeader>
-          <CardTitle className="text-[#1B2A4A]">{t('partnerAppDetail.sectionNotes')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {app.notes ? (
-            <p className="text-sm text-[#1F2937] whitespace-pre-wrap">{app.notes}</p>
-          ) : (
-            <p className="text-sm text-[#4B5563] italic">{t('partnerAppDetail.noNotesYet')}</p>
-          )}
-          <p className="text-xs text-[#4B5563] mt-4 flex items-center gap-1">
-            <Calendar className="w-3 h-3" />
-            {t('partnerAppDetail.createdOn', { date: fmtDateTime(app.createdAt) })}
-            {app.updatedAt && app.updatedAt !== app.createdAt && (
-              <>{t('partnerAppDetail.updatedOn', { date: fmtDateTime(app.updatedAt) })}</>
-            )}
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* Phase F: activity timeline. Shows status changes, admin
-          notes, and partner withdrawal requests in chronological
-          order. The feed is fail-soft: if the timeline endpoint
-          errors we still render the rest of the detail page. */}
-      <Card className="rounded-none">
-        <CardHeader>
-          <CardTitle className="text-[#1B2A4A] flex items-center gap-2">
-            <History className="w-4 h-4" /> {t('partnerAppDetail.sectionActivity')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {timelineLoading ? (
-            <div className="space-y-3">
-              <div className="h-4 bg-gray-200 animate-pulse w-3/4" />
-              <div className="h-4 bg-gray-200 animate-pulse w-1/2" />
-            </div>
-          ) : timeline.length === 0 ? (
-            <div className="text-sm text-[#4B5563] italic">
-              {t('partnerAppDetail.timelineEmpty')}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {timeline.map((event) => {
-                const dotColor =
-                  event.status === 'Accepted'
-                    ? 'bg-green-500'
-                    : event.status === 'Rejected' || event.status === 'Withdrawn'
-                    ? 'bg-red-500'
-                    : event.status === 'Submitted'
-                    ? 'bg-blue-500'
-                    : event.status === 'Withdrawal Requested'
-                    ? 'bg-amber-500'
-                    : 'bg-[#1B2A4A]';
-                const actor = event.actorEmail || t('partnerAppDetail.admissionsTeam');
-                return (
-                  <div key={event.id} className="flex items-start gap-4">
-                    <div className={`mt-1.5 w-2.5 h-2.5 rounded-full ${dotColor} flex-shrink-0`} />
-                    <div className="flex-1 pb-4 border-l-2 border-gray-200 pl-4">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
-                        <p className="font-semibold text-[#1B2A4A] text-sm">{getPartnerApplicationStatusLabel(event.status, t)}</p>
-                        <span className="text-xs text-[#4B5563]">
-                          {fmtDateTime(event.createdAt)}
-                        </span>
-                      </div>
-                      <p className="text-xs text-[#4B5563] mt-0.5">
-                        {t('partnerAppDetail.timelineActor', { actor })}
-                      </p>
-                      {event.notes && (
-                        <p className="text-sm text-[#1F2937] mt-2 whitespace-pre-wrap">
-                          {event.notes}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Phase G: documents linked to this application. Partners
-          often want to see which passports/transcripts/etc. are
-          already attached without leaving the application view. */}
-      <Card className="rounded-none">
-        <CardHeader>
-          <div className="flex items-center justify-between gap-4">
-            <CardTitle className="text-[#1B2A4A] flex items-center gap-2">
-              <FileText className="w-4 h-4" /> {t('partnerAppDetail.sectionDocuments')}
-            </CardTitle>
-            <Button asChild variant="outline" size="sm" className="rounded-none">
-              <Link
-                href={`/partner/documents?partnerApplicationId=${encodeURIComponent(applicationId)}`}
-                className="inline-flex items-center"
-              >
-                <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
-                {t('partnerAppDetail.viewAllDocuments')}
-              </Link>
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {linkedDocsLoading ? (
-            <div className="space-y-3">
-              <div className="h-4 bg-gray-200 animate-pulse w-3/4" />
-              <div className="h-4 bg-gray-200 animate-pulse w-1/2" />
-            </div>
-          ) : linkedDocs.length === 0 ? (
-            <div className="text-sm text-[#4B5563]">
-              <p>{t('partnerAppDetail.noLinkedDocuments')}</p>
-              <Button asChild variant="outline" size="sm" className="rounded-none mt-3">
-                <Link
-                  href={`/partner/documents?partnerApplicationId=${encodeURIComponent(applicationId)}`}
-                >
-                  <Plus className="mr-1.5 h-3.5 w-3.5" />
-                  {t('partnerAppDetail.uploadDocument')}
-                </Link>
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {linkedDocs.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 border border-gray-100"
-                >
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-[#1B2A4A] flex-shrink-0" />
-                      <span className="font-medium text-[#1B2A4A] text-sm truncate">{doc.name}</span>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-[#4B5563]">
-                      <Badge className={`rounded-none ${DOC_STATUS_STYLES[doc.status]}`}>
-                        {t(`partnerDocs.statusBadge.${doc.status.toLowerCase()}`)}
-                      </Badge>
-                      <span>
-                        {t(`partnerDocs.categoryBadge.${doc.category.toLowerCase()}`)}
-                      </span>
-                      {doc.fileSize && (
-                        <span>{formatBytes(doc.fileSize)}</span>
-                      )}
-                      <span>· {fmtDate(doc.uploadedAt)}</span>
-                      {doc.rejectionReason && (
-                        <span className="text-red-700">· {doc.rejectionReason}</span>
-                      )}
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="rounded-none h-8 w-8 p-0"
-                    onClick={() => handleDownloadDoc(doc)}
-                    title={t('partnerAppDetail.downloadDocument')}
-                    aria-label={t('partnerAppDetail.downloadDocument')}
+            <Card className="rounded-none">
+              <CardHeader>
+                <CardTitle className="text-[#1B2A4A] flex items-center gap-2">
+                  <BookOpen className="w-4 h-4" /> {t('partnerAppDetail.sectionStatus')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="text-[#4B5563] min-w-24">{t('partnerAppDetail.fieldStatus')}</span>
+                  <Badge variant={STATUS_VARIANTS[app.status]} className="rounded-none">
+                    {getPartnerApplicationStatusLabel(app.status, t)}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[#4B5563] min-w-24">{t('partnerAppDetail.fieldDecision')}</span>
+                  <Badge variant="outline" className="rounded-none">{getPartnerApplicationDecisionLabel(app.decision, t)}</Badge>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[#4B5563] min-w-24">{t('partnerAppDetail.fieldPriority')}</span>
+                  <span
+                    className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-none ${PRIORITY_VARIANTS[app.priority]}`}
                   >
-                    <Download className="h-4 w-4" />
+                    <Flag className="w-3 h-3" /> {getPartnerApplicationPriorityLabel(app.priority, t)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[#4B5563] min-w-24">{t('partnerAppDetail.fieldSubmitted')}</span>
+                  <span className="text-[#1F2937]">
+                    {fmtDate(app.submittedAt)}
+                  </span>
+                </div>
+                {/* Phase 49.1: prominent "why can't I change status?" callout.
+                    S27 removed the partner's ability to change status +
+                    decision (admins drive the workflow). Partners were
+                    left wondering why the Edit button doesn't surface
+                    those fields. The old copy was a tiny gray sentence
+                    at the bottom of the status card — easy to miss. This
+                    callout is now a real amber notice with an Info icon,
+                    explains the rule, and points at the request-withdrawal
+                    action below as the partner's recourse when the admin
+                    hasn't moved the status fast enough for them. */}
+                <div className="flex items-start gap-2 pt-3 mt-1 border-t border-gray-100">
+                  <Info className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-900">
+                    <strong>{t('partnerAppDetail.statusAdminNoteTitle')}</strong>{' '}
+                    {t('partnerAppDetail.statusAdminNote')}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="rounded-none">
+            <CardHeader>
+              <CardTitle className="text-[#1B2A4A] flex items-center gap-2">
+                <Mail className="w-4 h-4" /> {t('partnerAppDetail.sectionStudentContact')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              {app.studentEmail ? (
+                <div className="flex items-center gap-2">
+                  <Mail className="w-4 h-4 text-[#4B5563]" />
+                  <a
+                    href={`mailto:${app.studentEmail}`}
+                    className="text-[#1B2A4A] hover:underline"
+                  >
+                    {app.studentEmail}
+                  </a>
+                </div>
+              ) : (
+                <p className="text-sm text-[#4B5563] italic">{t('partnerAppDetail.noEmailOnFile')}</p>
+              )}
+              {app.studentPhone && (
+                <div className="flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-[#4B5563]" />
+                  <a href={`tel:${app.studentPhone}`} className="text-[#1B2A4A] hover:underline">
+                    {app.studentPhone}
+                  </a>
+                </div>
+              )}
+              {app.nationality && (
+                <div className="flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-[#4B5563]" />
+                  <span className="text-[#1F2937]">{app.nationality}</span>
+                </div>
+              )}
+              {app.createdByEmail && (
+                <div className="text-xs text-[#4B5563] pt-2 border-t border-gray-100 mt-2">
+                  {t('partnerAppDetail.addedBy', { email: app.createdByEmail })}
+                  {app.createdAt && (
+                    <> {t('partnerAppDetail.addedOn', { date: fmtDate(app.createdAt) })}</>
+                  )}
+                </div>
+              )}
+              {/* Phase 1.13: show the most recent admin-actor on this
+                  case so the partner knows who to follow up with.
+                  Falls back to "SICA Admissions Team" if no admin has
+                  touched the case yet. */}
+              <div className="text-xs text-[#4B5563] pt-2 border-t border-gray-100 mt-2">
+                <span className="font-semibold text-[#1B2A4A]">
+                  {t('partnerAppDetail.assignedTo')}:
+                </span>{' '}
+                {reviewer?.email ? (
+                  <>
+                    {reviewer.email}
+                    {reviewer.at && (
+                      <span className="text-gray-500 ml-1">
+                        ({t('partnerAppDetail.lastActivity', {
+                          date: fmtDate(reviewer.at),
+                        })})
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <span>{t('partnerAppDetail.admissionsTeam')}</span>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ---------------------------------------------------------- */}
+        {/* Student file: every section, always. An empty section says  */}
+        {/* "not recorded" instead of silently disappearing.            */}
+        {/* ---------------------------------------------------------- */}
+        <TabsContent value="file">
+          <div className="space-y-6">
+            <Card className="rounded-none">
+              <CardHeader>
+                <CardTitle className="text-[#1B2A4A]">{t('partnerAppDetail.sectionIdentityAddress')}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                {row(t('partnerAppDetail.fieldDateOfBirth'), app.dateOfBirth)}
+                {row(t('partnerAppDetail.fieldGender'), app.gender)}
+                {row(t('partnerAppDetail.fieldMaritalStatus'), app.maritalStatus)}
+                {row(t('partnerAppDetail.fieldPlaceOfBirth'), app.placeOfBirth)}
+                {app.currentAddress ? (
+                  <div>
+                    <div className="text-[#4B5563] mb-1">{t('partnerAppDetail.fieldCurrentAddress')}</div>
+                    <p className="text-[#1F2937] whitespace-pre-wrap">{app.currentAddress}</p>
+                  </div>
+                ) : (
+                  <DescriptionPlaceholder
+                    label={t('partnerAppDetail.fieldCurrentAddress')}
+                    value={notRecorded}
+                  />
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-none">
+              <CardHeader>
+                <CardTitle className="text-[#1B2A4A]">{t('partnerAppDetail.sectionPassport')}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                {row(t('partnerAppDetail.fieldPassportNumber'), app.passportNumber, true)}
+                {row(t('partnerAppDetail.fieldIssueDate'), app.passportIssueDate)}
+                {row(t('partnerAppDetail.fieldExpiryDate'), app.passportExpiryDate)}
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-none">
+              <CardHeader>
+                <CardTitle className="text-[#1B2A4A]">{t('partnerAppDetail.sectionEmergencyContact')}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                {row(t('partnerAppDetail.fieldName'), app.emergencyContactName)}
+                {row(t('partnerAppDetail.fieldRelationship'), app.emergencyContactRelationship)}
+                {row(t('partnerAppDetail.fieldPhone'), app.emergencyContactPhone)}
+                {row(t('partnerAppDetail.fieldEmail'), app.emergencyContactEmail)}
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-none">
+              <CardHeader>
+                <CardTitle className="text-[#1B2A4A]">{t('partnerAppDetail.sectionAcademic')}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                {row(t('partnerAppDetail.fieldHighestEducation'), app.highestEducation)}
+                {row(t('partnerAppDetail.fieldSchool'), app.schoolName)}
+                {row(t('partnerAppDetail.fieldCountry'), app.schoolCountry)}
+                {row(t('partnerAppDetail.fieldMajor'), app.major)}
+                {row(
+                  t('partnerAppDetail.fieldGraduationYear'),
+                  app.graduationYear ? String(app.graduationYear) : null,
+                )}
+                {row(t('partnerAppDetail.fieldGPA'), app.gpa)}
+                {row(t('partnerAppDetail.fieldClassRank'), app.classRank)}
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-none">
+              <CardHeader>
+                <CardTitle className="text-[#1B2A4A]">{t('partnerAppDetail.sectionLanguage')}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                {row(t('partnerAppDetail.fieldNativeLanguage'), app.nativeLanguage)}
+                {row(
+                  t('partnerAppDetail.fieldEnglish'),
+                  app.englishTest
+                    ? `${app.englishTest}${app.englishScore ? ` · ${app.englishScore}` : ''}`
+                    : null,
+                )}
+                {row(
+                  t('partnerAppDetail.fieldHSK'),
+                  app.hskLevel
+                    ? `${app.hskLevel}${app.hskScore ? ` · ${app.hskScore}` : ''}`
+                    : null,
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Application context (prior China study) — Phase 52 narrowed
+                this to just the China-history fields. The Funding
+                sub-card (fundingSource/scholarshipName) was dropped from
+                the partner application form in Phase 51f, so new rows can
+                never populate it. Same for the Personal Statement card —
+                Phase 51f removed the form, so we hide the card entirely.
+                Read-side data is preserved on the PartnerApplication
+                interface for any future restore. */}
+            <Card className="rounded-none">
+              <CardHeader>
+                <CardTitle className="text-[#1B2A4A]">{t('partnerAppDetail.sectionContext')}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                {row(
+                  t('partnerAppDetail.fieldStudiedInChinaBefore'),
+                  app.hasStudiedInChina === null
+                    ? null
+                    : app.hasStudiedInChina
+                    ? t('partnerAppDetail.yes')
+                    : t('partnerAppDetail.no'),
+                )}
+                {row(
+                  t('partnerAppDetail.fieldAppliedToCNUniBefore'),
+                  app.hasAppliedChinaUni === null
+                    ? null
+                    : app.hasAppliedChinaUni
+                    ? t('partnerAppDetail.yes')
+                    : t('partnerAppDetail.no'),
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* ---------------------------------------------------------- */}
+        {/* Documents: what SICA asked for, and what the partner has.   */}
+        {/* ---------------------------------------------------------- */}
+        <TabsContent value="documents">
+          <div className="space-y-6">
+            {/* Phase C: the admin document-request log. Every request
+                stays open (nothing ever writes `fulfilled_at`), so the
+                partner's progress is derived from the documents that
+                were uploaded after the request was raised. */}
+            <Card className="rounded-none">
+              <CardHeader>
+                <div className="flex items-center justify-between gap-4">
+                  <CardTitle className="text-[#1B2A4A] flex items-center gap-2">
+                    <FileUp className="w-4 h-4" /> {t('partnerAppDetail.sectionRequestedDocuments')}
+                  </CardTitle>
+                  {openRequests.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-none"
+                      onClick={() => setShowUploadDialog(true)}
+                      disabled={!app.studentId}
+                    >
+                      <Plus className="mr-1.5 h-3.5 w-3.5" />
+                      {t('partnerAppDetail.addRequestedDocuments')}
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4 text-sm">
+                {openRequests.length === 0 ? (
+                  <p className="text-xs text-[#4B5563]">
+                    {t('partnerAppDetail.openRequestsNone')}
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="text-xs font-semibold text-[#1B2A4A] uppercase tracking-wider">
+                      {t('partnerAppDetail.openRequests')} ({openRequests.length})
+                    </div>
+                    {openRequests.map((request) => (
+                      <div
+                        key={request.id}
+                        className="p-3 bg-amber-50 border border-amber-200"
+                      >
+                        <div className="flex flex-wrap gap-1 mb-1">
+                          {request.categories.map((category) => (
+                            <Badge key={category} variant="secondary" className="rounded-none text-xs">
+                              {t(
+                                `partnerAppDetail.requestCategory${DOC_REQUEST_CATEGORY_LABEL_KEY[category]}` as
+                                  | 'partnerAppDetail.requestCategoryPassport'
+                                  | 'partnerAppDetail.requestCategoryTranscript'
+                                  | 'partnerAppDetail.requestCategoryEnglishTest'
+                                  | 'partnerAppDetail.requestCategoryPhoto'
+                                  | 'partnerAppDetail.requestCategoryOther',
+                              )}
+                            </Badge>
+                          ))}
+                        </div>
+                        {request.message && (
+                          <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{request.message}</p>
+                        )}
+                        <p className="text-xs text-[#4B5563] mt-1">
+                          {t('partnerAppDetail.requestedByLabel')}{' '}
+                          {request.requested_by.slice(0, 8)} ·{' '}
+                          {t('partnerAppDetail.requestedOnLabel')} {fmtDate(request.requested_at)}
+                        </p>
+                        {/* Derived evidence: documents uploaded after
+                            this request that match the category. */}
+                        {request.categories.map((category) => {
+                          const count = countDocumentsForRequest(
+                            category,
+                            request.requested_at,
+                            linkedDocs,
+                          );
+                          if (count === null) return null;
+                          return (
+                            <p key={`evidence-${category}`} className="text-xs text-[#4B5563] mt-1">
+                              {count === 1
+                                ? t('partnerAppDetail.uploadedSinceRequestOne')
+                                : t('partnerAppDetail.uploadedSinceRequestOther', { count })}
+                            </p>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Phase G: documents linked to this application. Partners
+                often want to see which passports/transcripts/etc. are
+                already attached without leaving the application view. */}
+            <Card className="rounded-none">
+              <CardHeader>
+                <div className="flex items-center justify-between gap-4">
+                  <CardTitle className="text-[#1B2A4A] flex items-center gap-2">
+                    <FileText className="w-4 h-4" /> {t('partnerAppDetail.sectionDocuments')}
+                  </CardTitle>
+                  <Button asChild variant="outline" size="sm" className="rounded-none">
+                    <Link
+                      href={`/partner/documents?partnerApplicationId=${encodeURIComponent(applicationId)}`}
+                      className="inline-flex items-center"
+                    >
+                      <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                      {t('partnerAppDetail.viewAllDocuments')}
+                    </Link>
                   </Button>
                 </div>
-              ))}
-              <Button asChild variant="outline" size="sm" className="rounded-none mt-2">
-                <Link
-                  href={`/partner/documents?partnerApplicationId=${encodeURIComponent(applicationId)}`}
-                >
-                  <Plus className="mr-1.5 h-3.5 w-3.5" />
-                  {t('partnerAppDetail.uploadDocument')}
-                </Link>
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+              </CardHeader>
+              <CardContent>
+                {linkedDocsLoading ? (
+                  <div className="space-y-3">
+                    <div className="h-4 bg-gray-200 animate-pulse w-3/4" />
+                    <div className="h-4 bg-gray-200 animate-pulse w-1/2" />
+                  </div>
+                ) : linkedDocs.length === 0 ? (
+                  <div className="text-sm text-[#4B5563]">
+                    <p>{t('partnerAppDetail.noLinkedDocuments')}</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-none mt-3"
+                      onClick={() => setShowUploadDialog(true)}
+                      disabled={!app.studentId}
+                    >
+                      <Plus className="mr-1.5 h-3.5 w-3.5" />
+                      {t('partnerAppDetail.uploadDocument')}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {linkedDocs.map((doc) => (
+                      <div
+                        key={doc.id}
+                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 border border-gray-100"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-[#1B2A4A] flex-shrink-0" />
+                            <span className="font-medium text-[#1B2A4A] text-sm truncate">{doc.name}</span>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-[#4B5563]">
+                            <Badge className={`rounded-none ${DOC_STATUS_STYLES[doc.status]}`}>
+                              {t(`partnerDocs.statusBadge.${doc.status.toLowerCase()}`)}
+                            </Badge>
+                            <span>
+                              {t(`partnerDocs.categoryBadge.${doc.category.toLowerCase()}`)}
+                            </span>
+                            {doc.fileSize && (
+                              <span>{formatFileSize(doc.fileSize)}</span>
+                            )}
+                            <span>· {fmtDate(doc.uploadedAt)}</span>
+                            {doc.rejectionReason && (
+                              <span className="text-red-700">· {doc.rejectionReason}</span>
+                            )}
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="rounded-none h-8 w-8 p-0"
+                          onClick={() => handleDownloadDoc(doc)}
+                          title={t('partnerAppDetail.downloadDocument')}
+                          aria-label={t('partnerAppDetail.downloadDocument')}
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-none mt-2"
+                      onClick={() => setShowUploadDialog(true)}
+                      disabled={!app.studentId}
+                    >
+                      <Plus className="mr-1.5 h-3.5 w-3.5" />
+                      {t('partnerAppDetail.uploadDocument')}
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* ---------------------------------------------------------- */}
+        {/* Activity: what happened, plus the partner's own notes.      */}
+        {/* ---------------------------------------------------------- */}
+        <TabsContent value="activity">
+          <div className="space-y-6">
+            {/* Phase C: the notes editor. `notes` is the one
+                application field a partner may write, and it is what the
+                API requires when a university/program is left unassigned. */}
+            <Card className="rounded-none">
+              <CardHeader>
+                <CardTitle className="text-[#1B2A4A]">{t('partnerAppDetail.sectionNotes')}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Textarea
+                  value={notesDraft}
+                  onChange={(e) => setNotesDraft(e.target.value)}
+                  maxLength={4000}
+                  rows={5}
+                  className="rounded-none"
+                  placeholder={t('partnerAppDetail.notesPlaceholder')}
+                />
+                {notesError && <p className="text-sm text-red-700">{notesError}</p>}
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-none"
+                    onClick={handleSaveNotes}
+                    disabled={notesSaving || notesDraft === (app.notes ?? '')}
+                  >
+                    {notesSaving ? t('partnerAppDetail.notesSaving') : t('partnerAppDetail.saveNotes')}
+                  </Button>
+                  {notesSavedAt && (
+                    <span className="text-xs text-green-700 flex items-center gap-1">
+                      <CheckCircle className="h-3.5 w-3.5" />
+                      {t('partnerAppDetail.notesSaved')}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-[#4B5563] mt-4 flex items-center gap-1">
+                  <Calendar className="w-3 h-3" />
+                  {t('partnerAppDetail.createdOn', { date: fmtDateTime(app.createdAt) })}
+                  {app.updatedAt && app.updatedAt !== app.createdAt && (
+                    <>{t('partnerAppDetail.updatedOn', { date: fmtDateTime(app.updatedAt) })}</>
+                  )}
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Phase F: activity timeline. Shows status changes, admin
+                notes, and partner withdrawal requests in chronological
+                order. The feed is fail-soft: if the timeline endpoint
+                errors we still render the rest of the detail page. */}
+            <Card className="rounded-none">
+              <CardHeader>
+                <CardTitle className="text-[#1B2A4A] flex items-center gap-2">
+                  <History className="w-4 h-4" /> {t('partnerAppDetail.sectionActivity')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {timelineLoading ? (
+                  <div className="space-y-3">
+                    <div className="h-4 bg-gray-200 animate-pulse w-3/4" />
+                    <div className="h-4 bg-gray-200 animate-pulse w-1/2" />
+                  </div>
+                ) : timeline.length === 0 ? (
+                  <div className="text-sm text-[#4B5563] italic">
+                    {t('partnerAppDetail.timelineEmpty')}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {timeline.map((event) => {
+                      const dotColor =
+                        event.status === 'Accepted'
+                          ? 'bg-green-500'
+                          : event.status === 'Rejected' || event.status === 'Withdrawn'
+                          ? 'bg-red-500'
+                          : event.status === 'Submitted'
+                          ? 'bg-blue-500'
+                          : event.status === 'Withdrawal Requested'
+                          ? 'bg-amber-500'
+                          : 'bg-[#1B2A4A]';
+                      const actor = event.actorEmail || t('partnerAppDetail.admissionsTeam');
+                      return (
+                        <div key={event.id} className="flex items-start gap-4">
+                          <div className={`mt-1.5 w-2.5 h-2.5 rounded-full ${dotColor} flex-shrink-0`} />
+                          <div className="flex-1 pb-4 border-l-2 border-gray-200 pl-4">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                              <p className="font-semibold text-[#1B2A4A] text-sm">{getPartnerApplicationStatusLabel(event.status, t)}</p>
+                              <span className="text-xs text-[#4B5563]">
+                                {fmtDateTime(event.createdAt)}
+                              </span>
+                            </div>
+                            <p className="text-xs text-[#4B5563] mt-0.5">
+                              {t('partnerAppDetail.timelineActor', { actor })}
+                            </p>
+                            {event.notes && (
+                              <p className="text-sm text-[#1F2937] mt-2 whitespace-pre-wrap">
+                                {event.notes}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* Phase C: upload a document straight from the application, locked
+          to this application and its student. */}
+      <DocumentUploadDialog
+        open={showUploadDialog}
+        onOpenChange={setShowUploadDialog}
+        students={[]}
+        applications={[]}
+        defaultStudentId={app.studentId ?? undefined}
+        lockApplicationId={app.id}
+        lockedLabel={linkedLabel}
+        onUploaded={() => {
+          setShowUploadDialog(false);
+          void fetchLinkedDocs();
+        }}
+      />
+    </PageContainer>
   );
-}
-
-function formatBytes(n: number | null | undefined): string {
-  if (!n) return '';
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function Field({
-  label,
-  value,
-  mono = false,
-}: {
-  label: string;
-  value: string | null | undefined;
-  mono?: boolean;
-}) {
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-[#4B5563] min-w-24">{label}:</span>
-      <span className={`font-medium text-[#1F2937] ${mono ? 'font-mono' : ''}`}>
-        {value || '—'}
-      </span>
-    </div>
-  );
-}
-
-// Phase 111b: replaced the dead `UserIcon` shim (which always
-// rendered BookOpen regardless of `name`) with a direct lucide
-// import at the call site. The header subtitle next to "Status"
-// now actually renders the right icon for the surface.
-function BookIcon({ className }: { className?: string }) {
-  return <BookOpen className={className} />;
 }

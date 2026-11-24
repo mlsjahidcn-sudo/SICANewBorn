@@ -67,8 +67,9 @@ export function isOnTargetPath(pathname: string | null): boolean {
 export function isWebinarPromoOnScreen(
   pathname: string | null,
   promoDismissed: boolean,
+  promoEnabled: boolean = PUBLIC_WEBINAR_ENABLED && PUBLIC_WEBINAR_POPUP_ENABLED,
 ): boolean {
-  if (!PUBLIC_WEBINAR_ENABLED || !PUBLIC_WEBINAR_POPUP_ENABLED) return false;
+  if (!promoEnabled) return false;
   if (!isOnPublicPath(pathname)) return false;
   return !promoDismissed;
 }

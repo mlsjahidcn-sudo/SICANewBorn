@@ -7,6 +7,7 @@ import {
   formatWebinarDate,
   getCurrentWebinarKey,
   isWebinarRegistrationOpen,
+  isWebinarSessionUpcoming,
   PUBLIC_WEBINAR_ENABLED,
   WEBINAR_CONFIG,
 } from '@/lib/webinar-config';
@@ -38,7 +39,7 @@ const VALID_PROGRAM_INTERESTS = [
 type ProgramInterest = (typeof VALID_PROGRAM_INTERESTS)[number];
 
 export async function POST(request: NextRequest) {
-  if (!PUBLIC_WEBINAR_ENABLED) {
+  if (!PUBLIC_WEBINAR_ENABLED || !isWebinarSessionUpcoming(WEBINAR_CONFIG.sessionDateIso, Date.now())) {
     return NextResponse.json(
       { error: 'Webinar registration is currently closed.' },
       { status: 410 },

@@ -209,6 +209,8 @@ export function SearchableSelect({
                     <img
                       src={option.logo}
                       alt=""
+                      loading="lazy"
+                      decoding="async"
                       className="h-5 w-5 rounded-full object-contain bg-white border border-gray-200 mr-1 flex-shrink-0"
                       onError={(e) => {
                         (e.target as HTMLImageElement).style.display = 'none';

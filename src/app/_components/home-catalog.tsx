@@ -198,7 +198,7 @@ export async function HomeCatalog() {
   ]);
 
   return (
-    <>
+    <div data-home-catalog>
       {universities.length > 0 ? (
         <section className="border-t border-gray-200 bg-white py-16 lg:py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -247,6 +247,6 @@ export async function HomeCatalog() {
           </div>
         </section>
       ) : null}
-    </>
+    </div>
   );
 }

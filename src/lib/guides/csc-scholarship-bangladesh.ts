@@ -1,3 +1,4 @@
+import { cscCountryStatus } from './csc-country-status';
 import type { LocalizedGuide } from './types';
 // [verify] Editorial claims previously marked for confirmation — re-check official notices before relying on figures or dates.
 
@@ -58,6 +59,7 @@ export const cscBangladeshGuide: LocalizedGuide = {
       'Apply through both routes if eligible — many Bangladeshi applicants file both, and the two streams do not block each other',
     ],
     sections: [
+      cscCountryStatus('Bangladesh', 'en'),
       {
         id: 'two-routes',
         h2: 'The two routes: MoE Bangladesh + UGC vs university (Type B)',
@@ -262,6 +264,7 @@ export const cscBangladeshGuide: LocalizedGuide = {
       '符合条件可双渠道并行申请——两条流互不阻断',
     ],
     sections: [
+      cscCountryStatus('Bangladesh', 'zh'),
       {
         id: 'two-routes',
         h2: '两条渠道：MoE 孟加拉国 + UGC vs 大学（Type B）',

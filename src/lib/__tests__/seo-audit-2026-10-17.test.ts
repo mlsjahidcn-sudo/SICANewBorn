@@ -89,7 +89,7 @@ describe('F4 — no unconfirmed stat leaks into public copy', () => {
     expect(llms).toContain('10 years of experience in study-in-China admissions');
     expect(llms).toContain('Ednex Group LTD');
 
-    const home = readFileSync(join(SRC, 'app/page.tsx'), 'utf-8');
+    const home = ['app/page.tsx', 'app/_components/home-hero.tsx', 'app/_components/home-proof.tsx'].map((file) => readFileSync(join(SRC, file), 'utf-8')).join('\n');
     expect(home).toContain("t('why.trustLine')");
   });
 });
@@ -241,7 +241,7 @@ describe('F5 — guide metadata must fit the SERP budget', () => {
 });
 
 describe('F9 — the homepage links its money pages in-body', () => {
-  const home = readFileSync(join(SRC, 'app/page.tsx'), 'utf-8');
+  const home = ['app/page.tsx', 'app/_components/home-hero.tsx', 'app/_components/home-proof.tsx'].map((file) => readFileSync(join(SRC, file), 'utf-8')).join('\n');
 
   it('links the CSC scholarship guide in-body', () => {
     expect(home).toContain('/chinese-government-scholarship-csc');

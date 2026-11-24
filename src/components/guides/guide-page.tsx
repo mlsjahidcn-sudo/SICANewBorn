@@ -1,3 +1,5 @@
+import { getServerLocale } from '@/lib/server-t';
+import type { Locale } from '@/lib/i18n-translations';
 import Link from 'next/link';
 import {
   ArrowRight,
@@ -207,6 +209,7 @@ function inlineMd(input: string): string {
 }
 
 export interface GuidePageProps {
+  locale?: Locale;
   guide: Guide;
   /** Path segment used for the canonical URL and JSON-LD id. */
   pathSegment: string;
@@ -260,7 +263,8 @@ export interface GuidePageProps {
  * so search engines, ChatGPT, Perplexity, and Gemini can extract the
  * FAQ answers, step lists, and metadata in a single hop.
  */
-export function GuidePage({
+export async function GuidePage({
+  locale: requestedLocale,
   guide,
   pathSegment,
   urlPath,
@@ -269,6 +273,8 @@ export function GuidePage({
   showCscaPrepCallout,
   showConsultationCta,
 }: GuidePageProps) {
+  const locale = requestedLocale ?? await getServerLocale();
+  const zh = locale === 'zh';
   const url = `${SITE_URL}${urlPath ?? `/guides/${pathSegment}`}`;
   const resolvedUrlPath = urlPath ?? `/guides/${pathSegment}`;
 
@@ -398,7 +404,7 @@ export function GuidePage({
           <BreadcrumbList>
             <BreadcrumbItem>
               <BreadcrumbLink asChild>
-                <Link href="/">Home</Link>
+                <Link href="/">{zh ? '首页' : 'Home'}</Link>
               </BreadcrumbLink>
             </BreadcrumbItem>
             {crumbs.slice(0, -1).map((c) => (
@@ -447,7 +453,7 @@ export function GuidePage({
                 a visible date reinforces freshness for human readers
                 and gives GEO/AEO engines a clear signal). */}
             {(guide.updatedAt || guide.publishedAt) && <p className="mt-3 text-xs text-gray-400">
-              Last updated: <time dateTime={guide.updatedAt ?? guide.publishedAt}>{guide.updatedAt ?? guide.publishedAt}</time>
+              {zh ? '最近核查：' : 'Last updated: '}<time dateTime={guide.updatedAt ?? guide.publishedAt}>{guide.updatedAt ?? guide.publishedAt}</time>
             </p>}
           </div>
 
@@ -475,7 +481,7 @@ export function GuidePage({
           <section className="bg-white border-2 border-[#1B2A4A] p-6">
             <div className="flex items-center gap-2 mb-3">
               <div className="text-xs font-bold uppercase tracking-wider text-[#9B1B30]">
-                Quick answer
+                {zh ? '简要回答' : 'Quick answer'}
               </div>
             </div>
             <p className="text-[#1B2A4A] leading-relaxed text-base font-medium">
@@ -486,7 +492,7 @@ export function GuidePage({
           {/* Key takeaways */}
           <section className="bg-[#1B2A4A]/5 border-l-4 border-[#9B1B30] p-6">
             <h2 className="text-xs font-bold uppercase tracking-wider text-[#9B1B30] mb-3">
-              Key takeaways
+              {zh ? '要点' : 'Key takeaways'}
             </h2>
             <ul className="space-y-2">
               {guide.keyTakeaways.map((k, i) => (
@@ -521,7 +527,7 @@ export function GuidePage({
           {/* How-to steps */}
           <section className="bg-[#1B2A4A] text-white p-6 sm:p-8">
             <div className="text-xs font-bold uppercase tracking-wider text-[#D4A853] mb-2">
-              Step-by-step
+              {zh ? '申请步骤' : 'Step-by-step'}
             </div>
             {/* Phase 145: replace the broken "How to {title.toLowerCase()}"
                 template (which rendered "How to csca exam (china scholastic
@@ -530,7 +536,7 @@ export function GuidePage({
                 is hidden to avoid the broken fallback. */}
             {howToTitle && (
               <h2 className="text-2xl sm:text-3xl font-bold mb-6">
-                {howToTitle}
+                {zh ? '申请步骤' : howToTitle}
               </h2>
             )}
             <ol className="space-y-4">
@@ -584,7 +590,7 @@ export function GuidePage({
               FAQ
             </div>
             <h2 className="text-2xl sm:text-3xl font-bold text-[#1B2A4A] mb-6">
-              Frequently asked questions
+              {zh ? '常见问题' : 'Frequently asked questions'}
             </h2>
             <div className="space-y-3">
               {guide.faqs.map((f, i) => (
@@ -616,7 +622,7 @@ export function GuidePage({
             {/* Table of contents */}
             <nav className="bg-white border-2 border-gray-200 p-5">
               <div className="text-xs font-bold uppercase tracking-wider text-[#9B1B30] mb-3">
-                On this page
+                {zh ? '本页目录' : 'On this page'}
               </div>
               <ul className="space-y-1.5 text-sm">
                 {guide.sections.map((s) => (
@@ -634,7 +640,7 @@ export function GuidePage({
                     href="#faq"
                     className="text-[#1B2A4A] hover:text-[#9B1B30] hover:underline leading-snug"
                   >
-                    Frequently asked questions
+                    {zh ? '常见问题' : 'Frequently asked questions'}
                   </a>
                 </li>
               </ul>
@@ -642,7 +648,7 @@ export function GuidePage({
 
             {/* Quick apply CTA — kit buy only */}
             <div className="bg-[#9B1B30] text-white p-5">
-              <h3 className="font-bold mb-2">Ready to start?</h3>
+              <h3 className="font-bold mb-2">{zh ? '准备开始申请？' : 'Ready to start?'}</h3>
               <p className="text-sm text-white/90 mb-4 leading-relaxed">
                 {guide.ctaSubtitle}
               </p>
@@ -661,10 +667,10 @@ export function GuidePage({
       <section className="bg-white border-t-2 border-gray-200">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
           <div className="text-xs font-bold uppercase tracking-wider text-[#9B1B30] mb-2">
-            Related guides
+            {zh ? '相关指南' : 'Related guides'}
           </div>
           <h2 className="text-2xl font-bold text-[#1B2A4A] mb-6">
-            Keep reading
+            {zh ? '继续阅读' : 'Keep reading'}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {guide.related.map((r) => (

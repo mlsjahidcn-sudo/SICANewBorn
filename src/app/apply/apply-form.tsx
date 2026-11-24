@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useI18n } from '@/lib/i18n';
+import { publicApplicationSchema } from '@/lib/public-application';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -32,6 +33,7 @@ interface FormState {
   englishTest: '' | 'IELTS' | 'TOEFL' | 'Duolingo' | 'PTE' | 'Other';
   englishScore: string;
   whyProgram: string;
+  notes: string;
   // Honeypot — visually hidden, never filled by humans.
   website: string;
 }
@@ -51,6 +53,7 @@ const EMPTY: FormState = {
   englishTest: '',
   englishScore: '',
   whyProgram: '',
+  notes: '',
   website: '',
 };
 
@@ -137,10 +140,11 @@ export function ApplyForm() {
     (id: 'student' | 'program' | 'academics' | 'statement' | 'documents'): 'done' | 'partial' | 'empty' => {
       if (id === 'student') {
         if (!form.studentName) return 'empty';
-        if (form.studentEmail && form.studentPhone) return 'done';
+        if (form.studentEmail || form.studentPhone) return 'done';
         return 'partial';
       }
       if (id === 'program') {
+        if ((!form.university || !form.program) && form.notes.trim().length >= 20) return 'done';
         if (!form.university && !form.program) return 'empty';
         if (form.university && form.program) return 'done';
         return 'partial';
@@ -165,11 +169,12 @@ export function ApplyForm() {
     if (submitting) return;
     setError(null);
 
-    // Client-side guard: name is required. The server re-validates
-    // everything; this is just a faster UX.
-    if (!form.studentName.trim()) {
-      setError(t('apply.errorNameRequired'));
-      setExpanded((prev) => new Set(prev).add('student'));
+    const validation = publicApplicationSchema.safeParse(form);
+    if (!validation.success) {
+      const issue = validation.error.issues[0];
+      const field = String(issue?.path[0] ?? 'studentName');
+      setError(t(field === 'notes' ? 'apply.errorGoalsRequired' : field === 'studentName' ? 'apply.errorNameRequired' : 'apply.errorContactRequired'));
+      setExpanded((prev) => new Set(prev).add(field === 'notes' ? 'program' : 'student'));
       formTopRef.current?.scrollIntoView({ behavior: 'smooth' });
       return;
     }
@@ -353,6 +358,7 @@ export function ApplyForm() {
                     <div className="p-4 pt-0 space-y-4 border-t border-gray-100">
                       {id === 'student' && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <p className="md:col-span-2 text-sm text-gray-600">{t('apply.contactHelp')}</p>
                           <div className="md:col-span-2">
                             <Label htmlFor="studentName">{t('apply.fieldName')} *</Label>
                             <Input
@@ -416,6 +422,11 @@ export function ApplyForm() {
                               onChange={(e) => update('program', e.target.value)}
                               placeholder={t('apply.fieldProgramPh')}
                             />
+                          </div>
+                          <div className="md:col-span-2">
+                            <Label htmlFor="studyGoals">{t('apply.fieldGoals')}{(!form.university.trim() || !form.program.trim()) ? ' *' : ''}</Label>
+                            <p id="studyGoals-help" className="my-2 text-sm text-gray-600">{t('apply.goalsHelp')}</p>
+                            <Textarea id="studyGoals" aria-describedby="studyGoals-help" value={form.notes} onChange={(e) => update('notes', e.target.value)} maxLength={2000} rows={3} />
                           </div>
                           <div>
                             <Label htmlFor="degree">{t('apply.fieldDegree')}</Label>

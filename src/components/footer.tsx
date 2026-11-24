@@ -135,7 +135,7 @@ export function Footer({ counts }: { counts: CatalogCounts }) {
   const trustStats = [
     {
       value: getStat('partnerUniversities') || formatCount(counts.universities),
-      label: t('footer.trustUniversities'),
+      label: getStat('partnerUniversities') ? t('footer.trustUniversities') : t('home.stats.catalogUniversities'),
     },
     {
       value: getStat('countriesServed'),
@@ -165,48 +165,56 @@ export function Footer({ counts }: { counts: CatalogCounts }) {
                 {t('footer.newsletterSubtitle')}
               </p>
             </div>
-            <form
-              onSubmit={handleSubscribe}
-              className="flex flex-col sm:flex-row gap-3"
-            >
-              <label htmlFor="footer-newsletter-email" className="sr-only">
-                {t('footer.newsletterPlaceholder')}
-              </label>
-              <div className="relative flex-1">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
-                <input
-                  id="footer-newsletter-email"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder={t('footer.newsletterPlaceholder')}
-                  className="w-full pl-12 pr-4 py-3 bg-white text-sm text-[#1B2A4A] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#D4A853] border-0"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={subscribeState === 'loading'}
-                aria-busy={subscribeState === 'loading'}
-                className="inline-flex items-center justify-center gap-2 bg-[#9B1B30] hover:bg-[#7A1526] text-white font-semibold uppercase tracking-wider text-sm px-6 py-3 transition-colors shrink-0 disabled:opacity-60 disabled:cursor-not-allowed"
+            {/* The form, its status line and the privacy note are ONE unit.
+                The note describes the form, so it has to sit directly under
+                it. It used to be a third grid child with `lg:col-start-2`,
+                which pushed it onto a row of its own — an orphan line
+                floating below an empty cell, with a large dead gap between
+                it and the input it refers to. */}
+            <div className="min-w-0">
+              <form
+                onSubmit={handleSubscribe}
+                className="flex flex-col sm:flex-row gap-3"
               >
-                {subscribeState === 'loading' ? '…' : t('footer.newsletterCta')}
-                <ArrowRight className="h-4 w-4" />
-              </button>
-            </form>
-            {subscribeState === 'success' && (
-              <p className="text-xs text-emerald-400 lg:col-start-2 -mt-2" role="status">
-                {t('footer.newsletterSuccess')}
+                <label htmlFor="footer-newsletter-email" className="sr-only">
+                  {t('footer.newsletterPlaceholder')}
+                </label>
+                <div className="relative flex-1">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+                  <input
+                    id="footer-newsletter-email"
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder={t('footer.newsletterPlaceholder')}
+                    className="w-full pl-12 pr-4 py-3 bg-white text-sm text-[#1B2A4A] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#D4A853] border-0"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={subscribeState === 'loading'}
+                  aria-busy={subscribeState === 'loading'}
+                  className="inline-flex items-center justify-center gap-2 bg-[#9B1B30] hover:bg-[#7A1526] text-white font-semibold uppercase tracking-wider text-sm px-6 py-3 transition-colors shrink-0 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {subscribeState === 'loading' ? '…' : t('footer.newsletterCta')}
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+              </form>
+              {subscribeState === 'success' && (
+                <p className="mt-3 text-xs text-emerald-400" role="status">
+                  {t('footer.newsletterSuccess')}
+                </p>
+              )}
+              {subscribeState === 'error' && (
+                <p className="mt-3 text-xs text-red-400" role="alert">
+                  {t('footer.newsletterError')}
+                </p>
+              )}
+              <p className="mt-3 text-xs text-gray-400">
+                {t('footer.newsletterNote')}
               </p>
-            )}
-            {subscribeState === 'error' && (
-              <p className="text-xs text-red-400 lg:col-start-2 -mt-2" role="alert">
-                {t('footer.newsletterError')}
-              </p>
-            )}
-            <p className="text-xs text-gray-400 lg:col-start-2 -mt-2">
-              {t('footer.newsletterNote')}
-            </p>
+            </div>
           </div>
         </div>
       </div>

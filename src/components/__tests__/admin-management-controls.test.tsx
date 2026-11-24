@@ -73,4 +73,39 @@ describe('admin management controls', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Options unavailable'); fireEvent.click(screen.getByRole('button', { name: 'common.retry' }));
     await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
   });
+  it('renders the university logo for a program option through getLogo', async () => {
+    Element.prototype.scrollIntoView = vi.fn();
+    Element.prototype.hasPointerCapture = vi.fn(() => false);
+    Element.prototype.setPointerCapture = vi.fn();
+    Element.prototype.releasePointerCapture = vi.fn();
+    vi.stubGlobal('ResizeObserver', class ResizeObserverStub {
+      observe() { return undefined; }
+      unobserve() { return undefined; }
+      disconnect() { return undefined; }
+    });
+    mocks.api.mockResolvedValue({
+      options: [{
+        value: 'p1',
+        label: 'Computer Science',
+        sublabel: 'Tsinghua University · Bachelor',
+        record: { id: 'p1', logo: '/university-logos/tsinghua-university.avif' },
+      }],
+      hasMore: false,
+    });
+    render(
+      <RemoteSearchSelect<{ id: string; logo?: string }>
+        url="/api/admin/application-options?kind=program&degree=Bachelor"
+        value=""
+        placeholder="Select program"
+        onChange={() => {}}
+        getLogo={(record) => record.logo}
+      />,
+    );
+    const user = userEvent.setup();
+    const trigger = await screen.findByRole('combobox');
+    await user.click(trigger);
+    expect(await screen.findByText('Computer Science')).toBeInTheDocument();
+    expect(screen.getByText('Tsinghua University · Bachelor')).toBeInTheDocument();
+    expect(document.querySelector('img[src="/university-logos/tsinghua-university.avif"]')).not.toBeNull();
+  });
 });

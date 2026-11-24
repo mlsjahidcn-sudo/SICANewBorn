@@ -23,18 +23,18 @@ beforeEach(() => {
   mockCorsPreflightHeaders.mockReset();
 });
 
-describe('middleware — Cache-Control: public on public pages only', () => {
-  it('sets s-maxage on /', async () => {
+describe('middleware — Cache-Control: cookie-localized HTML stays private', () => {
+  it('sets private caching on /', async () => {
     const res = middleware(makeRequest('/'));
     expect(res.headers.get('Cache-Control')).toBe(
-      'public, s-maxage=3600, stale-while-revalidate=86400',
+      'private, no-store, max-age=0',
     );
   });
 
-  it('sets s-maxage on /universities (public marketing surface)', async () => {
+  it('sets private caching on /universities (public marketing surface)', async () => {
     const res = middleware(makeRequest('/universities'));
     expect(res.headers.get('Cache-Control')).toBe(
-      'public, s-maxage=3600, stale-while-revalidate=86400',
+      'private, no-store, max-age=0',
     );
   });
 
@@ -75,10 +75,10 @@ describe('middleware — Cache-Control: public on public pages only', () => {
     expect(cc).not.toMatch(/s-maxage/);
   });
 
-  it('still sets s-maxage on /contact (public lead form page)', async () => {
+  it('sets private caching on /contact (public lead form page)', async () => {
     const res = middleware(makeRequest('/contact'));
     expect(res.headers.get('Cache-Control')).toBe(
-      'public, s-maxage=3600, stale-while-revalidate=86400',
+      'private, no-store, max-age=0',
     );
   });
 });

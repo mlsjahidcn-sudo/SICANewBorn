@@ -186,7 +186,7 @@ export const cscScholarshipGuide: LocalizedGuide = {
           {
             type: 'callout',
             tone: 'success',
-            text: 'CSC + university top-up is a common stacking strategy. Many universities add their own scholarship on top of CSC (extra monthly stipend + research grants — amounts vary by university). CSC cannot be held simultaneously with other Chinese government scholarships (Confucius Institute, MOFCOM).',
+            text: 'Do not assume CSC can be combined with a university scholarship. The Singapore 2027/28 notice prohibits simultaneous government or university scholarship funding, except one-time awards. Check the rules for your channel and obtain written approval before accepting additional funding.',
           },
         ],
       },
@@ -211,7 +211,7 @@ export const cscScholarshipGuide: LocalizedGuide = {
           {
             type: 'callout',
             tone: 'warning',
-            text: 'CSC cannot be held simultaneously with other Chinese government scholarships (Confucius Institute, MOFCOM). If you win multiple, you must pick one. CSC can be combined with university-funded top-ups and external international scholarships.',
+            text: 'Check concurrent-funding rules in your current notice. Singapore prohibits other government or university scholarships while holding CSC, except one-time awards. Do not assume that university top-ups or external awards are compatible; confirm the funding category with the awarding authority.',
           },
         ],
       },
@@ -318,7 +318,7 @@ export const cscScholarshipGuide: LocalizedGuide = {
       },
       {
         q: 'How much is the CSC monthly stipend?',
-        a: 'Stipends are tiered by degree level — confirm the current amounts in the CSC notice. Most universities pay monthly; a few pay quarterly. University top-up funding can add extra on top of the base CSC stipend.',
+        a: 'Stipends are tiered by degree level — confirm the current amounts in the CSC notice. Most universities pay monthly; a few pay quarterly. Additional funding is subject to the current channel rules; Singapore permits one-time awards but prohibits other concurrent government or university scholarships.',
       },
       {
         q: 'How competitive is the CSC scholarship?',
@@ -563,7 +563,7 @@ export const cscScholarshipGuide: LocalizedGuide = {
           {
             type: 'callout',
             tone: 'success',
-            text: 'CSC + 院校追加是常见叠加策略。许多大学在 CSC 基础上再加自有奖学金（额外月津贴 + 科研经费，因校而异）。CSC 不可与孔子学院、MOFCOM 等其他中国政府奖学金同时持有。',
+            text: '不要默认 CSC 可与院校奖学金叠加。新加坡 2027/28 通知禁止同时享受其他政府或录取院校奖学金资助，一次性奖励金除外。接受额外资助前，请核对本渠道规定并取得书面确认。',
           },
         ],
       },
@@ -588,7 +588,7 @@ export const cscScholarshipGuide: LocalizedGuide = {
           {
             type: 'callout',
             tone: 'warning',
-            text: 'CSC 不能与其他中国政府奖学金（孔子学院、MOFCOM）同时持有。若多个均获奖，须选其一。CSC 可与院校资助追加和外部国际奖学金叠加。',
+            text: '请查阅本年度通知中的兼得资助规定。新加坡禁止 CSC 获得者同时享受其他政府或院校奖学金，一次性奖励金除外。不要默认大学追加资助或外部奖项可兼得，请向资助方书面确认。',
           },
         ],
       },
@@ -695,7 +695,7 @@ export const cscScholarshipGuide: LocalizedGuide = {
       },
       {
         q: 'CSC 月津贴多少？',
-        a: '按学位层级分档——以当期 CSC 通知确认各学位档位金额。多数大学按月发放；少数按季。大学追加资助可在 CSC 基础上再叠加。',
+        a: '按学位层级分档——以当期 CSC 通知确认各学位档位金额。多数大学按月发放；少数按季。额外资助须符合当期渠道规定；新加坡允许一次性奖励金，但禁止兼得其他政府或院校奖学金。',
       },
       {
         q: 'CSC 奖学金多大竞争？',

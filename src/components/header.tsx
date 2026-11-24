@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useI18n } from '@/lib/i18n';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Menu, X, Globe, FileText, Users, UserPlus, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,10 +16,20 @@ import {
 import { MainNav } from '@/components/main-nav';
 import { SicaLogo } from '@/components/sica-logo';
 
-export function Header(): React.JSX.Element {
+export function Header({ onMobileMenuChange }: { onMobileMenuChange?: (open: boolean) => void } = {}): React.JSX.Element {
   const { t, locale, setLocale } = useI18n();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const router = useRouter();
+  useEffect(() => {
+    onMobileMenuChange?.(mobileMenuOpen);
+    return () => onMobileMenuChange?.(false);
+  }, [mobileMenuOpen, onMobileMenuChange]);
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const onKey = (event: KeyboardEvent): void => { if (event.key === 'Escape') setMobileMenuOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [mobileMenuOpen]);
   const switchLocale = (): void => {
     const nextLocale = locale === 'en' ? 'zh' : 'en';
     setLocale(nextLocale);
@@ -137,7 +147,7 @@ export function Header(): React.JSX.Element {
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="xl:hidden border-t border-gray-200 bg-white px-4 pb-4 pt-2">
+        <div className="xl:hidden max-h-[calc(100dvh-7rem)] overflow-y-auto border-t border-gray-200 bg-white px-4 pb-4 pt-2">
           <nav className="flex flex-col gap-1">
             {mobileNavLinks.map((link) => (
               <Link

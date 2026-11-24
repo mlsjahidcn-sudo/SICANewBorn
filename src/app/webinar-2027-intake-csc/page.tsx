@@ -1,3 +1,4 @@
+import { getStat } from '@/lib/site-stats';
 /**
  * Public webinar landing page.
  *
@@ -10,6 +11,7 @@
  */
 import type { Metadata } from 'next';
 import Image from 'next/image';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
   GraduationCap,
@@ -25,15 +27,15 @@ import {
 } from 'lucide-react';
 import { getServerT } from '@/lib/server-t';
 import { buildLanguageAlternates } from '@/lib/alternates';
-import { COUNTRIES } from '@/lib/seo-data';
+import { ALL_COUNTRIES } from '@/lib/common-countries';
 import { getSupabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-server';
 import {
+  formatWebinarDate,
+  isWebinarRegistrationOpen,
   PUBLIC_WEBINAR_ENABLED,
   WEBINAR_CONFIG,
   WEBINAR_AGENDA_TRACKS,
   WEBINAR_FEATURED_UNIVERSITY_SLUGS,
-  formatWebinarDate,
-  isWebinarRegistrationOpen,
   type WebinarAgendaTrack,
 } from '@/lib/webinar-config';
 import { CountdownTimer } from './CountdownTimer';
@@ -147,7 +149,7 @@ export default async function WebinarPage() {
     { qKey: 'webinar.faq.q4', aKey: 'webinar.faq.a4' },
   ];
 
-  const countryOptions = COUNTRIES.map((c) => ({ value: c.name, label: c.name }));
+  const countryOptions = ALL_COUNTRIES;
 
   return (
     <div className="min-h-screen bg-[#FAFAF8]">
@@ -508,7 +510,7 @@ export default async function WebinarPage() {
             ) : null}
           </div>
           <p className="mt-6 text-xs text-white/50 uppercase tracking-wider">
-            {t('webinar.cta.trustBadge')}
+            {t('webinar.cta.trustBadge', { count: getStat('studentsHelped') })}
           </p>
         </div>
       </section>

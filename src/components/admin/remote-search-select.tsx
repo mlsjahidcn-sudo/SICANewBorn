@@ -5,9 +5,10 @@ import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 interface RemoteOption<T> extends SearchableSelectOption { record: T }
-export function RemoteSearchSelect<T>({ url, value, onChange, placeholder, clearValue, clearLabel, disabled, container }: {
+export function RemoteSearchSelect<T>({ url, value, onChange, placeholder, clearValue, clearLabel, disabled, container, getLogo }: {
   url: string; value: string; onChange: (value: string, record?: T) => void; placeholder: string;
   clearValue?: string; clearLabel?: string; disabled?: boolean; container?: HTMLElement | null;
+  getLogo?: (record: T) => string | undefined;
 }): React.ReactNode {
   const { t } = useI18n();
   const [search, setSearch] = useState(''); const [page, setPage] = useState(1);
@@ -23,7 +24,11 @@ export function RemoteSearchSelect<T>({ url, value, onChange, placeholder, clear
       apiFetchJson<{ options: RemoteOption<T>[]; hasMore: boolean }>(`${url}&${params}`, { signal: controller.signal })
         .then(data => {
           if (controller.signal.aborted) return;
-          setOptions(prev => page === 1 ? data.options : [...prev, ...data.options]); setHasMore(data.hasMore);
+          // A response without an `options` array must not put `undefined`
+          // into state: the render path maps over `options` unconditionally,
+          // and an undefined array crashes the whole tree on the next render.
+          const rows = data.options ?? [];
+          setOptions(prev => page === 1 ? rows : [...prev, ...rows]); setHasMore(data.hasMore);
         }).catch(err => { if (!controller.signal.aborted) setError(err instanceof Error ? err.message : t('common.error')); })
         .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     }, 250);
@@ -35,11 +40,14 @@ export function RemoteSearchSelect<T>({ url, value, onChange, placeholder, clear
     if (!value || value === clearValue || selected?.value === value || options.some(o => o.value === value)) return;
     const controller = new AbortController();
     apiFetchJson<{ options: RemoteOption<T>[] }>(`${url}&value=${encodeURIComponent(value)}`, { signal: controller.signal })
-      .then(data => { if (!controller.signal.aborted && data.options[0]) { setSelected(data.options[0]); setOptions(prev => [...data.options, ...prev.filter(o => o.value !== value)]); } })
+      .then(data => { const rows = data.options ?? []; if (!controller.signal.aborted && rows[0]) { setSelected(rows[0]); setOptions(prev => [...rows, ...prev.filter(o => o.value !== value)]); } })
       .catch(err => { if (!controller.signal.aborted) setError(err instanceof Error ? err.message : t('common.error')); });
     return () => controller.abort();
   }, [value, clearValue, options, url, t, selected]);
-  const visible = selected && selected.value === value && !options.some(o => o.value === selected.value) ? [selected, ...options] : options;
+  const decorated = options.map(o => (o.logo ? o : { ...o, logo: getLogo?.(o.record) }));
+  const visible = selected && selected.value === value && !options.some(o => o.value === selected.value)
+    ? [{ ...selected, logo: selected.logo ?? getLogo?.(selected.record) }, ...decorated]
+    : decorated;
   // Pagination and errors belong to the open list, not the parent layout: as
   // in-flow siblings they grew the filter bar's grid cell under the trigger.
   // Undefined, not an empty fragment — a fragment is always truthy, which would

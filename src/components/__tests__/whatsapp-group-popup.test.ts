@@ -64,12 +64,11 @@ describe('WhatsAppGroupPopup path filter', () => {
 });
 
 describe('WhatsAppGroupPopup vs webinar promo (one popup at a time)', () => {
-  it('does not hold back while the webinar promo is disabled', () => {
-    expect(isWebinarPromoOnScreen('/', false)).toBe(false);
-    expect(isWebinarPromoOnScreen('/universities', false)).toBe(false);
-    expect(isWebinarPromoOnScreen('/universities/tsinghua-university', false)).toBe(
-      false,
-    );
+  it('yields to an eligible webinar campaign, but not when disabled', () => {
+    for (const path of ['/', '/universities', '/universities/tsinghua-university']) {
+      expect(isWebinarPromoOnScreen(path, false, true)).toBe(true);
+      expect(isWebinarPromoOnScreen(path, false, false)).toBe(false);
+    }
   });
 
   it('lets the popup through once the visitor dismissed the promo', () => {

@@ -5,8 +5,8 @@ import { cscDeadlineGuide, cscCountryDeadlines, CSC_DEADLINES_PATH, CSC_DEADLINE
 import { cscScholarshipGuide } from '@/lib/guides/chinese-government-scholarship-csc';
 import { guideCards } from '@/lib/guides/hub-data';
 
-function showGuide(locale: 'en' | 'zh'): ReturnType<typeof render> {
-  return render(<GuidePage guide={cscDeadlineGuide[locale]} pathSegment="csc-scholarship-deadlines-2027-2028" urlPath={CSC_DEADLINES_PATH} showConsultationCta={false} />);
+async function showGuide(locale: 'en' | 'zh'): Promise<ReturnType<typeof render>> {
+  return render(await GuidePage({ locale, guide: cscDeadlineGuide[locale], pathSegment: 'csc-scholarship-deadlines-2027-2028', urlPath: CSC_DEADLINES_PATH, showConsultationCta: false }));
 }
 
 describe('CSC 2027/2028 deadline and document guide', () => {
@@ -20,8 +20,8 @@ describe('CSC 2027/2028 deadline and document guide', () => {
     ]);
   });
 
-  it.each(['en', 'zh'] as const)('links all seven country rows to their official source in %s', (locale) => {
-    showGuide(locale);
+  it.each(['en', 'zh'] as const)('links all seven country rows to their official source in %s', async (locale) => {
+    await showGuide(locale);
     const table = screen.getByRole('table');
     for (const row of cscCountryDeadlines) {
       const tr = within(table).getByRole('row', { name: new RegExp(row.country[locale]) });
@@ -42,16 +42,16 @@ describe('CSC 2027/2028 deadline and document guide', () => {
     expect(JSON.stringify(requirements)).toContain('https://www.csca.cn/');
   });
 
-  it('uses the real review date in visible content and Article metadata', () => {
-    const { container } = showGuide('en');
+  it('uses the real review date in visible content and Article metadata', async () => {
+    const { container } = await showGuide('en');
     expect(container.querySelector('time')).toHaveAttribute('datetime', CSC_DEADLINES_REVIEWED_AT);
     const article = [...container.querySelectorAll('script[type="application/ld+json"]')].map((script) => JSON.parse(script.textContent ?? '{}')).find((schema: { '@type'?: string }) => schema['@type'] === 'Article');
     expect(article.dateModified).toBe(CSC_DEADLINES_REVIEWED_AT);
     expect(article.datePublished).toBeUndefined();
   });
 
-  it('does not invent a last-updated date for an undated guide', () => {
-    const { container } = render(<GuidePage guide={{ ...cscDeadlineGuide.en, updatedAt: undefined, publishedAt: undefined }} pathSegment="undated" showConsultationCta={false} />);
+  it('does not invent a last-updated date for an undated guide', async () => {
+    const { container } = render(await GuidePage({ locale: 'en', guide: { ...cscDeadlineGuide.en, updatedAt: undefined, publishedAt: undefined }, pathSegment: 'undated', showConsultationCta: false }));
     expect(container.querySelector('time')).toBeNull();
     expect(screen.queryByText(/Last updated:/)).not.toBeInTheDocument();
   });

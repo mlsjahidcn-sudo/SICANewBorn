@@ -988,6 +988,7 @@ export default function AdminNewApplicationPage() {
                           setPrograms([record.program]); setUniversities([record.university]);
                           setFormData(prev => ({ ...prev, program: value, university: record.program.universitySlug }));
                         }}
+                        getLogo={(r) => r.university?.logo || undefined}
                       />
                     </div>
 

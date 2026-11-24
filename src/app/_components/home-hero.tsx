@@ -29,7 +29,16 @@ export function HomeHeroFallback() {
 
 async function HeroCatalogSearch() {
   const enabled = await isCatalogSearchEnabled();
-  if (!enabled) return null;
+  if (!enabled) {
+    // Catalog search is behind a feature flag. When it is off, still render a
+    // real GET form so a search submitted before React hydrates lands on
+    // /programs?q=… instead of reloading /? and dropping the query.
+    const t = await getServerT();
+    return <form action="/programs" method="get" className="flex gap-2 bg-[#FAFAF8] p-3">
+      <input name="q" aria-label={t('catalog.homeTitle')} placeholder={t('catalog.homeTitle')} className="min-w-0 flex-1 border border-gray-300 px-3 text-sm text-[#1B2A4A]" />
+      <button type="submit" className="min-h-11 bg-[#9B1B30] px-4 text-sm font-semibold text-white">{t('common.search')}</button>
+    </form>;
+  }
   return <HomeCatalogSearch className="mt-0" />;
 }
 

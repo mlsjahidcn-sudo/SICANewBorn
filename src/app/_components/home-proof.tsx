@@ -96,7 +96,7 @@ export async function HomeProof() {
   const stats = [
     {
       value: getStat('partnerUniversities') || formatCount(counts.universities),
-      label: t('home.stats.partnerUniversities'),
+      label: getStat('partnerUniversities') ? t('home.stats.partnerUniversities') : t('home.stats.catalogUniversities'),
     },
     {
       value: getStat('countriesServed'),
@@ -215,12 +215,12 @@ export async function HomeProof() {
           </h2>
           <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
             {[
-              { icon: Cpu, label: t('fields.cs'), href: '/universities' },
-              { icon: Wrench, label: t('fields.engineering'), href: '/universities' },
-              { icon: TrendingUp, label: t('fields.business'), href: '/universities' },
+              { icon: Cpu, label: t('fields.cs'), href: '/programs?q=computer%20science' },
+              { icon: Wrench, label: t('fields.engineering'), href: '/programs?q=engineering' },
+              { icon: TrendingUp, label: t('fields.business'), href: '/programs?q=business' },
               { icon: Heart, label: t('fields.medicine'), href: '/mbbs-in-china' },
-              { icon: BrainCircuit, label: t('fields.ai'), href: '/universities' },
-              { icon: Languages, label: t('fields.languages'), href: '/universities' },
+              { icon: BrainCircuit, label: t('fields.ai'), href: '/programs?q=artificial%20intelligence' },
+              { icon: Languages, label: t('fields.languages'), href: '/programs?q=language' },
             ].map((item) => (
               <Link
                 key={item.label}
@@ -236,7 +236,7 @@ export async function HomeProof() {
           </div>
           <div className="mt-8 text-center">
             <Link
-              href="/universities"
+              href="/programs"
               className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#9B1B30] hover:underline"
             >
               {t('fields.viewAll')}
@@ -369,7 +369,7 @@ export async function HomeProof() {
                   {t('successStories.title')}
                 </h2>
                 <p className="mt-2 max-w-2xl text-sm text-[#4B5563]">
-                  {t('successStories.countLabel')}
+                  {t('successStories.countLabel', { count: getStat('studentsHelped') })}
                 </p>
               </div>
               <Link
@@ -438,24 +438,35 @@ export async function HomeProof() {
         </section>
       ) : null}
 
-      <section className="bg-[#1B2A4A]">
-        <div className="mx-auto max-w-7xl px-4 py-16 text-center sm:px-6 lg:px-8 lg:py-24">
-          <h2 className="text-3xl font-bold text-white sm:text-4xl">{t('cta.title')}</h2>
-          <p className="mt-4 text-lg text-gray-300">{t('cta.subtitle')}</p>
-          <div className="mt-8 flex flex-wrap justify-center gap-4">
-            <Link href="/assessment">
-              <Button className="bg-[#9B1B30] px-8 py-3 text-base font-semibold text-white hover:bg-[#7A1526]">
+      {/* Closing statement. Deliberately NOT navy: the footer's subscription
+          strip below it is the only dark band, and when both were navy they
+          merged into one dead slab with a gap in the middle. Warm white keeps
+          the footer's dark strip reading as a separate zone. */}
+      <section className="border-t border-gray-200 bg-[#FAFAF8]">
+        <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end lg:gap-16">
+            <div className="max-w-2xl">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9B1B30]">{t('cta.eyebrow')}</p>
+              <h2 className="mt-3 text-2xl font-bold text-[#1B2A4A] sm:text-3xl">{t('cta.title')}</h2>
+              <p className="mt-3 max-w-xl text-base leading-relaxed text-gray-600">{t('cta.subtitle')}</p>
+            </div>
+            {/* One solid button plus one plain link — two equal outlined
+                buttons read as a template rather than a decision. */}
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-3 lg:justify-end">
+              <Link
+                href="/assessment"
+                className="inline-flex min-h-11 items-center justify-center bg-[#9B1B30] px-8 py-3 text-center text-sm font-semibold text-white transition-colors duration-150 hover:bg-[#7A1526] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9B1B30] focus-visible:ring-offset-2"
+              >
                 {t('cta.apply')}
-              </Button>
-            </Link>
-            <Link href="mailto:info@studyinchina.academy">
-              <Button
-                variant="outline"
-                className="border-white bg-transparent px-8 py-3 text-base font-semibold text-white hover:bg-white/10 hover:text-white"
+              </Link>
+              <Link
+                href="mailto:info@studyinchina.academy"
+                className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#1B2A4A] hover:underline"
               >
                 {t('cta.contact')}
-              </Button>
-            </Link>
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
           </div>
         </div>
       </section>

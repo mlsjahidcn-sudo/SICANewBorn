@@ -484,6 +484,7 @@ export interface HomeFeaturedProgram {
   city: string;
   cityCn: string;
   degree: string;
+  language?: string;
   discipline: string;
   disciplineCn: string;
   duration: string;
@@ -517,6 +518,7 @@ function toHomeFeaturedProgram(
     nameCn: string;
     universitySlug: string;
     degree: string;
+    language?: string;
     discipline: string;
     disciplineCn: string;
     duration: string;
@@ -537,6 +539,7 @@ function toHomeFeaturedProgram(
     city: label?.city ?? '',
     cityCn: label?.cityCn ?? '',
     degree: row.degree,
+    language: row.language,
     discipline: row.discipline,
     disciplineCn: row.disciplineCn,
     duration: row.duration,
@@ -560,6 +563,7 @@ function featuredProgramsFromStatic(limit: number): HomeFeaturedProgram[] {
         nameCn: program.nameCn,
         universitySlug: program.universitySlug,
         degree: program.degree,
+        language: program.language,
         discipline: program.discipline,
         disciplineCn: program.disciplineCn,
         duration: program.duration,
@@ -649,6 +653,7 @@ export const getFeaturedPrograms = cache(
                 nameCn: String(row.name_cn ?? row.name ?? ''),
                 universitySlug: String(row.university_slug ?? ''),
                 degree: String(row.degree ?? ''),
+                language: String(row.language ?? ''),
                 discipline: String(row.discipline ?? ''),
                 disciplineCn: String(row.discipline_cn ?? ''),
                 duration: String(row.duration ?? ''),

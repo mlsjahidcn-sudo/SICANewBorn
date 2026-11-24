@@ -1,5 +1,7 @@
 'use client';
 
+import { scholarshipDeadline } from '@/lib/scholarship-deadlines';
+
 /**
  * Phase 92: this was the whole /scholarships/[slug] page as one client
  * component that imported the full static scholarship catalog from
@@ -35,7 +37,8 @@ export default function ScholarshipDetailClient({ scholarship }: { scholarship: 
   const benefitItems = locale === 'zh' ? scholarship.benefitsCn : scholarship.benefits;
   const appMethod = locale === 'zh' ? scholarship.applicationMethodCn : scholarship.applicationMethod;
   const duration = locale === 'zh' ? scholarship.durationCn : scholarship.duration;
-  const deadline = locale === 'zh' ? scholarship.deadlineCn : scholarship.deadline;
+  const deadlineInfo = scholarshipDeadline(scholarship, locale);
+  const deadline = deadlineInfo.label;
   const regions = locale === 'zh' ? scholarship.eligibleRegionsCn : scholarship.eligibleRegions;
 
   // Phase 46 GEO/AEO: FAQPage JSON-LD. Built from the scholarship
@@ -68,7 +71,7 @@ export default function ScholarshipDetailClient({ scholarship }: { scholarship: 
         name: `What is the application deadline for the ${name}?`,
         acceptedAnswer: {
           '@type': 'Answer',
-          text: `The ${name} application deadline is ${deadline}. SICA recommends applying at least 8 weeks before the deadline to allow for document preparation and translation.`,
+          text: `${deadline}. ${deadlineInfo.note}`,
         },
       },
       {
@@ -299,7 +302,7 @@ export default function ScholarshipDetailClient({ scholarship }: { scholarship: 
                         <Clock className="w-3.5 h-3.5" />
                         {t('schol.deadlineLabel')}
                       </div>
-                      <p className="font-semibold text-[#1F2937]">{deadline}</p>
+                      <p className="font-semibold text-[#1F2937]">{deadline}</p><p className="mt-2 text-sm leading-6 text-gray-600">{deadlineInfo.note}</p>{deadlineInfo.href ? <Link href={deadlineInfo.href} className="inline-flex min-h-11 items-center font-semibold text-[#9B1B30] underline">{locale === 'zh' ? '查看各国截止日及官方来源' : 'Country deadlines and official sources'}</Link> : null}
                     </div>
                     <div className="p-4 bg-[#FAFAF8]">
                       <div className="flex items-center gap-2 text-gray-500 text-xs mb-1">
