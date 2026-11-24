@@ -23,7 +23,7 @@ export const cscScholarshipInterview2027Guide: LocalizedGuide = {
     title: 'CSC Scholarship Interviews and Entrance Exams for 2027: What to Expect',
     description:
       'CSC Type B 2027 interviews and entrance exams: SISU online written and oral tests 1–11 Dec 2026, NPU interview windows, what happens if you miss email, and what comes after you pass.',
-    seoTitle: 'CSC Scholarship Interview and Entrance Exam 2027 | SICA',
+    seoTitle: 'CSC Scholarship Interviews and Exams 2027 | SICA',
     seoDescription:
       'Shortlisted for a CSC Type B scholarship? Universities like SISU hold online written and oral exams on Dec 1-11, 2026. What they test and how to prepare.',
     subtitle:
