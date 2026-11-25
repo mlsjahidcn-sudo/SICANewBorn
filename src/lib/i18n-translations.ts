@@ -6192,7 +6192,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'webinar.countdown.secondsLabel': 's',
     'webinar.countdown.ariaLabel': 'Time remaining until the webinar starts',
     // Webinar promo popup — urgency + concrete date for registration CTA
-    'webinar.popupEyebrow': 'Free live webinar · This week',
+    'webinar.popupEyebrow': 'Free live webinar · 2027 intake',
     'webinar.popupTitle': 'Register for the 5 Universities webinar',
     'webinar.popupBody': '60 minutes live — Zhengzhou, ZJUT, Nantong, Harbin Engineering & Hangzhou Dianzi. Free seat · join link by email + WhatsApp.',
     'webinar.popupCta': 'Reserve my free seat',
@@ -12152,7 +12152,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'webinar.countdown.secondsLabel': '秒',
     'webinar.countdown.ariaLabel': '距离讲座开始还有多久',
     // Webinar promo popup — urgency + concrete date for registration CTA
-    'webinar.popupEyebrow': '本周免费直播讲座',
+    'webinar.popupEyebrow': '免费直播讲座 · 2027 入学季',
     'webinar.popupTitle': '报名五所高校线上讲座',
     'webinar.popupBody': '60 分钟直播 — 郑州大学、浙江工业大学、南通大学、哈尔滨工程大学、杭州电子科技大学。免费席位 · 邮件 + WhatsApp 发送会议链接。',
     'webinar.popupCta': '预留免费席位',

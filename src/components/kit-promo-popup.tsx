@@ -6,6 +6,7 @@ import { X, BookOpen } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useI18n } from '@/lib/i18n';
 import { track } from '@/lib/analytics';
+import { WEBINAR_CONFIG, isWebinarSessionUpcoming } from '@/lib/webinar-config';
 
 /**
  * KitPromoPopup — exit-intent / delayed promo for the China Admission Kit.
@@ -70,11 +71,25 @@ export function KitPromoPopup() {
   const { t, locale } = useI18n();
   const [open, setOpen] = useState(false);
   const [eligible, setEligible] = useState(false);
+  // Capture once — never Date.now() in render (Phase 161 lint).
+  const [nowMs] = useState(() => Date.now());
   const dialogRef = useRef<HTMLDivElement>(null);
   const triggeredRef = useRef(false);
 
+  /**
+   * The Kit promo yields the sitewide promo slot to the webinar campaign
+   * while a session is upcoming. Both are modals and both fire on the
+   * university, program and guide pages — two of them at once is popup
+   * soup, and the webinar is the time-limited one. The Kit resumes on
+   * its own once the session date has passed.
+   */
+  const webinarOwnsPromoSlot = isWebinarSessionUpcoming(
+    WEBINAR_CONFIG.sessionDateIso,
+    nowMs,
+  );
+
   useEffect(() => {
-    if (!shouldShowOnPath(pathname)) {
+    if (webinarOwnsPromoSlot || !shouldShowOnPath(pathname)) {
       setEligible(false);
       return;
     }
@@ -83,7 +98,7 @@ export function KitPromoPopup() {
       return;
     }
     setEligible(true);
-  }, [pathname]);
+  }, [pathname, webinarOwnsPromoSlot]);
 
   const fireOpen = () => {
     if (triggeredRef.current || !eligible) return;

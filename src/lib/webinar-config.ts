@@ -19,8 +19,14 @@ export function formatWebinarDate(iso: string | null): string {
 /** Controls the public webinar page and registration endpoint. */
 export const PUBLIC_WEBINAR_ENABLED = true;
 
-/** Pause the promotional popup independently of the webinar page and signups. */
-export const PUBLIC_WEBINAR_POPUP_ENABLED = false;
+/**
+ * The sitewide promo slot for the current session.
+ *
+ * While this is on, the webinar promo owns the slot and the China Admission
+ * Kit exit-intent promo stands down — two modals competing for the same
+ * moment on the university, program and guide pages is popup soup.
+ */
+export const PUBLIC_WEBINAR_POPUP_ENABLED = true;
 
 /**
  * Phase 165: hardcoded webinar configuration.
@@ -72,8 +78,8 @@ export interface WebinarStaticConfig {
  * via {@link getCurrentWebinarKey} (Asia/Shanghai `YYYY-MM-DD`).
  */
 export const WEBINAR_CONFIG: WebinarStaticConfig = {
-  // Monday 3 November 2026, 21:00 Asia/Shanghai = 13:00 UTC
-  sessionDateIso: '2026-11-03T13:00:00.000Z',
+  // Wednesday 2 December 2026, 21:00 Asia/Shanghai = 13:00 UTC
+  sessionDateIso: '2026-12-02T13:00:00.000Z',
   sessionTimeDisplay: '21:00 Beijing Time',
   sessionTimezone: 'Asia/Shanghai',
   joinUrl: null,

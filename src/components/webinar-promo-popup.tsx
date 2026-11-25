@@ -13,6 +13,12 @@ import {
   formatWebinarDate,
   isWebinarSessionUpcoming,
 } from '@/lib/webinar-config';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 /**
  * sessionStorage key for "the visitor closed the webinar promo".
@@ -21,11 +27,8 @@ import {
  */
 export const WEBINAR_PROMO_DISMISS_KEY = 'sica_webinar_promo_dismissed';
 
-/** Short delay so the page settles, then the card slides in. */
-const REVEAL_DELAY_MS = 1200;
-
 /**
- * Visitor-facing promo popup for the current webinar session.
+ * Visitor-facing promo MODAL for the current webinar session.
  *
  * Shows when both public webinar flags are enabled and the path is public:
  *   - Active branch when `sessionDateIso` is still in the future
@@ -33,59 +36,103 @@ const REVEAL_DELAY_MS = 1200;
  *   - Denylist path filter (portals / webinar landing / thank-you / api)
  *   - sessionStorage dismiss for the rest of the tab session
  *
- * Anchored below the header (top) on every breakpoint so it stays
- * visible above sticky apply bars / chat / WhatsApp floats.
+ * It owns the sitewide promo slot while a session is upcoming: the China
+ * Admission Kit exit-intent popup stands down for the same period, so a
+ * visitor never gets two modals for the same moment.
+ *
+ * Trigger mirrors the Kit promo: exit-intent on a pointer device,
+ * scroll-depth + timer on touch. The visitor has to have engaged with
+ * the page before it can fire, and it stays out of the way while they
+ * are typing in a form or reading another dialog.
  */
 export function WebinarPromoPopup() {
   const { t, locale } = useI18n();
   const pathname = usePathname();
-  const [mounted, setMounted] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
-  const [revealed, setRevealed] = useState(false);
+  const [open, setOpen] = useState(false);
   // Capture once — never Date.now() in render (Phase 161 lint).
   const [nowMs] = useState(() => Date.now());
   const firedRef = useRef(false);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      setDismissed(
-        window.sessionStorage.getItem(WEBINAR_PROMO_DISMISS_KEY) === '1',
-      );
-    } catch {
-      // sessionStorage unavailable — show the popup.
-    }
-    setMounted(true);
-  }, []);
 
   const hasActiveSession = isWebinarSessionUpcoming(
     WEBINAR_CONFIG.sessionDateIso,
     nowMs,
   );
-  const canShow =
-    PUBLIC_WEBINAR_ENABLED && PUBLIC_WEBINAR_POPUP_ENABLED && mounted && !dismissed && isOnPublicPath(pathname);
+  const eligible =
+    PUBLIC_WEBINAR_ENABLED &&
+    PUBLIC_WEBINAR_POPUP_ENABLED &&
+    isOnPublicPath(pathname) &&
+    !alreadyDismissed();
 
-  useEffect(() => {
-    if (!canShow) {
-      setRevealed(false);
-      return;
-    }
-    const timer = window.setTimeout(() => setRevealed(true), REVEAL_DELAY_MS);
-    return () => window.clearTimeout(timer);
-  }, [canShow]);
+  /**
+   * True while the visitor is typing in a form or another dialog is open.
+   * Checked once at trigger time rather than continuously: a live
+   * subscription would unmount the modal the instant it opened, because
+   * Radix renders `role="dialog" data-state="open"` — which is exactly
+   * what the check looks for.
+   */
+  const visitorIsBusy = (): boolean => {
+    const active = document.activeElement;
+    const enteringForm = active instanceof HTMLElement && Boolean(active.closest('form'));
+    const openDialog = document.querySelector('[role="dialog"][data-state="open"], [role="listbox"]');
+    return enteringForm || Boolean(openDialog);
+  };
 
-  useEffect(() => {
-    if (!canShow || !revealed) return;
-    if (firedRef.current) return;
+  const fireOpen = () => {
+    if (firedRef.current || !eligible) return;
+    if (visitorIsBusy()) return;
     firedRef.current = true;
-    if (hasActiveSession) {
-      track('webinar_popup_view', { locale, path: pathname ?? '' });
-    } else {
-      track('webinar_popup_view_teaser', { locale, path: pathname ?? '' });
-    }
-  }, [canShow, revealed, hasActiveSession, pathname, locale]);
+    setOpen(true);
+    track(
+      hasActiveSession ? 'webinar_popup_view' : 'webinar_popup_view_teaser',
+      { locale, path: pathname ?? '' },
+    );
+  };
 
-  if (!canShow) return null;
+  // Exit-intent on a pointer device.
+  useEffect(() => {
+    if (!eligible) return;
+    const handler = (e: MouseEvent) => {
+      if (e.clientY <= 0) fireOpen();
+    };
+    document.addEventListener('mouseleave', handler);
+    return () => document.removeEventListener('mouseleave', handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eligible]);
+
+  // Touch devices have no mouse-leave: fire once they have read most of
+  // the page AND had time to settle.
+  useEffect(() => {
+    if (!eligible) return;
+    if (!window.matchMedia('(pointer: coarse)').matches) return;
+
+    let scrollTriggered = false;
+    let timerTriggered = false;
+    const tryFire = () => {
+      if (scrollTriggered && timerTriggered) fireOpen();
+    };
+    const onScroll = () => {
+      const scrolled =
+        window.scrollY /
+        Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+      if (scrolled > 0.6) {
+        scrollTriggered = true;
+        tryFire();
+      }
+    };
+    const onTimer = () => {
+      timerTriggered = true;
+      tryFire();
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    const timer = window.setTimeout(onTimer, 25_000);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eligible]);
+
+  if (!eligible) return null;
 
   const dismiss = (source: 'close_button' | 'cta_click') => {
     try {
@@ -95,7 +142,7 @@ export function WebinarPromoPopup() {
     } catch {
       /* best effort */
     }
-    setDismissed(true);
+    setOpen(false);
     track('webinar_popup_dismiss', { source, locale, path: pathname ?? '' });
   };
 
@@ -112,107 +159,119 @@ export function WebinarPromoPopup() {
   const timeLabel = WEBINAR_CONFIG.sessionTimeDisplay;
 
   return (
-    <div
-      role="dialog"
-      aria-modal="false"
-      aria-label={t('webinar.popupAriaLabel')}
-      className={`fixed z-50 w-[calc(100vw-2rem)] max-w-md bg-white border-2 border-[#D4A853] shadow-[0_12px_40px_rgba(27,42,74,0.18)] p-4 sm:p-5 flex items-start gap-3 left-1/2 -translate-x-1/2 top-20 sm:top-24 transition-all duration-500 ease-out ${
-        revealed
-          ? 'opacity-100 translate-y-0'
-          : 'opacity-0 -translate-y-3 pointer-events-none'
-      }`}
-    >
-      <div className="flex-shrink-0 h-10 w-10 bg-[#9B1B30] text-white flex items-center justify-center">
-        <Megaphone className="h-5 w-5" aria-hidden />
-      </div>
-      <div className="flex-1 min-w-0">
-        {hasActiveSession ? (
-          <>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#9B1B30]">
-              {t('webinar.popupEyebrow')}
-            </p>
-            <h3 className="text-base font-bold text-[#1B2A4A] leading-tight mt-1">
-              {t('webinar.popupTitle')}
-            </h3>
-            {(dateLabel || timeLabel) && (
-              <div className="mt-2 inline-flex flex-wrap items-center gap-x-2 gap-y-1 bg-[#FAF6E8] border border-[#D4A853]/50 px-2.5 py-1 text-[11px] font-semibold text-[#1B2A4A]">
-                <span className="inline-flex items-center gap-1">
-                  <Calendar className="h-3 w-3 text-[#9B1B30]" aria-hidden />
-                  {dateLabel}
-                </span>
-                {timeLabel && (
-                  <>
-                    <span className="text-[#D4A853]">·</span>
-                    <span className="inline-flex items-center gap-1 font-normal text-[#4B5563]">
-                      <Clock className="h-3 w-3 text-[#9B1B30]" aria-hidden />
-                      {timeLabel}
-                    </span>
-                  </>
-                )}
-              </div>
-            )}
-            <p className="text-xs text-[#4B5563] mt-2 leading-relaxed">
-              {t('webinar.popupBody')}
-            </p>
-            <div className="flex flex-wrap items-center gap-2 mt-3">
-              <Link
-                href="/webinar-2027-intake-csc#signup"
-                onClick={handleCta}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[#9B1B30] text-white text-xs font-semibold uppercase tracking-wider hover:bg-[#7A1526] transition-colors"
-              >
-                <Calendar className="h-3.5 w-3.5" aria-hidden />
-                {t('webinar.popupCta')}
-              </Link>
-              <button
-                type="button"
-                onClick={() => dismiss('close_button')}
-                className="text-xs text-[#4B5563] hover:text-[#1B2A4A] font-medium px-2 py-2"
-              >
-                {t('webinar.popupDismiss')}
-              </button>
-            </div>
-          </>
-        ) : (
-          <>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#9B1B30]">
-              {t('webinar.popupTeaserEyebrow')}
-            </p>
-            <h3 className="text-base font-bold text-[#1B2A4A] leading-tight mt-1">
-              {t('webinar.popupTeaserTitle')}
-            </h3>
-            <p className="text-xs text-[#4B5563] mt-2 leading-relaxed">
-              {t('webinar.popupTeaserBody')}
-            </p>
-            <div className="flex flex-wrap items-center gap-2 mt-3">
-              <Link
-                href="/webinar-2027-intake-csc#signup"
-                onClick={handleCta}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[#9B1B30] text-white text-xs font-semibold uppercase tracking-wider hover:bg-[#7A1526] transition-colors"
-              >
-                <Bell className="h-3.5 w-3.5" aria-hidden />
-                {t('webinar.popupTeaserCta')}
-              </Link>
-              <button
-                type="button"
-                onClick={() => dismiss('close_button')}
-                className="text-xs text-[#4B5563] hover:text-[#1B2A4A] font-medium px-2 py-2"
-              >
-                {t('webinar.popupDismiss')}
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-      <button
-        type="button"
-        aria-label={t('webinar.popupDismiss')}
-        onClick={() => dismiss('close_button')}
-        className="flex-shrink-0 text-gray-400 hover:text-[#1B2A4A] -mt-1 -mr-1 p-1.5"
+    <Dialog open={open} onOpenChange={(next) => { if (!next) dismiss('close_button'); }}>
+      <DialogContent
+        showCloseButton={false}
+        aria-label={t('webinar.popupAriaLabel')}
+        className="max-w-md rounded-none border-2 border-[#D4A853] p-0 shadow-[0_12px_40px_rgba(27,42,74,0.18)]"
       >
-        <X className="h-4 w-4" />
-      </button>
-    </div>
+        <div className="flex items-start gap-3 p-4 sm:p-5">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center bg-[#9B1B30] text-white">
+            <Megaphone className="h-5 w-5" aria-hidden />
+          </div>
+          <div className="min-w-0 flex-1">
+            <DialogTitle className="sr-only">{t('webinar.popupTitle')}</DialogTitle>
+            <DialogDescription className="sr-only">{t('webinar.popupBody')}</DialogDescription>
+            {hasActiveSession ? (
+              <>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#9B1B30]">
+                  {t('webinar.popupEyebrow')}
+                </p>
+                <h3 className="mt-1 text-base font-bold leading-tight text-[#1B2A4A]">
+                  {t('webinar.popupTitle')}
+                </h3>
+                {(dateLabel || timeLabel) && (
+                  <div className="mt-2 inline-flex flex-wrap items-center gap-x-2 gap-y-1 border border-[#D4A853]/50 bg-[#FAF6E8] px-2.5 py-1 text-[11px] font-semibold text-[#1B2A4A]">
+                    <span className="inline-flex items-center gap-1">
+                      <Calendar className="h-3 w-3 text-[#9B1B30]" aria-hidden />
+                      {dateLabel}
+                    </span>
+                    {timeLabel && (
+                      <>
+                        <span className="text-[#D4A853]">·</span>
+                        <span className="inline-flex items-center gap-1 font-normal text-[#4B5563]">
+                          <Clock className="h-3 w-3 text-[#9B1B30]" aria-hidden />
+                          {timeLabel}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                )}
+                <p className="mt-2 text-xs leading-relaxed text-[#4B5563]">
+                  {t('webinar.popupBody')}
+                </p>
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <Link
+                    href="/webinar-2027-intake-csc#signup"
+                    onClick={handleCta}
+                    className="inline-flex items-center gap-1.5 bg-[#9B1B30] px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-white transition-colors hover:bg-[#7A1526]"
+                  >
+                    <Calendar className="h-3.5 w-3.5" aria-hidden />
+                    {t('webinar.popupCta')}
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => dismiss('close_button')}
+                    className="px-2 py-2 text-xs font-medium text-[#4B5563] transition-colors hover:text-[#1B2A4A]"
+                  >
+                    {t('webinar.popupDismiss')}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#9B1B30]">
+                  {t('webinar.popupTeaserEyebrow')}
+                </p>
+                <h3 className="mt-1 text-base font-bold leading-tight text-[#1B2A4A]">
+                  {t('webinar.popupTeaserTitle')}
+                </h3>
+                <p className="mt-2 text-xs leading-relaxed text-[#4B5563]">
+                  {t('webinar.popupTeaserBody')}
+                </p>
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <Link
+                    href="/webinar-2027-intake-csc#signup"
+                    onClick={handleCta}
+                    className="inline-flex items-center gap-1.5 bg-[#9B1B30] px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-white transition-colors hover:bg-[#7A1526]"
+                  >
+                    <Bell className="h-3.5 w-3.5" aria-hidden />
+                    {t('webinar.popupTeaserCta')}
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => dismiss('close_button')}
+                    className="px-2 py-2 text-xs font-medium text-[#4B5563] transition-colors hover:text-[#1B2A4A]"
+                  >
+                    {t('webinar.popupDismiss')}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+          <button
+            type="button"
+            aria-label={t('webinar.popupDismiss')}
+            onClick={() => dismiss('close_button')}
+            className="-mr-1 -mt-1 shrink-0 p-1.5 text-gray-400 transition-colors hover:text-[#1B2A4A]"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
+}
+
+/** True when the visitor already closed the promo in this tab session. */
+function alreadyDismissed(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.sessionStorage.getItem(WEBINAR_PROMO_DISMISS_KEY) === '1';
+  } catch {
+    // sessionStorage unavailable — show the popup.
+    return false;
+  }
 }
 
 /**

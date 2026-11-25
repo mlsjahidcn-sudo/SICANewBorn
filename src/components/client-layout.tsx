@@ -101,10 +101,16 @@ export function ClientLayout({
             exit-intent counselling overlay and mounts on quiet detail
             pages too. */}
         {!isHandoff && <PublicPromotions paused={mobileMenuOpen}>
-          {PUBLIC_WEBINAR_ENABLED && PUBLIC_WEBINAR_POPUP_ENABLED && <WebinarPromoPopup />}
           <KitPromoPopup />
           {!quiet && <WhatsAppGroupPopup />}
         </PublicPromotions>}
+        {/* The webinar modal owns the promo slot while a session is upcoming,
+            so it sits OUTSIDE PublicPromotions: Radix renders
+            role="dialog" data-state="open", which PublicPromotions reads as
+            "a dialog is open" — inside it, the modal would unmount the
+            instant it opened. It brings its own path denylist and its own
+            form/dialog interference check. */}
+        {PUBLIC_WEBINAR_ENABLED && PUBLIC_WEBINAR_POPUP_ENABLED && <WebinarPromoPopup />}
         {!quiet && <div className={mobileMenuOpen || !hasBrowsed ? 'hidden' : undefined}>
           <Chatbot autoNudge={false} />
           <StickyContact />
