@@ -129,10 +129,12 @@ grant execute on function public.admin_message_inbox(boolean, integer, integer) 
 
 -- Email templates (editable from /admin/emails). English in body_text,
 -- Chinese in body_text_zh; the sender picks by recipient locale.
-insert into public.email_templates (slug, category, subject, subject_zh, body_text, body_text_zh, variables, is_active)
+insert into public.email_templates (slug, name, description, category, subject, subject_zh, body_text, body_text_zh, variables, is_active)
 values
 (
   'message.to_student',
+  'Message to student',
+  'Sent to a student when SICA writes in their application thread (at most once an hour).',
   'status',
   'New message from SICA about your application {{applicationRef}}',
   'SICA 就您的申请 {{applicationRef}} 发来新消息',
@@ -163,6 +165,8 @@ Study in China Academy$body$,
 ),
 (
   'message.to_partner',
+  'Message to partner',
+  'Sent to the partner team when SICA writes in a partner application thread (at most once an hour).',
   'status',
   'New message from SICA about {{studentName}} ({{applicationRef}})',
   'SICA 就 {{studentName}}（{{applicationRef}}）发来新消息',
@@ -193,6 +197,8 @@ Study in China Academy$body$,
 ),
 (
   'message.to_admin',
+  'Message to SICA admin',
+  'Sent to the SICA inbox when a student or partner writes in an application thread (at most once an hour).',
   'status',
   'New message from {{senderName}} — {{applicationRef}}',
   '{{senderName}} 发来新消息 — {{applicationRef}}',
@@ -216,6 +222,8 @@ Reply in the admin portal:
   true
 )
 on conflict (slug) do update set
+  name = excluded.name,
+  description = excluded.description,
   category = excluded.category,
   subject = excluded.subject,
   subject_zh = excluded.subject_zh,
