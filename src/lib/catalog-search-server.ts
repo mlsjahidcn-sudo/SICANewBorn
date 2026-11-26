@@ -49,6 +49,10 @@ function numberValue(value: unknown): number | null {
   return value != null && Number.isFinite(Number(value)) ? Number(value) : null;
 }
 
+function stringList(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string' && item.trim() !== '') : [];
+}
+
 function toCatalogRow(row: Record<string, unknown>): CatalogRow {
   const reason = row.match_reason;
   return {
@@ -60,6 +64,8 @@ function toCatalogRow(row: Record<string, unknown>): CatalogRow {
     tuition: stringValue(row.tuition), intake: stringValue(row.intake), intakeCn: stringValue(row.intake_cn),
     scholarshipAvailable: typeof row.scholarship_available === 'boolean' ? row.scholarship_available : null,
     ranking: numberValue(row.ranking), qsWorldRanking: numberValue(row.qs_world_ranking),
+    tags: stringList(row.tags), tagsCn: stringList(row.tags_cn), type: stringValue(row.type), typeCn: stringValue(row.type_cn),
+    disciplines: stringList(row.disciplines),
     matchingProgramCount: numberValue(row.matching_program_count) ?? undefined,
     matchReason: reason === 'title' || reason === 'subject' || reason === 'location' || reason === 'university' ? reason : undefined,
   };

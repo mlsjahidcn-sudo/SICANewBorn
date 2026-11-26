@@ -36,6 +36,12 @@ export interface CatalogRow {
   scholarshipAvailable?: boolean | null;
   ranking?: number | null;
   qsWorldRanking?: number | null;
+  /** Universities only: 985 / 211 / Double First-Class style tags. */
+  tags?: string[];
+  tagsCn?: string[];
+  type?: string;
+  typeCn?: string;
+  disciplines?: string[];
   matchingProgramCount?: number;
   matchReason?: 'title' | 'subject' | 'university' | 'location';
 }
