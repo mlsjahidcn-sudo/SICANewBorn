@@ -77,11 +77,13 @@ function UniversityCard({
   locale,
   chinaLabel,
   qsLabel,
+  chinaRankLabel,
 }: {
   university: University;
   locale: Locale;
   chinaLabel: string;
   qsLabel: (rank: number) => string;
+  chinaRankLabel: (rank: number) => string;
 }) {
   const name = localized(locale, university.name, university.nameCn);
   const city = localized(locale, university.city, university.cityCn);
@@ -111,7 +113,11 @@ function UniversityCard({
             {name}
           </h3>
           {university.ranking > 0 ? (
-            <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center bg-[#D4A853]/20 text-[10px] font-bold text-[#1B2A4A]">
+            <span
+              title={chinaRankLabel(university.ranking)}
+              aria-label={chinaRankLabel(university.ranking)}
+              className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center bg-[#D4A853]/20 px-1 text-[10px] font-bold text-[#1B2A4A]"
+            >
               {university.ranking}
             </span>
           ) : null}
@@ -217,6 +223,7 @@ export async function HomeCatalog() {
                   locale={locale}
                   chinaLabel={t('common.china')}
                   qsLabel={(rank) => t('home.universities.qs', { rank })}
+                  chinaRankLabel={(rank) => t('catalog.chinaRank', { rank })}
                 />
               ))}
             </div>

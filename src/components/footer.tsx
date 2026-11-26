@@ -12,7 +12,6 @@ import {
   Send,
   Users,
   UserPlus,
-  FileText,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { SicaLogo } from '@/components/sica-logo';
@@ -95,7 +94,7 @@ import { FooterNewsStrip } from '@/components/FooterNewsStrip';
  */
 export function Footer({ counts }: { counts: CatalogCounts }) {
   const { t, locale } = useI18n();
-  const [year, setYear] = useState<number>(2025);
+  const [year, setYear] = useState<number>(() => new Date().getFullYear());
   const [email, setEmail] = useState('');
   const [subscribeState, setSubscribeState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
 
@@ -317,9 +316,6 @@ export function Footer({ counts }: { counts: CatalogCounts }) {
               <FooterLink href="/partner/login" icon={<UserPlus className="h-3.5 w-3.5" />}>
                 {t('nav.partnerPortal')}
               </FooterLink>
-              <FooterLink href="/admin/login" icon={<FileText className="h-3.5 w-3.5" />}>
-                {t('nav.adminPortal')}
-              </FooterLink>
             </ul>
           </div>
         </div>
@@ -378,7 +374,7 @@ export function Footer({ counts }: { counts: CatalogCounts }) {
 
         {/* ──────────────  Bottom legal bar  ────────────── */}
         <div className="mt-10 border-t border-gray-200 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-500">
-          <p>
+          <p suppressHydrationWarning>
             © {year} SICA · {t('footer.rights')}
           </p>
           <div className="flex items-center gap-5">

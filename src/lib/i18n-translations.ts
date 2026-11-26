@@ -829,6 +829,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     // About
     'about.title': 'About SICA',
     'about.subtitle': 'Your trusted partner for studying in China',
+    'about.metaDescription': 'SICA helps international students choose a Chinese university, find the right program and scholarship, and apply with one-to-one guidance.',
     'about.missionTitle': 'Our Mission',
     'about.missionDesc': 'SICA (Study in China Academy) is a professional education institution dedicated to helping international students achieve their dream of studying in China. We provide comprehensive guidance from university selection to arrival, ensuring every student finds the right path.',
     'about.storyTitle': 'Our Story',
@@ -855,6 +856,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     // Contact
     'contact.title': 'Contact Us',
     'contact.subtitle': 'We\'re here to help you start your journey to studying in China',
+    'contact.metaDescription': 'Contact SICA by WhatsApp, email or a free 10-minute consultation for help choosing a Chinese university, program or scholarship.',
     'contact.formTitle': 'Send Us a Message',
     'contact.name': 'Full Name',
     'contact.email': 'Email Address',
@@ -7012,6 +7014,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     // About
     'about.title': '关于 SICA',
     'about.subtitle': '你在中国留学的可信赖伙伴',
+    'about.metaDescription': 'SICA 帮助国际学生选择中国大学、匹配合适的专业与奖学金，并提供一对一申请指导。',
     'about.missionTitle': '我们的使命',
     'about.missionDesc': 'SICA（Study in China Academy）是一家专业的教育机构，致力于帮助国际学生实现在中国学习的梦想。我们提供从大学选择到抵达的全方位指导，确保每位学生找到正确的道路。',
     'about.storyTitle': '我们的故事',
@@ -7038,6 +7041,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     // Contact
     'contact.title': '联系我们',
     'contact.subtitle': '我们在这里帮助你开启中国留学之旅',
+    'contact.metaDescription': '通过 WhatsApp、邮件或 10 分钟免费咨询联系 SICA，获取中国大学、专业与奖学金选择方面的帮助。',
     'contact.formTitle': '给我们留言',
     'contact.name': '姓名',
     'contact.email': '电子邮箱',

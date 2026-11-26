@@ -10,18 +10,18 @@ export async function generateMetadata(): Promise<Metadata> {
   const t = await getServerT();
   return {
     title: t('about.title'),
-    description: t('about.subtitle'),
+    description: t('about.metaDescription'),
     alternates: await buildLanguageAlternates('/about'),
     openGraph: {
       title: t('about.title'),
-      description: t('about.subtitle'),
+      description: t('about.metaDescription'),
       url: '/about',
       images: ['/og-default.png'],
     },
     twitter: {
       card: 'summary_large_image',
       title: t('about.title'),
-      description: t('about.subtitle'),
+      description: t('about.metaDescription'),
       images: ['/og-default.png'],
     },
   };

@@ -203,7 +203,7 @@ const baseConfig: NextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.googletagmanager.com https://static.cloudflareinsights.com",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob: https://cdn.urongda.com https://static-data.gaokao.cn https://images.unsplash.com https://studyinchina.csc.edu.cn https://i.imgur.com https://*.supabase.co https://*.google-analytics.com https://*.googletagmanager.com",
+              "img-src 'self' data: blob: https://cdn.urongda.com https://static-data.gaokao.cn https://images.unsplash.com https://studyinchina.csc.edu.cn https://i.imgur.com https://*.supabase.co https://*.google-analytics.com https://*.googletagmanager.com https://www.google.com https://*.g.doubleclick.net",
               "media-src 'self' https://*.supabase.co",
               "font-src 'self' data:",
               "connect-src 'self' https://*.supabase.co https://*.google-analytics.com https://*.analytics.google.com https://analytics.google.com https://*.g.doubleclick.net https://www.google.com https://cloudflareinsights.com https://*.googletagmanager.com",
