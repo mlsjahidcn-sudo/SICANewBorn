@@ -154,7 +154,7 @@ export default function UniversityDetailClient({ university: uni, programPage, p
                   </dl>
                 ) : null}
                 {uni.rating > 0 ? <p className="mt-6 border-t border-gray-100 pt-4 text-xs leading-5 text-gray-500">{t('detail.editorialRating', { rating: uni.rating })}</p> : null}
-                {uni.qsWorldRanking > 0 && <p className="mt-4 text-sm text-[#1B2A4A]"><span className="bg-[#D4A853] px-2 py-1 font-semibold">QS #{uni.qsWorldRanking}</span>{evidence?.rankingYear && <span className="ml-2">{evidence.rankingYear}</span>}{evidence?.rankingSourceUrl ? <a href={evidence.rankingSourceUrl} target="_blank" rel="noopener noreferrer" className="ml-2 text-xs underline">{t('detail.viewSource')}</a> : <span className="ml-2 text-xs text-gray-500">{t('detail.rankingUnverified')}</span>}</p>}
+                {uni.qsWorldRanking > 0 && <p className="mt-4 text-sm text-[#1B2A4A]"><span className="bg-[#D4A853] px-2 py-1 font-semibold">QS #{uni.qsWorldRanking}</span>{evidence?.rankingYear && <span className="ml-2">{evidence.rankingYear}</span>}{evidence?.rankingSourceUrl ? <a href={evidence.rankingSourceUrl} target="_blank" rel="noopener noreferrer" className="ml-2 text-xs underline">{t('detail.viewSource')}</a> : null}</p>}
                 <EvidenceSource evidence={evidence} />
               </DetailSection>
 

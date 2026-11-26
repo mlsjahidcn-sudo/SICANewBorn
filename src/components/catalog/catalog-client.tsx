@@ -118,6 +118,7 @@ export function CatalogClient({ initialQuery, initialResult }: Props): ReactElem
           {[...new Set([...sorts, query.sort])].map((sort) => <option key={sort} value={sort}>{t(`catalog.sort.${sort}`)}</option>)}
         </select></label>
       </div>
+      {isProgram && result && result.total > 0 && <p className="-mt-2 mb-4 text-xs text-gray-500">{t('catalog.programsNote')}</p>}
       {error && <div role="alert" className="mb-4 border border-[#9B1B30]/30 bg-white p-4 text-sm"><p>{t(result ? 'catalog.errorPrevious' : 'catalog.error')}</p><button type="button" onClick={() => setRetry((value) => value + 1)} className="mt-2 font-semibold text-[#9B1B30] underline focus-visible:ring-2 focus-visible:ring-[#9B1B30]">{t('catalog.retry')}</button></div>}
       <section aria-label={t('catalog.results')} aria-busy={pending} className={pending ? 'opacity-60' : ''}>
         {result?.rows.length ? <div className="space-y-3">{result.rows.map((row, position) => <CatalogResultRow key={row.slug} row={row} query={displayQuery} position={(displayQuery.page - 1) * displayQuery.limit + position} />)}</div> : !pending && !error && <div className="border border-gray-200 bg-white px-5 py-12 text-center">

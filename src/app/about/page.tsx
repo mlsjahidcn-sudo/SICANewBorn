@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { buildLanguageAlternates } from "@/lib/alternates";
 import Link from 'next/link';
-import { Users, Eye, Heart, Globe, Building, GraduationCap, Award, Clock } from 'lucide-react';
+import { Users, Eye, Heart, Globe, Building, Award, Clock } from 'lucide-react';
 import { getServerT } from '@/lib/server-t';
 import { getCatalogCounts } from '@/lib/data-fetcher';
 import { formatCount, getStat } from '@/lib/site-stats';
@@ -85,20 +85,9 @@ export default async function AboutPage() {
 
       {/* Mission */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          <div>
-            <h2 className="text-2xl font-bold text-[#1F2937] mb-4">{t('about.missionTitle')}</h2>
-            <p className="text-[#4B5563] leading-relaxed">{t('about.missionDesc')}</p>
-          </div>
-          <div className="relative">
-            <div className="bg-[#1B2A4A] p-8 text-white">
-              <GraduationCap className="h-12 w-12 text-white/80 mb-4" />
-              <blockquote className="text-lg font-medium leading-relaxed">
-                &ldquo;We believe every student deserves access to world-class education, regardless of where they come from. China&apos;s universities offer incredible opportunities, and SICA is here to open that door.&rdquo;
-              </blockquote>
-              <p className="mt-4 text-gray-400">— Dr. Li Wei, Founder</p>
-            </div>
-          </div>
+        <div className="max-w-3xl">
+          <h2 className="text-2xl font-bold text-[#1F2937] mb-4">{t('about.missionTitle')}</h2>
+          <p className="text-[#4B5563] leading-relaxed">{t('about.missionDesc')}</p>
         </div>
       </section>
 
