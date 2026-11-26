@@ -52,6 +52,7 @@ interface StudentNotification {
 const TYPE_BADGE: Record<string, string> = {
   status_change: 'bg-blue-100 text-blue-700',
   documents_requested: 'bg-orange-100 text-orange-800',
+  message: 'bg-[#1B2A4A]/10 text-[#1B2A4A]',
   team: 'bg-purple-100 text-purple-700',
   info: 'bg-gray-100 text-gray-600',
 };
@@ -61,6 +62,7 @@ const TYPE_BADGE: Record<string, string> = {
 const TYPE_LABEL_KEY: Record<string, string> = {
   status_change: 'studentNotif.typeStatus',
   documents_requested: 'studentNotif.typeDocs',
+  message: 'studentNotif.typeMessage',
   team: 'studentNotif.typeTeam',
   info: 'studentNotif.typeInfo',
 };
@@ -349,7 +351,7 @@ export default function StudentNotificationsPage() {
         </button>
         {/* Phase 4C: type filter chips. */}
         <span className="w-px h-4 bg-gray-300 mx-1" />
-        {['all', 'status_change', 'documents_requested', 'team', 'info'].map((type) => (
+        {['all', 'message', 'status_change', 'documents_requested', 'team', 'info'].map((type) => (
           <button
             key={type}
             type="button"

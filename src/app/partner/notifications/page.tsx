@@ -47,12 +47,14 @@ interface PartnerNotification {
 
 const TYPE_BADGE: Record<string, string> = {
   status_change: 'bg-blue-100 text-blue-700',
+  message: 'bg-[#1B2A4A]/10 text-[#1B2A4A]',
   team: 'bg-purple-100 text-purple-700',
   info: 'bg-gray-100 text-gray-600',
 };
 
 const TYPE_LABEL: Record<string, string> = {
   status_change: 'partnerNotif.typeStatus',
+  message: 'partnerNotif.typeMessage',
   team: 'partnerNotif.typeTeam',
   info: 'partnerNotif.typeInfo',
 };

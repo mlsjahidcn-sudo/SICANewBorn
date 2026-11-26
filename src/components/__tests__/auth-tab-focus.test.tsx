@@ -13,6 +13,10 @@ vi.mock('@/lib/supabase-browser', () => ({ isSupabaseConfigured: true, supabase:
   getSession: mocks.getSession, onAuthStateChange: mocks.onAuthStateChange, signOut: mocks.signOut,
 } } }));
 vi.mock('@/lib/api-client', () => ({ apiFetch: mocks.api }));
+// The admin layout also polls the Messages unread badge; only the
+// /api/admin/profile access checks matter for these assertions.
+const profileChecks = () =>
+  mocks.api.mock.calls.filter(([url]) => url === '/api/admin/profile').length;
 vi.mock('next/navigation', () => ({
   useRouter: () => mocks.router, usePathname: () => '/admin/students',
 }));
@@ -56,7 +60,7 @@ describe('portal session recovery on tab focus', () => {
     });
     expect(screen.getByRole('textbox')).toBe(input);
     expect(input).toHaveValue('Do not lose this draft');
-    expect(mocks.api).toHaveBeenCalledTimes(1);
+    expect(profileChecks()).toBe(1);
     expect(mocks.mounted).toHaveBeenCalledTimes(1);
     expect(mocks.userChanged).toHaveBeenCalledTimes(1);
   });
@@ -70,7 +74,7 @@ describe('portal session recovery on tab focus', () => {
     await act(async () => { notify('USER_UPDATED', { ...session, user: { ...user, email: 'updated@example.test', user_metadata: { full_name: 'Updated name' } } }); });
     expect(screen.getByTestId('user-email')).toHaveTextContent('updated@example.test');
     expect(screen.getByRole('textbox')).toBe(input);
-    expect(mocks.api).toHaveBeenCalledTimes(1);
+    expect(profileChecks()).toBe(1);
     expect(mocks.mounted).toHaveBeenCalledTimes(1);
     expect(mocks.userChanged).toHaveBeenCalledTimes(2);
   });
@@ -81,7 +85,7 @@ describe('portal session recovery on tab focus', () => {
     let resolveCheck!: (value: Response) => void;
     mocks.api.mockReturnValue(new Promise<Response>((resolve) => { resolveCheck = resolve; }));
     await act(async () => { notify('SIGNED_IN', { ...session, user: { ...user, id: 'other-account' } }); });
-    expect(mocks.api).toHaveBeenCalledTimes(2);
+    expect(profileChecks()).toBe(2);
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     await act(async () => { resolveCheck(new Response('{}', { status: 403 })); });
     expect(mocks.signOut).toHaveBeenCalledTimes(1);

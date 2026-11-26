@@ -44,6 +44,7 @@ import { DocumentUploadDialog } from '@/components/partner/DocumentUploadDialog'
 import { apiFetch, apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 import { useUrlState } from '@/hooks/use-url-state';
+import { ApplicationThread, useUnreadMessageCount } from '@/components/messages/application-thread';
 import { formatFileSize } from '@/lib/document-viewer-origin';
 import {
   getPartnerApplicationDecisionLabel,
@@ -72,7 +73,7 @@ interface TimelineEvent {
 
 /** The four panes of the detail page. Bound to `?tab=` so the view is
  *  shareable and survives a refresh. */
-const DETAIL_TABS = ['overview', 'file', 'documents', 'activity'] as const;
+const DETAIL_TABS = ['overview', 'file', 'documents', 'messages', 'activity'] as const;
 type DetailTab = (typeof DETAIL_TABS)[number];
 
 export default function PartnerApplicationDetailPage() {
@@ -81,6 +82,8 @@ export default function PartnerApplicationDetailPage() {
   const searchParams = useSearchParams();
   const { t, locale } = useI18n();
   const applicationId = params.id as string;
+  const messagesEndpoint = `/api/partner/applications/${applicationId}/messages`;
+  const [unreadMessages, setUnreadMessages] = useUnreadMessageCount(messagesEndpoint);
 
   // Phase 52: locale-aware date formatter. The page used to
   // call `new Date(...).toLocaleDateString()` which respects
@@ -622,13 +625,21 @@ export default function PartnerApplicationDetailPage() {
       )}
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as DetailTab)} className="space-y-4">
-        <TabsList className="rounded-none">
+        <TabsList className="rounded-none h-auto flex-wrap">
           <TabsTrigger value="overview">{t('partnerAppDetail.tabOverview')}</TabsTrigger>
           <TabsTrigger value="file">{t('partnerAppDetail.tabFile')}</TabsTrigger>
           <TabsTrigger value="documents">
             {openRequests.length > 0
               ? t('partnerAppDetail.tabDocumentsOpen', { count: openRequests.length })
               : t('partnerAppDetail.tabDocuments')}
+          </TabsTrigger>
+          <TabsTrigger value="messages">
+            {t('appMessages.tabLabel')}
+            {unreadMessages > 0 ? (
+              <span className="ml-1.5 inline-flex min-w-5 items-center justify-center bg-[#9B1B30] px-1.5 text-[11px] font-semibold text-white">
+                {unreadMessages}
+              </span>
+            ) : null}
           </TabsTrigger>
           <TabsTrigger value="activity">{t('partnerAppDetail.tabActivity')}</TabsTrigger>
         </TabsList>
@@ -1259,6 +1270,15 @@ export default function PartnerApplicationDetailPage() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+        <TabsContent value="messages">
+          {activeTab === 'messages' ? (
+            <ApplicationThread
+              endpoint={messagesEndpoint}
+              viewerRole="partner"
+              onLoaded={() => setUnreadMessages(0)}
+            />
+          ) : null}
         </TabsContent>
       </Tabs>
 

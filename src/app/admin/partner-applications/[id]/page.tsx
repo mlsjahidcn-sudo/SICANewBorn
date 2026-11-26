@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { StudentMarkdownDownload } from '@/components/admin/student-markdown-download';
 import { PartnerApplicationTargetDialog } from '@/components/admin/partner-application-target-dialog';
 import { MissingDocumentsRequest } from '@/components/admin/missing-documents-request';
+import { ApplicationThread } from '@/components/messages/application-thread';
 import type { MissingDocumentCategory } from '@/lib/missing-document-message';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -77,6 +78,9 @@ export default function AdminPartnerApplicationDetailPage() {
   const searchParams = useSearchParams();
   const returnTo = applicationReturnTo(searchParams.get('returnTo') ?? '/admin/applications?surface=partner');
   const applicationId = params.id as string;
+  // Inbox links open this page at #messages; the section only exists once
+  // the application has loaded, so scroll to it after the first render.
+  const scrolledToMessages = useRef(false);
   const { t } = useI18n();
 
   const [app, setApp] = useState<PartnerApplication | null>(null);
@@ -92,6 +96,12 @@ export default function AdminPartnerApplicationDetailPage() {
   } | null>(null);
   const [enrollment, setEnrollment] = useState<ApplicationEnrollment | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  useEffect(() => {
+    if (isLoading || scrolledToMessages.current) return;
+    if (window.location.hash !== '#messages') return;
+    scrolledToMessages.current = true;
+    document.getElementById('messages')?.scrollIntoView({ block: 'start' });
+  }, [isLoading]);
   const [error, setError] = useState<string | null>(null);
   const [isSavingStatus, setIsSavingStatus] = useState(false);
   const [isSavingNotes, setIsSavingNotes] = useState(false);
@@ -821,6 +831,14 @@ export default function AdminPartnerApplicationDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Conversation with the partner team about this application. */}
+      <div id="messages" className="mt-6 scroll-mt-20">
+        <ApplicationThread
+          endpoint={`/api/admin/partner-applications/${applicationId}/messages`}
+          viewerRole="admin"
+        />
+      </div>
 
       {/* Phase 76: Documents — files uploaded by the student +
           open admin "request documents" events. Shows for all

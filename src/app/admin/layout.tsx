@@ -13,6 +13,7 @@ import {
   Users,
   UserCheck,
   FileText,
+  Inbox,
   Settings,
   VideoIcon,
   LogOut,
@@ -84,6 +85,7 @@ const navItems = [
   { href: '/admin/partner-fees', key: 'partnerFees', icon: DollarSign },
   { href: '/admin/promotions', key: 'promotions', icon: Sparkles },
   { href: '/admin/assessments', key: 'assessments', icon: ClipboardList },
+  { href: '/admin/messages', key: 'messages', icon: Inbox },
   { href: '/admin/applications', key: 'applications', icon: FileText },
   // Phase 51: Success Stories — public showcase of admission notices.
   // Sits next to Applications because both surface student outcomes.
@@ -122,6 +124,29 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   // resolves, and force a logout when the API explicitly rejects
   // a non-admin caller.
   const [roleGate, setRoleGate] = useState<'unknown' | 'admin' | 'non-admin'>('unknown');
+  // Unread student/partner messages for the sidebar badge (polled while signed in).
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  useEffect(() => {
+    if (roleGate !== 'admin') return;
+    let cancelled = false;
+    const refresh = () => {
+      if (document.visibilityState !== 'visible') return;
+      apiFetch('/api/admin/messages/unread-count', { cache: 'no-store' })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data: { unreadCount?: number } | null) => {
+          if (!cancelled && data) setUnreadMessages(data.unreadCount ?? 0);
+        })
+        .catch(() => {
+          /* decorative badge — ignore */
+        });
+    };
+    refresh();
+    const timer = window.setInterval(refresh, 60_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [roleGate, pathname]);
 
   // While the auth context is resolving or the role check hasn't
   // returned, keep the public auth pages (login + register)
@@ -308,7 +333,16 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                 >
                   <Icon size={18} />
                   <span>{t(`adminNav.${item.key}`)}</span>
-                  {isActive && <ChevronRight size={14} className="ml-auto" />}
+                  {item.key === 'messages' && unreadMessages > 0 ? (
+                    <span
+                      className="ml-auto inline-flex min-w-5 items-center justify-center bg-[#9B1B30] px-1.5 text-[11px] font-semibold text-white"
+                      aria-label={t('adminMessages.unreadBadge', { count: unreadMessages })}
+                    >
+                      {unreadMessages}
+                    </span>
+                  ) : isActive ? (
+                    <ChevronRight size={14} className="ml-auto" />
+                  ) : null}
                 </Link>
               );
             })}

@@ -21,6 +21,7 @@ import {
 import { apiFetchJson } from '@/lib/api-client';
 import { useI18n } from '@/lib/i18n';
 import type { StudentApplication } from '@/lib/application-mapper';
+import { ApplicationThread, useUnreadMessageCount } from '@/components/messages/application-thread';
 import { STUDENT_STATUS_TRANSITIONS } from '@/lib/application-mapper';
 // Phase 107 Batch 6: merge legacy application_timeline + new
 // application_stage_history into a single UnifiedTimelineEvent[] for
@@ -149,6 +150,14 @@ export default function StudentApplicationDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+  const messagesEndpoint = `/api/student/applications/${applicationId}/messages`;
+  const [unreadMessages, setUnreadMessages] = useUnreadMessageCount(messagesEndpoint);
+
+  // Notification links open straight on the Messages tab (?tab=messages).
+  useEffect(() => {
+    const tab = new URLSearchParams(window.location.search).get('tab');
+    if (tab === 'messages' || tab === 'documents' || tab === 'timeline') setActiveTab(tab);
+  }, []);
   const [selectedDocStatus, setSelectedDocStatus] = useState<DocumentStatus | 'all'>('all');
   // Phase 1 student actions
   const [withdrawOpen, setWithdrawOpen] = useState(false);
@@ -525,6 +534,17 @@ export default function StudentApplicationDetailPage() {
           >
             {t('studentAppDetail.tabs.timeline')}
           </TabsTrigger>
+          <TabsTrigger
+            value="messages"
+            className="rounded-none data-[state=active]:bg-white data-[state=active]:text-[#1B2A4A] data-[state=active]:shadow-sm"
+          >
+            {t('appMessages.tabLabel')}
+            {unreadMessages > 0 ? (
+              <span className="ml-1.5 inline-flex min-w-5 items-center justify-center bg-[#9B1B30] px-1.5 text-[11px] font-semibold text-white">
+                {unreadMessages}
+              </span>
+            ) : null}
+          </TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
@@ -759,6 +779,15 @@ export default function StudentApplicationDetailPage() {
               })()}
             </CardContent>
           </Card>
+        </TabsContent>
+        <TabsContent value="messages" className="mt-6">
+          {activeTab === 'messages' ? (
+            <ApplicationThread
+              endpoint={messagesEndpoint}
+              viewerRole="student"
+              onLoaded={() => setUnreadMessages(0)}
+            />
+          ) : null}
         </TabsContent>
       </Tabs>
 

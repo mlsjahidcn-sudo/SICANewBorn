@@ -30,10 +30,11 @@ import { applicationReturnTo, applicationDetailHref } from '@/lib/admin-applicat
 import { statusColorClass } from '@/lib/application-status';
 import { useI18n } from '@/lib/i18n';
 import { useUrlState } from '@/hooks/use-url-state';
+import { ApplicationThread, useUnreadMessageCount } from '@/components/messages/application-thread';
 
 interface ReviewApplication extends AdminApplication { archivedAt?: string | null }
 interface DetailResponse { application: ReviewApplication; payment: PaymentAggregate | null; paymentError?: string | null }
-const TAB_VALUES = ['overview', 'documents', 'notes', 'timeline'] as const;
+const TAB_VALUES = ['overview', 'documents', 'messages', 'notes', 'timeline'] as const;
 type AppTab = (typeof TAB_VALUES)[number];
 
 const NEXT_STEP: Record<string, { hint: string; label: string; tab?: AppTab; status?: ApplicationStatus; edit?: boolean; enrollment?: boolean }> = {
@@ -59,6 +60,8 @@ export default function AdminApplicationDetailPage(): React.ReactNode {
   });
   const [visitedTabs, setVisitedTabs] = useState<Set<AppTab>>(() => new Set([activeTab]));
   const changeTab = (tab: AppTab): void => { setVisitedTabs(prev => new Set([...prev, tab])); setActiveTab(tab); };
+  const messagesEndpoint = `/api/admin/applications/${id}/messages`;
+  const [unreadMessages, setUnreadMessages] = useUnreadMessageCount(messagesEndpoint);
   const [app, setApp] = useState<ReviewApplication | null>(null);
   const [payment, setPayment] = useState<PaymentAggregate | null>(null);
   const [enrollment, setEnrollment] = useState<ApplicationEnrollment | null>(null);
@@ -219,8 +222,8 @@ export default function AdminApplicationDetailPage(): React.ReactNode {
     <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
       <div className="min-w-0">
         <Tabs value={activeTab} onValueChange={value => changeTab(value as AppTab)}>
-          <TabsList className="grid h-auto w-full grid-cols-2 rounded-none sm:grid-cols-4">
-            {TAB_VALUES.map(tab => <TabsTrigger key={tab} className="rounded-none py-2.5" value={tab}>{t(`adminAppDetail.tab${tab === 'timeline' ? 'Timeline' : tab[0].toUpperCase() + tab.slice(1)}`)}</TabsTrigger>)}
+          <TabsList className="grid h-auto w-full grid-cols-3 rounded-none sm:grid-cols-5">
+            {TAB_VALUES.map(tab => <TabsTrigger key={tab} className="rounded-none py-2.5" value={tab}>{t(`adminAppDetail.tab${tab === 'timeline' ? 'Timeline' : tab[0].toUpperCase() + tab.slice(1)}`)}{tab === 'messages' && unreadMessages > 0 ? <span className="ml-1.5 inline-flex min-w-5 items-center justify-center bg-[#9B1B30] px-1.5 text-[11px] font-semibold text-white">{unreadMessages}</span> : null}</TabsTrigger>)}
           </TabsList>
           <TabsContent value="overview" className="mt-3 flex flex-col gap-4">
             <Card className="rounded-none gap-4 py-5 shadow-none"><CardHeader><CardTitle className="text-base">{t('adminAppReview.applicantInfo')}</CardTitle></CardHeader><CardContent className="flex flex-col gap-4">
@@ -241,6 +244,7 @@ export default function AdminApplicationDetailPage(): React.ReactNode {
             <DocumentsTab applicationId={app.id} studentId={app.studentId} />
           </TabsContent>
           {visitedTabs.has('notes') && <TabsContent value="notes" forceMount className="mt-3 data-[state=inactive]:hidden"><NotesTab applicationId={app.id} onSaved={() => void load()} /></TabsContent>}
+          <TabsContent value="messages" className="mt-3">{activeTab === 'messages' ? <ApplicationThread endpoint={messagesEndpoint} viewerRole="admin" onLoaded={() => setUnreadMessages(0)} /> : null}</TabsContent>
           <TabsContent value="timeline" className="mt-3"><TimelineTab applicationId={app.id} refreshKey={refreshKey} /></TabsContent>
         </Tabs>
       </div>
