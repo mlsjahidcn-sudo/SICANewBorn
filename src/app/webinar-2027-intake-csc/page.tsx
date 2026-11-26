@@ -3,8 +3,7 @@ import { getStat } from '@/lib/site-stats';
  * Public webinar landing page.
  *
  * Session metadata (date, time, join URL, label) + the agenda
- * come from `@/lib/webinar-config`. Featured university cards load
- * from the live Supabase catalog by slug. Registrations go to
+ * come from `@/lib/webinar-config`. Registrations go to
  * `POST /api/webinar-signups` (stamped with `webinar_key`).
  *
  * Static (revalidate = 3600) so the route is cached at the edge.
@@ -28,14 +27,12 @@ import {
 import { getServerT } from '@/lib/server-t';
 import { buildLanguageAlternates } from '@/lib/alternates';
 import { ALL_COUNTRIES } from '@/lib/common-countries';
-import { getSupabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-server';
 import {
   formatWebinarDate,
   isWebinarRegistrationOpen,
   PUBLIC_WEBINAR_ENABLED,
   WEBINAR_CONFIG,
   WEBINAR_AGENDA_TRACKS,
-  WEBINAR_FEATURED_UNIVERSITY_SLUGS,
   type WebinarAgendaTrack,
 } from '@/lib/webinar-config';
 import { CountdownTimer } from './CountdownTimer';
@@ -49,56 +46,6 @@ const TRACK_ICONS: Record<WebinarAgendaTrack['icon'], LucideIcon> = {
   bachelor: Globe2,
   universities: Microscope,
 };
-
-interface FeaturedUniversity {
-  slug: string;
-  name: string;
-  nameCn: string | null;
-  city: string | null;
-  ranking: number | null;
-  popularPrograms: string[];
-  tuitionUndergrad: string | null;
-}
-
-async function loadFeaturedUniversities(): Promise<FeaturedUniversity[]> {
-  if (!isSupabaseServerConfigured()) return [];
-  const supabase = getSupabaseServer();
-  if (!supabase) return [];
-
-  const slugs = [...WEBINAR_FEATURED_UNIVERSITY_SLUGS];
-  const { data, error } = await supabase
-    .from('universities')
-    .select(
-      'slug, name, name_cn, city, ranking, popular_programs, tuition_undergrad',
-    )
-    .in('slug', slugs);
-
-  if (error || !data) {
-    console.error('[webinar] featured universities load failed:', error?.message);
-    return [];
-  }
-
-  const bySlug = new Map(
-    data.map((row) => [
-      row.slug as string,
-      {
-        slug: row.slug as string,
-        name: (row.name as string) || '',
-        nameCn: (row.name_cn as string | null) || null,
-        city: (row.city as string | null) || null,
-        ranking: typeof row.ranking === 'number' ? row.ranking : null,
-        popularPrograms: Array.isArray(row.popular_programs)
-          ? (row.popular_programs as string[])
-          : [],
-        tuitionUndergrad: (row.tuition_undergrad as string | null) || null,
-      } satisfies FeaturedUniversity,
-    ]),
-  );
-
-  return slugs
-    .map((slug) => bySlug.get(slug))
-    .filter((uni): uni is FeaturedUniversity => !!uni);
-}
 
 export async function generateMetadata(): Promise<Metadata> {
   if (!PUBLIC_WEBINAR_ENABLED) notFound();
@@ -124,7 +71,6 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function WebinarPage() {
   if (!PUBLIC_WEBINAR_ENABLED) notFound();
   const t = await getServerT();
-  const featuredUniversities = await loadFeaturedUniversities();
 
   const sessionDateIso = WEBINAR_CONFIG.sessionDateIso;
   // HTML may lag up to `revalidate` (1h); the API closes registration
@@ -274,76 +220,6 @@ export default async function WebinarPage() {
                 </div>
               );
             })}
-          </div>
-        </div>
-      </section>
-
-      <section id="universities" className="bg-white border-y border-gray-200 py-14 lg:py-20">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-10">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#9B1B30]">
-              {t('webinar.featuredEyebrow')}
-            </p>
-            <h2 className="mt-3 text-3xl font-bold text-[#1B2A4A]">
-              {t('webinar.featuredTitle')}
-            </h2>
-            <p className="mt-3 text-base text-[#4B5563] max-w-3xl mx-auto leading-relaxed">
-              {t('webinar.featuredSubtitle')}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            {featuredUniversities.map((uni) => (
-              <div
-                key={uni.slug}
-                className="bg-[#FAFAF8] border-2 border-[#D4A853]/40 p-5 flex flex-col"
-              >
-                <div className="mb-3">
-                  <h3 className="font-bold text-[#1B2A4A] text-base leading-tight">
-                    {uni.name}
-                  </h3>
-                  {uni.nameCn && (
-                    <p className="text-xs text-gray-500 leading-tight mt-0.5">
-                      {uni.nameCn}
-                    </p>
-                  )}
-                </div>
-                <div className="text-xs text-gray-600 mb-3 flex items-center gap-2 flex-wrap">
-                  {uni.ranking != null && (
-                    <>
-                      <span className="font-semibold text-[#1B2A4A]">
-                        #{uni.ranking}
-                      </span>
-                      <span className="text-gray-400">·</span>
-                    </>
-                  )}
-                  <span>{uni.city || '—'}</span>
-                </div>
-                <div className="text-[10px] uppercase tracking-[0.15em] text-[#9B1B30] font-bold mb-1">
-                  {t('webinar.card.topPrograms')}
-                </div>
-                <ul className="text-xs text-[#4B5563] space-y-0.5 mb-3 flex-1">
-                  {uni.popularPrograms.slice(0, 3).map((program, i) => (
-                    <li key={i} className="truncate">
-                      • {program}
-                    </li>
-                  ))}
-                </ul>
-                <div className="text-[10px] uppercase tracking-[0.15em] text-[#9B1B30] font-bold mb-1">
-                  {t('webinar.card.tuition')}
-                </div>
-                <p className="text-xs text-[#4B5563] mb-4">
-                  {uni.tuitionUndergrad || '—'}
-                </p>
-                <a
-                  href={`/universities/${uni.slug}`}
-                  className="mt-auto inline-flex items-center justify-center gap-1 px-3 py-2 bg-[#1B2A4A] text-white text-xs font-semibold uppercase tracking-wider hover:bg-[#0F1B33] transition-colors"
-                >
-                  {t('webinar.card.viewDetail')}
-                  <ArrowRight className="h-3 w-3" />
-                </a>
-              </div>
-            ))}
           </div>
         </div>
       </section>

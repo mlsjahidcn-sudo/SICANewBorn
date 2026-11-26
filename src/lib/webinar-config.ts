@@ -158,19 +158,6 @@ export interface WebinarAgendaTrack {
   icon: 'march' | 'foundation' | 'bachelor' | 'universities';
 }
 
-/**
- * Featured-university slugs for the public 5-card grid.
- * Resolved from the live Supabase catalog (not static data.ts)
- * so admin-managed schools without a static fallback still render.
- */
-export const WEBINAR_FEATURED_UNIVERSITY_SLUGS = [
-  'zhengzhou-university',
-  'zhejiang-university-of-technology',
-  'nantong-university',
-  'harbin-engineering-university',
-  'hangzhou-dianzi-university',
-] as const;
-
 export const WEBINAR_AGENDA_TRACKS: WebinarAgendaTrack[] = [
   {
     id: 'march-lang',
