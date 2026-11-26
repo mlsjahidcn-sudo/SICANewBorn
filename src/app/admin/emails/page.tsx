@@ -48,6 +48,7 @@ import {
 import { apiFetchJson, ApiError } from '@/lib/api-client';
 import { Badge } from '@/components/ui/badge';
 import { useI18n } from '@/lib/i18n';
+import { useConfirm } from '@/components/admin/use-confirm';
 
 type EmailLanguage = 'en' | 'zh';
 
@@ -92,6 +93,7 @@ function delayLabel(ms: number | null, t: (k: string, p?: Record<string, string 
 
 export default function EmailTemplatesPage() {
   const { t } = useI18n();
+  const [confirm, confirmDialog] = useConfirm();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -278,7 +280,7 @@ export default function EmailTemplatesPage() {
   };
 
   const deleteTemplate = async (id: string) => {
-    if (!confirm(t('adminEmails.confirmDelete'))) return;
+    if (!(await confirm({ title: t('adminEmails.confirmDelete'), confirmLabel: t('adminCommon.delete'), destructive: true }))) return;
     setSaveError(null);
     try {
       await apiFetchJson(`/api/admin/emails/templates/${id}`, { method: 'DELETE' });
@@ -293,6 +295,7 @@ export default function EmailTemplatesPage() {
 
   return (
     <div className="space-y-6">
+      {confirmDialog}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-[#1B2A4A]">{t('adminEmails.title')}</h1>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdmin, buildServiceClient, getServerEnv } from '@/lib/supabase-auth';
+import { setRequestFulfillment } from '@/lib/document-request-fulfillment';
 
 export const dynamic = 'force-dynamic';
 
@@ -115,4 +116,83 @@ export async function POST(
   }
 
   return NextResponse.json({ request: newEvent, documents_requested: updated }, { status: 201 });
+}
+
+const FulfillPayload = z.object({
+  requestId: z.string().min(1),
+  fulfilled: z.boolean(),
+});
+
+/**
+ * PATCH — admin marks one document request done, or reopens it.
+ * Body: { requestId, fulfilled }. Requests for photos or "other" files can
+ * only be closed this way; the rest also close automatically when the
+ * partner uploads matching documents (see document-request-sync.ts).
+ */
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const auth = await requireAdmin(request);
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+  if (!getServerEnv().serviceKey) {
+    return NextResponse.json({ error: 'Supabase is not configured.' }, { status: 503 });
+  }
+
+  const { id } = await params;
+  if (!id) {
+    return NextResponse.json({ error: 'Missing id' }, { status: 400 });
+  }
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+  const parsed = FulfillPayload.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: 'Invalid payload', issues: parsed.error.flatten() },
+      { status: 400 },
+    );
+  }
+
+  const service = buildServiceClient();
+  const { data: existing, error: exErr } = await service
+    .from('partner_applications')
+    .select('id, documents_requested')
+    .eq('id', id)
+    .maybeSingle();
+  if (exErr) {
+    console.error('[admin/partner-applications/:id/request-documents PATCH] lookup error:', exErr);
+    return NextResponse.json({ error: exErr.message }, { status: 500 });
+  }
+  if (!existing) {
+    return NextResponse.json({ error: 'Application not found' }, { status: 404 });
+  }
+
+  const updated = setRequestFulfillment(
+    existing.documents_requested,
+    parsed.data.requestId,
+    parsed.data.fulfilled,
+    new Date().toISOString(),
+    auth.user.id,
+  );
+  if (!updated) {
+    return NextResponse.json({ error: 'Request not found' }, { status: 404 });
+  }
+
+  const { error: upErr } = await service
+    .from('partner_applications')
+    .update({ documents_requested: updated })
+    .eq('id', id);
+  if (upErr) {
+    console.error('[admin/partner-applications/:id/request-documents PATCH] update error:', upErr);
+    return NextResponse.json({ error: upErr.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ documents_requested: updated });
 }

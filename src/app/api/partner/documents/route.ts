@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireTeamMember, buildServiceClient, getServerEnv } from '@/lib/supabase-auth';
+import { syncDocumentRequestsForApplication } from '@/lib/document-request-sync';
 import {
   mapPartnerDocumentFromDb,
   PARTNER_DOC_CATEGORIES,
@@ -353,6 +354,15 @@ export async function POST(request: NextRequest) {
         console.error('[partner/documents POST] cleanup failed:', cleanupErr);
       }
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    // Close any SICA document request this upload now satisfies.
+    if (partnerApplicationIdRaw) {
+      await syncDocumentRequestsForApplication(
+        buildServiceClient(),
+        partnerApplicationIdRaw,
+        auth.user.id,
+      );
     }
 
     return NextResponse.json(

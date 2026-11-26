@@ -142,12 +142,6 @@ export default function AdminLoginPage() {
           </form>
           )}
 
-          <div className="mt-6 text-center text-sm text-[#4B5563]">
-            {t('adminAuth.noAccount')}{' '}
-            <Link href="/admin/register" className="text-[#9B1B30] font-medium hover:underline">
-              {t('adminAuth.createAccount')}
-            </Link>
-          </div>
         </div>
 
         {/* Back link */}

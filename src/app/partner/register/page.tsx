@@ -9,10 +9,13 @@
  * status='pending'. The admin must approve before the partner can use
  * the portal.
  */
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Users, CheckCircle2, Send, ArrowLeft, AlertCircle } from 'lucide-react';
+import { CheckCircle2, Send, ArrowLeft, AlertCircle } from 'lucide-react';
+import { SicaLogo } from '@/components/sica-logo';
+import { SearchableSelect } from '@/components/ui/searchable-select';
+import { ALL_COUNTRIES } from '@/lib/common-countries';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/lib/auth-context';
@@ -40,10 +43,24 @@ export default function PartnerRegisterPage() {
     // no-op — we let them sign up with a new email
   }, []);
 
+  const countryOptions = useMemo(
+    () =>
+      ALL_COUNTRIES.map((c) => ({
+        value: c.value,
+        label: c.label,
+        sublabel: c.code,
+      })),
+    [],
+  );
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
+    if (!formData.country.trim()) {
+      setError(t('partnerRegister.countryRequired'));
+      return;
+    }
     if (formData.password.length < 8) {
       setError(t('partnerRegister.passwordTooShort'));
       return;
@@ -151,9 +168,7 @@ export default function PartnerRegisterPage() {
     <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-lg">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-[#9B1B30] mb-4">
-            <Users className="text-white" size={28} />
-          </div>
+          <SicaLogo className="h-10 w-auto mx-auto mb-4" />
           <h1 className="text-[#1B2A4A] text-2xl font-bold">{t('partnerRegister.title')}</h1>
           <p className="text-[#4B5563] mt-1 text-sm">
             {t('partnerRegister.subtitle')}
@@ -233,7 +248,7 @@ export default function PartnerRegisterPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className="block text-sm font-medium text-[#1F2937] mb-1.5">
                   {t('partnerRegister.phoneLabel')}
@@ -250,18 +265,18 @@ export default function PartnerRegisterPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#1F2937] mb-1.5">
+                <label htmlFor="partner-register-country" className="block text-sm font-medium text-[#1F2937] mb-1.5">
                   {t('partnerRegister.countryLabel')}
                 </label>
-                <input
-                  type="text"
-                  name="country"
+                <SearchableSelect
+                  id="partner-register-country"
                   value={formData.country}
-                  onChange={handleChange}
-                  required
+                  onChange={(value) => setFormData((prev) => ({ ...prev, country: value }))}
+                  options={countryOptions}
                   placeholder={t('partnerRegister.countryPlaceholder')}
-                  autoComplete="country-name"
-                  className="w-full px-4 py-2.5 border border-gray-300 text-[#1F2937] placeholder:text-gray-400 focus:outline-none focus:border-[#9B1B30] focus:ring-1 focus:ring-[#9B1B30] text-sm"
+                  searchPlaceholder={t('studentRegister.countrySearch')}
+                  emptyText={t('studentRegister.countryEmpty')}
+                  className="h-[42px] border-gray-300 text-sm"
                 />
               </div>
             </div>

@@ -36,6 +36,7 @@ import { applicationListHref, applicationDetailHref, readApplicationListLocation
 import { groupApplications } from '@/lib/application-grouping';
 import { ApplicationStatusDialog, type ApplicationStatusOptions } from '@/components/admin/application-status-dialog';
 import { useI18n } from '@/lib/i18n';
+import { useConfirm } from '@/components/admin/use-confirm';
 
 interface Application {
   id: string;
@@ -171,6 +172,7 @@ export default function AdminApplicationsPage() {
   const searchParams = useSearchParams();
 
   const { t } = useI18n();
+  const [confirm, confirmDialog] = useConfirm();
   const initialLocation = readApplicationListLocation(searchParams);
 
   // S34: cohort filter, sourced from the URL on mount. The
@@ -904,6 +906,7 @@ export default function AdminApplicationsPage() {
 
   return (
     <div className="space-y-6">
+      {confirmDialog}
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
@@ -2019,10 +2022,14 @@ export default function AdminApplicationsPage() {
                 variant="outline"
                 size="sm"
                 className="rounded-none text-red-600 border-red-200 hover:bg-red-50"
-                onClick={() => {
-                  if (window.confirm(t(archiveFilter === 'archived' ? 'adminManagement.restoreConfirm' : 'adminManagement.archiveConfirm'))) {
-                    runBulk(archiveFilter === 'archived' ? 'restoreArchive' : 'delete');
-                  }
+                onClick={async () => {
+                  const restoring = archiveFilter === 'archived';
+                  const ok = await confirm({
+                    title: t(restoring ? 'adminManagement.restoreConfirm' : 'adminManagement.archiveConfirm'),
+                    confirmLabel: t(restoring ? 'adminManagement.restore' : 'adminManagement.archive'),
+                    destructive: !restoring,
+                  });
+                  if (ok) runBulk(restoring ? 'restoreArchive' : 'delete');
                 }}
                 disabled={bulkRunning}
               >

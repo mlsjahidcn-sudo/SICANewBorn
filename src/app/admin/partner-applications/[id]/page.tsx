@@ -99,6 +99,7 @@ export default function AdminPartnerApplicationDetailPage() {
   const [adminNotes, setAdminNotes] = useState('');
   const [showAssign, setShowAssign] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
+  const [updatingRequestId, setUpdatingRequestId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!applicationId) return;
@@ -206,6 +207,23 @@ export default function AdminPartnerApplicationDetailPage() {
       { method: 'POST', body: JSON.stringify(request) },
     );
     setApp((previous) => previous ? { ...previous, documentsRequested: response.documents_requested } : previous);
+  };
+
+  // Close a document request by hand (photo / "other" requests can only
+  // close this way) or reopen one closed by mistake.
+  const setRequestDone = async (requestId: string, fulfilled: boolean): Promise<void> => {
+    setUpdatingRequestId(requestId);
+    try {
+      const response = await apiFetchJson<{ documents_requested: DocumentsRequestEvent[] }>(
+        `/api/admin/partner-applications/${applicationId}/request-documents`,
+        { method: 'PATCH', body: JSON.stringify({ requestId, fulfilled }) },
+      );
+      setApp((previous) => previous ? { ...previous, documentsRequested: response.documents_requested } : previous);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('adminPartnerApp.errorUpdateRequest'));
+    } finally {
+      setUpdatingRequestId(null);
+    }
   };
 
   const handleAssign = useCallback(async (target: {
@@ -880,13 +898,26 @@ export default function AdminPartnerApplicationDetailPage() {
                     {r.message && (
                       <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{r.message}</p>
                     )}
-                    <p className="text-xs text-gray-500 mt-1">
-                      {t('adminPartnerApp.requestedBy')}{' '}
-                      {r.requested_by.slice(0, 8)} ·{' '}
-                      {new Date(r.requested_at).toLocaleString()}
-                    </p>
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-xs text-gray-500">
+                        {t('adminPartnerApp.requestedBy')}{' '}
+                        {r.requested_by.slice(0, 8)} ·{' '}
+                        {new Date(r.requested_at).toLocaleString()}
+                      </p>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="rounded-none h-7 text-xs"
+                        disabled={updatingRequestId === r.id}
+                        onClick={() => void setRequestDone(r.id, true)}
+                      >
+                        {t('adminPartnerApp.markRequestDone')}
+                      </Button>
+                    </div>
                   </div>
                 ))}
+                <p className="text-xs text-gray-500">{t('adminPartnerApp.autoCloseHint')}</p>
               </div>
             );
           })()}
@@ -896,8 +927,37 @@ export default function AdminPartnerApplicationDetailPage() {
             const fulfilled = (app.documentsRequested ?? []).filter((r) => r.fulfilled_at);
             if (fulfilled.length === 0) return null;
             return (
-              <div className="text-xs text-gray-500">
-                {t('adminPartnerApp.fulfilledRequests')}: {fulfilled.length}
+              <div className="space-y-2">
+                <div className="text-xs font-semibold text-[#1B2A4A] uppercase tracking-wider">
+                  {t('adminPartnerApp.fulfilledRequests')} ({fulfilled.length})
+                </div>
+                {fulfilled.map((r) => (
+                  <div
+                    key={r.id}
+                    className="flex flex-wrap items-center justify-between gap-2 p-2 border border-gray-200 bg-gray-50"
+                  >
+                    <div className="flex flex-wrap items-center gap-1">
+                      {r.categories.map((c) => (
+                        <Badge key={c} variant="secondary" className="rounded-none text-xs">
+                          {t(`adminPartnerApp.requestCategory${c.charAt(0).toUpperCase()}${c.slice(1).replace(/_([a-z])/g, (_, x) => x.toUpperCase())}` as 'adminPartnerApp.requestCategoryPassport' | 'adminPartnerApp.requestCategoryTranscript' | 'adminPartnerApp.requestCategoryEnglishTest' | 'adminPartnerApp.requestCategoryPhoto' | 'adminPartnerApp.requestCategoryOther')}
+                        </Badge>
+                      ))}
+                      <span className="text-xs text-gray-500">
+                        {t('adminPartnerApp.fulfilledOn', { date: new Date(r.fulfilled_at as string).toLocaleDateString() })}
+                      </span>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="rounded-none h-7 text-xs"
+                      disabled={updatingRequestId === r.id}
+                      onClick={() => void setRequestDone(r.id, false)}
+                    >
+                      {t('adminPartnerApp.reopenRequest')}
+                    </Button>
+                  </div>
+                ))}
               </div>
             );
           })()}

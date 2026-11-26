@@ -126,7 +126,7 @@ export default function StudentRegisterPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="student-register-first-name" className="block text-sm font-medium text-[#1F2937] mb-1.5">
-                  {t('studentRegister.firstName')}
+                  {t('studentRegister.firstName')}<span aria-hidden="true" className="text-[#9B1B30]"> *</span>
                 </label>
                 <input
                   id="student-register-first-name"
@@ -142,7 +142,7 @@ export default function StudentRegisterPage() {
               </div>
               <div>
                 <label htmlFor="student-register-last-name" className="block text-sm font-medium text-[#1F2937] mb-1.5">
-                  {t('studentRegister.lastName')}
+                  {t('studentRegister.lastName')}<span aria-hidden="true" className="text-[#9B1B30]"> *</span>
                 </label>
                 <input
                   id="student-register-last-name"
@@ -160,7 +160,7 @@ export default function StudentRegisterPage() {
 
             <div>
               <label htmlFor="student-register-email" className="block text-sm font-medium text-[#1F2937] mb-1.5">
-                {t('studentRegister.email')}
+                {t('studentRegister.email')}<span aria-hidden="true" className="text-[#9B1B30]"> *</span>
               </label>
               <input
                 id="student-register-email"
@@ -176,10 +176,10 @@ export default function StudentRegisterPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label htmlFor="student-register-country" className="block text-sm font-medium text-[#1F2937] mb-1.5">
-                  {t('studentRegister.country')}
+                  {t('studentRegister.country')}<span aria-hidden="true" className="text-[#9B1B30]"> *</span>
                 </label>
                 <SearchableSelect
                   id="student-register-country"
@@ -194,7 +194,7 @@ export default function StudentRegisterPage() {
               </div>
               <div>
                 <label htmlFor="student-register-whatsapp" className="block text-sm font-medium text-[#1F2937] mb-1.5">
-                  {t('studentRegister.whatsapp')}
+                  {t('studentRegister.whatsapp')}<span aria-hidden="true" className="text-[#9B1B30]"> *</span>
                 </label>
                 <input
                   id="student-register-whatsapp"
@@ -211,10 +211,10 @@ export default function StudentRegisterPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label htmlFor="student-register-degree" className="block text-sm font-medium text-[#1F2937] mb-1.5">
-                  {t('studentRegister.degree')}
+                  {t('studentRegister.degree')}<span aria-hidden="true" className="text-[#9B1B30]"> *</span>
                 </label>
                 <input
                   id="student-register-degree"
@@ -230,7 +230,7 @@ export default function StudentRegisterPage() {
               </div>
               <div>
                 <label htmlFor="student-register-program" className="block text-sm font-medium text-[#1F2937] mb-1.5">
-                  {t('studentRegister.interestedProgram')}
+                  {t('studentRegister.interestedProgram')}<span aria-hidden="true" className="text-[#9B1B30]"> *</span>
                 </label>
                 <input
                   id="student-register-program"
@@ -248,7 +248,7 @@ export default function StudentRegisterPage() {
 
             <div>
               <label htmlFor="student-register-password" className="block text-sm font-medium text-[#1F2937] mb-1.5">
-                {t('studentRegister.password')}
+                {t('studentRegister.password')}<span aria-hidden="true" className="text-[#9B1B30]"> *</span>
               </label>
               <div className="relative">
                 <input
@@ -275,7 +275,7 @@ export default function StudentRegisterPage() {
 
             <div>
               <label htmlFor="student-register-confirm-password" className="block text-sm font-medium text-[#1F2937] mb-1.5">
-                {t('studentRegister.confirmPassword')}
+                {t('studentRegister.confirmPassword')}<span aria-hidden="true" className="text-[#9B1B30]"> *</span>
               </label>
               <input
                 id="student-register-confirm-password"

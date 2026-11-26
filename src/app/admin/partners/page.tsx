@@ -28,6 +28,7 @@ import { Input } from '@/components/ui/input';
 import { apiFetchJson, ApiError } from '@/lib/api-client';
 import { Badge } from '@/components/ui/badge';
 import { useI18n } from '@/lib/i18n';
+import { useConfirm } from '@/components/admin/use-confirm';
 
 interface AdminPartner {
   id: string;
@@ -71,6 +72,7 @@ const PAGE_SIZE = 20;
 
 export default function AdminPartnersPage() {
   const { t, locale } = useI18n();
+  const [confirm, confirmDialog] = useConfirm();
   const [partners, setPartners] = useState<AdminPartner[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -124,9 +126,12 @@ export default function AdminPartnersPage() {
   const hasActiveFilter = statusFilter !== 'all' || searchQuery.trim().length > 0;
 
   const quickApprove = async (p: AdminPartner) => {
-    if (!confirm(`Approve ${p.company_name}? They will be able to sign in immediately.`)) {
-      return;
-    }
+    const approved = await confirm({
+      title: t('adminPartners.approveConfirmTitle', { name: p.company_name }),
+      description: t('adminPartners.approveConfirmBody'),
+      confirmLabel: t('adminPartners.approveConfirmAction'),
+    });
+    if (!approved) return;
     setApprovingId(p.id);
     try {
       await apiFetchJson(`/api/admin/partners/${p.id}`, {
@@ -148,6 +153,7 @@ export default function AdminPartnersPage() {
 
   return (
     <div className="space-y-6">
+      {confirmDialog}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-[#1B2A4A]">{t('adminPartners.title')}</h1>

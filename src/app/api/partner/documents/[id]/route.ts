@@ -11,6 +11,7 @@ import {
   type RawPartnerDocument,
 } from '@/lib/partner-doc-mapper';
 import { deletePartnerDocFile } from '@/lib/storage';
+import { syncDocumentRequestsForApplication } from '@/lib/document-request-sync';
 
 export const dynamic = 'force-dynamic';
 
@@ -284,6 +285,13 @@ export async function PATCH(
     }
     if (!data) {
       return NextResponse.json({ error: 'Document not found' }, { status: 404 });
+    }
+
+    // Linking (or re-categorising) a document can satisfy an open SICA
+    // document request on its application.
+    const linkedAppId = (data as { partner_application_id?: string | null }).partner_application_id;
+    if (linkedAppId && (body.partnerApplicationId !== undefined || category !== null)) {
+      await syncDocumentRequestsForApplication(buildServiceClient(), linkedAppId, auth.user.id);
     }
 
     return NextResponse.json({

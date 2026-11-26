@@ -17,6 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Trash2, ExternalLink, Eye, EyeOff, RefreshCw } from 'lucide-react';
 import { apiFetch, apiFetchJson } from '@/lib/api-client';
 import type { AdmissionDegree } from '@/lib/admission-notices/types';
+import { useConfirm } from '@/components/admin/use-confirm';
 
 interface AdmissionNotice {
   id: string;
@@ -44,6 +45,7 @@ interface ApiResponse {
 
 export default function AdminAdmissionNoticesPage() {
   const { t } = useI18n();
+  const [confirm, confirmDialog] = useConfirm();
   const [notices, setNotices] = useState<AdmissionNotice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -79,7 +81,7 @@ export default function AdminAdmissionNoticesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm(t('adminAdmissionNotices.deleteConfirm'))) return;
+    if (!(await confirm({ title: t('adminAdmissionNotices.deleteConfirm'), confirmLabel: t('adminCommon.delete'), destructive: true }))) return;
     setDeletingId(id);
     try {
       // apiFetch for the Bearer header, AND check res.ok — the previous
@@ -101,6 +103,7 @@ export default function AdminAdmissionNoticesPage() {
 
   return (
     <div className="space-y-6">
+      {confirmDialog}
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>

@@ -35,6 +35,7 @@ import { useI18n } from '@/lib/i18n';
 import { useUrlState } from '@/hooks/use-url-state';
 import type { AdminStudent } from '@/lib/student-mapper';
 import { mapStudentName } from '@/lib/student-mapper';
+import { useConfirm } from '@/components/admin/use-confirm';
 
 type DocumentStatus = 'Pending' | 'Uploaded' | 'Verified' | 'Rejected';
 type ApplicationStatus =
@@ -742,6 +743,7 @@ interface StudentNote {
 
 function NotesTab({ studentId }: { studentId: string }) {
   const { t } = useI18n();
+  const [confirm, confirmDialog] = useConfirm();
   const [notes, setNotes] = useState<StudentNote[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [newBody, setNewBody] = useState('');
@@ -787,7 +789,7 @@ function NotesTab({ studentId }: { studentId: string }) {
   };
 
   const handleDelete = async (noteId: string) => {
-    if (!confirm(t('adminStudentDetail.notesDeleteConfirm'))) return;
+    if (!(await confirm({ title: t('adminStudentDetail.notesDeleteConfirm'), confirmLabel: t('adminCommon.delete'), destructive: true }))) return;
     try {
       await apiFetchJson(`/api/admin/students/${studentId}/notes/${noteId}`, {
         method: 'DELETE',
@@ -812,6 +814,7 @@ function NotesTab({ studentId }: { studentId: string }) {
 
   return (
     <div className="space-y-4">
+      {confirmDialog}
       <Card>
         <CardContent className="pt-6 space-y-3">
           <Textarea
