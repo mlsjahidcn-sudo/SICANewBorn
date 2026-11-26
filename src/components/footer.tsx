@@ -373,7 +373,7 @@ export function Footer({ counts }: { counts: CatalogCounts }) {
         </div>
 
         {/* ──────────────  Bottom legal bar  ────────────── */}
-        <div className="mt-10 border-t border-gray-200 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-500">
+        <div className="mt-10 border-t border-gray-200 pt-6 pb-20 sm:pb-0 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-500">
           <p suppressHydrationWarning>
             © {year} SICA · {t('footer.rights')}
           </p>

@@ -9,6 +9,8 @@ const tMock = vi.fn((key: string) => {
     'consultationCta.subtitle': '11 guides, templates and a university database.',
     'consultationCta.ctaPrimary': 'Get the Kit',
     'consultationCta.ctaSecondary': 'Get the Kit',
+    'consultationCta.heroConsult': 'Book a free consultation',
+    'consultationCta.heroKit': 'Get the kit, $49',
   };
   return map[key] ?? key;
 });
@@ -82,8 +84,10 @@ describe('ConsultationCta — Admission Kit buy-only', () => {
   });
 
   it('renders the hero CTA compact layout when variant="hero"', () => {
-    render(<ConsultationCta variant="hero" />);
-    const cta = screen.getByRole('link', { name: /Get the Kit/i });
-    expect(cta).toBeInTheDocument();
+    render(<ConsultationCta variant="hero" slug="home_hero" />);
+    const consult = screen.getByRole('link', { name: /Book a free consultation/i });
+    expect(consult).toHaveAttribute('href', '/counselling?from=home_hero');
+    const kit = screen.getByRole('link', { name: /Get the kit, \$49/i });
+    expect(kit).toHaveAttribute('href', '/china-admission-kit?from=home_hero');
   });
 });

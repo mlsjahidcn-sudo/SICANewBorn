@@ -61,7 +61,12 @@ export function StickyContact() {
         // secondary "more contact options" entry point (WeChat QR
         // for Chinese users, email, hours). Popover opens upward
         // and never collides with the WhatsApp button below.
-        className="fixed bottom-4 left-4 z-40 sm:left-6"
+        // bottom-24 / sm:bottom-28 clears the WhatsApp button (64px at
+        // bottom-4 / sm:bottom-6); at bottom-4 the two were stacked on
+        // the same spot and the navy square peeked out behind it.
+        // Hidden below sm: on a phone the WhatsApp button already covers
+        // contact, and a third floating square would cover page content.
+        className="fixed bottom-24 left-4 z-40 hidden sm:block sm:bottom-28 sm:left-6"
       >
         {/* Popover — on desktop: anchored to the button, opens above.
             On mobile: becomes a full-width bottom sheet for thumb

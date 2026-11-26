@@ -111,7 +111,7 @@ export function CatalogSearchBox({ query, onSearch, onKindChange, variant = 'dir
               }
               if (event.key === 'Enter' && visible && active >= 0) { event.preventDefault(); choose(suggestions[active], active); }
             }}
-            className="h-14 w-full min-w-0 appearance-none rounded-none border border-gray-300 bg-white pl-12 pr-16 text-base shadow-sm outline-none transition-colors focus:border-[#9B1B30] focus:ring-2 focus:ring-[#9B1B30]/20 [&::-webkit-search-cancel-button]:appearance-none"
+            className="h-14 w-full min-w-0 appearance-none rounded-none border border-gray-300 bg-white pl-12 pr-10 text-base sm:pr-16 shadow-sm outline-none transition-colors focus:border-[#9B1B30] focus:ring-2 focus:ring-[#9B1B30]/20 [&::-webkit-search-cancel-button]:appearance-none"
           />
           <div className="absolute right-3 top-4 flex items-center gap-2">
             {loading && <Loader2 className="h-4 w-4 animate-spin text-[#1B2A4A]" aria-hidden="true" />}
@@ -136,7 +136,7 @@ export function CatalogSearchBox({ query, onSearch, onKindChange, variant = 'dir
           )}
           <span role="status" aria-live="polite" className="sr-only">{visible ? t('catalog.suggestionCount', { count: suggestions.length }) : ''}</span>
         </div>
-        <button type="submit" className="h-14 shrink-0 rounded-none bg-[#9B1B30] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#7A1526] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1B2A4A] focus-visible:ring-offset-2 sm:px-6">{t('catalog.search')}</button>
+        <button type="submit" className="h-14 shrink-0 rounded-none bg-[#9B1B30] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#7A1526] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1B2A4A] focus-visible:ring-offset-2 sm:px-6" aria-label={t('catalog.search')}><Search className="h-5 w-5 sm:hidden" aria-hidden="true" /><span className="hidden sm:inline">{t('catalog.search')}</span></button>
       </form>
       {variant === 'directory' && categories}
     </div>
