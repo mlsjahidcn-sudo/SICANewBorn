@@ -14,6 +14,7 @@ import { requireAdmin } from '@/lib/supabase-auth';
 import { mapAdmissionNoticeFromDb, mapAdmissionNoticeInsertToDb } from '@/lib/admission-notices/mapper';
 import { parseAdmissionDegree } from '@/lib/admission-notices/types';
 import { getAdmissionNoticePublicUrl } from '@/lib/admission-notices/storage';
+import { invalidatePublicAdmissionNotices } from '@/lib/admission-notices/public-list';
 
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
@@ -113,6 +114,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    invalidatePublicAdmissionNotices();
     const mapped = mapAdmissionNoticeFromDb(data as never);
     return NextResponse.json(
       {

@@ -56,7 +56,7 @@ describe('city catalog loading', () => {
   it('retains a last complete snapshot when universities fail to refresh', async () => {
     const { loadCityCatalog } = await import('@/lib/city-catalog');
     await loadCityCatalog();
-    vi.setSystemTime(new Date('2026-10-28T00:02:00Z'));
+    vi.setSystemTime(new Date('2026-10-28T00:06:00Z')); // past the 5-minute cache
     db.fail.add('universities');
     const result = await loadCityCatalog();
     expect(result.source).toBe('stale');

@@ -19,6 +19,7 @@ import {
   deleteAdmissionNoticeImages,
   getAdmissionNoticePublicUrl,
 } from '@/lib/admission-notices/storage';
+import { invalidatePublicAdmissionNotices } from '@/lib/admission-notices/public-list';
 
 export async function PATCH(
   request: NextRequest,
@@ -94,6 +95,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Notice not found' }, { status: 404 });
     }
 
+    invalidatePublicAdmissionNotices();
     const mapped = mapAdmissionNoticeFromDb(data as never);
     return NextResponse.json({
       notice: {
@@ -146,6 +148,7 @@ export async function DELETE(
       return NextResponse.json({ error: delErr.message }, { status: 500 });
     }
 
+    invalidatePublicAdmissionNotices();
     const imagePath = (existing as { image_path: string }).image_path;
     const originalPath = (existing as { original_path: string }).original_path;
     const cleanup = await deleteAdmissionNoticeImages(originalPath, imagePath);

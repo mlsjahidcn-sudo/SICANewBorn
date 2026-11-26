@@ -57,10 +57,15 @@ export async function loadCityCatalog(): Promise<CityCatalog> {
       value = { cities: buildCityIndex(universities.value.map(mapUniversity), programRows), source: 'live', programsAvailable: programRows !== null };
       if (programRows !== null) lastComplete = value;
     }
-    cached = { expires: Date.now() + 60_000, value };
+    // 5 minutes; admin catalog writes clear it via invalidateCityCatalogCache().
+    cached = { expires: Date.now() + 5 * 60_000, value };
     return value;
   })().finally(() => { pending = null; });
   return pending;
+}
+/** Drop the cached city index. Called after admin catalog writes. */
+export function invalidateCityCatalogCache(): void {
+  cached = null;
 }
 export const getCityCatalog = cache(loadCityCatalog);
 export const getCitiesAsync = cache(async (): Promise<CityInfo[]> => (await getCityCatalog()).cities);

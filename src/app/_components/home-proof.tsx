@@ -29,7 +29,8 @@ import { getCatalogCounts } from '@/lib/data-fetcher';
 import { guideCards } from '@/lib/guides/hub-data';
 import { getServerLocale, getServerT } from '@/lib/server-t';
 import { formatCount, getStat } from '@/lib/site-stats';
-import { isSupabaseServerConfigured, getSupabaseServer } from '@/lib/supabase-server';
+import { isSupabaseServerConfigured } from '@/lib/supabase-server';
+import { listLatestAdmissionTeasers, type AdmissionTeaser } from '@/lib/admission-notices/public-list';
 
 const VideoTestimonials = dynamic(
   () => import('@/components/VideoTestimonials').then((m) => m.VideoTestimonials),
@@ -49,29 +50,10 @@ export function HomeProofSkeleton() {
   );
 }
 
-interface AdmissionTeaser {
-  id: string;
-  student_name: string;
-  university_name: string;
-  program: string | null;
-  degree: string | null;
-  intake: string | null;
-  country: string | null;
-  image_path: string;
-}
-
 async function fetchLatestAdmissions(): Promise<AdmissionTeaser[]> {
   if (!isSupabaseServerConfigured()) return [];
-  const supabase = getSupabaseServer();
-  if (!supabase) return [];
-  const { data } = await supabase
-    .from('admission_notices')
-    .select('id, student_name, university_name, program, degree, intake, country, image_path')
-    .eq('is_published', true)
-    .order('display_order', { ascending: false })
-    .order('created_at', { ascending: false })
-    .limit(3);
-  return (data as AdmissionTeaser[]) || [];
+  // Cached 5 minutes in process; admin admission-notice writes clear it.
+  return listLatestAdmissionTeasers(3);
 }
 
 function admissionImageUrl(imagePath: string): string {

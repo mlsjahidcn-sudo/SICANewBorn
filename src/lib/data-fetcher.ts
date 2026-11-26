@@ -25,8 +25,8 @@
  * generated pages still fired its own full-table query, and 4 build
  * workers hammering Supabase at once pushed individual pages past
  * staticPageGenerationTimeout (Cloudflare Pages build failures).
- * The 60s TTL matches the ISR `revalidate` the consuming pages
- * already declare, so runtime staleness is unchanged.
+ * The 5-minute TTL (was 60s) bounds staleness; admin catalog writes
+ * clear the cache immediately (invalidateDataFetcherCache).
  */
 import { cache } from 'react';
 import { fetchProgramRows } from './program-rows';
@@ -53,9 +53,21 @@ export type { University, Program, Scholarship };
  * so concurrent callers share one in-flight query; failures evict
  * immediately so a transient error during one page's build doesn't
  * poison the other pages.
+ *
+ * 2026-11-26: 5 minutes (was 60 s). getAllPrograms pages through all
+ * ~13k programs with `select *` (27 requests); at 60 s that reload was
+ * the second-largest cost in pg_stat_statements. Admin catalog writes
+ * clear this cache straight away through invalidateDataFetcherCache()
+ * (called from invalidateLiveCatalogCache), so edits still show up
+ * immediately on this server; the TTL only bounds staleness elsewhere.
  */
-const PROCESS_CACHE_TTL_MS = 60_000;
+const PROCESS_CACHE_TTL_MS = 5 * 60_000;
 const processCache = new Map<string, { expires: number; promise: Promise<unknown> }>();
+
+/** Drop every cached table load. Called after admin catalog writes. */
+export function invalidateDataFetcherCache(): void {
+  processCache.clear();
+}
 
 function cachedProcess<T>(key: string, loader: () => Promise<T>): Promise<T> {
   const hit = processCache.get(key);
@@ -265,9 +277,9 @@ export const getAllUniversities = cache(
  * back to the static seed otherwise (so dev / offline still render).
  *
  * Cached at the React layer (`cache()`) + process layer
- * (`cachedProcess` with 60s TTL) — same pattern as the rest of the
+ * (`cachedProcess`, 5-minute TTL) — same pattern as the rest of the
  * data fetchers. Per-page revalidation on the city pages is what
- * gives the SEO pages their freshness; the 60s TTL is the
+ * gives the SEO pages their freshness; the 5-minute TTL is the
  * safety net against stampedes when many pages render in the same
  * worker.
  */
@@ -412,7 +424,7 @@ export const getAllPrograms = cache(
  *
  * `head: true` + `count: 'exact'` means PostgREST returns the row
  * count without transferring a single row. Three of those per minute
- * (the 60s process cache) is the entire cost of this helper.
+ * (the 5-minute process cache) is the entire cost of this helper.
  */
 export interface CatalogCounts {
   universities: number;

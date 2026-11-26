@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, buildServiceClient, getServerEnv } from '@/lib/supabase-auth';
 import { pickConsultationShotInput, CONSULTATION_BUCKET } from '@/lib/consultation-activity';
+import { invalidateConsultationShotsCache } from '@/lib/consultation-activity';
 
 export const dynamic = 'force-dynamic';
 
@@ -78,6 +79,7 @@ export async function PATCH(
     if (!data) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
+    invalidateConsultationShotsCache();
     return NextResponse.json({ shot: data });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
@@ -132,6 +134,7 @@ export async function DELETE(
       console.error('[admin/consultation-activity/[id] DELETE] delete failed:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+    invalidateConsultationShotsCache();
     return NextResponse.json({ ok: true });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';

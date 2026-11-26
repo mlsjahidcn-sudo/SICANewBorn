@@ -155,7 +155,10 @@ export default function AssessmentsPage() {
 
   useEffect(() => {
     loadStats();
-    const id = setInterval(loadStats, 30_000);
+    // Skip the background refresh while the tab is hidden.
+    const id = setInterval(() => {
+      if (document.visibilityState === 'visible') loadStats();
+    }, 30_000);
     return () => clearInterval(id);
   }, []);
 
@@ -168,7 +171,9 @@ export default function AssessmentsPage() {
   // the stats endpoint). New assessments landing via /assessment appear
   // without a manual refresh. Cheap: bounded by PAGE_SIZE (20) per call.
   useEffect(() => {
-    const id = setInterval(load, 30_000);
+    const id = setInterval(() => {
+      if (document.visibilityState === 'visible') load();
+    }, 30_000);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, page]);

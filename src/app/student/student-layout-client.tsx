@@ -61,12 +61,10 @@ function useAttentionCount(): { count: number; severity: 'urgent' | 'resumable' 
       // The /applications page itself will surface real errors.
     }
   }, []);
-  useEffect(() => {
-    fetchAttention();
-  }, [fetchAttention]);
-  // Re-fetch when the route changes (covers /applications → / → /applications)
-  // and when the tab regains focus (covers coming back from the
-  // documents page where the student uploaded a file).
+  // Fetch on mount and whenever the route changes (covers /applications →
+  // / → /applications), and when the tab regains focus (covers coming back
+  // from the documents page where the student uploaded a file). The route
+  // effect also runs on mount, so a separate mount fetch would duplicate it.
   const pathname = usePathname();
   useEffect(() => {
     fetchAttention();

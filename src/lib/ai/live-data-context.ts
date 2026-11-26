@@ -41,6 +41,8 @@
 import { universities as staticUniversities, type University } from '@/lib/data';
 import { scholarships as staticScholarships, type Scholarship } from '@/lib/data';
 import { getSupabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-server';
+import { invalidateDataFetcherCache } from '@/lib/data-fetcher';
+import { invalidateCityCatalogCache } from '@/lib/city-catalog';
 
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 min
 
@@ -66,6 +68,10 @@ let cache: CacheEntry | null = null;
  */
 export function invalidateLiveCatalogCache(): void {
   cache = null;
+  // Every catalog admin write calls this, so it also clears the page-data
+  // caches that public pages read (5-minute TTLs).
+  invalidateDataFetcherCache();
+  invalidateCityCatalogCache();
 }
 
 /**

@@ -4,6 +4,7 @@ import {
   getAllConsultationShotsAdmin,
   pickConsultationShotInput,
 } from '@/lib/consultation-activity';
+import { invalidateConsultationShotsCache } from '@/lib/consultation-activity';
 
 export const dynamic = 'force-dynamic';
 
@@ -81,6 +82,7 @@ export async function POST(request: NextRequest) {
       console.error('[admin/consultation-activity POST] insert failed:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+    invalidateConsultationShotsCache();
     return NextResponse.json({ shot: data }, { status: 201 });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';

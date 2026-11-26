@@ -40,6 +40,7 @@
 
 import { getSupabaseServer, isSupabaseServerConfigured } from '@/lib/supabase-server';
 import type { Locale } from '@/lib/i18n-translations';
+import { createTtlMemo } from '@/lib/ttl-memo';
 
 export const CONSULTATION_BUCKET = 'consultation-activity';
 
@@ -79,6 +80,15 @@ export interface ResolvedConsultationShot {
  * `locale` selects which caption to use — `caption_zh` when zh,
  * else `caption_en`.
  */
+// Rendered on the home and counselling pages for every visitor, so the
+// active rows are kept 5 minutes in process; admin writes clear it.
+const activeShotsMemo = createTtlMemo<ConsultationShotRow[] | null>(5 * 60_000, { keep: (rows) => rows !== null });
+
+/** Drop the cached public rows. Called after admin consultation-activity writes. */
+export function invalidateConsultationShotsCache(): void {
+  activeShotsMemo.clear();
+}
+
 export async function getActiveConsultationShots(
   locale: Locale,
 ): Promise<ResolvedConsultationShot[]> {
@@ -87,17 +97,21 @@ export async function getActiveConsultationShots(
   if (!supabase) return [];
 
   try {
-    const { data, error } = await supabase
-      .from('consultation_activity_shots')
-      .select('id, image_url, caption_en, caption_zh, person_name, initials, shot_date, is_active, display_order, created_at, updated_at')
-      .eq('is_active', true)
-      .order('display_order', { ascending: true })
-      .order('created_at', { ascending: false });
-    if (error) {
-      console.error('[consultation-activity] public fetch failed:', error);
-      return [];
-    }
-    const rows = (data || []) as ConsultationShotRow[];
+    const fetched = await activeShotsMemo.get('active', async () => {
+      const { data, error } = await supabase
+        .from('consultation_activity_shots')
+        .select('id, image_url, caption_en, caption_zh, person_name, initials, shot_date, is_active, display_order, created_at, updated_at')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true })
+        .order('created_at', { ascending: false });
+      if (error) {
+        console.error('[consultation-activity] public fetch failed:', error);
+        return null;
+      }
+      return (data || []) as ConsultationShotRow[];
+    });
+    if (!fetched) return [];
+    const rows = fetched;
     return rows.map((row) => {
       // Resolve the storage object path to a full public URL.
       // `getPublicUrl` returns `{ data: { publicUrl } }`; on

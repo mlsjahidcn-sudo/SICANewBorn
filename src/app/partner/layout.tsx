@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Spinner } from '@/components/ui/spinner';
 import { useRouter, usePathname } from 'next/navigation';
 import {
@@ -85,6 +85,10 @@ function PartnerLayoutInner({ children }: { children: React.ReactNode }) {
   // badge. Polled every 30s + on focus + after route change. Cheap
   // query (head: true + RLS-scoped), so the cadence is fine.
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+  // The status gate only needs to pass once per signed-in user: moving
+  // between portal pages used to re-run /api/partner/login-status on every
+  // navigation. Data APIs still reject suspended or unlinked partners.
+  const activeStatusFor = useRef<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -111,6 +115,10 @@ function PartnerLayoutInner({ children }: { children: React.ReactNode }) {
 
     // Phase 3: status gate. If the partner isn't 'active' yet, route
     // them to the right waiting page.
+    if (user && activeStatusFor.current === user.id) {
+      setIsLoading(false);
+      return;
+    }
     let cancelled = false;
     (async () => {
       const { supabase } = await import('@/lib/supabase-browser');
@@ -169,6 +177,7 @@ function PartnerLayoutInner({ children }: { children: React.ReactNode }) {
           commission_rate: null,
         });
         setRole(body.teamMember?.role ?? null);
+        if (user) activeStatusFor.current = user.id;
         setIsLoading(false);
       } else {
         setAuthError(t('partnerLayout.notLinkedToPartner'));

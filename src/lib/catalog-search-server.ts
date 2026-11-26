@@ -15,6 +15,11 @@ export interface PublicCatalogResult extends CatalogSearchResult {
   matchedUniversitySlugs: string[];
 }
 
+// 2026-11-26: results kept 5 minutes (was 60 s) and up to 500 entries (was
+// 200). catalog_search_v2 was ~90% of all database time; admin catalog writes
+// still clear this immediately through invalidateCatalogSearchCache().
+const RESULT_TTL_MS = 5 * 60_000;
+const RESULT_CACHE_MAX = 500;
 const cache = new Map<string, { at: number; value: PublicCatalogResult }>();
 const suggestionCache = new Map<string, { at: number; value: CatalogSuggestion[] }>();
 let capability: { at: number; ready: boolean } | undefined;
@@ -24,7 +29,7 @@ let generation = 0;
 /** Off by default. Missing migration or server credentials keeps the original finder available. */
 export async function isCatalogSearchEnabled(): Promise<boolean> {
   if (process.env.CATALOG_SEARCH_V2 !== 'true' || !isSupabaseServerConfigured()) return false;
-  if (capability && Date.now() - capability.at < 60000) return capability.ready;
+  if (capability && Date.now() - capability.at < RESULT_TTL_MS) return capability.ready;
   try {
     const { data, error } = await supabaseServer.rpc('catalog_search_version_v2');
     capability = { at: Date.now(), ready: !error && data === 2 };
@@ -94,7 +99,7 @@ async function fetchCatalog(query: CatalogQuery, locale: 'en' | 'zh', includeFac
 export async function searchPublicCatalog(query: CatalogQuery, locale: 'en' | 'zh' = 'en', includeFacets = true): Promise<PublicCatalogResult> {
   const key = `${query.kind}:${locale}:${includeFacets}:${catalogQueryString(query)}`;
   const cached = cache.get(key);
-  if (cached && Date.now() - cached.at < 60000) return cached.value;
+  if (cached && Date.now() - cached.at < RESULT_TTL_MS) return cached.value;
   const pending = inFlight.get(key);
   if (pending) return pending;
   const promise = fetchCatalog(query, locale, includeFacets);
@@ -102,7 +107,7 @@ export async function searchPublicCatalog(query: CatalogQuery, locale: 'en' | 'z
   try {
     const value = await promise;
     if (inFlight.get(key) === promise) {
-      if (cache.size >= 200) cache.delete(cache.keys().next().value ?? '');
+      if (cache.size >= RESULT_CACHE_MAX) cache.delete(cache.keys().next().value ?? '');
       cache.set(key, { at: Date.now(), value });
     }
     return value;
